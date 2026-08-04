@@ -62,10 +62,13 @@ async fn main() {
         .await
         .expect("Failed to bind address");
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .expect("Server error");
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .expect("Server error");
 }
 
 async fn create_app() -> Router {
@@ -101,7 +104,7 @@ async fn create_app() -> Router {
     let rate_limit_config = RateLimitConfig::from_env();
     let rate_limiter = RateLimiterState::new(rate_limit_config.clone());
     info!(
-        "Rate limiting enabled: {} requests/minute",
+        "Rate limiting enabled: {} requests/minute per IP",
         rate_limit_config.requests_per_minute
     );
 

@@ -1,33 +1,48 @@
-//! Global (non-keyed) rate limiting middleware.
+//! Per-IP rate limiting middleware.
 //!
-//! Applies one shared token bucket across all requests to protect the
-//! upstream Yahoo Finance API. Per-IP tracking would require additional
-//! state management and isn't implemented.
+//! Keys a continuously-refilling token bucket on the client's TCP peer
+//! address, so one abusive client can't starve everyone else's shared
+//! `RATE_LIMIT_PER_MINUTE` budget. Deliberately never trusts
+//! `X-Forwarded-For` or similar headers — those are caller-controlled and
+//! trivially spoofed to evade or misattribute rate limiting unless a proxy
+//! in front of this process is known to overwrite them, which this
+//! self-hosted server can't assume. Buckets live in a bounded map: entries
+//! idle past `IDLE_EVICTION` are swept once the map hits
+//! `MAX_TRACKED_CLIENTS`, so long-running processes don't accumulate
+//! unbounded per-IP state.
 //!
 //! Hand-rolled rather than a general-purpose crate: the only capability
-//! this needs is a single continuously-refilling counter, which a `Mutex`
-//! around a token count + timestamp covers in a few dozen lines, at none of
-//! the transitive dependency weight (keyed limiters, jitter, jemalloc-style
-//! CPU timing) a multi-tenant rate-limiting library carries for capabilities
-//! this middleware never exercises.
+//! this needs is a keyed, continuously-refilling counter, which a `Mutex`
+//! around a small `HashMap` covers in a few dozen lines, at none of the
+//! transitive dependency weight (jitter, jemalloc-style CPU timing) a
+//! multi-tenant rate-limiting library carries for capabilities this
+//! middleware never exercises.
 
 use axum::{
     Json,
     body::Body,
-    extract::State,
+    extract::{ConnectInfo, State},
     http::{Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
 use serde::Serialize;
+use std::collections::HashMap;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::warn;
 
+/// Upper bound on tracked per-IP buckets before idle entries are swept.
+const MAX_TRACKED_CLIENTS: usize = 10_000;
+
+/// A bucket idle longer than this is a sweep candidate once at capacity.
+const IDLE_EVICTION: Duration = Duration::from_secs(600);
+
 /// Rate limit configuration
 #[derive(Debug, Clone)]
 pub struct RateLimitConfig {
-    /// Requests per minute, shared globally across all clients (not per-IP).
+    /// Requests per minute, applied independently per client IP.
     pub requests_per_minute: u32,
 }
 
@@ -41,7 +56,7 @@ impl Default for RateLimitConfig {
 }
 
 impl RateLimitConfig {
-    /// Create configuration from environment variable
+    /// Create configuration from environment variables
     pub fn from_env() -> Self {
         let requests_per_minute = std::env::var("RATE_LIMIT_PER_MINUTE")
             .ok()
@@ -93,10 +108,63 @@ impl TokenBucket {
     }
 }
 
+/// One client's bucket plus the last time it was touched, for idle eviction.
+struct ClientBucket {
+    bucket: TokenBucket,
+    last_seen: Instant,
+}
+
+/// Bounded map of per-IP token buckets, sharing one `requests_per_minute` quota.
+struct PerIpLimiter {
+    clients: HashMap<IpAddr, ClientBucket>,
+    requests_per_minute: u32,
+}
+
+impl PerIpLimiter {
+    fn new(requests_per_minute: u32) -> Self {
+        Self {
+            clients: HashMap::new(),
+            requests_per_minute,
+        }
+    }
+
+    fn check(&mut self, ip: IpAddr) -> Result<(), Duration> {
+        let now = Instant::now();
+
+        // Only a brand-new client can grow the map past capacity — a no-op
+        // on the common path of already-seen IPs.
+        if !self.clients.contains_key(&ip) && self.clients.len() >= MAX_TRACKED_CLIENTS {
+            self.clients
+                .retain(|_, c| now.duration_since(c.last_seen) < IDLE_EVICTION);
+
+            // Sustained load with every tracked client still active: the idle
+            // sweep freed nothing, so evict the least-recently-seen entry
+            // rather than let the map grow past MAX_TRACKED_CLIENTS.
+            if self.clients.len() >= MAX_TRACKED_CLIENTS
+                && let Some(oldest) = self
+                    .clients
+                    .iter()
+                    .min_by_key(|(_, c)| c.last_seen)
+                    .map(|(ip, _)| *ip)
+            {
+                self.clients.remove(&oldest);
+            }
+        }
+
+        let requests_per_minute = self.requests_per_minute;
+        let client = self.clients.entry(ip).or_insert_with(|| ClientBucket {
+            bucket: TokenBucket::new(requests_per_minute),
+            last_seen: now,
+        });
+        client.last_seen = now;
+        client.bucket.check()
+    }
+}
+
 /// Shared rate limiter state
 #[derive(Clone)]
 pub struct RateLimiterState {
-    bucket: Arc<Mutex<TokenBucket>>,
+    limiter: Arc<Mutex<PerIpLimiter>>,
 }
 
 impl RateLimiterState {
@@ -105,15 +173,15 @@ impl RateLimiterState {
         crate::metrics::RATE_LIMIT_QUOTA_PER_MINUTE.set(config.requests_per_minute as f64);
 
         Self {
-            bucket: Arc::new(Mutex::new(TokenBucket::new(config.requests_per_minute))),
+            limiter: Arc::new(Mutex::new(PerIpLimiter::new(config.requests_per_minute))),
         }
     }
 
-    fn check(&self) -> Result<(), Duration> {
-        self.bucket
+    fn check(&self, ip: IpAddr) -> Result<(), Duration> {
+        self.limiter
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .check()
+            .check(ip)
     }
 }
 
@@ -128,14 +196,16 @@ struct RateLimitError {
 
 /// Rate limiting middleware
 ///
-/// Applies global rate limiting to all requests.
-/// Note: Per-IP tracking would require additional state management.
+/// Applies `RATE_LIMIT_PER_MINUTE` independently per client IP. Requires the
+/// server to be served via `into_make_service_with_connect_info::<SocketAddr>()`
+/// so `ConnectInfo` is available.
 pub async fn rate_limit_middleware(
     State(limiter): State<RateLimiterState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     request: Request<Body>,
     next: Next,
 ) -> impl IntoResponse {
-    match limiter.check() {
+    match limiter.check(peer.ip()) {
         Ok(()) => {
             crate::metrics::RATE_LIMIT_ALLOWED.inc();
             next.run(request).await.into_response()
@@ -185,9 +255,89 @@ mod tests {
             requests_per_minute: 100,
         };
         let state = RateLimiterState::new(config);
+        let ip: IpAddr = "127.0.0.1".parse().unwrap();
 
         // Verify we can check rate limits
-        assert!(state.check().is_ok());
+        assert!(state.check(ip).is_ok());
+    }
+
+    #[test]
+    fn different_ips_get_independent_buckets() {
+        let config = RateLimitConfig {
+            requests_per_minute: 1,
+        };
+        let state = RateLimiterState::new(config);
+        let a: IpAddr = "10.0.0.1".parse().unwrap();
+        let b: IpAddr = "10.0.0.2".parse().unwrap();
+
+        // Exhaust `a`'s single-token budget; `b` is untouched by it.
+        assert!(state.check(a).is_ok());
+        assert!(state.check(a).is_err());
+        assert!(state.check(b).is_ok());
+    }
+
+    #[test]
+    fn same_ip_shares_one_bucket_across_calls() {
+        let config = RateLimitConfig {
+            requests_per_minute: 2,
+        };
+        let state = RateLimiterState::new(config);
+        let ip: IpAddr = "10.0.0.3".parse().unwrap();
+
+        assert!(state.check(ip).is_ok());
+        assert!(state.check(ip).is_ok());
+        assert!(state.check(ip).is_err());
+    }
+
+    #[test]
+    fn evicts_idle_entries_once_at_capacity() {
+        let mut limiter = PerIpLimiter::new(10);
+        let stale = Instant::now() - IDLE_EVICTION - Duration::from_secs(1);
+        for i in 0..MAX_TRACKED_CLIENTS as u32 {
+            limiter.clients.insert(
+                IpAddr::from(std::net::Ipv4Addr::from(i)),
+                ClientBucket {
+                    bucket: TokenBucket::new(10),
+                    last_seen: stale,
+                },
+            );
+        }
+        assert_eq!(limiter.clients.len(), MAX_TRACKED_CLIENTS);
+
+        let fresh: IpAddr = "203.0.113.1".parse().unwrap();
+        assert!(limiter.check(fresh).is_ok());
+
+        // Every stale entry was swept, leaving only the new arrival.
+        assert_eq!(limiter.clients.len(), 1);
+    }
+
+    #[test]
+    fn evicts_lru_entry_when_all_tracked_clients_are_still_active() {
+        let mut limiter = PerIpLimiter::new(10);
+        let now = Instant::now();
+        // Every entry is fresh (well inside IDLE_EVICTION), so the idle sweep
+        // frees nothing — the least-recently-seen one must still be evicted.
+        // Staggered by milliseconds (not seconds) so even the oldest entry
+        // stays well under the 600s IDLE_EVICTION threshold.
+        for i in 0..MAX_TRACKED_CLIENTS as u32 {
+            limiter.clients.insert(
+                IpAddr::from(std::net::Ipv4Addr::from(i)),
+                ClientBucket {
+                    bucket: TokenBucket::new(10),
+                    last_seen: now - Duration::from_millis(i as u64),
+                },
+            );
+        }
+        let lru_ip = IpAddr::from(std::net::Ipv4Addr::from(MAX_TRACKED_CLIENTS as u32 - 1));
+        assert_eq!(limiter.clients.len(), MAX_TRACKED_CLIENTS);
+
+        let fresh: IpAddr = "203.0.113.1".parse().unwrap();
+        assert!(limiter.check(fresh).is_ok());
+
+        // The map never grows past capacity, even with no idle entries to sweep.
+        assert_eq!(limiter.clients.len(), MAX_TRACKED_CLIENTS);
+        assert!(!limiter.clients.contains_key(&lru_ip));
+        assert!(limiter.clients.contains_key(&fresh));
     }
 
     #[test]
