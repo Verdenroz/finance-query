@@ -2238,7 +2238,7 @@ mod tests {
     fn make_alternating_candles(base: f64, swing_pct: f64, n: usize) -> Vec<Candle> {
         (0..n)
             .map(|i| {
-                let p = if i % 2 == 0 {
+                let p = if i.is_multiple_of(2) {
                     base
                 } else {
                     base * (1.0 + swing_pct)
@@ -4265,7 +4265,7 @@ mod tests {
             fn on_candle(&self, ctx: &StrategyContext) -> Signal {
                 if ctx.has_position() {
                     Signal::exit(ctx.timestamp(), ctx.close())
-                } else if ctx.index % 3 == 0 {
+                } else if ctx.index.is_multiple_of(3) {
                     Signal::long(ctx.timestamp(), ctx.close())
                 } else {
                     Signal::hold()
@@ -4275,8 +4275,8 @@ mod tests {
 
         let mut prices = Vec::new();
         let mut p = 100.0;
-        for i in 0..60 {
-            p *= if i % 2 == 0 { 1.03 } else { 0.98 };
+        for i in 0..60u32 {
+            p *= if i.is_multiple_of(2) { 1.03 } else { 0.98 };
             prices.push(p);
         }
         let candles = make_candles(&prices);
