@@ -12,6 +12,8 @@ pub(crate) mod alphavantage;
 pub(crate) mod binance;
 #[cfg(feature = "bls")]
 pub(crate) mod bls;
+#[cfg(feature = "cftc")]
+pub(crate) mod cftc;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
 #[cfg(feature = "defi")]
@@ -98,6 +100,10 @@ pub enum Provider {
     /// GDELT DOC 2.0 global news search (requires `gdelt` feature, keyless).
     #[cfg(feature = "gdelt")]
     Gdelt,
+    /// CFTC Commitments of Traders futures positioning (requires `cftc`
+    /// feature, keyless).
+    #[cfg(feature = "cftc")]
+    Cftc,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -137,6 +143,8 @@ impl Provider {
             "defillama" => Some(Self::DefiLlama),
             #[cfg(feature = "gdelt")]
             "gdelt" => Some(Self::Gdelt),
+            #[cfg(feature = "cftc")]
+            "cftc" => Some(Self::Cftc),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -174,6 +182,8 @@ impl Provider {
             Self::DefiLlama => "defillama",
             #[cfg(feature = "gdelt")]
             Self::Gdelt => "gdelt",
+            #[cfg(feature = "cftc")]
+            Self::Cftc => "cftc",
             Self::Edgar => "edgar",
         }
     }
@@ -212,6 +222,8 @@ impl Provider {
         v.push(Self::DefiLlama);
         #[cfg(feature = "gdelt")]
         v.push(Self::Gdelt);
+        #[cfg(feature = "cftc")]
+        v.push(Self::Cftc);
         v.push(Self::Edgar);
         v
     }
@@ -254,6 +266,8 @@ impl Provider {
             Self::DefiLlama => ProviderAdapter::capabilities(&defillama::DefiLlamaProvider),
             #[cfg(feature = "gdelt")]
             Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
+            #[cfg(feature = "cftc")]
+            Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -505,6 +519,9 @@ pub enum Operation {
     /// Historical total value locked in a DeFi protocol.
     #[cfg(feature = "defi")]
     ProtocolTvlHistory,
+    /// Weekly CFTC Commitments of Traders futures positioning.
+    #[cfg(feature = "cftc")]
+    CommitmentsOfTraders,
     /// Aggregated analyst price-target consensus.
     PriceTargetConsensus,
     /// Price-target publication activity over trailing windows.
@@ -587,6 +604,8 @@ impl Operation {
             Self::ProtocolTvl => "protocol_tvl",
             #[cfg(feature = "defi")]
             Self::ProtocolTvlHistory => "protocol_tvl_history",
+            #[cfg(feature = "cftc")]
+            Self::CommitmentsOfTraders => "commitments_of_traders",
             Self::PriceTargetConsensus => "price_target_consensus",
             Self::PriceTargetSummary => "price_target_summary",
             Self::RatingConsensus => "rating_consensus",
@@ -642,6 +661,8 @@ impl Operation {
                 Capability::INDICES
             }
             Self::FuturesQuote => Capability::FUTURES,
+            #[cfg(feature = "cftc")]
+            Self::CommitmentsOfTraders => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
             Self::Filings
             | Self::FilingSections
@@ -1057,6 +1078,8 @@ pub(crate) async fn build_providers(
             Provider::DefiLlama => Arc::new(defillama::DefiLlamaProvider),
             #[cfg(feature = "gdelt")]
             Provider::Gdelt => Arc::new(gdelt::GdeltProvider),
+            #[cfg(feature = "cftc")]
+            Provider::Cftc => Arc::new(cftc::CftcProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

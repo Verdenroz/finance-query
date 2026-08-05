@@ -259,7 +259,7 @@ pub use domains::Commodity;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::Discovery;
 pub use domains::Filings;
-#[cfg(feature = "polygon")]
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use domains::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
@@ -390,8 +390,10 @@ pub use models::economic::{
     feature = "polygon"
 ))]
 pub use models::forex::ForexQuote;
-#[cfg(feature = "polygon")]
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use models::futures::FuturesQuote;
+#[cfg(feature = "cftc")]
+pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 #[cfg(feature = "polygon")]

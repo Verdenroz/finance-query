@@ -512,13 +512,23 @@ pub(crate) trait IndicesProvider: ProviderCore {
 }
 
 /// [`Capability::FUTURES`] — futures contract quotes.
-#[cfg(feature = "polygon")]
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 #[async_trait::async_trait]
 pub(crate) trait FuturesProvider: ProviderCore {
     async fn fetch_futures_quote(
         &self,
         symbol: &str,
     ) -> Result<crate::models::futures::FuturesQuote>;
+
+    /// Fetch weekly CFTC Commitments of Traders positioning for a futures
+    /// symbol, broken down by trader category.
+    #[cfg(feature = "cftc")]
+    async fn fetch_commitments_of_traders(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::futures::cot::CommitmentsOfTraders> {
+        Err(self.not_supported(Operation::CommitmentsOfTraders))
+    }
 }
 
 /// [`Capability::COMMODITIES`] — commodity price quotes.
@@ -608,7 +618,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     fn as_indices(&self) -> Option<&dyn IndicesProvider> {
         None
     }
-    #[cfg(feature = "polygon")]
+    #[cfg(any(feature = "polygon", feature = "cftc"))]
     fn as_futures(&self) -> Option<&dyn FuturesProvider> {
         None
     }
@@ -687,7 +697,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         if self.as_indices().is_some() {
             caps = caps | Capability::INDICES;
         }
-        #[cfg(feature = "polygon")]
+        #[cfg(any(feature = "polygon", feature = "cftc"))]
         if self.as_futures().is_some() {
             caps = caps | Capability::FUTURES;
         }

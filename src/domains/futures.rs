@@ -11,7 +11,11 @@ domain_handle! {
     ///
     /// Created via [`Providers::futures`](crate::Providers::futures).
     pub struct FuturesContract { symbol, symbol }
-    cache: crate::models::futures::FuturesQuote, chart
+    cache: crate::models::futures::FuturesQuote, chart,
+    extra: {
+        #[cfg(feature = "cftc")]
+        cot_cache: crate::models::futures::cot::CommitmentsOfTraders,
+    }
 }
 
 impl FuturesContract {
@@ -40,6 +44,33 @@ impl FuturesContract {
     /// ([`TimeRange::default_interval`]).
     pub async fn history(&self, range: TimeRange) -> Result<Chart> {
         self.chart(range.default_interval(), range).await
+    }
+
+    /// Fetch weekly CFTC Commitments of Traders positioning for this futures
+    /// contract — long/short/spread broken down by trader category
+    /// (commercial hedgers, swap dealers, managed money, other reportables,
+    /// small traders).
+    ///
+    /// Routed through `Capability::FUTURES`; only [`Provider::Cftc`](crate::Provider::Cftc)
+    /// serves it, so route `FUTURES` to include it. CFTC covers physical
+    /// commodities only (agriculture, energy, metals) via the disaggregated
+    /// futures-only report — the symbol is either a recognised Yahoo-style
+    /// continuous futures root (`"GC=F"`, `"CL=F"`, …) or a raw CFTC
+    /// `cftc_contract_market_code` passed straight through.
+    #[cfg(feature = "cftc")]
+    pub async fn commitments_of_traders(
+        &self,
+    ) -> Result<crate::models::futures::cot::CommitmentsOfTraders> {
+        fetch_via!(
+            cache: cot_cache,
+            self,
+            symbol,
+            FUTURES,
+            as_futures,
+            CommitmentsOfTraders,
+            fetch_commitments_of_traders,
+            crate::models::futures::cot::CommitmentsOfTraders
+        )
     }
 }
 

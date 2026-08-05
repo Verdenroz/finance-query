@@ -124,6 +124,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
   exact phrase match) is the search term — precision over recall. GDELT has
   no corporate calendar, so `fetch_events` reports `NotSupported`.
+- **CFTC Commitments of Traders** (`cftc` feature, keyless) —
+  `Provider::Cftc` serves `Capability::FUTURES` with weekly futures
+  positioning by trader category (commercial hedgers, swap dealers, managed
+  money, other reportables, small traders) via
+  `FuturesContract::commitments_of_traders()`, reading the disaggregated
+  futures-only combined report from `publicreporting.cftc.gov`. A curated
+  table maps common Yahoo-style continuous futures roots (`"GC=F"`, `"CL=F"`,
+  …) to their CFTC contract code; anything else is passed through as a raw
+  `cftc_contract_market_code`. New public model `CommitmentsOfTraders` /
+  `CotObservation`. Covers physical commodities only (agriculture, energy,
+  metals) — CFTC reports financial futures (equity indices, rates,
+  currencies) separately in the Traders in Financial Futures report, which
+  this adapter does not serve; CFTC publishes no price quotes at all, so
+  `fetch_futures_quote` reports `NotSupported` and falls through to another
+  routed provider (e.g. Polygon).
 - Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
   `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
   (heaviest first) — no other wired provider serves ETF composition —
