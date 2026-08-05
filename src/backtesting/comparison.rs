@@ -291,6 +291,7 @@ mod tests {
             recovery_factor: 1.0,
             ulcer_index: 0.0,
             serenity_ratio: 0.0,
+            total_borrow_cost: 0.0,
         }
     }
 

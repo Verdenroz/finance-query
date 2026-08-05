@@ -251,6 +251,13 @@ pub struct PerformanceMetrics {
     /// penalising prolonged drawdowns more heavily than short-term volatility.
     /// Returns `f64::MAX` when Ulcer Index is zero and excess return is positive.
     pub serenity_ratio: f64,
+
+    /// Total short-borrow fees paid across all trades (see
+    /// [`BacktestConfig::short_borrow_rate`]). Zero when no shorts were held
+    /// or the rate is `0.0` (the default).
+    ///
+    /// [`BacktestConfig::short_borrow_rate`]: crate::backtesting::BacktestConfig::short_borrow_rate
+    pub total_borrow_cost: f64,
 }
 
 impl PerformanceMetrics {
@@ -315,6 +322,7 @@ impl PerformanceMetrics {
             recovery_factor: 0.0,
             ulcer_index: 0.0,
             serenity_ratio: 0.0,
+            total_borrow_cost: 0.0,
         }
     }
 
@@ -510,6 +518,7 @@ impl PerformanceMetrics {
             recovery_factor,
             ulcer_index,
             serenity_ratio,
+            total_borrow_cost: stats.total_borrow_cost,
         }
     }
 }
@@ -528,6 +537,7 @@ struct TradeStats {
     largest_loss: f64,
     total_commission: f64,
     total_dividend_income: f64,
+    total_borrow_cost: f64,
     winning_returns: Vec<f64>,
     losing_returns: Vec<f64>,
     /// All trade return percentages (wins + losses + break-even).
@@ -549,6 +559,7 @@ fn analyze_trades(trades: &[Trade]) -> TradeStats {
         largest_loss: 0.0,
         total_commission: 0.0,
         total_dividend_income: 0.0,
+        total_borrow_cost: 0.0,
         winning_returns: Vec::new(),
         losing_returns: Vec::new(),
         all_returns: Vec::new(),
@@ -575,6 +586,7 @@ fn analyze_trades(trades: &[Trade]) -> TradeStats {
         stats.total_duration += t.duration_secs();
         stats.total_commission += t.commission;
         stats.total_dividend_income += t.dividend_income;
+        stats.total_borrow_cost += t.borrow_cost;
         stats.all_returns.push(t.return_pct);
     }
 
@@ -1445,6 +1457,7 @@ mod tests {
             return_pct,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
+            borrow_cost: 0.0,
             tags: Vec::new(),
             is_partial: false,
             scale_sequence: 0,
@@ -1856,6 +1869,7 @@ mod tests {
             return_pct,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
+            borrow_cost: 0.0,
             tags: Vec::new(),
             is_partial: false,
             scale_sequence: 0,

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::indicators::{self, Indicator};
 use crate::models::chart::{Candle, Dividend};
 
-use super::config::BacktestConfig;
+use super::config::{BacktestConfig, PositionSizing, SizingContext};
 use super::error::{BacktestError, Result};
 use super::position::{Position, PositionSide, Trade};
 use super::result::{
@@ -444,6 +444,95 @@ pub(crate) fn validate_series_order(candles: &[Candle], dividends: &[Dividend]) 
     Ok(())
 }
 
+// ── Position sizing context precomputation ────────────────────────────────────
+
+/// Precomputed per-bar series feeding [`SizingContext`] for [`PositionSizing`]
+/// schemes that need bar-level indicator values (ATR, realized volatility).
+///
+/// Only populated (via [`BacktestEngine::compute_sizing_series`]) when the
+/// matching [`PositionSizing`] variant is active, so [`PositionSizing::FixedFraction`]
+/// (the default) pays zero extra computation cost.
+#[derive(Default)]
+struct SizingSeries {
+    atr: Option<Vec<Option<f64>>>,
+    vol: Option<Vec<Option<f64>>>,
+}
+
+/// Rolling per-bar return standard deviation over a trailing window.
+///
+/// Returns `None` for indices before `lookback` bars of returns are
+/// available, or when any return within the window couldn't be computed
+/// (e.g. a zero-close bar).  Uses sample standard deviation (n-1).
+fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
+    let n = closes.len();
+    let mut out = vec![None; n];
+    if lookback < 2 || n < 2 {
+        return out;
+    }
+
+    let mut returns = vec![f64::NAN; n];
+    for i in 1..n {
+        if closes[i - 1] > 0.0 {
+            returns[i] = closes[i] / closes[i - 1] - 1.0;
+        }
+    }
+
+    for i in lookback..n {
+        let window = &returns[i - lookback + 1..=i];
+        if window.iter().any(|r| r.is_nan()) {
+            continue;
+        }
+        let mean = window.iter().sum::<f64>() / lookback as f64;
+        let variance =
+            window.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (lookback as f64 - 1.0);
+        out[i] = Some(variance.sqrt());
+    }
+
+    out
+}
+
+/// Trailing win-rate and payoff-ratio (avg win / avg loss, both in
+/// `return_pct` terms) over the last `lookback` closed trades, for
+/// [`PositionSizing::FractionalKelly`].
+///
+/// Returns `(None, None)` when there are fewer than 2 trades in the window,
+/// or when the window has no wins or no losses (payoff ratio undefined) —
+/// signalling the caller to fall back to `position_size_pct`.
+fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Option<f64>) {
+    if trades.is_empty() {
+        return (None, None);
+    }
+    let start = trades.len().saturating_sub(lookback.max(1));
+    let window = &trades[start..];
+    if window.len() < 2 {
+        return (None, None);
+    }
+
+    let wins: Vec<f64> = window
+        .iter()
+        .filter(|t| t.pnl > 0.0)
+        .map(|t| t.return_pct)
+        .collect();
+    let losses: Vec<f64> = window
+        .iter()
+        .filter(|t| t.pnl < 0.0)
+        .map(|t| t.return_pct.abs())
+        .collect();
+
+    if wins.is_empty() || losses.is_empty() {
+        return (None, None);
+    }
+
+    let win_rate = wins.len() as f64 / window.len() as f64;
+    let avg_win = wins.iter().sum::<f64>() / wins.len() as f64;
+    let avg_loss = losses.iter().sum::<f64>() / losses.len() as f64;
+    if avg_loss <= 0.0 {
+        return (None, None);
+    }
+
+    (Some(win_rate), Some(avg_win / avg_loss))
+}
+
 impl BacktestEngine {
     /// Create a new backtest engine with the given configuration
     pub fn new(config: BacktestConfig) -> Self {
@@ -512,6 +601,10 @@ impl BacktestEngine {
         // per-bar HashMap lookups in on_candle.
         strategy.setup(&indicators);
 
+        // Precompute bar-level series for non-default PositionSizing schemes.
+        // A no-op (both None) for the default FixedFraction scheme.
+        let sizing = self.compute_sizing_series(candles);
+
         // Initialize state
         let mut equity = self.config.initial_capital;
         let mut cash = self.config.initial_capital;
@@ -543,6 +636,11 @@ impl BacktestEngine {
         for i in 0..candles.len() {
             let candle = &candles[i];
 
+            // Accrue short-borrow fees before this bar's equity snapshot so the
+            // fee's drag is reflected the same bar (no-op when short_borrow_rate
+            // is 0.0, the default, or the position is long).
+            self.accrue_short_borrow_cost(&mut position, &mut cash, candle);
+
             equity = Self::update_equity_and_curve(
                 position.as_ref(),
                 candle,
@@ -569,6 +667,37 @@ impl BacktestEngine {
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
+
+            // Margin call: broker-forced liquidation takes priority over the
+            // strategy's own stop-loss/take-profit/trailing-stop. Only active
+            // when max_leverage > 1.0 (default 1.0 never triggers this).
+            if let Some(margin_signal) = self.check_margin_call(position.as_ref(), candle, equity) {
+                let fill_price = margin_signal.price;
+                let executed = self.close_position_at(
+                    &mut position,
+                    &mut cash,
+                    &mut trades,
+                    candle,
+                    fill_price,
+                    &margin_signal,
+                );
+
+                signals.push(SignalRecord {
+                    timestamp: candle.timestamp,
+                    price: fill_price,
+                    direction: SignalDirection::Exit,
+                    strength: 1.0,
+                    reason: margin_signal.reason.clone(),
+                    executed,
+                    tags: margin_signal.tags.clone(),
+                });
+
+                if executed {
+                    hwm = None;
+                    extremes = None;
+                    continue; // Skip strategy signal this bar
+                }
+            }
 
             // Check stop-loss / take-profit / trailing-stop on existing position.
             // The signal carries the intrabar fill price (stop/TP level with gap guard),
@@ -668,6 +797,9 @@ impl BacktestEngine {
                         &order.signal,
                         is_long,
                         fill_price,
+                        i,
+                        &sizing,
+                        &trades,
                     );
                     if executed {
                         hwm = position.as_ref().map(|p| p.entry_price);
@@ -736,9 +868,11 @@ impl BacktestEngine {
                         self.execute_signal(
                             &signal,
                             fill_candle,
+                            i + 1,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false
@@ -773,9 +907,11 @@ impl BacktestEngine {
                         self.execute_signal(
                             &signal,
                             fill_candle,
+                            i + 1,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false
@@ -819,9 +955,11 @@ impl BacktestEngine {
                         self.execute_signal(
                             &follow,
                             fill_candle,
+                            i + 1,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false
@@ -1084,6 +1222,119 @@ impl BacktestEngine {
         Ok(result)
     }
 
+    /// Precompute the ATR / realized-volatility series a non-default
+    /// [`PositionSizing`] scheme needs, if any. Both fields are `None` (no
+    /// computation performed) for [`PositionSizing::FixedFraction`], the
+    /// [`PositionSizing::FractionalKelly`] variant (which derives its inputs
+    /// from the running trade log instead), and any scheme whose warmup
+    /// requirement exceeds the candle count.
+    fn compute_sizing_series(&self, candles: &[Candle]) -> SizingSeries {
+        match self.config.position_sizing {
+            PositionSizing::Atr { atr_period, .. } => {
+                let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
+                let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
+                let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
+                let atr = indicators::atr(&highs, &lows, &closes, atr_period).ok();
+                SizingSeries { atr, vol: None }
+            }
+            PositionSizing::VolatilityTarget { lookback, .. } => {
+                let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
+                SizingSeries {
+                    atr: None,
+                    vol: Some(rolling_volatility(&closes, lookback)),
+                }
+            }
+            PositionSizing::FixedFraction | PositionSizing::FractionalKelly { .. } => {
+                SizingSeries::default()
+            }
+        }
+    }
+
+    /// Build the [`SizingContext`] for a fill at candle index `idx`, given the
+    /// engine's precomputed [`SizingSeries`] and the trade log accumulated so
+    /// far in the simulation (used only by [`PositionSizing::FractionalKelly`]).
+    fn build_sizing_context(
+        &self,
+        idx: usize,
+        sizing: &SizingSeries,
+        trades: &[Trade],
+    ) -> SizingContext {
+        let atr = sizing
+            .atr
+            .as_ref()
+            .and_then(|s| s.get(idx).copied().flatten());
+        let recent_volatility = sizing
+            .vol
+            .as_ref()
+            .and_then(|s| s.get(idx).copied().flatten());
+        let (win_rate, payoff_ratio) = match self.config.position_sizing {
+            PositionSizing::FractionalKelly {
+                lookback_trades, ..
+            } => trailing_kelly_inputs(trades, lookback_trades),
+            _ => (None, None),
+        };
+        SizingContext {
+            atr,
+            recent_volatility,
+            win_rate,
+            payoff_ratio,
+        }
+    }
+
+    /// Accrue the per-bar short-borrow fee (see [`BacktestConfig::short_borrow_rate`])
+    /// against an open short position, debiting `cash` and recording it on the
+    /// position for later inclusion in the closed trade's P&L. No-op when the
+    /// rate is `0.0` (the default) or the position is long.
+    fn accrue_short_borrow_cost(
+        &self,
+        position: &mut Option<Position>,
+        cash: &mut f64,
+        candle: &Candle,
+    ) {
+        if self.config.short_borrow_rate <= 0.0 {
+            return;
+        }
+        if let Some(pos) = position.as_mut()
+            && pos.is_short()
+        {
+            let fee = pos.quantity
+                * candle.close
+                * (self.config.short_borrow_rate / self.config.bars_per_year);
+            if fee > 0.0 {
+                *cash -= fee;
+                pos.accrue_borrow_cost(fee);
+            }
+        }
+    }
+
+    /// Force-close the full open position when equity falls below the
+    /// maintenance margin requirement relative to leveraged notional exposure.
+    ///
+    /// Only active when [`BacktestConfig::max_leverage`] is greater than
+    /// `1.0` — at the default leverage of `1.0` this never fires, preserving
+    /// backward compatibility. Checked at the current bar's close, ahead of
+    /// stop-loss/take-profit/trailing-stop (a margin call is broker-forced,
+    /// not a strategy decision).
+    fn check_margin_call(
+        &self,
+        position: Option<&Position>,
+        candle: &Candle,
+        equity: f64,
+    ) -> Option<Signal> {
+        if self.config.max_leverage <= 1.0 {
+            return None;
+        }
+        let pos = position?;
+        let notional = pos.quantity * candle.close;
+        if notional > 0.0 && equity < notional * self.config.maintenance_margin_pct {
+            return Some(
+                Signal::exit(candle.timestamp, candle.close)
+                    .with_reason("Margin call: equity below maintenance margin requirement"),
+            );
+        }
+        None
+    }
+
     // ── Simulation helpers ────────────────────────────────────────────────────
 
     /// Compute current equity, track peak/drawdown, and append an equity curve point.
@@ -1271,21 +1522,37 @@ impl BacktestEngine {
         None
     }
 
-    /// Execute a signal, modifying position and cash
+    /// Execute a signal, modifying position and cash.
+    ///
+    /// `fill_index` is the candle index of `candle` (the fill bar) within the
+    /// original series, used to look up the [`SizingSeries`] entry for a new
+    /// entry's [`SizingContext`].
+    #[allow(clippy::too_many_arguments)]
     fn execute_signal(
         &self,
         signal: &Signal,
         candle: &Candle,
+        fill_index: usize,
         position: &mut Option<Position>,
         cash: &mut f64,
         trades: &mut Vec<Trade>,
+        sizing: &SizingSeries,
     ) -> bool {
         match signal.direction {
             SignalDirection::Long => {
                 if position.is_some() {
                     return false; // Already have a position
                 }
-                self.open_position(position, cash, candle, signal, true)
+                self.open_position(
+                    position,
+                    cash,
+                    candle,
+                    signal,
+                    true,
+                    fill_index,
+                    sizing,
+                    trades.as_slice(),
+                )
             }
             SignalDirection::Short => {
                 if position.is_some() {
@@ -1294,7 +1561,16 @@ impl BacktestEngine {
                 if !self.config.allow_short {
                     return false; // Shorts not allowed
                 }
-                self.open_position(position, cash, candle, signal, false)
+                self.open_position(
+                    position,
+                    cash,
+                    candle,
+                    signal,
+                    false,
+                    fill_index,
+                    sizing,
+                    trades.as_slice(),
+                )
             }
             SignalDirection::Exit => {
                 if position.is_none() {
@@ -1435,6 +1711,7 @@ impl BacktestEngine {
     }
 
     /// Open a new position at `candle.open` (market fill).
+    #[allow(clippy::too_many_arguments)]
     fn open_position(
         &self,
         position: &mut Option<Position>,
@@ -1442,14 +1719,31 @@ impl BacktestEngine {
         candle: &Candle,
         signal: &Signal,
         is_long: bool,
+        fill_index: usize,
+        sizing: &SizingSeries,
+        trades: &[Trade],
     ) -> bool {
-        self.open_position_at_price(position, cash, candle, signal, is_long, candle.open)
+        self.open_position_at_price(
+            position,
+            cash,
+            candle,
+            signal,
+            is_long,
+            candle.open,
+            fill_index,
+            sizing,
+            trades,
+        )
     }
 
     /// Open a new position at an explicit fill price.
     ///
     /// Used for pending limit/stop order fills where the computed order price
     /// (with gap guard) is the fill price rather than the next bar's open.
+    ///
+    /// `fill_index`/`sizing`/`trades` feed the [`SizingContext`] for
+    /// [`PositionSizing`] schemes other than the default `FixedFraction`.
+    #[allow(clippy::too_many_arguments)]
     fn open_position_at_price(
         &self,
         position: &mut Option<Position>,
@@ -1458,10 +1752,17 @@ impl BacktestEngine {
         signal: &Signal,
         is_long: bool,
         fill_price_raw: f64,
+        fill_index: usize,
+        sizing: &SizingSeries,
+        trades: &[Trade],
     ) -> bool {
         let entry_price_slipped = self.config.apply_entry_slippage(fill_price_raw, is_long);
         let entry_price = self.config.apply_entry_spread(entry_price_slipped, is_long);
-        let quantity = self.config.calculate_position_size(*cash, entry_price);
+
+        let ctx = self.build_sizing_context(fill_index, sizing, trades);
+        let quantity = self
+            .config
+            .calculate_position_size_with_context(*cash, entry_price, &ctx);
 
         if quantity <= 0.0 {
             return false; // Not enough capital
@@ -1472,12 +1773,22 @@ impl BacktestEngine {
         // Tax on buy orders only: long entries are buys
         let entry_tax = self.config.calculate_transaction_tax(entry_value, is_long);
 
+        // Buying power = current cash (≈ equity, since no position is open when
+        // entering) scaled by max_leverage. At the default max_leverage = 1.0
+        // this is identical to the pre-leverage cash-only guard below.
+        let buying_power = cash.max(0.0) * self.config.max_leverage;
+
         if is_long {
-            if entry_value + commission + entry_tax > *cash {
-                return false; // Not enough capital including commission and tax
+            if entry_value + commission + entry_tax > buying_power {
+                return false; // Not enough buying power including commission and tax
             }
-        } else if commission > *cash {
-            return false; // Not enough cash to pay entry commission
+        } else {
+            if entry_value > buying_power {
+                return false; // Notional exceeds leveraged buying power
+            }
+            if commission > *cash {
+                return false; // Not enough cash to pay entry commission
+            }
         }
 
         let side = if is_long {
@@ -1900,6 +2211,73 @@ mod tests {
                 provider_id: None,
             })
             .collect()
+    }
+
+    /// Candles with a configurable intrabar range (`range_pct` of price each
+    /// side) — used to produce distinct ATR levels for sizing-scheme tests.
+    fn make_candles_with_range(prices: &[f64], range_pct: f64) -> Vec<Candle> {
+        prices
+            .iter()
+            .enumerate()
+            .map(|(i, &p)| Candle {
+                timestamp: i as i64,
+                open: p,
+                high: p * (1.0 + range_pct),
+                low: p * (1.0 - range_pct),
+                close: p,
+                volume: 1000,
+                adj_close: Some(p),
+                provider_id: None,
+            })
+            .collect()
+    }
+
+    /// Candles alternating between `base` and `base * (1.0 + swing_pct)` each
+    /// bar — used to produce distinct close-to-close return volatility levels
+    /// for [`PositionSizing::VolatilityTarget`] tests.
+    fn make_alternating_candles(base: f64, swing_pct: f64, n: usize) -> Vec<Candle> {
+        (0..n)
+            .map(|i| {
+                let p = if i % 2 == 0 {
+                    base
+                } else {
+                    base * (1.0 + swing_pct)
+                };
+                Candle {
+                    timestamp: i as i64,
+                    open: p,
+                    high: p * 1.001,
+                    low: p * 0.999,
+                    close: p,
+                    volume: 1000,
+                    adj_close: Some(p),
+                    provider_id: None,
+                }
+            })
+            .collect()
+    }
+
+    /// Enters long at a specific bar index (once), then holds. Lets sizing
+    /// tests place the entry after an indicator/statistics warmup period.
+    #[derive(Clone)]
+    struct EnterLongAt(usize);
+
+    impl Strategy for EnterLongAt {
+        fn name(&self) -> &str {
+            "Enter Long At"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == self.0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
     }
 
     #[test]
@@ -3606,5 +3984,360 @@ mod tests {
         for (k, v) in &one {
             assert_eq!(two.get(k), Some(v), "key {k} changed when requested twice");
         }
+    }
+
+    // ── Margin call / leverage ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_margin_call_triggers_with_leverage_on_crash() {
+        // Enter long on bar 0 (fills bar 1), then a severe multi-bar crash.
+        let mut prices = vec![100.0; 3];
+        let mut p = 100.0;
+        for _ in 0..15 {
+            p *= 0.85; // ~15% down each bar
+            prices.push(p);
+        }
+        let candles = make_candles(&prices);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .max_leverage(3.0)
+            .maintenance_margin_pct(0.25)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+
+        let margin_calls = result
+            .trades
+            .iter()
+            .filter(|t| {
+                t.exit_signal
+                    .reason
+                    .as_deref()
+                    .is_some_and(|r| r.contains("Margin call"))
+            })
+            .count();
+        assert!(
+            margin_calls > 0,
+            "expected a margin call to force-close the leveraged long position on the crash"
+        );
+    }
+
+    #[test]
+    fn test_margin_call_never_triggers_at_default_leverage() {
+        // Identical crash, but max_leverage stays at its default of 1.0: the
+        // margin-call path must never engage regardless of how far equity falls.
+        let mut prices = vec![100.0; 3];
+        let mut p = 100.0;
+        for _ in 0..15 {
+            p *= 0.85;
+            prices.push(p);
+        }
+        let candles = make_candles(&prices);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .maintenance_margin_pct(0.25) // set but inert: max_leverage is still 1.0
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        assert_eq!(config.max_leverage, 1.0);
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+
+        let margin_calls = result
+            .trades
+            .iter()
+            .filter(|t| {
+                t.exit_signal
+                    .reason
+                    .as_deref()
+                    .is_some_and(|r| r.contains("Margin call"))
+            })
+            .count();
+        assert_eq!(
+            margin_calls, 0,
+            "margin calls must never fire at max_leverage = 1.0"
+        );
+    }
+
+    #[test]
+    fn test_leverage_scales_position_size() {
+        let prices = vec![100.0; 10];
+        let candles = make_candles(&prices);
+
+        let base_config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(true)
+            .build()
+            .unwrap();
+        let leveraged_config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .max_leverage(2.0)
+            .close_at_end(true)
+            .build()
+            .unwrap();
+
+        let base_result = BacktestEngine::new(base_config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+        let leveraged_result = BacktestEngine::new(leveraged_config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+
+        assert!(!base_result.trades.is_empty());
+        assert!(!leveraged_result.trades.is_empty());
+        let base_qty = base_result.trades[0].quantity;
+        let leveraged_qty = leveraged_result.trades[0].quantity;
+        assert!(
+            (leveraged_qty - base_qty * 2.0).abs() < 1e-6,
+            "2x leverage should double the entry quantity: base={base_qty}, leveraged={leveraged_qty}"
+        );
+    }
+
+    // ── Short-borrow cost ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_short_borrow_cost_accrues_and_reduces_pnl() {
+        // Flat price: gross P&L is exactly zero, so the closed trade's P&L
+        // should equal exactly the negative of the accrued borrow cost.
+        let prices = vec![100.0; 30];
+        let candles = make_candles(&prices);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .short_borrow_rate(0.10) // 10% annualized
+            .bars_per_year(252.0)
+            .close_at_end(true)
+            .build()
+            .unwrap();
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortHold)
+            .unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        let trade = &result.trades[0];
+        assert!(
+            trade.borrow_cost > 0.0,
+            "expected nonzero accrued borrow cost"
+        );
+        assert!(
+            (trade.pnl + trade.borrow_cost).abs() < 1e-6,
+            "with flat prices and zero friction, pnl should equal -borrow_cost exactly: pnl={}, borrow_cost={}",
+            trade.pnl,
+            trade.borrow_cost
+        );
+        assert!(result.metrics.total_borrow_cost > 0.0);
+    }
+
+    #[test]
+    fn test_short_borrow_cost_zero_by_default() {
+        let prices = vec![100.0; 30];
+        let candles = make_candles(&prices);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(true)
+            .build()
+            .unwrap();
+        assert_eq!(config.short_borrow_rate, 0.0);
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortHold)
+            .unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        assert_eq!(result.trades[0].borrow_cost, 0.0);
+        assert_eq!(result.metrics.total_borrow_cost, 0.0);
+    }
+
+    // ── Position sizing schemes (end-to-end wiring) ────────────────────────────
+
+    #[test]
+    fn test_atr_sizing_shrinks_position_in_high_volatility() {
+        let entry_bar = 25usize;
+        let n = 40;
+        let low_vol_candles = make_candles_with_range(&vec![100.0; n], 0.001);
+        let high_vol_candles = make_candles_with_range(&vec![100.0; n], 0.05);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .position_sizing(PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            })
+            .close_at_end(true)
+            .build()
+            .unwrap();
+
+        let low_vol_result = BacktestEngine::new(config.clone())
+            .run("TEST", &low_vol_candles, EnterLongAt(entry_bar))
+            .unwrap();
+        let high_vol_result = BacktestEngine::new(config)
+            .run("TEST", &high_vol_candles, EnterLongAt(entry_bar))
+            .unwrap();
+
+        assert!(!low_vol_result.trades.is_empty());
+        assert!(!high_vol_result.trades.is_empty());
+        let qty_low_vol = low_vol_result.trades[0].quantity;
+        let qty_high_vol = high_vol_result.trades[0].quantity;
+        assert!(
+            qty_low_vol > qty_high_vol,
+            "low-ATR environment should size a larger position than high-ATR: {qty_low_vol} vs {qty_high_vol}"
+        );
+    }
+
+    #[test]
+    fn test_volatility_target_sizing_shrinks_position_in_high_volatility() {
+        let entry_bar = 25usize;
+        let n = 40;
+        let calm_candles = make_alternating_candles(100.0, 0.001, n);
+        let volatile_candles = make_alternating_candles(100.0, 0.10, n);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .position_sizing(PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 20,
+            })
+            .close_at_end(true)
+            .build()
+            .unwrap();
+
+        let calm_result = BacktestEngine::new(config.clone())
+            .run("TEST", &calm_candles, EnterLongAt(entry_bar))
+            .unwrap();
+        let volatile_result = BacktestEngine::new(config)
+            .run("TEST", &volatile_candles, EnterLongAt(entry_bar))
+            .unwrap();
+
+        assert!(!calm_result.trades.is_empty());
+        assert!(!volatile_result.trades.is_empty());
+        let qty_calm = calm_result.trades[0].quantity;
+        let qty_volatile = volatile_result.trades[0].quantity;
+        assert!(
+            qty_calm > qty_volatile,
+            "calm realized-volatility environment should size a larger position: {qty_calm} vs {qty_volatile}"
+        );
+    }
+
+    #[test]
+    fn test_fractional_kelly_sizing_runs_end_to_end_with_trade_history() {
+        // A choppy market generates several round-trip trades before the final
+        // entry, giving FractionalKelly a non-trivial trailing win/loss history
+        // to size against. This is a wiring smoke test — the pure Kelly formula
+        // itself is unit-tested directly in config.rs.
+        #[derive(Clone)]
+        struct ChoppyRoundTrips;
+        impl Strategy for ChoppyRoundTrips {
+            fn name(&self) -> &str {
+                "Choppy Round Trips"
+            }
+            fn required_indicators(&self) -> Vec<(String, Indicator)> {
+                vec![]
+            }
+            fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+                if ctx.has_position() {
+                    Signal::exit(ctx.timestamp(), ctx.close())
+                } else if ctx.index % 3 == 0 {
+                    Signal::long(ctx.timestamp(), ctx.close())
+                } else {
+                    Signal::hold()
+                }
+            }
+        }
+
+        let mut prices = Vec::new();
+        let mut p = 100.0;
+        for i in 0..60 {
+            p *= if i % 2 == 0 { 1.03 } else { 0.98 };
+            prices.push(p);
+        }
+        let candles = make_candles(&prices);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .position_sizing(PositionSizing::FractionalKelly {
+                kelly_fraction: 0.5,
+                lookback_trades: 10,
+            })
+            .close_at_end(true)
+            .build()
+            .unwrap();
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, ChoppyRoundTrips)
+            .unwrap();
+
+        assert!(
+            result.trades.len() > 3,
+            "expected several round-trip trades to build Kelly history, got {}",
+            result.trades.len()
+        );
+    }
+
+    #[test]
+    fn test_new_config_fields_at_defaults_do_not_change_results() {
+        // Explicitly re-setting every new field to its default value must be a
+        // complete no-op versus never touching them at all.
+        let mut prices = vec![100.0; 30];
+        for (i, price) in prices.iter_mut().enumerate().take(25).skip(10) {
+            *price = 100.0 + (i - 10) as f64 * 1.5;
+        }
+        let candles = make_candles(&prices);
+
+        let default_config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+        let explicit_config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .max_leverage(1.0)
+            .maintenance_margin_pct(0.25)
+            .short_borrow_rate(0.0)
+            .position_sizing(PositionSizing::FixedFraction)
+            .build()
+            .unwrap();
+
+        let a = BacktestEngine::new(default_config)
+            .run("TEST", &candles, SmaCrossover::new(3, 6))
+            .unwrap();
+        let b = BacktestEngine::new(explicit_config)
+            .run("TEST", &candles, SmaCrossover::new(3, 6))
+            .unwrap();
+
+        assert_eq!(a.trades.len(), b.trades.len());
+        assert!((a.final_equity - b.final_equity).abs() < 1e-9);
+        assert!((a.metrics.total_return_pct - b.metrics.total_return_pct).abs() < 1e-9);
     }
 }

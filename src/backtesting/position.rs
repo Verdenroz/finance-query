@@ -110,6 +110,17 @@ pub struct Position {
     /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
     #[serde(default)]
     pub bracket_trailing_stop_pct: Option<f64>,
+
+    /// Cumulative short-borrow fee accrued while this position was open.
+    ///
+    /// Zero for long positions and for shorts when
+    /// [`BacktestConfig::short_borrow_rate`] is `0.0` (the default). Deducted
+    /// from P&L on close, matching the cash already debited bar-by-bar by the
+    /// engine.
+    ///
+    /// [`BacktestConfig::short_borrow_rate`]: crate::backtesting::BacktestConfig::short_borrow_rate
+    #[serde(default)]
+    pub borrow_cost_accrued: f64,
 }
 
 impl Position {
@@ -162,6 +173,21 @@ impl Position {
             bracket_stop_loss_pct,
             bracket_take_profit_pct,
             bracket_trailing_stop_pct,
+            borrow_cost_accrued: 0.0,
+        }
+    }
+
+    /// Accrue a short-borrow fee (see [`BacktestConfig::short_borrow_rate`]).
+    ///
+    /// `fee` is a positive dollar amount already debited from cash by the
+    /// caller; this only tracks it so [`close_with_tax`](Self::close_with_tax)
+    /// / [`partial_close`](Self::partial_close) can subtract it from P&L to
+    /// match. No-op for non-positive fees.
+    ///
+    /// [`BacktestConfig::short_borrow_rate`]: crate::backtesting::BacktestConfig::short_borrow_rate
+    pub(crate) fn accrue_borrow_cost(&mut self, fee: f64) {
+        if fee > 0.0 {
+            self.borrow_cost_accrued += fee;
         }
     }
 
@@ -201,6 +227,7 @@ impl Position {
             }
         };
         gross_pnl - self.entry_commission - self.entry_transaction_tax + self.unreinvested_dividends
+            - self.borrow_cost_accrued
     }
 
     /// Calculate unrealized return percentage
@@ -332,6 +359,7 @@ impl Position {
         let unreinvested = self.unreinvested_dividends * fraction;
         let entry_comm_slice = self.entry_commission * fraction;
         let entry_tax_slice = self.entry_transaction_tax * fraction;
+        let borrow_cost_slice = self.borrow_cost_accrued * fraction;
 
         // Reduce the open position; keep entry_quantity in sync with quantity so
         // close_with_tax computes the correct cost basis for the remainder.
@@ -341,6 +369,7 @@ impl Position {
         self.unreinvested_dividends -= unreinvested;
         self.entry_commission -= entry_comm_slice;
         self.entry_transaction_tax -= entry_tax_slice;
+        self.borrow_cost_accrued -= borrow_cost_slice;
 
         let gross_pnl = match self.side {
             PositionSide::Long => (exit_price - self.entry_price) * qty_closed,
@@ -349,7 +378,7 @@ impl Position {
         let partial_commission = entry_comm_slice + commission;
         let partial_tax = entry_tax_slice + exit_tax;
 
-        let pnl = gross_pnl - partial_commission - partial_tax + unreinvested;
+        let pnl = gross_pnl - partial_commission - partial_tax + unreinvested - borrow_cost_slice;
         let entry_value = self.entry_price * qty_closed;
         let return_pct = if entry_value > 0.0 {
             (pnl / entry_value) * 100.0
@@ -374,6 +403,7 @@ impl Position {
             return_pct,
             dividend_income: div_income,
             unreinvested_dividends: unreinvested,
+            borrow_cost: borrow_cost_slice,
             entry_signal: self.entry_signal.clone(),
             exit_signal: signal,
             tags: self.entry_signal.tags.clone(),
@@ -421,8 +451,9 @@ impl Position {
             PositionSide::Long => exit_value - initial_value,
             PositionSide::Short => initial_value - exit_value,
         };
-        let pnl =
-            gross_pnl - total_commission - total_transaction_tax + self.unreinvested_dividends;
+        let pnl = gross_pnl - total_commission - total_transaction_tax
+            + self.unreinvested_dividends
+            - self.borrow_cost_accrued;
 
         let entry_value = self.entry_price * self.entry_quantity;
         let return_pct = if entry_value > 0.0 {
@@ -445,6 +476,7 @@ impl Position {
             return_pct,
             dividend_income: self.dividend_income,
             unreinvested_dividends: self.unreinvested_dividends,
+            borrow_cost: self.borrow_cost_accrued,
             tags: self.entry_signal.tags.clone(),
             entry_signal: self.entry_signal,
             exit_signal,
@@ -505,6 +537,15 @@ pub struct Trade {
     /// Used internally for correct cash-accounting.
     #[serde(default)]
     pub unreinvested_dividends: f64,
+
+    /// Short-borrow fee accrued while this position was open (see
+    /// [`BacktestConfig::short_borrow_rate`]). Zero for long trades and for
+    /// shorts when the rate is `0.0` (the default). Already deducted from
+    /// [`pnl`](Self::pnl).
+    ///
+    /// [`BacktestConfig::short_borrow_rate`]: crate::backtesting::BacktestConfig::short_borrow_rate
+    #[serde(default)]
+    pub borrow_cost: f64,
 
     /// Signal that triggered entry
     pub entry_signal: Signal,
@@ -983,5 +1024,81 @@ mod tests {
         // closed 10 shares; gross PnL = (140 - 110) * 10 = $300
         assert!((final_trade.pnl - 300.0).abs() < 1e-10);
         assert!(!final_trade.is_partial);
+    }
+
+    // ── Short-borrow cost accrual ──────────────────────────────────────────────
+
+    #[test]
+    fn test_borrow_cost_accrual_reduces_pnl() {
+        let mut pos = Position::new(
+            PositionSide::Short,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            Signal::short(1000, 100.0),
+        );
+
+        // Accrue $5 total borrow fee over the holding period.
+        pos.accrue_borrow_cost(2.0);
+        pos.accrue_borrow_cost(3.0);
+        assert!((pos.borrow_cost_accrued - 5.0).abs() < 1e-10);
+
+        // Price falls to 90: gross PnL = (100 - 90) * 10 = 100, minus $5 borrow cost.
+        let trade = pos.close(2000, 90.0, 0.0, make_exit_signal());
+        assert!((trade.pnl - 95.0).abs() < 1e-10);
+        assert!((trade.borrow_cost - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_borrow_cost_accrual_noop_for_nonpositive_fee() {
+        let mut pos = Position::new(
+            PositionSide::Short,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            Signal::short(1000, 100.0),
+        );
+        pos.accrue_borrow_cost(0.0);
+        pos.accrue_borrow_cost(-1.0);
+        assert_eq!(pos.borrow_cost_accrued, 0.0);
+    }
+
+    #[test]
+    fn test_borrow_cost_defaults_to_zero() {
+        let pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        assert_eq!(pos.borrow_cost_accrued, 0.0);
+        // Long P&L is unaffected when borrow cost is never accrued.
+        let trade = pos.close(2000, 110.0, 0.0, make_exit_signal());
+        assert_eq!(trade.borrow_cost, 0.0);
+    }
+
+    #[test]
+    fn test_borrow_cost_partial_close_is_proportional() {
+        let mut pos = Position::new(
+            PositionSide::Short,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            Signal::short(1000, 100.0),
+        );
+        pos.accrue_borrow_cost(10.0);
+
+        // Close 50%: half the accrued borrow cost should be sliced into this trade.
+        let partial = pos.partial_close(0.5, 1500, 95.0, 0.0, 0.0, make_exit_signal());
+        assert!((partial.borrow_cost - 5.0).abs() < 1e-10);
+        assert!((pos.borrow_cost_accrued - 5.0).abs() < 1e-10); // remainder stays on position
+
+        let remainder = pos.close(2000, 90.0, 0.0, make_exit_signal());
+        assert!((remainder.borrow_cost - 5.0).abs() < 1e-10);
     }
 }
