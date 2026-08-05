@@ -277,6 +277,10 @@ impl ProviderAdapter for PolygonProvider {
         Ok(())
     }
 
+    fn rate_limit_remaining(&self) -> Option<f64> {
+        polygon::rate_limiter().and_then(|l| l.available_estimate())
+    }
+
     fn as_quote(&self) -> Option<&dyn QuoteProvider> {
         Some(self)
     }

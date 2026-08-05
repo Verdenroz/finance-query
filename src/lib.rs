@@ -255,7 +255,7 @@ pub mod translation;
 // ============================================================================
 pub mod domains;
 pub use providers::config::{Providers, ProvidersBuilder};
-pub use providers::{Capability, Fetch, Operation, Provider};
+pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
 // Domain-specific query handles — constructable via Providers factory methods.

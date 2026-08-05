@@ -54,6 +54,17 @@ macro_rules! provider_singleton_state {
                     reason: $already_init_reason.to_string(),
                 })
         }
+
+        /// The shared rate limiter backing this provider's singleton, for
+        /// health/budget introspection (issue #276). `None` before `init`/
+        /// `init_with_timeout` has been called.
+        #[allow(dead_code)]
+        pub(crate) fn rate_limiter()
+        -> ::std::option::Option<::std::sync::Arc<crate::rate_limiter::RateLimiter>> {
+            $static_name
+                .get()
+                .map(|s| ::std::sync::Arc::clone(&s.limiter))
+        }
     };
 }
 

@@ -2,6 +2,8 @@
 
 pub(crate) mod adapter;
 pub mod config;
+pub(crate) mod health;
+pub(crate) mod retry;
 
 #[cfg(test)]
 pub(crate) mod mock;
@@ -46,8 +48,12 @@ use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub(crate) use adapter::*;
+pub(crate) use health::HealthTracker;
+pub use health::ProviderHealth;
+pub use retry::RetryPolicy;
 
 /// Typed identifier for a financial data provider.
 ///
@@ -760,6 +766,13 @@ pub(crate) struct ProviderSet {
     providers: Vec<Arc<dyn ProviderAdapter>>,
     yahoo_client: Option<Arc<YahooClient>>,
     routes: Routes,
+    /// Opt-in retry policy (issue #276). `None` (the default) preserves the
+    /// pre-#276 behavior exactly: a `RateLimited` error is treated like any
+    /// other failure and dispatch moves straight to the next candidate.
+    retry_policy: Option<RetryPolicy>,
+    /// In-memory recent success/failure tracker, always active (cheap to
+    /// maintain) and surfaced on request via [`ProviderSet::health`].
+    health: HealthTracker,
 }
 
 impl std::fmt::Debug for ProviderSet {
@@ -785,7 +798,30 @@ impl ProviderSet {
             providers,
             yahoo_client,
             routes,
+            retry_policy: None,
+            health: HealthTracker::new(),
         }
+    }
+
+    /// Opt into [`RetryPolicy`]-driven retry of `RateLimited` errors.
+    /// `None` (the default from [`new`](Self::new)) preserves pre-#276
+    /// behavior exactly.
+    pub(crate) fn with_retry_policy(mut self, policy: Option<RetryPolicy>) -> Self {
+        self.retry_policy = policy;
+        self
+    }
+
+    /// Snapshot recent health for every configured provider, in the order
+    /// they were added (see [`crate::Providers::health`]).
+    pub(crate) fn health(&self) -> Vec<ProviderHealth> {
+        self.providers
+            .iter()
+            .map(|p| {
+                let mut snapshot = self.health.snapshot(p.id());
+                snapshot.requests_remaining_estimate = p.rate_limit_remaining();
+                snapshot
+            })
+            .collect()
     }
 
     /// Returns the providers to use for a given capability, respecting any
@@ -835,6 +871,46 @@ impl ProviderSet {
             .unwrap_or_else(|| Self::no_provider(cap))
     }
 
+    /// Call `f(p)`, retrying in place on `FinanceError::RateLimited` per
+    /// `self.retry_policy` (issue #276). With no policy configured this is
+    /// exactly `f(p).await` — zero behavior change for existing callers.
+    async fn call_with_retry<T, F, Fut>(&self, p: &Arc<dyn ProviderAdapter>, f: &F) -> Result<T>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        let Some(policy) = self.retry_policy.as_ref() else {
+            return f(p).await;
+        };
+        let mut seed = crate::backoff::seed_from_time();
+        let mut attempt: u32 = 0;
+        loop {
+            match f(p).await {
+                Ok(v) => return Ok(v),
+                Err(FinanceError::RateLimited { retry_after })
+                    if attempt + 1 < policy.max_attempts =>
+                {
+                    let delay =
+                        policy.delay_for(attempt, retry_after.map(Duration::from_secs), &mut seed);
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    /// Record a candidate's outcome in the health tracker. `NotSupported`
+    /// isn't a provider failure (it just means "try the next candidate"), so
+    /// it's excluded from health accounting entirely.
+    fn record_health<T>(&self, provider: Provider, result: &Result<T>) {
+        match result {
+            Ok(_) => self.health.record(provider, true, None),
+            Err(FinanceError::NotSupported { .. }) => {}
+            Err(e) => self.health.record(provider, false, Some(e.to_string())),
+        }
+    }
+
     pub(crate) async fn fetch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
     where
         F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
@@ -849,7 +925,9 @@ impl ProviderSet {
                 let mut last = None;
                 let mut unsupported = None;
                 for p in &candidates {
-                    match f(p).await {
+                    let result = self.call_with_retry(p, &f).await;
+                    self.record_health(p.id(), &result);
+                    match result {
                         Ok(v) => return Ok(v),
                         Err(e @ FinanceError::NotSupported { .. }) => unsupported = Some(e),
                         Err(e) => last = Some(e),
@@ -860,7 +938,16 @@ impl ProviderSet {
             Fetch::Parallel => {
                 let mut futs = futures::stream::FuturesUnordered::new();
                 for p in &candidates {
-                    futs.push(f(p));
+                    let id = p.id();
+                    // Capture `&f` (Copy) rather than `f` itself — `f: F` isn't
+                    // necessarily `Copy`, and `async move` would otherwise try
+                    // (and fail) to move it out on every loop iteration.
+                    let f_ref = &f;
+                    futs.push(async move {
+                        let result = self.call_with_retry(p, f_ref).await;
+                        self.record_health(id, &result);
+                        result
+                    });
                 }
                 let mut last = None;
                 let mut unsupported = None;
@@ -1395,5 +1482,183 @@ mod tests {
                 .contains(Capability::FILINGS)
         );
         assert!(needs_edgar_injection(&[Provider::AlphaVantage]));
+    }
+
+    /// A [`ChartProvider`] that returns `RateLimited` for its first
+    /// `fail_times` calls, then succeeds — for exercising [`RetryPolicy`].
+    struct FlakyChartProvider {
+        id: Provider,
+        fail_times: usize,
+        calls: std::sync::atomic::AtomicUsize,
+    }
+
+    impl FlakyChartProvider {
+        fn new(id: Provider, fail_times: usize) -> Self {
+            Self {
+                id,
+                fail_times,
+                calls: std::sync::atomic::AtomicUsize::new(0),
+            }
+        }
+
+        fn call_count(&self) -> usize {
+            self.calls.load(std::sync::atomic::Ordering::SeqCst)
+        }
+    }
+
+    impl ProviderCore for FlakyChartProvider {
+        fn id(&self) -> Provider {
+            self.id
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ChartProvider for FlakyChartProvider {
+        async fn fetch_chart(
+            &self,
+            symbol: &str,
+            _: crate::Interval,
+            _: crate::TimeRange,
+        ) -> Result<crate::models::chart::Chart> {
+            let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if n < self.fail_times {
+                return Err(FinanceError::RateLimited {
+                    retry_after: Some(0),
+                });
+            }
+            Ok(crate::models::chart::Chart {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles: Vec::new(),
+                interval: None,
+                range: None,
+                provider_id: Some(self.id),
+            })
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ProviderAdapter for FlakyChartProvider {
+        fn as_chart(&self) -> Option<&dyn ChartProvider> {
+            Some(self)
+        }
+    }
+
+    async fn fetch_chart_via(set: &ProviderSet) -> Result<crate::models::chart::Chart> {
+        set.fetch(Capability::CHART, |p| {
+            let p = p.clone();
+            async move {
+                p.as_chart()
+                    .ok_or_else(|| p.not_supported(Operation::Chart))?
+                    .fetch_chart("AAPL", crate::Interval::OneDay, crate::TimeRange::FiveDays)
+                    .await
+            }
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn no_retry_policy_means_a_single_attempt_per_candidate() {
+        let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, usize::MAX));
+        let set = ProviderSet::new(
+            vec![provider.clone() as Arc<dyn ProviderAdapter>],
+            None,
+            Routes::new(Fetch::Sequential),
+        );
+        let err = fetch_chart_via(&set).await.unwrap_err();
+        assert!(matches!(err, FinanceError::RateLimited { .. }));
+        assert_eq!(
+            provider.call_count(),
+            1,
+            "no retry policy set: exactly one attempt"
+        );
+    }
+
+    #[tokio::test]
+    async fn retry_policy_retries_rate_limited_then_succeeds() {
+        let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, 2));
+        let set = ProviderSet::new(
+            vec![provider.clone() as Arc<dyn ProviderAdapter>],
+            None,
+            Routes::new(Fetch::Sequential),
+        )
+        .with_retry_policy(Some(RetryPolicy::new(5)));
+
+        let chart = fetch_chart_via(&set)
+            .await
+            .expect("should eventually succeed");
+        assert_eq!(chart.symbol, "AAPL");
+        // 2 failures + 1 success = 3 calls.
+        assert_eq!(provider.call_count(), 3);
+    }
+
+    #[tokio::test]
+    async fn retry_policy_exhausts_and_falls_through_to_next_provider() {
+        let always_limited = Arc::new(FlakyChartProvider::new(Provider::Yahoo, usize::MAX));
+        let succeeds = Arc::new(FlakyChartProvider::new(Provider::Edgar, 0));
+        let mut routes = Routes::new(Fetch::Sequential);
+        routes
+            .map
+            .insert(Capability::CHART, vec![Provider::Yahoo, Provider::Edgar]);
+        let set = ProviderSet::new(
+            vec![
+                always_limited.clone() as Arc<dyn ProviderAdapter>,
+                succeeds.clone() as Arc<dyn ProviderAdapter>,
+            ],
+            None,
+            routes,
+        )
+        .with_retry_policy(Some(RetryPolicy::new(3)));
+
+        let chart = fetch_chart_via(&set).await.expect("falls through to Edgar");
+        assert_eq!(chart.provider_id, Some(Provider::Edgar));
+        // Exhausts all 3 attempts on the first candidate before falling through.
+        assert_eq!(always_limited.call_count(), 3);
+        assert_eq!(succeeds.call_count(), 1);
+    }
+
+    #[tokio::test]
+    async fn health_reflects_failures_and_recovers_after_success() {
+        let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, 1));
+        let set = ProviderSet::new(
+            vec![provider.clone() as Arc<dyn ProviderAdapter>],
+            None,
+            Routes::new(Fetch::Sequential),
+        );
+
+        // First call fails (RateLimited), recorded as a failure.
+        assert!(fetch_chart_via(&set).await.is_err());
+        let health = set.health();
+        assert_eq!(health.len(), 1);
+        assert_eq!(health[0].provider, Provider::Yahoo);
+        assert_eq!(health[0].recent_failures, 1);
+        assert!(health[0].last_error.is_some());
+
+        // Second call succeeds, clearing last_error.
+        assert!(fetch_chart_via(&set).await.is_ok());
+        let health = set.health();
+        assert_eq!(health[0].recent_successes, 1);
+        assert!(health[0].last_error.is_none());
+    }
+
+    #[test]
+    fn not_supported_is_excluded_from_health_accounting() {
+        let tracker = health::HealthTracker::new();
+        // A NotSupported "failure" must not count against health.
+        let err: Result<()> = Err(FinanceError::NotSupported {
+            provider: Provider::Yahoo,
+            operation: Operation::Spark,
+            candidates: vec![],
+        });
+        // Exercise the same logic ProviderSet::record_health uses.
+        match &err {
+            Ok(_) => tracker.record(Provider::Yahoo, true, None),
+            Err(FinanceError::NotSupported { .. }) => {}
+            Err(e) => tracker.record(Provider::Yahoo, false, Some(e.to_string())),
+        }
+        let health = tracker.snapshot(Provider::Yahoo);
+        assert!(health.is_healthy);
+        assert_eq!(health.recent_successes, 0);
+        assert_eq!(health.recent_failures, 0);
     }
 }
