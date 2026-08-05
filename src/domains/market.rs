@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::error::Result;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
+use crate::models::chart::Candle;
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
 };
@@ -186,5 +187,72 @@ impl Market {
     /// Highest traded volume.
     pub async fn most_active(&self) -> Result<Vec<MoverQuote>> {
         self.movers(MoverDirection::MostActive).await
+    }
+
+    /// Fetch grouped daily OHLCV bars for every stock ticker on `date`
+    /// (`YYYY-MM-DD`) in one call — "give me every ticker's OHLC for this
+    /// date" rather than one symbol at a time.
+    ///
+    /// Routes through [`Capability::CHART`](crate::providers::Capability::CHART)
+    /// (the same capability backing per-symbol chart methods) rather than
+    /// `MARKET`, since it's OHLCV data rather than a performance statistic.
+    /// Currently Polygon only. Not cached — one date is one request either way.
+    pub async fn grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let providers = Arc::clone(&self.providers);
+        let date = date.to_string();
+        providers
+            .fetch(crate::providers::Capability::CHART, move |p| {
+                let date = date.clone();
+                let p = p.clone();
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::GroupedDaily))?
+                        .fetch_grouped_daily(&date)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
+    /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
+    pub async fn crypto_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let providers = Arc::clone(&self.providers);
+        let date = date.to_string();
+        providers
+            .fetch(crate::providers::Capability::CHART, move |p| {
+                let date = date.clone();
+                let p = p.clone();
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::CryptoGroupedDaily)
+                        })?
+                        .fetch_crypto_grouped_daily(&date)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
+    /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
+    pub async fn forex_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let providers = Arc::clone(&self.providers);
+        let date = date.to_string();
+        providers
+            .fetch(crate::providers::Capability::CHART, move |p| {
+                let date = date.clone();
+                let p = p.clone();
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::ForexGroupedDaily)
+                        })?
+                        .fetch_forex_grouped_daily(&date)
+                        .await
+                }
+            })
+            .await
     }
 }

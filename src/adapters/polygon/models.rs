@@ -80,6 +80,10 @@ impl Timespan {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct AggBarDTO {
+    /// Ticker symbol — present on grouped-daily (all-tickers-for-one-date)
+    /// responses, absent on single-ticker range/prev responses.
+    #[serde(rename = "T", default)]
+    pub ticker: Option<String>,
     /// Open price.
     #[serde(rename = "o")]
     pub open: f64,

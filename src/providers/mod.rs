@@ -556,6 +556,12 @@ pub enum Operation {
     EtfProfile,
     /// The provider's whole listed-security universe.
     ListingStatus,
+    /// Grouped daily OHLCV bars for every stock ticker on one date.
+    GroupedDaily,
+    /// Grouped daily OHLCV bars for every crypto ticker on one date.
+    CryptoGroupedDaily,
+    /// Grouped daily OHLCV bars for every forex ticker on one date.
+    ForexGroupedDaily,
 }
 
 impl Operation {
@@ -623,6 +629,9 @@ impl Operation {
             Self::EconomicReleases => "economic_releases",
             Self::EtfProfile => "etf_profile",
             Self::ListingStatus => "listing_status",
+            Self::GroupedDaily => "grouped_daily",
+            Self::CryptoGroupedDaily => "crypto_grouped_daily",
+            Self::ForexGroupedDaily => "forex_grouped_daily",
         }
     }
 
@@ -630,7 +639,12 @@ impl Operation {
     pub fn capability(self) -> Capability {
         match self {
             Self::Quote | Self::QuotesBatch | Self::UnifiedSnapshot => Capability::QUOTE,
-            Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
+            Self::Chart
+            | Self::ChartRange
+            | Self::Spark
+            | Self::GroupedDaily
+            | Self::CryptoGroupedDaily
+            | Self::ForexGroupedDaily => Capability::CHART,
             Self::Financials
             | Self::ShortInterest
             | Self::ShortVolume

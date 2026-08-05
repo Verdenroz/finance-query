@@ -217,6 +217,7 @@ impl ScreenerFilters {
     ///
     /// Uses Financial Modeling Prep's parameter names — the only provider
     /// currently routed for `Capability::DISCOVERY` screening.
+    #[cfg(feature = "fmp")]
     pub(crate) fn to_query(&self) -> Vec<(&'static str, String)> {
         let mut q: Vec<(&'static str, String)> = Vec::new();
         let mut num = |k: &'static str, v: Option<f64>| {
@@ -256,11 +257,13 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "fmp")]
     fn empty_filters_render_no_query_params() {
         assert!(ScreenerFilters::new().to_query().is_empty());
     }
 
     #[test]
+    #[cfg(feature = "fmp")]
     fn set_filters_render_with_provider_parameter_names() {
         let q = ScreenerFilters::new()
             .market_cap(Some(1e9), None)

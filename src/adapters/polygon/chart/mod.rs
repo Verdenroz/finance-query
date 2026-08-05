@@ -122,6 +122,40 @@ fn aggs_to_candles(aggs: AggregateResponseDTO) -> Vec<Candle> {
         .collect()
 }
 
+/// Convert a grouped-daily (all-tickers-for-one-date) response into
+/// per-ticker candles. Bars without a `"T"` ticker field are skipped — that
+/// shouldn't happen for a grouped-daily response, but single-ticker
+/// range/prev responses (which lack `"T"`) share the same DTO.
+fn grouped_daily_to_candles(aggs: AggregateResponseDTO) -> Vec<(String, Candle)> {
+    aggs.results
+        .into_iter()
+        .flatten()
+        .filter_map(|r| {
+            let ticker = r.ticker.clone()?;
+            Some((
+                ticker,
+                Candle {
+                    timestamp: r.timestamp,
+                    open: r.open,
+                    high: r.high,
+                    low: r.low,
+                    close: r.close,
+                    volume: r.volume as i64,
+                    adj_close: None,
+                    provider_id: Some(Provider::Polygon),
+                },
+            ))
+        })
+        .collect()
+}
+
+/// Fetch grouped daily OHLCV bars for every stock ticker on `date`
+/// (`YYYY-MM-DD`), as `(symbol, candle)` pairs.
+pub async fn fetch_grouped_daily_response(date: &str) -> Result<Vec<(String, Candle)>> {
+    let aggs = stock_grouped_daily(date, None).await?;
+    Ok(grouped_daily_to_candles(aggs))
+}
+
 /// Fetch chart data (canonical) for a stock ticker by interval and time range.
 pub async fn fetch_chart_response(
     symbol: &str,
@@ -187,7 +221,6 @@ pub async fn stock_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
-#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
 pub async fn stock_grouped_daily(
     date: &str,
     adjusted: Option<bool>,
@@ -322,6 +355,47 @@ mod tests {
         assert_eq!(resp.ticker.as_deref(), Some("MSFT"));
         let bar = &resp.results.unwrap()[0];
         assert!((bar.close - 383.5).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn test_stock_grouped_daily_mock_maps_per_ticker_candles() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/v2/aggs/grouped/locale/us/market/stocks/2024-01-15")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "status": "OK",
+                    "adjusted": true,
+                    "queryCount": 2,
+                    "resultsCount": 2,
+                    "results": [
+                        { "T": "AAPL", "o": 185.09, "h": 187.01, "l": 184.35, "c": 186.19, "v": 65076600.0, "t": 1704067200000_i64 },
+                        { "T": "MSFT", "o": 380.0, "h": 385.0, "l": 378.0, "c": 383.5, "v": 25000000.0, "t": 1704067200000_i64 }
+                    ]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get_raw("/v2/aggs/grouped/locale/us/market/stocks/2024-01-15", &[])
+            .await
+            .unwrap();
+
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
+        let candles = grouped_daily_to_candles(resp);
+        assert_eq!(candles.len(), 2);
+        assert_eq!(candles[0].0, "AAPL");
+        assert!((candles[0].1.close - 186.19).abs() < 0.01);
+        assert_eq!(candles[1].0, "MSFT");
+        assert!((candles[1].1.close - 383.5).abs() < 0.01);
     }
 
     #[tokio::test]

@@ -83,6 +83,34 @@ pub(crate) trait ChartProvider: ProviderCore {
     ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
         Err(self.not_supported(Operation::Spark))
     }
+
+    /// Fetch grouped daily OHLCV bars for every stock ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request — market-wide rather than
+    /// symbol-scoped. Returns `(symbol, candle)` pairs.
+    async fn fetch_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::GroupedDaily))
+    }
+
+    /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    async fn fetch_crypto_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::CryptoGroupedDaily))
+    }
+
+    /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    async fn fetch_forex_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::ForexGroupedDaily))
+    }
 }
 
 /// [`Capability::FUNDAMENTALS`] — financial statements and share-supply data.

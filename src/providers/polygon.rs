@@ -59,6 +59,27 @@ impl ChartProvider for PolygonProvider {
     ) -> Result<crate::models::chart::Chart> {
         polygon::fetch_chart_range_response(symbol, interval, start, end).await
     }
+
+    async fn fetch_grouped_daily(
+        &self,
+        date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        polygon::fetch_grouped_daily_response(date).await
+    }
+
+    async fn fetch_crypto_grouped_daily(
+        &self,
+        date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        polygon::fetch_crypto_grouped_daily_response(date).await
+    }
+
+    async fn fetch_forex_grouped_daily(
+        &self,
+        date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        polygon::fetch_forex_grouped_daily_response(date).await
+    }
 }
 
 #[async_trait::async_trait]
