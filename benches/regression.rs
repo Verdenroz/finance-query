@@ -41,9 +41,10 @@ use finance_query::fred::{MacroSeries, TreasuryYield};
 use finance_query::indicators::{
     accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
     bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
-    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, roc, rsi, sma, stochastic,
-    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+    coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
+    fibonacci_retracement, heikin_ashi, hma, ichimoku, keltner_channels, macd, mcginley_dynamic,
+    mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma, stochastic,
+    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
 };
 use finance_query::risk::{
     beta, historical_var, max_drawdown, parametric_var, sharpe_ratio, sortino_ratio,
@@ -324,10 +325,46 @@ fn ind_patterns(candles: Vec<Candle>) {
     let _ = black_box(patterns(black_box(&candles)));
 }
 
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_pivot_points(s: Series) {
+    let (_, highs, lows, closes, _) = &s;
+    let _ = black_box(pivot_points(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+    ));
+    let _ = black_box(fibonacci_pivot_points(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+    ));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = candles_1000)]
+fn ind_heikin_ashi(candles: Vec<Candle>) {
+    let _ = black_box(heikin_ashi(black_box(&candles)));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_zigzag(s: Series) {
+    let (_, highs, lows, _, _) = &s;
+    let _ = black_box(zigzag(black_box(highs), black_box(lows), 5.0));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_fibonacci_retracement(s: Series) {
+    let (_, highs, lows, _, _) = &s;
+    let _ = black_box(fibonacci_retracement(black_box(highs), black_box(lows), 50));
+}
+
 library_benchmark_group!(
     name = indicators;
     benchmarks = ind_moving_averages, ind_momentum, ind_trend, ind_volatility, ind_volume,
-        ind_patterns
+        ind_patterns, ind_pivot_points, ind_heikin_ashi, ind_zigzag, ind_fibonacci_retracement
 );
 
 // ── Backtesting engine ───────────────────────────────────────────────────────

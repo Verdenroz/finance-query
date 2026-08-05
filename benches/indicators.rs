@@ -3,9 +3,10 @@ use finance_query::Candle;
 use finance_query::indicators::{
     accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
     bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
-    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, roc, rsi, sma, stochastic,
-    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+    coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
+    fibonacci_retracement, heikin_ashi, hma, ichimoku, keltner_channels, macd, mcginley_dynamic,
+    mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma, stochastic,
+    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
 };
 use std::hint::black_box;
 
@@ -313,6 +314,35 @@ fn bench_patterns(c: &mut Criterion) {
     group.finish();
 }
 
+// ── Pivot Points, Heikin-Ashi, ZigZag, Fibonacci Retracement ────────────────
+
+fn bench_pivot_heikin_zigzag_fib(c: &mut Criterion) {
+    let candles = synthetic_candles(1000);
+    let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
+    let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
+    let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
+
+    let mut group = c.benchmark_group("pivot_heikin_zigzag_fib");
+
+    group.bench_function("pivot_points", |b| {
+        b.iter(|| pivot_points(black_box(&highs), black_box(&lows), black_box(&closes)))
+    });
+    group.bench_function("fibonacci_pivot_points", |b| {
+        b.iter(|| fibonacci_pivot_points(black_box(&highs), black_box(&lows), black_box(&closes)))
+    });
+    group.bench_function("heikin_ashi", |b| {
+        b.iter(|| heikin_ashi(black_box(&candles)))
+    });
+    group.bench_function("zigzag_5pct", |b| {
+        b.iter(|| zigzag(black_box(&highs), black_box(&lows), 5.0))
+    });
+    group.bench_function("fibonacci_retracement_50", |b| {
+        b.iter(|| fibonacci_retracement(black_box(&highs), black_box(&lows), 50))
+    });
+
+    group.finish();
+}
+
 // ── Full Indicator Suite (equivalent to IndicatorsSummary workload) ───────────
 
 fn bench_full_suite(c: &mut Criterion) {
@@ -397,6 +427,7 @@ criterion_group!(
     bench_volatility,
     bench_volume,
     bench_patterns,
+    bench_pivot_heikin_zigzag_fib,
     bench_full_suite,
 );
 criterion_main!(benches);

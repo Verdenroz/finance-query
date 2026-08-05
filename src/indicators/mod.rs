@@ -59,6 +59,8 @@ mod dema;
 mod donchian_channels;
 mod elder_ray;
 mod ema;
+mod fibonacci_retracement;
+mod heikin_ashi;
 mod hma;
 mod ichimoku;
 mod keltner_channels;
@@ -69,6 +71,7 @@ mod momentum;
 mod obv;
 mod parabolic_sar;
 mod patterns;
+mod pivot_points;
 mod roc;
 mod rsi;
 mod sma;
@@ -81,6 +84,7 @@ mod vwap;
 mod vwma;
 mod williams_r;
 mod wma;
+mod zigzag;
 
 // Summary module for batch indicator calculations
 pub mod summary;
@@ -105,6 +109,9 @@ pub use dema::dema;
 pub use donchian_channels::{DonchianChannelsResult, donchian_channels};
 pub use elder_ray::{ElderRayResult, elder_ray};
 pub use ema::ema;
+pub use fibonacci_retracement::{FibonacciLevels, fibonacci_retracement};
+pub use heikin_ashi::heikin_ashi;
+pub(crate) use heikin_ashi::heikin_ashi_raw;
 pub use hma::hma;
 pub use ichimoku::{IchimokuResult, ichimoku};
 pub use keltner_channels::{KeltnerChannelsResult, keltner_channels};
@@ -115,6 +122,7 @@ pub use momentum::momentum;
 pub use obv::obv;
 pub use parabolic_sar::parabolic_sar;
 pub use patterns::{CandlePattern, PatternSentiment, patterns};
+pub use pivot_points::{PivotPoints, fibonacci_pivot_points, pivot_points};
 pub use roc::roc;
 pub use rsi::rsi;
 pub use sma::sma;
@@ -127,6 +135,7 @@ pub use vwap::vwap;
 pub use vwma::vwma;
 pub use williams_r::williams_r;
 pub use wma::wma;
+pub use zigzag::{ZigZagPoint, zigzag};
 
 // Re-export summary types
 pub use summary::{
@@ -187,6 +196,14 @@ pub enum IndicatorResult {
     Keltner(KeltnerChannelsResult),
     /// Donchian Channels result
     Donchian(DonchianChannelsResult),
+    /// Pivot Points result (standard or Fibonacci variant)
+    PivotPoints(Vec<Option<PivotPoints>>),
+    /// Heikin-Ashi transformed candles
+    HeikinAshi(Vec<crate::Candle>),
+    /// ZigZag swing points
+    ZigZag(Vec<ZigZagPoint>),
+    /// Fibonacci Retracement levels
+    FibonacciRetracement(Vec<Option<FibonacciLevels>>),
 }
 
 /// Enum representing all available technical indicators.
@@ -349,6 +366,16 @@ pub enum Indicator {
     AccumulationDistribution,
     /// Balance of Power
     BalanceOfPower(Option<usize>),
+    /// Standard (classic) Pivot Points, derived from the previous bar's high/low/close
+    PivotPointsStandard,
+    /// Fibonacci Pivot Points, derived from the previous bar's high/low/close
+    PivotPointsFibonacci,
+    /// Heikin-Ashi candle transform
+    HeikinAshi,
+    /// ZigZag with a percentage reversal threshold
+    ZigZag(f64),
+    /// Fibonacci Retracement over a rolling lookback window
+    FibonacciRetracement(usize),
 }
 
 impl Indicator {
@@ -424,6 +451,11 @@ impl Indicator {
             Indicator::ChaikinOscillator => "Chaikin Oscillator",
             Indicator::AccumulationDistribution => "Accumulation/Distribution",
             Indicator::BalanceOfPower(_) => "Balance of Power",
+            Indicator::PivotPointsStandard => "Pivot Points (Standard)",
+            Indicator::PivotPointsFibonacci => "Pivot Points (Fibonacci)",
+            Indicator::HeikinAshi => "Heikin-Ashi",
+            Indicator::ZigZag(_) => "ZigZag",
+            Indicator::FibonacciRetracement(_) => "Fibonacci Retracement",
         }
     }
 
@@ -496,13 +528,18 @@ impl Indicator {
                 period, atr_period, ..
             } => *period.max(atr_period),
             Self::BalanceOfPower(Some(p)) => *p,
+            Self::FibonacciRetracement(p) => *p,
+            // Both pivot-point variants only need the single prior bar.
+            Self::PivotPointsStandard | Self::PivotPointsFibonacci => 2,
+            Self::ZigZag(_) => 2,
             // Volume/price indicators with no meaningful lookback
             Self::Obv
             | Self::Vwap
             | Self::TrueRange
             | Self::ChaikinOscillator
             | Self::AccumulationDistribution
-            | Self::BalanceOfPower(None) => 1,
+            | Self::BalanceOfPower(None)
+            | Self::HeikinAshi => 1,
         }
     }
 }
@@ -652,6 +689,21 @@ pub(crate) fn compute_indicator(
         Indicator::BalanceOfPower(p) => {
             IndicatorResult::Series(crate::indicators::balance_of_power(&o, &h, &l, &c, p)?)
         }
+        Indicator::PivotPointsStandard => {
+            IndicatorResult::PivotPoints(crate::indicators::pivot_points(&h, &l, &c)?)
+        }
+        Indicator::PivotPointsFibonacci => {
+            IndicatorResult::PivotPoints(crate::indicators::fibonacci_pivot_points(&h, &l, &c)?)
+        }
+        Indicator::HeikinAshi => {
+            IndicatorResult::HeikinAshi(crate::indicators::heikin_ashi(&chart.candles)?)
+        }
+        Indicator::ZigZag(deviation_pct) => {
+            IndicatorResult::ZigZag(crate::indicators::zigzag(&h, &l, deviation_pct)?)
+        }
+        Indicator::FibonacciRetracement(period) => IndicatorResult::FibonacciRetracement(
+            crate::indicators::fibonacci_retracement(&h, &l, period)?,
+        ),
     })
 }
 

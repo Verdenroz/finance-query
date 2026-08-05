@@ -48,6 +48,11 @@ fn needs_high_low(indicator: &Indicator) -> bool {
             | Indicator::BullBearPower(_)
             | Indicator::ElderRay(_)
             | Indicator::AwesomeOscillator { .. }
+            | Indicator::PivotPointsStandard
+            | Indicator::PivotPointsFibonacci
+            | Indicator::HeikinAshi
+            | Indicator::ZigZag(_)
+            | Indicator::FibonacciRetracement(_)
     )
 }
 
@@ -315,8 +320,111 @@ fn compute_one(
             out.push((format!("elder_bull_{period}"), er.bull_power));
             out.push((format!("elder_bear_{period}"), er.bear_power));
         }
+        Indicator::PivotPointsStandard => {
+            let pv = indicators::pivot_points(highs, lows, closes)?;
+            push_pivot_series(&mut out, "pivot", &pv);
+        }
+        Indicator::PivotPointsFibonacci => {
+            let pv = indicators::fibonacci_pivot_points(highs, lows, closes)?;
+            push_pivot_series(&mut out, "fib_pivot", &pv);
+        }
+        Indicator::HeikinAshi => {
+            let ha = indicators::heikin_ashi_raw(opens, highs, lows, closes)?;
+            out.push((
+                "ha_open".to_string(),
+                ha.open.into_iter().map(Some).collect(),
+            ));
+            out.push((
+                "ha_high".to_string(),
+                ha.high.into_iter().map(Some).collect(),
+            ));
+            out.push(("ha_low".to_string(), ha.low.into_iter().map(Some).collect()));
+            out.push((
+                "ha_close".to_string(),
+                ha.close.into_iter().map(Some).collect(),
+            ));
+        }
+        Indicator::ZigZag(deviation_pct) => {
+            let pivots = indicators::zigzag(highs, lows, deviation_pct)?;
+            let mut series = vec![None; closes.len()];
+            for p in &pivots {
+                if let Some(slot) = series.get_mut(p.index) {
+                    *slot = Some(p.price);
+                }
+            }
+            out.push((name, series));
+        }
+        Indicator::FibonacciRetracement(period) => {
+            let levels = indicators::fibonacci_retracement(highs, lows, period)?;
+            out.push((
+                "fib_swing_high".to_string(),
+                levels.iter().map(|o| o.map(|l| l.swing_high)).collect(),
+            ));
+            out.push((
+                "fib_swing_low".to_string(),
+                levels.iter().map(|o| o.map(|l| l.swing_low)).collect(),
+            ));
+            out.push((
+                "fib_23_6".to_string(),
+                levels.iter().map(|o| o.map(|l| l.level_23_6)).collect(),
+            ));
+            out.push((
+                "fib_38_2".to_string(),
+                levels.iter().map(|o| o.map(|l| l.level_38_2)).collect(),
+            ));
+            out.push((
+                "fib_50".to_string(),
+                levels.iter().map(|o| o.map(|l| l.level_50)).collect(),
+            ));
+            out.push((
+                "fib_61_8".to_string(),
+                levels.iter().map(|o| o.map(|l| l.level_61_8)).collect(),
+            ));
+            out.push((
+                "fib_78_6".to_string(),
+                levels.iter().map(|o| o.map(|l| l.level_78_6)).collect(),
+            ));
+        }
     }
     Ok(out)
+}
+
+/// Flatten a [`indicators::PivotPoints`] series into named scalar series
+/// (`{prefix}`, `{prefix}_r1`, ... `{prefix}_s3`) for the backtesting DSL,
+/// which only operates on flat `Vec<Option<f64>>` time series.
+fn push_pivot_series(
+    out: &mut Vec<(String, Vec<Option<f64>>)>,
+    prefix: &str,
+    pv: &[Option<indicators::PivotPoints>],
+) {
+    out.push((
+        prefix.to_string(),
+        pv.iter().map(|o| o.map(|p| p.pivot)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_r1"),
+        pv.iter().map(|o| o.map(|p| p.r1)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_r2"),
+        pv.iter().map(|o| o.map(|p| p.r2)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_r3"),
+        pv.iter().map(|o| o.map(|p| p.r3)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_s1"),
+        pv.iter().map(|o| o.map(|p| p.s1)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_s2"),
+        pv.iter().map(|o| o.map(|p| p.s2)).collect(),
+    ));
+    out.push((
+        format!("{prefix}_s3"),
+        pv.iter().map(|o| o.map(|p| p.s3)).collect(),
+    ));
 }
 
 /// Pre-compute a set of indicators on the given candles.
@@ -360,7 +468,7 @@ pub(crate) fn compute_for_candles(
     let use_vol = required.iter().any(|(_, i)| needs_volumes(i));
     let use_open = required
         .iter()
-        .any(|(_, i)| matches!(i, Indicator::BalanceOfPower(_)));
+        .any(|(_, i)| matches!(i, Indicator::BalanceOfPower(_) | Indicator::HeikinAshi));
 
     // Extract price series upfront (single pass each, cache-friendly).
     let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
