@@ -35,7 +35,7 @@
 //! to AVX-512 string routines (`memcpy`/`memmove`) at runtime, hardening the
 //! gate on AVX-512 hosts that *do* have a valgrind-decodable loader.
 
-use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
+use finance_query::backtesting::{BacktestConfig, BacktestEngine, PositionSizing, SmaCrossover};
 use finance_query::crypto::CoinQuote;
 use finance_query::fred::{MacroSeries, TreasuryYield};
 use finance_query::indicators::{
@@ -350,9 +350,81 @@ fn bt_sma_crossover(input: (BacktestConfig, Vec<Candle>)) {
     let _ = black_box(engine.run(black_box("BENCH"), black_box(&candles), strategy));
 }
 
+// Leveraged/margin path (issue #274): max_leverage > 1.0 activates the
+// buying-power check and margin-call test on every bar, so this is measured
+// separately from the plain no-leverage `bt_sma_crossover` above.
+fn leveraged_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .max_leverage(2.0)
+        .maintenance_margin_pct(0.25)
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = leveraged_backtest_inputs)]
+fn bt_leveraged_margin(input: (BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config);
+    let strategy = SmaCrossover::new(10, 20);
+    let _ = black_box(engine.run(black_box("BENCH"), black_box(&candles), strategy));
+}
+
+// ATR-based position sizing (issue #274): exercises the per-run ATR
+// precomputation plus per-entry SizingContext lookup.
+fn atr_sizing_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .position_sizing(PositionSizing::Atr {
+            risk_pct: 0.02,
+            atr_period: 14,
+            atr_multiple: 2.0,
+        })
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = atr_sizing_backtest_inputs)]
+fn bt_atr_sizing(input: (BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config);
+    let strategy = SmaCrossover::new(10, 20);
+    let _ = black_box(engine.run(black_box("BENCH"), black_box(&candles), strategy));
+}
+
+// Fractional-Kelly position sizing (issue #274): exercises the trailing
+// win-rate/payoff-ratio scan over the running trade log on every entry.
+fn kelly_sizing_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .position_sizing(PositionSizing::FractionalKelly {
+            kelly_fraction: 0.5,
+            lookback_trades: 20,
+        })
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = kelly_sizing_backtest_inputs)]
+fn bt_fractional_kelly_sizing(input: (BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config);
+    let strategy = SmaCrossover::new(10, 20);
+    let _ = black_box(engine.run(black_box("BENCH"), black_box(&candles), strategy));
+}
+
 library_benchmark_group!(
     name = backtesting;
-    benchmarks = bt_sma_crossover
+    benchmarks = bt_sma_crossover, bt_leveraged_margin, bt_atr_sizing, bt_fractional_kelly_sizing
 );
 
 // ── Risk metric hot paths ────────────────────────────────────────────────────
