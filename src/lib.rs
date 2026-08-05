@@ -74,6 +74,7 @@ pub mod edgar {
 }
 
 // Internal modules
+mod backoff;
 mod constants;
 mod models;
 mod providers;
