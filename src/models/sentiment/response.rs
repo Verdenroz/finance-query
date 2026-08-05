@@ -74,6 +74,18 @@ impl FearAndGreed {
             }
         })?;
 
+        Self::from_entry(entry)
+    }
+
+    /// Parse every entry in the response (current + historical), newest
+    /// first — matching the API's own ordering. Used for `limit > 1` requests.
+    pub(crate) fn vec_from_response(
+        resp: FearAndGreedApiResponse,
+    ) -> Result<Vec<Self>, crate::error::FinanceError> {
+        resp.data.into_iter().map(Self::from_entry).collect()
+    }
+
+    fn from_entry(entry: FearAndGreedEntry) -> Result<Self, crate::error::FinanceError> {
         let value = entry.value.parse::<u8>().map_err(|_| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "value".to_string(),

@@ -54,8 +54,8 @@ use finance_query::risk::{
 use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 use finance_query::translation::{Lang, translate_texts};
 use finance_query::{
-    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FinancialStatement, News, Options,
-    Quote, ScreenerResults, SearchResults, Transcript, analyze_sentiment,
+    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FearAndGreed, FinancialStatement,
+    News, Options, Quote, ScreenerResults, SearchResults, Transcript, analyze_sentiment,
 };
 use iai_callgrind::{
     Callgrind, EventKind, LibraryBenchmarkConfig, library_benchmark, library_benchmark_group, main,
@@ -599,6 +599,8 @@ library_benchmark_group!(
 static SEARCH_JSON: &str = include_str!("fixtures/search.json");
 static NEWS_JSON: &str = include_str!("fixtures/news.json");
 static CURRENCIES_JSON: &str = include_str!("fixtures/currencies.json");
+static FEAR_AND_GREED_CRYPTO_HISTORY_JSON: &str =
+    include_str!("fixtures/fear_and_greed_crypto_history.json");
 
 #[library_benchmark]
 fn de_search() -> SearchResults {
@@ -615,6 +617,11 @@ fn de_currencies() -> Vec<Currency> {
     black_box(serde_json::from_str(black_box(CURRENCIES_JSON)).unwrap())
 }
 
+#[library_benchmark]
+fn de_fear_and_greed_crypto_history() -> Vec<FearAndGreed> {
+    black_box(serde_json::from_str(black_box(FEAR_AND_GREED_CRYPTO_HISTORY_JSON)).unwrap())
+}
+
 fn parsed_currencies() -> Vec<Currency> {
     serde_json::from_str(CURRENCIES_JSON).unwrap()
 }
@@ -627,7 +634,7 @@ fn ser_currencies(currencies: Vec<Currency>) -> String {
 
 library_benchmark_group!(
     name = model_serde;
-    benchmarks = de_search, de_news, de_currencies, ser_currencies
+    benchmarks = de_search, de_news, de_currencies, ser_currencies, de_fear_and_greed_crypto_history
 );
 
 // ── Endpoint response (de)serialization (real captured server payloads) ──────

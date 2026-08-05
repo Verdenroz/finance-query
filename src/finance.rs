@@ -531,6 +531,36 @@ pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> 
     crate::adapters::yahoo::market::fear_and_greed::fetch().await
 }
 
+/// Fetch the crypto Fear & Greed Index from Alternative.me — current value
+/// plus up to `limit - 1` historical readings (newest first).
+///
+/// Alternative.me's index specifically tracks crypto (Bitcoin) market
+/// sentiment from volatility, momentum, social media, dominance, and
+/// Google Trends signals. No API key required.
+///
+/// # Arguments
+///
+/// * `limit` - Number of readings to return, newest first (`1` for just the
+///   current value; e.g. `30` for the trailing month).
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let history = finance::fear_and_greed_crypto(7).await?;
+/// let latest = &history[0];
+/// println!("Crypto Fear & Greed: {} ({})", latest.value, latest.classification.as_str());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn fear_and_greed_crypto(
+    limit: u32,
+) -> Result<Vec<crate::models::sentiment::FearAndGreed>> {
+    crate::adapters::yahoo::market::fear_and_greed::fetch_history(limit).await
+}
+
 // ── Financial Modeling Prep (FMP) ───────────────────────────────────
 
 /// Time period for analyst estimates.
