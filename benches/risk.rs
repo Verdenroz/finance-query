@@ -10,7 +10,9 @@
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use finance_query::risk::{
-    beta, calmar_ratio, historical_var, max_drawdown, parametric_var, sharpe_ratio, sortino_ratio,
+    beta, calmar_ratio, historical_cvar, historical_var, information_ratio, kelly_criterion,
+    max_drawdown, omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio,
+    tracking_error, ulcer_index, win_loss_stats,
 };
 
 /// Deterministic pseudo-random return series (seeded xorshift, no `rand` dep).
@@ -86,11 +88,62 @@ fn bench_beta(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_cvar(c: &mut Criterion) {
+    let mut group = c.benchmark_group("conditional_value_at_risk");
+    for n in [252usize, 1260, 2520] {
+        let returns = synthetic_returns(n);
+        group.bench_with_input(BenchmarkId::new("historical_95", n), &returns, |b, r| {
+            b.iter(|| historical_cvar(black_box(r), 0.95))
+        });
+        group.bench_with_input(BenchmarkId::new("parametric_95", n), &returns, |b, r| {
+            b.iter(|| parametric_cvar(black_box(r), 0.95))
+        });
+    }
+    group.finish();
+}
+
+fn bench_promoted_metrics(c: &mut Criterion) {
+    let mut group = c.benchmark_group("promoted_metrics");
+    for n in [252usize, 1260, 2520] {
+        let returns = synthetic_returns(n);
+        group.bench_with_input(BenchmarkId::new("omega_ratio", n), &returns, |b, r| {
+            b.iter(|| omega_ratio(black_box(r)))
+        });
+        group.bench_with_input(BenchmarkId::new("ulcer_index", n), &returns, |b, r| {
+            b.iter(|| ulcer_index(black_box(r)))
+        });
+        group.bench_with_input(BenchmarkId::new("win_loss_stats", n), &returns, |b, r| {
+            b.iter(|| win_loss_stats(black_box(r)))
+        });
+    }
+    group.bench_function("kelly_criterion", |b| {
+        b.iter(|| kelly_criterion(black_box(0.55), black_box(1.8), black_box(-1.2)))
+    });
+
+    for n in [252usize, 1260, 2520] {
+        let asset = synthetic_returns(n);
+        let benchmark = synthetic_returns(n + 1);
+        group.bench_with_input(
+            BenchmarkId::new("information_ratio", n),
+            &(asset.clone(), benchmark.clone()),
+            |b, (a, m)| b.iter(|| information_ratio(black_box(a), black_box(m), 252.0)),
+        );
+        group.bench_with_input(
+            BenchmarkId::new("tracking_error", n),
+            &(asset, benchmark),
+            |b, (a, m)| b.iter(|| tracking_error(black_box(a), black_box(m), 252.0)),
+        );
+    }
+    group.finish();
+}
+
 criterion_group!(
     risk_benches,
     bench_value_at_risk,
+    bench_cvar,
     bench_ratios,
     bench_drawdown,
     bench_beta,
+    bench_promoted_metrics,
 );
 criterion_main!(risk_benches);

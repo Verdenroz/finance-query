@@ -585,18 +585,12 @@ fn analyze_trades(trades: &[Trade]) -> TradeStats {
 ///
 /// Returns `f64::MAX` when there are no losing trades and wins are positive
 /// (unbounded edge). Returns `0.0` when inputs are degenerate.
+///
+/// Delegates to `crate::perf_metrics::kelly_criterion`, shared with the
+/// standalone `risk` module so both compute the same formula without either
+/// feature depending on the other (see that module's doc comment).
 fn calculate_kelly(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
-    let abs_loss = avg_loss_pct.abs();
-    if abs_loss == 0.0 {
-        // No losing trades: edge is unbounded. Use f64::MAX to match the
-        // sentinel convention used by profit_factor and calmar_ratio.
-        return if avg_win_pct > 0.0 { f64::MAX } else { 0.0 };
-    }
-    if avg_win_pct == 0.0 {
-        return 0.0;
-    }
-    let r = avg_win_pct / abs_loss;
-    win_rate - (1.0 - win_rate) / r
+    crate::perf_metrics::kelly_criterion(win_rate, avg_win_pct, avg_loss_pct)
 }
 
 /// Van Tharp's System Quality Number.
@@ -621,14 +615,12 @@ fn calculate_sqn(returns: &[f64]) -> f64 {
 ///
 /// `Σ max(r, 0) / Σ max(-r, 0)`. Returns `f64::MAX` when the denominator
 /// is zero (no negative returns), `0.0` when the numerator is also zero.
+///
+/// Delegates to `crate::perf_metrics::omega_ratio` (see that module's doc
+/// comment for why the shared formula lives outside both `risk` and
+/// `backtesting`).
 fn calculate_omega_ratio(returns: &[f64]) -> f64 {
-    let gains: f64 = returns.iter().map(|&r| r.max(0.0)).sum();
-    let losses: f64 = returns.iter().map(|&r| (-r).max(0.0)).sum();
-    if losses == 0.0 {
-        if gains > 0.0 { f64::MAX } else { 0.0 }
-    } else {
-        gains / losses
-    }
+    crate::perf_metrics::omega_ratio(returns)
 }
 
 /// Tail Ratio: `abs(p95) / abs(p5)` of trade returns.
@@ -657,18 +649,13 @@ fn calculate_tail_ratio(returns: &[f64]) -> f64 {
 
 /// Ulcer Index: `sqrt(mean(drawdown_pct²))` across all equity curve points,
 /// returned in **percentage** units (0–100) to match standard tool output.
+///
+/// Delegates to `crate::perf_metrics::ulcer_index`, which takes plain
+/// drawdown fractions rather than `EquityPoint` so it stays usable from the
+/// standalone `risk` module too.
 fn calculate_ulcer_index(equity_curve: &[EquityPoint]) -> f64 {
-    if equity_curve.is_empty() {
-        return 0.0;
-    }
-    // drawdown_pct is a fraction (0–1); multiply by 100 before squaring so
-    // the result is in percentage units consistent with backtesting.py and
-    // Peter Martin's original definition.
-    let sum_sq: f64 = equity_curve
-        .iter()
-        .map(|p| (p.drawdown_pct * 100.0).powi(2))
-        .sum();
-    (sum_sq / equity_curve.len() as f64).sqrt()
+    let drawdowns: Vec<f64> = equity_curve.iter().map(|p| p.drawdown_pct).collect();
+    crate::perf_metrics::ulcer_index(&drawdowns)
 }
 
 /// Calculate maximum consecutive wins and losses
@@ -963,6 +950,10 @@ pub struct BenchmarkMetrics {
 
     /// Information ratio: excess return per unit of tracking error (annualised)
     pub information_ratio: f64,
+
+    /// Tracking error: annualised standard deviation of (strategy − benchmark)
+    /// periodic returns — the denominator of `information_ratio`.
+    pub tracking_error: f64,
 }
 
 /// Complete backtest result

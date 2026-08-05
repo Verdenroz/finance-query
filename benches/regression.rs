@@ -47,7 +47,9 @@ use finance_query::indicators::{
     stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
 };
 use finance_query::risk::{
-    beta, historical_var, max_drawdown, parametric_var, sharpe_ratio, sortino_ratio,
+    beta, historical_cvar, historical_var, information_ratio, kelly_criterion, max_drawdown,
+    omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio, tracking_error,
+    ulcer_index, win_loss_stats,
 };
 use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 use finance_query::translation::{Lang, translate_texts};
@@ -433,10 +435,63 @@ fn risk_beta(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
     black_box(beta(black_box(&series.0), black_box(&series.1)))
 }
 
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_historical_cvar(returns: Vec<f64>) -> Option<f64> {
+    black_box(historical_cvar(black_box(&returns), 0.95))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_parametric_cvar(returns: Vec<f64>) -> Option<f64> {
+    black_box(parametric_cvar(black_box(&returns), 0.95))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_omega_ratio(returns: Vec<f64>) -> f64 {
+    black_box(omega_ratio(black_box(&returns)))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_ulcer_index(returns: Vec<f64>) -> f64 {
+    black_box(ulcer_index(black_box(&returns)))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_kelly_criterion(returns: Vec<f64>) -> f64 {
+    let (win_rate, avg_win_pct, avg_loss_pct) = win_loss_stats(black_box(&returns));
+    black_box(kelly_criterion(win_rate, avg_win_pct, avg_loss_pct))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_pair_1000)]
+fn risk_information_ratio(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
+    black_box(information_ratio(
+        black_box(&series.0),
+        black_box(&series.1),
+        252.0,
+    ))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_pair_1000)]
+fn risk_tracking_error(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
+    black_box(tracking_error(
+        black_box(&series.0),
+        black_box(&series.1),
+        252.0,
+    ))
+}
+
 library_benchmark_group!(
     name = risk;
     benchmarks = risk_historical_var, risk_parametric_var, risk_sharpe, risk_sortino,
-        risk_max_drawdown, risk_beta
+        risk_max_drawdown, risk_beta, risk_historical_cvar, risk_parametric_cvar,
+        risk_omega_ratio, risk_ulcer_index, risk_kelly_criterion, risk_information_ratio,
+        risk_tracking_error
 );
 
 // ── Streaming (PriceUpdate serde — the per-tick hot path) ─────────────────────

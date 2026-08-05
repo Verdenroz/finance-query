@@ -77,6 +77,8 @@ pub mod edgar {
 mod backoff;
 mod constants;
 mod models;
+#[cfg(any(feature = "risk", feature = "backtesting"))]
+mod perf_metrics;
 mod providers;
 pub(crate) mod rate_limiter;
 mod scrapers;

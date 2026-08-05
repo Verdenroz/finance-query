@@ -2,8 +2,10 @@
 //!
 //! Requires the **`risk`** feature flag (which implies **`indicators`**).
 //!
-//! Provides Value at Risk, Sharpe/Sortino/Calmar ratios, beta, and max drawdown
-//! as standalone metrics — independent of the backtesting engine.
+//! Provides Value at Risk, Conditional VaR (Expected Shortfall),
+//! Sharpe/Sortino/Calmar ratios, Omega Ratio, Kelly Criterion, beta, max
+//! drawdown, Ulcer Index, Information Ratio, and tracking error as standalone
+//! metrics — independent of the backtesting engine.
 //!
 //! # Quick Start
 //!
@@ -24,13 +26,18 @@
 //! ```
 
 mod beta;
+mod cvar;
 mod drawdown;
 mod ratios;
 mod var;
 
 pub use self::beta::beta;
+pub use self::cvar::{historical_cvar, parametric_cvar};
 pub use self::drawdown::max_drawdown;
-pub use self::ratios::{calmar_ratio, sharpe_ratio, sortino_ratio};
+pub use self::ratios::{
+    calmar_ratio, information_ratio, kelly_criterion, omega_ratio, sharpe_ratio, sortino_ratio,
+    tracking_error, ulcer_index, win_loss_stats,
+};
 pub use self::var::{historical_var, parametric_var};
 
 use crate::models::chart::Candle;
@@ -48,6 +55,23 @@ pub struct RiskSummary {
     pub var_99: f64,
     /// 1-day parametric VaR at 95% confidence (assumes normally distributed returns)
     pub parametric_var_95: f64,
+    /// 1-day historical Conditional VaR (Expected Shortfall) at 95% confidence —
+    /// the average loss in the worst 5% of historical periods.
+    pub cvar_95: f64,
+    /// 1-day historical Conditional VaR at 99% confidence.
+    pub cvar_99: f64,
+    /// 1-day parametric Conditional VaR at 95% confidence (assumes normally
+    /// distributed returns).
+    pub parametric_cvar_95: f64,
+    /// Omega Ratio at a 0.0 threshold: probability-weighted ratio of gains to
+    /// losses over the full return distribution. `f64::MAX` when there are no
+    /// negative-return periods.
+    pub omega: f64,
+    /// Kelly Criterion: optimal fraction of capital to risk, treating each
+    /// positive-return period as a "win" and each negative-return period as a
+    /// "loss". `f64::MAX` when there are no losing periods and wins are
+    /// positive (unbounded edge).
+    pub kelly: f64,
     /// Annualised Sharpe Ratio (risk-free rate = 0, 252 trading days/year).
     /// `None` when fewer than 2 periods or zero volatility.
     pub sharpe: Option<f64>,
@@ -64,6 +88,17 @@ pub struct RiskSummary {
     /// Number of trading periods to recover from the maximum drawdown.
     /// `None` when no recovery occurred within the data window.
     pub max_drawdown_recovery_periods: Option<u64>,
+    /// Ulcer Index: root-mean-square of drawdown depth across all periods,
+    /// expressed as a percentage (0–100). Penalises both depth and duration of
+    /// drawdowns, unlike `max_drawdown` which only reports the worst single one.
+    pub ulcer_index: f64,
+    /// Information Ratio vs benchmark: annualised mean excess return divided by
+    /// tracking error. `None` when no benchmark is provided or data is insufficient.
+    pub information_ratio: Option<f64>,
+    /// Tracking error vs benchmark: annualised standard deviation of
+    /// (asset − benchmark) periodic returns. `None` when no benchmark is
+    /// provided or data is insufficient.
+    pub tracking_error: Option<f64>,
 }
 
 /// Compute returns from a slice of candles (simple daily returns: close-to-close).
@@ -90,6 +125,12 @@ pub(crate) enum TradingCalendar {
     Crypto,
 }
 
+// Only constructed/called by the domain-handle `risk()` macro in
+// `src/domains/mod.rs`, gated behind provider features (alphavantage, fmp,
+// polygon, crypto, ...) that may all be disabled under a narrower feature
+// set (e.g. `--features indicators,risk,backtesting` alone), same reasoning
+// as the `#[allow(dead_code)]` on `TradingCalendar` above.
+#[allow(dead_code)]
 impl TradingCalendar {
     fn trading_days(self) -> f64 {
         match self {
@@ -110,6 +151,7 @@ impl TradingCalendar {
 /// Number of `interval` periods in a trading year for the given calendar — the
 /// annualisation factor for Sharpe/Sortino/Calmar. Day/week/month/quarter are
 /// exact; intraday scales the daily count by the session length.
+#[allow(dead_code)]
 pub(crate) fn periods_per_year(interval: crate::Interval, cal: TradingCalendar) -> f64 {
     use crate::Interval;
     let days = cal.trading_days();
@@ -155,6 +197,16 @@ pub(crate) fn compute_risk_summary_with_periods(
         .map(|(m, s)| var::parametric_var_with_stats(m, s, 0.95))
         .unwrap_or(0.0);
 
+    let cvar_95 = cvar::historical_cvar_sorted(&sorted, 0.95).unwrap_or(0.0);
+    let cvar_99 = cvar::historical_cvar_sorted(&sorted, 0.99).unwrap_or(0.0);
+    let parametric_cvar_95 = stats
+        .map(|(m, s)| cvar::parametric_cvar_with_stats(m, s, 0.95))
+        .unwrap_or(0.0);
+
+    let omega = omega_ratio(&returns);
+    let (win_rate, avg_win_pct, avg_loss_pct) = win_loss_stats(&returns);
+    let kelly = kelly_criterion(win_rate, avg_win_pct, avg_loss_pct);
+
     let sharpe = stats.and_then(|(m, s)| ratios::sharpe_with_stats(m, s, 0.0, periods_per_year));
     let sortino = sortino_ratio(&returns, 0.0, periods_per_year);
 
@@ -162,19 +214,32 @@ pub(crate) fn compute_risk_summary_with_periods(
     let total_return = returns.iter().fold(1.0_f64, |acc, r| acc * (1.0 + r)) - 1.0;
     let years = returns.len() as f64 / periods_per_year;
     let calmar = calmar_ratio(total_return, years, dd.max_drawdown);
+    let ulcer_index_val = ulcer_index(&returns);
 
     let beta_val = benchmark_returns.and_then(|br| beta(&returns, br));
+    let information_ratio_val =
+        benchmark_returns.and_then(|br| information_ratio(&returns, br, periods_per_year));
+    let tracking_error_val =
+        benchmark_returns.and_then(|br| tracking_error(&returns, br, periods_per_year));
 
     RiskSummary {
         var_95,
         var_99,
         parametric_var_95,
+        cvar_95,
+        cvar_99,
+        parametric_cvar_95,
+        omega,
+        kelly,
         sharpe,
         sortino,
         calmar,
         beta: beta_val,
         max_drawdown: dd.max_drawdown,
         max_drawdown_recovery_periods: dd.recovery_periods,
+        ulcer_index: ulcer_index_val,
+        information_ratio: information_ratio_val,
+        tracking_error: tracking_error_val,
     }
 }
 
@@ -203,6 +268,60 @@ mod tests {
         assert_eq!(summary.var_95, 0.0);
         assert_eq!(summary.max_drawdown, 0.0);
         assert!(summary.sharpe.is_none());
+        // New metrics: degenerate for a flat (zero-return) series.
+        assert_eq!(summary.cvar_95, 0.0);
+        assert_eq!(summary.cvar_99, 0.0);
+        assert_eq!(summary.parametric_cvar_95, 0.0);
+        assert_eq!(summary.omega, 0.0);
+        assert_eq!(summary.kelly, 0.0);
+        assert_eq!(summary.ulcer_index, 0.0);
+        assert!(summary.information_ratio.is_none());
+        assert!(summary.tracking_error.is_none());
+    }
+
+    #[test]
+    fn test_cvar_at_least_as_severe_as_var() {
+        // A volatile, mostly-declining series should have CVaR >= VaR (CVaR
+        // averages the tail beyond the VaR threshold, so it's at least as bad).
+        let closes: Vec<f64> = (0..60)
+            .map(|i| 100.0 - i as f64 * 0.5 + if i % 5 == 0 { -8.0 } else { 0.0 })
+            .collect();
+        let candles: Vec<Candle> = closes.into_iter().map(make_candle).collect();
+        let summary = compute_risk_summary(&candles, None);
+        assert!(
+            summary.cvar_95 >= summary.var_95,
+            "cvar_95 ({}) should be >= var_95 ({})",
+            summary.cvar_95,
+            summary.var_95
+        );
+        assert!(summary.parametric_cvar_95 >= summary.parametric_var_95);
+    }
+
+    #[test]
+    fn test_drawdown_produces_positive_ulcer_index() {
+        // A single sharp drawdown followed by recovery should score a
+        // positive (nonzero) Ulcer Index.
+        let closes = [100.0, 110.0, 80.0, 85.0, 105.0, 115.0];
+        let candles: Vec<Candle> = closes.into_iter().map(make_candle).collect();
+        let summary = compute_risk_summary(&candles, None);
+        assert!(summary.ulcer_index > 0.0);
+        assert!(summary.max_drawdown > 0.0);
+    }
+
+    #[test]
+    fn test_information_ratio_and_tracking_error_with_benchmark() {
+        let asset_closes: Vec<f64> = (0..30).map(|i| 100.0 + i as f64 * 1.2).collect();
+        let bench_closes: Vec<f64> = (0..30).map(|i| 100.0 + i as f64 * 0.8).collect();
+        let candles: Vec<Candle> = asset_closes.into_iter().map(make_candle).collect();
+        let bench_candles: Vec<Candle> = bench_closes.into_iter().map(make_candle).collect();
+        let bench_returns = candles_to_returns(&bench_candles);
+
+        let summary = compute_risk_summary(&candles, Some(&bench_returns));
+        assert!(summary.information_ratio.is_some());
+        assert!(summary.tracking_error.is_some());
+        assert!(summary.tracking_error.unwrap() > 0.0);
+        // Asset outperforms the benchmark every period -> positive excess return.
+        assert!(summary.information_ratio.unwrap() > 0.0);
     }
 
     #[test]

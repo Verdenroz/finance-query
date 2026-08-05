@@ -1787,6 +1787,7 @@ fn compute_benchmark_metrics(
             alpha: 0.0,
             beta: 0.0,
             information_ratio: 0.0,
+            tracking_error: 0.0,
         };
     }
 
@@ -1836,27 +1837,18 @@ fn compute_benchmark_metrics(
     let rf_ann = risk_free_rate * 100.0;
     let alpha = strategy_ann - rf_ann - beta * (bench_ann - rf_ann);
 
-    // Information ratio: (excess returns mean / tracking error) * sqrt(bars_per_year)
-    // Uses sample standard deviation (n-1) for consistency with Sharpe/Sortino.
-    let excess: Vec<f64> = aligned_strategy
-        .iter()
-        .zip(aligned_benchmark.iter())
-        .map(|(si, bi)| si - bi)
-        .collect();
-    let ir = if excess.len() >= 2 {
-        let n = excess.len() as f64;
-        let mean = excess.iter().sum::<f64>() / n;
-        // Sample variance (n-1)
-        let variance = excess.iter().map(|e| (e - mean).powi(2)).sum::<f64>() / (n - 1.0);
-        let std_dev = variance.sqrt();
-        if std_dev > 0.0 {
-            (mean / std_dev) * bars_per_year.sqrt()
-        } else {
-            0.0
-        }
-    } else {
-        0.0
-    };
+    // Information ratio / tracking error: shared with the standalone `risk`
+    // module via `crate::perf_metrics` (see that module's doc comment for why
+    // the formula lives outside both `risk` and `backtesting`).
+    let ir = crate::perf_metrics::information_ratio(
+        &aligned_strategy,
+        &aligned_benchmark,
+        bars_per_year,
+    )
+    .unwrap_or(0.0);
+    let te =
+        crate::perf_metrics::tracking_error(&aligned_strategy, &aligned_benchmark, bars_per_year)
+            .unwrap_or(0.0);
 
     BenchmarkMetrics {
         symbol: benchmark_symbol.to_string(),
@@ -1865,6 +1857,7 @@ fn compute_benchmark_metrics(
         alpha,
         beta,
         information_ratio: ir,
+        tracking_error: te,
     }
 }
 
