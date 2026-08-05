@@ -27,6 +27,8 @@ pub(crate) mod fmp;
 pub(crate) mod frankfurter;
 #[cfg(feature = "fred")]
 pub(crate) mod fred;
+#[cfg(feature = "gdelt")]
+pub(crate) mod gdelt;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
 #[cfg(feature = "polygon")]
@@ -93,6 +95,9 @@ pub enum Provider {
     /// DefiLlama DeFi TVL data (requires `defi` feature, keyless).
     #[cfg(feature = "defi")]
     DefiLlama,
+    /// GDELT DOC 2.0 global news search (requires `gdelt` feature, keyless).
+    #[cfg(feature = "gdelt")]
+    Gdelt,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -130,6 +135,8 @@ impl Provider {
             "finra" => Some(Self::Finra),
             #[cfg(feature = "defi")]
             "defillama" => Some(Self::DefiLlama),
+            #[cfg(feature = "gdelt")]
+            "gdelt" => Some(Self::Gdelt),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -165,6 +172,8 @@ impl Provider {
             Self::Finra => "finra",
             #[cfg(feature = "defi")]
             Self::DefiLlama => "defillama",
+            #[cfg(feature = "gdelt")]
+            Self::Gdelt => "gdelt",
             Self::Edgar => "edgar",
         }
     }
@@ -201,6 +210,8 @@ impl Provider {
         v.push(Self::Finra);
         #[cfg(feature = "defi")]
         v.push(Self::DefiLlama);
+        #[cfg(feature = "gdelt")]
+        v.push(Self::Gdelt);
         v.push(Self::Edgar);
         v
     }
@@ -241,6 +252,8 @@ impl Provider {
             Self::Finra => ProviderAdapter::capabilities(&finra::FinraProvider),
             #[cfg(feature = "defi")]
             Self::DefiLlama => ProviderAdapter::capabilities(&defillama::DefiLlamaProvider),
+            #[cfg(feature = "gdelt")]
+            Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -1042,6 +1055,8 @@ pub(crate) async fn build_providers(
             Provider::Finra => Arc::new(finra::FinraProvider),
             #[cfg(feature = "defi")]
             Provider::DefiLlama => Arc::new(defillama::DefiLlamaProvider),
+            #[cfg(feature = "gdelt")]
+            Provider::Gdelt => Arc::new(gdelt::GdeltProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

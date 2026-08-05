@@ -117,6 +117,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- **GDELT DOC 2.0** (`gdelt` feature, keyless) — `Provider::Gdelt` serves the
+  news slice of `Capability::CORPORATE` from GDELT's worldwide online news
+  index (65 languages, updated roughly every 15 minutes), giving `Ticker::news()`
+  a keyless alternative to Yahoo's scraper and Alpha Vantage's 25 req/day
+  quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
+  exact phrase match) is the search term — precision over recall. GDELT has
+  no corporate calendar, so `fetch_events` reports `NotSupported`.
 - Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
   `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
   (heaviest first) — no other wired provider serves ETF composition —

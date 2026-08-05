@@ -32,6 +32,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **FINRA** | `finra` | Keyless (non-commercial) | *(keyless)* |
 | **OpenFIGI** | `openfigi` | Keyless 25 req/min | `OPENFIGI_API_KEY` *(optional)* |
 | **DefiLlama** | `defi` | Keyless | *(keyless)* |
+| **GDELT DOC 2.0** | `gdelt` | Keyless (~1 req/5s) | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml
