@@ -255,4 +255,44 @@ impl Market {
             })
             .await
     }
+
+    /// Fetch coins/nfts/categories trending in the last 24h.
+    ///
+    /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
+    /// Currently CoinGecko only.
+    #[cfg(feature = "crypto")]
+    pub async fn crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+        self.providers
+            .fetch(crate::providers::Capability::CRYPTO, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_crypto()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::CryptoTrending)
+                        })?
+                        .fetch_crypto_trending()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch aggregate global cryptocurrency market statistics.
+    ///
+    /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
+    /// Currently CoinGecko only.
+    #[cfg(feature = "crypto")]
+    pub async fn crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+        self.providers
+            .fetch(crate::providers::Capability::CRYPTO, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_crypto()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::CryptoGlobal))?
+                        .fetch_crypto_global()
+                        .await
+                }
+            })
+            .await
+    }
 }

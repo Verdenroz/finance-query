@@ -8,7 +8,7 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use tracing::debug;
 
-use super::models::CoinQuote;
+use super::models::{CoinQuote, GlobalResponseDTO, SearchResponseDTO, TrendingResponseDTO};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -91,6 +91,44 @@ impl CoinGeckoClient {
 
         let url = format!("{COINGECKO_BASE}/coins/{id}/ohlc?vs_currency={vs_currency}&days={days}");
         debug!("CoinGecko request: ohlc(id={id}, vs={vs_currency}, days={days})");
+        let resp = self.http.get(&url).send().await?;
+        CoinGeckoClient::check_status(&resp)?;
+        Ok(resp.json().await?)
+    }
+
+    /// Search CoinGecko's coin/exchange/category catalog by free-text query.
+    pub async fn search(&self, query: &str) -> Result<SearchResponseDTO> {
+        self.limiter.acquire().await;
+
+        let url = format!("{COINGECKO_BASE}/search");
+        debug!("CoinGecko request: search(query={query})");
+        let resp = self
+            .http
+            .get(&url)
+            .query(&[("query", query)])
+            .send()
+            .await?;
+        CoinGeckoClient::check_status(&resp)?;
+        Ok(resp.json().await?)
+    }
+
+    /// Fetch coins/nfts/categories trending in the last 24h.
+    pub async fn trending(&self) -> Result<TrendingResponseDTO> {
+        self.limiter.acquire().await;
+
+        let url = format!("{COINGECKO_BASE}/search/trending");
+        debug!("CoinGecko request: trending()");
+        let resp = self.http.get(&url).send().await?;
+        CoinGeckoClient::check_status(&resp)?;
+        Ok(resp.json().await?)
+    }
+
+    /// Fetch aggregate global cryptocurrency market statistics.
+    pub async fn global(&self) -> Result<GlobalResponseDTO> {
+        self.limiter.acquire().await;
+
+        let url = format!("{COINGECKO_BASE}/global");
+        debug!("CoinGecko request: global()");
         let resp = self.http.get(&url).send().await?;
         CoinGeckoClient::check_status(&resp)?;
         Ok(resp.json().await?)

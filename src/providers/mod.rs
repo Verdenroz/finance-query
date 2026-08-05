@@ -562,6 +562,12 @@ pub enum Operation {
     CryptoGroupedDaily,
     /// Grouped daily OHLCV bars for every forex ticker on one date.
     ForexGroupedDaily,
+    /// Coins/nfts/categories trending in the last 24h.
+    #[cfg(feature = "crypto")]
+    CryptoTrending,
+    /// Aggregate global cryptocurrency market statistics.
+    #[cfg(feature = "crypto")]
+    CryptoGlobal,
 }
 
 impl Operation {
@@ -632,6 +638,10 @@ impl Operation {
             Self::GroupedDaily => "grouped_daily",
             Self::CryptoGroupedDaily => "crypto_grouped_daily",
             Self::ForexGroupedDaily => "forex_grouped_daily",
+            #[cfg(feature = "crypto")]
+            Self::CryptoTrending => "crypto_trending",
+            #[cfg(feature = "crypto")]
+            Self::CryptoGlobal => "crypto_global",
         }
     }
 
@@ -665,6 +675,8 @@ impl Operation {
             Self::CryptoQuote => Capability::CRYPTO,
             #[cfg(feature = "defi")]
             Self::ProtocolTvl | Self::ProtocolTvlHistory => Capability::CRYPTO,
+            #[cfg(feature = "crypto")]
+            Self::CryptoTrending | Self::CryptoGlobal => Capability::CRYPTO,
             Self::EconomicSeries
             | Self::EconomicSeriesAsOf
             | Self::EconomicSearch

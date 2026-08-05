@@ -67,3 +67,47 @@ pub struct CoinQuote {
     /// Market cap rank (1 = highest market cap)
     pub market_cap_rank: Option<u32>,
 }
+
+/// A coin trending in the last 24h, from CoinGecko's `/search/trending`.
+///
+/// Obtain via [`Market::crypto_trending`](crate::domains::Market::crypto_trending).
+#[cfg(feature = "crypto")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct TrendingCoin {
+    /// CoinGecko coin ID (e.g., `"bitcoin"`)
+    pub id: Option<String>,
+    /// Ticker symbol in uppercase (e.g., `"BTC"`)
+    pub symbol: Option<String>,
+    /// Full coin name (e.g., `"Bitcoin"`)
+    pub name: Option<String>,
+    /// Market cap rank (1 = highest market cap)
+    pub market_cap_rank: Option<u32>,
+    /// Price denominated in BTC
+    pub price_btc: Option<f64>,
+    /// Trending rank (0 = most trending)
+    pub score: Option<u32>,
+}
+
+/// Aggregate global cryptocurrency market statistics, from CoinGecko's `/global`.
+///
+/// Obtain via [`Market::crypto_global`](crate::domains::Market::crypto_global).
+#[cfg(feature = "crypto")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct GlobalCryptoStats {
+    /// Number of active cryptocurrencies tracked
+    pub active_cryptocurrencies: Option<u32>,
+    /// Number of markets tracked
+    pub markets: Option<u32>,
+    /// Total market capitalisation in USD across all tracked coins
+    pub total_market_cap_usd: Option<f64>,
+    /// Total 24-hour trading volume in USD across all tracked coins
+    pub total_volume_usd: Option<f64>,
+    /// Bitcoin's percentage of total market cap
+    pub btc_dominance: Option<f64>,
+    /// Ethereum's percentage of total market cap
+    pub eth_dominance: Option<f64>,
+    /// 24-hour percentage change in total market cap (USD)
+    pub market_cap_change_percentage_24h_usd: Option<f64>,
+}
