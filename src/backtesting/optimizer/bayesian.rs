@@ -62,6 +62,7 @@ use super::super::engine::{BacktestEngine, validate_series_order};
 use super::super::error::{BacktestError, Result};
 use super::super::monte_carlo::Xorshift64;
 use super::super::strategy::Strategy;
+use super::pareto::{ParetoReport, build_pareto_report};
 use super::{
     OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange, ParamValue,
     sort_results_best_first,
@@ -184,6 +185,92 @@ impl BayesianSearch {
         S: Strategy,
         F: Fn(&HashMap<String, ParamValue>) -> S,
     {
+        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
+        let (mut all_results, convergence_curve, n_evaluations) =
+            self.search(symbol, candles, config, metric, &factory)?;
+
+        sort_results_best_first(&mut all_results, metric);
+
+        if metric.score(&all_results[0].result).is_nan() {
+            return Err(BacktestError::invalid_param(
+                "metric",
+                "all parameter sets produced NaN for the target metric",
+            ));
+        }
+
+        let strategy_name = all_results[0].result.strategy_name.clone();
+        let best = all_results[0].clone();
+        let total_combinations = all_results.len();
+
+        Ok(OptimizationReport {
+            strategy_name,
+            total_combinations,
+            results: all_results,
+            best,
+            skipped_errors: 0,
+            convergence_curve,
+            n_evaluations,
+        })
+    }
+
+    /// Run the Bayesian search and return the Pareto front over 2+ objectives,
+    /// instead of a single winner ranked by one metric.
+    ///
+    /// The surrogate/UCB acquisition that drives *where* to sample next is a
+    /// single-objective algorithm, so it is guided by `objectives[0]` alone
+    /// (the `.optimize_for()` metric, if set, is ignored here). The returned
+    /// [`ParetoReport::front`], however, is computed over **every** supplied
+    /// objective from **every** evaluated parameter set — so combinations that
+    /// score well on `objectives[1..]` without dominating on `objectives[0]`
+    /// can still appear in the front, they're just not what steered the search.
+    /// For a search that more evenly explores all objectives, prefer
+    /// [`GridSearch::run_pareto`](super::GridSearch::run_pareto) when the
+    /// parameter space is small enough to enumerate.
+    ///
+    /// Returns an error when fewer than 2 objectives are supplied, no
+    /// parameters are defined, or every evaluation was skipped / produced
+    /// non-finite scores.
+    pub fn run_pareto<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        objectives: &[OptimizeMetric],
+        factory: F,
+    ) -> Result<ParetoReport>
+    where
+        S: Strategy,
+        F: Fn(&HashMap<String, ParamValue>) -> S,
+    {
+        if objectives.is_empty() {
+            return Err(BacktestError::invalid_param(
+                "objectives",
+                "Pareto search requires at least 2 objectives",
+            ));
+        }
+        let guide_metric = objectives[0];
+        let (all_results, _convergence_curve, _n_evaluations) =
+            self.search(symbol, candles, config, guide_metric, &factory)?;
+        build_pareto_report(all_results, objectives)
+    }
+
+    /// Shared search loop for [`run`](Self::run) and [`run_pareto`](Self::run_pareto):
+    /// Latin Hypercube initial sampling followed by surrogate-guided sequential
+    /// search, scored throughout by `metric`. Returns every successful
+    /// evaluation, the running-best convergence curve, and the total
+    /// evaluation count attempted.
+    fn search<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        metric: OptimizeMetric,
+        factory: &F,
+    ) -> Result<(Vec<OptimizationResult>, Vec<f64>, usize)>
+    where
+        S: Strategy,
+        F: Fn(&HashMap<String, ParamValue>) -> S,
+    {
         if self.params.is_empty() {
             return Err(BacktestError::invalid_param(
                 "params",
@@ -195,7 +282,6 @@ impl BayesianSearch {
         validate_series_order(candles, &[])?;
 
         let d = self.params.len();
-        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
         let max_eval = self.max_evaluations.unwrap_or(DEFAULT_MAX_EVALUATIONS);
         let n_init = self
             .initial_points
@@ -223,7 +309,7 @@ impl BayesianSearch {
                 candles,
                 config,
                 &metric,
-                &factory,
+                factory,
                 &norm_point,
                 &self.params,
             ) {
@@ -266,7 +352,7 @@ impl BayesianSearch {
                 candles,
                 config,
                 &metric,
-                &factory,
+                factory,
                 &norm_point,
                 &self.params,
             ) {
@@ -291,28 +377,7 @@ impl BayesianSearch {
             ));
         }
 
-        sort_results_best_first(&mut all_results, metric);
-
-        if metric.score(&all_results[0].result).is_nan() {
-            return Err(BacktestError::invalid_param(
-                "metric",
-                "all parameter sets produced NaN for the target metric",
-            ));
-        }
-
-        let strategy_name = all_results[0].result.strategy_name.clone();
-        let best = all_results[0].clone();
-        let total_combinations = all_results.len();
-
-        Ok(OptimizationReport {
-            strategy_name,
-            total_combinations,
-            results: all_results,
-            best,
-            skipped_errors: 0,
-            convergence_curve,
-            n_evaluations,
-        })
+        Ok((all_results, convergence_curve, n_evaluations))
     }
 }
 

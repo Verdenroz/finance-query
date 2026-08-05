@@ -41,6 +41,7 @@ use super::super::config::BacktestConfig;
 use super::super::engine::{BacktestEngine, validate_series_order};
 use super::super::error::{BacktestError, Result};
 use super::super::strategy::Strategy;
+use super::pareto::{ParetoReport, build_pareto_report};
 use super::{
     OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange, ParamValue,
     sort_results_best_first,
@@ -110,6 +111,78 @@ impl GridSearch {
         S: Strategy + Send,
         F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,
     {
+        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
+        let (mut results, total_combinations, skipped_errors) =
+            self.evaluate_all(symbol, candles, config, factory)?;
+
+        sort_results_best_first(&mut results, metric);
+
+        if metric.score(&results[0].result).is_nan() {
+            return Err(BacktestError::invalid_param(
+                "metric",
+                "all parameter combinations produced NaN for the target metric",
+            ));
+        }
+
+        let strategy_name = results[0].result.strategy_name.clone();
+        let best = results[0].clone();
+        let n_evaluations = total_combinations;
+
+        Ok(OptimizationReport {
+            strategy_name,
+            total_combinations,
+            results,
+            best,
+            skipped_errors,
+            // GridSearch runs all combinations in parallel — no sequential ordering,
+            // so the convergence curve is meaningless and left empty.
+            convergence_curve: vec![],
+            n_evaluations,
+        })
+    }
+
+    /// Run the grid search and return the Pareto front over 2+ objectives,
+    /// instead of a single winner ranked by one metric.
+    ///
+    /// Every combination in the grid is evaluated exactly as in [`run`](Self::run)
+    /// (the `.optimize_for()` metric, if set, is ignored here — objectives are
+    /// explicit); the returned [`ParetoReport::front`] holds the non-dominated
+    /// combinations across all supplied `objectives`.
+    ///
+    /// Returns an error when fewer than 2 objectives are supplied, the grid is
+    /// empty, or every combination was skipped / produced non-finite scores.
+    pub fn run_pareto<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        objectives: &[OptimizeMetric],
+        factory: F,
+    ) -> Result<ParetoReport>
+    where
+        S: Strategy + Send,
+        F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,
+    {
+        let (results, _total_combinations, _skipped_errors) =
+            self.evaluate_all(symbol, candles, config, factory)?;
+        build_pareto_report(results, objectives)
+    }
+
+    /// Shared combination-evaluation logic for [`run`](Self::run) and
+    /// [`run_pareto`](Self::run_pareto): expand the grid, run every
+    /// combination in parallel, and return the successful results plus the
+    /// total combination count and the count skipped for unexpected errors.
+    fn evaluate_all<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        factory: F,
+    ) -> Result<(Vec<OptimizationResult>, usize, usize)>
+    where
+        S: Strategy + Send,
+        F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,
+    {
         if self.params.is_empty() {
             return Err(BacktestError::invalid_param(
                 "params",
@@ -119,8 +192,6 @@ impl GridSearch {
 
         // Checked once here rather than inside every combination's backtest.
         validate_series_order(candles, &[])?;
-
-        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
 
         let expanded: Vec<(&str, Vec<ParamValue>)> = self
             .params
@@ -147,7 +218,7 @@ impl GridSearch {
         }
 
         let skipped_errors = AtomicUsize::new(0);
-        let mut results: Vec<OptimizationResult> = combinations
+        let results: Vec<OptimizationResult> = combinations
             .into_par_iter()
             .filter_map(|params| {
                 let strategy = factory(&params);
@@ -175,30 +246,7 @@ impl GridSearch {
             ));
         }
 
-        sort_results_best_first(&mut results, metric);
-
-        if metric.score(&results[0].result).is_nan() {
-            return Err(BacktestError::invalid_param(
-                "metric",
-                "all parameter combinations produced NaN for the target metric",
-            ));
-        }
-
-        let strategy_name = results[0].result.strategy_name.clone();
-        let best = results[0].clone();
-        let n_evaluations = total_combinations;
-
-        Ok(OptimizationReport {
-            strategy_name,
-            total_combinations,
-            results,
-            best,
-            skipped_errors,
-            // GridSearch runs all combinations in parallel — no sequential ordering,
-            // so the convergence curve is meaningless and left empty.
-            convergence_curve: vec![],
-            n_evaluations,
-        })
+        Ok((results, total_combinations, skipped_errors))
     }
 }
 
