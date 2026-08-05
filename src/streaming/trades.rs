@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use super::client::StreamResult;
 use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::{AssetClass, PolygonTradeSource};
+use super::source::ReconnectConfig;
 
 /// Channel capacity — trade prints are the highest-volume feed here.
 const CHANNEL_CAPACITY: usize = 4096;
@@ -87,6 +88,7 @@ pub struct TradeStreamBuilder {
     symbols: Vec<String>,
     asset_class: AssetClass,
     retry_delay: Duration,
+    max_reconnect_attempts: Option<u32>,
 }
 
 impl TradeStreamBuilder {
@@ -96,6 +98,7 @@ impl TradeStreamBuilder {
             symbols: Vec::new(),
             asset_class: AssetClass::Stocks,
             retry_delay: RECONNECT_BACKOFF,
+            max_reconnect_attempts: None,
         }
     }
 
@@ -116,8 +119,10 @@ impl TradeStreamBuilder {
     /// when the chosen asset class has no trade feed.
     pub async fn build(self) -> StreamResult<TradeStream> {
         let source = Arc::new(PolygonTradeSource::new(self.asset_class)?);
+        let reconnect =
+            ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
         Ok(TradeStream {
-            inner: SourceStream::start(source, self.symbols, self.retry_delay, CHANNEL_CAPACITY),
+            inner: SourceStream::start(source, self.symbols, reconnect, CHANNEL_CAPACITY),
         })
     }
 }

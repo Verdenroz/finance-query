@@ -13,6 +13,7 @@ use super::client::StreamResult;
 use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::PolygonOptionsSource;
 use super::pricing::OptionType;
+use super::source::ReconnectConfig;
 
 /// Channel capacity — a wide chain fans out many contracts per tick.
 const CHANNEL_CAPACITY: usize = 2048;
@@ -184,6 +185,7 @@ impl OptionsChainStream {
 pub struct OptionsChainStreamBuilder {
     underlyings: Vec<String>,
     retry_delay: Duration,
+    max_reconnect_attempts: Option<u32>,
     greeks_refresh: Option<Duration>,
 }
 
@@ -193,6 +195,7 @@ impl OptionsChainStreamBuilder {
         Self {
             underlyings: Vec::new(),
             retry_delay: RECONNECT_BACKOFF,
+            max_reconnect_attempts: None,
             greeks_refresh: Some(DEFAULT_GREEKS_REFRESH),
         }
     }
@@ -209,13 +212,10 @@ impl OptionsChainStreamBuilder {
     /// Build and start the stream.
     pub async fn build(self) -> StreamResult<OptionsChainStream> {
         let source = Arc::new(PolygonOptionsSource::new(self.greeks_refresh));
+        let reconnect =
+            ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
         Ok(OptionsChainStream {
-            inner: SourceStream::start(
-                source,
-                self.underlyings,
-                self.retry_delay,
-                CHANNEL_CAPACITY,
-            ),
+            inner: SourceStream::start(source, self.underlyings, reconnect, CHANNEL_CAPACITY),
         })
     }
 }

@@ -13,7 +13,7 @@ use futures::stream::Stream;
 
 use super::handle::SourceStream;
 use super::pricing::PriceUpdate;
-use super::source::StreamSource;
+use super::source::{ReconnectConfig, StreamSource};
 use super::yahoo::YahooStreamSource;
 use crate::error::FinanceError;
 
@@ -113,7 +113,7 @@ impl PriceStream {
         Self::subscribe_with_source(
             Arc::new(YahooStreamSource),
             symbols,
-            Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            ReconnectConfig::new(Duration::from_secs(RECONNECT_BACKOFF_SECS)),
         )
         .await
     }
@@ -125,7 +125,7 @@ impl PriceStream {
     pub(crate) async fn subscribe_with_source<S, I>(
         source: Arc<dyn StreamSource<PriceUpdate>>,
         symbols: I,
-        retry_delay: Duration,
+        reconnect: ReconnectConfig,
     ) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -134,7 +134,7 @@ impl PriceStream {
         let initial_symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
 
         Ok(PriceStream {
-            inner: SourceStream::start(source, initial_symbols, retry_delay, CHANNEL_CAPACITY),
+            inner: SourceStream::start(source, initial_symbols, reconnect, CHANNEL_CAPACITY),
         })
     }
 
@@ -223,6 +223,7 @@ pub enum PriceSource {
 pub struct PriceStreamBuilder {
     symbols: Vec<String>,
     retry_delay: Duration,
+    max_reconnect_attempts: Option<u32>,
     source: PriceSource,
 }
 
@@ -232,6 +233,7 @@ impl PriceStreamBuilder {
         Self {
             symbols: Vec::new(),
             retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            max_reconnect_attempts: None,
             source: PriceSource::Yahoo,
         }
     }
@@ -268,9 +270,20 @@ impl PriceStreamBuilder {
         self
     }
 
-    /// Set the delay between reconnection attempts (default: 3s)
+    /// Set the base delay before the first reconnection attempt (default:
+    /// 3s). Later attempts grow exponentially from this, capped and
+    /// jittered — see [`Self::max_reconnect_attempts`] to also cap how many
+    /// attempts are made.
     pub fn retry(mut self, delay: Duration) -> Self {
         self.retry_delay = delay;
+        self
+    }
+
+    /// Cap the number of consecutive reconnect attempts before the stream
+    /// gives up and ends (default: unlimited, i.e. retry forever like before
+    /// issue #276).
+    pub fn max_reconnect_attempts(mut self, max: u32) -> Self {
+        self.max_reconnect_attempts = Some(max);
         self
     }
 
@@ -281,7 +294,9 @@ impl PriceStreamBuilder {
             #[cfg(feature = "polygon")]
             PriceSource::Polygon(class) => Arc::new(super::polygon::PolygonPriceSource::new(class)),
         };
-        PriceStream::subscribe_with_source(source, self.symbols, self.retry_delay).await
+        let reconnect =
+            ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
+        PriceStream::subscribe_with_source(source, self.symbols, reconnect).await
     }
 }
 
