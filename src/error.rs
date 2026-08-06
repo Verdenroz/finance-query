@@ -29,7 +29,10 @@ pub enum FinanceError {
     },
 
     /// Rate limit exceeded
-    #[error("Rate limited (retry after {retry_after:?}s)")]
+    #[error("Rate limited{}", match retry_after {
+        Some(s) => format!(" (retry after {s}s)"),
+        None => String::new(),
+    })]
     RateLimited {
         /// Seconds until retry is allowed
         retry_after: Option<u64>,

@@ -45,7 +45,7 @@ fn client() -> Result<CftcClient> {
     CftcClient::new(DEFAULT_TIMEOUT, shared_limiter(), client::CFTC_BASE)
 }
 
-pub(crate) use futures::fetch_commitments_of_traders_response;
+pub use futures::fetch_commitments_of_traders_response;
 
 #[cfg(test)]
 mod tests {

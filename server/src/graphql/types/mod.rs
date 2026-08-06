@@ -13,6 +13,7 @@ pub mod fred;
 pub mod holders;
 pub mod indicators;
 pub mod industry;
+pub mod keyless;
 pub mod market;
 pub mod metadata;
 pub mod news;

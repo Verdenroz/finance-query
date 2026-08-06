@@ -2,7 +2,7 @@
 //!
 //! `mode=artlist&format=json` answers with a single `articles` array. GDELT
 //! reports more fields than modelled here (`url_mobile`, `language`,
-//! `sourcecountry`, …) — only the ones [`super::corporate::to_news`] maps
+//! `sourcecountry`, …) — only the ones [`super::corporate::to_news_at`] maps
 //! onto the canonical [`crate::models::corporate::news::News`] are kept.
 //! GDELT sometimes omits a field entirely (rather than sending an empty
 //! string) for older or thinly-indexed sources, so everything but `url` is

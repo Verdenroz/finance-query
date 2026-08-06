@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use reqwest::{Client, StatusCode};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use super::models::GdeltDocResponse;
 use crate::adapters::common::keyless_http_client;
@@ -64,7 +64,7 @@ impl GdeltClient {
         let bytes = resp.bytes().await?;
 
         if !status.is_success() {
-            return Err(Self::map_error(status));
+            return Err(Self::map_error(status, &bytes));
         }
 
         // GDELT answers throttled/malformed requests with a plain-text
@@ -83,13 +83,67 @@ impl GdeltClient {
         })
     }
 
-    fn map_error(status: StatusCode) -> FinanceError {
+    /// GDELT states its throttle in a plain-text body ("Please limit requests
+    /// to one every 5 seconds…") rather than a `Retry-After` header, so the
+    /// interval is recovered from the text and the body logged — staying
+    /// `RateLimited` keeps `is_retriable` and any retry policy working.
+    fn map_error(status: StatusCode, body: &[u8]) -> FinanceError {
         match status {
-            StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
+            StatusCode::TOO_MANY_REQUESTS => {
+                let text = String::from_utf8_lossy(body);
+                let text = text.trim();
+                if !text.is_empty() {
+                    warn!("GDELT throttled the request: {text}");
+                }
+                FinanceError::RateLimited {
+                    retry_after: parse_throttle_seconds(text),
+                }
+            }
             s => FinanceError::ExternalApiError {
                 api: "GDELT".to_string(),
                 status: s.as_u16(),
             },
         }
+    }
+}
+
+/// Pull the retry interval out of GDELT's throttle text, which reads
+/// "Please limit requests to one every 5 seconds…".
+fn parse_throttle_seconds(text: &str) -> Option<u64> {
+    let rest = text.split_once("one every")?.1;
+    let (num, _) = rest.trim_start().split_once(' ')?;
+    num.parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn throttle_interval_is_recovered_from_the_message() {
+        assert_eq!(
+            parse_throttle_seconds("Please limit requests to one every 5 seconds or contact x"),
+            Some(5)
+        );
+    }
+
+    #[test]
+    fn an_unrecognised_throttle_message_yields_no_interval() {
+        assert_eq!(parse_throttle_seconds("slow down"), None);
+        assert_eq!(parse_throttle_seconds(""), None);
+    }
+
+    #[test]
+    fn throttle_maps_to_rate_limited_with_the_parsed_interval() {
+        let err = GdeltClient::map_error(
+            StatusCode::TOO_MANY_REQUESTS,
+            b"Please limit requests to one every 5 seconds.",
+        );
+        assert!(matches!(
+            err,
+            FinanceError::RateLimited {
+                retry_after: Some(5)
+            }
+        ));
     }
 }

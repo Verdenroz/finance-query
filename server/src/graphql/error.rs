@@ -42,6 +42,7 @@ pub fn to_gql_error(err: Box<dyn std::error::Error + Send + Sync>) -> Error {
 fn finance_error_to_gql(err: &FinanceError) -> Error {
     let (code, status) = match err {
         FinanceError::SymbolNotFound { .. } => ("NOT_FOUND", 404),
+        FinanceError::InvalidParameter { .. } => ("BAD_REQUEST", 400),
         FinanceError::RateLimited { .. } => ("RATE_LIMITED", 429),
         FinanceError::Timeout { .. } => ("TIMEOUT", 408),
         FinanceError::AuthenticationFailed { .. } => ("UNAUTHORIZED", 401),

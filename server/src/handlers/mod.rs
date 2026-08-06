@@ -17,6 +17,7 @@ mod fred;
 mod gql_bridge;
 mod holders;
 mod indicators;
+mod keyless;
 mod market;
 mod metadata;
 mod news;
@@ -52,6 +53,11 @@ pub(crate) fn api_routes() -> Router {
         // GET /v2/capital-gains?symbols=<csv>&range=<str>
         .route("/capital-gains", get(events::get_batch_capital_gains))
         .route("/calendar", get(calendar::get_calendar))
+        // GET /v2/cftc/cot/{symbol}
+        .route(
+            "/cftc/cot/{symbol}",
+            get(keyless::get_commitments_of_traders),
+        )
         // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>&patterns=<bool>
         .route("/chart/{symbol}", get(chart::get_chart))
         // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
@@ -96,6 +102,8 @@ pub(crate) fn api_routes() -> Router {
         .route("/fred/series/{id}", get(fred::get_fred_series))
         // GET /v2/fred/treasury-yields?year=<u32>
         .route("/fred/treasury-yields", get(fred::get_fred_treasury_yields))
+        // GET /v2/gdelt/news/{symbol}
+        .route("/gdelt/news/{symbol}", get(keyless::get_gdelt_news))
         // GET /v2/health - version-prefixed health check
         .route("/health", get(system::health_check))
         // GET /v2/holders/{symbol}/{holder_type}

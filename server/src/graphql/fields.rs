@@ -308,6 +308,25 @@ pub const GQL_NEWS_VALID_FIELDS: &[&str] = &["title", "link", "source", "img", "
 /// `sentiment` is composite (`GqlSentiment`) and needs its own nested sub-selection.
 pub const NEWS_COMPOSITE_FIELDS: &[(&str, &str)] = &[("sentiment", "{ label score confidence }")];
 
+// ── CFTC Commitments of Traders (keyless) ───────────────────────────────────
+
+pub const GQL_COT_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "marketAndExchangeName",
+    "cftcContractMarketCode",
+    "observations",
+];
+
+/// `observations` is a paginated list of `GqlCotObservation`.
+pub const COT_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
+    "observations",
+    "{ reportDate openInterest producerMerchantLong producerMerchantShort \
+       swapDealerLong swapDealerShort swapDealerSpread managedMoneyLong \
+       managedMoneyShort managedMoneySpread otherReportableLong \
+       otherReportableShort otherReportableSpread totalReportableLong \
+       totalReportableShort nonreportableLong nonreportableShort }",
+)];
+
 /// Valid GraphQL field names for `GqlFeedEntry` (top-level `feeds` root field).
 pub const GQL_FEEDS_VALID_FIELDS: &[&str] = &["title", "url", "published", "summary", "source"];
 

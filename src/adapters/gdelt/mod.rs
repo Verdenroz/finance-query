@@ -14,6 +14,11 @@
 //! itself, quoted for an exact phrase match. See that function's doc comment
 //! for the precision/recall tradeoff this implies.
 //!
+//! GDELT rejects phrases under 5 characters, so symbols shorter than that
+//! (`AAPL`, `TSLA`, `AMD`, …) error with `InvalidParameter` and dispatch
+//! falls through to another CORPORATE provider. In practice GDELT serves
+//! longer tickers and non-US symbols.
+//!
 //! GDELT has no concept of a corporate calendar (earnings/dividends/splits),
 //! so the provider bridge reports [`crate::error::FinanceError::NotSupported`]
 //! for that operation rather than implementing it here.
@@ -41,7 +46,7 @@ fn client() -> Result<GdeltClient> {
     GdeltClient::new(DEFAULT_TIMEOUT, shared_limiter(), client::GDELT_BASE)
 }
 
-pub(crate) use corporate::fetch_news_response;
+pub use corporate::fetch_news_response;
 
 #[cfg(test)]
 mod tests {
@@ -108,7 +113,7 @@ mod tests {
         let news: Vec<_> = response
             .articles
             .into_iter()
-            .map(super::corporate::to_news)
+            .map(|a| super::corporate::to_news_at(a, chrono::Utc::now()))
             .collect();
         assert_eq!(news[0].link, "https://example.com/news/aapl-earnings");
         assert_eq!(news[0].source, "example.com");

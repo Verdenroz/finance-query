@@ -114,9 +114,7 @@ pub(crate) fn to_canonical(symbol: &str, mut rows: Vec<CotRow>) -> Result<Commit
 }
 
 /// Fetch the canonical Commitments of Traders series for a futures symbol.
-pub(crate) async fn fetch_commitments_of_traders_response(
-    symbol: &str,
-) -> Result<CommitmentsOfTraders> {
+pub async fn fetch_commitments_of_traders_response(symbol: &str) -> Result<CommitmentsOfTraders> {
     let code = resolve_contract_code(symbol);
     let rows = super::client()?.commitments_of_traders(&code).await?;
     to_canonical(symbol, rows)

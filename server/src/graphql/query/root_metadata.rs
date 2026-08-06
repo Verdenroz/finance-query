@@ -12,7 +12,9 @@ use crate::graphql::types::{
     edgar::{GqlEdgarCik, GqlEdgarSearchHit, GqlEdgarSearchResults},
     enums::GqlTimeRange,
     fred::{GqlMacroSeries, GqlTreasuryYield},
+    keyless::GqlCommitmentsOfTraders,
     metadata::{GqlCurrency, GqlExchange, GqlMarketHours, GqlQuoteTypeData},
+    news::GqlNews,
 };
 
 #[derive(Default)]
@@ -53,6 +55,43 @@ impl RootMetadataQuery {
             &state.cache,
             &id,
             &vs_currency,
+        ))
+        .await
+    }
+
+    /// Worldwide news mentioning `symbol`, from GDELT DOC 2.0 (keyless).
+    ///
+    /// Distinct from the Yahoo-sourced `ticker { news }`: GDELT indexes news
+    /// across 65 languages, matched on the ticker as an exact phrase.
+    async fn gdelt_news(
+        &self,
+        ctx: &Context<'_>,
+        symbol: String,
+        #[graphql(desc = "Max articles per page; omitted = every article in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlNews>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::keyless::get_gdelt_news(&state.cache, &symbol)
+            .await
+            .map_err(to_gql_error)?;
+        let entries: Vec<GqlNews> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
+    }
+
+    /// Weekly CFTC Commitments of Traders positioning for a futures contract
+    /// (keyless). Accepts a Yahoo-style continuous futures root (`"GC=F"`,
+    /// `"CL=F"`, …) or a raw CFTC contract market code.
+    async fn commitments_of_traders(
+        &self,
+        ctx: &Context<'_>,
+        symbol: String,
+    ) -> Result<GqlCommitmentsOfTraders> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::keyless::get_commitments_of_traders(
+            &state.cache,
+            &symbol,
         ))
         .await
     }

@@ -18,6 +18,10 @@ const MAX_RECORDS: u32 = 50;
 /// still returning *something* for a quietly-traded symbol.
 const TIMESPAN: &str = "2w";
 
+/// GDELT rejects quoted phrases shorter than this with "The specified phrase
+/// is too short", which rules out most US tickers (AAPL, TSLA, AMD, …).
+const MIN_PHRASE_LEN: usize = 5;
+
 /// Build the DOC 2.0 `query` parameter for a ticker symbol.
 ///
 /// GDELT has no ticker vocabulary of its own — [`Ticker::news`](crate::Ticker::news)
@@ -28,21 +32,40 @@ const TIMESPAN: &str = "2w";
 /// rather than every article about the underlying company by name, which
 /// would require a separate symbol-to-company-name lookup this adapter
 /// doesn't perform.
-pub(crate) fn build_query(symbol: &str) -> String {
-    format!("\"{}\"", symbol.trim())
+pub(crate) fn build_query(symbol: &str) -> Result<String> {
+    let symbol = symbol.trim();
+    if symbol.len() < MIN_PHRASE_LEN {
+        return Err(crate::error::FinanceError::InvalidParameter {
+            param: "symbol".to_string(),
+            reason: format!(
+                "GDELT rejects phrase queries shorter than {MIN_PHRASE_LEN} characters, so it \
+                 cannot serve news for {symbol:?}; route CORPORATE to another provider for \
+                 short tickers"
+            ),
+        });
+    }
+    Ok(format!("\"{symbol}\""))
 }
 
 /// Fetch canonical news articles for a symbol.
-pub(crate) async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
-    let query = build_query(symbol);
+pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
+    let query = build_query(symbol)?;
     let response = super::client()?
         .article_search(&query, TIMESPAN, MAX_RECORDS)
         .await?;
-    Ok(response.articles.into_iter().map(to_news).collect())
+    // One clock read for the batch, so every article's relative time is
+    // measured against the same instant.
+    let now = Utc::now();
+    Ok(response
+        .articles
+        .into_iter()
+        .map(|a| to_news_at(a, now))
+        .collect())
 }
 
-/// Map one GDELT article onto the canonical [`News`] model.
-pub(crate) fn to_news(article: GdeltArticle) -> News {
+/// Map one GDELT article onto the canonical [`News`] model, with `now` as the
+/// reference point for the relative `time` string.
+pub(crate) fn to_news_at(article: GdeltArticle, now: DateTime<Utc>) -> News {
     News {
         title: article.title.unwrap_or_default(),
         link: article.url,
@@ -51,7 +74,7 @@ pub(crate) fn to_news(article: GdeltArticle) -> News {
         time: article
             .seendate
             .as_deref()
-            .map(|d| relative_time_at(d, Utc::now()))
+            .map(|d| relative_time_at(d, now))
             .unwrap_or_default(),
         provider_id: Some(crate::Provider::Gdelt),
         #[cfg(feature = "sentiment")]
@@ -107,8 +130,23 @@ mod tests {
 
     #[test]
     fn query_wraps_the_symbol_in_quotes_for_an_exact_match() {
-        assert_eq!(build_query("AAPL"), "\"AAPL\"");
-        assert_eq!(build_query(" TSLA "), "\"TSLA\"");
+        assert_eq!(build_query("GOOGL").unwrap(), "\"GOOGL\"");
+        assert_eq!(build_query(" BRK.B ").unwrap(), "\"BRK.B\"");
+    }
+
+    #[test]
+    fn a_symbol_below_gdelts_phrase_minimum_is_rejected_up_front() {
+        // GDELT answers "The specified phrase is too short" for these, which
+        // would otherwise surface as an opaque parse error.
+        for symbol in ["AAPL", "TSLA", "AMD", "F"] {
+            assert!(
+                matches!(
+                    build_query(symbol),
+                    Err(crate::error::FinanceError::InvalidParameter { .. })
+                ),
+                "{symbol} should be rejected"
+            );
+        }
     }
 
     #[test]
@@ -189,7 +227,7 @@ mod tests {
             domain: None,
             socialimage: None,
         };
-        let news = to_news(article);
+        let news = to_news_at(article, fixed_now());
         assert_eq!(news.title, "");
         assert_eq!(news.link, "https://example.com/a");
         assert_eq!(news.source, "");

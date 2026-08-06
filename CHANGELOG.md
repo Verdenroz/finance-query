@@ -122,8 +122,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   index (65 languages, updated roughly every 15 minutes), giving `Ticker::news()`
   a keyless alternative to Yahoo's scraper and Alpha Vantage's 25 req/day
   quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
-  exact phrase match) is the search term — precision over recall. GDELT has
-  no corporate calendar, so `fetch_events` reports `NotSupported`.
+  exact phrase match) is the search term — precision over recall. GDELT
+  rejects phrases under 5 characters, so shorter tickers (`AAPL`, `TSLA`, …)
+  error with `InvalidParameter` and dispatch falls through to another
+  CORPORATE provider. GDELT has no corporate calendar, so `fetch_events`
+  reports `NotSupported`.
 - **CFTC Commitments of Traders** (`cftc` feature, keyless) —
   `Provider::Cftc` serves `Capability::FUTURES` with weekly futures
   positioning by trader category (commercial hedgers, swap dealers, managed
@@ -139,6 +142,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this adapter does not serve; CFTC publishes no price quotes at all, so
   `fetch_futures_quote` reports `NotSupported` and falls through to another
   routed provider (e.g. Polygon).
+- Both keyless providers are exposed on the server: `GET /v2/gdelt/news/{symbol}`
+  and `GET /v2/cftc/cot/{symbol}`, plus the `gdeltNews`/`commitmentsOfTraders`
+  GraphQL root fields. The library gains `gdelt::news()` and
+  `cftc::commitments_of_traders()` shortcuts so neither needs provider routing.
 - Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
   `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
   (heaviest first) — no other wired provider serves ETF composition —
@@ -240,6 +247,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session is dropped so the next caller builds a fresh one.
 
 ### Fixed
+
+- `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
+  when no retry hint was available, and "Some(30)s" when there was one.
+- GDELT's throttle response carries its retry interval in a plain-text body
+  rather than a `Retry-After` header; that interval is now parsed into
+  `RateLimited::retry_after` and the message logged instead of discarded.
 
 - `finance::hours()` no longer labels every region's market "U.S. markets".
   Yahoo returns correct per-region session times but hardcodes the U.S.
