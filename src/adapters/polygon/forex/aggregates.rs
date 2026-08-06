@@ -18,7 +18,7 @@ use super::super::models::*;
 /// * `from` - Start date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `to` - End date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `params` - Optional parameters (adjusted, sort, limit)
-#[allow(dead_code)] // unrouted: per-symbol forex charts route through the generic CHART capability path (fetch_chart_response); not part of #245
+#[allow(dead_code)] // unrouted: per-symbol forex charts route through the generic CHART capability path (fetch_chart_response)
 pub async fn forex_aggregates(
     ticker: &str,
     multiplier: u32,
@@ -67,7 +67,7 @@ pub async fn forex_aggregates(
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
-#[allow(dead_code)] // unrouted: not part of #245's grouped-daily scope
+#[allow(dead_code)] // unrouted: outside the grouped-daily surface
 pub async fn forex_previous_close(
     ticker: &str,
     adjusted: Option<bool>,

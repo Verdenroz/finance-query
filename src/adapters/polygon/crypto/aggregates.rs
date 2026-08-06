@@ -63,7 +63,7 @@ pub struct CryptoOpenCloseTradeDTO {
 /// * `from` - Start date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `to` - End date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `params` - Optional parameters (adjusted, sort, limit)
-#[allow(dead_code)] // unrouted: per-symbol crypto charts route through the generic CHART capability path (fetch_chart_response); not part of #245
+#[allow(dead_code)] // unrouted: per-symbol crypto charts route through the generic CHART capability path (fetch_chart_response)
 pub async fn crypto_aggregates(
     ticker: &str,
     multiplier: u32,
@@ -112,7 +112,7 @@ pub async fn crypto_aggregates(
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
 /// * `adjusted` - Whether results are adjusted (default: true)
-#[allow(dead_code)] // unrouted: not part of #245's grouped-daily scope
+#[allow(dead_code)] // unrouted: outside the grouped-daily surface
 pub async fn crypto_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
@@ -197,7 +197,7 @@ pub async fn fetch_crypto_grouped_daily_response(date: &str) -> Result<Vec<(Stri
 /// * `from` - The "from" symbol of the pair (e.g., `"BTC"`)
 /// * `to` - The "to" symbol of the pair (e.g., `"USD"`)
 /// * `date` - Date as `"YYYY-MM-DD"`
-#[allow(dead_code)] // unrouted: not part of #245's grouped-daily scope
+#[allow(dead_code)] // unrouted: outside the grouped-daily surface
 pub async fn crypto_daily_open_close(
     from: &str,
     to: &str,
