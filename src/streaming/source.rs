@@ -54,7 +54,7 @@ where
 }
 
 /// Exponential-backoff-with-jitter configuration for [`run_stream_loop`]'s
-/// reconnect delay (issue #276).
+/// reconnect delay.
 ///
 /// `base_delay` is the same knob every builder's `.retry(Duration)` method has
 /// always exposed — the delay before the first reconnect attempt. Later
@@ -70,6 +70,7 @@ pub(crate) struct ReconnectConfig {
     multiplier: f64,
     jitter: f64,
     max_attempts: Option<u32>,
+    healthy_after: Duration,
 }
 
 impl ReconnectConfig {
@@ -80,6 +81,7 @@ impl ReconnectConfig {
             multiplier: 2.0,
             jitter: 0.2,
             max_attempts: None,
+            healthy_after: Duration::from_secs(60),
         }
     }
 
@@ -90,29 +92,37 @@ impl ReconnectConfig {
         self
     }
 
+    /// How long a session must stay up before its failure resets the attempt
+    /// counter. Test hook — production uses the 60s default.
+    #[cfg(test)]
+    pub(crate) fn healthy_after(mut self, healthy_after: Duration) -> Self {
+        self.healthy_after = healthy_after;
+        self
+    }
+
     /// Delay before the reconnect attempt numbered `attempt` (0-indexed).
     fn delay_for(&self, attempt: u32, seed: &mut u64) -> Duration {
-        crate::backoff::with_jitter(
-            crate::backoff::exponential_delay(
-                attempt,
-                self.base_delay,
-                self.multiplier,
-                self.max_delay,
-            ),
-            self.jitter,
-            seed,
-        )
+        crate::backoff::BackoffParams {
+            base: self.base_delay,
+            max: self.max_delay,
+            multiplier: self.multiplier,
+            jitter: self.jitter,
+        }
+        .delay_for(attempt, seed)
     }
 }
 
 /// Drive a [`StreamSource`] with automatic reconnection until it shuts down.
 ///
 /// `reconnect` is supplied by the caller rather than hard-coded so builders
-/// can tune the base delay and attempt cap without touching sources (see
-/// issue #276). A session that stays connected for at least one `base_delay`
-/// interval is treated as healthy — its disconnect resets the backoff, so a
-/// single brief blip doesn't inherit a long delay accumulated from an earlier
-/// outage.
+/// can tune the base delay and attempt cap without touching sources. A session
+/// that stays connected for `healthy_after` is treated as healthy — its
+/// disconnect resets the backoff, so a single brief blip doesn't inherit a
+/// long delay accumulated from an earlier outage. That threshold is
+/// deliberately independent of `base_delay`: keying it to the (short) base
+/// delay would let a source that accepts the connection and then fails a few
+/// seconds in — auth rejection, subscription error, idle kill — reset the
+/// counter every cycle and reconnect forever despite `max_attempts`.
 pub(crate) async fn run_stream_loop<T>(
     source: Arc<dyn StreamSource<T>>,
     initial_symbols: Vec<String>,
@@ -138,7 +148,7 @@ where
                 break;
             }
             Err(e) => {
-                if session_start.elapsed() >= reconnect.base_delay {
+                if session_start.elapsed() >= reconnect.healthy_after {
                     attempt = 0;
                 }
                 if let Some(max) = reconnect.max_attempts
@@ -304,6 +314,51 @@ mod tests {
                 "boom".to_string(),
             ))
         }
+    }
+
+    /// A source whose session survives briefly, then fails — the shape that
+    /// used to defeat `max_attempts` by resetting the counter every cycle.
+    struct BrieflyUpThenFailSource;
+
+    #[async_trait::async_trait]
+    impl StreamSource<PriceUpdate> for BrieflyUpThenFailSource {
+        fn id(&self) -> &'static str {
+            "briefly-up"
+        }
+
+        async fn run_session(
+            &self,
+            _subscriptions: &Arc<RwLock<HashSet<String>>>,
+            _broadcast_tx: &broadcast::Sender<PriceUpdate>,
+            _command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ) -> StreamResult<()> {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            Err(super::super::client::StreamError::ConnectionFailed(
+                "dropped".to_string(),
+            ))
+        }
+    }
+
+    #[tokio::test]
+    async fn a_session_shorter_than_healthy_after_still_counts_toward_max_attempts() {
+        // Sessions last ~20ms — longer than base_delay but well short of
+        // healthy_after, so the attempt counter must keep climbing.
+        let reconnect = ReconnectConfig::new(Duration::from_millis(1))
+            .max_attempts(Some(2))
+            .healthy_after(Duration::from_secs(60));
+        let mut stream = PriceStream::subscribe_with_source(
+            Arc::new(BrieflyUpThenFailSource),
+            Vec::<String>::new(),
+            reconnect,
+        )
+        .await
+        .unwrap();
+
+        let ended = tokio::time::timeout(Duration::from_secs(5), stream.next()).await;
+        assert!(
+            matches!(ended, Ok(None)),
+            "stream should have given up, not reconnected forever"
+        );
     }
 
     #[tokio::test]

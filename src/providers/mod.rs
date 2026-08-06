@@ -766,8 +766,8 @@ pub(crate) struct ProviderSet {
     providers: Vec<Arc<dyn ProviderAdapter>>,
     yahoo_client: Option<Arc<YahooClient>>,
     routes: Routes,
-    /// Opt-in retry policy (issue #276). `None` (the default) preserves the
-    /// pre-#276 behavior exactly: a `RateLimited` error is treated like any
+    /// Opt-in retry policy. `None` (the default) preserves the prior
+    /// behavior exactly: a `RateLimited` error is treated like any
     /// other failure and dispatch moves straight to the next candidate.
     retry_policy: Option<RetryPolicy>,
     /// In-memory recent success/failure tracker, always active (cheap to
@@ -804,8 +804,8 @@ impl ProviderSet {
     }
 
     /// Opt into [`RetryPolicy`]-driven retry of `RateLimited` errors.
-    /// `None` (the default from [`new`](Self::new)) preserves pre-#276
-    /// behavior exactly.
+    /// `None` (the default from [`new`](Self::new)) preserves the prior
+    /// no-retry behavior exactly.
     pub(crate) fn with_retry_policy(mut self, policy: Option<RetryPolicy>) -> Self {
         self.retry_policy = policy;
         self
@@ -872,7 +872,7 @@ impl ProviderSet {
     }
 
     /// Call `f(p)`, retrying in place on `FinanceError::RateLimited` per
-    /// `self.retry_policy` (issue #276). With no policy configured this is
+    /// `self.retry_policy`. With no policy configured this is
     /// exactly `f(p).await` — zero behavior change for existing callers.
     async fn call_with_retry<T, F, Fut>(&self, p: &Arc<dyn ProviderAdapter>, f: &F) -> Result<T>
     where
@@ -1641,24 +1641,33 @@ mod tests {
         assert!(health[0].last_error.is_none());
     }
 
-    #[test]
-    fn not_supported_is_excluded_from_health_accounting() {
-        let tracker = health::HealthTracker::new();
-        // A NotSupported "failure" must not count against health.
-        let err: Result<()> = Err(FinanceError::NotSupported {
-            provider: Provider::Yahoo,
-            operation: Operation::Spark,
-            candidates: vec![],
-        });
-        // Exercise the same logic ProviderSet::record_health uses.
-        match &err {
-            Ok(_) => tracker.record(Provider::Yahoo, true, None),
-            Err(FinanceError::NotSupported { .. }) => {}
-            Err(e) => tracker.record(Provider::Yahoo, false, Some(e.to_string())),
+    /// A provider that only implements `as_quote`, so a CHART dispatch hits
+    /// its `NotSupported` path — which must not count against its health.
+    struct QuoteOnlyProvider;
+
+    impl ProviderCore for QuoteOnlyProvider {
+        fn id(&self) -> Provider {
+            Provider::Yahoo
         }
-        let health = tracker.snapshot(Provider::Yahoo);
-        assert!(health.is_healthy);
-        assert_eq!(health.recent_successes, 0);
-        assert_eq!(health.recent_failures, 0);
+    }
+
+    #[async_trait::async_trait]
+    impl ProviderAdapter for QuoteOnlyProvider {}
+
+    #[tokio::test]
+    async fn not_supported_is_excluded_from_health_accounting() {
+        let set = ProviderSet::new(
+            vec![Arc::new(QuoteOnlyProvider) as Arc<dyn ProviderAdapter>],
+            None,
+            Routes::new(Fetch::Sequential),
+        );
+        // Goes through the real `record_health`, not a copy of its match.
+        assert!(fetch_chart_via(&set).await.is_err());
+
+        let health = set.health();
+        assert!(health[0].is_healthy);
+        assert_eq!(health[0].recent_successes, 0);
+        assert_eq!(health[0].recent_failures, 0);
+        assert!(health[0].last_error.is_none());
     }
 }

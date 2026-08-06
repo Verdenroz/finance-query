@@ -67,7 +67,7 @@ impl RateLimiter {
     /// Best-effort peek at the estimated number of tokens currently
     /// available, without consuming one.
     ///
-    /// For provider health/budget introspection (issue #276). Refills the
+    /// For provider health/budget introspection. Refills the
     /// estimate against elapsed time exactly like [`acquire`](Self::acquire),
     /// but never mutates `last_refill` or consumes a token — a health check
     /// must not itself spend rate-limit budget. Uses `try_lock` rather than

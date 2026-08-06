@@ -56,7 +56,7 @@ macro_rules! provider_singleton_state {
         }
 
         /// The shared rate limiter backing this provider's singleton, for
-        /// health/budget introspection (issue #276). `None` before `init`/
+        /// health/budget introspection. `None` before `init`/
         /// `init_with_timeout` has been called.
         #[allow(dead_code)]
         pub(crate) fn rate_limiter()

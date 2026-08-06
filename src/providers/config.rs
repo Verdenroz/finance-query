@@ -331,10 +331,10 @@ impl ProvidersBuilder {
     }
 
     /// Opt into retrying `FinanceError::RateLimited` errors during dispatch
-    /// (issue #276). See [`RetryPolicy`] for the exact semantics.
+    /// See [`RetryPolicy`] for the exact semantics.
     ///
     /// **Default is no retry** — omitting this call preserves the exact
-    /// pre-#276 behavior: a `RateLimited` error is treated like any other
+    /// prior behavior: a `RateLimited` error is treated like any other
     /// failure and dispatch moves straight to the next routed provider.
     pub fn retry(mut self, policy: RetryPolicy) -> Self {
         self.retry = Some(policy);

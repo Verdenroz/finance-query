@@ -280,8 +280,7 @@ impl PriceStreamBuilder {
     }
 
     /// Cap the number of consecutive reconnect attempts before the stream
-    /// gives up and ends (default: unlimited, i.e. retry forever like before
-    /// issue #276).
+    /// gives up and ends (default: unlimited, i.e. retry forever).
     pub fn max_reconnect_attempts(mut self, max: u32) -> Self {
         self.max_reconnect_attempts = Some(max);
         self

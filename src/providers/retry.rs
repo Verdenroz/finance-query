@@ -7,10 +7,11 @@ use std::time::Duration;
 ///
 /// When configured, a candidate provider that returns
 /// [`FinanceError::RateLimited`](crate::error::FinanceError::RateLimited) is
-/// retried in place — honoring the error's `retry_after` hint verbatim when
-/// present, or this policy's own exponential-backoff-plus-jitter delay
-/// otherwise — up to `max_attempts` times before dispatch falls through to
-/// the next routed provider (or fails, if it was the last).
+/// retried in place — honoring the error's `retry_after` hint when present
+/// (capped by `max_retry_after`), or this policy's own
+/// exponential-backoff-plus-jitter delay otherwise — up to `max_attempts`
+/// times before dispatch falls through to the next routed provider (or
+/// fails, if it was the last).
 ///
 /// Other error kinds are never retried by this policy: a `RateLimited` is the
 /// one error a policy-level retry can reliably fix by waiting; anything else
@@ -49,9 +50,13 @@ pub struct RetryPolicy {
     /// Jitter fraction (`0.0..=1.0`) applied to the computed delay so many
     /// concurrent callers don't retry in lockstep. Default: `0.2`.
     pub jitter: f64,
-    /// Upper bound on the computed delay. Never applied to an explicit
-    /// `retry_after` hint — that value is honored verbatim. Default: 30s.
+    /// Upper bound on the computed backoff delay. Default: 30s.
     pub max_delay: Duration,
+    /// Upper bound on an explicit `retry_after` hint. Separate from
+    /// `max_delay` so a legitimate multi-minute hint is honored, while a
+    /// hostile or buggy upstream can't park the caller indefinitely.
+    /// Default: 5 minutes.
+    pub max_retry_after: Duration,
 }
 
 impl RetryPolicy {
@@ -65,6 +70,7 @@ impl RetryPolicy {
             multiplier: 2.0,
             jitter: 0.2,
             max_delay: Duration::from_secs(30),
+            max_retry_after: Duration::from_secs(300),
         }
     }
 
@@ -92,9 +98,16 @@ impl RetryPolicy {
         self
     }
 
+    /// Override the cap on an explicit `retry_after` hint
+    /// (see [`RetryPolicy::max_retry_after`] field docs).
+    pub fn max_retry_after(mut self, max_retry_after: Duration) -> Self {
+        self.max_retry_after = max_retry_after;
+        self
+    }
+
     /// Delay before the retry numbered `attempt` (0-indexed: `0` is the delay
-    /// before the first retry), honoring an explicit `retry_after` hint
-    /// verbatim when present.
+    /// before the first retry), honoring an explicit `retry_after` hint when
+    /// present, capped at [`max_retry_after`](Self::max_retry_after).
     pub(crate) fn delay_for(
         &self,
         attempt: u32,
@@ -102,17 +115,14 @@ impl RetryPolicy {
         seed: &mut u64,
     ) -> Duration {
         match retry_after {
-            Some(explicit) => explicit,
-            None => crate::backoff::with_jitter(
-                crate::backoff::exponential_delay(
-                    attempt,
-                    self.base_delay,
-                    self.multiplier,
-                    self.max_delay,
-                ),
-                self.jitter,
-                seed,
-            ),
+            Some(explicit) => explicit.min(self.max_retry_after),
+            None => crate::backoff::BackoffParams {
+                base: self.base_delay,
+                max: self.max_delay,
+                multiplier: self.multiplier,
+                jitter: self.jitter,
+            }
+            .delay_for(attempt, seed),
         }
     }
 }
@@ -134,6 +144,7 @@ mod tests {
         assert_eq!(policy.multiplier, 2.0);
         assert_eq!(policy.jitter, 0.2);
         assert_eq!(policy.max_delay, Duration::from_secs(30));
+        assert_eq!(policy.max_retry_after, Duration::from_secs(300));
     }
 
     #[test]
@@ -143,11 +154,21 @@ mod tests {
     }
 
     #[test]
-    fn explicit_retry_after_is_honored_verbatim_ignoring_max_delay() {
+    fn explicit_retry_after_is_honored_independently_of_max_delay() {
+        // max_delay bounds the computed backoff, not the hint.
         let policy = RetryPolicy::new(3).max_delay(Duration::from_secs(1));
         let mut seed = 42;
-        let delay = policy.delay_for(5, Some(Duration::from_secs(999)), &mut seed);
-        assert_eq!(delay, Duration::from_secs(999));
+        let delay = policy.delay_for(5, Some(Duration::from_secs(120)), &mut seed);
+        assert_eq!(delay, Duration::from_secs(120));
+    }
+
+    #[test]
+    fn an_absurd_retry_after_hint_is_capped() {
+        // A hostile or buggy upstream must not park the caller for a day.
+        let policy = RetryPolicy::new(3);
+        let mut seed = 42;
+        let delay = policy.delay_for(0, Some(Duration::from_secs(86_400)), &mut seed);
+        assert_eq!(delay, Duration::from_secs(300));
     }
 
     #[test]

@@ -27,8 +27,8 @@ pub struct ProviderHealth {
     pub recent_successes: u32,
     /// Failures among the last [`WINDOW`] recorded outcomes.
     pub recent_failures: u32,
-    /// The most recent failure's message, if the last recorded outcome (or
-    /// any within the window) failed and none have succeeded since.
+    /// The most recent failure's message. Cleared by any success, so it is
+    /// set only when the latest recorded outcome was a failure.
     pub last_error: Option<String>,
     /// Best-effort estimate of remaining rate-limit budget (tokens in the
     /// adapter's own token bucket), when the provider exposes one via
@@ -78,28 +78,17 @@ impl HealthTracker {
     /// recorded calls yet).
     pub(crate) fn snapshot(&self, provider: Provider) -> ProviderHealth {
         let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
-        match guard.get(&provider) {
-            Some(state) => {
-                let total = state.outcomes.len();
-                let successes = state.outcomes.iter().filter(|o| **o).count();
-                let failures = total - successes;
-                ProviderHealth {
-                    provider,
-                    is_healthy: total == 0 || successes * 2 >= total,
-                    recent_successes: successes as u32,
-                    recent_failures: failures as u32,
-                    last_error: state.last_error.clone(),
-                    requests_remaining_estimate: None,
-                }
-            }
-            None => ProviderHealth {
-                provider,
-                is_healthy: true,
-                recent_successes: 0,
-                recent_failures: 0,
-                last_error: None,
-                requests_remaining_estimate: None,
-            },
+        let state = guard.get(&provider);
+        let total = state.map_or(0, |s| s.outcomes.len());
+        let successes = state.map_or(0, |s| s.outcomes.iter().filter(|o| **o).count());
+        ProviderHealth {
+            provider,
+            // No calls recorded yet reads as healthy (0 >= 0), the optimistic default.
+            is_healthy: successes * 2 >= total,
+            recent_successes: successes as u32,
+            recent_failures: (total - successes) as u32,
+            last_error: state.and_then(|s| s.last_error.clone()),
+            requests_remaining_estimate: None,
         }
     }
 }

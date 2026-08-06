@@ -19,9 +19,37 @@ pub(crate) fn exponential_delay(
     max: Duration,
 ) -> Duration {
     let base_secs = base.as_secs_f64();
+    // A zero base stays zero: `0.0 * inf` is NaN at high attempt counts, and
+    // `f64::min` returns the *other* operand for NaN, which would silently
+    // promote a no-delay config to the cap.
+    if base_secs <= 0.0 {
+        return Duration::ZERO;
+    }
     let factor = multiplier.max(1.0).powi(attempt as i32);
     let secs = (base_secs * factor).min(max.as_secs_f64());
     Duration::from_secs_f64(secs.max(0.0))
+}
+
+/// The four knobs every backoff sequence here needs, so `RetryPolicy` and
+/// `ReconnectConfig` share one implementation instead of two copies of the
+/// same nested `with_jitter(exponential_delay(..))` call.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BackoffParams {
+    pub base: Duration,
+    pub max: Duration,
+    pub multiplier: f64,
+    pub jitter: f64,
+}
+
+impl BackoffParams {
+    /// Jittered delay before the retry/reconnect numbered `attempt` (0-indexed).
+    pub(crate) fn delay_for(&self, attempt: u32, seed: &mut u64) -> Duration {
+        with_jitter(
+            exponential_delay(attempt, self.base, self.multiplier, self.max),
+            self.jitter,
+            seed,
+        )
+    }
 }
 
 /// Apply a `+/- jitter` fraction (clamped to `0.0..=1.0`) of randomness to a
@@ -90,6 +118,19 @@ mod tests {
         let max = Duration::from_secs(60);
         // A multiplier < 1.0 is clamped to 1.0 - the delay never shrinks.
         assert_eq!(exponential_delay(5, base, 0.1, max), base);
+    }
+
+    #[test]
+    fn a_zero_base_delay_stays_zero_at_every_attempt() {
+        // `0.0 * inf` is NaN, and `f64::min` would return the cap instead.
+        let max = Duration::from_secs(60);
+        for attempt in [0, 1, 10, 100, 1000] {
+            assert_eq!(
+                exponential_delay(attempt, Duration::ZERO, 2.0, max),
+                Duration::ZERO,
+                "attempt {attempt}"
+            );
+        }
     }
 
     #[test]

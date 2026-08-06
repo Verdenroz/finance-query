@@ -600,7 +600,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
 
     /// Best-effort estimate of remaining rate-limit budget — tokens
     /// currently available in this provider's own token bucket, for
-    /// [`super::Providers::health`] (issue #276). Peeking never consumes a
+    /// [`super::Providers::health`]. Peeking never consumes a
     /// token.
     ///
     /// `None` by default: providers with no local rate limiter to peek (e.g.
