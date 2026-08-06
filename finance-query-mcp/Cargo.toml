@@ -72,3 +72,7 @@ translation-offline = [
     "finance-query/translation-offline",
     "finance-query-server/translation-offline",
 ]
+# Backtesting engine for the `run_backtest` tool (prebuilt strategies only).
+backtesting = ["finance-query/backtesting"]
+# Every feature except `translation-offline` (see root Cargo.toml's `full` for why).
+full = ["backtesting", "translation"]

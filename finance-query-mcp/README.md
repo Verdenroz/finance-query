@@ -259,3 +259,8 @@ For stdio, point your client at the binary:
 | `get_edgar_facts` | XBRL structured financial data for any public company |
 | `get_edgar_submissions` | SEC filing history and company metadata |
 | `get_edgar_search` | Full-text search across SEC filings |
+
+### Backtesting (requires `backtesting` build feature)
+| Tool | Description |
+|------|-------------|
+| `run_backtest` | Run a prebuilt strategy (SMA crossover, RSI reversal, MACD signal, Bollinger mean-reversion, SuperTrend follow, Donchian breakout) against a symbol's history — returns summary metrics, a paginated equity curve, and a paginated trade list. Supports optional leverage, margin, short-borrow cost, and position-sizing schemes. |

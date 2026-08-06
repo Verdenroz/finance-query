@@ -18,6 +18,7 @@ GROUPS = [
     ("FRED & Treasury",  ["get_fred_series", "get_treasury_yields"]),
     ("EDGAR",            ["get_edgar_facts", "get_edgar_submissions", "get_edgar_search"]),
     ("Transcripts",      ["get_transcripts"]),
+    ("Backtesting",      ["run_backtest"]),
 ]
 
 CSS = """

@@ -1,10 +1,12 @@
 use finance_query::{Frequency, Interval, StatementType, TimeRange};
 
-fn parse_interval(s: &str) -> Interval {
+/// Parse a raw interval string, falling back to `1d` for unknown input.
+pub fn parse_interval(s: &str) -> Interval {
     s.parse().unwrap_or(Interval::OneDay)
 }
 
-fn parse_range(s: &str) -> TimeRange {
+/// Parse a raw range string, falling back to `1mo` for unknown input.
+pub fn parse_range(s: &str) -> TimeRange {
     s.parse().unwrap_or(TimeRange::OneMonth)
 }
 
