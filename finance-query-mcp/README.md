@@ -171,6 +171,9 @@ For stdio, point your client at the binary:
 |----------|----------|-------------|
 | `EDGAR_EMAIL` | Optional | Enables `get_edgar_*` tools. SEC requires a contact email in the User-Agent. |
 | `FRED_API_KEY` | Optional | Enables `get_fred_series`. Free key at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html). `get_treasury_yields` is keyless and always available. |
+| `FMP_API_KEY` | Optional | Enables `get_commodity` and contributes to `get_forex` (built with the `fmp` feature). |
+| `POLYGON_API_KEY` | Optional | Enables `get_futures` and contributes to `get_forex` (built with the `polygon` feature). |
+| `ALPHAVANTAGE_API_KEY` | Optional | Contributes to `get_forex`/`get_commodity` (built with the `alphavantage` feature). |
 
 ---
 
@@ -259,6 +262,13 @@ For stdio, point your client at the binary:
 | `get_edgar_facts` | XBRL structured financial data for any public company |
 | `get_edgar_submissions` | SEC filing history and company metadata |
 | `get_edgar_search` | Full-text search across SEC filings |
+
+### Forex, Futures & Commodities (requires `fmp`/`polygon`/`alphavantage` build features + API key)
+| Tool | Description |
+|------|-------------|
+| `get_forex` | Current exchange rate for a currency pair (e.g., USD/EUR) |
+| `get_futures` | Current quote for a futures contract |
+| `get_commodity` | Current price quote for a commodity (gold, silver, crude oil, etc.) |
 
 ### Backtesting (requires `backtesting` build feature)
 | Tool | Description |

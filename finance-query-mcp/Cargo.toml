@@ -74,5 +74,10 @@ translation-offline = [
 ]
 # Backtesting engine for the `run_backtest` tool (prebuilt strategies only).
 backtesting = ["finance-query/backtesting"]
+# Provider-routed domain tools — each gates its own MCP tool(s):
+# alphavantage/fmp -> get_commodity, any of the three -> get_forex, polygon -> get_futures.
+alphavantage = ["finance-query/alphavantage"]
+fmp = ["finance-query/fmp"]
+polygon = ["finance-query/polygon"]
 # Every feature except `translation-offline` (see root Cargo.toml's `full` for why).
-full = ["backtesting", "translation"]
+full = ["backtesting", "alphavantage", "fmp", "polygon", "translation"]

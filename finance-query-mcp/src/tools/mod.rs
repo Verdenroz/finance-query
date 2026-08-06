@@ -15,6 +15,8 @@ pub mod indicators;
 pub mod market;
 pub mod news;
 pub mod options;
+#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+pub mod providers;
 pub mod quotes;
 pub mod risk;
 pub mod search;
@@ -238,6 +240,35 @@ pub struct CryptoParams {
     pub limit: Option<u32>,
     /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
     pub cursor: Option<String>,
+}
+
+#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[derive(Deserialize, JsonSchema)]
+pub struct ForexParams {
+    /// Base (from) currency code (e.g., "USD")
+    pub from: String,
+    /// Quote (to) currency code (e.g., "EUR")
+    pub to: String,
+    /// Comma-separated list of field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[cfg(feature = "polygon")]
+#[derive(Deserialize, JsonSchema)]
+pub struct FuturesParams {
+    /// Futures contract ticker symbol (e.g., "ESM26")
+    pub symbol: String,
+    /// Comma-separated list of field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+#[derive(Deserialize, JsonSchema)]
+pub struct CommodityParams {
+    /// Commodity symbol (e.g., "GCUSD" for gold, "CLUSD" for crude oil)
+    pub symbol: String,
+    /// Comma-separated list of field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[cfg(feature = "backtesting")]
@@ -562,6 +593,18 @@ impl FinanceTools {
         // `#[tool_router]` naively scans every `#[tool]`-attributed method in its
         // impl block at the token level, ignoring any `#[cfg]` on the method
         // itself, so gating has to happen at the impl-block boundary instead.
+        #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+        {
+            tool_router += Self::forex_tool_router();
+        }
+        #[cfg(feature = "polygon")]
+        {
+            tool_router += Self::futures_tool_router();
+        }
+        #[cfg(any(feature = "fmp", feature = "alphavantage"))]
+        {
+            tool_router += Self::commodity_tool_router();
+        }
         #[cfg(feature = "backtesting")]
         {
             tool_router += Self::backtest_tool_router();
@@ -984,6 +1027,42 @@ impl FinanceTools {
 // the generated router when the feature is off; the whole impl block must
 // be the cfg boundary instead.
 
+#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[tool_router(router = forex_tool_router)]
+impl FinanceTools {
+    #[tool(
+        description = "Get the current exchange rate for a forex currency pair (e.g., USD/EUR). Requires FMP_API_KEY, POLYGON_API_KEY, or ALPHAVANTAGE_API_KEY."
+    )]
+    async fn get_forex(&self, p: Parameters<ForexParams>) -> Result<CallToolResult, McpError> {
+        providers::get_forex(p.0.from, p.0.to, p.0.fields).await
+    }
+}
+
+#[cfg(feature = "polygon")]
+#[tool_router(router = futures_tool_router)]
+impl FinanceTools {
+    #[tool(
+        description = "Get the current quote for a futures contract (e.g., ESM26, GC=F). Requires POLYGON_API_KEY."
+    )]
+    async fn get_futures(&self, p: Parameters<FuturesParams>) -> Result<CallToolResult, McpError> {
+        providers::get_futures(p.0.symbol, p.0.fields).await
+    }
+}
+
+#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+#[tool_router(router = commodity_tool_router)]
+impl FinanceTools {
+    #[tool(
+        description = "Get the current price quote for a commodity (gold, silver, crude oil, etc.). Requires FMP_API_KEY or ALPHAVANTAGE_API_KEY."
+    )]
+    async fn get_commodity(
+        &self,
+        p: Parameters<CommodityParams>,
+    ) -> Result<CallToolResult, McpError> {
+        providers::get_commodity(p.0.symbol, p.0.fields).await
+    }
+}
+
 #[cfg(feature = "backtesting")]
 #[tool_router(router = backtest_tool_router)]
 impl FinanceTools {
@@ -1233,6 +1312,38 @@ mod param_tests {
         assert_eq!(p.fields, None);
         assert_eq!(p.limit, None);
         assert_eq!(p.cursor, None);
+    }
+
+    #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+    #[test]
+    fn forex_params_requires_from_and_to() {
+        let err = serde_json::from_value::<ForexParams>(json!({"from": "USD"}));
+        assert!(err.is_err());
+    }
+
+    #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+    #[test]
+    fn forex_params_defaults_fields_to_none() {
+        let p: ForexParams = serde_json::from_value(json!({"from": "USD", "to": "EUR"})).unwrap();
+        assert_eq!(p.from, "USD");
+        assert_eq!(p.to, "EUR");
+        assert_eq!(p.fields, None);
+    }
+
+    #[cfg(feature = "polygon")]
+    #[test]
+    fn futures_params_defaults_optionals_to_none() {
+        let p: FuturesParams = serde_json::from_value(json!({"symbol": "ESM26"})).unwrap();
+        assert_eq!(p.symbol, "ESM26");
+        assert_eq!(p.fields, None);
+    }
+
+    #[cfg(any(feature = "fmp", feature = "alphavantage"))]
+    #[test]
+    fn commodity_params_defaults_optionals_to_none() {
+        let p: CommodityParams = serde_json::from_value(json!({"symbol": "GCUSD"})).unwrap();
+        assert_eq!(p.symbol, "GCUSD");
+        assert_eq!(p.fields, None);
     }
 
     #[cfg(feature = "backtesting")]
