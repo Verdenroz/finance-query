@@ -26,6 +26,8 @@
 //! | `finra` | [FINRA Query API](https://developer.finra.org/) | Keyless (non-commercial) | 1 | Daily short-sale volume by security, from the primary source |
 //! | `openfigi` | [OpenFIGI](https://www.openfigi.com/api) | Keyless (25 req/min) | 1 | CUSIP/ISIN/SEDOL/FIGI to ticker resolution |
 //! | `defi` | [DefiLlama](https://defillama.com/docs/api) | Keyless | 3 | Protocol TVL (current + history), chain rankings, stablecoin supplies |
+//! | `gdelt` | [GDELT DOC 2.0](https://www.gdeltproject.org/) | Keyless (~1 req/5s) | 1 | Worldwide online news search across 65 languages, updated every 15 minutes |
+//! | `cftc` | [CFTC Public Reporting](https://publicreporting.cftc.gov/) | Keyless | 1 | Weekly Commitments of Traders futures positioning (disaggregated futures-only report) |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -100,6 +102,14 @@ pub(crate) mod openfigi;
 /// DefiLlama DeFi TVL and stablecoin data (keyless, requires `defi` feature).
 #[cfg(feature = "defi")]
 pub(crate) mod defillama;
+
+/// GDELT DOC 2.0 global news search (keyless, requires `gdelt` feature).
+#[cfg(feature = "gdelt")]
+pub(crate) mod gdelt;
+
+/// CFTC Commitments of Traders futures positioning (keyless, requires `cftc` feature).
+#[cfg(feature = "cftc")]
+pub(crate) mod cftc;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

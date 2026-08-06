@@ -117,6 +117,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- **GDELT DOC 2.0** (`gdelt` feature, keyless) — `Provider::Gdelt` serves the
+  news slice of `Capability::CORPORATE` from GDELT's worldwide online news
+  index (65 languages, updated roughly every 15 minutes), giving `Ticker::news()`
+  a keyless alternative to Yahoo's scraper and Alpha Vantage's 25 req/day
+  quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
+  exact phrase match) is the search term — precision over recall. GDELT
+  rejects phrases under 5 characters, so shorter tickers (`AAPL`, `TSLA`, …)
+  error with `InvalidParameter` and dispatch falls through to another
+  CORPORATE provider. GDELT has no corporate calendar, so `fetch_events`
+  reports `NotSupported`.
+- **CFTC Commitments of Traders** (`cftc` feature, keyless) —
+  `Provider::Cftc` serves `Capability::FUTURES` with weekly futures
+  positioning by trader category (commercial hedgers, swap dealers, managed
+  money, other reportables, small traders) via
+  `FuturesContract::commitments_of_traders()`, reading the disaggregated
+  futures-only combined report from `publicreporting.cftc.gov`. A curated
+  table maps common Yahoo-style continuous futures roots (`"GC=F"`, `"CL=F"`,
+  …) to their CFTC contract code; anything else is passed through as a raw
+  `cftc_contract_market_code`. New public model `CommitmentsOfTraders` /
+  `CotObservation`. Covers physical commodities only (agriculture, energy,
+  metals) — CFTC reports financial futures (equity indices, rates,
+  currencies) separately in the Traders in Financial Futures report, which
+  this adapter does not serve; CFTC publishes no price quotes at all, so
+  `fetch_futures_quote` reports `NotSupported` and falls through to another
+  routed provider (e.g. Polygon).
+- Both keyless providers are exposed on the server: `GET /v2/gdelt/news/{symbol}`
+  and `GET /v2/cftc/cot/{symbol}`, plus the `gdeltNews`/`commitmentsOfTraders`
+  GraphQL root fields. The library gains `gdelt::news()` and
+  `cftc::commitments_of_traders()` shortcuts so neither needs provider routing.
 - Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
   `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
   (heaviest first) — no other wired provider serves ETF composition —
@@ -218,6 +247,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session is dropped so the next caller builds a fresh one.
 
 ### Fixed
+
+- `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
+  when no retry hint was available, and "Some(30)s" when there was one.
+- GDELT's throttle response carries its retry interval in a plain-text body
+  rather than a `Retry-After` header; that interval is now parsed into
+  `RateLimited::retry_after` and the message logged instead of discarded.
 
 - `finance::hours()` no longer labels every region's market "U.S. markets".
   Yahoo returns correct per-region session times but hardcodes the U.S.

@@ -141,6 +141,23 @@ pub(crate) fn unwrap_connection(data: serde_json::Value, paginated: bool) -> ser
     }
 }
 
+/// Render REST's `limit`/`cursor` params as GraphQL `first`/`after` arguments.
+/// Empty when the caller opted out of pagination — callers decide whether to
+/// wrap the result in parens or append it to an existing argument list.
+pub(crate) fn connection_args(limit: Option<u32>, cursor: Option<&str>) -> Vec<String> {
+    let mut args = Vec::new();
+    if let Some(limit) = limit {
+        args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = cursor {
+        args.push(format!(
+            "after: \"{}\"",
+            crate::graphql::fields::escape_gql_string(cursor)
+        ));
+    }
+    args
+}
+
 // Map a REST interval string to a GqlInterval enum literal for GraphQL query building.
 pub(crate) fn interval_to_gql(s: &str) -> &'static str {
     use finance_query::Interval;

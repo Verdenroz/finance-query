@@ -118,6 +118,8 @@ full = [
     "finra",
     "openfigi",
     "defi",
+    "gdelt",
+    "cftc",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -147,6 +149,10 @@ finra = []
 openfigi = []
 # Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
 defi = []
+# Enable GDELT DOC 2.0 global news search (keyless)
+gdelt = []
+# Enable CFTC Commitments of Traders futures positioning data (keyless)
+cftc = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -196,6 +202,8 @@ features = [
     "finra",
     "openfigi",
     "defi",
+    "gdelt",
+    "cftc",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

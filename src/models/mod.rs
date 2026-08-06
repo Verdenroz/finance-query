@@ -65,8 +65,8 @@ pub mod economic;
     feature = "polygon"
 ))]
 pub mod forex;
-/// Futures market data models — Polygon.
-#[cfg(feature = "polygon")]
+/// Futures market data models — Polygon / CFTC.
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub mod futures;
 /// Stock market index data models — Polygon / FMP.
 #[cfg(any(feature = "polygon", feature = "fmp"))]

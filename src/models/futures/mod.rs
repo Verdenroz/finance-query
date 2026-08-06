@@ -5,6 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Commitments of Traders weekly positioning models (CFTC).
+#[cfg(feature = "cftc")]
+pub mod cot;
+
 /// A futures contract quote.
 ///
 /// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the futures symbol (e.g., `"GC=F"`).

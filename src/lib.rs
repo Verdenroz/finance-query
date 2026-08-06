@@ -99,6 +99,28 @@ pub mod crypto {
     pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
 }
 
+#[cfg(feature = "gdelt")]
+pub mod gdelt {
+    //! GDELT global news search (requires `gdelt` feature, keyless).
+    //!
+    //! Keyless shortcut for callers that want GDELT specifically;
+    //! [`Ticker::news`](crate::Ticker::news) reaches the same data through
+    //! `Capability::CORPORATE` when GDELT is routed.
+    pub use crate::adapters::gdelt::fetch_news_response as news;
+    pub use crate::models::corporate::news::News;
+}
+
+#[cfg(feature = "cftc")]
+pub mod cftc {
+    //! CFTC Commitments of Traders positioning (requires `cftc` feature, keyless).
+    //!
+    //! Keyless shortcut;
+    //! [`FuturesContract::commitments_of_traders`](crate::FuturesContract::commitments_of_traders)
+    //! reaches the same data through `Capability::FUTURES` when CFTC is routed.
+    pub use crate::adapters::cftc::fetch_commitments_of_traders_response as commitments_of_traders;
+    pub use crate::models::futures::cot::{CommitmentsOfTraders, CotObservation};
+}
+
 #[cfg(feature = "openfigi")]
 pub mod openfigi {
     //! Security-identifier resolution via OpenFIGI (requires `openfigi`
@@ -259,7 +281,7 @@ pub use domains::Commodity;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::Discovery;
 pub use domains::Filings;
-#[cfg(feature = "polygon")]
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use domains::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
@@ -390,8 +412,10 @@ pub use models::economic::{
     feature = "polygon"
 ))]
 pub use models::forex::ForexQuote;
-#[cfg(feature = "polygon")]
+#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use models::futures::FuturesQuote;
+#[cfg(feature = "cftc")]
+pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 #[cfg(feature = "polygon")]

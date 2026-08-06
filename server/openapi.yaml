@@ -69,6 +69,8 @@ tags:
     description: Portfolio risk analytics (VaR, Sharpe, drawdown, beta)
   - name: Feeds
     description: RSS/Atom news feeds from financial publishers
+  - name: Futures
+    description: CFTC Commitments of Traders futures positioning (keyless)
 
 paths:
   /v2/health:
@@ -2780,6 +2782,77 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v2/gdelt/news/{symbol}:
+    get:
+      tags: [News]
+      summary: Worldwide news for a symbol (GDELT)
+      description: >-
+        News mentioning the ticker, indexed by GDELT DOC 2.0 across 65
+        languages over a trailing two-week window. Keyless. Distinct from
+        `/v2/news/{symbol}`, which is Yahoo-sourced.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
+      responses:
+        '200':
+          description: |
+            Matching articles. Pagination is opt-in: omitting both `limit` and
+            `cursor` returns a bare array; passing either returns
+            `{ items: [...], pageInfo: {...} }` instead.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsArticle'
+        '429':
+          description: GDELT throttled the request (~1 req/5s)
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/cftc/cot/{symbol}:
+    get:
+      tags: [Futures]
+      summary: CFTC Commitments of Traders positioning
+      description: >-
+        Weekly futures positioning by trader category (commercial hedgers, swap
+        dealers, managed money, other reportables, small traders) from the CFTC
+        disaggregated futures-only report. Keyless. Covers physical commodities
+        only — agriculture, energy, and metals.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          description: >-
+            Yahoo-style continuous futures root (GC=F, SI=F, PL=F, HG=F, CL=F,
+            NG=F, ZC=F, ZW=F, ZS=F) or a raw CFTC contract market code.
+          example: GC=F
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
+      responses:
+        '200':
+          description: Weekly positioning series, oldest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommitmentsOfTraders'
+        '404':
+          description: No CFTC rows for this contract code/symbol
+        '429':
+          description: CFTC public reporting API throttled the request
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v2/risk/{symbol}:
     get:
       tags: [Risk]
@@ -3311,6 +3384,99 @@ components:
           type: integer
           nullable: true
           description: Market cap rank (1 = highest market cap)
+
+    CommitmentsOfTraders:
+      type: object
+      description: Weekly CFTC Commitments of Traders positioning for one futures market
+      properties:
+        symbol:
+          type: string
+          description: The symbol the series was requested with
+          example: GC=F
+        marketAndExchangeName:
+          type: string
+          example: GOLD - COMMODITY EXCHANGE INC.
+        cftcContractMarketCode:
+          type: string
+          example: '088691'
+        observations:
+          type: array
+          description: Weekly report rows, oldest first
+          items:
+            $ref: '#/components/schemas/CotObservation'
+
+    CotObservation:
+      type: object
+      description: One weekly COT report row, broken down by trader category
+      properties:
+        reportDate:
+          type: string
+          description: Report date (YYYY-MM-DD) — the Tuesday the report is as of
+          example: '2026-07-28'
+        openInterest:
+          type: integer
+          format: int64
+          nullable: true
+        producerMerchantLong:
+          type: integer
+          format: int64
+          nullable: true
+        producerMerchantShort:
+          type: integer
+          format: int64
+          nullable: true
+        swapDealerLong:
+          type: integer
+          format: int64
+          nullable: true
+        swapDealerShort:
+          type: integer
+          format: int64
+          nullable: true
+        swapDealerSpread:
+          type: integer
+          format: int64
+          nullable: true
+        managedMoneyLong:
+          type: integer
+          format: int64
+          nullable: true
+        managedMoneyShort:
+          type: integer
+          format: int64
+          nullable: true
+        managedMoneySpread:
+          type: integer
+          format: int64
+          nullable: true
+        otherReportableLong:
+          type: integer
+          format: int64
+          nullable: true
+        otherReportableShort:
+          type: integer
+          format: int64
+          nullable: true
+        otherReportableSpread:
+          type: integer
+          format: int64
+          nullable: true
+        totalReportableLong:
+          type: integer
+          format: int64
+          nullable: true
+        totalReportableShort:
+          type: integer
+          format: int64
+          nullable: true
+        nonreportableLong:
+          type: integer
+          format: int64
+          nullable: true
+        nonreportableShort:
+          type: integer
+          format: int64
+          nullable: true
 
     Split:
       type: object
