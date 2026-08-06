@@ -9,12 +9,16 @@ use crate::models::discovery::reference::{ExchangeInfo, SymbolMatch};
 pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
     SymbolMatch {
         symbol: dto.symbol,
+        id: None,
         name: Some(dto.name),
         exchange: Some(dto.region),
         asset_type: Some(dto.asset_type),
         currency: Some(dto.currency),
         // SYMBOL_SEARCH only returns tradable symbols, so a hit is active.
         active: Some(true),
+        market_cap_rank: None,
+        thumbnail: None,
+        image: None,
     }
 }
 
@@ -35,11 +39,15 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         .map(|s| s.eq_ignore_ascii_case("active"));
     SymbolMatch {
         symbol: dto.symbol,
+        id: None,
         name: dto.name,
         exchange: dto.exchange,
         asset_type: dto.asset_type,
         currency: None,
         active,
+        market_cap_rank: None,
+        thumbnail: None,
+        image: None,
     }
 }
 

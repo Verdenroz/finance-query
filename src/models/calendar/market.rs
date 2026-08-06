@@ -23,6 +23,9 @@ pub enum CalendarKind {
     Economic,
     /// Market holidays and early closes.
     MarketHoliday,
+    /// Live exchange open/closed status — a snapshot, not a dated event, so
+    /// providers serving it ignore the `from`/`to` range.
+    MarketStatus,
 }
 
 impl CalendarKind {
@@ -36,6 +39,7 @@ impl CalendarKind {
             Self::Split => Operation::SplitCalendar,
             Self::Economic => Operation::EconomicCalendar,
             Self::MarketHoliday => Operation::HolidayCalendar,
+            Self::MarketStatus => Operation::MarketStatus,
         }
     }
 }

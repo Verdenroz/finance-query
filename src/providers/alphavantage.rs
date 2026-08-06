@@ -180,19 +180,16 @@ impl MarketProvider for AlphaVantageProvider {
 
 #[async_trait::async_trait]
 impl CalendarProvider for AlphaVantageProvider {
-    /// Alpha Vantage serves live exchange open/closed status only, mapped
-    /// onto [`CalendarKind::MarketHoliday`](crate::models::calendar::market::CalendarKind::MarketHoliday)
-    /// — the closest existing shape — as an additional fallback route beside
-    /// Polygon's holiday calendar. Other kinds fall through to the next
-    /// routed provider. `from`/`to` are ignored: this is a live snapshot, not
-    /// a dated event.
+    /// Alpha Vantage serves live exchange open/closed status only. Other
+    /// kinds fall through to the next routed provider. `from`/`to` are
+    /// ignored: this is a snapshot, not a dated event.
     async fn fetch_market_calendar(
         &self,
         kind: crate::models::calendar::market::CalendarKind,
         _from: &str,
         _to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        if kind != crate::models::calendar::market::CalendarKind::MarketHoliday {
+        if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
             return Err(self.not_supported(kind.operation()));
         }
         av::fetch_market_status_response().await

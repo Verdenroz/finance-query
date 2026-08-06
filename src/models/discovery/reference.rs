@@ -11,8 +11,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SymbolMatch {
-    /// Ticker symbol.
+    /// Ticker symbol, uppercased.
     pub symbol: String,
+    /// Provider-native identifier, when the provider uses one distinct from
+    /// the ticker — e.g. the CoinGecko coin id (`"bitcoin"`), which is what
+    /// [`Providers::crypto`](crate::Providers::crypto) accepts. `None` for
+    /// providers whose ticker *is* the identifier.
+    pub id: Option<String>,
     /// Security or company name.
     pub name: Option<String>,
     /// Listing exchange, as reported by the provider.
@@ -23,6 +28,12 @@ pub struct SymbolMatch {
     pub currency: Option<String>,
     /// Whether the symbol is currently active/tradable.
     pub active: Option<bool>,
+    /// Rank within the provider's universe by market cap (1 = largest).
+    pub market_cap_rank: Option<u32>,
+    /// Small logo/icon URL.
+    pub thumbnail: Option<String>,
+    /// Full-size logo URL.
+    pub image: Option<String>,
 }
 
 /// Detailed reference data for a single symbol.
@@ -252,18 +263,17 @@ impl ScreenerFilters {
     }
 }
 
-#[cfg(test)]
+// Gated as a whole: every test here exercises `to_query`, which is fmp-only.
+#[cfg(all(test, feature = "fmp"))]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(feature = "fmp")]
     fn empty_filters_render_no_query_params() {
         assert!(ScreenerFilters::new().to_query().is_empty());
     }
 
     #[test]
-    #[cfg(feature = "fmp")]
     fn set_filters_render_with_provider_parameter_names() {
         let q = ScreenerFilters::new()
             .market_cap(Some(1e9), None)

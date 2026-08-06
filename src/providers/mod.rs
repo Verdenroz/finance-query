@@ -497,6 +497,8 @@ pub enum Operation {
     SectorPerformanceHistory,
     /// Market-wide holiday calendar.
     HolidayCalendar,
+    /// Live exchange open/closed status.
+    MarketStatus,
     /// Current constituents of a major index.
     IndexConstituents,
     /// Historical constituent changes of a major index.
@@ -604,6 +606,7 @@ impl Operation {
             Self::MarketMovers => "market_movers",
             Self::SectorPerformanceHistory => "sector_performance_history",
             Self::HolidayCalendar => "holiday_calendar",
+            Self::MarketStatus => "market_status",
             Self::IndexConstituents => "index_constituents",
             Self::IndexConstituentChanges => "index_constituent_changes",
             Self::ShortInterest => "short_interest",
@@ -706,7 +709,8 @@ impl Operation {
             | Self::DividendCalendar
             | Self::SplitCalendar
             | Self::EconomicCalendar
-            | Self::HolidayCalendar => Capability::CALENDAR,
+            | Self::HolidayCalendar
+            | Self::MarketStatus => Capability::CALENDAR,
             Self::SectorPerformance | Self::MarketMovers | Self::SectorPerformanceHistory => {
                 Capability::MARKET
             }
@@ -1061,6 +1065,13 @@ pub(crate) fn range_to_dates(range: crate::TimeRange) -> (String, String) {
     )
 }
 
+/// Keyed on identity, not `capabilities().contains(FILINGS)`: a provider may
+/// advertise FILINGS only to reach a secondary op (Alpha Vantage does, for
+/// insider trades), which would otherwise suppress the real filings source.
+fn needs_edgar_injection(ids: &[Provider]) -> bool {
+    !ids.contains(&Provider::Edgar)
+}
+
 pub(crate) async fn build_providers(
     ids: &[Provider],
     config: &ClientConfig,
@@ -1111,11 +1122,7 @@ pub(crate) async fn build_providers(
         adapter.initialize().await?;
         providers.push(adapter);
     }
-    // Auto-inject EDGAR if no other FILINGS-capable provider was configured
-    let has_filings = providers
-        .iter()
-        .any(|p| p.capabilities().contains(Capability::FILINGS));
-    if !has_filings {
+    if needs_edgar_injection(ids) {
         providers.push(Arc::new(edgar::EdgarProvider));
     }
     Ok(ProviderSet::new(providers, yahoo_client, routes))
@@ -1370,5 +1377,23 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, FinanceError::ApiError(_)), "got {err:?}");
+    }
+
+    #[test]
+    fn edgar_is_injected_unless_configured_explicitly() {
+        assert!(needs_edgar_injection(&[Provider::Yahoo]));
+        assert!(!needs_edgar_injection(&[Provider::Yahoo, Provider::Edgar]));
+    }
+
+    /// Alpha Vantage advertises FILINGS for insider trades only, so a
+    /// capability-based check would drop EDGAR and break `filings()`.
+    #[test]
+    #[cfg(feature = "alphavantage")]
+    fn a_filings_advertising_provider_does_not_suppress_edgar() {
+        assert!(
+            ProviderAdapter::capabilities(&alphavantage::AlphaVantageProvider)
+                .contains(Capability::FILINGS)
+        );
+        assert!(needs_edgar_injection(&[Provider::AlphaVantage]));
     }
 }

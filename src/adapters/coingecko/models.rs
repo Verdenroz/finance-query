@@ -20,14 +20,20 @@ pub(crate) struct SearchResponseDTO {
 }
 
 /// One coin match from `/search`.
-///
-/// CoinGecko's response also carries `symbol`/`market_cap_rank`/thumbnail
-/// URLs, but the canonical mapping only needs `id` (the identifier
-/// [`Providers::crypto`](crate::Providers::crypto) accepts) and `name`.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SearchCoinDTO {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub symbol: Option<String>,
+    #[serde(default)]
+    pub market_cap_rank: Option<u32>,
+    /// Small (~25px) icon.
+    #[serde(default)]
+    pub thumb: Option<String>,
+    /// Full-size logo.
+    #[serde(default)]
+    pub large: Option<String>,
 }
 
 // ============================================================================

@@ -231,11 +231,15 @@ pub async fn fetch_symbol_search_response(
         .filter_map(|t| {
             Some(SymbolMatch {
                 symbol: t.ticker?,
+                id: None,
                 name: t.name,
                 exchange: t.primary_exchange,
                 asset_type: t.asset_type,
                 currency: t.currency_name,
                 active: t.active,
+                market_cap_rank: None,
+                thumbnail: None,
+                image: None,
             })
         })
         .collect())

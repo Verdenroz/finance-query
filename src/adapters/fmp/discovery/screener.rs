@@ -109,12 +109,16 @@ pub async fn fetch_symbol_search_response(
         .filter_map(|r| {
             Some(SymbolMatch {
                 symbol: r.symbol?,
+                id: None,
                 name: r.name,
                 // Prefer the short code (e.g. "NASDAQ") over the long venue name.
                 exchange: r.exchange_short_name.or(r.stock_exchange),
                 asset_type: None,
                 currency: r.currency,
                 active: None,
+                market_cap_rank: None,
+                thumbnail: None,
+                image: None,
             })
         })
         .collect())

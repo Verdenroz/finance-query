@@ -96,7 +96,17 @@ pub mod fred {
 #[cfg(feature = "crypto")]
 pub mod crypto {
     //! CoinGecko cryptocurrency data (requires `crypto` feature).
-    pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
+    //!
+    //! Keyless shortcuts, the crypto counterpart to [`finance`](crate::finance).
+    //! [`Market::crypto_trending`](crate::domains::Market::crypto_trending) and
+    //! [`crypto_global`](crate::domains::Market::crypto_global) reach the same
+    //! data through provider routing when other CRYPTO providers are configured.
+    pub use crate::adapters::coingecko::{
+        CoinQuote, coin, coins, fetch_crypto_global_response as global,
+        fetch_crypto_trending_response as trending, fetch_symbol_search_response as search,
+    };
+    pub use crate::models::crypto::{GlobalCryptoStats, TrendingCoin};
+    pub use crate::models::discovery::reference::SymbolMatch;
 }
 
 #[cfg(feature = "gdelt")]

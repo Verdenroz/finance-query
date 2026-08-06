@@ -91,6 +91,12 @@ impl MarketCalendar {
     pub async fn holidays(&self) -> Result<Vec<MarketCalendarEntry>> {
         self.fetch(CalendarKind::MarketHoliday, "", "").await
     }
+
+    /// Live open/closed status per exchange. A snapshot rather than a dated
+    /// event, so no date range is taken. Currently Alpha Vantage only.
+    pub async fn market_status(&self) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::MarketStatus, "", "").await
+    }
 }
 
 /// Market-wide performance statistics backed by configured data providers.
@@ -198,62 +204,46 @@ impl Market {
     /// `MARKET`, since it's OHLCV data rather than a performance statistic.
     /// Currently Polygon only. Not cached — one date is one request either way.
     pub async fn grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
-        let providers = Arc::clone(&self.providers);
         let date = date.to_string();
-        providers
-            .fetch(crate::providers::Capability::CHART, move |p| {
-                let date = date.clone();
-                let p = p.clone();
-                async move {
-                    p.as_chart()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::GroupedDaily))?
-                        .fetch_grouped_daily(&date)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            GroupedDaily,
+            fetch_grouped_daily,
+            [date],
+            &date
+        )
     }
 
     /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
     /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
     pub async fn crypto_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
-        let providers = Arc::clone(&self.providers);
         let date = date.to_string();
-        providers
-            .fetch(crate::providers::Capability::CHART, move |p| {
-                let date = date.clone();
-                let p = p.clone();
-                async move {
-                    p.as_chart()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::CryptoGroupedDaily)
-                        })?
-                        .fetch_crypto_grouped_daily(&date)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            CryptoGroupedDaily,
+            fetch_crypto_grouped_daily,
+            [date],
+            &date
+        )
     }
 
     /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
     /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
     pub async fn forex_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
-        let providers = Arc::clone(&self.providers);
         let date = date.to_string();
-        providers
-            .fetch(crate::providers::Capability::CHART, move |p| {
-                let date = date.clone();
-                let p = p.clone();
-                async move {
-                    p.as_chart()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::ForexGroupedDaily)
-                        })?
-                        .fetch_forex_grouped_daily(&date)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            ForexGroupedDaily,
+            fetch_forex_grouped_daily,
+            [date],
+            &date
+        )
     }
 
     /// Fetch coins/nfts/categories trending in the last 24h.
@@ -262,19 +252,14 @@ impl Market {
     /// Currently CoinGecko only.
     #[cfg(feature = "crypto")]
     pub async fn crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
-        self.providers
-            .fetch(crate::providers::Capability::CRYPTO, move |p| {
-                let p = p.clone();
-                async move {
-                    p.as_crypto()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::CryptoTrending)
-                        })?
-                        .fetch_crypto_trending()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            CRYPTO,
+            as_crypto,
+            CryptoTrending,
+            fetch_crypto_trending,
+            []
+        )
     }
 
     /// Fetch aggregate global cryptocurrency market statistics.
@@ -283,16 +268,13 @@ impl Market {
     /// Currently CoinGecko only.
     #[cfg(feature = "crypto")]
     pub async fn crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
-        self.providers
-            .fetch(crate::providers::Capability::CRYPTO, move |p| {
-                let p = p.clone();
-                async move {
-                    p.as_crypto()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::CryptoGlobal))?
-                        .fetch_crypto_global()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            CRYPTO,
+            as_crypto,
+            CryptoGlobal,
+            fetch_crypto_global,
+            []
+        )
     }
 }

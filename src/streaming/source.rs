@@ -56,7 +56,7 @@ where
 /// Drive a [`StreamSource`] with automatic reconnection until it shuts down.
 ///
 /// `retry_delay` is supplied by the caller rather than hard-coded so a smarter
-/// policy (see issue #276) can be swapped in without touching sources.
+/// policy can be swapped in without touching sources.
 pub(crate) async fn run_stream_loop<T>(
     source: Arc<dyn StreamSource<T>>,
     initial_symbols: Vec<String>,

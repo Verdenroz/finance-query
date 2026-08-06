@@ -2853,6 +2853,90 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v2/crypto/trending:
+    get:
+      tags: [Cryptocurrency]
+      summary: Trending coins (last 24h)
+      description: Coins trending on CoinGecko over the last 24 hours, most trending first
+      parameters:
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
+      responses:
+        '200':
+          description: |
+            Trending coins ordered by trending rank. Pagination is opt-in:
+            omitting both `limit` and `cursor` returns a bare array; passing
+            either returns `{ items: [...], pageInfo: {...} }` instead.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrendingCoin'
+        '429':
+          description: CoinGecko rate limit exceeded (30 req/min on free tier)
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/crypto/search:
+    get:
+      tags: [Cryptocurrency]
+      summary: Search the CoinGecko coin universe
+      description: Free-text search over CoinGecko's coin list, returning provider-neutral symbol matches
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Coin name, symbol, or CoinGecko id
+          example: bitcoin
+        - name: limitResults
+          in: query
+          schema:
+            type: integer
+            default: 25
+          description: Max matches to fetch upstream
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
+      responses:
+        '200':
+          description: |
+            Matching coins. Pagination is opt-in: omitting both `limit` and
+            `cursor` returns a bare array; passing either returns
+            `{ items: [...], pageInfo: {...} }` instead.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SymbolMatch'
+        '429':
+          description: CoinGecko rate limit exceeded
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/crypto/global:
+    get:
+      tags: [Cryptocurrency]
+      summary: Global crypto market statistics
+      description: Aggregate market cap, volume, and dominance figures across all tracked coins
+      parameters:
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Global cryptocurrency market statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalCryptoStats'
+        '429':
+          description: CoinGecko rate limit exceeded
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v2/risk/{symbol}:
     get:
       tags: [Risk]
@@ -3476,6 +3560,115 @@ components:
         nonreportableShort:
           type: integer
           format: int64
+          nullable: true
+
+    SymbolMatch:
+      type: object
+      description: Provider-neutral symbol match from a discovery search
+      properties:
+        symbol:
+          type: string
+          description: Ticker symbol, uppercased
+          example: BTC
+        id:
+          type: string
+          nullable: true
+          description: >-
+            Provider-native identifier when distinct from the ticker — e.g. the
+            CoinGecko coin id, which is what the crypto quote route accepts.
+          example: bitcoin
+        name:
+          type: string
+          nullable: true
+          example: Bitcoin
+        exchange:
+          type: string
+          nullable: true
+        assetType:
+          type: string
+          nullable: true
+          description: Asset type (e.g. CS for common stock, ETF, Cryptocurrency)
+        currency:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+          nullable: true
+        marketCapRank:
+          type: integer
+          nullable: true
+          description: Rank within the provider's universe by market cap (1 = largest)
+        thumbnail:
+          type: string
+          nullable: true
+          description: Small logo/icon URL
+        image:
+          type: string
+          nullable: true
+          description: Full-size logo URL
+
+    TrendingCoin:
+      type: object
+      description: A coin trending on CoinGecko over the last 24 hours
+      properties:
+        id:
+          type: string
+          nullable: true
+          description: CoinGecko coin ID
+          example: bitcoin
+        symbol:
+          type: string
+          nullable: true
+          example: BTC
+        name:
+          type: string
+          nullable: true
+          example: Bitcoin
+        marketCapRank:
+          type: integer
+          nullable: true
+          description: Market cap rank (1 = highest market cap)
+        priceBtc:
+          type: number
+          format: double
+          nullable: true
+          description: Price denominated in BTC
+        score:
+          type: integer
+          nullable: true
+          description: Trending rank (0 = most trending)
+
+    GlobalCryptoStats:
+      type: object
+      description: Aggregate global cryptocurrency market statistics from CoinGecko
+      properties:
+        activeCryptocurrencies:
+          type: integer
+          nullable: true
+        markets:
+          type: integer
+          nullable: true
+        totalMarketCapUsd:
+          type: number
+          format: double
+          nullable: true
+        totalVolumeUsd:
+          type: number
+          format: double
+          nullable: true
+        btcDominance:
+          type: number
+          format: double
+          nullable: true
+          description: Bitcoin's percentage of total market cap
+        ethDominance:
+          type: number
+          format: double
+          nullable: true
+          description: Ethereum's percentage of total market cap
+        marketCapChangePercentage24HUsd:
+          type: number
+          format: double
           nullable: true
 
     Split:

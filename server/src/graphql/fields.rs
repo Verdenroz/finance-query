@@ -428,6 +428,32 @@ pub const GQL_COIN_VALID_FIELDS: &[&str] = &[
     "marketCapRank",
 ];
 
+pub const GQL_TRENDING_COIN_VALID_FIELDS: &[&str] =
+    &["id", "symbol", "name", "marketCapRank", "priceBtc", "score"];
+
+pub const GQL_CRYPTO_SYMBOL_MATCH_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "id",
+    "name",
+    "exchange",
+    "assetType",
+    "currency",
+    "active",
+    "marketCapRank",
+    "thumbnail",
+    "image",
+];
+
+pub const GQL_GLOBAL_CRYPTO_STATS_VALID_FIELDS: &[&str] = &[
+    "activeCryptocurrencies",
+    "markets",
+    "totalMarketCapUsd",
+    "totalVolumeUsd",
+    "btcDominance",
+    "ethDominance",
+    "marketCapChangePercentage24HUsd",
+];
+
 // ── FRED (economic series + Treasury yields) ────────────────────────────────
 
 pub const GQL_MACRO_SERIES_VALID_FIELDS: &[&str] = &["id", "observations"];

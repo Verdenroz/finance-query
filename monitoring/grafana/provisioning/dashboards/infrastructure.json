@@ -107,7 +107,7 @@
       ],
       "title": "Disk Usage by Mountpoint",
       "type": "bargauge",
-      "description": "Filesystem fill level per mountpoint. A full disk took the whole stack down in issue #222 \u2014 this is the incident class this panel exists to catch early. Yellow at 80%, red at 90%."
+      "description": "Filesystem fill level per mountpoint. Yellow at 80%, red at 90%."
     },
     {
       "datasource": {
@@ -211,7 +211,7 @@
       ],
       "title": "Disk Usage Over Time",
       "type": "timeseries",
-      "description": "Filesystem fill level per mountpoint. A full disk took the whole stack down in issue #222 \u2014 this is the incident class this panel exists to catch early. Yellow at 80%, red at 90%."
+      "description": "Filesystem fill level per mountpoint. Yellow at 80%, red at 90%."
     },
     {
       "datasource": {
