@@ -35,7 +35,7 @@ groups:
           service: finance-query-v2
         annotations:
           summary: "Finance Query V2 lost its Redis cache connection"
-          description: "cache_backend_connected has been 0 for 5+ minutes — V2 is running in silent in-memory fallback (issue #222). Cache will not persist across restarts."
+          description: "cache_backend_connected has been 0 for 5+ minutes — V2 is running in silent in-memory fallback. Cache will not persist across restarts."
 
       - alert: CacheErrorsHigh
         expr: rate(finance_query_cache_errors_total[5m]) > 0

@@ -5,6 +5,9 @@ use crate::error::{FinanceError, Result};
 use super::build_client;
 use super::models::*;
 
+pub mod insider;
+pub use insider::fetch_insider_trades_response;
+
 /// Fetch market news and sentiment for given tickers and/or topics.
 ///
 /// # Arguments

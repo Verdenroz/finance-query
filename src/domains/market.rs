@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::error::Result;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
+use crate::models::chart::Candle;
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
 };
@@ -89,6 +90,12 @@ impl MarketCalendar {
     /// upcoming set, so no date range is taken.
     pub async fn holidays(&self) -> Result<Vec<MarketCalendarEntry>> {
         self.fetch(CalendarKind::MarketHoliday, "", "").await
+    }
+
+    /// Live open/closed status per exchange. A snapshot rather than a dated
+    /// event, so no date range is taken. Currently Alpha Vantage only.
+    pub async fn market_status(&self) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::MarketStatus, "", "").await
     }
 }
 
@@ -186,5 +193,88 @@ impl Market {
     /// Highest traded volume.
     pub async fn most_active(&self) -> Result<Vec<MoverQuote>> {
         self.movers(MoverDirection::MostActive).await
+    }
+
+    /// Fetch grouped daily OHLCV bars for every stock ticker on `date`
+    /// (`YYYY-MM-DD`) in one call — "give me every ticker's OHLC for this
+    /// date" rather than one symbol at a time.
+    ///
+    /// Routes through [`Capability::CHART`](crate::providers::Capability::CHART)
+    /// (the same capability backing per-symbol chart methods) rather than
+    /// `MARKET`, since it's OHLCV data rather than a performance statistic.
+    /// Currently Polygon only. Not cached — one date is one request either way.
+    pub async fn grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let date = date.to_string();
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            GroupedDaily,
+            fetch_grouped_daily,
+            [date],
+            &date
+        )
+    }
+
+    /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
+    /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
+    pub async fn crypto_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let date = date.to_string();
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            CryptoGroupedDaily,
+            fetch_crypto_grouped_daily,
+            [date],
+            &date
+        )
+    }
+
+    /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
+    /// (`YYYY-MM-DD`) in one call. See [`grouped_daily`](Self::grouped_daily).
+    pub async fn forex_grouped_daily(&self, date: &str) -> Result<Vec<(String, Candle)>> {
+        let date = date.to_string();
+        dispatch_via!(
+            self,
+            CHART,
+            as_chart,
+            ForexGroupedDaily,
+            fetch_forex_grouped_daily,
+            [date],
+            &date
+        )
+    }
+
+    /// Fetch coins/nfts/categories trending in the last 24h.
+    ///
+    /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
+    /// Currently CoinGecko only.
+    #[cfg(feature = "crypto")]
+    pub async fn crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+        dispatch_via!(
+            self,
+            CRYPTO,
+            as_crypto,
+            CryptoTrending,
+            fetch_crypto_trending,
+            []
+        )
+    }
+
+    /// Fetch aggregate global cryptocurrency market statistics.
+    ///
+    /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
+    /// Currently CoinGecko only.
+    #[cfg(feature = "crypto")]
+    pub async fn crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+        dispatch_via!(
+            self,
+            CRYPTO,
+            as_crypto,
+            CryptoGlobal,
+            fetch_crypto_global,
+            []
+        )
     }
 }

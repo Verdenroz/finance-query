@@ -18,7 +18,7 @@ groups:
           service: host
         annotations:
           summary: "Disk usage above 80% on {{ $labels.mountpoint }}"
-          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. Investigate before it cascades (issue #222: disk bloat previously reached 99% and broke Redis)."
+          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. Investigate before it cascades."
 
       - alert: HostDiskUsageCritical
         expr: |
@@ -32,7 +32,7 @@ groups:
           service: host
         annotations:
           summary: "CRITICAL: Disk usage above 90% on {{ $labels.mountpoint }}"
-          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. This is the issue #222 incident class (cache bloat -> full disk -> Redis errors). Free space NOW."
+          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. Free space NOW."
 
       - alert: HostMemoryAvailableLow
         expr: |

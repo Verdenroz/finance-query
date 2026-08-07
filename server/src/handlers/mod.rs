@@ -66,6 +66,12 @@ pub(crate) fn api_routes() -> Router {
         .route("/crypto/coins", get(crypto::get_crypto_coins))
         // GET /v2/crypto/coins/{id}?vs_currency=<str>
         .route("/crypto/coins/{id}", get(crypto::get_crypto_coin))
+        // GET /v2/crypto/trending
+        .route("/crypto/trending", get(crypto::get_crypto_trending))
+        // GET /v2/crypto/global
+        .route("/crypto/global", get(crypto::get_crypto_global))
+        // GET /v2/crypto/search?query=<str>
+        .route("/crypto/search", get(crypto::get_crypto_search))
         // GET /v2/currencies
         .route("/currencies", get(metadata::get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>

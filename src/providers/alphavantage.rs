@@ -4,9 +4,9 @@
 //! in the adapter functions under `crate::adapters::alphavantage::*`.
 
 use super::{
-    ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider, DiscoveryProvider,
-    EconomicProvider, ForexProvider, FundamentalsProvider, MarketProvider, OptionsProvider,
-    ProviderAdapter, ProviderCore, QuoteProvider,
+    CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider,
+    DiscoveryProvider, EconomicProvider, FilingsProvider, ForexProvider, FundamentalsProvider,
+    MarketProvider, Operation, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::alphavantage as av;
 use crate::error::Result;
@@ -179,6 +179,50 @@ impl MarketProvider for AlphaVantageProvider {
 }
 
 #[async_trait::async_trait]
+impl CalendarProvider for AlphaVantageProvider {
+    /// Alpha Vantage serves live exchange open/closed status only. Other
+    /// kinds fall through to the next routed provider. `from`/`to` are
+    /// ignored: this is a snapshot, not a dated event.
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        _from: &str,
+        _to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
+            return Err(self.not_supported(kind.operation()));
+        }
+        av::fetch_market_status_response().await
+    }
+}
+
+/// `fetch_filings` is the trait's required primary operation, but Alpha
+/// Vantage publishes no raw SEC filing surface — only insider transactions —
+/// so it reports `NotSupported` there and dispatch falls through to the next
+/// routed provider (EDGAR).
+#[async_trait::async_trait]
+impl FilingsProvider for AlphaVantageProvider {
+    async fn fetch_filings(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::filings::ProviderFilings> {
+        Err(self.not_supported(Operation::Filings))
+    }
+
+    /// A second route for the ownership surface alongside EDGAR — Alpha
+    /// Vantage's `INSIDER_TRANSACTIONS` is coarser (no accession number, form
+    /// type, or derivative/non-derivative distinction) but covers the same
+    /// canonical [`InsiderTrade`](crate::models::filings::InsiderTrade) model.
+    async fn fetch_insider_trades(
+        &self,
+        symbol: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+        av::corporate::fetch_insider_trades_response(symbol, limit).await
+    }
+}
+
+#[async_trait::async_trait]
 impl ProviderAdapter for AlphaVantageProvider {
     async fn initialize(&self) -> Result<()> {
         let key = std::env::var("ALPHAVANTAGE_API_KEY").map_err(|_| {
@@ -223,6 +267,12 @@ impl ProviderAdapter for AlphaVantageProvider {
         Some(self)
     }
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
+        Some(self)
+    }
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
+        Some(self)
+    }
+    fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         Some(self)
     }
 }

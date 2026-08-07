@@ -6,7 +6,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 ///
 /// Alpha Vantage returns numeric values as strings, and uses `"None"` or `"."`
 /// for missing data.
-#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
 pub(crate) fn deserialize_optional_f64<'de, D>(
     deserializer: D,
 ) -> std::result::Result<Option<f64>, D::Error>
@@ -217,7 +216,6 @@ pub struct BulkQuoteDTO {
 /// A single match result from a symbol search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct SymbolMatchDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -246,7 +244,6 @@ pub struct SymbolMatchDTO {
 /// Status of a single market/exchange.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct MarketStatusDTO {
     /// Market type (e.g., `"Equity"`, `"Forex"`)
     pub market_type: String,
@@ -262,6 +259,39 @@ pub struct MarketStatusDTO {
     pub current_status: String,
     /// Notes
     pub notes: String,
+}
+
+// ============================================================================
+// Insider transactions
+// ============================================================================
+
+/// A single insider transaction record (`INSIDER_TRANSACTIONS`).
+///
+/// Alpha Vantage's fields are coarser than a Form 3/4/5 line item — no
+/// accession number, form type, or derivative/non-derivative distinction —
+/// so mapping into the canonical [`InsiderTrade`](crate::models::filings::InsiderTrade)
+/// leaves those fields `None`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct InsiderTransactionDTO {
+    /// Transaction date (`YYYY-MM-DD`).
+    pub transaction_date: Option<String>,
+    /// Ticker symbol.
+    pub ticker: Option<String>,
+    /// Insider's name, as filed.
+    pub executive: Option<String>,
+    /// Insider's title (e.g. `"Chief Executive Officer"`).
+    pub executive_title: Option<String>,
+    /// Security type (e.g. `"Common Stock"`).
+    pub security_type: Option<String>,
+    /// `"A"` (acquisition) or `"D"` (disposal).
+    pub acquisition_or_disposal: Option<String>,
+    /// Number of shares transacted (Alpha Vantage sends this as a string).
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub shares: Option<f64>,
+    /// Price per share (Alpha Vantage sends this as a string).
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub share_price: Option<f64>,
 }
 
 // ============================================================================

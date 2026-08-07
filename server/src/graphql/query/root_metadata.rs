@@ -8,7 +8,7 @@ use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     calendar::GqlCalendarEvent,
-    crypto::GqlCoinQuote,
+    crypto::{GqlCoinQuote, GqlGlobalCryptoStats, GqlSymbolMatch, GqlTrendingCoin},
     edgar::{GqlEdgarCik, GqlEdgarSearchHit, GqlEdgarSearchResults},
     enums::GqlTimeRange,
     fred::{GqlMacroSeries, GqlTreasuryYield},
@@ -94,6 +94,49 @@ impl RootMetadataQuery {
             &symbol,
         ))
         .await
+    }
+
+    /// Coins trending on CoinGecko over the last 24h, most trending first.
+    async fn crypto_trending(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Max coins per page; omitted = every trending coin in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlTrendingCoin>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::crypto::get_trending(&state.cache)
+            .await
+            .map_err(to_gql_error)?;
+        let coins: Vec<GqlTrendingCoin> = from_gql_json(json)?;
+        pagination::paginate(&coins, first, after).await
+    }
+
+    /// Search CoinGecko's coin universe by free-text query.
+    async fn crypto_search(
+        &self,
+        ctx: &Context<'_>,
+        query: String,
+        #[graphql(default = 25)] limit: u32,
+        #[graphql(desc = "Max matches per page; omitted = every match in one page")] first: Option<
+            i32,
+        >,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlSymbolMatch>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::crypto::search(&state.cache, &query, limit)
+            .await
+            .map_err(to_gql_error)?;
+        let matches: Vec<GqlSymbolMatch> = from_gql_json(json)?;
+        pagination::paginate(&matches, first, after).await
+    }
+
+    /// Aggregate global cryptocurrency market statistics (CoinGecko).
+    async fn crypto_global(&self, ctx: &Context<'_>) -> Result<GqlGlobalCryptoStats> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::crypto::get_global(&state.cache)).await
     }
 
     /// Resolve a ticker symbol to its SEC CIK number. Requires `EDGAR_EMAIL`.

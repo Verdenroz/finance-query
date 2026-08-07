@@ -1,6 +1,6 @@
 //! CoinGecko provider implementation.
 
-use super::{ChartProvider, CryptoProvider, ProviderAdapter, ProviderCore};
+use super::{ChartProvider, CryptoProvider, DiscoveryProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
 
 pub(crate) struct CoinGeckoProvider;
@@ -19,6 +19,25 @@ impl CryptoProvider for CoinGeckoProvider {
         vs_currency: &str,
     ) -> Result<crate::models::crypto::CryptoQuote> {
         crate::adapters::coingecko::fetch_crypto_quote_response(id, vs_currency).await
+    }
+
+    async fn fetch_crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+        crate::adapters::coingecko::fetch_crypto_trending_response().await
+    }
+
+    async fn fetch_crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+        crate::adapters::coingecko::fetch_crypto_global_response().await
+    }
+}
+
+#[async_trait::async_trait]
+impl DiscoveryProvider for CoinGeckoProvider {
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        crate::adapters::coingecko::fetch_symbol_search_response(query, limit).await
     }
 }
 
@@ -43,6 +62,9 @@ impl ProviderAdapter for CoinGeckoProvider {
         Some(self)
     }
     fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         Some(self)
     }
 }

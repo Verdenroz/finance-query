@@ -96,7 +96,17 @@ pub mod fred {
 #[cfg(feature = "crypto")]
 pub mod crypto {
     //! CoinGecko cryptocurrency data (requires `crypto` feature).
-    pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
+    //!
+    //! Keyless shortcuts, the crypto counterpart to [`finance`](crate::finance).
+    //! [`Market::crypto_trending`](crate::domains::Market::crypto_trending) and
+    //! [`crypto_global`](crate::domains::Market::crypto_global) reach the same
+    //! data through provider routing when other CRYPTO providers are configured.
+    pub use crate::adapters::coingecko::{
+        CoinQuote, coin, coins, fetch_crypto_global_response as global,
+        fetch_crypto_trending_response as trending, fetch_symbol_search_response as search,
+    };
+    pub use crate::models::crypto::{GlobalCryptoStats, TrendingCoin};
+    pub use crate::models::discovery::reference::SymbolMatch;
 }
 
 #[cfg(feature = "gdelt")]
@@ -278,7 +288,12 @@ pub use domains::{EconomicCatalog, EconomicIndicator};
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use domains::Commodity;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "crypto"
+))]
 pub use domains::Discovery;
 pub use domains::Filings;
 #[cfg(any(feature = "polygon", feature = "cftc"))]
@@ -287,8 +302,13 @@ pub use domains::FuturesContract;
 pub use domains::Index;
 #[cfg(feature = "polygon")]
 pub use domains::Snapshot;
+// `Market` is unconditional — its grouped-daily/crypto methods route through
+// CHART/CRYPTO, which have their own (broader) per-method gating rather than
+// requiring fmp/polygon/alphavantage. `MarketCalendar` still needs one of them
+// since `CalendarProvider` itself is gated to that set.
+pub use domains::Market;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-pub use domains::{Market, MarketCalendar};
+pub use domains::MarketCalendar;
 
 // Provider-specific financial data functions
 // (FMP, Polygon, Alpha Vantage — defined in the finance module)
@@ -318,7 +338,12 @@ pub use tickers::BatchIndicatorsResponse;
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "crypto"
+))]
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };

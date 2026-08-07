@@ -1,7 +1,9 @@
 //! Forex aggregate bar endpoints: OHLCV bars, previous close, grouped daily.
 
+use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
+use crate::models::chart::Candle;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -16,6 +18,7 @@ use super::super::models::*;
 /// * `from` - Start date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `to` - End date as `"YYYY-MM-DD"` or millisecond timestamp string
 /// * `params` - Optional parameters (adjusted, sort, limit)
+#[allow(dead_code)] // unrouted: per-symbol forex charts route through the generic CHART capability path (fetch_chart_response)
 pub async fn forex_aggregates(
     ticker: &str,
     multiplier: u32,
@@ -64,6 +67,7 @@ pub async fn forex_aggregates(
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: outside the grouped-daily surface
 pub async fn forex_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
@@ -109,6 +113,38 @@ pub async fn forex_grouped_daily(
             "forex grouped daily response",
         )
         .await
+}
+
+/// Convert a grouped-daily (all-tickers-for-one-date) response into
+/// per-ticker candles. Bars without a `"T"` ticker field are skipped.
+fn grouped_daily_to_candles(aggs: AggregateResponseDTO) -> Vec<(String, Candle)> {
+    aggs.results
+        .into_iter()
+        .flatten()
+        .filter_map(|r| {
+            let ticker = r.ticker.clone()?;
+            Some((
+                ticker,
+                Candle {
+                    timestamp: r.timestamp,
+                    open: r.open,
+                    high: r.high,
+                    low: r.low,
+                    close: r.close,
+                    volume: r.volume as i64,
+                    adj_close: None,
+                    provider_id: Some(Provider::Polygon),
+                },
+            ))
+        })
+        .collect()
+}
+
+/// Fetch grouped daily OHLCV bars for every forex ticker on `date`
+/// (`YYYY-MM-DD`), as `(symbol, candle)` pairs.
+pub async fn fetch_forex_grouped_daily_response(date: &str) -> Result<Vec<(String, Candle)>> {
+    let aggs = forex_grouped_daily(date, None).await?;
+    Ok(grouped_daily_to_candles(aggs))
 }
 
 #[cfg(test)]
@@ -237,5 +273,42 @@ mod tests {
         let results = resp.results.unwrap();
         assert!(!results.is_empty());
         assert!((results[0].open - 1.1050).abs() < 0.0001);
+    }
+
+    #[tokio::test]
+    async fn test_forex_grouped_daily_mock_maps_per_ticker_candles() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/v2/aggs/grouped/locale/global/market/fx/2024-01-16")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "status": "OK",
+                    "adjusted": true,
+                    "resultsCount": 1,
+                    "results": [
+                        { "T": "C:GBPUSD", "o": 1.2700, "h": 1.2750, "l": 1.2680, "c": 1.2730, "v": 30000.0, "t": 1704067200000_i64 }
+                    ]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get_raw("/v2/aggs/grouped/locale/global/market/fx/2024-01-16", &[])
+            .await
+            .unwrap();
+
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
+        let candles = grouped_daily_to_candles(resp);
+        assert_eq!(candles.len(), 1);
+        assert_eq!(candles[0].0, "C:GBPUSD");
+        assert!((candles[0].1.close - 1.2730).abs() < 0.0001);
     }
 }

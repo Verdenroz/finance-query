@@ -1,6 +1,7 @@
 //! Core stock time series endpoints: intraday, daily, weekly, monthly, quotes, search, market status.
 
 use crate::error::{FinanceError, Result};
+use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 use crate::models::chart::{Candle, Chart};
 use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
@@ -383,8 +384,43 @@ pub async fn symbol_search(keywords: &str) -> Result<Vec<SymbolMatchDTO>> {
         .collect())
 }
 
+/// Convert one market status DTO into a canonical calendar entry.
+///
+/// Reuses [`CalendarDetail::MarketHoliday`] — the closest existing shape for
+/// "is this exchange open right now" — rather than adding a bespoke variant
+/// for a single provider's live-status snapshot. `name` carries the
+/// region/market-type label Alpha Vantage reports since the entry has no
+/// dedicated fields for them; `symbol`/`date` are `None` since this is a
+/// live status snapshot rather than a dated event.
+fn market_status_to_canonical(m: MarketStatusDTO) -> MarketCalendarEntry {
+    fn non_empty(s: String) -> Option<String> {
+        if s.is_empty() { None } else { Some(s) }
+    }
+
+    MarketCalendarEntry {
+        symbol: None,
+        date: None,
+        detail: CalendarDetail::MarketHoliday {
+            name: Some(format!("{} ({})", m.region, m.market_type)),
+            exchange: non_empty(m.primary_exchanges),
+            status: non_empty(m.current_status),
+            open: non_empty(m.local_open),
+            close: non_empty(m.local_close),
+        },
+    }
+}
+
+/// Fetch the current market status of every major global exchange as
+/// canonical calendar entries.
+pub async fn fetch_market_status_response() -> Result<Vec<MarketCalendarEntry>> {
+    Ok(market_status()
+        .await?
+        .into_iter()
+        .map(market_status_to_canonical)
+        .collect())
+}
+
 /// Fetch the current market status of major global exchanges.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn market_status() -> Result<Vec<MarketStatusDTO>> {
     let client = build_client()?;
     let json = client.get("MARKET_STATUS", &[]).await?;
@@ -639,6 +675,65 @@ fn timestamp_to_date_string(ts: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn market_status_maps_region_and_type_into_name() {
+        let dto = MarketStatusDTO {
+            market_type: "Equity".to_string(),
+            region: "United States".to_string(),
+            primary_exchanges: "NASDAQ, NYSE".to_string(),
+            local_open: "09:30".to_string(),
+            local_close: "16:00".to_string(),
+            current_status: "open".to_string(),
+            notes: String::new(),
+        };
+        let entry = market_status_to_canonical(dto);
+        assert!(entry.symbol.is_none());
+        assert!(entry.date.is_none());
+        match entry.detail {
+            CalendarDetail::MarketHoliday {
+                name,
+                exchange,
+                status,
+                open,
+                close,
+            } => {
+                assert_eq!(name.as_deref(), Some("United States (Equity)"));
+                assert_eq!(exchange.as_deref(), Some("NASDAQ, NYSE"));
+                assert_eq!(status.as_deref(), Some("open"));
+                assert_eq!(open.as_deref(), Some("09:30"));
+                assert_eq!(close.as_deref(), Some("16:00"));
+            }
+            _ => panic!("expected MarketHoliday detail"),
+        }
+    }
+
+    #[test]
+    fn market_status_empty_open_close_become_none() {
+        let dto = MarketStatusDTO {
+            market_type: "Forex".to_string(),
+            region: "Global".to_string(),
+            primary_exchanges: String::new(),
+            local_open: String::new(),
+            local_close: String::new(),
+            current_status: "closed".to_string(),
+            notes: String::new(),
+        };
+        let entry = market_status_to_canonical(dto);
+        match entry.detail {
+            CalendarDetail::MarketHoliday {
+                exchange,
+                open,
+                close,
+                ..
+            } => {
+                assert!(exchange.is_none());
+                assert!(open.is_none());
+                assert!(close.is_none());
+            }
+            _ => panic!("expected MarketHoliday detail"),
+        }
+    }
 
     fn entry(timestamp: &str, close: f64) -> TimeSeriesEntryDTO {
         TimeSeriesEntryDTO {

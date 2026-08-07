@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CoinGecko trending, global stats, and coin search** are exposed keylessly on
+  the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
+  `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
+  GraphQL root fields). The library gains matching `crypto::trending()`,
+  `crypto::global()`, and `crypto::search()` shortcuts alongside
+  `crypto::coins()`/`crypto::coin()`.
+- `CalendarKind::MarketStatus` and `MarketCalendar::market_status()` for live
+  exchange open/closed status, which Alpha Vantage serves. It was previously
+  mapped onto `CalendarKind::MarketHoliday`, so a holiday-calendar query routed
+  to Alpha Vantage silently returned live status rows instead.
+- `SymbolMatch` gains `id`, `market_cap_rank`, `thumbnail`, and `image`. `id`
+  carries a provider-native identifier when it differs from the ticker — the
+  CoinGecko coin id, for instance, is what `Providers::crypto` accepts.
 - **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
   serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
   indicators across 200+ economies, closing the gap left by FRED's US focus.
@@ -253,6 +266,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GDELT's throttle response carries its retry interval in a plain-text body
   rather than a `Retry-After` header; that interval is now parsed into
   `RateLimited::retry_after` and the message logged instead of discarded.
+- EDGAR is no longer dropped from the provider set when Alpha Vantage is
+  configured. Auto-injection tested `capabilities().contains(FILINGS)`, and
+  Alpha Vantage advertises FILINGS only to serve insider transactions — so
+  EDGAR, the sole real filings source, was suppressed and every `filings()`
+  call failed. Injection is now keyed on provider identity.
+- CoinGecko symbol search puts the ticker in `SymbolMatch::symbol` (uppercased),
+  matching every other DISCOVERY provider; it previously put the CoinGecko coin
+  id there, which broke the provider-neutral contract for consumers searching
+  across providers.
 
 - `finance::hours()` no longer labels every region's market "U.S. markets".
   Yahoo returns correct per-region session times but hardcodes the U.S.

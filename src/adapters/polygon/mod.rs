@@ -61,7 +61,9 @@ pub use options::snapshots::fetch_options_response;
 pub use quote::*;
 
 // Asset-class modules
+pub use crypto::aggregates::fetch_crypto_grouped_daily_response;
 pub use crypto::snapshots::*;
+pub use forex::aggregates::fetch_forex_grouped_daily_response;
 pub use forex::quotes::*;
 pub use futures::snapshots::*;
 pub use indices::snapshots::*;

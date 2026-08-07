@@ -1,6 +1,10 @@
 //! Options market data endpoints.
 
-#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
+// Polygon publishes no grouped-daily (all-tickers-for-one-date) endpoint
+// for options, unlike stocks/crypto/forex; the URL 404s. Per-symbol
+// aggregates already route through the generic CHART capability path
+// (`fetch_chart_response`), so this module stays unrouted.
+#[allow(dead_code)]
 pub mod aggregates;
 pub mod snapshots;
 #[allow(dead_code)] // unrouted: tick-level trades land with #250

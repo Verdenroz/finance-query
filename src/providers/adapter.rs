@@ -83,6 +83,34 @@ pub(crate) trait ChartProvider: ProviderCore {
     ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
         Err(self.not_supported(Operation::Spark))
     }
+
+    /// Fetch grouped daily OHLCV bars for every stock ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request — market-wide rather than
+    /// symbol-scoped. Returns `(symbol, candle)` pairs.
+    async fn fetch_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::GroupedDaily))
+    }
+
+    /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    async fn fetch_crypto_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::CryptoGroupedDaily))
+    }
+
+    /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
+    /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    async fn fetch_forex_grouped_daily(
+        &self,
+        _date: &str,
+    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+        Err(self.not_supported(Operation::ForexGroupedDaily))
+    }
 }
 
 /// [`Capability::FUNDAMENTALS`] — financial statements and share-supply data.
@@ -279,7 +307,12 @@ pub(crate) trait FilingsProvider: ProviderCore {
 
 /// [`Capability::DISCOVERY`] — symbol search, reference data, exchanges,
 /// screeners.
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "crypto"
+))]
 #[async_trait::async_trait]
 pub(crate) trait DiscoveryProvider: ProviderCore {
     /// Search the provider's symbol universe by free-text query.
@@ -417,6 +450,18 @@ pub(crate) trait CryptoProvider: ProviderCore {
         _protocol: &str,
     ) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
         Err(self.not_supported(Operation::ProtocolTvlHistory))
+    }
+
+    /// Fetch coins/nfts/categories trending in the last 24h (CoinGecko only).
+    #[cfg(feature = "crypto")]
+    async fn fetch_crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+        Err(self.not_supported(Operation::CryptoTrending))
+    }
+
+    /// Fetch aggregate global cryptocurrency market statistics (CoinGecko only).
+    #[cfg(feature = "crypto")]
+    async fn fetch_crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+        Err(self.not_supported(Operation::CryptoGlobal))
     }
 }
 
@@ -571,7 +616,12 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    #[cfg(any(
+        feature = "fmp",
+        feature = "polygon",
+        feature = "alphavantage",
+        feature = "crypto"
+    ))]
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         None
     }
@@ -652,14 +702,18 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         if self.as_market().is_some() {
             caps = caps | Capability::MARKET;
         }
+        #[cfg(any(
+            feature = "fmp",
+            feature = "polygon",
+            feature = "alphavantage",
+            feature = "crypto"
+        ))]
+        if self.as_discovery().is_some() {
+            caps = caps | Capability::DISCOVERY;
+        }
         #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-        {
-            if self.as_discovery().is_some() {
-                caps = caps | Capability::DISCOVERY;
-            }
-            if self.as_calendar().is_some() {
-                caps = caps | Capability::CALENDAR;
-            }
+        if self.as_calendar().is_some() {
+            caps = caps | Capability::CALENDAR;
         }
         #[cfg(any(
             feature = "alphavantage",
