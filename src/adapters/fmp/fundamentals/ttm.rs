@@ -7,7 +7,6 @@
 //! FMP's `*TTM`-suffixed keys deserialize straight into the public models via
 //! their `serde` aliases — see [`crate::models::fundamentals::ttm`].
 
-use crate::adapters::common::encode_path_segment;
 use crate::adapters::fmp::{build_client, first_or_missing};
 use crate::error::Result;
 use crate::models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
@@ -19,20 +18,14 @@ use crate::models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
 /// Fetch the TTM key-metrics snapshot for a symbol.
 pub async fn key_metrics_ttm(symbol: &str) -> Result<Vec<KeyMetricsTtm>> {
     build_client()?
-        .get(
-            &format!("/api/v3/key-metrics-ttm/{}", encode_path_segment(symbol)),
-            &[],
-        )
+        .get("/stable/key-metrics-ttm", &[("symbol", symbol)])
         .await
 }
 
 /// Fetch the TTM ratios snapshot for a symbol.
 pub async fn ratios_ttm(symbol: &str) -> Result<Vec<FinancialRatiosTtm>> {
     build_client()?
-        .get(
-            &format!("/api/v3/ratios-ttm/{}", encode_path_segment(symbol)),
-            &[],
-        )
+        .get("/stable/ratios-ttm", &[("symbol", symbol)])
         .await
 }
 

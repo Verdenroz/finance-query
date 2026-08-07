@@ -1,6 +1,5 @@
 //! Commodities endpoints for Financial Modeling Prep.
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -36,8 +35,7 @@ pub async fn fetch_canonical_commodity_quote(
 /// * `symbol` - e.g., `"GCUSD"` (gold)
 pub async fn commodity_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/quote/{}", encode_path_segment(symbol));
-    client.get(&path, &[]).await
+    client.get("/stable/quote", &[("symbol", symbol)]).await
 }
 
 #[cfg(test)]
@@ -50,7 +48,7 @@ mod tests {
     async fn test_commodity_quote_to_canonical_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/quote/GCUSD")
+            .mock("GET", "/stable/quote")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -70,7 +68,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let quotes: Vec<FmpQuoteDTO> = client.get("/api/v3/quote/GCUSD", &[]).await.unwrap();
+        let quotes: Vec<FmpQuoteDTO> = client.get("/stable/quote", &[]).await.unwrap();
 
         let quote = commodity_quote_to_canonical("GCUSD", &quotes);
         assert_eq!(quote.symbol, "GCUSD");

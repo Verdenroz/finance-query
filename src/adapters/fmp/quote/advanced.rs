@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -48,10 +47,10 @@ pub struct SicEntryDTO {
 #[non_exhaustive]
 pub struct CotSymbolDTO {
     /// Trading symbol.
-    #[serde(rename = "trading_symbol")]
+    #[serde(rename = "symbol", alias = "trading_symbol")]
     pub trading_symbol: Option<String>,
     /// Short name.
-    #[serde(rename = "short_name")]
+    #[serde(rename = "name", alias = "short_name")]
     pub short_name: Option<String>,
 }
 
@@ -111,16 +110,16 @@ pub struct CotAnalysisDTO {
     /// Market sentiment.
     #[serde(rename = "marketSentiment")]
     pub market_sentiment: Option<String>,
-    /// Reversal indicator.
+    /// Whether the trend is reversing.
     #[serde(rename = "reversalTrend")]
-    pub reversal_trend: Option<String>,
+    pub reversal_trend: Option<bool>,
 }
 
 /// Fetch all SIC codes.
 pub async fn sic_codes() -> Result<Vec<SicCodeDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/standard_industrial_classification_list", &[])
+        .get("/stable/standard-industrial-classification-list", &[])
         .await
 }
 
@@ -131,7 +130,7 @@ pub async fn sic_by_code(code: &str) -> Result<Vec<SicEntryDTO>> {
     let client = build_client()?;
     client
         .get(
-            "/api/v4/standard_industrial_classification",
+            "/stable/industry-classification-search",
             &[("sicCode", code)],
         )
         .await
@@ -140,9 +139,7 @@ pub async fn sic_by_code(code: &str) -> Result<Vec<SicEntryDTO>> {
 /// Fetch available COT report symbols.
 pub async fn cot_symbols() -> Result<Vec<CotSymbolDTO>> {
     let client = build_client()?;
-    client
-        .get("/api/v4/commitment_of_traders_report/list", &[])
-        .await
+    client.get("/stable/commitment-of-traders-list", &[]).await
 }
 
 /// Fetch a Commitment of Traders report for a symbol.
@@ -150,11 +147,12 @@ pub async fn cot_symbols() -> Result<Vec<CotSymbolDTO>> {
 /// * `symbol` - Trading symbol from the COT report list
 pub async fn cot_report(symbol: &str) -> Result<Vec<CotReportDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v4/commitment_of_traders_report/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    client
+        .get(
+            "/stable/commitment-of-traders-report",
+            &[("symbol", symbol)],
+        )
+        .await
 }
 
 /// Fetch a Commitment of Traders analysis for a symbol.
@@ -162,11 +160,12 @@ pub async fn cot_report(symbol: &str) -> Result<Vec<CotReportDTO>> {
 /// * `symbol` - Trading symbol from the COT report list
 pub async fn cot_analysis(symbol: &str) -> Result<Vec<CotAnalysisDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v4/commitment_of_traders_report_analysis/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    client
+        .get(
+            "/stable/commitment-of-traders-analysis",
+            &[("symbol", symbol)],
+        )
+        .await
 }
 
 #[cfg(test)]
@@ -177,7 +176,7 @@ mod tests {
     async fn test_sic_codes_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/standard_industrial_classification_list")
+            .mock("GET", "/stable/standard-industrial-classification-list")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -197,7 +196,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<SicCodeDTO> = client
-            .get("/api/v4/standard_industrial_classification_list", &[])
+            .get("/stable/standard-industrial-classification-list", &[])
             .await
             .unwrap();
         assert_eq!(result.len(), 1);

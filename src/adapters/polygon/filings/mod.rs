@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 use crate::models::filings::{ProviderFiling, ProviderFilings};
 
@@ -18,15 +17,15 @@ pub struct FilingEntryDTO {
     /// Filing date.
     pub filing_date: Option<String>,
     /// Filing type (e.g., `"10-K"`, `"8-K"`).
-    pub filing_type: Option<String>,
+    pub form_type: Option<String>,
     /// Filing URL.
     pub filing_url: Option<String>,
     /// Company name.
-    pub company_name: Option<String>,
+    pub issuer_name: Option<String>,
     /// CIK.
     pub cik: Option<String>,
-    /// Tickers.
-    pub tickers: Option<Vec<String>>,
+    /// Primary ticker.
+    pub ticker: Option<String>,
 }
 
 /// SEC filing section content.
@@ -36,19 +35,28 @@ pub struct FilingSectionDTO {
     /// Section key/name.
     pub section: Option<String>,
     /// Section text content.
+    #[serde(alias = "text", alias = "items_text")]
     pub content: Option<String>,
+    /// Filing date.
+    pub filing_date: Option<String>,
+    /// Filing URL.
+    pub filing_url: Option<String>,
+    /// Ticker symbol.
+    pub ticker: Option<String>,
 }
 
 /// Risk factor entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct RiskFactorDTO {
-    /// Risk factor title.
-    pub title: Option<String>,
-    /// Risk factor text.
-    pub text: Option<String>,
-    /// Risk category.
-    pub category: Option<String>,
+    /// Top-level risk category.
+    pub primary_category: Option<String>,
+    /// Mid-level risk category.
+    pub secondary_category: Option<String>,
+    /// Most specific risk category.
+    pub tertiary_category: Option<String>,
+    /// Supporting disclosure text.
+    pub supporting_text: Option<String>,
     /// Filing date.
     pub filing_date: Option<String>,
 }
@@ -58,8 +66,14 @@ pub struct RiskFactorDTO {
 #[non_exhaustive]
 #[allow(dead_code)] // unrouted: risk-category taxonomy; fold into risk factors if a consumer appears
 pub struct RiskCategoryDTO {
-    /// Category name.
-    pub name: Option<String>,
+    /// Top-level category.
+    pub primary_category: Option<String>,
+    /// Mid-level category.
+    pub secondary_category: Option<String>,
+    /// Most specific category.
+    pub tertiary_category: Option<String>,
+    /// Taxonomy name.
+    pub taxonomy: Option<serde_json::Value>,
     /// Description.
     pub description: Option<String>,
 }
@@ -81,7 +95,7 @@ pub async fn sec_edgar_index(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<FilingEntryDTO>> {
     let client = build_client()?;
-    client.get("/v1/reference/sec/filings", params).await
+    client.get("/stocks/filings/vX/index", params).await
 }
 
 /// Fetch filings (canonical) for a stock ticker.
@@ -94,9 +108,9 @@ pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
         .map(|f| ProviderFiling {
             accession_number: f.accession_number,
             filing_date: f.filing_date,
-            filing_type: f.filing_type,
+            filing_type: f.form_type,
             filing_url: f.filing_url,
-            company_name: f.company_name,
+            company_name: f.issuer_name,
             cik: f.cik,
         })
         .collect();
@@ -112,12 +126,15 @@ pub async fn filing_10k_sections(
     params: &[(&str, &str)],
 ) -> Result<FilingSectionsResponseDTO> {
     let client = build_client()?;
-    let path = format!(
-        "/v1/reference/sec/filings/{}/sections",
-        encode_path_segment(accession_number)
-    );
+    let mut query = vec![("accession_number", accession_number)];
+    query.extend_from_slice(params);
     client
-        .get_as(&path, params, "10k_sections", "10-K sections")
+        .get_as(
+            "/stocks/filings/10-K/vX/sections",
+            &query,
+            "10k_sections",
+            "10-K sections",
+        )
         .await
 }
 
@@ -127,24 +144,24 @@ pub async fn filing_8k_text(
     params: &[(&str, &str)],
 ) -> Result<FilingSectionsResponseDTO> {
     let client = build_client()?;
-    let path = format!(
-        "/v1/reference/sec/filings/{}/8k",
-        encode_path_segment(accession_number)
-    );
-    client.get_as(&path, params, "8k_text", "8-K text").await
+    let mut query = vec![("accession_number", accession_number)];
+    query.extend_from_slice(params);
+    client
+        .get_as("/stocks/filings/8-K/vX/text", &query, "8k_text", "8-K text")
+        .await
 }
 
 /// Fetch risk factors from SEC filings.
 pub async fn risk_factors(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<RiskFactorDTO>> {
     let client = build_client()?;
-    client.get("/v1/reference/sec/risk-factors", params).await
+    client.get("/stocks/filings/vX/risk-factors", params).await
 }
 
 /// Fetch risk factor categories.
 #[allow(dead_code)] // unrouted: risk-category taxonomy; fold into risk factors if a consumer appears
 pub async fn risk_categories() -> Result<PaginatedResponseDTO<RiskCategoryDTO>> {
     let client = build_client()?;
-    client.get("/v1/reference/sec/risk-categories", &[]).await
+    client.get("/stocks/taxonomies/vX/risk-factors", &[]).await
 }
 
 /// Fetch canonical sectioned text for one filing.
@@ -178,9 +195,12 @@ pub async fn fetch_risk_factors_response(
         .unwrap_or_default()
         .into_iter()
         .map(|d| crate::models::filings::RiskFactor {
-            title: d.title,
-            text: d.text,
-            category: d.category,
+            title: d.tertiary_category.clone(),
+            text: d.supporting_text,
+            category: d
+                .tertiary_category
+                .or(d.secondary_category)
+                .or(d.primary_category),
             filing_date: d.filing_date,
         })
         .collect())

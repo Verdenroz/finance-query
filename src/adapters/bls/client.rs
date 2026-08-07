@@ -117,9 +117,14 @@ impl BlsClient {
             })?;
 
         if parsed.status != "REQUEST_SUCCEEDED" {
+            let context = format!("{}: {}", parsed.status, parsed.message.join("; "));
+            let normalized = context.to_ascii_lowercase();
+            if normalized.contains("registration key") || normalized.contains("registrationkey") {
+                return Err(FinanceError::AuthenticationFailed { context });
+            }
             return Err(FinanceError::MacroDataError {
                 provider: "BLS".to_string(),
-                context: format!("{}: {}", parsed.status, parsed.message.join("; ")),
+                context,
             });
         }
 

@@ -1,6 +1,6 @@
 //! FMP aggregated analyst-consensus endpoints (price targets, rating rollup).
 //!
-//! These are the v4 consensus endpoints — server-side rollups over the whole
+//! These are the stable consensus endpoints — server-side rollups over the whole
 //! analyst panel, as opposed to the raw per-analyst grade actions served by
 //! [`estimates`](super::estimates).
 
@@ -14,7 +14,7 @@ use crate::models::fundamentals::{PriceTargetConsensus, PriceTargetSummary, Rati
 // Response types
 // ============================================================================
 
-/// Consensus price target entry (`/api/v4/price-target-consensus`).
+/// Consensus price target entry (`/stable/price-target-consensus`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PriceTargetConsensusDTO {
@@ -34,7 +34,7 @@ pub struct PriceTargetConsensusDTO {
     pub target_median: Option<f64>,
 }
 
-/// Price-target activity summary entry (`/api/v4/price-target-summary`).
+/// Price-target activity summary entry (`/stable/price-target-summary`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PriceTargetSummaryDTO {
@@ -66,7 +66,7 @@ pub struct PriceTargetSummaryDTO {
     pub all_time_avg_price_target: Option<f64>,
 }
 
-/// Upgrades/downgrades consensus entry (`/api/v4/upgrades-downgrades-consensus`).
+/// Upgrades/downgrades consensus entry (`/stable/grades-consensus`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct RatingConsensusDTO {
@@ -95,24 +95,21 @@ pub struct RatingConsensusDTO {
 /// Fetch the consensus price target for a symbol.
 pub async fn price_target_consensus(symbol: &str) -> Result<Vec<PriceTargetConsensusDTO>> {
     build_client()?
-        .get("/api/v4/price-target-consensus", &[("symbol", symbol)])
+        .get("/stable/price-target-consensus", &[("symbol", symbol)])
         .await
 }
 
 /// Fetch the price-target activity summary for a symbol.
 pub async fn price_target_summary(symbol: &str) -> Result<Vec<PriceTargetSummaryDTO>> {
     build_client()?
-        .get("/api/v4/price-target-summary", &[("symbol", symbol)])
+        .get("/stable/price-target-summary", &[("symbol", symbol)])
         .await
 }
 
 /// Fetch the aggregated upgrades/downgrades consensus for a symbol.
 pub async fn upgrades_downgrades_consensus(symbol: &str) -> Result<Vec<RatingConsensusDTO>> {
     build_client()?
-        .get(
-            "/api/v4/upgrades-downgrades-consensus",
-            &[("symbol", symbol)],
-        )
+        .get("/stable/grades-consensus", &[("symbol", symbol)])
         .await
 }
 

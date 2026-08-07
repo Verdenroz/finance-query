@@ -13,7 +13,7 @@
 //! | Feature | Provider | Free tier | Endpoints | Coverage |
 //! |---------|----------|-----------|-----------|----------|
 //! | `alphavantage` | [Alpha Vantage](https://www.alphavantage.co/) | 25 req/day | ~100 | Stocks, forex, crypto, commodities, economic indicators, 50+ technical indicators |
-//! | `polygon` | [Polygon.io](https://polygon.io/) | 5 req/sec | ~100 | Stocks, options, forex, crypto, indices, futures, economy, analyst data, WebSocket streaming |
+//! | `polygon` | [Massive](https://massive.com/) | 5 req/sec | ~100 | Stocks, options, forex, crypto, indices, futures, economy, analyst data, WebSocket streaming |
 //! | `fmp` | [Financial Modeling Prep](https://financialmodelingprep.com/) | 250 req/day | ~100 | Fundamentals, DCF/ratings, insider trading, institutional holdings, screener, 60+ exchanges |
 //! | `crypto` | [CoinGecko](https://www.coingecko.com/) | 30 req/min | 2 | Top coins by market cap, single coin quotes (keyless) |
 //! | `fred` | [FRED](https://fred.stlouisfed.org/) | 120 req/min | 2+ | 800k+ macro time series, US Treasury yield curve |
@@ -33,7 +33,7 @@
 //! # Quick comparison
 //!
 //! - **Alpha Vantage**: Best free option for technical indicators (50+) and economic data. Lowest rate limits.
-//! - **Polygon.io**: Tick-level trades/quotes, SEC filings, real-time WebSocket streams. Best for market microstructure.
+//! - **Massive (formerly Polygon.io)**: Tick-level trades/quotes, SEC filings, and real-time WebSocket streams. Best for market microstructure.
 //! - **CoinGecko**: Best for cryptocurrency data. Keyless (public API). Rate-limited to 30 req/min.
 //! - **FRED**: 800k+ US macro-economic time series (GDP, CPI, employment, interest rates). Free API key required.
 //! - **SEC EDGAR**: Company filings, XBRL financials, full-text search. Always available, no feature flag needed.
@@ -51,7 +51,7 @@ pub(crate) mod singleton;
 #[cfg(feature = "alphavantage")]
 pub(crate) mod alphavantage;
 
-/// Polygon.io financial data API (requires `polygon` feature).
+/// Massive financial data API (formerly Polygon.io; requires `polygon` feature).
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 

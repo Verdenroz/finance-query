@@ -225,14 +225,7 @@ impl FilingsProvider for AlphaVantageProvider {
 #[async_trait::async_trait]
 impl ProviderAdapter for AlphaVantageProvider {
     async fn initialize(&self) -> Result<()> {
-        let key = std::env::var("ALPHAVANTAGE_API_KEY").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "alphavantage".into(),
-                reason: "ALPHAVANTAGE_API_KEY not set. Set the environment variable or call alphavantage::init(key)."
-                    .into(),
-            }
-        })?;
-        let _ = av::init(key);
+        let _ = av::build_client()?;
         Ok(())
     }
 

@@ -8,5 +8,6 @@ pub mod etf_mutual_funds;
 pub mod float;
 #[allow(dead_code)] // unrouted: ETF/fund data has no capability route yet
 pub mod fund_holdings;
+pub mod health;
 pub mod ttm;
 pub use core::*;

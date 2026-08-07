@@ -87,12 +87,88 @@ mod tickers;
 mod utils;
 
 // Feature-gated external data source modules
+#[cfg(feature = "alphavantage")]
+pub mod alphavantage {
+    //! Alpha Vantage configuration (requires the `alphavantage` feature).
+    //!
+    //! Call [`init`] before constructing a provider when the API key should
+    //! come from application configuration instead of the process environment.
+    pub use crate::adapters::alphavantage::{init, init_with_timeout};
+}
+
+#[cfg(feature = "fmp")]
+pub mod fmp {
+    //! Financial Modeling Prep configuration and provider-specific operations
+    //! (requires the `fmp` feature).
+    //!
+    //! General quotes, charts, fundamentals, and corporate data are available
+    //! through [`Providers`](crate::Providers). Provider-specific research
+    //! endpoints are exposed here.
+    pub use crate::adapters::fmp::corporate::filings::{
+        SecFilingDTO, sec_filings_by_cik, sec_filings_by_form_type, sec_filings_by_symbol,
+    };
+    pub use crate::adapters::fmp::discovery::reference::{
+        SecuritySearchDTO, cik_search, cusip_search, exchange_variants, isin_search, name_search,
+    };
+    pub use crate::adapters::fmp::fundamentals::estimates::{
+        EarningsTranscriptDTO, EarningsTranscriptRefDTO, earnings_transcript,
+        earnings_transcript_list,
+    };
+    pub use crate::adapters::fmp::fundamentals::health::{
+        FinancialScoreDTO, OwnerEarningsDTO, financial_scores, owner_earnings,
+    };
+    pub use crate::adapters::fmp::market::economics::{
+        EconomicIndicatorDTO, MarketRiskPremiumDTO, TreasuryRateDTO, economic_indicators,
+        market_risk_premium, treasury_rates,
+    };
+    pub use crate::adapters::fmp::quote::extended::{
+        AftermarketQuoteDTO, AftermarketTradeDTO, QuoteShortDTO, StockPriceChangeDTO,
+        aftermarket_quote, aftermarket_trade, batch_aftermarket_quote, batch_aftermarket_trade,
+        batch_quote_short, quote_short, stock_price_change,
+    };
+    pub use crate::adapters::fmp::quote::technical::{
+        TechnicalIndicator, TechnicalIndicatorDTO, technical_indicator,
+    };
+    pub use crate::adapters::fmp::{init, init_with_timeout};
+}
+
+#[cfg(feature = "polygon")]
+pub mod polygon {
+    //! Massive (formerly Polygon.io) configuration, provider-specific market
+    //! research, and real-time WebSocket streaming
+    //! (requires the `polygon` feature).
+    //!
+    //! REST operations route through [`Providers`](crate::Providers). Use
+    //! [`PolygonStream`] when the application needs Polygon's native streaming
+    //! channels.
+    pub use crate::adapters::polygon::websocket::{
+        BookSide, ClusterDTO as Cluster, PolygonMessage, PolygonSender, PolygonStream,
+        PolygonStreamBuilder, StreamAggregate, StreamForexQuote, StreamIndexValue, StreamLevel2,
+        StreamQuote, StreamTrade,
+    };
+    pub use crate::adapters::polygon::{
+        ConditionCodeDTO, CurrencyMarketStatusDTO, ExchangeMarketStatusDTO, FuturesAggregateDTO,
+        FuturesContractDTO, FuturesExchangeDTO, FuturesLastQuoteDTO, FuturesLastTradeDTO,
+        FuturesMarketStatusDTO, FuturesMinuteDTO, FuturesProductDTO, FuturesQuoteDTO,
+        FuturesScheduleDTO, FuturesSessionDTO, FuturesSnapshotDTO, FuturesSnapshotDetailsDTO,
+        FuturesSnapshotResponseDTO, FuturesTradeDTO, MarketStatusDTO, OptionsContractDTO,
+        TechnicalIndicator, TechnicalIndicatorResponseDTO, TechnicalIndicatorResultsDTO,
+        TechnicalIndicatorUnderlyingDTO, TechnicalIndicatorValueDTO, condition_codes,
+        futures_aggregates, futures_contracts, futures_exchanges, futures_market_status,
+        futures_products, futures_quotes, futures_schedules, futures_snapshot, futures_trades,
+        init, init_with_timeout, market_status, options_contracts, stock_ema, stock_macd,
+        stock_rsi, stock_sma, technical_indicator,
+    };
+}
+
 #[cfg(feature = "fred")]
 pub mod fred {
     //! FRED economic data API (requires `fred` feature).
     //!
     //! Access 800k+ macroeconomic time series and US Treasury yield curve data.
-    pub use crate::adapters::fred::{init, init_with_timeout, series, treasury_yields};
+    pub use crate::adapters::fred::{
+        ReleaseDate, init, init_with_timeout, release_dates, series, treasury_yields,
+    };
     pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
 }
 

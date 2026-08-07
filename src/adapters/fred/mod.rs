@@ -271,6 +271,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_invalid_key_in_400_body_maps_to_authentication_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/series/observations")
+            .match_query(mockito::Matcher::Any)
+            .with_status(400)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "error_code": 400,
+                    "error_message": "Bad Request. The value for variable api_key is not registered."
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let err = test_client(&server.url()).series("GDP").await.unwrap_err();
+        assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
     async fn test_series_missing_observations_errors() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server

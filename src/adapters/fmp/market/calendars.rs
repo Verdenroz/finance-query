@@ -136,7 +136,7 @@ pub struct EconomicCalendarEntryDTO {
 pub async fn earnings_calendar(from: &str, to: &str) -> Result<Vec<EarningsCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/earning_calendar", &[("from", from), ("to", to)])
+        .get("/stable/earnings-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -144,7 +144,7 @@ pub async fn earnings_calendar(from: &str, to: &str) -> Result<Vec<EarningsCalen
 pub async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<IpoCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/ipo_calendar", &[("from", from), ("to", to)])
+        .get("/stable/ipos-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -152,10 +152,7 @@ pub async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<IpoCalendarEntryDT
 pub async fn stock_split_calendar(from: &str, to: &str) -> Result<Vec<StockSplitCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v3/stock_split_calendar",
-            &[("from", from), ("to", to)],
-        )
+        .get("/stable/splits-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -163,10 +160,7 @@ pub async fn stock_split_calendar(from: &str, to: &str) -> Result<Vec<StockSplit
 pub async fn dividend_calendar(from: &str, to: &str) -> Result<Vec<DividendCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v3/stock_dividend_calendar",
-            &[("from", from), ("to", to)],
-        )
+        .get("/stable/dividends-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -174,7 +168,7 @@ pub async fn dividend_calendar(from: &str, to: &str) -> Result<Vec<DividendCalen
 pub async fn economic_calendar(from: &str, to: &str) -> Result<Vec<EconomicCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/economic_calendar", &[("from", from), ("to", to)])
+        .get("/stable/economic-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -304,7 +298,7 @@ mod tests {
     async fn test_earnings_calendar_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/earning_calendar")
+            .mock("GET", "/stable/earnings-calendar")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("from".into(), "2024-01-01".into()),
@@ -331,7 +325,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EarningsCalendarEntryDTO> = client
             .get(
-                "/api/v3/earning_calendar",
+                "/stable/earnings-calendar",
                 &[("from", "2024-01-01"), ("to", "2024-01-31")],
             )
             .await
@@ -345,7 +339,7 @@ mod tests {
     async fn test_economic_calendar_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/economic_calendar")
+            .mock("GET", "/stable/economic-calendar")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("from".into(), "2024-01-01".into()),
@@ -372,7 +366,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EconomicCalendarEntryDTO> = client
             .get(
-                "/api/v3/economic_calendar",
+                "/stable/economic-calendar",
                 &[("from", "2024-01-01"), ("to", "2024-01-31")],
             )
             .await
