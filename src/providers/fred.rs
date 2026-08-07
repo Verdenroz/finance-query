@@ -67,6 +67,10 @@ impl ProviderAdapter for FredProvider {
         Ok(())
     }
 
+    fn rate_limit_remaining(&self) -> Option<f64> {
+        crate::adapters::fred::rate_limiter().and_then(|l| l.available_estimate())
+    }
+
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         Some(self)
     }

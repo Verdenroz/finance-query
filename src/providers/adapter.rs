@@ -598,6 +598,18 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         Ok(())
     }
 
+    /// Best-effort estimate of remaining rate-limit budget — tokens
+    /// currently available in this provider's own token bucket, for
+    /// [`super::Providers::health`]. Peeking never consumes a
+    /// token.
+    ///
+    /// `None` by default: providers with no local rate limiter to peek (e.g.
+    /// Yahoo) or whose singleton hasn't been initialized yet return `None`
+    /// rather than a misleading number.
+    fn rate_limit_remaining(&self) -> Option<f64> {
+        None
+    }
+
     fn as_quote(&self) -> Option<&dyn QuoteProvider> {
         None
     }

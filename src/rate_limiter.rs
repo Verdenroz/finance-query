@@ -63,6 +63,24 @@ impl RateLimiter {
             tokio::time::sleep(sleep_duration).await;
         }
     }
+
+    /// Best-effort peek at the estimated number of tokens currently
+    /// available, without consuming one.
+    ///
+    /// For provider health/budget introspection. Refills the
+    /// estimate against elapsed time exactly like [`acquire`](Self::acquire),
+    /// but never mutates `last_refill` or consumes a token — a health check
+    /// must not itself spend rate-limit budget. Uses `try_lock` rather than
+    /// blocking: a momentary contention with a concurrent `acquire` just
+    /// yields `None` instead of stalling a synchronous health snapshot.
+    #[allow(dead_code)] // used by fmp/alphavantage/polygon/fred feature-gated providers
+    pub(crate) fn available_estimate(&self) -> Option<f64> {
+        let state = self.state.try_lock().ok()?;
+        let elapsed = Instant::now()
+            .duration_since(state.last_refill)
+            .as_secs_f64();
+        Some((state.available + elapsed * state.refill_rate).min(state.max_tokens))
+    }
 }
 
 #[cfg(test)]
@@ -111,5 +129,32 @@ mod tests {
 
         assert!(elapsed >= Duration::from_millis(1900));
         assert!(elapsed <= Duration::from_millis(2100));
+    }
+
+    #[tokio::test]
+    async fn available_estimate_reflects_consumption_without_consuming() {
+        let limiter = RateLimiter::new(4.0);
+        assert_eq!(limiter.available_estimate(), Some(4.0));
+
+        limiter.acquire().await;
+        let after_one = limiter.available_estimate().unwrap();
+        assert!((after_one - 3.0).abs() < 0.01);
+
+        // Peeking again immediately must not consume a second token.
+        let peeked_again = limiter.available_estimate().unwrap();
+        assert!((peeked_again - after_one).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn available_estimate_refills_over_time() {
+        tokio::time::pause();
+        let limiter = RateLimiter::new(2.0);
+        limiter.acquire().await;
+        limiter.acquire().await;
+        assert!(limiter.available_estimate().unwrap() < 0.01);
+
+        tokio::time::advance(Duration::from_millis(500)).await;
+        let refilled = limiter.available_estimate().unwrap();
+        assert!(refilled > 0.9, "expected ~1 token refilled, got {refilled}");
     }
 }

@@ -12,12 +12,13 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+#[cfg(feature = "polygon")]
 use std::time::Duration;
 
 use futures::stream::Stream;
 use tokio::sync::{broadcast, mpsc};
 
-use super::source::{StreamCommand, StreamSource, run_stream_loop};
+use super::source::{ReconnectConfig, StreamCommand, StreamSource, run_stream_loop};
 use super::subscription::Subscription;
 
 /// Command-channel depth: control messages are rare compared to data.
@@ -43,11 +44,11 @@ where
     pub(crate) fn start(
         source: Arc<dyn StreamSource<T>>,
         symbols: Vec<String>,
-        retry_delay: Duration,
+        reconnect: ReconnectConfig,
         capacity: usize,
     ) -> Self {
         Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
-            let _ = run_stream_loop(source, symbols, broadcast_tx, command_rx, retry_delay).await;
+            let _ = run_stream_loop(source, symbols, broadcast_tx, command_rx, reconnect).await;
         })
     }
 
@@ -176,8 +177,9 @@ macro_rules! stream_handle {
     };
 }
 
-/// Emit the symbol-accumulating setter, `retry` and `Default` for a builder
-/// whose fields are `$field: Vec<String>` and `retry_delay: Duration`.
+/// Emit the symbol-accumulating setter, `retry`, `max_reconnect_attempts` and
+/// `Default` for a builder whose fields are `$field: Vec<String>`,
+/// `retry_delay: Duration` and `max_reconnect_attempts: Option<u32>`.
 #[cfg(feature = "polygon")]
 macro_rules! stream_builder {
     ($builder:ident, $field:ident = $doc:literal) => {
@@ -192,9 +194,20 @@ macro_rules! stream_builder {
                 self
             }
 
-            /// Set the delay between reconnection attempts (default: 3s).
+            /// Set the base delay before the first reconnection attempt
+            /// (default: 3s). Later attempts grow exponentially from this,
+            /// capped and jittered — see [`Self::max_reconnect_attempts`] to
+            /// also cap how many attempts are made.
             pub fn retry(mut self, delay: ::std::time::Duration) -> Self {
                 self.retry_delay = delay;
+                self
+            }
+
+            /// Cap the number of consecutive reconnect attempts before the
+            /// stream gives up and ends (default: unlimited, i.e. retry
+            /// forever).
+            pub fn max_reconnect_attempts(mut self, max: u32) -> Self {
+                self.max_reconnect_attempts = Some(max);
                 self
             }
         }

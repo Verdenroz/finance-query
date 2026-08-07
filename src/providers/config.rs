@@ -1,6 +1,8 @@
 use crate::adapters::yahoo::client::ClientConfig;
 use crate::error::Result;
-use crate::providers::{Fetch, Provider, ProviderSet, Routes, build_providers};
+use crate::providers::{
+    Fetch, Provider, ProviderHealth, ProviderSet, RetryPolicy, Routes, build_providers,
+};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -214,6 +216,31 @@ impl Providers {
     pub fn filings(&self, symbol: impl Into<String>) -> crate::domains::Filings {
         crate::domains::Filings::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
+
+    /// Snapshot recent health for every configured provider.
+    ///
+    /// Each [`ProviderHealth`] entry reflects up to the last 20 dispatch
+    /// outcomes recorded in-process for that provider (recency window is
+    /// internal and unspecified beyond "recent"), plus a best-effort
+    /// rate-limit budget estimate where the provider exposes one. Purely
+    /// observational — it does not affect routing or retries.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Providers;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let providers = Providers::builder().build().await?;
+    /// for health in providers.health() {
+    ///     println!("{:?}: healthy={}", health.provider, health.is_healthy);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn health(&self) -> Vec<ProviderHealth> {
+        self.set.health()
+    }
 }
 
 /// Builder for [`Providers`].
@@ -222,6 +249,7 @@ pub struct ProvidersBuilder {
     provider_ids: Vec<Provider>,
     config: ClientConfig,
     routes: Routes,
+    retry: Option<RetryPolicy>,
 }
 
 impl Default for ProvidersBuilder {
@@ -230,6 +258,7 @@ impl Default for ProvidersBuilder {
             provider_ids: vec![Provider::Yahoo],
             config: ClientConfig::default(),
             routes: Routes::new(Fetch::Sequential),
+            retry: None,
         }
     }
 }
@@ -301,12 +330,25 @@ impl ProvidersBuilder {
         self
     }
 
+    /// Opt into retrying `FinanceError::RateLimited` errors during dispatch
+    /// See [`RetryPolicy`] for the exact semantics.
+    ///
+    /// **Default is no retry** — omitting this call preserves the exact
+    /// prior behavior: a `RateLimited` error is treated like any other
+    /// failure and dispatch moves straight to the next routed provider.
+    pub fn retry(mut self, policy: RetryPolicy) -> Self {
+        self.retry = Some(policy);
+        self
+    }
+
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
         #[cfg(feature = "translation")]
         crate::translation::Lang::parse(&self.config.lang)?;
         let lang = self.config.lang.clone();
-        let set = build_providers(&self.provider_ids, &self.config, self.routes).await?;
+        let set = build_providers(&self.provider_ids, &self.config, self.routes)
+            .await?
+            .with_retry_policy(self.retry);
         Ok(Providers {
             set: Arc::new(set),
             lang,

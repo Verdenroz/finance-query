@@ -275,6 +275,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matching every other DISCOVERY provider; it previously put the CoinGecko coin
   id there, which broke the provider-neutral contract for consumers searching
   across providers.
+- `RetryPolicy` honored an error's `retry_after` hint with no ceiling, so a
+  hostile or buggy upstream could park a caller indefinitely. Capped by the
+  new `max_retry_after` (default 5 minutes), kept separate from `max_delay`
+  so legitimate multi-minute hints are still honored.
+- A stream whose session came up and then failed a few seconds in — auth
+  rejection, subscription error, idle kill — reset the reconnect counter
+  every cycle and retried forever despite `max_reconnect_attempts`. The
+  healthy-session threshold is now 60s, independent of the (short) base
+  delay it was keyed to.
+- A zero base delay produced the maximum delay instead of zero at high
+  attempt counts (`0.0 * inf` is NaN, and `f64::min` returns the other
+  operand for NaN).
 
 - `finance::hours()` no longer labels every region's market "U.S. markets".
   Yahoo returns correct per-region session times but hardcodes the U.S.

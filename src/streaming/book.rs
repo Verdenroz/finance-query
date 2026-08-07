@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::client::StreamResult;
 use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::PolygonBookSource;
+use super::source::ReconnectConfig;
 
 /// Channel capacity — book updates are large but less frequent than prints.
 const CHANNEL_CAPACITY: usize = 1024;
@@ -115,6 +116,7 @@ impl DepthStream {
 pub struct DepthStreamBuilder {
     pairs: Vec<String>,
     retry_delay: Duration,
+    max_reconnect_attempts: Option<u32>,
 }
 
 impl DepthStreamBuilder {
@@ -123,16 +125,19 @@ impl DepthStreamBuilder {
         Self {
             pairs: Vec::new(),
             retry_delay: RECONNECT_BACKOFF,
+            max_reconnect_attempts: None,
         }
     }
 
     /// Build and start the stream.
     pub async fn build(self) -> StreamResult<DepthStream> {
+        let reconnect =
+            ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
         Ok(DepthStream {
             inner: SourceStream::start(
                 Arc::new(PolygonBookSource),
                 self.pairs,
-                self.retry_delay,
+                reconnect,
                 CHANNEL_CAPACITY,
             ),
         })
