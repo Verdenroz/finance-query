@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 // ============================================================================
@@ -139,30 +138,6 @@ pub struct MarketCapDTO {
     pub market_cap: Option<f64>,
 }
 
-/// Company outlook from FMP (v4 endpoint).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub struct CompanyOutlookDTO {
-    /// Profile section.
-    pub profile: Option<CompanyProfileDTO>,
-    /// Metrics section.
-    pub metrics: Option<serde_json::Value>,
-    /// Ratios section.
-    pub ratios: Option<Vec<serde_json::Value>>,
-    /// Insider trading section.
-    #[serde(rename = "insideTrades")]
-    pub inside_trades: Option<Vec<serde_json::Value>>,
-    /// Key executives.
-    #[serde(rename = "keyExecutives")]
-    pub key_executives: Option<Vec<KeyExecutiveDTO>>,
-    /// Stock news.
-    #[serde(rename = "stockNews")]
-    pub stock_news: Option<Vec<serde_json::Value>>,
-    /// Rating section.
-    pub rating: Option<Vec<serde_json::Value>>,
-}
-
 /// Stock peer from FMP (v4 endpoint).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -202,12 +177,7 @@ pub struct DelistedCompanyDTO {
 #[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
     let client = crate::adapters::fmp::build_client()?;
-    client
-        .get(
-            &format!("/api/v3/profile/{}", encode_path_segment(symbol)),
-            &[],
-        )
-        .await
+    client.get("/stable/profile", &[("symbol", symbol)]).await
 }
 
 /// Fetch key executives for a symbol.
@@ -215,10 +185,7 @@ pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
 pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!("/api/v3/key-executives/{}", encode_path_segment(symbol)),
-            &[],
-        )
+        .get("/stable/key-executives", &[("symbol", symbol)])
         .await
 }
 
@@ -227,13 +194,7 @@ pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
 pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCapDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!(
-                "/api/v3/market-capitalization/{}",
-                encode_path_segment(symbol)
-            ),
-            &[],
-        )
+        .get("/stable/market-capitalization", &[("symbol", symbol)])
         .await
 }
 
@@ -244,11 +205,8 @@ pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<V
     let limit_str = limit.unwrap_or(100).to_string();
     client
         .get(
-            &format!(
-                "/api/v3/historical-market-capitalization/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("limit", &limit_str)],
+            "/stable/historical-market-capitalization",
+            &[("symbol", symbol), ("limit", &limit_str)],
         )
         .await
 }
@@ -282,20 +240,11 @@ pub async fn fetch_canonical_similar_symbols(
     Ok(stock_peers_to_canonical(peers, limit as usize))
 }
 
-/// Fetch company outlook for a symbol (v4 endpoint).
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn company_outlook(symbol: &str) -> Result<CompanyOutlookDTO> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get("/api/v4/company-outlook", &[("symbol", symbol)])
-        .await
-}
-
-/// Fetch stock peers for a symbol (v4 endpoint).
+/// Fetch stock peers for a symbol.
 pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get("/api/v4/stock_peers", &[("symbol", symbol)])
+        .get("/stable/stock-peers", &[("symbol", symbol)])
         .await
 }
 
@@ -305,7 +254,10 @@ pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompan
     let client = crate::adapters::fmp::build_client()?;
     let limit_str = limit.unwrap_or(100).to_string();
     client
-        .get("/api/v3/delisted-companies", &[("limit", &limit_str)])
+        .get(
+            "/stable/delisted-companies",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -317,7 +269,7 @@ mod tests {
     async fn test_company_profile_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/profile/AAPL")
+            .mock("GET", "/stable/profile")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -347,7 +299,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyProfileDTO> = client.get("/api/v3/profile/AAPL", &[]).await.unwrap();
+        let result: Vec<CompanyProfileDTO> = client.get("/stable/profile", &[]).await.unwrap();
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
@@ -360,7 +312,7 @@ mod tests {
     async fn test_key_executives_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/key-executives/AAPL")
+            .mock("GET", "/stable/key-executives")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -391,10 +343,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<KeyExecutiveDTO> = client
-            .get("/api/v3/key-executives/AAPL", &[])
-            .await
-            .unwrap();
+        let result: Vec<KeyExecutiveDTO> = client.get("/stable/key-executives", &[]).await.unwrap();
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name.as_deref(), Some("Mr. Timothy D. Cook"));
@@ -412,7 +361,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
@@ -431,7 +380,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
@@ -440,7 +389,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fmp_body_error_message_returns_invalid_parameter() {
+    async fn test_fmp_body_api_key_error_returns_authentication_failed() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", mockito::Matcher::Any)
@@ -450,11 +399,11 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
-            Err(crate::error::FinanceError::InvalidParameter { .. })
+            Err(crate::error::FinanceError::AuthenticationFailed { .. })
         ));
     }
 
@@ -469,7 +418,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,

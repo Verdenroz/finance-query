@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 use crate::models::fundamentals::FinancialStatement;
 use crate::providers::build_financial_statement;
@@ -39,6 +38,8 @@ pub struct FinancialResultDTO {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ShortInterestDTO {
+    /// Ticker symbol.
+    pub ticker: Option<String>,
     /// Settlement date.
     pub settlement_date: Option<String>,
     /// Short interest (shares).
@@ -53,12 +54,16 @@ pub struct ShortInterestDTO {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ShortVolumeDTO {
+    /// Ticker symbol.
+    pub ticker: Option<String>,
     /// Date.
     pub date: Option<String>,
     /// Short volume.
     pub short_volume: Option<f64>,
     /// Short exempt volume.
-    pub short_exempt_volume: Option<f64>,
+    pub exempt_volume: Option<f64>,
+    /// Short volume excluding exempt transactions.
+    pub non_exempt_volume: Option<f64>,
     /// Total volume.
     pub total_volume: Option<f64>,
 }
@@ -70,11 +75,11 @@ pub struct FloatDataDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Float shares.
-    pub float_shares: Option<f64>,
-    /// Outstanding shares.
-    pub outstanding_shares: Option<f64>,
-    /// Date.
-    pub date: Option<String>,
+    pub free_float: Option<f64>,
+    /// Percentage of shares freely tradable.
+    pub free_float_percent: Option<f64>,
+    /// Effective date of the measurement.
+    pub effective_date: Option<String>,
 }
 
 /// Fetch stock financials (balance sheets, income statements, cash flow).
@@ -154,11 +159,9 @@ pub async fn stock_short_interest(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<ShortInterestDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/v3/reference/short-interest/{}",
-        encode_path_segment(ticker)
-    );
-    client.get(&path, params).await
+    let mut query = vec![("ticker", ticker)];
+    query.extend_from_slice(params);
+    client.get("/stocks/v1/short-interest", &query).await
 }
 
 /// Fetch short volume data for a stock ticker.
@@ -167,15 +170,15 @@ pub async fn stock_short_volume(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<ShortVolumeDTO>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/short-volume/{}", encode_path_segment(ticker));
-    client.get(&path, params).await
+    let mut query = vec![("ticker", ticker)];
+    query.extend_from_slice(params);
+    client.get("/stocks/v1/short-volume", &query).await
 }
 
 /// Fetch float data for a stock ticker.
 pub async fn stock_float(ticker: &str) -> Result<PaginatedResponseDTO<FloatDataDTO>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/float/{}", encode_path_segment(ticker));
-    client.get(&path, &[]).await
+    client.get("/stocks/vX/float", &[("ticker", ticker)]).await
 }
 
 /// Fetch canonical short-interest reports for a stock ticker.
@@ -208,7 +211,7 @@ pub async fn fetch_short_volume_response(
         .map(|d| crate::models::fundamentals::ShortVolume {
             date: d.date,
             short_volume: d.short_volume,
-            short_exempt_volume: d.short_exempt_volume,
+            short_exempt_volume: d.exempt_volume,
             total_volume: d.total_volume,
         })
         .collect())
@@ -230,9 +233,9 @@ pub async fn fetch_share_float_response(
         })?;
     Ok(crate::models::fundamentals::ShareFloat {
         symbol: d.ticker.or_else(|| Some(symbol.to_string())),
-        float_shares: d.float_shares,
-        outstanding_shares: d.outstanding_shares,
-        date: d.date,
+        float_shares: d.free_float,
+        outstanding_shares: None,
+        date: d.effective_date,
     })
 }
 

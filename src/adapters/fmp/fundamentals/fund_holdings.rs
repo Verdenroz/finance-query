@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -17,9 +16,9 @@ use crate::adapters::fmp::build_client;
 pub struct EtfSectorWeightingDTO {
     /// Sector name.
     pub sector: Option<String>,
-    /// Weight percentage (e.g., "7.23%").
+    /// Weight percentage (e.g., `7.23`).
     #[serde(rename = "weightPercentage")]
-    pub weight_percentage: Option<String>,
+    pub weight_percentage: Option<f64>,
 }
 
 /// ETF country weighting entry.
@@ -59,28 +58,25 @@ pub struct EtfHoldingDTO {
 /// Fetch ETF sector weightings.
 pub async fn etf_sector_weightings(symbol: &str) -> Result<Vec<EtfSectorWeightingDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/etf-sector-weightings/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    client
+        .get("/stable/etf/sector-weightings", &[("symbol", symbol)])
+        .await
 }
 
 /// Fetch ETF country weightings.
 pub async fn etf_country_weightings(symbol: &str) -> Result<Vec<EtfCountryWeightingDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/etf-country-weightings/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    client
+        .get("/stable/etf/country-weightings", &[("symbol", symbol)])
+        .await
 }
 
 /// Fetch ETF holdings (same endpoint as ETF holder).
 pub async fn etf_holdings(symbol: &str) -> Result<Vec<EtfHoldingDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-holder/{}", encode_path_segment(symbol));
-    client.get(&path, &[]).await
+    client
+        .get("/stable/etf/holdings", &[("symbol", symbol)])
+        .await
 }
 
 #[cfg(test)]
@@ -91,7 +87,7 @@ mod tests {
     async fn test_etf_sector_weightings_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/etf-sector-weightings/SPY")
+            .mock("GET", "/stable/etf/sector-weightings")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -101,11 +97,11 @@ mod tests {
                 serde_json::json!([
                     {
                         "sector": "Technology",
-                        "weightPercentage": "29.50%"
+                        "weightPercentage": 29.50
                     },
                     {
                         "sector": "Healthcare",
-                        "weightPercentage": "13.20%"
+                        "weightPercentage": 13.20
                     }
                 ])
                 .to_string(),
@@ -115,19 +111,19 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EtfSectorWeightingDTO> = client
-            .get("/api/v3/etf-sector-weightings/SPY", &[])
+            .get("/stable/etf/sector-weightings", &[])
             .await
             .unwrap();
         assert_eq!(resp.len(), 2);
         assert_eq!(resp[0].sector.as_deref(), Some("Technology"));
-        assert_eq!(resp[0].weight_percentage.as_deref(), Some("29.50%"));
+        assert_eq!(resp[0].weight_percentage, Some(29.50));
     }
 
     #[tokio::test]
     async fn test_etf_country_weightings_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/etf-country-weightings/VEU")
+            .mock("GET", "/stable/etf/country-weightings")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -147,7 +143,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EtfCountryWeightingDTO> = client
-            .get("/api/v3/etf-country-weightings/VEU", &[])
+            .get("/stable/etf/country-weightings", &[])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);

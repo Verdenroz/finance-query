@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::models::Period;
@@ -495,8 +494,12 @@ pub async fn income_statement(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/income-statement/{}", encode_path_segment(symbol)),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/income-statement",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -511,11 +514,12 @@ pub async fn balance_sheet(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!(
-                "/api/v3/balance-sheet-statement/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/balance-sheet-statement",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -530,11 +534,12 @@ pub async fn cash_flow(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!(
-                "/api/v3/cash-flow-statement/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/cash-flow-statement",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -547,7 +552,7 @@ mod tests {
     async fn test_income_statement_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/income-statement/AAPL")
+            .mock("GET", "/stable/income-statement")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "quarter".into()),
@@ -576,7 +581,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<IncomeStatementDTO> = client
             .get(
-                "/api/v3/income-statement/AAPL",
+                "/stable/income-statement",
                 &[("period", "quarter"), ("limit", "2")],
             )
             .await
@@ -592,7 +597,7 @@ mod tests {
     async fn test_balance_sheet_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/balance-sheet-statement/AAPL")
+            .mock("GET", "/stable/balance-sheet-statement")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "annual".into()),
@@ -616,7 +621,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<BalanceSheetDTO> = client
             .get(
-                "/api/v3/balance-sheet-statement/AAPL",
+                "/stable/balance-sheet-statement",
                 &[("period", "annual"), ("limit", "1")],
             )
             .await

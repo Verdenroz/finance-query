@@ -2,81 +2,83 @@
 
 use serde_json::Value;
 
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 
 use crate::adapters::fmp::build_client;
 
-/// Fetch bulk income statements as raw JSON.
+/// Fetch bulk income statements and convert FMP's CSV response to JSON.
 ///
 /// * `year` - Fiscal year (e.g., `"2023"`)
-/// * `period` - Period: `"annual"` or `"quarter"`
+/// * `period` - Stable period (`"FY"`, `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`)
 pub async fn bulk_income_statements(year: &str, period: &str) -> Result<Value> {
     let client = build_client()?;
     client
-        .get_raw(
-            "/api/v4/income-statement-bulk",
+        .get_csv_value(
+            "/stable/income-statement-bulk",
             &[("year", year), ("period", period)],
         )
         .await
 }
 
-/// Fetch bulk balance sheet statements as raw JSON.
+/// Fetch bulk balance sheet statements and convert FMP's CSV response to JSON.
 ///
 /// * `year` - Fiscal year (e.g., `"2023"`)
-/// * `period` - Period: `"annual"` or `"quarter"`
+/// * `period` - Stable period (`"FY"`, `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`)
 pub async fn bulk_balance_sheets(year: &str, period: &str) -> Result<Value> {
     let client = build_client()?;
     client
-        .get_raw(
-            "/api/v4/balance-sheet-statement-bulk",
+        .get_csv_value(
+            "/stable/balance-sheet-statement-bulk",
             &[("year", year), ("period", period)],
         )
         .await
 }
 
-/// Fetch bulk cash flow statements as raw JSON.
+/// Fetch bulk cash flow statements and convert FMP's CSV response to JSON.
 ///
 /// * `year` - Fiscal year (e.g., `"2023"`)
-/// * `period` - Period: `"annual"` or `"quarter"`
+/// * `period` - Stable period (`"FY"`, `"Q1"`, `"Q2"`, `"Q3"`, or `"Q4"`)
 pub async fn bulk_cash_flow(year: &str, period: &str) -> Result<Value> {
     let client = build_client()?;
     client
-        .get_raw(
-            "/api/v4/cash-flow-statement-bulk",
+        .get_csv_value(
+            "/stable/cash-flow-statement-bulk",
             &[("year", year), ("period", period)],
         )
         .await
 }
 
-/// Fetch bulk financial ratios as raw JSON.
-///
-/// * `year` - Fiscal year (e.g., `"2023"`)
-/// * `period` - Period: `"annual"` or `"quarter"`
-pub async fn bulk_ratios(year: &str, period: &str) -> Result<Value> {
-    let client = build_client()?;
-    client
-        .get_raw("/api/v4/ratios-bulk", &[("year", year), ("period", period)])
+/// Fetch current trailing-twelve-month ratios for all companies.
+pub async fn bulk_ratios_ttm() -> Result<Value> {
+    build_client()?
+        .get_csv_value("/stable/ratios-ttm-bulk", &[])
         .await
 }
 
-/// Fetch bulk key metrics as raw JSON.
-///
-/// * `year` - Fiscal year (e.g., `"2023"`)
-/// * `period` - Period: `"annual"` or `"quarter"`
-pub async fn bulk_key_metrics(year: &str, period: &str) -> Result<Value> {
-    let client = build_client()?;
-    client
-        .get_raw(
-            "/api/v4/key-metrics-bulk",
-            &[("year", year), ("period", period)],
-        )
+/// Fetch current trailing-twelve-month key metrics for all companies.
+pub async fn bulk_key_metrics_ttm() -> Result<Value> {
+    build_client()?
+        .get_csv_value("/stable/key-metrics-ttm-bulk", &[])
         .await
 }
 
-/// Fetch all company profiles as raw JSON.
+/// Fetch all company profiles and convert FMP's CSV responses to JSON.
 pub async fn bulk_profiles() -> Result<Value> {
     let client = build_client()?;
-    client.get_raw("/api/v4/profile/all", &[]).await
+    let mut profiles = Vec::new();
+    for part in 0..4_u32 {
+        let part = part.to_string();
+        let response = client
+            .get_csv_value("/stable/profile-bulk", &[("part", &part)])
+            .await?;
+        let Value::Array(mut rows) = response else {
+            return Err(FinanceError::UnexpectedResponse(
+                "FMP profile-bulk returned a non-array response".into(),
+            ));
+        };
+        profiles.append(&mut rows);
+    }
+    Ok(Value::Array(profiles))
 }
 
 #[cfg(test)]
@@ -85,30 +87,21 @@ mod tests {
     async fn test_bulk_income_statements_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/income-statement-bulk")
+            .mock("GET", "/stable/income-statement-bulk")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("year".into(), "2023".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "annual".into()),
             ]))
             .with_status(200)
-            .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "revenue": 383285000000_i64,
-                        "netIncome": 96995000000_i64
-                    }
-                ])
-                .to_string(),
-            )
+            .with_body("symbol,revenue,netIncome\nAAPL,383285000000,96995000000\n")
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result = client
-            .get_raw(
-                "/api/v4/income-statement-bulk",
+            .get_csv_value(
+                "/stable/income-statement-bulk",
                 &[("year", "2023"), ("period", "annual")],
             )
             .await

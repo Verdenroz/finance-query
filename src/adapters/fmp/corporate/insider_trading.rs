@@ -1,8 +1,7 @@
-//! Insider trading, congressional trading, CIK mapping, and fail-to-deliver endpoints.
+//! Insider trading, congressional trading, and CIK mapping endpoints.
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -66,25 +65,6 @@ pub struct CikMappingDTO {
     pub company_name: Option<String>,
 }
 
-/// Fail-to-deliver record.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub struct FailToDeliverDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Date (YYYY-MM-DD).
-    pub date: Option<String>,
-    /// Quantity of fails.
-    pub quantity: Option<f64>,
-    /// Price.
-    pub price: Option<f64>,
-    /// Security name.
-    pub name: Option<String>,
-    /// Description.
-    pub description: Option<String>,
-}
-
 /// Congressional/senate trading record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -130,8 +110,8 @@ pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTrad
     let limit_str = limit.to_string();
     client
         .get(
-            "/api/v4/insider-trading",
-            &[("symbol", symbol), ("limit", &limit_str)],
+            "/stable/insider-trading/search",
+            &[("symbol", symbol), ("page", "0"), ("limit", &limit_str)],
         )
         .await
 }
@@ -142,7 +122,10 @@ pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
     client
-        .get("/api/v4/insider-trading-rss-feed", &[("limit", &limit_str)])
+        .get(
+            "/stable/insider-trading/latest",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -151,7 +134,10 @@ pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
 pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/mapper-cik-name", &[("name", name)])
+        .get(
+            "/stable/sec-filings-company-search/name",
+            &[("company", name)],
+        )
         .await
 }
 
@@ -159,16 +145,11 @@ pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
 #[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMappingDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v4/mapper-cik-company/{}", encode_path_segment(name));
-    client.get(&path, &[]).await
-}
-
-/// Fetch fail-to-deliver data for a symbol.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
-    let client = build_client()?;
     client
-        .get("/api/v4/fail_to_deliver", &[("symbol", symbol)])
+        .get(
+            "/stable/sec-filings-company-search/name",
+            &[("company", name)],
+        )
         .await
 }
 
@@ -177,7 +158,7 @@ pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
 pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTradeDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/senate-trading", &[("symbol", symbol)])
+        .get("/stable/senate-trades", &[("symbol", symbol)])
         .await
 }
 
@@ -189,7 +170,7 @@ mod tests {
     async fn test_insider_trading_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/insider-trading")
+            .mock("GET", "/stable/insider-trading/search")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
@@ -219,7 +200,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<InsiderTradeDTO> = client
             .get(
-                "/api/v4/insider-trading",
+                "/stable/insider-trading/search",
                 &[("symbol", "AAPL"), ("limit", "10")],
             )
             .await
@@ -233,7 +214,7 @@ mod tests {
     async fn test_congressional_trading_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/senate-trading")
+            .mock("GET", "/stable/senate-trades")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
@@ -259,7 +240,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<CongressionalTradeDTO> = client
-            .get("/api/v4/senate-trading", &[("symbol", "AAPL")])
+            .get("/stable/senate-trades", &[("symbol", "AAPL")])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);

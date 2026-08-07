@@ -1,4 +1,4 @@
-//! Polygon.io provider implementation.
+//! Massive (formerly Polygon.io) provider implementation.
 
 use super::{
     CalendarProvider, ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider,
@@ -6,7 +6,6 @@ use super::{
     IndicesProvider, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::polygon;
-use crate::error::FinanceError;
 use crate::error::Result;
 use crate::models::quote::QuoteSummaryResponse;
 
@@ -246,13 +245,7 @@ impl EconomicProvider for PolygonProvider {
 #[async_trait::async_trait]
 impl ProviderAdapter for PolygonProvider {
     async fn initialize(&self) -> Result<()> {
-        let key = std::env::var("POLYGON_API_KEY").map_err(|_| FinanceError::InvalidParameter {
-            param: "polygon".into(),
-            reason:
-                "POLYGON_API_KEY not set. Set the environment variable or call polygon::init(key)."
-                    .into(),
-        })?;
-        let _ = polygon::init(key);
+        let _ = polygon::build_client()?;
         Ok(())
     }
 

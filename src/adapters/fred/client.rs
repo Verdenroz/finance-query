@@ -73,28 +73,50 @@ pub(crate) struct FredClient {
 }
 
 impl FredClient {
-    /// Map a FRED HTTP status onto a `FinanceError`.
-    fn check_status(status: StatusCode) -> Result<()> {
+    fn response_error(status: StatusCode, body: &[u8]) -> FinanceError {
+        let message = serde_json::from_slice::<FredErrorEnvelope>(body)
+            .ok()
+            .and_then(|error| error.error_message)
+            .unwrap_or_else(|| format!("FRED returned HTTP {status}"));
+        let normalized = message.to_ascii_lowercase();
+        if normalized.contains("api_key") || normalized.contains("api key") {
+            return FinanceError::AuthenticationFailed { context: message };
+        }
         match status {
-            StatusCode::OK => Ok(()),
-            StatusCode::BAD_REQUEST => Err(FinanceError::InvalidParameter {
+            StatusCode::BAD_REQUEST => FinanceError::InvalidParameter {
                 param: "request".to_string(),
-                reason: "FRED rejected the request parameters".to_string(),
-            }),
+                reason: message,
+            },
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(FinanceError::AuthenticationFailed {
-                    context: "FRED API key invalid or missing. Call fred::init(key) first."
-                        .to_string(),
-                })
+                FinanceError::AuthenticationFailed { context: message }
             }
-            StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited {
+            StatusCode::TOO_MANY_REQUESTS | StatusCode::LOCKED => FinanceError::RateLimited {
                 retry_after: Some(60),
-            }),
-            s => Err(FinanceError::ExternalApiError {
+            },
+            s if s.is_server_error() => FinanceError::ServerError {
+                status: s.as_u16(),
+                context: message,
+            },
+            s => FinanceError::ExternalApiError {
                 api: "FRED".to_string(),
                 status: s.as_u16(),
-            }),
+            },
         }
+    }
+
+    async fn decode_json<T: serde::de::DeserializeOwned>(
+        response: reqwest::Response,
+        field: &str,
+    ) -> Result<T> {
+        let status = response.status();
+        let bytes = response.bytes().await?;
+        if !status.is_success() {
+            return Err(Self::response_error(status, &bytes));
+        }
+        serde_json::from_slice(&bytes).map_err(|error| FinanceError::ResponseStructureError {
+            field: field.to_string(),
+            context: format!("Failed to deserialize FRED response: {error}"),
+        })
     }
 
     /// Rate-limited GET against a FRED path, deserialized into `T`.
@@ -113,20 +135,13 @@ impl FredClient {
         query.extend_from_slice(params);
 
         debug!("FRED request: {path}");
-        let resp = self.http.get(&url).query(&query).send().await?;
-        Self::check_status(resp.status())?;
-
-        resp.json()
-            .await
-            .map_err(|e| FinanceError::ResponseStructureError {
-                field: path.to_string(),
-                context: format!("Failed to deserialize FRED response: {e}"),
-            })
+        let response = self.http.get(&url).query(&query).send().await?;
+        Self::decode_json(response, path).await
     }
 
     /// Fetch all observations for a FRED series by ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`).
     pub async fn series(&self, series_id: &str) -> Result<MacroSeries> {
-        self.observations(series_id, "").await
+        self.observations(series_id, &[]).await
     }
 
     /// Fetch only the most recent observation for a series.
@@ -134,51 +149,16 @@ impl FredClient {
     /// Pollers reading one value would otherwise download the whole history.
     pub async fn latest_observation(&self, series_id: &str) -> Result<Option<MacroObservation>> {
         let series = self
-            .observations(series_id, "&sort_order=desc&limit=1")
+            .observations(series_id, &[("sort_order", "desc"), ("limit", "1")])
             .await?;
         Ok(series.observations.into_iter().next())
     }
 
-    /// Query `series/observations`, appending `extra` query parameters.
-    async fn observations(&self, series_id: &str, extra: &str) -> Result<MacroSeries> {
-        self.limiter.acquire().await;
-
-        let url = format!(
-            "{}/series/observations?series_id={series_id}&api_key={}&file_type=json{extra}",
-            self.base_url, self.api_key
-        );
-
-        debug!("FRED request: series_id={series_id}");
-        let resp = self.http.get(&url).send().await?;
-
-        match resp.status() {
-            StatusCode::OK => {}
-            StatusCode::BAD_REQUEST => {
-                return Err(FinanceError::InvalidParameter {
-                    param: "series_id".to_string(),
-                    reason: format!("FRED series '{series_id}' not found or invalid"),
-                });
-            }
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                return Err(FinanceError::AuthenticationFailed {
-                    context: "FRED API key invalid or missing. Call fred::init(key) first."
-                        .to_string(),
-                });
-            }
-            StatusCode::TOO_MANY_REQUESTS => {
-                return Err(FinanceError::RateLimited {
-                    retry_after: Some(60),
-                });
-            }
-            s => {
-                return Err(FinanceError::ExternalApiError {
-                    api: "FRED".to_string(),
-                    status: s.as_u16(),
-                });
-            }
-        }
-
-        let json: serde_json::Value = resp.json().await?;
+    /// Query `series/observations` with optional endpoint parameters.
+    async fn observations(&self, series_id: &str, extra: &[(&str, &str)]) -> Result<MacroSeries> {
+        let mut params = vec![("series_id", series_id)];
+        params.extend_from_slice(extra);
+        let json: serde_json::Value = self.get_json("series/observations", &params).await?;
 
         let observations = json
             .get("observations")
@@ -191,7 +171,6 @@ impl FredClient {
             .filter_map(|obs| {
                 let date = obs.get("date")?.as_str()?.to_string();
                 let raw = obs.get("value")?.as_str()?;
-                // FRED uses "." for missing values
                 let value = if raw == "." {
                     None
                 } else {
@@ -208,45 +187,18 @@ impl FredClient {
     }
 
     /// Fetch upcoming scheduled economic-data release dates.
-    ///
-    /// Queries the FRED `releases/dates` endpoint with a realtime window from
-    /// `today` onward so only future-scheduled releases (CPI, NFP, GDP, FOMC,
-    /// etc.) are returned, sorted ascending by date.
     pub async fn release_dates(&self, today: &str) -> Result<Vec<ReleaseDate>> {
-        self.limiter.acquire().await;
-
-        let url = format!(
-            "{}/releases/dates?api_key={}&file_type=json\
-             &include_release_dates_with_no_data=true&sort_order=asc\
-             &realtime_start={today}&realtime_end=9999-12-31",
-            self.base_url, self.api_key
-        );
-
-        debug!("FRED request: releases/dates from {today}");
-        let resp = self.http.get(&url).send().await?;
-
-        match resp.status() {
-            StatusCode::OK => {}
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                return Err(FinanceError::AuthenticationFailed {
-                    context: "FRED API key invalid or missing. Call fred::init(key) first."
-                        .to_string(),
-                });
-            }
-            StatusCode::TOO_MANY_REQUESTS => {
-                return Err(FinanceError::RateLimited {
-                    retry_after: Some(60),
-                });
-            }
-            s => {
-                return Err(FinanceError::ExternalApiError {
-                    api: "FRED".to_string(),
-                    status: s.as_u16(),
-                });
-            }
-        }
-
-        let json: serde_json::Value = resp.json().await?;
+        let json: serde_json::Value = self
+            .get_json(
+                "releases/dates",
+                &[
+                    ("include_release_dates_with_no_data", "true"),
+                    ("sort_order", "asc"),
+                    ("realtime_start", today),
+                    ("realtime_end", "9999-12-31"),
+                ],
+            )
+            .await?;
 
         let dates = json
             .get("release_dates")
@@ -267,4 +219,9 @@ impl FredClient {
 
         Ok(dates)
     }
+}
+
+#[derive(serde::Deserialize)]
+struct FredErrorEnvelope {
+    error_message: Option<String>,
 }

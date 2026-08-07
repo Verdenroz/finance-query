@@ -72,7 +72,7 @@ pub struct SearchResultDTO {
 /// * `params` - Query params such as `marketCapMoreThan`, `sector`, `industry`, `country`, `exchange`, `limit`, etc.
 pub async fn stock_screener(params: &[(&str, &str)]) -> Result<Vec<ScreenerResultDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/stock-screener", params).await
+    client.get("/stable/company-screener", params).await
 }
 
 /// Search for symbols matching a query string.
@@ -94,7 +94,7 @@ pub async fn symbol_search(
     if let Some(e) = exchange {
         params.push(("exchange", e));
     }
-    client.get("/api/v3/search", &params).await
+    client.get("/stable/search-symbol", &params).await
 }
 
 /// Search symbols and return provider-neutral matches.
@@ -157,7 +157,7 @@ mod tests {
     async fn test_symbol_search_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/search")
+            .mock("GET", "/stable/search-symbol")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("query".into(), "apple".into()),
@@ -181,7 +181,10 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<SearchResultDTO> = client
-            .get("/api/v3/search", &[("query", "apple"), ("limit", "5")])
+            .get(
+                "/stable/search-symbol",
+                &[("query", "apple"), ("limit", "5")],
+            )
             .await
             .unwrap();
         assert_eq!(result.len(), 1);

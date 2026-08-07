@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -91,8 +90,8 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
     let limit_str = limit.to_string();
     client
         .get(
-            "/api/v3/stock_news",
-            &[("tickers", tickers), ("limit", &limit_str)],
+            "/stable/news/stock",
+            &[("symbols", tickers), ("limit", &limit_str)],
         )
         .await
 }
@@ -100,18 +99,25 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
 /// Fetch press releases for a symbol.
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressReleaseDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
-    client.get(&path, &[("limit", &*limit_str)]).await
+    client
+        .get(
+            "/stable/news/press-releases",
+            &[("symbols", symbol), ("limit", &limit_str)],
+        )
+        .await
 }
 
 /// Fetch crypto news.
 #[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
-    let size_str = limit.to_string();
+    let limit_str = limit.to_string();
     client
-        .get("/api/v4/crypto_news", &[("page", "0"), ("size", &size_str)])
+        .get(
+            "/stable/news/crypto-latest",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -119,9 +125,12 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 #[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
-    let size_str = limit.to_string();
+    let limit_str = limit.to_string();
     client
-        .get("/api/v4/forex_news", &[("page", "0"), ("size", &size_str)])
+        .get(
+            "/stable/news/forex-latest",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -150,10 +159,10 @@ mod tests {
     async fn test_stock_news_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/stock_news")
+            .mock("GET", "/stable/news/stock")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-                mockito::Matcher::UrlEncoded("tickers".into(), "AAPL".into()),
+                mockito::Matcher::UrlEncoded("symbols".into(), "AAPL".into()),
                 mockito::Matcher::UrlEncoded("limit".into(), "5".into()),
             ]))
             .with_status(200)
@@ -176,7 +185,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<StockNewsDTO> = client
-            .get("/api/v3/stock_news", &[("tickers", "AAPL"), ("limit", "5")])
+            .get("/stable/news/stock", &[("symbols", "AAPL"), ("limit", "5")])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);
@@ -188,7 +197,7 @@ mod tests {
     async fn test_press_releases_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/press-releases/AAPL")
+            .mock("GET", "/stable/news/press-releases")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("limit".into(), "10".into()),
@@ -210,7 +219,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<PressReleaseDTO> = client
-            .get("/api/v3/press-releases/AAPL", &[("limit", "10")])
+            .get("/stable/news/press-releases", &[("limit", "10")])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);
