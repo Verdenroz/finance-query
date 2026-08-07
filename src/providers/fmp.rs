@@ -320,14 +320,7 @@ impl CryptoProvider for FmpProvider {
 #[async_trait::async_trait]
 impl ProviderAdapter for FmpProvider {
     async fn initialize(&self) -> Result<()> {
-        let key = std::env::var("FMP_API_KEY").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "fmp".into(),
-                reason: "FMP_API_KEY not set. Set the environment variable or call fmp::init(key)."
-                    .into(),
-            }
-        })?;
-        let _ = crate::adapters::fmp::init(key);
+        let _ = crate::adapters::fmp::build_client()?;
         Ok(())
     }
 

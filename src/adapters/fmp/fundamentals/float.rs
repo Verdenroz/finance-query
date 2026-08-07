@@ -1,4 +1,4 @@
-//! FMP share-float endpoint (`/api/v4/shares_float`).
+//! FMP share-float endpoint (`/stable/shares-float`).
 //!
 //! Lives under `fundamentals/` rather than `corporate/` because float routes
 //! through `Capability::FUNDAMENTALS`, alongside the short-interest data it is
@@ -10,7 +10,7 @@ use crate::adapters::fmp::build_client;
 use crate::error::{FinanceError, Result};
 use crate::models::fundamentals::ShareFloat;
 
-/// Share float entry (`/api/v4/shares_float`).
+/// Share float entry (`/stable/shares-float`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SharesFloatDTO {
@@ -32,7 +32,7 @@ pub struct SharesFloatDTO {
 /// Fetch the share float for a symbol.
 pub async fn shares_float(symbol: &str) -> Result<Vec<SharesFloatDTO>> {
     build_client()?
-        .get("/api/v4/shares_float", &[("symbol", symbol)])
+        .get("/stable/shares-float", &[("symbol", symbol)])
         .await
 }
 

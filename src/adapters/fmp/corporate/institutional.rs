@@ -2,8 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 
 use crate::adapters::fmp::build_client;
 
@@ -16,6 +15,7 @@ use crate::adapters::fmp::build_client;
 #[non_exhaustive]
 pub struct InstitutionalHolderDTO {
     /// Institution name.
+    #[serde(alias = "investorName", alias = "name")]
     pub holder: Option<String>,
     /// Number of shares held.
     pub shares: Option<f64>,
@@ -50,6 +50,7 @@ pub struct EtfHolderDTO {
 #[non_exhaustive]
 pub struct MutualFundHolderDTO {
     /// Fund name.
+    #[serde(alias = "investorName", alias = "name")]
     pub holder: Option<String>,
     /// Number of shares held.
     pub shares: Option<f64>,
@@ -100,25 +101,38 @@ pub struct Form13FDTO {
 /// Fetch institutional holders of a stock.
 pub async fn institutional_holders(symbol: &str) -> Result<Vec<InstitutionalHolderDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/institutional-holder/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    let (year, quarter) = latest_completed_quarter();
+    client
+        .get(
+            "/stable/institutional-ownership/extract-analytics/holder",
+            &[
+                ("symbol", symbol),
+                ("year", &year),
+                ("quarter", &quarter),
+                ("page", "0"),
+                ("limit", "100"),
+            ],
+        )
+        .await
 }
 
 /// Fetch ETF holders of a stock.
 pub async fn etf_holders(symbol: &str) -> Result<Vec<EtfHolderDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-holder/{}", encode_path_segment(symbol));
-    client.get(&path, &[]).await
+    client
+        .get("/stable/etf/holdings", &[("symbol", symbol)])
+        .await
 }
 
 /// Fetch mutual fund holders of a stock.
 pub async fn mutual_fund_holders(symbol: &str) -> Result<Vec<MutualFundHolderDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/mutual-fund-holder/{}", encode_path_segment(symbol));
-    client.get(&path, &[]).await
+    client
+        .get(
+            "/stable/funds/disclosure-holders-latest",
+            &[("symbol", symbol)],
+        )
+        .await
 }
 
 /// Fetch Form 13F filings for a CIK.
@@ -127,8 +141,34 @@ pub async fn mutual_fund_holders(symbol: &str) -> Result<Vec<MutualFundHolderDTO
 /// * `date` - Filing date (YYYY-MM-DD)
 pub async fn form_13f(cik: &str, date: &str) -> Result<Vec<Form13FDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/form-thirteen/{}", encode_path_segment(cik));
-    client.get(&path, &[("date", date)]).await
+    let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| {
+        FinanceError::InvalidParameter {
+            param: "date".into(),
+            reason: "expected YYYY-MM-DD".into(),
+        }
+    })?;
+    let year = parsed.format("%Y").to_string();
+    let month = parsed.format("%m").to_string().parse::<u32>().unwrap_or(1);
+    let quarter = ((month - 1) / 3 + 1).to_string();
+    client
+        .get(
+            "/stable/institutional-ownership/extract",
+            &[("cik", cik), ("year", &year), ("quarter", &quarter)],
+        )
+        .await
+}
+
+fn latest_completed_quarter() -> (String, String) {
+    use chrono::Datelike;
+
+    let today = chrono::Utc::now().date_naive();
+    let current_quarter = (today.month0() / 3) + 1;
+    let (year, quarter) = if current_quarter == 1 {
+        (today.year() - 1, 4)
+    } else {
+        (today.year(), current_quarter - 1)
+    };
+    (year.to_string(), quarter.to_string())
 }
 
 #[cfg(test)]
@@ -139,7 +179,7 @@ mod tests {
     async fn test_institutional_holders_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/institutional-holder/AAPL")
+            .mock("GET", "/stable/funds/disclosure-holders-latest")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -161,7 +201,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<InstitutionalHolderDTO> = client
-            .get("/api/v3/institutional-holder/AAPL", &[])
+            .get("/stable/funds/disclosure-holders-latest", &[])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);
@@ -172,7 +212,7 @@ mod tests {
     async fn test_etf_holders_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/etf-holder/SPY")
+            .mock("GET", "/stable/etf/holdings")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -194,7 +234,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let resp: Vec<EtfHolderDTO> = client.get("/api/v3/etf-holder/SPY", &[]).await.unwrap();
+        let resp: Vec<EtfHolderDTO> = client.get("/stable/etf/holdings", &[]).await.unwrap();
         assert_eq!(resp.len(), 1);
         assert_eq!(resp[0].asset.as_deref(), Some("AAPL"));
         assert!((resp[0].weight_percentage.unwrap() - 7.2).abs() < 0.01);

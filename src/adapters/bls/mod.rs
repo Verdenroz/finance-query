@@ -264,6 +264,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn invalid_registration_key_is_an_authentication_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("POST", "/v2/timeseries/data/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "status": "REQUEST_NOT_PROCESSED",
+                    "message": ["The registration key is invalid."],
+                    "Results": {}
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let err = test_client(&server.url(), Tier::V2("bad-key".into()))
+            .series("CUUR0000SA0")
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
     async fn http_error_maps_to_external_api_error() {
         let mut server = mockito::Server::new_async().await;
         let _m = server

@@ -1,4 +1,4 @@
-//! Polygon.io API client with rate limiting and cursor-based pagination.
+//! Polygon/Massive API client with rate limiting and cursor-based pagination.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,7 +15,7 @@ use crate::rate_limiter::RateLimiter;
 
 use super::models::PaginatedResponseDTO;
 
-const PG_BASE: &str = "https://api.polygon.io";
+const PG_BASE: &str = "https://api.massive.com";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) struct PolygonClientBuilder {
@@ -45,8 +45,9 @@ impl PolygonClientBuilder {
     }
 
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<PolygonClient> {
+        let timeout = self.timeout;
         let http = Client::builder()
-            .timeout(self.timeout)
+            .timeout(timeout)
             .user_agent(format!(
                 "finance-query/{} (https://github.com/Verdenroz/finance-query)",
                 env!("CARGO_PKG_VERSION")
@@ -58,16 +59,18 @@ impl PolygonClientBuilder {
             http,
             limiter,
             base_url: self.base_url.unwrap_or_else(|| PG_BASE.to_string()),
+            timeout,
         })
     }
 }
 
-/// Polygon.io API client. Constructed per-call via the module singleton.
+/// Massive API client. Constructed per-call via the module singleton.
 pub(crate) struct PolygonClient {
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
     base_url: String,
+    timeout: Duration,
 }
 
 impl PolygonClient {
@@ -103,7 +106,7 @@ impl PolygonClient {
         let Some(status) = env.status.as_deref() else {
             return Ok(());
         };
-        if status != "ERROR" && status != "NOT_FOUND" {
+        if status != "ERROR" && status != "NOT_FOUND" && status != "NOT_AUTHORIZED" {
             return Ok(());
         }
         let msg = env
@@ -115,6 +118,18 @@ impl PolygonClient {
         if status == "NOT_FOUND" {
             return Err(FinanceError::SymbolNotFound {
                 symbol: None,
+                context: msg.to_string(),
+            });
+        }
+        let normalized = msg.to_ascii_lowercase();
+        if status == "NOT_AUTHORIZED"
+            || normalized.contains("api key")
+            || normalized.contains("apikey")
+            || normalized.contains("not authorized")
+            || normalized.contains("not entitled")
+            || normalized.contains("upgrade your plan")
+        {
+            return Err(FinanceError::AuthenticationFailed {
                 context: msg.to_string(),
             });
         }
@@ -133,11 +148,34 @@ impl PolygonClient {
         query.extend_from_slice(params);
 
         debug!("Polygon request: {path}");
-        let resp = self.http.get(&url).query(&query).send().await?;
+        let resp = self
+            .http
+            .get(&url)
+            .query(&query)
+            .send()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
+        let status = resp.status();
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
+        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
+            Self::check_error_envelope(&env)?;
+        }
+        Self::check_status(status)?;
+        Ok(bytes)
+    }
 
-        Self::check_status(resp.status())?;
-
-        Ok(resp.bytes().await?)
+    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
+        if error.is_timeout() {
+            return FinanceError::Timeout {
+                timeout_ms: self.timeout.as_millis() as u64,
+            };
+        }
+        // A reqwest error may retain the full URL. Polygon authenticates with
+        // an apiKey query parameter, so never bubble that URL into logs.
+        FinanceError::ApiError("Polygon HTTP request failed".to_string())
     }
 
     /// Execute a GET request to a Polygon REST path and return raw JSON.
@@ -208,6 +246,7 @@ struct ErrorEnvelope {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rate_limiter::RateLimiter;
 
     #[test]
     fn error_envelope_maps_bodies_to_errors() {
@@ -216,6 +255,7 @@ mod tests {
             Ok,
             NotFound(&'static str),
             External,
+            Auth,
         }
 
         let cases = [
@@ -238,6 +278,18 @@ mod tests {
                 r#"{"status":"NOT_FOUND","error":{"code":2}}"#,
                 Want::NotFound("Unknown error"),
             ),
+            (
+                r#"{"status":"ERROR","error":"API Key was not provided"}"#,
+                Want::Auth,
+            ),
+            (
+                r#"{"status":"ERROR","error":"You are not entitled to this data. Please upgrade your plan"}"#,
+                Want::Auth,
+            ),
+            (
+                r#"{"status":"NOT_AUTHORIZED","message":"plan restriction"}"#,
+                Want::Auth,
+            ),
             (r#"{"status":"OK"}"#, Want::Ok),
             (r#"[{"ticker":"AAPL"}]"#, Want::Ok),
             (r#"{}"#, Want::Ok),
@@ -258,8 +310,35 @@ mod tests {
                     assert_eq!(api, "Polygon", "body {body}");
                     assert_eq!(status, 400, "body {body}");
                 }
+                (Want::Auth, Err(FinanceError::AuthenticationFailed { .. })) => {}
                 (_, got) => panic!("body {body}: unexpected {got:?}"),
             }
         }
+    }
+
+    #[tokio::test]
+    async fn authentication_body_is_preserved_on_http_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/v2/aggs/ticker/AAPL/prev")
+            .match_query(mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            ))
+            .with_status(403)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"status":"ERROR","error":"API Key is invalid"}"#)
+            .create_async()
+            .await;
+        let client = PolygonClientBuilder::new("test-key")
+            .base_url(server.url())
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap();
+
+        let err = client
+            .get_raw("/v2/aggs/ticker/AAPL/prev", &[])
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
     }
 }

@@ -9,27 +9,41 @@
 //!
 //! # Keys
 //!
-//! None required. `OPENFIGI_API_KEY` is optional and only raises the quota
-//! (25 requests/minute keyless, 10 identifiers per request).
+//! None required. `OPENFIGI_API_KEY` is optional and raises the quota from
+//! 25 requests/minute and 10 jobs per request to 25 requests/6 seconds and
+//! 100 jobs per request.
 
 pub(crate) mod client;
 pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::{FinanceError, Result};
 use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
-use client::{MAX_JOBS_PER_REQUEST, OpenFigiClient};
+use client::OpenFigiClient;
 use models::{FigiRecord, MappingJob};
 
-/// Keyless quota is 25 requests/minute; a key raises it. Pace to the lower
-/// tier so the keyless path never trips the limit.
-const OPENFIGI_RATE_PER_SEC: f64 = 0.4;
+const OPENFIGI_ANONYMOUS_RATE_PER_SEC: f64 = 25.0 / 60.0;
+const OPENFIGI_AUTHENTICATED_RATE_PER_SEC: f64 = 25.0 / 6.0;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-keyless_limiter!(rate = OPENFIGI_RATE_PER_SEC);
+static ANONYMOUS_LIMITER: std::sync::OnceLock<std::sync::Arc<crate::rate_limiter::RateLimiter>> =
+    std::sync::OnceLock::new();
+static AUTHENTICATED_LIMITER: std::sync::OnceLock<
+    std::sync::Arc<crate::rate_limiter::RateLimiter>,
+> = std::sync::OnceLock::new();
+
+fn limiter(authenticated: bool) -> std::sync::Arc<crate::rate_limiter::RateLimiter> {
+    let (slot, rate) = if authenticated {
+        (&AUTHENTICATED_LIMITER, OPENFIGI_AUTHENTICATED_RATE_PER_SEC)
+    } else {
+        (&ANONYMOUS_LIMITER, OPENFIGI_ANONYMOUS_RATE_PER_SEC)
+    };
+    std::sync::Arc::clone(
+        slot.get_or_init(|| std::sync::Arc::new(crate::rate_limiter::RateLimiter::new(rate))),
+    )
+}
 
 /// Build a client against the live API, reusing the shared token bucket.
 ///
@@ -39,9 +53,10 @@ fn client() -> Result<OpenFigiClient> {
     let api_key = std::env::var("OPENFIGI_API_KEY")
         .ok()
         .filter(|k| !k.trim().is_empty());
+    let request_limiter = limiter(api_key.is_some());
     OpenFigiClient::new(
         DEFAULT_TIMEOUT,
-        shared_limiter(),
+        request_limiter,
         client::OPENFIGI_BASE,
         api_key,
     )
@@ -85,9 +100,10 @@ pub(crate) async fn resolve_many(
     }
 
     let client = client()?;
+    let max_jobs = client.max_jobs_per_request();
     let mut out: Vec<Vec<SecurityMapping>> = Vec::with_capacity(ids.len());
 
-    for chunk in ids.chunks(MAX_JOBS_PER_REQUEST) {
+    for chunk in ids.chunks(max_jobs) {
         let jobs: Vec<MappingJob<'_>> = chunk
             .iter()
             .map(|id| MappingJob {
@@ -135,6 +151,57 @@ mod tests {
             None,
         )
         .unwrap()
+    }
+
+    fn keyed_test_client(base_url: &str) -> OpenFigiClient {
+        OpenFigiClient::new(
+            Duration::from_secs(5),
+            Arc::new(RateLimiter::new(100.0)),
+            base_url,
+            Some("test-key".to_string()),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn api_key_enables_the_documented_batch_size() {
+        let limiter = Arc::new(RateLimiter::new(100.0));
+        let anonymous = OpenFigiClient::new(
+            Duration::from_secs(5),
+            Arc::clone(&limiter),
+            client::OPENFIGI_BASE,
+            None,
+        )
+        .unwrap();
+        let authenticated = OpenFigiClient::new(
+            Duration::from_secs(5),
+            limiter,
+            client::OPENFIGI_BASE,
+            Some("test-key".to_string()),
+        )
+        .unwrap();
+
+        assert_eq!(anonymous.max_jobs_per_request(), 10);
+        assert_eq!(authenticated.max_jobs_per_request(), 100);
+    }
+
+    #[tokio::test]
+    async fn api_key_is_sent_in_the_documented_header() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("POST", "/mapping")
+            .match_header("X-OPENFIGI-APIKEY", "test-key")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"[{"warning":"No identifier found."}]"#)
+            .create_async()
+            .await;
+        let jobs = [MappingJob {
+            id_type: "TICKER",
+            id_value: "UNKNOWN",
+        }];
+
+        keyed_test_client(&server.url()).map(&jobs).await.unwrap();
     }
 
     fn apple_payload() -> String {

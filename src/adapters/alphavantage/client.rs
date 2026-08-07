@@ -68,42 +68,7 @@ pub(crate) struct AlphaVantageClient {
 }
 
 impl AlphaVantageClient {
-    /// Execute a GET request to the Alpha Vantage API.
-    ///
-    /// All AV endpoints use the same base URL with `function=` and `apikey=` query params.
-    /// Additional params are passed as `&[(&str, &str)]`.
-    pub async fn get(&self, function: &str, params: &[(&str, &str)]) -> Result<Value> {
-        self.limiter.acquire().await;
-
-        let mut query: Vec<(&str, &str)> = vec![("function", function), ("apikey", &self.api_key)];
-        query.extend_from_slice(params);
-
-        debug!("AlphaVantage request: function={function}");
-        let resp = self.http.get(&self.base_url).query(&query).send().await?;
-
-        match resp.status() {
-            StatusCode::OK => {}
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                return Err(FinanceError::AuthenticationFailed {
-                    context: "Alpha Vantage API key invalid or missing. Call alphavantage::init(key) first.".to_string(),
-                });
-            }
-            StatusCode::TOO_MANY_REQUESTS => {
-                return Err(FinanceError::RateLimited {
-                    retry_after: Some(60),
-                });
-            }
-            s => {
-                return Err(FinanceError::ExternalApiError {
-                    api: "AlphaVantage".to_string(),
-                    status: s.as_u16(),
-                });
-            }
-        }
-
-        let json: Value = resp.json().await?;
-
-        // AV returns 200 with error messages in the JSON body
+    fn check_error_payload(json: &Value) -> Result<()> {
         if let Some(error_msg) = json.get("Error Message").and_then(|v| v.as_str()) {
             return Err(FinanceError::InvalidParameter {
                 param: "function".to_string(),
@@ -123,10 +88,60 @@ impl AlphaVantageClient {
                     retry_after: Some(60),
                 });
             }
-            // Premium endpoint, invalid key, or other AV informational message.
+            let normalized = info.to_ascii_lowercase();
+            if normalized.contains("api key") || normalized.contains("apikey") {
+                return Err(FinanceError::AuthenticationFailed {
+                    context: info.to_string(),
+                });
+            }
             return Err(FinanceError::ApiError(format!("AlphaVantage: {info}")));
         }
+        Ok(())
+    }
 
+    /// Execute a GET request to the Alpha Vantage API.
+    ///
+    /// All AV endpoints use the same base URL with `function=` and `apikey=` query params.
+    /// Additional params are passed as `&[(&str, &str)]`.
+    pub async fn get(&self, function: &str, params: &[(&str, &str)]) -> Result<Value> {
+        self.limiter.acquire().await;
+
+        let mut query: Vec<(&str, &str)> = vec![("function", function), ("apikey", &self.api_key)];
+        query.extend_from_slice(params);
+
+        debug!("AlphaVantage request: function={function}");
+        let resp = self.http.get(&self.base_url).query(&query).send().await?;
+        let status = resp.status();
+        let bytes = resp.bytes().await?;
+        let payload = serde_json::from_slice::<Value>(&bytes).ok();
+        if let Some(payload) = &payload {
+            Self::check_error_payload(payload)?;
+        }
+
+        match status {
+            StatusCode::OK => {}
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                return Err(FinanceError::AuthenticationFailed {
+                    context: "Alpha Vantage API key invalid or missing. Call alphavantage::init(key) first.".to_string(),
+                });
+            }
+            StatusCode::TOO_MANY_REQUESTS => {
+                return Err(FinanceError::RateLimited {
+                    retry_after: Some(60),
+                });
+            }
+            s => {
+                return Err(FinanceError::ExternalApiError {
+                    api: "AlphaVantage".to_string(),
+                    status: s.as_u16(),
+                });
+            }
+        }
+
+        let json = payload.ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "response".to_string(),
+            context: "Alpha Vantage returned invalid JSON".to_string(),
+        })?;
         Ok(json)
     }
 
@@ -139,8 +154,10 @@ impl AlphaVantageClient {
 
         debug!("AlphaVantage CSV request: function={function}");
         let resp = self.http.get(&self.base_url).query(&query).send().await?;
+        let status = resp.status();
+        let body = resp.text().await?;
 
-        match resp.status() {
+        match status {
             StatusCode::OK => {}
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
                 return Err(FinanceError::AuthenticationFailed {
@@ -160,6 +177,43 @@ impl AlphaVantageClient {
             }
         }
 
-        Ok(resp.text().await?)
+        if let Ok(payload) = serde_json::from_str::<Value>(&body) {
+            Self::check_error_payload(&payload)?;
+        }
+        Ok(body)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_client(base_url: &str) -> AlphaVantageClient {
+        AlphaVantageClientBuilder::new("test-key")
+            .base_url(base_url)
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn csv_request_recognizes_json_authentication_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("function".into(), "DIVIDENDS".into()),
+                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"Information":"Invalid API key. Please visit the support page."}"#)
+            .create_async()
+            .await;
+
+        let err = test_client(&server.url())
+            .get_csv("DIVIDENDS", &[])
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
     }
 }

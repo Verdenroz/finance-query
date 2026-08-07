@@ -14,10 +14,40 @@ use super::models::PaginatedResponseDTO;
 pub struct EconomicDataPointDTO {
     /// Date.
     pub date: Option<String>,
-    /// Value.
-    pub value: Option<f64>,
-    /// Period.
-    pub period: Option<String>,
+    /// Consumer Price Index.
+    pub cpi: Option<f64>,
+    /// Year-over-year CPI change.
+    pub cpi_year_over_year: Option<f64>,
+    /// Core CPI.
+    pub cpi_core: Option<f64>,
+    /// Personal Consumption Expenditures price index.
+    pub pce: Option<f64>,
+    /// Core PCE price index.
+    pub pce_core: Option<f64>,
+    /// One-year modeled inflation expectation.
+    pub model_1_year: Option<f64>,
+    /// Five-year modeled inflation expectation.
+    pub model_5_year: Option<f64>,
+    /// Ten-year modeled inflation expectation.
+    pub model_10_year: Option<f64>,
+    /// Thirty-year modeled inflation expectation.
+    pub model_30_year: Option<f64>,
+    /// Five-year market breakeven inflation expectation.
+    pub market_5_year: Option<f64>,
+    /// Ten-year market breakeven inflation expectation.
+    pub market_10_year: Option<f64>,
+    /// Unemployment rate.
+    pub unemployment_rate: Option<f64>,
+    /// Labor-force participation rate.
+    pub labor_force_participation_rate: Option<f64>,
+    /// One-year Treasury yield.
+    pub yield_1_year: Option<f64>,
+    /// Five-year Treasury yield.
+    pub yield_5_year: Option<f64>,
+    /// Ten-year Treasury yield.
+    pub yield_10_year: Option<f64>,
+    /// Thirty-year Treasury yield.
+    pub yield_30_year: Option<f64>,
 }
 
 /// Fetch inflation data.
@@ -25,7 +55,7 @@ pub async fn inflation(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<EconomicDataPointDTO>> {
     let client = build_client()?;
-    client.get("/v1/indicators/economy/inflation", params).await
+    client.get("/fed/v1/inflation", params).await
 }
 
 /// Fetch inflation expectations.
@@ -33,9 +63,7 @@ pub async fn inflation_expectations(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<EconomicDataPointDTO>> {
     let client = build_client()?;
-    client
-        .get("/v1/indicators/economy/inflation-expectations", params)
-        .await
+    client.get("/fed/v1/inflation-expectations", params).await
 }
 
 /// Fetch labor market data (unemployment, participation, earnings, job openings).
@@ -43,9 +71,7 @@ pub async fn labor_market(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<EconomicDataPointDTO>> {
     let client = build_client()?;
-    client
-        .get("/v1/indicators/economy/labor-market", params)
-        .await
+    client.get("/fed/v1/labor-market", params).await
 }
 
 /// Fetch US Treasury yield data.
@@ -53,9 +79,7 @@ pub async fn treasury_yields(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<EconomicDataPointDTO>> {
     let client = build_client()?;
-    client
-        .get("/v1/indicators/economy/treasury-yields", params)
-        .await
+    client.get("/fed/v1/treasury-yields", params).await
 }
 
 /// Fetch economic series (canonical) by series ID.
@@ -89,7 +113,13 @@ fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>)
             .into_iter()
             .map(|d| MacroObservation {
                 date: d.date.unwrap_or_default(),
-                value: d.value,
+                value: match series_id {
+                    "inflation" => d.cpi_year_over_year.or(d.cpi),
+                    "inflation_expectations" => d.market_10_year.or(d.model_10_year),
+                    "labor_market" => d.unemployment_rate,
+                    "treasury_yields" => d.yield_10_year,
+                    _ => None,
+                },
             })
             .collect(),
     }
@@ -102,8 +132,8 @@ mod tests {
     #[test]
     fn points_to_series_maps_observations() {
         let points: Vec<EconomicDataPointDTO> = serde_json::from_value(serde_json::json!([
-            {"date": "2024-01-01", "value": 3.4, "period": "monthly"},
-            {"date": "2024-02-01", "value": 3.2}
+            {"date": "2024-01-01", "cpi_year_over_year": 3.4},
+            {"date": "2024-02-01", "cpi": 3.2}
         ]))
         .unwrap();
 
@@ -117,7 +147,7 @@ mod tests {
     #[test]
     fn points_to_series_defaults_missing_date_and_value() {
         let points: Vec<EconomicDataPointDTO> =
-            serde_json::from_value(serde_json::json!([{"period": "monthly"}])).unwrap();
+            serde_json::from_value(serde_json::json!([{}])).unwrap();
         let series = points_to_series("labor_market", Some(points));
         assert_eq!(series.observations.len(), 1);
         assert_eq!(series.observations[0].date, "");

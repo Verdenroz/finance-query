@@ -13,7 +13,7 @@ use crate::models::corporate::governance::{EmployeeCount, ExecutiveCompensation}
 // Response types
 // ============================================================================
 
-/// Executive compensation entry (`/api/v4/governance/executive_compensation`).
+/// Executive compensation entry (`/stable/governance-executive-compensation`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ExecutiveCompensationDTO {
@@ -54,7 +54,7 @@ pub struct ExecutiveCompensationDTO {
     pub url: Option<String>,
 }
 
-/// Employee headcount entry (`/api/v4/historical/employee_count`).
+/// Employee headcount entry (`/stable/historical-employee-count`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EmployeeCountDTO {
@@ -89,7 +89,7 @@ pub struct EmployeeCountDTO {
 pub async fn executive_compensation(symbol: &str) -> Result<Vec<ExecutiveCompensationDTO>> {
     build_client()?
         .get(
-            "/api/v4/governance/executive_compensation",
+            "/stable/governance-executive-compensation",
             &[("symbol", symbol)],
         )
         .await
@@ -98,7 +98,7 @@ pub async fn executive_compensation(symbol: &str) -> Result<Vec<ExecutiveCompens
 /// Fetch historical employee headcount for a symbol.
 pub async fn employee_count(symbol: &str) -> Result<Vec<EmployeeCountDTO>> {
     build_client()?
-        .get("/api/v4/historical/employee_count", &[("symbol", symbol)])
+        .get("/stable/historical-employee-count", &[("symbol", symbol)])
         .await
 }
 

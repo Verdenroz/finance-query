@@ -2,10 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
+use crate::adapters::fmp::fundamentals::consensus::RatingConsensusDTO;
 use crate::adapters::fmp::models::Period;
 
 // ============================================================================
@@ -90,10 +90,10 @@ pub struct EarningsSurpriseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Actual earning result.
-    #[serde(rename = "actualEarningResult")]
+    #[serde(rename = "epsActual", alias = "actualEarningResult")]
     pub actual_earning_result: Option<f64>,
     /// Estimated earning.
-    #[serde(rename = "estimatedEarning")]
+    #[serde(rename = "epsEstimated", alias = "estimatedEarning")]
     pub estimated_earning: Option<f64>,
 }
 
@@ -163,66 +163,88 @@ pub async fn analyst_estimates(
     limit: u32,
 ) -> Result<Vec<AnalystEstimateDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/analyst-estimates/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
     client
-        .get(&path, &[("period", period.as_str()), ("limit", &limit_str)])
+        .get(
+            "/stable/analyst-estimates",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+                ("page", "0"),
+            ],
+        )
         .await
 }
 
 /// Fetch analyst stock recommendations.
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendationDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/analyst-stock-recommendations/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    let rows: Vec<RatingConsensusDTO> = client
+        .get("/stable/grades-consensus", &[("symbol", symbol)])
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| AnalystRecommendationDTO {
+            symbol: row.symbol.or_else(|| Some(symbol.to_string())),
+            date: None,
+            analyst_ratings_buy: row.buy.and_then(|value| value.try_into().ok()),
+            analyst_ratings_hold: row.hold.and_then(|value| value.try_into().ok()),
+            analyst_ratings_sell: row.sell.and_then(|value| value.try_into().ok()),
+            analyst_ratings_strong_buy: row.strong_buy.and_then(|value| value.try_into().ok()),
+            analyst_ratings_strong_sell: row.strong_sell.and_then(|value| value.try_into().ok()),
+        })
+        .collect())
 }
 
 /// Fetch earnings surprises for a symbol.
 #[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_surprises(symbol: &str) -> Result<Vec<EarningsSurpriseDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/earnings-surprises/{}", encode_path_segment(symbol));
-    client.get(&path, &[]).await
+    client.get("/stable/earnings", &[("symbol", symbol)]).await
 }
 
 /// Fetch stock grade history for a symbol.
 #[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/grade/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
-    client.get(&path, &[("limit", &*limit_str)]).await
+    client
+        .get(
+            "/stable/grades-historical",
+            &[("symbol", symbol), ("limit", &limit_str)],
+        )
+        .await
 }
 
 /// Fetch an earnings call transcript.
 ///
 /// * `quarter` - Quarter number (1-4)
 /// * `year` - Year (e.g., 2024)
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_transcript(
     symbol: &str,
     quarter: u32,
     year: u32,
 ) -> Result<Vec<EarningsTranscriptDTO>> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/earning_call_transcript/{}",
-        encode_path_segment(symbol)
-    );
     let q = quarter.to_string();
     let y = year.to_string();
-    client.get(&path, &[("quarter", &*q), ("year", &*y)]).await
+    client
+        .get(
+            "/stable/earning-call-transcript",
+            &[("symbol", symbol), ("quarter", &q), ("year", &y)],
+        )
+        .await
 }
 
 /// Fetch a list of available earnings transcripts for a symbol.
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_transcript_list(symbol: &str) -> Result<Vec<EarningsTranscriptRefDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/earning_call_transcript", &[("symbol", symbol)])
+        .get(
+            "/stable/earning-call-transcript-dates",
+            &[("symbol", symbol)],
+        )
         .await
 }
 
@@ -231,10 +253,38 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn stable_transcript_route_uses_symbol_year_and_quarter() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/earning-call-transcript")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
+                mockito::Matcher::UrlEncoded("year".into(), "2024".into()),
+                mockito::Matcher::UrlEncoded("quarter".into(), "2".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"[{"symbol":"AAPL","quarter":2,"year":2024,"content":"Call"}]"#)
+            .create_async()
+            .await;
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let rows: Vec<EarningsTranscriptDTO> = client
+            .get(
+                "/stable/earning-call-transcript",
+                &[("symbol", "AAPL"), ("quarter", "2"), ("year", "2024")],
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(rows[0].symbol.as_deref(), Some("AAPL"));
+    }
+
+    #[tokio::test]
     async fn test_analyst_estimates_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/analyst-estimates/AAPL")
+            .mock("GET", "/stable/analyst-estimates")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "quarter".into()),
@@ -260,7 +310,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<AnalystEstimateDTO> = client
             .get(
-                "/api/v3/analyst-estimates/AAPL",
+                "/stable/analyst-estimates",
                 &[("period", "quarter"), ("limit", "4")],
             )
             .await
@@ -274,7 +324,7 @@ mod tests {
     async fn test_earnings_surprises_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/earnings-surprises/AAPL")
+            .mock("GET", "/stable/earnings")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -285,8 +335,8 @@ mod tests {
                     {
                         "date": "2024-01-25",
                         "symbol": "AAPL",
-                        "actualEarningResult": 2.18,
-                        "estimatedEarning": 2.10
+                        "epsActual": 2.18,
+                        "epsEstimated": 2.10
                     }
                 ])
                 .to_string(),
@@ -295,10 +345,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let resp: Vec<EarningsSurpriseDTO> = client
-            .get("/api/v3/earnings-surprises/AAPL", &[])
-            .await
-            .unwrap();
+        let resp: Vec<EarningsSurpriseDTO> = client.get("/stable/earnings", &[]).await.unwrap();
         assert_eq!(resp.len(), 1);
         assert!((resp[0].actual_earning_result.unwrap() - 2.18).abs() < 0.01);
     }

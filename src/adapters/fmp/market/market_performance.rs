@@ -47,10 +47,13 @@ pub struct SectorPerformanceDTO {
     /// Changes percentage.
     #[serde(rename = "changesPercentage")]
     pub changes_percentage: Option<String>,
+    /// Average percentage change returned by the stable snapshot endpoint.
+    #[serde(rename = "averageChange")]
+    pub average_change: Option<f64>,
 }
 
 /// Historical sector performance entry.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct HistoricalSectorPerformanceDTO {
     /// Date.
@@ -103,8 +106,15 @@ pub struct MarketMoverDTO {
     /// Price.
     pub price: Option<f64>,
     /// Change percentage.
-    #[serde(rename = "changesPercentage")]
+    #[serde(rename = "changePercentage", alias = "changesPercentage")]
     pub changes_percentage: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StableSectorHistoryDTO {
+    date: Option<String>,
+    #[serde(rename = "averageChange")]
+    average_change: Option<f64>,
 }
 
 // ============================================================================
@@ -114,21 +124,28 @@ pub struct MarketMoverDTO {
 /// Fetch sector PE ratios.
 pub async fn sectors_pe() -> Result<Vec<SectorPeDTO>> {
     let client = build_client()?;
-    client.get("/api/v4/sector_price_earning_ratio", &[]).await
+    let date = latest_completed_market_date();
+    client
+        .get("/stable/sector-pe-snapshot", &[("date", &date)])
+        .await
 }
 
 /// Fetch industry PE ratios.
 pub async fn industries_pe() -> Result<Vec<IndustryPeDTO>> {
     let client = build_client()?;
+    let date = latest_completed_market_date();
     client
-        .get("/api/v4/industry_price_earning_ratio", &[])
+        .get("/stable/industry-pe-snapshot", &[("date", &date)])
         .await
 }
 
 /// Fetch current sector performance.
 pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/sector-performance", &[]).await
+    let date = latest_completed_market_date();
+    client
+        .get("/stable/sector-performance-snapshot", &[("date", &date)])
+        .await
 }
 
 /// Fetch historical sector performance.
@@ -136,31 +153,83 @@ pub async fn historical_sector_performance(
     limit: u32,
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
     let client = build_client()?;
-    let limit_str = limit.to_string();
-    client
-        .get(
-            "/api/v3/historical-sectors-performance",
-            &[("limit", &*limit_str)],
-        )
-        .await
+    let mut by_date = std::collections::BTreeMap::<String, HistoricalSectorPerformanceDTO>::new();
+    for sector in [
+        "Utilities",
+        "Basic Materials",
+        "Communication Services",
+        "Consumer Cyclical",
+        "Consumer Defensive",
+        "Energy",
+        "Financial Services",
+        "Healthcare",
+        "Industrials",
+        "Real Estate",
+        "Technology",
+    ] {
+        let rows: Vec<StableSectorHistoryDTO> = client
+            .get(
+                "/stable/historical-sector-performance",
+                &[("sector", sector)],
+            )
+            .await?;
+        for row in rows {
+            let Some(date) = row.date else { continue };
+            let entry = by_date.entry(date.clone()).or_default();
+            entry.date = Some(date);
+            match sector {
+                "Utilities" => entry.utilities_changes_percentage = row.average_change,
+                "Basic Materials" => entry.basic_materials_changes_percentage = row.average_change,
+                "Communication Services" => {
+                    entry.communication_services_changes_percentage = row.average_change;
+                }
+                "Consumer Cyclical" => {
+                    entry.consumer_cyclical_changes_percentage = row.average_change
+                }
+                "Consumer Defensive" => {
+                    entry.consumer_defensive_changes_percentage = row.average_change;
+                }
+                "Energy" => entry.energy_changes_percentage = row.average_change,
+                "Financial Services" => {
+                    entry.financial_services_changes_percentage = row.average_change;
+                }
+                "Healthcare" => entry.healthcare_changes_percentage = row.average_change,
+                "Industrials" => entry.industrials_changes_percentage = row.average_change,
+                "Real Estate" => entry.real_estate_changes_percentage = row.average_change,
+                "Technology" => entry.technology_changes_percentage = row.average_change,
+                _ => unreachable!(),
+            }
+        }
+    }
+    Ok(by_date.into_values().rev().take(limit as usize).collect())
+}
+
+fn latest_completed_market_date() -> String {
+    use chrono::Datelike;
+
+    let mut date = chrono::Utc::now().date_naive() - chrono::Days::new(1);
+    while date.weekday() == chrono::Weekday::Sat || date.weekday() == chrono::Weekday::Sun {
+        date = date.pred_opt().expect("valid previous calendar date");
+    }
+    date.format("%Y-%m-%d").to_string()
 }
 
 /// Fetch top stock market gainers.
 pub async fn stock_market_gainers() -> Result<Vec<MarketMoverDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/stock_market/gainers", &[]).await
+    client.get("/stable/biggest-gainers", &[]).await
 }
 
 /// Fetch top stock market losers.
 pub async fn stock_market_losers() -> Result<Vec<MarketMoverDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/stock_market/losers", &[]).await
+    client.get("/stable/biggest-losers", &[]).await
 }
 
 /// Fetch most active stocks.
 pub async fn stock_market_most_active() -> Result<Vec<MarketMoverDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/stock_market/actives", &[]).await
+    client.get("/stable/most-actives", &[]).await
 }
 
 /// Fetch sector performance and map to provider-neutral entries.
@@ -173,7 +242,7 @@ pub async fn fetch_sector_performance_response()
         .filter_map(|s| {
             Some(SectorPerformance {
                 sector: s.sector?,
-                change_percent: parse_percent(s.changes_percentage.as_deref()),
+                change_percent: parse_percent(s.changes_percentage.as_deref()).or(s.average_change),
             })
         })
         .collect())
@@ -319,7 +388,7 @@ mod tests {
     async fn test_sector_performance_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/sector-performance")
+            .mock("GET", "/stable/sector-performance-snapshot")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -342,8 +411,10 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let resp: Vec<SectorPerformanceDTO> =
-            client.get("/api/v3/sector-performance", &[]).await.unwrap();
+        let resp: Vec<SectorPerformanceDTO> = client
+            .get("/stable/sector-performance-snapshot", &[])
+            .await
+            .unwrap();
         assert_eq!(resp.len(), 2);
         assert_eq!(resp[0].sector.as_deref(), Some("Technology"));
         assert_eq!(resp[0].changes_percentage.as_deref(), Some("1.25%"));
@@ -353,7 +424,7 @@ mod tests {
     async fn test_stock_market_gainers_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/stock_market/gainers")
+            .mock("GET", "/stable/biggest-gainers")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -375,10 +446,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let resp: Vec<MarketMoverDTO> = client
-            .get("/api/v3/stock_market/gainers", &[])
-            .await
-            .unwrap();
+        let resp: Vec<MarketMoverDTO> = client.get("/stable/biggest-gainers", &[]).await.unwrap();
         assert_eq!(resp.len(), 1);
         assert_eq!(resp[0].symbol.as_deref(), Some("XYZ"));
         assert!((resp[0].change.unwrap() - 5.20).abs() < 0.01);

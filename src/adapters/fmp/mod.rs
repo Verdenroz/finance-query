@@ -99,6 +99,9 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 }
 
 #[cfg(test)]
+mod live_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::FinanceError;

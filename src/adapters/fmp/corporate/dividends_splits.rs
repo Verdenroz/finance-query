@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -139,21 +138,23 @@ pub async fn fetch_canonical_events(
 /// Fetch historical dividend data for a symbol.
 pub async fn historical_dividends(symbol: &str) -> Result<DividendHistoryResponseDTO> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/historical-price-full/stock_dividend/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    let historical = client
+        .get("/stable/dividends", &[("symbol", symbol)])
+        .await?;
+    Ok(DividendHistoryResponseDTO {
+        symbol: Some(symbol.to_string()),
+        historical,
+    })
 }
 
 /// Fetch historical stock split data for a symbol.
 pub async fn historical_splits(symbol: &str) -> Result<SplitHistoryResponseDTO> {
     let client = build_client()?;
-    let path = format!(
-        "/api/v3/historical-price-full/stock_split/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, &[]).await
+    let historical = client.get("/stable/splits", &[("symbol", symbol)]).await?;
+    Ok(SplitHistoryResponseDTO {
+        symbol: Some(symbol.to_string()),
+        historical,
+    })
 }
 
 #[cfg(test)]
@@ -164,16 +165,14 @@ mod tests {
     async fn test_historical_dividends_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/historical-price-full/stock_dividend/AAPL")
+            .mock("GET", "/stable/dividends")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!({
-                    "symbol": "AAPL",
-                    "historical": [
+                serde_json::json!([
                         {
                             "date": "2024-02-09",
                             "label": "February 09, 24",
@@ -183,53 +182,47 @@ mod tests {
                             "paymentDate": "2024-02-15",
                             "declarationDate": "2024-02-01"
                         }
-                    ]
-                })
+                ])
                 .to_string(),
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let path = "/api/v3/historical-price-full/stock_dividend/AAPL";
-        let resp: DividendHistoryResponseDTO = client.get(path, &[]).await.unwrap();
-        assert_eq!(resp.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(resp.historical.len(), 1);
-        assert!((resp.historical[0].adj_dividend.unwrap() - 0.24).abs() < 0.001);
+        let path = "/stable/dividends";
+        let resp: Vec<DividendHistoryDTO> = client.get(path, &[]).await.unwrap();
+        assert_eq!(resp.len(), 1);
+        assert!((resp[0].adj_dividend.unwrap() - 0.24).abs() < 0.001);
     }
 
     #[tokio::test]
     async fn test_historical_splits_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/historical-price-full/stock_split/AAPL")
+            .mock("GET", "/stable/splits")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!({
-                    "symbol": "AAPL",
-                    "historical": [
+                serde_json::json!([
                         {
                             "date": "2020-08-31",
                             "label": "August 31, 20",
                             "numerator": 4.0,
                             "denominator": 1.0
                         }
-                    ]
-                })
+                ])
                 .to_string(),
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let path = "/api/v3/historical-price-full/stock_split/AAPL";
-        let resp: SplitHistoryResponseDTO = client.get(path, &[]).await.unwrap();
-        assert_eq!(resp.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(resp.historical.len(), 1);
-        assert!((resp.historical[0].numerator.unwrap() - 4.0).abs() < 0.001);
+        let path = "/stable/splits";
+        let resp: Vec<SplitHistoryDTO> = client.get(path, &[]).await.unwrap();
+        assert_eq!(resp.len(), 1);
+        assert!((resp[0].numerator.unwrap() - 4.0).abs() < 0.001);
     }
 }
