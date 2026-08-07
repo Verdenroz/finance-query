@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Candle {

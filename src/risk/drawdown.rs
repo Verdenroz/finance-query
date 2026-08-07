@@ -68,6 +68,35 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
     }
 }
 
+/// Per-period drawdown fraction (peak-to-current), built from the same
+/// synthetic cumulative-equity curve `max_drawdown` uses internally.
+///
+/// Returned length is `returns.len() + 1` (includes the starting point,
+/// always `0.0`). Used to feed `perf_metrics::ulcer_index` — kept separate
+/// from `max_drawdown` itself since that function also tracks peak/trough
+/// indices for recovery-period detection that ulcer index doesn't need.
+pub(crate) fn drawdown_series(returns: &[f64]) -> Vec<f64> {
+    if returns.is_empty() {
+        return Vec::new();
+    }
+    let mut equity = Vec::with_capacity(returns.len() + 1);
+    equity.push(1.0_f64);
+    for r in returns {
+        let last = *equity.last().unwrap();
+        equity.push(last * (1.0 + r));
+    }
+
+    let mut peak = equity[0];
+    let mut out = Vec::with_capacity(equity.len());
+    for &val in &equity {
+        if val > peak {
+            peak = val;
+        }
+        out.push((peak - val) / peak);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

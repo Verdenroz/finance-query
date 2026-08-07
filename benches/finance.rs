@@ -7,6 +7,8 @@ static SEARCH_JSON: &str = include_str!("fixtures/search.json");
 static MARKET_SUMMARY_JSON: &str = include_str!("fixtures/market_summary.json");
 static TRENDING_JSON: &str = include_str!("fixtures/trending.json");
 static FEAR_AND_GREED_JSON: &str = include_str!("fixtures/fear_and_greed.json");
+static FEAR_AND_GREED_CRYPTO_HISTORY_JSON: &str =
+    include_str!("fixtures/fear_and_greed_crypto_history.json");
 static HOURS_JSON: &str = include_str!("fixtures/hours.json");
 static NEWS_JSON: &str = include_str!("fixtures/news.json");
 static CURRENCIES_JSON: &str = include_str!("fixtures/currencies.json");
@@ -45,6 +47,16 @@ fn bench_fear_and_greed_deserialize(c: &mut Criterion) {
         b.iter(|| {
             let result: FearAndGreed =
                 serde_json::from_str(black_box(FEAR_AND_GREED_JSON)).unwrap();
+            black_box(result);
+        })
+    });
+}
+
+fn bench_fear_and_greed_crypto_history_deserialize(c: &mut Criterion) {
+    c.bench_function("fear_and_greed_crypto_history_deserialize_10_items", |b| {
+        b.iter(|| {
+            let result: Vec<FearAndGreed> =
+                serde_json::from_str(black_box(FEAR_AND_GREED_CRYPTO_HISTORY_JSON)).unwrap();
             black_box(result);
         })
     });
@@ -123,6 +135,7 @@ criterion_group!(
     bench_market_summary_deserialize,
     bench_trending_deserialize,
     bench_fear_and_greed_deserialize,
+    bench_fear_and_greed_crypto_history_deserialize,
     bench_hours_deserialize,
     bench_news_deserialize,
     bench_currencies_deserialize,

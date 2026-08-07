@@ -1,0 +1,12 @@
+[
+  {"value":62,"classification":"Greed","timestamp":1774137600},
+  {"value":55,"classification":"Neutral","timestamp":1774051200},
+  {"value":48,"classification":"Neutral","timestamp":1773964800},
+  {"value":41,"classification":"Fear","timestamp":1773878400},
+  {"value":33,"classification":"Fear","timestamp":1773792000},
+  {"value":28,"classification":"Fear","timestamp":1773705600},
+  {"value":19,"classification":"Extreme Fear","timestamp":1773619200},
+  {"value":24,"classification":"Extreme Fear","timestamp":1773532800},
+  {"value":37,"classification":"Fear","timestamp":1773446400},
+  {"value":45,"classification":"Neutral","timestamp":1773360000}
+]

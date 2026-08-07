@@ -1,7 +1,7 @@
 //! Indicators summary module.
 //!
 //! Provides the `IndicatorsSummary` type which calculates and returns the latest
-//! values for all 52+ technical indicators at once.
+//! values for all 56+ technical indicators at once.
 //!
 //! This module reuses the main indicator implementations and extracts the last value,
 //! ensuring consistency and eliminating code duplication.
@@ -9,13 +9,14 @@
 use super::last_value;
 use crate::Candle;
 use crate::indicators::{
-    accumulation_distribution, adx, alma, aroon, atr, atr::atr_raw, awesome_oscillator,
-    balance_of_power, bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index,
-    cmf, cmo, coppock_curve, dema, donchian_channels, elder_ray, ema::ema_raw, hma, ichimoku,
-    keltner_channels::keltner_with_atr_dense, macd, mcginley_dynamic, mfi, momentum, obv,
-    parabolic_sar, roc, rsi::rsi_raw, sma::sma_raw, stochastic,
+    FibonacciLevels, PivotPoints, ZigZagPoint, accumulation_distribution, adx, alma, aroon, atr,
+    atr::atr_raw, awesome_oscillator, balance_of_power, bollinger_bands, bull_bear_power, cci,
+    chaikin_oscillator, choppiness_index, cmf, cmo, coppock_curve, dema, donchian_channels,
+    elder_ray, ema::ema_raw, fibonacci_pivot_points, fibonacci_retracement, heikin_ashi_raw, hma,
+    ichimoku, keltner_channels::keltner_with_atr_dense, macd, mcginley_dynamic, mfi, momentum, obv,
+    parabolic_sar, pivot_points, roc, rsi::rsi_raw, sma::sma_raw, stochastic,
     stochastic_rsi::stochastic_rsi_from_rsi_dense, supertrend::supertrend_with_atr_dense, tema,
-    true_range, vwap, vwma, williams_r, wma::wma_raw,
+    true_range, vwap, vwma, williams_r, wma::wma_raw, zigzag,
 };
 
 /// Helper to extract last value from Result-returning indicators
@@ -218,6 +219,36 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         )),
         vwap: last_from_result(vwap(&highs, &lows, &closes, &volumes)),
         balance_of_power: last_from_result(balance_of_power(&opens, &highs, &lows, &closes, None)),
+
+        // === PIVOT POINTS, HEIKIN-ASHI, ZIGZAG, FIBONACCI ===
+        pivot_points: pivot_points(&highs, &lows, &closes)
+            .ok()
+            .and_then(|v| v.into_iter().rev().find_map(|p| p)),
+        fibonacci_pivot_points: fibonacci_pivot_points(&highs, &lows, &closes)
+            .ok()
+            .and_then(|v| v.into_iter().rev().find_map(|p| p)),
+        heikin_ashi: heikin_ashi_raw(&opens, &highs, &lows, &closes)
+            .ok()
+            .and_then(|series| {
+                let last = candles.last()?;
+                let i = series.close.len().checked_sub(1)?;
+                Some(Candle {
+                    timestamp: last.timestamp,
+                    open: series.open[i],
+                    high: series.high[i],
+                    low: series.low[i],
+                    close: series.close[i],
+                    volume: last.volume,
+                    adj_close: last.adj_close,
+                    provider_id: last.provider_id,
+                })
+            }),
+        zigzag_last_pivot: zigzag(&highs, &lows, 5.0)
+            .ok()
+            .and_then(|v| v.last().copied()),
+        fibonacci_retracement_50: fibonacci_retracement(&highs, &lows, 50)
+            .ok()
+            .and_then(|v| v.into_iter().rev().find_map(|p| p)),
     }
 }
 
@@ -398,6 +429,23 @@ pub struct IndicatorsSummary {
     /// Balance of Power
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_of_power: Option<f64>,
+
+    // === PIVOT POINTS, HEIKIN-ASHI, ZIGZAG, FIBONACCI ===
+    /// Standard (classic) Pivot Points, derived from the previous bar's high/low/close
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pivot_points: Option<PivotPoints>,
+    /// Fibonacci Pivot Points, derived from the previous bar's high/low/close
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fibonacci_pivot_points: Option<PivotPoints>,
+    /// Latest Heikin-Ashi ("average bar") candle
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heikin_ashi: Option<Candle>,
+    /// Most recent confirmed ZigZag swing point (5% reversal threshold)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zigzag_last_pivot: Option<ZigZagPoint>,
+    /// Fibonacci Retracement levels (50-period rolling window)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fibonacci_retracement_50: Option<FibonacciLevels>,
 }
 
 /// Stochastic Oscillator data

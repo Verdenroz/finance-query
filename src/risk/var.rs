@@ -54,7 +54,7 @@ pub(crate) fn parametric_var_with_stats(mean: f64, std_dev: f64, confidence: f64
 
 /// Approximate inverse normal CDF (quantile function) for confidence levels in [0.90, 0.999].
 /// Uses the Beasley-Springer-Moro approximation.
-fn normal_quantile(p: f64) -> f64 {
+pub(crate) fn normal_quantile(p: f64) -> f64 {
     // This covers the most common confidence levels (95%, 99%) with good accuracy.
     // For exact values, a statistics library would be needed.
     match p {

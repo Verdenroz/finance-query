@@ -254,4 +254,62 @@ impl Chart {
     pub fn patterns(&self) -> Vec<Option<crate::indicators::CandlePattern>> {
         crate::indicators::patterns(&self.candles)
     }
+
+    /// Calculate classic (standard) Pivot Points.
+    ///
+    /// Each bar's levels are derived from the **previous** bar's
+    /// high/low/close; the first bar is `None`.
+    pub fn pivot_points(
+        &self,
+    ) -> crate::indicators::Result<Vec<Option<crate::indicators::PivotPoints>>> {
+        crate::indicators::pivot_points(
+            &self.high_prices(),
+            &self.low_prices(),
+            &self.close_prices(),
+        )
+    }
+
+    /// Calculate Fibonacci Pivot Points.
+    ///
+    /// Same central pivot as [`pivot_points`](Self::pivot_points), but uses
+    /// Fibonacci retracement ratios of the previous bar's range for the
+    /// support/resistance levels.
+    pub fn fibonacci_pivot_points(
+        &self,
+    ) -> crate::indicators::Result<Vec<Option<crate::indicators::PivotPoints>>> {
+        crate::indicators::fibonacci_pivot_points(
+            &self.high_prices(),
+            &self.low_prices(),
+            &self.close_prices(),
+        )
+    }
+
+    /// Transform candles into Heikin-Ashi ("average bar") candles.
+    ///
+    /// Smooths price action to make the prevailing trend easier to read.
+    /// Volume, timestamp, adjusted close, and provider id pass through
+    /// unchanged — only open/high/low/close are recomputed.
+    pub fn heikin_ashi(&self) -> crate::indicators::Result<Vec<crate::Candle>> {
+        crate::indicators::heikin_ashi(&self.candles)
+    }
+
+    /// Calculate ZigZag swing points using a percentage reversal threshold.
+    ///
+    /// `deviation_pct` is the minimum reversal size (e.g. `5.0` for 5%)
+    /// required before a swing high/low is confirmed.
+    pub fn zigzag(
+        &self,
+        deviation_pct: f64,
+    ) -> crate::indicators::Result<Vec<crate::indicators::ZigZagPoint>> {
+        crate::indicators::zigzag(&self.high_prices(), &self.low_prices(), deviation_pct)
+    }
+
+    /// Calculate rolling Fibonacci Retracement levels over a `period`-bar
+    /// lookback window.
+    pub fn fibonacci_retracement(
+        &self,
+        period: usize,
+    ) -> crate::indicators::Result<Vec<Option<crate::indicators::FibonacciLevels>>> {
+        crate::indicators::fibonacci_retracement(&self.high_prices(), &self.low_prices(), period)
+    }
 }

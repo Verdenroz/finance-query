@@ -73,6 +73,99 @@ pub fn sortino_ratio(returns: &[f64], risk_free_rate: f64, periods_per_year: f64
     Some((mean - risk_free_rate) / downside_std * periods_per_year.sqrt())
 }
 
+/// Compute the Omega Ratio at a `0.0` threshold: probability-weighted ratio
+/// of gains to losses over the full return distribution.
+///
+/// `Σ max(r, 0) / Σ max(-r, 0)`. More general than Sharpe — considers the
+/// full return distribution rather than only mean and standard deviation.
+/// Returns `f64::MAX` when there are no negative returns, `0.0` when there
+/// are also no positive returns.
+pub fn omega_ratio(returns: &[f64]) -> f64 {
+    crate::perf_metrics::omega_ratio(returns)
+}
+
+/// Compute the Kelly Criterion: optimal fraction of capital to risk, given a
+/// win rate and average win/loss magnitudes (in percent).
+///
+/// `W - (1 - W) / R` where `R = avg_win_pct / abs(avg_loss_pct)`. Returns
+/// `f64::MAX` when there are no losses and wins are positive (unbounded
+/// edge), `0.0` for other degenerate inputs.
+///
+/// Use [`win_loss_stats`] to derive `win_rate`/`avg_win_pct`/`avg_loss_pct`
+/// from a plain return series (treating each positive-return period as a
+/// "win" and each negative-return period as a "loss").
+pub fn kelly_criterion(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
+    crate::perf_metrics::kelly_criterion(win_rate, avg_win_pct, avg_loss_pct)
+}
+
+/// Compute the Ulcer Index: root-mean-square of drawdown depth across a
+/// return series, expressed as a percentage (0–100).
+///
+/// Unlike [`max_drawdown`](super::max_drawdown), penalises both depth and
+/// duration of drawdowns — a long shallow drawdown scores higher than a
+/// brief deep one.
+pub fn ulcer_index(returns: &[f64]) -> f64 {
+    crate::perf_metrics::ulcer_index(&super::drawdown::drawdown_series(returns))
+}
+
+/// Compute the Information Ratio vs a benchmark: annualised mean excess
+/// return divided by tracking error.
+///
+/// Returns `None` when the series differ in length, fewer than 2 aligned
+/// observations are available, or tracking error is zero.
+pub fn information_ratio(
+    asset_returns: &[f64],
+    benchmark_returns: &[f64],
+    periods_per_year: f64,
+) -> Option<f64> {
+    crate::perf_metrics::information_ratio(asset_returns, benchmark_returns, periods_per_year)
+}
+
+/// Compute the tracking error vs a benchmark: annualised standard deviation
+/// of (asset − benchmark) periodic returns.
+///
+/// Returns `None` when the series differ in length or fewer than 2 aligned
+/// observations are available.
+pub fn tracking_error(
+    asset_returns: &[f64],
+    benchmark_returns: &[f64],
+    periods_per_year: f64,
+) -> Option<f64> {
+    crate::perf_metrics::tracking_error(asset_returns, benchmark_returns, periods_per_year)
+}
+
+/// Derive win-rate and average win/loss percentages from a return series,
+/// treating each period as if it were a discrete "trade" (a positive-return
+/// period is a win, a negative-return period is a loss) — the natural
+/// analogue of backtesting trade statistics for a plain returns series with
+/// no explicit trade log. Feeds [`kelly_criterion`].
+///
+/// Returns `(win_rate, avg_win_pct, avg_loss_pct)`, all `0.0` for an empty
+/// series.
+pub fn win_loss_stats(returns: &[f64]) -> (f64, f64, f64) {
+    let total = returns.len();
+    if total == 0 {
+        return (0.0, 0.0, 0.0);
+    }
+
+    let wins: Vec<f64> = returns.iter().copied().filter(|&r| r > 0.0).collect();
+    let losses: Vec<f64> = returns.iter().copied().filter(|&r| r < 0.0).collect();
+
+    let win_rate = wins.len() as f64 / total as f64;
+    let avg_win_pct = if wins.is_empty() {
+        0.0
+    } else {
+        wins.iter().sum::<f64>() / wins.len() as f64 * 100.0
+    };
+    let avg_loss_pct = if losses.is_empty() {
+        0.0
+    } else {
+        losses.iter().sum::<f64>() / losses.len() as f64 * 100.0
+    };
+
+    (win_rate, avg_win_pct, avg_loss_pct)
+}
+
 /// Compute the Calmar Ratio: annualised return divided by maximum drawdown.
 ///
 /// # Arguments

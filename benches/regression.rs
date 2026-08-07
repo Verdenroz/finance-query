@@ -41,18 +41,21 @@ use finance_query::fred::{MacroSeries, TreasuryYield};
 use finance_query::indicators::{
     accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
     bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
-    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, roc, rsi, sma, stochastic,
-    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+    coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
+    fibonacci_retracement, heikin_ashi, hma, ichimoku, keltner_channels, macd, mcginley_dynamic,
+    mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma, stochastic,
+    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
 };
 use finance_query::risk::{
-    beta, historical_var, max_drawdown, parametric_var, sharpe_ratio, sortino_ratio,
+    beta, historical_cvar, historical_var, information_ratio, kelly_criterion, max_drawdown,
+    omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio, tracking_error,
+    ulcer_index, win_loss_stats,
 };
 use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 use finance_query::translation::{Lang, translate_texts};
 use finance_query::{
-    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FinancialStatement, News, Options,
-    Quote, ScreenerResults, SearchResults, Transcript, analyze_sentiment,
+    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FearAndGreed, FinancialStatement,
+    News, Options, Quote, ScreenerResults, SearchResults, Transcript, analyze_sentiment,
 };
 use iai_callgrind::{
     Callgrind, EventKind, LibraryBenchmarkConfig, library_benchmark, library_benchmark_group, main,
@@ -324,10 +327,46 @@ fn ind_patterns(candles: Vec<Candle>) {
     let _ = black_box(patterns(black_box(&candles)));
 }
 
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_pivot_points(s: Series) {
+    let (_, highs, lows, closes, _) = &s;
+    let _ = black_box(pivot_points(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+    ));
+    let _ = black_box(fibonacci_pivot_points(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+    ));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = candles_1000)]
+fn ind_heikin_ashi(candles: Vec<Candle>) {
+    let _ = black_box(heikin_ashi(black_box(&candles)));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_zigzag(s: Series) {
+    let (_, highs, lows, _, _) = &s;
+    let _ = black_box(zigzag(black_box(highs), black_box(lows), 5.0));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_fibonacci_retracement(s: Series) {
+    let (_, highs, lows, _, _) = &s;
+    let _ = black_box(fibonacci_retracement(black_box(highs), black_box(lows), 50));
+}
+
 library_benchmark_group!(
     name = indicators;
     benchmarks = ind_moving_averages, ind_momentum, ind_trend, ind_volatility, ind_volume,
-        ind_patterns
+        ind_patterns, ind_pivot_points, ind_heikin_ashi, ind_zigzag, ind_fibonacci_retracement
 );
 
 // ── Backtesting engine ───────────────────────────────────────────────────────
@@ -396,10 +435,63 @@ fn risk_beta(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
     black_box(beta(black_box(&series.0), black_box(&series.1)))
 }
 
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_historical_cvar(returns: Vec<f64>) -> Option<f64> {
+    black_box(historical_cvar(black_box(&returns), 0.95))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_parametric_cvar(returns: Vec<f64>) -> Option<f64> {
+    black_box(parametric_cvar(black_box(&returns), 0.95))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_omega_ratio(returns: Vec<f64>) -> f64 {
+    black_box(omega_ratio(black_box(&returns)))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_ulcer_index(returns: Vec<f64>) -> f64 {
+    black_box(ulcer_index(black_box(&returns)))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_1000)]
+fn risk_kelly_criterion(returns: Vec<f64>) -> f64 {
+    let (win_rate, avg_win_pct, avg_loss_pct) = win_loss_stats(black_box(&returns));
+    black_box(kelly_criterion(win_rate, avg_win_pct, avg_loss_pct))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_pair_1000)]
+fn risk_information_ratio(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
+    black_box(information_ratio(
+        black_box(&series.0),
+        black_box(&series.1),
+        252.0,
+    ))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = returns_pair_1000)]
+fn risk_tracking_error(series: (Vec<f64>, Vec<f64>)) -> Option<f64> {
+    black_box(tracking_error(
+        black_box(&series.0),
+        black_box(&series.1),
+        252.0,
+    ))
+}
+
 library_benchmark_group!(
     name = risk;
     benchmarks = risk_historical_var, risk_parametric_var, risk_sharpe, risk_sortino,
-        risk_max_drawdown, risk_beta
+        risk_max_drawdown, risk_beta, risk_historical_cvar, risk_parametric_cvar,
+        risk_omega_ratio, risk_ulcer_index, risk_kelly_criterion, risk_information_ratio,
+        risk_tracking_error
 );
 
 // ── Streaming (PriceUpdate serde — the per-tick hot path) ─────────────────────
@@ -507,6 +599,8 @@ library_benchmark_group!(
 static SEARCH_JSON: &str = include_str!("fixtures/search.json");
 static NEWS_JSON: &str = include_str!("fixtures/news.json");
 static CURRENCIES_JSON: &str = include_str!("fixtures/currencies.json");
+static FEAR_AND_GREED_CRYPTO_HISTORY_JSON: &str =
+    include_str!("fixtures/fear_and_greed_crypto_history.json");
 
 #[library_benchmark]
 fn de_search() -> SearchResults {
@@ -523,6 +617,11 @@ fn de_currencies() -> Vec<Currency> {
     black_box(serde_json::from_str(black_box(CURRENCIES_JSON)).unwrap())
 }
 
+#[library_benchmark]
+fn de_fear_and_greed_crypto_history() -> Vec<FearAndGreed> {
+    black_box(serde_json::from_str(black_box(FEAR_AND_GREED_CRYPTO_HISTORY_JSON)).unwrap())
+}
+
 fn parsed_currencies() -> Vec<Currency> {
     serde_json::from_str(CURRENCIES_JSON).unwrap()
 }
@@ -535,7 +634,7 @@ fn ser_currencies(currencies: Vec<Currency>) -> String {
 
 library_benchmark_group!(
     name = model_serde;
-    benchmarks = de_search, de_news, de_currencies, ser_currencies
+    benchmarks = de_search, de_news, de_currencies, ser_currencies, de_fear_and_greed_crypto_history
 );
 
 // ── Endpoint response (de)serialization (real captured server payloads) ──────
