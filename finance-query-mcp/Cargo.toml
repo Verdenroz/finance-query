@@ -7,6 +7,10 @@ license = "MIT"
 repository = "https://github.com/Verdenroz/finance-query"
 publish = false
 
+[lib]
+name = "finance_query_mcp"
+path = "src/lib.rs"
+
 [[bin]]
 name = "fq-mcp"
 path = "src/main.rs"
@@ -60,6 +64,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Environment config
 dotenvy = "0.15"
 axum = "0.8"
+
+[dev-dependencies]
+# Route/spec reconciliation (`cargo soothfast spec check`). Dev-only — never
+# compiled into the production binary (this crate isn't published anyway).
+soothfast = { version = "0.1", features = ["runner"] }
+
+[[bench]]
+name = "soothfast-routes"
+path = "spec/routes.rs"
+harness = false
 
 [features]
 default = []

@@ -1,8 +1,8 @@
-use finance_query::Screener;
+use finance_query::{LookupType, Screener};
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
-use crate::error::{invalid_params, ser_err};
+use crate::error::ser_err;
 use crate::tools::gql::{
     DEFAULT_MCP_PAGE_SIZE, GQL_LOOKUP_RESULTS_DEFAULT_FIELDS, GQL_LOOKUP_RESULTS_VALID_FIELDS,
     GQL_SCREENER_RESULTS_DEFAULT_FIELDS, GQL_SCREENER_RESULTS_VALID_FIELDS,
@@ -12,16 +12,16 @@ use crate::tools::gql::{
     build_type_spec_selection, execute_query, parse_fields, unwrap_field, wrap_nested_connection,
 };
 
-fn lookup_type_to_gql(s: &str) -> &'static str {
-    match s.to_lowercase().as_str() {
-        "equity" | "stock" => "EQUITY",
-        "etf" => "ETF",
-        "mutualfund" | "mutual_fund" | "mutual-fund" => "MUTUAL_FUND",
-        "index" => "INDEX",
-        "future" => "FUTURE",
-        "currency" | "forex" | "fx" => "CURRENCY",
-        "crypto" | "cryptocurrency" => "CRYPTOCURRENCY",
-        _ => "ALL",
+fn lookup_type_to_gql(lookup_type: LookupType) -> &'static str {
+    match lookup_type {
+        LookupType::All => "ALL",
+        LookupType::Equity => "EQUITY",
+        LookupType::MutualFund => "MUTUAL_FUND",
+        LookupType::Etf => "ETF",
+        LookupType::Index => "INDEX",
+        LookupType::Future => "FUTURE",
+        LookupType::Currency => "CURRENCY",
+        LookupType::Cryptocurrency => "CRYPTOCURRENCY",
     }
 }
 
@@ -67,17 +67,11 @@ pub async fn search(
 
 pub async fn screener(
     schema: &FinanceSchema,
-    screener_type: String,
+    screener_type: Screener,
     count: Option<u32>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let s = screener_type.parse::<Screener>().map_err(|_| {
-        invalid_params(format!(
-            "Invalid screener: '{screener_type}'. Valid types: {}",
-            Screener::valid_types()
-        ))
-    })?;
-    let gql_type = s.as_scr_id().to_uppercase();
+    let gql_type = screener_type.as_scr_id().to_uppercase();
     let n = count.unwrap_or(25);
     let field_list = parse_fields(fields);
     let selection = build_type_spec_selection(
@@ -97,7 +91,7 @@ pub async fn screener(
 pub async fn get_lookup(
     schema: &FinanceSchema,
     query: String,
-    query_type: Option<String>,
+    query_type: Option<LookupType>,
     lang: Option<String>,
     fields: Option<String>,
     logo: Option<bool>,
@@ -109,7 +103,7 @@ pub async fn get_lookup(
         GQL_LOOKUP_RESULTS_DEFAULT_FIELDS,
         LOOKUP_RESULTS_COMPOSITE_FIELDS,
     );
-    let gql_type = lookup_type_to_gql(query_type.as_deref().unwrap_or("all"));
+    let gql_type = lookup_type_to_gql(query_type.unwrap_or(LookupType::All));
     let lang_arg = match crate::lang::normalize(lang.as_deref()) {
         Some(l) => format!(", lang: \"{}\"", l),
         None => String::new(),
@@ -135,42 +129,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lookup_type_to_gql_maps_known_aliases_case_insensitively() {
-        assert_eq!(lookup_type_to_gql("equity"), "EQUITY");
-        assert_eq!(lookup_type_to_gql("EQUITY"), "EQUITY");
-        assert_eq!(lookup_type_to_gql("Stock"), "EQUITY");
-        assert_eq!(lookup_type_to_gql("etf"), "ETF");
-        assert_eq!(lookup_type_to_gql("ETF"), "ETF");
-        assert_eq!(lookup_type_to_gql("index"), "INDEX");
-        assert_eq!(lookup_type_to_gql("future"), "FUTURE");
-    }
-
-    #[test]
-    fn lookup_type_to_gql_maps_mutual_fund_variants() {
-        assert_eq!(lookup_type_to_gql("mutualfund"), "MUTUAL_FUND");
-        assert_eq!(lookup_type_to_gql("mutual_fund"), "MUTUAL_FUND");
-        assert_eq!(lookup_type_to_gql("mutual-fund"), "MUTUAL_FUND");
-        assert_eq!(lookup_type_to_gql("Mutual-Fund"), "MUTUAL_FUND");
-    }
-
-    #[test]
-    fn lookup_type_to_gql_maps_currency_variants() {
-        assert_eq!(lookup_type_to_gql("currency"), "CURRENCY");
-        assert_eq!(lookup_type_to_gql("forex"), "CURRENCY");
-        assert_eq!(lookup_type_to_gql("fx"), "CURRENCY");
-    }
-
-    #[test]
-    fn lookup_type_to_gql_maps_crypto_variants() {
-        assert_eq!(lookup_type_to_gql("crypto"), "CRYPTOCURRENCY");
-        assert_eq!(lookup_type_to_gql("cryptocurrency"), "CRYPTOCURRENCY");
-        assert_eq!(lookup_type_to_gql("CRYPTO"), "CRYPTOCURRENCY");
-    }
-
-    #[test]
-    fn lookup_type_to_gql_falls_back_to_all_for_unknown_or_empty() {
-        assert_eq!(lookup_type_to_gql("all"), "ALL");
-        assert_eq!(lookup_type_to_gql("bogus"), "ALL");
-        assert_eq!(lookup_type_to_gql(""), "ALL");
+    fn lookup_type_to_gql_maps_every_variant() {
+        assert_eq!(lookup_type_to_gql(LookupType::All), "ALL");
+        assert_eq!(lookup_type_to_gql(LookupType::Equity), "EQUITY");
+        assert_eq!(lookup_type_to_gql(LookupType::MutualFund), "MUTUAL_FUND");
+        assert_eq!(lookup_type_to_gql(LookupType::Etf), "ETF");
+        assert_eq!(lookup_type_to_gql(LookupType::Index), "INDEX");
+        assert_eq!(lookup_type_to_gql(LookupType::Future), "FUTURE");
+        assert_eq!(lookup_type_to_gql(LookupType::Currency), "CURRENCY");
+        assert_eq!(
+            lookup_type_to_gql(LookupType::Cryptocurrency),
+            "CRYPTOCURRENCY"
+        );
     }
 }

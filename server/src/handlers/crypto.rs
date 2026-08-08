@@ -12,53 +12,15 @@ use finance_query_server::graphql::{
     },
     pagination::build_connection_selection,
 };
-use serde::Deserialize;
+use finance_query_server::params::{
+    CryptoCoinQuery, CryptoCoinsQuery, CryptoGlobalQuery, CryptoSearchQuery, CryptoTrendingQuery,
+};
 use tracing::info;
 
 use super::gql_bridge::{
     build_rest_selection, connection_args, execute_gql_rest, unwrap_connection,
 };
 
-fn default_vs_currency() -> String {
-    "usd".to_string()
-}
-
-fn default_crypto_count() -> usize {
-    50
-}
-
-/// Query parameters for /v2/crypto/coins
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CryptoCoinsQuery {
-    /// Currency to compare against (default: "usd")
-    #[serde(default = "default_vs_currency")]
-    vs_currency: String,
-    /// Number of coins to return (default: 50)
-    #[serde(default = "default_crypto_count")]
-    count: usize,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max coins per page; omitted (with cursor also omitted) = every fetched
-    /// coin (up to `count`) as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/crypto/coins/{id}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CryptoCoinQuery {
-    /// Currency to compare against (default: "usd")
-    #[serde(default = "default_vs_currency")]
-    vs_currency: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// GET /v2/crypto/coins
-///
 /// Query: `vs_currency` (str, default "usd"), `count` (u32, default 50)
 pub(crate) async fn get_crypto_coins(
     Extension(schema): Extension<graphql::FinanceSchema>,
@@ -119,26 +81,6 @@ pub(crate) async fn get_crypto_coin(
     (StatusCode::OK, Json(unwrap_field(data, "cryptoCoin"))).into_response()
 }
 
-/// Query parameters for /v2/crypto/trending
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CryptoTrendingQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max coins per page; omitted (with cursor also omitted) = bare array
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/crypto/global
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CryptoGlobalQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
 /// GET /v2/crypto/trending
 pub(crate) async fn get_crypto_trending(
     Extension(schema): Extension<graphql::FinanceSchema>,
@@ -164,27 +106,6 @@ pub(crate) async fn get_crypto_trending(
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "cryptoTrending"), paginated);
     (StatusCode::OK, Json(result)).into_response()
-}
-
-/// Query parameters for /v2/crypto/search
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CryptoSearchQuery {
-    /// Free-text query (coin name, symbol, or CoinGecko id)
-    query: String,
-    /// Max matches to fetch (default: 25)
-    #[serde(default = "default_crypto_search_limit")]
-    limit_results: u32,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max matches per page; omitted (with cursor also omitted) = bare array
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-fn default_crypto_search_limit() -> u32 {
-    25
 }
 
 /// GET /v2/crypto/search

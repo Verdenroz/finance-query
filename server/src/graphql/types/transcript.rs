@@ -43,8 +43,10 @@ pub struct GqlTranscriptContent {
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
+#[serde(rename_all = "camelCase")]
 pub struct GqlSpeakerMapping {
     pub speaker: i32,
+    #[serde(alias = "speaker_data")]
     pub speaker_data: GqlSpeakerData,
 }
 

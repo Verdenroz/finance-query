@@ -101,7 +101,7 @@ impl MarketCalendar {
 
 /// Market-wide performance statistics backed by configured data providers.
 ///
-/// Routes through [`Capability::MARKET`]. Unlike [`crate::finance::sector`] and
+/// Routes through [`crate::Capability::MARKET`]. Unlike [`crate::finance::sector`] and
 /// [`crate::finance::market_summary`] — Yahoo-only convenience shortcuts — these
 /// honour the configured provider priority.
 ///

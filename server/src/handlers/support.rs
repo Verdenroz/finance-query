@@ -3,17 +3,10 @@
 
 use finance_query::ValueFormat;
 
-/// Parse format query parameter into ValueFormat
-pub(crate) fn parse_format(s: Option<&str>) -> ValueFormat {
-    s.and_then(ValueFormat::parse).unwrap_or_default()
-}
-
-/// Default chart interval, overridable via `DEFAULT_INTERVAL` env var.
-pub(crate) fn default_interval() -> String {
-    std::env::var("DEFAULT_INTERVAL").unwrap_or_else(|_| "1d".to_string())
-}
-
-/// Default chart range, overridable via `DEFAULT_RANGE` env var.
-pub(crate) fn default_range() -> String {
-    std::env::var("DEFAULT_RANGE").unwrap_or_else(|_| "1mo".to_string())
+/// Resolve an omitted (or unrecognized) `format` query parameter to the default.
+///
+/// The lenient string parsing now lives in `params::lenient_value_format`, which
+/// is where an unrecognized value becomes `None` rather than a rejection.
+pub(crate) fn parse_format(f: Option<ValueFormat>) -> ValueFormat {
+    f.unwrap_or_default()
 }

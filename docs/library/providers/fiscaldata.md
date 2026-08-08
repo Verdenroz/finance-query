@@ -11,19 +11,23 @@ FRED mirrors part of this data with a lag and needs a key; FiscalData is the pri
 
 ## Setup
 
-```rust
+```rust no_run feature=fiscaldata
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::ECONOMIC, [Provider::FiscalData])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::FiscalData])
+        .build()
+        .await?;
 
-let debt = providers.economic("DEBT_TO_PENNY").series().await?;
-println!("{}", debt.title.unwrap_or_default());  // "Total Public Debt Outstanding"
+    let debt = providers.economic("DEBT_TO_PENNY").series().await?;
+    println!("{}", debt.title.unwrap_or_default());  // "Total Public Debt Outstanding"
 
-if let Some(latest) = debt.observations.last() {
-    println!("{}: {:?}", latest.date, latest.value);
+    if let Some(latest) = debt.observations.last() {
+        println!("{}: {:?}", latest.date, latest.value);
+    }
+    Ok(())
 }
 ```
 
@@ -51,11 +55,22 @@ The two `AVG_INTEREST_RATE*` entries read the same column with different row fil
 
 Anything outside the curated list is reachable with the passthrough form `"<dataset path>:<value column>"`:
 
-```rust
-let series = providers
-    .economic("v2/accounting/od/debt_to_penny:debt_held_public_amt")
-    .series()
-    .await?;
+```rust no_run feature=fiscaldata
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::FiscalData])
+        .build()
+        .await?;
+
+    let series = providers
+        .economic("v2/accounting/od/debt_to_penny:debt_held_public_amt")
+        .series()
+        .await?;
+    Ok(())
+}
 ```
 
 Dataset paths and column names come from the [FiscalData dataset catalogue](https://fiscaldata.treasury.gov/datasets/). Passthrough series report `units` from the column's declared type and leave `frequency` as `None` — the adapter will not guess.

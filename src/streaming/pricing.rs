@@ -190,8 +190,8 @@ pub(crate) struct PricingData {
     pub open_interest: i64,
 
     /// Options type (call/put)
-    #[prost(enumeration = "OptionTypeProto", tag = "20")]
-    pub options_type: i32,
+    #[prost(sint64, tag = "20")]
+    pub options_type: i64,
 
     /// Mini option indicator
     #[prost(sint64, tag = "21")]
@@ -268,14 +268,6 @@ pub enum QuoteTypeProto {
     Cryptocurrency = 41,
     Indicator = 42,
     Industry = 1000,
-}
-
-/// Protobuf enum for option type
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, prost::Enumeration)]
-#[repr(i32)]
-pub enum OptionTypeProto {
-    Call = 0,
-    Put = 1,
 }
 
 /// Protobuf enum for market hours type
@@ -364,7 +356,7 @@ impl From<PricingData> for PriceUpdate {
             strike_price: data.strike_price,
             underlying_symbol: data.underlying_symbol,
             open_interest: data.open_interest,
-            options_type: OptionType::from(data.options_type),
+            options_type: OptionType::from(data.options_type as i32),
             mini_option: data.mini_option,
             last_size: data.last_size,
             bid: data.bid,

@@ -237,7 +237,10 @@ impl TickersBuilder {
     }
 
     /// Pre-inject a shared provider set (used by [`Providers::tickers`]).
-    pub(crate) fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
+    ///
+    /// Not part of the stable public API — see [`ProviderAdapter`](crate::ProviderAdapter).
+    #[doc(hidden)]
+    pub fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
         self.injected_providers = Some(set);
         self
     }

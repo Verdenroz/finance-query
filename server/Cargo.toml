@@ -76,6 +76,14 @@ tokio-test = "0.4"
 mockito = "1"
 serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
+# Route/spec reconciliation (`cargo soothfast spec check`). Dev-only — never
+# compiled into the published binary (this crate isn't published anyway).
+soothfast = { version = "0.1", features = ["runner"] }
+
+[[bench]]
+name = "soothfast-routes"
+path = "spec/routes.rs"
+harness = false
 
 [features]
 default = ["redis-cache", "translation"]

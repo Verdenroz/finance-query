@@ -111,6 +111,13 @@ mod tests {
     }
 
     #[test]
+    fn kraken_rejects_intervals_outside_its_fixed_bucket_set() {
+        assert_eq!(interval_minutes(Interval::TwoMinutes), None);
+        assert_eq!(interval_minutes(Interval::NinetyMinutes), None);
+        assert_eq!(interval_minutes(Interval::FiveDays), None);
+    }
+
+    #[test]
     fn candles_keep_kraken_second_timestamps() {
         let candles = to_candles(vec![KrakenCandle {
             time: 1_723_507_200,

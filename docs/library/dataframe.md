@@ -11,7 +11,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "2.0", features = ["dataframe"] }
-    polars = "0.45"
+    polars = "0.53"
     ```
 
 ## Overview
@@ -32,14 +32,18 @@ The `dataframe` feature enables `.to_dataframe()` methods on many response types
 - **Indicators** - Technical indicators summary
 - **Market Data** - Exchanges, currencies, market hours
 
+The Polars conversion path is deliberately **outside the measured performance
+gate** — DataFrame construction cost is dominated by Polars itself, not this
+crate.
+
 ## Basic Usage
 
 ### Chart Data
 
 Convert historical OHLCV data to DataFrame:
 
-```rust
-use finance_query::{Ticker, Interval, TimeRange};
+```rust capture-output feature=dataframe covers=finance_query::models::chart::candle::Candle
+use finance_query::{Interval, Ticker, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,20 +54,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let df = chart.to_dataframe()?;
 
     println!("{}", df);
-    // Output:
-    // ┌────────────┬────────┬────────┬────────┬────────┬───────────┐
-    // │ timestamp  ┆ open   ┆ high   ┆ low    ┆ close  ┆ volume    │
-    // │ i64        ┆ f64    ┆ f64    ┆ f64    ┆ f64    ┆ i64       │
-    // ╞════════════╪════════╪════════╪════════╪════════╪═══════════╡
-    // │ 1234567890 ┆ 150.20 ┆ 152.40 ┆ 149.80 ┆ 151.30 ┆ 45000000  │
-    // │ ...        ┆ ...    ┆ ...    ┆ ...    ┆ ...    ┆ ...       │
-    // └────────────┴────────┴────────┴────────┴────────┴───────────┘
-
     Ok(())
 }
 ```
 
+```text soothfast-output
+shape: (20, 7)
+┌────────────┬────────────┬────────────┬────────────┬────────────┬───────────┬───────────┐
+│ timestamp  ┆ open       ┆ high       ┆ low        ┆ close      ┆ volume    ┆ adj_close │
+│ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---       ┆ ---       │
+│ i64        ┆ f64        ┆ f64        ┆ f64        ┆ f64        ┆ i64       ┆ f64       │
+╞════════════╪════════════╪════════════╪════════════╪════════════╪═══════════╪═══════════╡
+│ 1781789400 ┆ 298.109985 ┆ 300.570007 ┆ 295.619995 ┆ 298.01001  ┆ 85962200  ┆ null      │
+│ 1782135000 ┆ 297.309998 ┆ 302.420013 ┆ 296.76001  ┆ 297.01001  ┆ 44879900  ┆ null      │
+│ 1782221400 ┆ 297.540009 ┆ 301.640015 ┆ 294.179993 ┆ 294.299988 ┆ 52010900  ┆ null      │
+│ 1782307800 ┆ 295.359985 ┆ 299.700012 ┆ 292.940002 ┆ 293.079987 ┆ 53081900  ┆ null      │
+│ 1782394200 ┆ 287.399994 ┆ 288.799988 ┆ 273.75     ┆ 275.149994 ┆ 107013700 ┆ null      │
+│ …          ┆ …          ┆ …          ┆ …          ┆ …          ┆ …         ┆ …         │
+│ 1783949400 ┆ 317.019989 ┆ 323.450012 ┆ 315.779999 ┆ 317.309998 ┆ 43257800  ┆ null      │
+│ 1784035800 ┆ 313.76001  ┆ 316.190002 ┆ 311.910004 ┆ 314.859985 ┆ 36336800  ┆ null      │
+│ 1784122200 ┆ 317.619995 ┆ 328.730011 ┆ 317.320007 ┆ 327.5      ┆ 60957600  ┆ null      │
+│ 1784208600 ┆ 328.01001  ┆ 334.679993 ┆ 326.790009 ┆ 333.26001  ┆ 62970600  ┆ null      │
+│ 1784295000 ┆ 331.980011 ┆ 334.98999  ┆ 329.0      ┆ 333.73999  ┆ 63365300  ┆ null      │
+└────────────┴────────────┴────────────┴────────────┴────────────┴───────────┴───────────┘
+```
+
 **Chart DataFrame Columns:**
+
+<!-- soothfast:bind finance_query::models::chart::candle::Candle -->
 
 - `timestamp` (i64) - Unix timestamp
 - `open` (f64) - Opening price
@@ -73,19 +91,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - `volume` (i64) - Trading volume
 - `adj_close` (Option<f64>) - Adjusted close price (accounts for splits/dividends)
 
+<!-- /soothfast:bind -->
+
 ### Quote Data
 
 Single quote to DataFrame:
 
-```rust
-use finance_query::format::Both;
+```rust capture-output feature=dataframe
+use finance_query::{Ticker, format::Both};
 
-let ticker = Ticker::new("NVDA").await?;
-let quote = ticker.quote::<Both>().await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("NVDA").await?;
+    let quote = ticker.quote::<Both>().await?;
 
-// Convert to single-row DataFrame
-let df = quote.to_dataframe()?;
-println!("{}", df);
+    // Convert to single-row DataFrame
+    let df = quote.to_dataframe()?;
+    println!("{}", df);
+    Ok(())
+}
+```
+
+```text soothfast-output
+shape: (1, 154)
+┌────────┬──────────┬────────────┬────────────┬───┬────────────┬───────────┬───────────┬───────────┐
+│ symbol ┆ logo_url ┆ company_lo ┆ short_name ┆ … ┆ most_recen ┆ price_hin ┆ tradeable ┆ financial │
+│ ---    ┆ ---      ┆ go_url     ┆ ---        ┆   ┆ t_quarter  ┆ t         ┆ ---       ┆ _currency │
+│ str    ┆ str      ┆ ---        ┆ str        ┆   ┆ ---        ┆ ---       ┆ bool      ┆ ---       │
+│        ┆          ┆ str        ┆            ┆   ┆ i64        ┆ i64       ┆           ┆ str       │
+╞════════╪══════════╪════════════╪════════════╪═══╪════════════╪═══════════╪═══════════╪═══════════╡
+│ NVDA   ┆ null     ┆ null       ┆ NVIDIA Cor ┆ … ┆ 1777161600 ┆ 2         ┆ false     ┆ USD       │
+│        ┆          ┆            ┆ poration   ┆   ┆            ┆           ┆           ┆           │
+└────────┴──────────┴────────────┴────────────┴───┴────────────┴───────────┴───────────┴───────────┘
 ```
 
 **Quote DataFrame includes 30+ columns** like:
@@ -101,39 +138,99 @@ println!("{}", df);
 
 Convert dividends, splits, or capital gains to DataFrame:
 
-```rust
-use finance_query::{Ticker, TimeRange, Dividend, Split, CapitalGain};
+```rust capture-output feature=dataframe
+use finance_query::{CapitalGain, Dividend, Split, Ticker, TimeRange};
 
-let ticker = Ticker::new("AAPL").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
 
-// Dividends
-let dividends = ticker.dividends(TimeRange::OneYear).await?;
-let div_df = Dividend::vec_to_dataframe(&dividends)?;
-// Columns: timestamp, amount
+    // Dividends
+    let dividends = ticker.dividends(TimeRange::OneYear).await?;
+    let div_df = Dividend::vec_to_dataframe(&dividends)?;
+    // Columns: timestamp, amount
+    println!("dividends: {:?}", div_df.shape());
 
-// Splits
-let splits = ticker.splits(TimeRange::Max).await?;
-let split_df = Split::vec_to_dataframe(&splits)?;
-// Columns: timestamp, ratio
+    // Splits
+    let splits = ticker.splits(TimeRange::Max).await?;
+    let split_df = Split::vec_to_dataframe(&splits)?;
+    // Columns: timestamp, ratio
+    println!("splits: {:?}", split_df.shape());
 
-// Capital gains
-let gains = ticker.capital_gains(TimeRange::FiveYears).await?;
-let gains_df = CapitalGain::vec_to_dataframe(&gains)?;
-// Columns: timestamp, amount
+    // Capital gains (AAPL is a stock, not a fund, so this is typically empty)
+    let gains = ticker.capital_gains(TimeRange::FiveYears).await?;
+    let gains_df = CapitalGain::vec_to_dataframe(&gains)?;
+    // Columns: timestamp, amount
+    println!("capital gains: {:?}", gains_df.shape());
+    Ok(())
+}
+```
+
+```text soothfast-output
+dividends: (4, 2)
+splits: (5, 4)
+capital gains: (0, 2)
 ```
 
 ### Screener Results
 
 Convert screener results to DataFrame for analysis:
 
-```rust
-use finance_query::{finance, Screener};
+```rust capture-output feature=dataframe
+use finance_query::{Screener, finance};
 
-let gainers = finance::screener(Screener::DayGainers, 50).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let gainers = finance::screener(Screener::DayGainers, 50).await?;
 
-// Convert to DataFrame
-let df = gainers.to_dataframe()?;
-println!("{}", df);
+    // Convert to DataFrame
+    let df = gainers.to_dataframe()?;
+    println!("{}", df);
+    Ok(())
+}
+```
+
+```text soothfast-output
+shape: (50, 59)
+┌────────┬────────────┬────────────┬────────────┬───┬───────────┬───────────┬───────────┬──────────┐
+│ symbol ┆ short_name ┆ long_name  ┆ display_na ┆ … ┆ earnings_ ┆ earnings_ ┆ earnings_ ┆ currency │
+│ ---    ┆ ---        ┆ ---        ┆ me         ┆   ┆ timestamp ┆ timestamp ┆ timestamp ┆ ---      │
+│ str    ┆ str        ┆ str        ┆ ---        ┆   ┆ ---       ┆ _start    ┆ _end      ┆ str      │
+│        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
+│        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
+╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
+│ LCID   ┆ Lucid      ┆ Lucid      ┆ Lucid      ┆ … ┆ 178587360 ┆ 178587360 ┆ 178587360 ┆ USD      │
+│        ┆ Group,     ┆ Group,     ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ SLS    ┆ SELLAS     ┆ SELLAS     ┆ SELLAS     ┆ … ┆ 177861600 ┆ 178647840 ┆ 178647840 ┆ USD      │
+│        ┆ Life       ┆ Life       ┆ Life       ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Sciences   ┆ Sciences   ┆ Sciences   ┆   ┆           ┆           ┆           ┆          │
+│        ┆ Group, In… ┆ Group, In… ┆            ┆   ┆           ┆           ┆           ┆          │
+│ ORKA   ┆ Oruka Ther ┆ Oruka Ther ┆ Oruka Ther ┆ … ┆ 177870240 ┆ 178639200 ┆ 178639200 ┆ USD      │
+│        ┆ apeutics,  ┆ apeutics,  ┆ apeutics   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ DNTH   ┆ Dianthus   ┆ Dianthus   ┆ Dianthus   ┆ … ┆ 177801120 ┆ 177801120 ┆ 177801120 ┆ USD      │
+│        ┆ Therapeuti ┆ Therapeuti ┆ Therapeuti ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ cs, Inc.   ┆ cs, Inc.   ┆ cs         ┆   ┆           ┆           ┆           ┆          │
+│ COAG   ┆ Hemab Ther ┆ Hemab Ther ┆ Hemab Ther ┆ … ┆ 177936660 ┆ 178671060 ┆ 178671060 ┆ USD      │
+│        ┆ apeutics   ┆ apeutics   ┆ apeutics   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Holdings,  ┆ Holdings,  ┆            ┆   ┆           ┆           ┆           ┆          │
+│        ┆ I…         ┆ I…         ┆            ┆   ┆           ┆           ┆           ┆          │
+│ …      ┆ …          ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …        │
+│ SSL    ┆ Sasol Ltd. ┆ Sasol      ┆ null       ┆ … ┆ null      ┆ 177185340 ┆ 177185340 ┆ USD      │
+│        ┆            ┆ Limited    ┆            ┆   ┆           ┆ 0         ┆ 0         ┆          │
+│ CLMT   ┆ Calumet,   ┆ Calumet,   ┆ Calumet    ┆ … ┆ 177824340 ┆ 178610580 ┆ 178610580 ┆ USD      │
+│        ┆ Inc        ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ BAND   ┆ Bandwidth  ┆ Bandwidth  ┆ Bandwidth  ┆ … ┆ 178532820 ┆ 178532820 ┆ 178532820 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ EWTX   ┆ Edgewise   ┆ Edgewise   ┆ Edgewise   ┆ … ┆ 177815700 ┆ 178601940 ┆ 178601940 ┆ USD      │
+│        ┆ Therapeuti ┆ Therapeuti ┆ Therapeuti ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ cs, Inc.   ┆ cs, Inc.   ┆ cs         ┆   ┆           ┆           ┆           ┆          │
+│ ARWR   ┆ Arrowhead  ┆ Arrowhead  ┆ Arrowhead  ┆ … ┆ 177818400 ┆ 178604640 ┆ 178604640 ┆ USD      │
+│        ┆ Pharmaceut ┆ Pharmaceut ┆ Pharmaceut ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ icals,     ┆ icals,     ┆ icals      ┆   ┆           ┆           ┆           ┆          │
+│        ┆ Inc…       ┆ Inc…       ┆            ┆   ┆           ┆           ┆           ┆          │
+└────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
 ### Indicators
@@ -146,190 +243,378 @@ println!("{}", df);
 
 Convert technical indicators to DataFrame:
 
-```rust
-use finance_query::{Ticker, Interval, TimeRange};
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 
-let ticker = Ticker::new("TSLA").await?;
-let indicators = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("TSLA").await?;
+    let indicators = ticker
+        .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
 
-// Convert to single-row DataFrame with all 52 indicators
-let df = indicators.to_dataframe()?;
+    // Convert to single-row DataFrame with all 52 indicators
+    let df = indicators.to_dataframe()?;
 
-// Access specific indicators
-println!("RSI(14): {:?}", df.column("rsi_14")?);
-println!("MACD: {:?}", df.column("macd")?);
+    // Access specific scalar indicators. Nested indicators (e.g. `macd`,
+    // an Option<MacdData>) are skipped by the derive — read them off the struct.
+    println!("RSI(14): {:?}", df.column("rsi_14")?);
+    println!("ADX(14): {:?}", df.column("adx_14")?);
+    Ok(())
+}
+```
+
+```text soothfast-output
+RSI(14): Scalar(ScalarColumn { name: "rsi_14", scalar: Scalar { dtype: Float64, value: Float64(36.299227899822874) }, length: 1, materialized: OnceLock(shape: (1,)
+Series: 'rsi_14' [f64]
+[
+	36.299228
+]) })
+ADX(14): Scalar(ScalarColumn { name: "adx_14", scalar: Scalar { dtype: Float64, value: Float64(12.3541707718352) }, length: 1, materialized: OnceLock(shape: (1,)
+Series: 'adx_14' [f64]
+[
+	12.354171
+]) })
 ```
 
 ## Working with Polars
 
+The examples below use the Polars 0.53 lazy API (`finance-query`'s `dataframe`
+feature enables `polars/lazy`). For the full expression reference, see the
+[Polars Documentation](https://docs.pola.rs/).
+
 ### Filtering Data
 
-!!! warning "Polars API Updates"
-    The Polars API has evolved significantly. The filtering examples below use an older API style.
-    For current Polars 0.52+ API, refer to the [Polars Documentation](https://docs.pola.rs/).
-
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let ticker = Ticker::new("AAPL").await?;
-let chart = ticker.chart(Interval::OneDay, TimeRange::SixMonths).await?;
-let df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::SixMonths).await?;
+    let df = chart.to_dataframe()?;
 
-// For filtering with current Polars API, see Polars documentation
-// Older API example (may need updates):
-// let high_volume = df.filter(&df.column("volume")?.gt(50_000_000)?)?;
+    // Keep only high-volume days
+    let high_volume = df
+        .clone()
+        .lazy()
+        .filter(col("volume").gt(lit(50_000_000i64)))
+        .collect()?;
 
-println!("Total days: {}", df.height());
+    println!(
+        "Total days: {}, high-volume days: {}",
+        df.height(),
+        high_volume.height()
+    );
+    Ok(())
+}
+```
+
+```text soothfast-output
+Total days: 124, high-volume days: 45
 ```
 
 ### Computing Statistics
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::SixMonths).await?;
+    let df = chart.to_dataframe()?;
 
-// Calculate average closing price
-let avg_close = df.column("close")?
-    .mean()
-    .unwrap();
-println!("Average close: ${:.2}", avg_close);
+    // Average close, max high, min low in one pass
+    let stats = df
+        .lazy()
+        .select([
+            col("close").mean().alias("avg_close"),
+            col("high").max().alias("max_high"),
+            col("low").min().alias("min_low"),
+        ])
+        .collect()?;
 
-// Get max high and min low
-let max_high = df.column("high")?.max::<f64>().unwrap();
-let min_low = df.column("low")?.min::<f64>().unwrap();
-println!("Range: ${:.2} - ${:.2}", min_low, max_high);
+    let avg_close: f64 = stats.column("avg_close")?.f64()?.get(0).unwrap();
+    let max_high: f64 = stats.column("max_high")?.f64()?.get(0).unwrap();
+    let min_low: f64 = stats.column("min_low")?.f64()?.get(0).unwrap();
+    println!("Average close: ${:.2}", avg_close);
+    println!("Range: ${:.2} - ${:.2}", min_low, max_high);
+    Ok(())
+}
+```
+
+```text soothfast-output
+Average close: $278.49
+Range: $243.42 - $334.99
 ```
 
 ### Adding Calculated Columns
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let mut df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let df = chart.to_dataframe()?;
 
-// Add daily return column
-let close = df.column("close")?;
-let prev_close = close.shift(1);
-let daily_return = ((close - &prev_close) / &prev_close) * lit(100.0);
+    // Add daily return column
+    let df = df
+        .lazy()
+        .with_column(
+            ((col("close") - col("close").shift(lit(1))) / col("close").shift(lit(1))
+                * lit(100.0))
+            .alias("daily_return_pct"),
+        )
+        .collect()?;
 
-df.with_column(daily_return.alias("daily_return_pct"))?;
+    println!("{:?}", df.column("daily_return_pct")?);
+    Ok(())
+}
+```
+
+```text soothfast-output
+Series(SeriesColumn { inner: shape: (20,)
+Series: 'daily_return_pct' [f64]
+[
+	null
+	-0.335559
+	-0.912435
+	-0.414543
+	-6.117781
+	…
+	0.631102
+	-0.772119
+	4.014487
+	1.758782
+	0.144026
+], materialized_at: None })
 ```
 
 ### Time-based Operations
 
-```rust
+```rust capture-output feature=dataframe
+use chrono::DateTime;
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
-use chrono::{DateTime, Utc};
 
-let df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
+    let df = chart.to_dataframe()?;
 
-// Convert timestamp to datetime
-let dates: Vec<_> = df.column("timestamp")?
-    .i64()?
-    .into_iter()
-    .map(|ts| {
-        ts.map(|t| DateTime::from_timestamp(t, 0).unwrap())
-    })
-    .collect();
+    // Convert timestamp to datetime
+    let dates: Vec<_> = df
+        .column("timestamp")?
+        .i64()?
+        .into_iter()
+        .map(|ts| ts.map(|t| DateTime::from_timestamp(t, 0).unwrap()))
+        .collect();
+    println!("{} rows", dates.len());
 
-// Filter by date range
-let start_ts = 1704067200; // 2024-01-01
-let df_filtered = df.filter(
-    &df.column("timestamp")?.gt_eq(start_ts)?
-)?;
+    // Filter by date range
+    let start_ts = 1704067200i64; // 2024-01-01
+    let df_filtered = df
+        .lazy()
+        .filter(col("timestamp").gt_eq(lit(start_ts)))
+        .collect()?;
+    println!("Rows since 2024-01-01: {}", df_filtered.height());
+    Ok(())
+}
+```
+
+```text soothfast-output
+251 rows
+Rows since 2024-01-01: 251
 ```
 
 ### Sorting and Ranking
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Screener, finance};
 use polars::prelude::*;
 
-let gainers = finance::screener(Screener::DayGainers, 100).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let gainers = finance::screener(Screener::DayGainers, 100).await?;
 
-let mut df = gainers.to_dataframe()?;
+    let mut df = gainers.to_dataframe()?;
 
-// Sort by market cap descending
-df = df.sort(["market_cap"], SortMultipleOptions::default().with_order_descending(true))?;
+    // Sort by market cap descending
+    df = df.sort(
+        ["market_cap"],
+        SortMultipleOptions::default().with_order_descending(true),
+    )?;
 
-// Get top 10
-let top_10 = df.head(Some(10));
-println!("{}", top_10);
+    // Get top 10
+    let top_10 = df.head(Some(10));
+    println!("{}", top_10);
+    Ok(())
+}
+```
+
+```text soothfast-output
+shape: (10, 59)
+┌────────┬────────────┬────────────┬────────────┬───┬───────────┬───────────┬───────────┬──────────┐
+│ symbol ┆ short_name ┆ long_name  ┆ display_na ┆ … ┆ earnings_ ┆ earnings_ ┆ earnings_ ┆ currency │
+│ ---    ┆ ---        ┆ ---        ┆ me         ┆   ┆ timestamp ┆ timestamp ┆ timestamp ┆ ---      │
+│ str    ┆ str        ┆ str        ┆ ---        ┆   ┆ ---       ┆ _start    ┆ _end      ┆ str      │
+│        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
+│        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
+╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
+│ TTE    ┆ TotalEnerg ┆ TotalEnerg ┆ null       ┆ … ┆ 178483680 ┆ 178483680 ┆ 178483680 ┆ USD      │
+│        ┆ ies SE     ┆ ies SE     ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ STX    ┆ Seagate    ┆ Seagate    ┆ Seagate    ┆ … ┆ 178526880 ┆ 178526880 ┆ 178526880 ┆ USD      │
+│        ┆ Technology ┆ Technology ┆ Technology ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆           ┆           ┆           ┆          │
+│        ┆ PL…        ┆ pl…        ┆            ┆   ┆           ┆           ┆           ┆          │
+│ VLO    ┆ Valero     ┆ Valero     ┆ Valero     ┆ … ┆ 178541460 ┆ 178541460 ┆ 178541460 ┆ USD      │
+│        ┆ Energy Cor ┆ Energy Cor ┆ Energy     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
+│ EQNR   ┆ Equinor    ┆ Equinor    ┆ null       ┆ … ┆ 178472340 ┆ 178472340 ┆ 178472340 ┆ USD      │
+│        ┆ ASA        ┆ ASA        ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ TRV    ┆ The        ┆ The        ┆ The        ┆ … ┆ 178429140 ┆ 179206740 ┆ 179206740 ┆ USD      │
+│        ┆ Travelers  ┆ Travelers  ┆ Travelers  ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Companies, ┆ Companies, ┆ Companies  ┆   ┆           ┆           ┆           ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ E      ┆ ENI S.p.A. ┆ Eni S.p.A. ┆ Eni S.p.A  ┆ … ┆ 177706080 ┆ 177706080 ┆ 177706080 ┆ USD      │
+│        ┆            ┆            ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ ALL    ┆ Allstate   ┆ The        ┆ The        ┆ … ┆ 177749280 ┆ 177749280 ┆ 177749280 ┆ USD      │
+│        ┆ Corporatio ┆ Allstate   ┆ Allstate   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ n (The)    ┆ Corporatio ┆            ┆   ┆           ┆           ┆           ┆          │
+│        ┆            ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
+│ BE     ┆ Bloom      ┆ Bloom      ┆ Bloom      ┆ … ┆ 178526880 ┆ 178526880 ┆ 178526880 ┆ USD      │
+│        ┆ Energy Cor ┆ Energy Cor ┆ Energy     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
+│ LITE   ┆ Lumentum   ┆ Lumentum   ┆ Lumentum   ┆ … ┆ 178647840 ┆ 178647840 ┆ 178647840 ┆ USD      │
+│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ HUM    ┆ Humana     ┆ Humana     ┆ Humana     ┆ … ┆ 178532820 ┆ 178532820 ┆ 178532820 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+└────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
 ### Aggregations
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
+    let df = chart.to_dataframe()?;
 
-// Group by month and aggregate
-let monthly = df.lazy()
-    .select([
-        (col("timestamp") / lit(86400 * 30)).alias("month"),
-        col("close").mean().alias("avg_close"),
-        col("volume").sum().alias("total_volume"),
-        col("high").max().alias("max_high"),
-        col("low").min().alias("min_low"),
-    ])
-    .group_by([col("month")])
-    .agg([
-        col("avg_close"),
-        col("total_volume"),
-        col("max_high"),
-        col("min_low"),
-    ])
-    .collect()?;
+    // Group by (approximate) month and aggregate
+    let monthly = df
+        .lazy()
+        .with_column((col("timestamp") / lit(86400i64 * 30i64)).alias("month"))
+        .group_by([col("month")])
+        .agg([
+            col("close").mean().alias("avg_close"),
+            col("volume").sum().alias("total_volume"),
+            col("high").max().alias("max_high"),
+            col("low").min().alias("min_low"),
+        ])
+        .collect()?;
 
-println!("{}", monthly);
+    println!("{}", monthly);
+    Ok(())
+}
+```
+
+```text soothfast-output
+shape: (13, 5)
+┌───────┬────────────┬──────────────┬────────────┬────────────┐
+│ month ┆ avg_close  ┆ total_volume ┆ max_high   ┆ min_low    │
+│ ---   ┆ ---        ┆ ---          ┆ ---        ┆ ---        │
+│ i64   ┆ f64        ┆ i64          ┆ f64        ┆ f64        │
+╞═══════╪════════════╪══════════════╪════════════╪════════════╡
+│ 679   ┆ 261.201363 ┆ 1086109600   ┆ 277.320007 ┆ 244.0      │
+│ 680   ┆ 275.101053 ┆ 870045100    ┆ 288.619995 ┆ 265.320007 │
+│ 678   ┆ 247.65909  ┆ 1257230200   ┆ 259.23999  ┆ 225.949997 │
+│ 682   ┆ 259.249999 ┆ 1186011100   ┆ 279.5      ┆ 243.419998 │
+│ 681   ┆ 273.322498 ┆ 825315400    ┆ 280.149994 ┆ 262.119995 │
+│ …     ┆ …          ┆ …            ┆ …          ┆ …          │
+│ 677   ┆ 231.592499 ┆ 943741000    ┆ 241.320007 ┆ 223.779999 │
+│ 686   ┆ 303.452858 ┆ 1001455700   ┆ 316.940002 ┆ 285.779999 │
+│ 688   ┆ 319.492001 ┆ 486548400    ┆ 334.98999  ┆ 307.0      │
+│ 676   ┆ 212.066875 ┆ 1031778200   ┆ 231.0      ┆ 201.5      │
+│ 684   ┆ 253.480499 ┆ 789735900    ┆ 262.480011 ┆ 245.509995 │
+└───────┴────────────┴──────────────┴────────────┴────────────┘
 ```
 
 ## Multiple Symbols
 
 Combine data from multiple symbols:
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let aapl = Ticker::new("AAPL").await?;
-let msft = Ticker::new("MSFT").await?;
-let nvda = Ticker::new("NVDA").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let aapl = Ticker::new("AAPL").await?;
+    let msft = Ticker::new("MSFT").await?;
+    let nvda = Ticker::new("NVDA").await?;
 
-let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-let msft_chart = msft.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-let nvda_chart = nvda.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let msft_chart = msft.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let nvda_chart = nvda.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 
-// Convert to DataFrames
-let mut aapl_df = aapl_chart.to_dataframe()?;
-let mut msft_df = msft_chart.to_dataframe()?;
-let mut nvda_df = nvda_chart.to_dataframe()?;
+    // Convert to DataFrames
+    let mut aapl_df = aapl_chart.to_dataframe()?;
+    let mut msft_df = msft_chart.to_dataframe()?;
+    let mut nvda_df = nvda_chart.to_dataframe()?;
 
-// Add symbol column to each
-aapl_df.with_column(Series::new("symbol", vec!["AAPL"; aapl_df.height()]))?;
-msft_df.with_column(Series::new("symbol", vec!["MSFT"; msft_df.height()]))?;
-nvda_df.with_column(Series::new("symbol", vec!["NVDA"; nvda_df.height()]))?;
+    // Add symbol column to each
+    aapl_df.with_column(Series::new("symbol".into(), vec!["AAPL"; aapl_df.height()]).into())?;
+    msft_df.with_column(Series::new("symbol".into(), vec!["MSFT"; msft_df.height()]).into())?;
+    nvda_df.with_column(Series::new("symbol".into(), vec!["NVDA"; nvda_df.height()]).into())?;
 
-// Combine into single DataFrame
-let combined = concat(
-    &[aapl_df, msft_df, nvda_df],
-    UnionArgs::default(),
-)?;
+    // Combine into single DataFrame
+    let combined = concat(
+        [aapl_df.lazy(), msft_df.lazy(), nvda_df.lazy()],
+        UnionArgs::default(),
+    )?
+    .collect()?;
 
-println!("Combined data: {} rows", combined.height());
+    println!("Combined data: {} rows", combined.height());
+    Ok(())
+}
+```
+
+```text soothfast-output
+Combined data: 60 rows
 ```
 
 ## Exporting Data
 
+The `dataframe` feature enables Polars with only its `lazy` feature. File
+writers live behind Polars' own feature flags, so exporting requires adding
+`polars` to your `Cargo.toml` with the matching features (`csv`, `parquet`,
+`json`):
+
+```toml
+polars = { version = "0.53", features = ["lazy", "csv", "parquet", "json"] }
+```
+
 ### CSV Export
 
-```rust
+```rust ignore
 use polars::prelude::*;
 use std::fs::File;
 
-let df = chart.to_dataframe()?;
+let mut df = chart.to_dataframe()?;
 
-// Write to CSV
+// Write to CSV (requires the polars `csv` feature)
 let mut file = File::create("aapl_prices.csv")?;
 CsvWriter::new(&mut file)
     .include_header(true)
@@ -338,13 +623,13 @@ CsvWriter::new(&mut file)
 
 ### Parquet Export
 
-```rust
+```rust ignore
 use polars::prelude::*;
 use std::fs::File;
 
-let df = chart.to_dataframe()?;
+let mut df = chart.to_dataframe()?;
 
-// Write to Parquet (efficient columnar format)
+// Write to Parquet (requires the polars `parquet` feature)
 let file = File::create("aapl_prices.parquet")?;
 ParquetWriter::new(file)
     .finish(&mut df)?;
@@ -352,13 +637,13 @@ ParquetWriter::new(file)
 
 ### JSON Export
 
-```rust
+```rust ignore
 use polars::prelude::*;
 use std::fs::File;
 
-let df = chart.to_dataframe()?;
+let mut df = chart.to_dataframe()?;
 
-// Write to JSON
+// Write to JSON (requires the polars `json` feature)
 let mut file = File::create("aapl_prices.json")?;
 JsonWriter::new(&mut file)
     .finish(&mut df)?;
@@ -368,12 +653,15 @@ JsonWriter::new(&mut file)
 
 ### Rolling Windows
 
-```rust
+Rolling aggregations require the Polars `rolling_window` feature in addition
+to `lazy`:
+
+```rust ignore
 use polars::prelude::*;
 
 let df = chart.to_dataframe()?;
 
-// Calculate 20-day moving average
+// Calculate 20-day moving average (requires the polars `rolling_window` feature)
 let ma20 = df.lazy()
     .select([
         col("timestamp"),
@@ -389,49 +677,84 @@ println!("{}", ma20);
 
 ### Joining DataFrames
 
-!!! warning "Polars API Updates"
-    The join API may require importing additional traits in newer Polars versions.
-    Refer to the [Polars Documentation](https://docs.pola.rs/) for current API.
+Requires the `polars-ops` Polars feature (enabled by default alongside `lazy` in finance-query's own `dataframe` feature).
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Dividend, Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-let aapl_divs = aapl.dividends(TimeRange::OneMonth).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let aapl = Ticker::new("AAPL").await?;
+    let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let aapl_divs = aapl.dividends(TimeRange::OneMonth).await?;
 
-let price_df = aapl_chart.to_dataframe()?;
-let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
+    let price_df = aapl_chart.to_dataframe()?;
+    let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
 
-// Note: left_join API may require trait imports in newer Polars versions
-// Example: use polars_ops::frame::join::DataFrameJoinOps;
-// let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
+    let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
+    println!("joined shape: {:?}", joined.shape());
+    Ok(())
+}
+```
+
+```text soothfast-output
+joined shape: (20, 8)
 ```
 
 ### Custom Analysis
 
-```rust
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
-let df = chart.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let df = chart.to_dataframe()?;
 
-// Calculate daily price range as percentage
-let range_pct = df.lazy()
-    .select([
-        col("timestamp"),
-        col("symbol"),
-        ((col("high") - col("low")) / col("close") * lit(100.0))
-            .alias("range_pct"),
-    ])
-    .collect()?;
+    // Calculate daily price range as percentage
+    let range_pct = df
+        .lazy()
+        .select([
+            col("timestamp"),
+            ((col("high") - col("low")) / col("close") * lit(100.0)).alias("range_pct"),
+        ])
+        .collect()?;
 
-// Find days with highest volatility
-let volatile_days = range_pct.sort(
-    ["range_pct"],
-    SortMultipleOptions::default().with_order_descending(true),
-)?
-.head(Some(10));
+    // Find days with highest volatility
+    let volatile_days = range_pct
+        .sort(
+            ["range_pct"],
+            SortMultipleOptions::default().with_order_descending(true),
+        )?
+        .head(Some(10));
 
-println!("Most volatile days:\n{}", volatile_days);
+    println!("Most volatile days:\n{}", volatile_days);
+    Ok(())
+}
+```
+
+```text soothfast-output
+Most volatile days:
+shape: (10, 2)
+┌────────────┬───────────┐
+│ timestamp  ┆ range_pct │
+│ ---        ┆ ---       │
+│ i64        ┆ f64       │
+╞════════════╪═══════════╡
+│ 1782394200 ┆ 5.469739  │
+│ 1782999000 ┆ 5.099965  │
+│ 1782480600 ┆ 4.137015  │
+│ 1784122200 ┆ 3.483971  │
+│ 1782826200 ┆ 3.193251  │
+│ 1782739800 ┆ 3.024061  │
+│ 1783603800 ┆ 2.64689   │
+│ 1782221400 ┆ 2.534836  │
+│ 1782912600 ┆ 2.510355  │
+│ 1783517400 ┆ 2.479345  │
+└────────────┴───────────┘
 ```
 
 ## Type Conversions
@@ -440,43 +763,103 @@ println!("Most volatile days:\n{}", volatile_days);
 
 Many types support converting `Vec<T>` to DataFrame:
 
-```rust
-// Vec of dividends to DataFrame
-let dividends = ticker.dividends(TimeRange::FiveYears).await?;
-let df = Dividend::vec_to_dataframe(&dividends)?;
+```rust capture-output feature=dataframe
+use finance_query::{Dividend, SearchOptions, Ticker, TimeRange, finance};
 
-// SearchQuotes wrapper has to_dataframe() method
-let results = finance::search("tech", &SearchOptions::default()).await?;
-let df = results.quotes.to_dataframe()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Vec of dividends to DataFrame
+    let ticker = Ticker::new("AAPL").await?;
+    let dividends = ticker.dividends(TimeRange::FiveYears).await?;
+    let df = Dividend::vec_to_dataframe(&dividends)?;
+
+    // SearchQuotes wrapper has to_dataframe() method
+    let results = finance::search("tech", &SearchOptions::default()).await?;
+    let df = results.quotes.to_dataframe()?;
+    println!("{} rows", df.height());
+    Ok(())
+}
 ```
+
+```text soothfast-output
+7 rows
+```
+
+<!-- soothfast:bind finance_query::models::chart::events::Dividend -->
+The conversion itself needs no network. Response types are `#[non_exhaustive]`
+and cannot be constructed literally, but any serde-compatible source works —
+this example runs as a real test on a fixture value:
+
+```rust capture-output feature=dataframe covers=finance_query::models::chart::events::Dividend
+use finance_query::Dividend;
+
+let dividends: Vec<Dividend> = serde_json::from_str(
+    r#"[{"timestamp": 1704067200, "amount": 0.24},
+        {"timestamp": 1711929600, "amount": 0.25}]"#,
+)
+.unwrap();
+
+let df = Dividend::vec_to_dataframe(&dividends).unwrap();
+assert_eq!(df.height(), 2);
+assert!(df.column("timestamp").is_ok());
+assert!(df.column("amount").is_ok());
+println!("rows = {}", df.height());
+println!("columns = {:?}", df.get_column_names());
+```
+
+```text soothfast-output
+rows = 2
+columns = ["timestamp", "amount"]
+```
+<!-- /soothfast:bind -->
 
 ### Single Item to DataFrame
 
 Individual structs create single-row DataFrames:
 
-```rust
-use finance_query::format::Both;
+```rust capture-output feature=dataframe
+use finance_query::{Ticker, format::Both};
 
-let quote = ticker.quote::<Both>().await?;
-let df = quote.to_dataframe()?;  // 1 row, 30+ columns
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let quote = ticker.quote::<Both>().await?;
+    let df = quote.to_dataframe()?; // 1 row, 30+ columns
+    println!("{} columns", df.width());
+    Ok(())
+}
+```
+
+```text soothfast-output
+154 columns
 ```
 
 ## Error Handling
 
 DataFrame conversion can fail due to Polars errors:
 
-```rust
-use finance_query::Ticker;
-use polars::prelude::*;
+```rust capture-output feature=dataframe
+use finance_query::{Interval, Ticker, TimeRange};
 
-match chart.to_dataframe() {
-    Ok(df) => {
-        println!("DataFrame created: {} rows", df.height());
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+
+    match chart.to_dataframe() {
+        Ok(df) => {
+            println!("DataFrame created: {} rows", df.height());
+        }
+        Err(e) => {
+            eprintln!("DataFrame conversion error: {}", e);
+        }
     }
-    Err(e) => {
-        eprintln!("DataFrame conversion error: {}", e);
-    }
+    Ok(())
 }
+```
+
+```text soothfast-output
+DataFrame created: 20 rows
 ```
 
 ## Best Practices
@@ -484,18 +867,30 @@ match chart.to_dataframe() {
 !!! tip "Combine with Ticker Caching"
     Ticker instances cache data automatically. Fetch once, convert to DataFrame multiple times without additional API calls:
 
-    ```rust
-    let ticker = Ticker::new("AAPL").await?;
-    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    ```rust no_run feature=dataframe
+    use finance_query::{Interval, Ticker, TimeRange};
+    use polars::prelude::*;
 
-    // Convert to DataFrame for analysis
-    let df = chart.to_dataframe()?;
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let ticker = Ticker::new("AAPL").await?;
+        let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 
-    // Reuse the same chart data for different analyses
-    let high_volume = df.filter(&df.column("volume")?.gt(50_000_000)?)?;
-    let recent = df.tail(Some(5));
+        // Convert to DataFrame for analysis
+        let df = chart.to_dataframe()?;
 
-    // No additional API calls - data is cached in the Ticker
+        // Reuse the same chart data for different analyses
+        let high_volume = df
+            .clone()
+            .lazy()
+            .filter(col("volume").gt(lit(50_000_000i64)))
+            .collect()?;
+        let recent = df.tail(Some(5));
+
+        // No additional API calls - data is cached in the Ticker
+        println!("{} high-volume days, recent:\n{}", high_volume.height(), recent);
+        Ok(())
+    }
     ```
 
 ## Next Steps

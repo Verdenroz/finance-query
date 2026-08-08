@@ -103,8 +103,9 @@ where
 /// A distinct type from `async_graphql::connection::PageInfo` (which is
 /// `#[graphql(internal)]` and doesn't derive `Clone`/`Debug`, so it isn't
 /// meant for reuse in ordinary struct fields) — same shape, usable directly.
-#[derive(async_graphql::SimpleObject, Debug, Clone, Default)]
+#[derive(async_graphql::SimpleObject, Debug, Clone, Default, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlPageInfo {
     pub has_previous_page: bool,
     pub has_next_page: bool,

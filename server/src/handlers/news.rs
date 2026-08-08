@@ -13,32 +13,10 @@ use finance_query_server::graphql::{
     pagination::build_connection_selection,
 };
 use finance_query_server::lang;
-use serde::Deserialize;
+use finance_query_server::params::NewsQuery;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest, unwrap_connection};
-
-fn default_news_count() -> u32 {
-    10
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct NewsQuery {
-    /// Maximum number of articles to return (default: 10)
-    #[serde(default = "default_news_count")]
-    count: u32,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-    /// Max articles per page; omitted (with cursor also omitted) = every fetched
-    /// article (up to `count`) as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
 
 fn connection_args(params: &NewsQuery) -> String {
     let mut args = Vec::new();

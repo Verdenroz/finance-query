@@ -1571,25 +1571,31 @@ pub fn parse_bool(s: &str) -> Result<bool> {
 fn interval_rank(interval: Interval) -> usize {
     match interval {
         Interval::OneMinute => 0,
-        Interval::FiveMinutes => 1,
-        Interval::FifteenMinutes => 2,
-        Interval::ThirtyMinutes => 3,
-        Interval::OneHour => 4,
-        Interval::OneDay => 5,
-        Interval::OneWeek => 6,
-        Interval::OneMonth => 7,
-        Interval::ThreeMonths => 8,
+        Interval::TwoMinutes => 1,
+        Interval::FiveMinutes => 2,
+        Interval::FifteenMinutes => 3,
+        Interval::ThirtyMinutes => 4,
+        Interval::OneHour => 5,
+        Interval::NinetyMinutes => 6,
+        Interval::OneDay => 7,
+        Interval::FiveDays => 8,
+        Interval::OneWeek => 9,
+        Interval::OneMonth => 10,
+        Interval::ThreeMonths => 11,
     }
 }
 
 fn available_htf_intervals_for_base(base_interval: Interval) -> Vec<Option<Interval>> {
     let all = [
         Interval::OneMinute,
+        Interval::TwoMinutes,
         Interval::FiveMinutes,
         Interval::FifteenMinutes,
         Interval::ThirtyMinutes,
         Interval::OneHour,
+        Interval::NinetyMinutes,
         Interval::OneDay,
+        Interval::FiveDays,
         Interval::OneWeek,
         Interval::OneMonth,
         Interval::ThreeMonths,
@@ -1745,7 +1751,9 @@ mod tests {
             options,
             vec![
                 None,
+                Some(Interval::NinetyMinutes),
                 Some(Interval::OneDay),
+                Some(Interval::FiveDays),
                 Some(Interval::OneWeek),
                 Some(Interval::OneMonth),
                 Some(Interval::ThreeMonths),

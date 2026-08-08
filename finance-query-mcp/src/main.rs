@@ -1,12 +1,7 @@
-mod error;
-mod lang;
-mod metrics;
-mod tools;
-
 use anyhow::Result;
 use clap::Parser;
+use finance_query_mcp::{metrics, tools::FinanceTools};
 use finance_query_server::{AppState, FeedHub, StreamHub, cache::Cache, graphql};
-use tools::FinanceTools;
 use tracing::info;
 
 #[derive(Parser)]

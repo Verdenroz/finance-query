@@ -1,352 +1,404 @@
-asyncapi: 2.6.0
+asyncapi: 3.0.0
 info:
   title: Finance Query Streaming API
   version: 2.8.0
-  description: |
-    Real-time price streaming from Yahoo Finance, and continuous RSS/Atom feed
-    streaming, both via WebSocket.
-
-    ## Price stream connection flow (`/v2/stream`)
-    1. Connect to the WebSocket endpoint
-    2. Send a subscribe message with ticker symbols
-    3. Receive real-time price updates as they occur
-
-    ## Feed stream connection flow (`/v2/feeds/stream`)
-    1. Connect to the WebSocket endpoint
-    2. Send a subscribe message with feed source slugs (same slugs accepted by
-       `GET /v2/feeds`)
-    3. Receive newly-seen feed entries as the server polls each source
-
-    RSS/Atom has no push transport of its own, so the feed stream polls every
-    5 minutes and fans out only entries not seen before (deduplicated by URL)
-    — unlike the price stream, which is genuinely push end to end.
-
+  description: High-performance financial data API server built on finance-query library
 servers:
-  production:
-    url: finance-query.com/v2/stream
+  financeQuery:
+    host: finance-query.com
     protocol: wss
-    description: Production server (price stream)
-  development:
-    url: localhost:8000/v2/stream
+  localhost:
+    host: "localhost:8000"
     protocol: ws
-    description: Local development server (price stream)
-  feedsProduction:
-    url: finance-query.com/v2/feeds/stream
-    protocol: wss
-    description: Production server (feed stream)
-  feedsDevelopment:
-    url: localhost:8000/v2/feeds/stream
-    protocol: ws
-    description: Local development server (feed stream)
-
 channels:
-  /:
-    servers: [production, development]
-    publish:
-      operationId: sendMessage
-      summary: Send messages to the server
-      message:
-        oneOf:
-          - $ref: '#/components/messages/Subscribe'
-          - $ref: '#/components/messages/Unsubscribe'
-          - $ref: '#/components/messages/SetAlerts'
-    subscribe:
-      operationId: receiveMessage
-      summary: >-
-        Receive price updates from the server, or alert events while an alert
-        rule set is active
-      message:
-        oneOf:
-          - $ref: '#/components/messages/PriceUpdate'
-          - $ref: '#/components/messages/AlertEvent'
-
-  /feeds:
-    servers: [feedsProduction, feedsDevelopment]
-    publish:
-      operationId: sendFeedMessage
-      summary: Send messages to the server
-      message:
-        oneOf:
-          - $ref: '#/components/messages/FeedSubscribe'
-          - $ref: '#/components/messages/FeedUnsubscribe'
-    subscribe:
-      operationId: receiveFeedEntry
-      summary: Receive new feed entries from the server
-      message:
-        $ref: '#/components/messages/FeedEntryMessage'
-
+  v2FeedsStream:
+    address: /v2/feeds/stream
+    messages:
+      FeedStreamCommand:
+        $ref: "#/components/messages/FeedStreamCommand"
+      GqlFeedEntry:
+        $ref: "#/components/messages/GqlFeedEntry"
+  v2Stream:
+    address: /v2/stream
+    messages:
+      PriceStreamMessage:
+        $ref: "#/components/messages/PriceStreamMessage"
+      params_StreamCommand:
+        $ref: "#/components/messages/params_StreamCommand"
+operations:
+  receiveFeedEntry:
+    summary: Newly-seen RSS/Atom feed entries as the server polls each source.
+    action: send
+    channel:
+      $ref: "#/channels/v2FeedsStream"
+    messages:
+      - $ref: "#/channels/v2FeedsStream/messages/GqlFeedEntry"
+  receiveMessage:
+    summary: "Real-time price ticks, or fired alert events while alert rules are active."
+    action: send
+    channel:
+      $ref: "#/channels/v2Stream"
+    messages:
+      - $ref: "#/channels/v2Stream/messages/PriceStreamMessage"
+  sendFeedMessage:
+    summary: Subscribe/unsubscribe to feed sources.
+    action: receive
+    channel:
+      $ref: "#/channels/v2FeedsStream"
+    messages:
+      - $ref: "#/channels/v2FeedsStream/messages/FeedStreamCommand"
+  sendMessage:
+    summary: "Subscribe/unsubscribe to symbols, or set alert rules."
+    action: receive
+    channel:
+      $ref: "#/channels/v2Stream"
+    messages:
+      - $ref: "#/channels/v2Stream/messages/params_StreamCommand"
 components:
   messages:
-    Subscribe:
-      name: subscribe
-      title: Subscribe Message
-      summary: Subscribe to ticker symbols
-      contentType: application/json
+    FeedStreamCommand:
       payload:
-        type: object
-        required:
-          - subscribe
-        properties:
-          subscribe:
-            type: array
-            items:
-              type: string
-            description: List of ticker symbols to subscribe to
-            example:
-              - AAPL
-              - NVDA
-              - BTC-USD
-
-    Unsubscribe:
-      name: unsubscribe
-      title: Unsubscribe Message
-      summary: Unsubscribe from ticker symbols
-      contentType: application/json
+        $ref: "#/components/schemas/FeedStreamCommand"
+    GqlFeedEntry:
       payload:
-        type: object
-        required:
-          - unsubscribe
-        properties:
-          unsubscribe:
-            type: array
-            items:
-              type: string
-            description: List of ticker symbols to unsubscribe from
-            example:
-              - AAPL
-
-    SetAlerts:
-      name: alerts
-      title: Set Alerts Message
-      summary: >-
-        Replace the connection's alert rule set. While a non-empty rule set is
-        active the server sends AlertEvent messages instead of raw price
-        updates; send an empty array to revert to raw ticks. Symbols named by
-        rules are subscribed automatically.
-      contentType: application/json
+        $ref: "#/components/schemas/GqlFeedEntry"
+    PriceStreamMessage:
       payload:
-        type: object
-        required:
-          - alerts
-        properties:
-          alerts:
-            type: array
-            items:
-              $ref: '#/components/schemas/AlertRule'
-
-    PriceUpdate:
-      name: priceUpdate
-      title: Price Update
-      summary: Real-time price update
-      contentType: application/json
+        $ref: "#/components/schemas/PriceStreamMessage"
+    params_StreamCommand:
       payload:
-        $ref: '#/components/schemas/PriceUpdate'
-
-    AlertEvent:
-      name: alertEvent
-      title: Alert Event
-      summary: A price tick that satisfied one of the connection's alert rules
-      contentType: application/json
-      payload:
-        $ref: '#/components/schemas/AlertEvent'
-
-    FeedSubscribe:
-      name: subscribe
-      title: Subscribe Message
-      summary: Subscribe to feed sources
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - subscribe
-        properties:
-          subscribe:
-            type: array
-            items:
-              type: string
-            description: >-
-              List of feed source slugs to subscribe to (same slugs as
-              `GET /v2/feeds`'s `sources` param).
-            example:
-              - bloomberg
-              - marketwatch
-          formType:
-            type: string
-            description: SEC filing form type, used when sec-filings is in subscribe
-            example: 8-K
-
-    FeedUnsubscribe:
-      name: unsubscribe
-      title: Unsubscribe Message
-      summary: Unsubscribe from feed sources
-      contentType: application/json
-      payload:
-        type: object
-        required:
-          - unsubscribe
-        properties:
-          unsubscribe:
-            type: array
-            items:
-              type: string
-            description: List of feed source slugs to unsubscribe from
-            example:
-              - bloomberg
-
-    FeedEntryMessage:
-      name: feedEntry
-      title: Feed Entry
-      summary: A newly-seen RSS/Atom feed entry
-      contentType: application/json
-      payload:
-        $ref: '#/components/schemas/FeedEntry'
-
+        $ref: "#/components/schemas/params_StreamCommand"
   schemas:
-    AlertRule:
+    AlertCondition:
+      description: A predicate over incoming price ticks.
+      oneOf:
+        - type: object
+          properties:
+            crossesAbove:
+              type: number
+              format: double
+          required:
+            - crossesAbove
+          additionalProperties: false
+        - type: object
+          properties:
+            crossesBelow:
+              type: number
+              format: double
+          required:
+            - crossesBelow
+          additionalProperties: false
+        - type: object
+          properties:
+            priceAbove:
+              type: number
+              format: double
+          required:
+            - priceAbove
+          additionalProperties: false
+        - type: object
+          properties:
+            priceBelow:
+              type: number
+              format: double
+          required:
+            - priceBelow
+          additionalProperties: false
+        - type: object
+          properties:
+            percentChangeAbove:
+              type: number
+              format: double
+          required:
+            - percentChangeAbove
+          additionalProperties: false
+        - type: object
+          properties:
+            percentChangeBelow:
+              type: number
+              format: double
+          required:
+            - percentChangeBelow
+          additionalProperties: false
+        - type: object
+          properties:
+            volumeAbove:
+              type: integer
+              format: int64
+          required:
+            - volumeAbove
+          additionalProperties: false
+    AlertConditionKind:
+      description: "Which predicate an [`AlertCondition`] applies, without its threshold."
+      type: string
+      enum:
+        - crossesAbove
+        - crossesBelow
+        - priceAbove
+        - priceBelow
+        - percentChangeAbove
+        - percentChangeBelow
+        - volumeAbove
+    AlertEvent:
+      description: "A fired alert, carrying the tick that triggered it."
       type: object
+      properties:
+        changePercent:
+          description: Percent change carried by the triggering tick.
+          type: number
+          format: float
+        condition:
+          description: Condition that fired.
+          $ref: "#/components/schemas/AlertCondition"
+        previousPrice:
+          description: "Last price seen before this tick, if any."
+          type: number
+          format: float
+        price:
+          description: Price on the triggering tick.
+          type: number
+          format: float
+        symbol:
+          description: Symbol that triggered.
+          type: string
+        time:
+          description: Tick timestamp (milliseconds).
+          type: integer
+          format: int64
+        update:
+          description: The full triggering tick.
+          $ref: "#/components/schemas/PriceUpdate"
+      required:
+        - symbol
+        - condition
+        - price
+        - changePercent
+        - time
+        - update
+    FeedStreamCommand:
+      description: "Inbound control message for `/v2/feeds/stream`."
+      type: object
+      properties:
+        formType:
+          description: "SEC filing form type, used when `sec-filings` is in `subscribe`."
+          type: string
+        subscribe:
+          description: "Feed source slugs to subscribe to (same slugs as `GET /v2/feeds`'s\n`sources` param)."
+          type: array
+          items:
+            type: string
+        unsubscribe:
+          description: Feed source slugs to unsubscribe from.
+          type: array
+          items:
+            type: string
+    GqlFeedEntry:
+      description: A single entry from an RSS/Atom feed.
+      type: object
+      properties:
+        published:
+          type: string
+        source:
+          type: string
+        summary:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+      required:
+        - title
+        - url
+        - source
+    MarketHoursType:
+      description: Market hours type enumeration
+      type: string
+      enum:
+        - PRE_MARKET
+        - REGULAR_MARKET
+        - POST_MARKET
+        - EXTENDED_HOURS_MARKET
+    OptionType:
+      description: Option type enumeration
+      type: string
+      enum:
+        - CALL
+        - PUT
+    PriceStreamMessage:
+      description: "Outbound message on `/v2/stream`: a live price tick, or — while a\nclient's alert rules are active — a fired alert event instead of the raw\ntick. Schema-only: `deliver()` in `handlers::stream` sends each variant's\nJSON directly rather than constructing this type."
+      oneOf:
+        - $ref: "#/components/schemas/PriceUpdate"
+        - $ref: "#/components/schemas/AlertEvent"
+    PriceUpdate:
+      description: Real-time price update from Yahoo Finance WebSocket.
+      type: object
+      properties:
+        ask:
+          type: number
+          format: float
+        askSize:
+          type: integer
+          format: int64
+        bid:
+          type: number
+          format: float
+        bidSize:
+          type: integer
+          format: int64
+        change:
+          type: number
+          format: float
+        changePercent:
+          type: number
+          format: float
+        circulatingSupply:
+          type: number
+          format: double
+        currency:
+          type: string
+        dayHigh:
+          type: number
+          format: float
+        dayLow:
+          type: number
+          format: float
+        dayVolume:
+          type: integer
+          format: int64
+        exchange:
+          type: string
+        expireDate:
+          type: integer
+          format: int64
+        fromCurrency:
+          type: string
+        id:
+          type: string
+        lastMarket:
+          type: string
+        lastSize:
+          type: integer
+          format: int64
+        marketCap:
+          type: number
+          format: double
+        marketHours:
+          $ref: "#/components/schemas/MarketHoursType"
+        miniOption:
+          type: integer
+          format: int64
+        openInterest:
+          type: integer
+          format: int64
+        openPrice:
+          type: number
+          format: float
+        optionsType:
+          $ref: "#/components/schemas/OptionType"
+        previousClose:
+          type: number
+          format: float
+        price:
+          type: number
+          format: float
+        priceHint:
+          type: integer
+          format: int64
+        quoteType:
+          $ref: "#/components/schemas/pricing_QuoteType"
+        shortName:
+          type: string
+        strikePrice:
+          type: number
+          format: float
+        time:
+          type: integer
+          format: int64
+        underlyingSymbol:
+          type: string
+        vol24hr:
+          type: integer
+          format: int64
+        volAllCurrencies:
+          type: integer
+          format: int64
+      required:
+        - id
+        - price
+        - time
+        - currency
+        - exchange
+        - quoteType
+        - marketHours
+        - changePercent
+        - dayVolume
+        - dayHigh
+        - dayLow
+        - change
+        - shortName
+        - expireDate
+        - openPrice
+        - previousClose
+        - strikePrice
+        - underlyingSymbol
+        - openInterest
+        - optionsType
+        - miniOption
+        - lastSize
+        - bid
+        - bidSize
+        - ask
+        - askSize
+        - priceHint
+        - vol24hr
+        - volAllCurrencies
+        - fromCurrency
+        - lastMarket
+        - circulatingSupply
+        - marketCap
+    WsAlertRule:
+      description: One alert rule as sent over the wire.
+      type: object
+      properties:
+        condition:
+          description: "Predicate to evaluate. Crossing conditions compare against the\nprevious tick and never fire on a symbol's first tick."
+          $ref: "#/components/schemas/AlertConditionKind"
+        repeat:
+          description: "Fire every time the condition becomes true again, instead of once."
+          type: boolean
+        symbol:
+          description: Ticker symbol to watch.
+          type: string
+        value:
+          description: Threshold the predicate compares against.
+          type: number
+          format: double
       required:
         - symbol
         - condition
         - value
-      properties:
-        symbol:
-          type: string
-          description: Ticker symbol to watch
-          example: AAPL
-        condition:
-          type: string
-          enum:
-            - crossesAbove
-            - crossesBelow
-            - priceAbove
-            - priceBelow
-            - percentChangeAbove
-            - percentChangeBelow
-            - volumeAbove
-          description: >-
-            Predicate to evaluate. Crossing conditions compare against the
-            previous tick and never fire on a symbol's first tick.
-        value:
-          type: number
-          description: Threshold the predicate compares against
-          example: 200.0
-        repeat:
-          type: boolean
-          default: false
-          description: >-
-            Fire every time the condition becomes true again, instead of once
-
-    AlertEvent:
+    params_StreamCommand:
+      description: "Inbound control message for `/v2/stream`."
       type: object
       properties:
-        symbol:
-          type: string
-        condition:
-          type: object
-          description: >-
-            The condition that fired, as a single-key object — for example
-            `{"crossesAbove": 200.0}`
-        price:
-          type: number
-          format: float
-        previousPrice:
-          type: number
-          format: float
-          nullable: true
-        changePercent:
-          type: number
-          format: float
-        time:
-          type: integer
-          format: int64
-        update:
-          $ref: '#/components/schemas/PriceUpdate'
-
-    PriceUpdate:
-      type: object
-      description: Real-time price update from Yahoo Finance
-      properties:
-        id:
-          type: string
-          description: Ticker symbol
-          example: BTC-USD
-        price:
-          type: number
-          format: float
-          description: Current price
-          example: 87690.22
-        time:
-          type: integer
-          format: int64
-          description: Unix timestamp in milliseconds
-          example: 1735364458000
-        currency:
-          type: string
-          description: Currency code
-          example: USD
-        exchange:
-          type: string
-          description: Exchange code
-          example: CCC
-        quoteType:
-          $ref: '#/components/schemas/QuoteType'
-        marketHours:
-          $ref: '#/components/schemas/MarketHoursType'
-        changePercent:
-          type: number
-          format: float
-          description: Percent change from previous close
-        dayVolume:
-          type: integer
-          format: int64
-          description: Day's trading volume
-        dayHigh:
-          type: number
-          format: float
-          description: Day's high price
-        dayLow:
-          type: number
-          format: float
-          description: Day's low price
-        change:
-          type: number
-          format: float
-          description: Price change from previous close
-        shortName:
-          type: string
-          description: Short name/description
-        openPrice:
-          type: number
-          format: float
-          description: Opening price
-        previousClose:
-          type: number
-          format: float
-          description: Previous close price
-        bid:
-          type: number
-          format: float
-          description: Bid price
-        bidSize:
-          type: integer
-          format: int64
-          description: Bid size
-        ask:
-          type: number
-          format: float
-          description: Ask price
-        askSize:
-          type: integer
-          format: int64
-          description: Ask size
-        marketCap:
-          type: number
-          format: double
-          description: Market capitalization
-
-    QuoteType:
+        alerts:
+          description: "Replace the connection's alert rule set. While a non-empty rule set is\nactive the server sends alert events instead of raw price updates;\nsend an empty array to revert to raw ticks. Symbols named by rules\nare subscribed automatically."
+          type: array
+          items:
+            $ref: "#/components/schemas/WsAlertRule"
+        subscribe:
+          description: Ticker symbols to subscribe to.
+          type: array
+          items:
+            type: string
+        unsubscribe:
+          description: Ticker symbols to unsubscribe from.
+          type: array
+          items:
+            type: string
+    pricing_QuoteType:
+      description: Quote type enumeration
       type: string
-      description: Type of financial instrument
       enum:
         - NONE
         - ALT_SYMBOL
@@ -366,38 +418,3 @@ components:
         - CRYPTOCURRENCY
         - INDICATOR
         - INDUSTRY
-
-    MarketHoursType:
-      type: string
-      description: Market hours indicator
-      enum:
-        - PRE_MARKET
-        - REGULAR_MARKET
-        - POST_MARKET
-        - EXTENDED_HOURS_MARKET
-
-    OptionType:
-      type: string
-      description: Option type (for options contracts)
-      enum:
-        - CALL
-        - PUT
-
-    FeedEntry:
-      type: object
-      description: A single entry from an RSS/Atom feed
-      properties:
-        title:
-          type: string
-        url:
-          type: string
-          format: uri
-        published:
-          type: string
-          format: date-time
-          nullable: true
-        summary:
-          type: string
-          nullable: true
-        source:
-          type: string

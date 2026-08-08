@@ -18,7 +18,11 @@ use crate::models::quote::QuoteSummaryResponse;
 
 /// Identity shared by every capability trait: the provider id and the
 /// `NotSupported` error constructor used by default method bodies.
-pub(crate) trait ProviderCore: Send + Sync {
+///
+/// Not part of the stable public API — `pub` only so `benches/soothfast.rs`
+/// can implement [`ProviderAdapter`] on a canned, network-free provider.
+#[doc(hidden)]
+pub trait ProviderCore: Send + Sync {
     fn id(&self) -> Provider;
 
     fn not_supported(&self, operation: Operation) -> FinanceError {
@@ -29,8 +33,12 @@ pub(crate) trait ProviderCore: Send + Sync {
 // ── Capability traits (always compiled) ─────────────────────────────
 
 /// [`Capability::QUOTE`] — single and batch equity quotes.
+///
+/// Not part of the stable public API — `pub` only so `benches/soothfast.rs`
+/// can serve canned quotes through the [`ProviderAdapter`] seam.
+#[doc(hidden)]
 #[async_trait::async_trait]
-pub(crate) trait QuoteProvider: ProviderCore {
+pub trait QuoteProvider: ProviderCore {
     async fn fetch_quote(&self, symbol: &str) -> Result<QuoteSummaryResponse>;
 
     /// Fetch quotes for multiple symbols in a single request.
@@ -53,8 +61,12 @@ pub(crate) trait QuoteProvider: ProviderCore {
 }
 
 /// [`Capability::CHART`] — historical OHLCV candles and sparklines.
+///
+/// Not part of the stable public API — `pub` only so `benches/soothfast.rs`
+/// can serve canned charts through the [`ProviderAdapter`] seam.
+#[doc(hidden)]
 #[async_trait::async_trait]
-pub(crate) trait ChartProvider: ProviderCore {
+pub trait ChartProvider: ProviderCore {
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -591,8 +603,19 @@ pub(crate) trait CommoditiesProvider: ProviderCore {
 /// A configured provider as seen by [`super::ProviderSet`] dispatch: lifecycle
 /// plus one `as_*` accessor per capability. Override an accessor to
 /// `Some(self)` for each capability trait the provider implements.
+///
+/// Not part of the stable public API — exposed only so `benches/soothfast.rs`
+/// can inject a canned, network-free adapter for gating `Ticker`/`Tickers`
+/// hot paths. No semver guarantees; may change or move without notice.
+///
+/// The capability traits returned by the `as_*` accessors stay deliberately
+/// `pub(crate)` — they're dispatch plumbing, not public API — so this trait's
+/// externally unreachable-in-practice privacy leak is intentionally allowed
+/// rather than widening every capability trait just to silence the lint.
+#[allow(private_interfaces)]
+#[doc(hidden)]
 #[async_trait::async_trait]
-pub(crate) trait ProviderAdapter: ProviderCore {
+pub trait ProviderAdapter: ProviderCore {
     /// Initialize this provider. Called once during construction.
     async fn initialize(&self) -> Result<()> {
         Ok(())

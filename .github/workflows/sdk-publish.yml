@@ -1,0 +1,35 @@
+name: SDK Publish
+
+# Publish the generated Python SDK to PyPI on release, in version lockstep with the crate
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish SDK to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Install nightly (rustdoc JSON)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: false
+      - name: Install cargo-soothfast
+        run: cargo install cargo-soothfast --locked
+      - name: Publish
+        run: cargo soothfast sdk publish -p finance-query-server --target soothfast-routes --only python

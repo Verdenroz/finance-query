@@ -18,24 +18,28 @@ DefiLlama data splits by what it is *about*:
 
 ## Protocol TVL
 
-```rust
+```rust no_run feature=defi
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::CRYPTO, [Provider::DefiLlama])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, [Provider::DefiLlama])
+        .build()
+        .await?;
 
-let aave = providers.crypto("aave");
-let tvl = aave.tvl().await?;
+    let aave = providers.crypto("aave");
+    let tvl = aave.tvl().await?;
 
-println!("{} — ${:?}", tvl.name.unwrap_or_default(), tvl.tvl);
-println!("1d {:?}%  7d {:?}%", tvl.change_1d_percent, tvl.change_7d_percent);
-for allocation in &tvl.tvl_by_chain {
-    println!("  {}: ${:.0}", allocation.chain, allocation.tvl);
+    println!("{} — ${:?}", tvl.name.unwrap_or_default(), tvl.tvl);
+    println!("1d {:?}%  7d {:?}%", tvl.change_1d_percent, tvl.change_7d_percent);
+    for allocation in &tvl.tvl_by_chain {
+        println!("  {}: ${:.0}", allocation.chain, allocation.tvl);
+    }
+
+    let history = aave.tvl_history().await?;   // oldest first
+    Ok(())
 }
-
-let history = aave.tvl_history().await?;   // oldest first
 ```
 
 !!! warning "The handle id is a protocol slug, not a coin id"
@@ -57,22 +61,26 @@ The headline `tvl` is the latest history snapshot, not a sum of those allocation
 
 ## Market-Wide Views
 
-```rust
+```rust no_run feature=defi
 use finance_query::defi;
 
-// Chains ranked by total value locked
-for chain in defi::chains().await?.into_iter().take(10) {
-    println!("{:<15} ${:?}", chain.name, chain.tvl);
-}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Chains ranked by total value locked
+    for chain in defi::chains().await?.into_iter().take(10) {
+        println!("{:<15} ${:?}", chain.name, chain.tvl);
+    }
 
-// Stablecoins ranked by circulating supply
-for coin in defi::stablecoins().await?.into_iter().take(10) {
-    println!(
-        "{:<10} {:?} ({:?})",
-        coin.symbol.unwrap_or_default(),
-        coin.circulating,
-        coin.peg_mechanism
-    );
+    // Stablecoins ranked by circulating supply
+    for coin in defi::stablecoins().await?.into_iter().take(10) {
+        println!(
+            "{:<10} {:?} ({:?})",
+            coin.symbol.unwrap_or_default(),
+            coin.circulating,
+            coin.peg_mechanism
+        );
+    }
+    Ok(())
 }
 ```
 

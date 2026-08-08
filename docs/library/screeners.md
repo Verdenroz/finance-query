@@ -9,23 +9,38 @@ The screener API lets you filter stocks and mutual funds by hundreds of financia
 
 Yahoo Finance maintains a set of curated screeners. Pass a `Screener` variant and a result count to `finance::screener`:
 
-```rust
+```rust no_run covers=finance_query::constants::screeners::Screener
 use finance_query::{finance, Screener};
 
-// Top 25 day gainers
-let gainers = finance::screener(Screener::DayGainers, 25).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Top 25 day gainers
+    let gainers = finance::screener(Screener::DayGainers, 25).await?;
 
-// Most actively traded stocks
-let actives = finance::screener(Screener::MostActives, 50).await?;
+    // Most actively traded stocks
+    let actives = finance::screener(Screener::MostActives, 50).await?;
+    println!("Most actives returned: {}", actives.quotes.len());
 
-// Process results
-for quote in &gainers.quotes {
-    let change_pct = quote.regular_market_change_percent.raw.unwrap_or(0.0);
-    println!("{}: {:+.2}%", quote.symbol, change_pct);
+    // Process results
+    for quote in &gainers.quotes {
+        let change_pct = quote.regular_market_change_percent.raw.unwrap_or(0.0);
+        println!("{}: {:+.2}%", quote.symbol, change_pct);
+    }
+    Ok(())
 }
 ```
 
+Screener responses are large, but cheap to decode — a checked claim, re-verified against real measurements in CI:
+
+<!-- soothfast:claim finance_query::de_screener.walltime.median_ns < 2000000 -->
+<!-- soothfast:claim finance_query::de_screener.perfcnt.instructions < 7000000 -->
+- Deserializing a real full screener response page (measured in
+  `benches/soothfast.rs`) takes **well under 2 ms** and fewer than **7 million
+  CPU instructions** — the network round-trip dominates, not the parsing.
+
 **Available `Screener` variants:**
+
+<!-- soothfast:bind finance_query::constants::screeners::Screener -->
 
 | Variant | Description |
 |---------|-------------|
@@ -45,6 +60,8 @@ for quote in &gainers.quotes {
 | `UndervaluedGrowthStocks` | Undervalued growth opportunities |
 | `UndervaluedLargeCaps` | Undervalued large-cap companies |
 
+<!-- /soothfast:bind -->
+
 ## Custom Screeners — Typed Query Builder
 
 The custom screener API uses typed field enums so your IDE can autocomplete field names and the compiler catches typos at build time.
@@ -61,64 +78,95 @@ The custom screener API uses typed field enums so your IDE can autocomplete fiel
 
 ### Basic Example
 
-```rust
+```rust no_run covers=finance_query::models::discovery::screeners::fields::EquityField
 use finance_query::{finance, EquityScreenerQuery, EquityField, ScreenerFieldExt};
 
-// Find US large-cap value stocks with healthy volume
-let query = EquityScreenerQuery::new()
-    .size(50)
-    .sort_by(EquityField::IntradayMarketCap, false)   // descending
-    .add_condition(EquityField::Region.eq_str("us"))
-    .add_condition(EquityField::AvgDailyVol3M.gt(500_000.0))
-    .add_condition(EquityField::IntradayMarketCap.gt(10_000_000_000.0))
-    .add_condition(EquityField::PeRatio.between(10.0, 25.0));
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Find US large-cap value stocks with healthy volume
+    let query = EquityScreenerQuery::new()
+        .size(50)
+        .sort_by(EquityField::IntradayMarketCap, false)   // descending
+        .add_condition(EquityField::Region.eq_str("us"))
+        .add_condition(EquityField::AvgDailyVol3M.gt(500_000.0))
+        .add_condition(EquityField::IntradayMarketCap.gt(10_000_000_000.0))
+        .add_condition(EquityField::PeRatio.between(10.0, 25.0));
 
-let results = finance::custom_screener(query).await?;
-println!("Found {} stocks", results.quotes.len());
+    let results = finance::custom_screener(query).await?;
+    println!("Found {} stocks", results.quotes.len());
+    Ok(())
+}
 ```
 
 ### Condition Methods (`ScreenerFieldExt`)
 
-Import `ScreenerFieldExt` to access the fluent condition builders on any field variant:
+Import `ScreenerFieldExt` to access the fluent condition builders on any field variant. This example runs as a real test — conditions are built offline:
 
-```rust
-use finance_query::ScreenerFieldExt;
+```rust capture-output
+use finance_query::{EquityField, ScreenerFieldExt};
 
 // Numeric comparisons
-EquityField::PeRatio.gt(5.0)           // P/E > 5
-EquityField::PeRatio.lt(30.0)          // P/E < 30
-EquityField::PeRatio.gte(10.0)         // P/E >= 10
-EquityField::PeRatio.lte(25.0)         // P/E <= 25
-EquityField::PeRatio.eq_num(15.0)      // P/E == 15 (exact)
-EquityField::PeRatio.between(10.0, 25.0)  // 10 <= P/E <= 25
+let _ = EquityField::PeRatio.gt(5.0); // P/E > 5
+let _ = EquityField::PeRatio.lt(30.0); // P/E < 30
+let _ = EquityField::PeRatio.gte(10.0); // P/E >= 10
+let _ = EquityField::PeRatio.lte(25.0); // P/E <= 25
+let _ = EquityField::PeRatio.eq_num(15.0); // P/E == 15 (exact)
+let cond = EquityField::PeRatio.between(10.0, 25.0); // 10 <= P/E <= 25
+assert_eq!(cond.field, EquityField::PeRatio);
+println!("numeric field = {:?}", cond.field);
 
 // String equality (for categorical fields)
-EquityField::Region.eq_str("us")
-EquityField::Sector.eq_str("Technology")
-EquityField::Exchange.eq_str("NMS")
+let _ = EquityField::Region.eq_str("us");
+let _ = EquityField::Sector.eq_str("Technology");
+let cond = EquityField::Exchange.eq_str("NMS");
+assert_eq!(cond.field, EquityField::Exchange);
+println!("categorical field = {:?}", cond.field);
+```
+
+```text soothfast-output
+numeric field = PeRatio
+categorical field = Exchange
 ```
 
 ### Controlling Results
 
-```rust
+```rust capture-output
+use finance_query::{EquityField, EquityScreenerQuery};
+
 let query = EquityScreenerQuery::new()
-    .size(100)          // number of results (max 250, default 25)
-    .offset(50)         // pagination offset
-    .sort_by(EquityField::PeRatio, true)  // sort field + ascending=true
-    .include_fields(vec![               // columns to return
+    .size(100) // number of results (max 250, default 25)
+    .offset(50) // pagination offset
+    .sort_by(EquityField::PeRatio, true) // sort field + ascending=true
+    .include_fields(vec![
+        // columns to return
         EquityField::Ticker,
         EquityField::CompanyShortName,
         EquityField::IntradayPrice,
         EquityField::PeRatio,
         EquityField::IntradayMarketCap,
     ]);
+
+assert_eq!(query.size, 100);
+assert_eq!(query.offset, 50);
+assert_eq!(query.include_fields.len(), 5);
+println!("size = {}", query.size);
+println!("offset = {}", query.offset);
+println!("include_fields.len() = {}", query.include_fields.len());
+```
+
+```text soothfast-output
+size = 100
+offset = 50
+include_fields.len() = 5
 ```
 
 ### OR Logic — `add_or_conditions`
 
 All `add_condition` calls are AND'd together by default. Use `add_or_conditions` when you want any of several values to match:
 
-```rust
+```rust capture-output
+use finance_query::{EquityField, EquityScreenerQuery, ScreenerFieldExt};
+
 // US OR Canadian equities, large-cap
 let query = EquityScreenerQuery::new()
     .add_or_conditions(vec![
@@ -126,49 +174,69 @@ let query = EquityScreenerQuery::new()
         EquityField::Region.eq_str("ca"),
     ])
     .add_condition(EquityField::IntradayMarketCap.gt(5_000_000_000.0));
+
+// Top level is AND: one OR sub-group plus one plain condition
+assert_eq!(query.query.operands.len(), 2);
+println!("top-level operands = {}", query.query.operands.len());
+```
+
+```text soothfast-output
+top-level operands = 2
 ```
 
 ### Preset Constructors
 
 `EquityScreenerQuery` includes three built-in presets:
 
-```rust
+```rust no_run
 use finance_query::{EquityScreenerQuery, finance};
 
-// Most shorted US stocks with average volume > 200K
-let results = finance::custom_screener(EquityScreenerQuery::most_shorted()).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Most shorted US stocks with average volume > 200K
+    let results = finance::custom_screener(EquityScreenerQuery::most_shorted()).await?;
 
-// High-dividend US stocks (forward yield > 3%, volume > 100K)
-let results = finance::custom_screener(EquityScreenerQuery::high_dividend()).await?;
+    // High-dividend US stocks (forward yield > 3%, volume > 100K)
+    let results = finance::custom_screener(EquityScreenerQuery::high_dividend()).await?;
 
-// US large-cap growth stocks (market cap > $10B, positive EPS growth)
-let results = finance::custom_screener(EquityScreenerQuery::large_cap_growth()).await?;
+    // US large-cap growth stocks (market cap > $10B, positive EPS growth)
+    let results = finance::custom_screener(EquityScreenerQuery::large_cap_growth()).await?;
+    println!("Large-cap growth: {}", results.quotes.len());
+    Ok(())
+}
 ```
 
 ### Mutual Fund Screener
 
 Use `FundScreenerQuery` with `FundField` for mutual funds:
 
-```rust
+```rust no_run covers=finance_query::models::discovery::screeners::fields::FundField
 use finance_query::{finance, FundScreenerQuery, FundField, ScreenerFieldExt};
 
-let query = FundScreenerQuery::new()
-    .size(25)
-    .sort_by(FundField::PerformanceRating, false)
-    .add_condition(FundField::RiskRating.lte(3.0))
-    .include_fields(vec![
-        FundField::Ticker,
-        FundField::CompanyShortName,
-        FundField::IntradayPrice,
-        FundField::CategoryName,
-        FundField::PerformanceRating,
-        FundField::RiskRating,
-    ]);
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let query = FundScreenerQuery::new()
+        .size(25)
+        .sort_by(FundField::PerformanceRating, false)
+        .add_condition(FundField::RiskRating.lte(3.0))
+        .include_fields(vec![
+            FundField::Ticker,
+            FundField::CompanyShortName,
+            FundField::IntradayPrice,
+            FundField::CategoryName,
+            FundField::PerformanceRating,
+            FundField::RiskRating,
+        ]);
 
-let results = finance::custom_screener(query).await?;
+    let results = finance::custom_screener(query).await?;
+    println!("Funds: {}", results.quotes.len());
+    Ok(())
+}
 ```
 
 **Available `FundField` variants:**
+
+<!-- soothfast:bind finance_query::models::discovery::screeners::fields::FundField -->
 
 | Variant | Yahoo Field | Description |
 |---------|------------|-------------|
@@ -184,7 +252,11 @@ let results = finance::custom_screener(query).await?;
 | `RiskRating` | `"riskratingoverall"` | Overall risk rating |
 | `Exchange` | `"exchange"` | Exchange |
 
+<!-- /soothfast:bind -->
+
 ## `EquityField` Reference
+
+<!-- soothfast:bind finance_query::models::discovery::screeners::fields::EquityField -->
 
 ### Price & Market Cap
 
@@ -330,6 +402,8 @@ let results = finance::custom_screener(query).await?;
 | `GovernanceScore` | Governance score |
 | `SocialScore` | Social score |
 | `HighestControversy` | Highest controversy level |
+
+<!-- /soothfast:bind -->
 
 ## Next Steps
 

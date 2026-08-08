@@ -1,0 +1,11 @@
+{
+  "name": "finance-query-darwin-x64",
+  "version": "2.8.0",
+  "description": "The finance-query-server binary for darwin-x64, used by finance-query.",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "files": [
+    "bin"
+  ],
+  "preferUnplugged": true
+}

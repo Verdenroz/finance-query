@@ -7,8 +7,9 @@ use serde::Deserialize;
 // ── Company Facts (XBRL) ───────────────────────────────────────────────────
 
 /// A single XBRL fact concept with its data points.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase", complex)]
+#[serde(rename_all = "camelCase")]
 pub struct GqlFactConcept {
     pub concept: String,
     pub label: Option<String>,
@@ -33,7 +34,7 @@ impl GqlFactConcept {
     }
 }
 
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlFactDataPoint {
     pub start: Option<String>,
@@ -49,8 +50,9 @@ pub struct GqlFactDataPoint {
 
 // ── Submissions ────────────────────────────────────────────────────────────
 
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase", complex)]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEdgarSubmissions {
     pub cik: Option<String>,
     pub name: Option<String>,
@@ -85,8 +87,9 @@ impl GqlEdgarSubmissions {
     }
 }
 
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEdgarFiling {
     pub accession_number: String,
     pub filing_date: String,
@@ -99,16 +102,18 @@ pub struct GqlEdgarFiling {
 
 // ── Search ─────────────────────────────────────────────────────────────────
 
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEdgarSearchResults {
     pub total_hits: Option<i64>,
     pub hits: Vec<GqlEdgarSearchHit>,
     pub page_info: Option<GqlPageInfo>,
 }
 
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEdgarSearchHit {
     pub file_date: Option<String>,
     pub form: Option<String>,

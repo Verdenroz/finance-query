@@ -22,19 +22,22 @@ export FMP_API_KEY="your-fmp-api-key"
 
 Route the `COMMODITIES` capability to `Provider::Fmp` when building `Providers`:
 
-```rust
+```rust no_run feature=fmp
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .route(Capability::COMMODITIES, [Provider::Fmp])
-    .build()
-    .await?;
-let gold = providers.commodity("GCUSD");
-let quote = gold.quote().await?;
-let chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-let history = gold.history(TimeRange::OneMonth).await?;
-# Ok(()) }
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let gold = providers.commodity("GCUSD");
+    let quote = gold.quote().await?;
+    let chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let history = gold.history(TimeRange::OneMonth).await?;
+    println!("{}: {:?} ({} candles)", quote.symbol, quote.price, chart.candles.len() + history.candles.len());
+    Ok(())
+}
 ```
 
 ## Methods
@@ -43,52 +46,56 @@ let history = gold.history(TimeRange::OneMonth).await?;
 
 Fetches the current price quote for the commodity:
 
-```rust
+```rust no_run feature=fmp
 use finance_query::{Capability, Provider, Providers};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .route(Capability::COMMODITIES, [Provider::Fmp])
-    .build()
-    .await?;
-let gold = providers.commodity("GCUSD");
-let quote = gold.quote().await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let gold = providers.commodity("GCUSD");
+    let quote = gold.quote().await?;
 
-println!("Symbol: {}", quote.symbol);
-if let Some(name) = &quote.name {
-    println!("Name: {}", name);
+    println!("Symbol: {}", quote.symbol);
+    if let Some(name) = &quote.name {
+        println!("Name: {}", name);
+    }
+    if let Some(price) = quote.price {
+        println!("Price: {:.2}", price);
+    }
+    if let (Some(change), Some(pct)) = (quote.change, quote.change_percent) {
+        println!("Change: {:+.2} ({:+.2}%)", change, pct);
+    }
+    Ok(())
 }
-if let Some(price) = quote.price {
-    println!("Price: {:.2}", price);
-}
-if let (Some(change), Some(pct)) = (quote.change, quote.change_percent) {
-    println!("Change: {:+.2} ({:+.2}%)", change, pct);
-}
-# Ok(()) }
 ```
 
 ### `chart(interval, range)`
 
 Fetches OHLCV candles at a specific interval over a given time range:
 
-```rust
+```rust no_run feature=fmp
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .route(Capability::COMMODITIES, [Provider::Fmp])
-    .build()
-    .await?;
-let crude = providers.commodity("CLUSD");
-let chart = crude.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let crude = providers.commodity("CLUSD");
+    let chart = crude.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
-println!("Symbol: {}", chart.symbol);
-println!("Candles: {}", chart.candles.len());
-for candle in chart.candles.iter().take(3) {
-    println!("  t={} o={:.2} h={:.2} l={:.2} c={:.2}",
-        candle.timestamp, candle.open, candle.high, candle.low, candle.close);
+    println!("Symbol: {}", chart.symbol);
+    println!("Candles: {}", chart.candles.len());
+    for candle in chart.candles.iter().take(3) {
+        println!("  t={} o={:.2} h={:.2} l={:.2} c={:.2}",
+            candle.timestamp, candle.open, candle.high, candle.low, candle.close);
+    }
+    Ok(())
 }
-# Ok(()) }
 ```
 
 ### `history(range)`
@@ -96,20 +103,22 @@ for candle in chart.candles.iter().take(3) {
 Fetches candles over a range using the default interval for that range
 (determined by [`TimeRange::default_interval`]):
 
-```rust
+```rust no_run feature=fmp
 use finance_query::{Capability, Provider, Providers, TimeRange};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .route(Capability::COMMODITIES, [Provider::Fmp])
-    .build()
-    .await?;
-let silver = providers.commodity("SIUSD");
-let history = silver.history(TimeRange::SixMonths).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let silver = providers.commodity("SIUSD");
+    let history = silver.history(TimeRange::SixMonths).await?;
 
-println!("Symbol: {}", history.symbol);
-println!("Candles: {}", history.candles.len());
-# Ok(()) }
+    println!("Symbol: {}", history.symbol);
+    println!("Candles: {}", history.candles.len());
+    Ok(())
+}
 ```
 
 ### `indicators(interval, range)` / `indicator(kind, interval, range)` / `risk(interval, range)`
@@ -117,36 +126,40 @@ println!("Candles: {}", history.candles.len());
 Computes technical indicators or a risk summary from the commodity's own
 chart data (requires the `indicators`/`risk` features respectively):
 
-```rust
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+```rust no_run feature=risk
 use finance_query::indicators::Indicator;
+use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .route(Capability::COMMODITIES, [Provider::Fmp])
-    .build()
-    .await?;
-let gold = providers.commodity("GCUSD");
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let gold = providers.commodity("GCUSD");
 
-let summary = gold.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
-if let Some(rsi) = summary.rsi_14 {
-    println!("RSI(14): {:.2}", rsi);
+    let summary = gold.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
+    if let Some(rsi) = summary.rsi_14 {
+        println!("RSI(14): {:.2}", rsi);
+    }
+
+    let rsi_21 = gold
+        .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+
+    let risk = gold.risk(Interval::OneDay, TimeRange::OneYear).await?;
+    println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+    println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+    Ok(())
 }
-
-let rsi_21 = gold
-    .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
-    .await?;
-
-let risk = gold.risk(Interval::OneDay, TimeRange::OneYear).await?;
-println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
-println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
-# Ok(()) }
 ```
 
 `risk` takes no benchmark parameter — `beta` is always `None`, since
 commodities have no natural benchmark to compare against.
 
 ## `CommodityQuote` Fields
+
+<!-- soothfast:bind finance_query::models::commodities::CommodityQuote -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -157,6 +170,49 @@ commodities have no natural benchmark to compare against.
 | `change` | `Option<f64>` | Price change |
 | `change_percent` | `Option<f64>` | Price change percentage |
 | `timestamp` | `Option<i64>` | Unix timestamp of last update |
+
+<!-- /soothfast:bind -->
+
+This field-verification helper compiles as a real test, so the table above
+cannot drift from the type:
+
+```rust capture-output feature=fmp covers=finance_query::models::commodities::CommodityQuote
+use finance_query::CommodityQuote;
+
+// `CommodityQuote` is #[non_exhaustive] outside the crate, so construct via
+// serde. With live data: `commodity.quote().await?`.
+let quote: CommodityQuote = serde_json::from_value(serde_json::json!({
+    "symbol": "GCUSD",
+    "name": "Gold",
+    "unit": "troy ounce",
+    "price": 2387.50,
+    "change": 12.30,
+    "change_percent": 0.52,
+    "timestamp": 1_718_000_000_i64,
+}))
+.unwrap();
+
+fn verify_commodity_quote_fields(q: CommodityQuote) {
+    let _: String = q.symbol;
+    let _: Option<String> = q.name;
+    let _: Option<String> = q.unit;
+    let _: Option<f64> = q.price;
+    let _: Option<f64> = q.change;
+    let _: Option<f64> = q.change_percent;
+    let _: Option<i64> = q.timestamp;
+}
+verify_commodity_quote_fields(quote.clone());
+
+println!("symbol = {}", quote.symbol);
+println!("name = {:?}", quote.name);
+println!("price = {:?}", quote.price);
+```
+
+```text soothfast-output
+symbol = GCUSD
+name = Some("Gold")
+price = Some(2387.5)
+```
 
 ## Common FMP Commodity Symbols
 

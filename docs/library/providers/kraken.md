@@ -9,14 +9,18 @@ Kraken's public endpoints (`api.kraken.com/0/public/*`) need no API key and impo
 
 Two exchanges also give `Capability::CRYPTO` a real fallback chain:
 
-```rust
+```rust no_run feature=full
 use finance_query::{Capability, Fetch, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::CRYPTO, [Provider::Binance, Provider::Kraken, Provider::CoinGecko])
-    .fetch(Fetch::Sequential)
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, [Provider::Binance, Provider::Kraken, Provider::CoinGecko])
+        .fetch(Fetch::Sequential)
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 ## Capabilities
@@ -26,10 +30,21 @@ let providers = Providers::builder()
 | `CRYPTO` | 24-hour ticker per spot pair |
 | `CHART` | OHLC candles |
 
-```rust
-let btc = providers.crypto("bitcoin");
-let quote = btc.quote("usd").await?;
-println!("BTC {:?}", quote.price);
+```rust no_run feature=kraken
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, [Provider::Kraken])
+        .build()
+        .await?;
+
+    let btc = providers.crypto("bitcoin");
+    let quote = btc.quote("usd").await?;
+    println!("BTC {:?}", quote.price);
+    Ok(())
+}
 ```
 
 ## Kraken's Own Symbol Conventions

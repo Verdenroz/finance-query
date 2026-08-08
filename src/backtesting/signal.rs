@@ -282,7 +282,7 @@ pub struct Signal {
 
     /// User-defined tags for post-hoc trade subgroup analysis.
     ///
-    /// Tags are propagated to [`Trade::tags`] when a position closes,
+    /// Tags are propagated to [`Trade::tags`](crate::backtesting::Trade::tags) when a position closes,
     /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
     /// Use the `.tag()` builder to attach tags at signal creation time.
     #[serde(default)]
@@ -741,7 +741,7 @@ impl Signal {
 
     /// Attach a tag to this signal for post-hoc trade subgroup analysis.
     ///
-    /// Tags are propagated to [`Trade::tags`] when the position closes,
+    /// Tags are propagated to [`Trade::tags`](crate::backtesting::Trade::tags) when the position closes,
     /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
     /// Multiple tags can be chained: `.tag("breakout").tag("high_volume")`.
     pub fn tag(mut self, name: impl Into<String>) -> Self {

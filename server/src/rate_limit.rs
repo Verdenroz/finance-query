@@ -185,13 +185,16 @@ impl RateLimiterState {
     }
 }
 
-/// Rate limit error response
+/// Rate limit error body, returned with HTTP 429 and a `Retry-After` header.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct RateLimitError {
-    error: String,
-    message: String,
-    retry_after_seconds: u64,
+pub struct RateLimitError {
+    /// Always "Rate limit exceeded".
+    pub error: String,
+    /// Human-readable message including the retry delay.
+    pub message: String,
+    /// Seconds until the next request would be admitted.
+    pub retry_after_seconds: u64,
 }
 
 /// Rate limiting middleware

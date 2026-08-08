@@ -6,26 +6,37 @@ pub mod screeners {
     ///
     /// Passed to `finance::screener()` or `client.get_screener()` to select one of the
     /// 15 built-in Yahoo Finance screeners (equity or fund).
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    ///
+    /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
+    /// deserializing (axum path extraction, JSON) takes the same spellings parsing does.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "kebab-case")]
     pub enum Screener {
         // Equity screeners
         /// Small caps with high EPS growth, sorted by volume
         AggressiveSmallCaps,
         /// Top gaining stocks (>3% change, >$2B market cap)
+        #[serde(alias = "gainers")]
         DayGainers,
         /// Top losing stocks (<-2.5% change, >$2B market cap)
+        #[serde(alias = "losers")]
         DayLosers,
         /// Tech stocks with 25%+ revenue and EPS growth
+        #[serde(alias = "growth-tech")]
         GrowthTechnologyStocks,
         /// Most actively traded stocks by volume
+        #[serde(alias = "actives")]
         MostActives,
         /// Stocks with highest short interest percentage
+        #[serde(alias = "most-shorted")]
         MostShortedStocks,
         /// Small cap gainers (<$2B market cap)
         SmallCapGainers,
         /// Low P/E (<20), low PEG (<1), high EPS growth (25%+)
+        #[serde(alias = "undervalued-growth")]
         UndervaluedGrowthStocks,
         /// Large caps ($10B-$100B) with low P/E and PEG
+        #[serde(alias = "undervalued-large")]
         UndervaluedLargeCaps,
         // Fund screeners
         /// Low-risk foreign large cap funds (4-5 star rated)
@@ -145,30 +156,41 @@ pub mod sectors {
     use serde::{Deserialize, Serialize};
 
     /// Market sector types available on Yahoo Finance
+    ///
+    /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
+    /// deserializing (axum path extraction, JSON) takes the same spellings parsing does.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
     #[serde(rename_all = "kebab-case")]
     pub enum Sector {
         /// Technology sector (software, semiconductors, hardware)
+        #[serde(alias = "tech")]
         Technology,
         /// Financial Services sector (banks, insurance, asset management)
+        #[serde(alias = "financials", alias = "financial")]
         FinancialServices,
         /// Consumer Cyclical sector (retail, automotive, leisure)
         ConsumerCyclical,
         /// Communication Services sector (telecom, media, entertainment)
+        #[serde(alias = "communication")]
         CommunicationServices,
         /// Healthcare sector (pharma, biotech, medical devices)
+        #[serde(alias = "health")]
         Healthcare,
         /// Industrials sector (aerospace, machinery, construction)
+        #[serde(alias = "industrial")]
         Industrials,
         /// Consumer Defensive sector (food, beverages, household products)
         ConsumerDefensive,
         /// Energy sector (oil, gas, renewable energy)
         Energy,
         /// Basic Materials sector (chemicals, metals, mining)
+        #[serde(alias = "materials")]
         BasicMaterials,
         /// Real Estate sector (REITs, property management)
+        #[serde(alias = "realestate")]
         RealEstate,
         /// Utilities sector (electric, gas, water utilities)
+        #[serde(alias = "utility")]
         Utilities,
     }
 
@@ -270,17 +292,26 @@ pub mod sectors {
 /// World market indices
 pub mod indices {
     /// Region categories for world indices
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    ///
+    /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
+    /// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "kebab-case")]
     pub enum Region {
         /// North and South America
+        #[serde(alias = "america", alias = "am")]
         Americas,
         /// European markets
+        #[serde(alias = "eu")]
         Europe,
         /// Asia and Pacific markets
+        #[serde(alias = "asia", alias = "apac", alias = "asia_pacific")]
         AsiaPacific,
         /// Middle East and Africa
+        #[serde(alias = "mea", alias = "emea", alias = "middle_east_africa")]
         MiddleEastAfrica,
         /// Currency indices
+        #[serde(alias = "currency", alias = "fx")]
         Currencies,
     }
 
@@ -559,13 +590,20 @@ pub mod fundamental_types {
 }
 
 /// Statement types for financial data
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing (axum path/query extraction, JSON) takes the same spellings parsing does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum StatementType {
     /// Income statement
+    #[serde(alias = "income-statement")]
     Income,
     /// Balance sheet
+    #[serde(alias = "balance-sheet")]
     Balance,
     /// Cash flow statement
+    #[serde(alias = "cash", alias = "cash-flow")]
     CashFlow,
 }
 
@@ -744,11 +782,17 @@ const CASH_FLOW_FIELDS: [&str; 47] = [
 ];
 
 /// Frequency for financial data (annual or quarterly)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Frequency {
     /// Annual financial data
+    #[serde(alias = "yearly", alias = "year")]
     Annual,
     /// Quarterly financial data
+    #[serde(alias = "quarter", alias = "q")]
     Quarterly,
 }
 
@@ -791,11 +835,17 @@ impl std::str::FromStr for Frequency {
 }
 
 /// Chart intervals
+///
+/// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Interval {
     /// 1 minute
     #[serde(rename = "1m")]
     OneMinute,
+    /// 2 minutes
+    #[serde(rename = "2m")]
+    TwoMinutes,
     /// 5 minutes
     #[serde(rename = "5m")]
     FiveMinutes,
@@ -806,11 +856,17 @@ pub enum Interval {
     #[serde(rename = "30m")]
     ThirtyMinutes,
     /// 1 hour
-    #[serde(rename = "1h")]
+    #[serde(rename = "1h", alias = "60m")]
     OneHour,
+    /// 90 minutes
+    #[serde(rename = "90m")]
+    NinetyMinutes,
     /// 1 day
     #[serde(rename = "1d")]
     OneDay,
+    /// 5 days
+    #[serde(rename = "5d")]
+    FiveDays,
     /// 1 week
     #[serde(rename = "1wk")]
     OneWeek,
@@ -827,11 +883,14 @@ impl Interval {
     pub fn as_str(&self) -> &'static str {
         match self {
             Interval::OneMinute => "1m",
+            Interval::TwoMinutes => "2m",
             Interval::FiveMinutes => "5m",
             Interval::FifteenMinutes => "15m",
             Interval::ThirtyMinutes => "30m",
             Interval::OneHour => "1h",
+            Interval::NinetyMinutes => "90m",
             Interval::OneDay => "1d",
+            Interval::FiveDays => "5d",
             Interval::OneWeek => "1wk",
             Interval::OneMonth => "1mo",
             Interval::ThreeMonths => "3mo",
@@ -846,11 +905,14 @@ impl Interval {
     pub(crate) const fn duration_secs(self) -> i64 {
         match self {
             Interval::OneMinute => 60,
+            Interval::TwoMinutes => 120,
             Interval::FiveMinutes => 300,
             Interval::FifteenMinutes => 900,
             Interval::ThirtyMinutes => 1_800,
             Interval::OneHour => 3_600,
+            Interval::NinetyMinutes => 5_400,
             Interval::OneDay => 86_400,
+            Interval::FiveDays => 432_000,
             Interval::OneWeek => 604_800,
             Interval::OneMonth => 2_592_000,
             Interval::ThreeMonths => 7_776_000,
@@ -868,15 +930,19 @@ impl std::str::FromStr for Interval {
     type Err = ();
 
     /// Parses the same short codes returned by [`Interval::as_str`] (e.g. `"1d"`,
-    /// `"1wk"`), case-insensitively.
+    /// `"1wk"`), case-insensitively. `"60m"` is also accepted as an alias for
+    /// [`Interval::OneHour`] (Yahoo itself normalizes `60m` to `1h`).
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_lowercase().as_str() {
             "1m" => Ok(Interval::OneMinute),
+            "2m" => Ok(Interval::TwoMinutes),
             "5m" => Ok(Interval::FiveMinutes),
             "15m" => Ok(Interval::FifteenMinutes),
             "30m" => Ok(Interval::ThirtyMinutes),
-            "1h" => Ok(Interval::OneHour),
+            "1h" | "60m" => Ok(Interval::OneHour),
+            "90m" => Ok(Interval::NinetyMinutes),
             "1d" => Ok(Interval::OneDay),
+            "5d" => Ok(Interval::FiveDays),
             "1wk" => Ok(Interval::OneWeek),
             "1mo" => Ok(Interval::OneMonth),
             "3mo" => Ok(Interval::ThreeMonths),
@@ -886,13 +952,16 @@ impl std::str::FromStr for Interval {
 }
 
 /// Time ranges for chart data
+///
+/// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TimeRange {
     /// 1 day
     #[serde(rename = "1d")]
     OneDay,
     /// 5 days
-    #[serde(rename = "5d")]
+    #[serde(rename = "5d", alias = "1wk")]
     FiveDays,
     /// 1 month
     #[serde(rename = "1mo")]
@@ -1013,72 +1082,104 @@ impl std::str::FromStr for TimeRange {
 ///
 /// Each region has predefined language and region codes that work together.
 /// Using the Region enum ensures correct lang/region pairing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum Region {
     /// Argentina (es-AR, AR)
+    #[serde(rename = "AR")]
     Argentina,
     /// Australia (en-AU, AU)
+    #[serde(rename = "AU")]
     Australia,
     /// Brazil (pt-BR, BR)
+    #[serde(rename = "BR")]
     Brazil,
     /// Canada (en-CA, CA)
+    #[serde(rename = "CA")]
     Canada,
     /// China (zh-CN, CN)
+    #[serde(rename = "CN")]
     China,
     /// Denmark (da-DK, DK)
+    #[serde(rename = "DK")]
     Denmark,
     /// Finland (fi-FI, FI)
+    #[serde(rename = "FI")]
     Finland,
     /// France (fr-FR, FR)
+    #[serde(rename = "FR")]
     France,
     /// Germany (de-DE, DE)
+    #[serde(rename = "DE")]
     Germany,
     /// Greece (el-GR, GR)
+    #[serde(rename = "GR")]
     Greece,
     /// Hong Kong (zh-Hant-HK, HK)
+    #[serde(rename = "HK")]
     HongKong,
     /// India (en-IN, IN)
+    #[serde(rename = "IN")]
     India,
     /// Israel (he-IL, IL)
+    #[serde(rename = "IL")]
     Israel,
     /// Italy (it-IT, IT)
+    #[serde(rename = "IT")]
     Italy,
     /// Japan (ja-JP, JP)
+    #[serde(rename = "JP")]
     Japan,
     /// South Korea (ko-KR, KR)
+    #[serde(rename = "KR")]
     Korea,
     /// Malaysia (ms-MY, MY)
+    #[serde(rename = "MY")]
     Malaysia,
     /// Mexico (es-MX, MX)
+    #[serde(rename = "MX")]
     Mexico,
     /// New Zealand (en-NZ, NZ)
+    #[serde(rename = "NZ")]
     NewZealand,
     /// Norway (nb-NO, NO)
+    #[serde(rename = "NO")]
     Norway,
     /// Portugal (pt-PT, PT)
+    #[serde(rename = "PT")]
     Portugal,
     /// Qatar (ar-QA, QA)
+    #[serde(rename = "QA")]
     Qatar,
     /// Russia (ru-RU, RU)
+    #[serde(rename = "RU")]
     Russia,
     /// Singapore (en-SG, SG)
+    #[serde(rename = "SG")]
     Singapore,
     /// Spain (es-ES, ES)
+    #[serde(rename = "ES")]
     Spain,
     /// Sweden (sv-SE, SE)
+    #[serde(rename = "SE")]
     Sweden,
     /// Taiwan (zh-TW, TW)
+    #[serde(rename = "TW")]
     Taiwan,
     /// Thailand (th-TH, TH)
+    #[serde(rename = "TH")]
     Thailand,
     /// Turkey (tr-TR, TR)
+    #[serde(rename = "TR")]
     Turkey,
     /// United Kingdom (en-GB, GB)
+    #[serde(rename = "GB", alias = "UK")]
     UnitedKingdom,
     /// United States (en-US, US) - Default
     #[default]
+    #[serde(rename = "US")]
     UnitedStates,
     /// Vietnam (vi-VN, VN)
+    #[serde(rename = "VN")]
     Vietnam,
 }
 
@@ -1289,7 +1390,10 @@ impl From<Region> for String {
 /// Controls how `FormattedValue<T>` fields are serialized in responses.
 /// This allows API consumers to choose between raw numeric values,
 /// human-readable formatted strings, or both.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+/// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ValueFormat {
     /// Return only raw numeric values (e.g., `123.45`) - default
     /// Best for programmatic use, calculations, charts
@@ -1297,9 +1401,11 @@ pub enum ValueFormat {
     Raw,
     /// Return only formatted strings (e.g., `"$123.45"`, `"1.2B"`)
     /// Best for display purposes
+    #[serde(alias = "fmt")]
     Pretty,
     /// Return both raw and formatted values
     /// Returns the full `{raw, fmt, longFmt}` object
+    #[serde(alias = "full")]
     Both,
 }
 
@@ -1461,314 +1567,462 @@ pub mod industries {
     ///
     /// See the module-level doc for usage.
     #[non_exhaustive]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
     pub enum Industry {
         // ── Agriculture / Raw Materials ──────────────────────────────────────
         /// Agricultural inputs, fertilizers, and crop chemicals
+        #[serde(rename = "agricultural-inputs")]
         AgriculturalInputs,
         /// Aluminum production and processing companies
+        #[serde(rename = "aluminum")]
         Aluminum,
         /// Coal mining and processing companies
+        #[serde(rename = "coal")]
         Coal,
         /// Copper mining and processing companies
+        #[serde(rename = "copper")]
         Copper,
         /// Farm products including grains, livestock, and produce
+        #[serde(rename = "farm-products")]
         FarmProducts,
         /// Forest products including timber and paper pulp
+        #[serde(rename = "forest-products")]
         ForestProducts,
         /// Gold mining and royalty companies
+        #[serde(rename = "gold")]
         Gold,
         /// Lumber and wood production companies
+        #[serde(rename = "lumber-wood-production")]
         LumberAndWoodProduction,
         /// Other industrial metals and mining (zinc, nickel, etc.)
+        #[serde(rename = "other-industrial-metals-mining")]
         OtherIndustrialMetalsAndMining,
         /// Other precious metals and mining (platinum, palladium, etc.)
+        #[serde(rename = "other-precious-metals-mining")]
         OtherPreciousMetalsAndMining,
         /// Silver mining and streaming companies
+        #[serde(rename = "silver")]
         Silver,
         /// Steel production and processing companies
+        #[serde(rename = "steel")]
         Steel,
         /// Thermal coal mining for electricity generation
+        #[serde(rename = "thermal-coal")]
         ThermalCoal,
         /// Uranium mining companies
+        #[serde(rename = "uranium")]
         Uranium,
         // ── Consumer ─────────────────────────────────────────────────────────
         /// Clothing and apparel manufacturing companies
+        #[serde(rename = "apparel-manufacturing")]
         ApparelManufacturing,
         /// Clothing and apparel retail chains
+        #[serde(rename = "apparel-retail")]
         ApparelRetail,
         /// Automotive and truck dealerships
+        #[serde(rename = "auto-truck-dealerships")]
         AutoAndTruckDealerships,
         /// Automobile manufacturers and assemblers
+        #[serde(rename = "auto-manufacturers")]
         AutoManufacturers,
         /// Automotive parts manufacturers and distributors
+        #[serde(rename = "auto-parts")]
         AutoParts,
         /// Beer brewing and distribution companies
+        #[serde(rename = "beverages-brewers")]
         BeveragesBrewers,
         /// Non-alcoholic beverages including soft drinks and juices
+        #[serde(rename = "beverages-non-alcoholic")]
         BeveragesNonAlcoholic,
         /// Wineries, distilleries, and spirits producers
+        #[serde(rename = "beverages-wineries-distilleries")]
         BeveragesWineriesAndDistilleries,
         /// Candy, chocolate, and confectionery makers
+        #[serde(rename = "confectioners")]
         Confectioners,
         /// Traditional department store retailers
+        #[serde(rename = "department-stores")]
         DepartmentStores,
         /// Discount and value retail stores
+        #[serde(rename = "discount-stores")]
         DiscountStores,
         /// Electronic gaming software and multimedia entertainment
+        #[serde(rename = "electronic-gaming-multimedia")]
         ElectronicGamingAndMultimedia,
         /// Wholesale food distribution companies
+        #[serde(rename = "food-distribution")]
         FoodDistribution,
         /// Footwear, handbags, and fashion accessories
+        #[serde(rename = "footwear-accessories")]
         FootwearAndAccessories,
         /// Furniture, fixtures, and household appliances
+        #[serde(rename = "furnishings-fixtures-appliances")]
         FurnishingsFixturesAndAppliances,
         /// Casinos, online gambling, and gaming operators
+        #[serde(rename = "gambling")]
         Gambling,
         /// Supermarkets and grocery retail chains
+        #[serde(rename = "grocery-stores")]
         GroceryStores,
         /// Home improvement retail stores
+        #[serde(rename = "home-improvement-retail")]
         HomeImprovementRetail,
         /// Household cleaning products and personal care items
+        #[serde(rename = "household-personal-products")]
         HouseholdAndPersonalProducts,
         /// Online retail and e-commerce marketplaces
+        #[serde(rename = "internet-retail")]
         InternetRetail,
         /// Leisure, recreation, and entertainment companies
+        #[serde(rename = "leisure")]
         Leisure,
         /// Hotels and lodging companies
+        #[serde(rename = "lodging")]
         Lodging,
         /// Luxury goods, fashion, and premium consumer brands
+        #[serde(rename = "luxury-goods")]
         LuxuryGoods,
         /// Packaged and processed food manufacturers
+        #[serde(rename = "packaged-foods")]
         PackagedFoods,
         /// Personal care, laundry, and household services
+        #[serde(rename = "personal-services")]
         PersonalServices,
         /// Home builders and residential construction
+        #[serde(rename = "residential-construction")]
         ResidentialConstruction,
         /// Resorts, integrated casinos, and hotel-casinos
+        #[serde(rename = "resorts-casinos")]
         ResortsAndCasinos,
         /// Restaurant chains and food service operators
+        #[serde(rename = "restaurants")]
         Restaurants,
         /// Specialty retail stores (pets, books, electronics, etc.)
+        #[serde(rename = "specialty-retail")]
         SpecialtyRetail,
         /// Textile and fabric manufacturers
+        #[serde(rename = "textile-manufacturing")]
         TextileManufacturing,
         /// Tobacco product manufacturers
+        #[serde(rename = "tobacco")]
         Tobacco,
         /// Travel agencies, booking platforms, and tour operators
+        #[serde(rename = "travel-services")]
         TravelServices,
         // ── Energy ───────────────────────────────────────────────────────────
         /// Oil and gas contract drilling services
+        #[serde(rename = "oil-gas-drilling")]
         OilAndGasDrilling,
         /// Oil and gas exploration and production companies
+        #[serde(rename = "oil-gas-ep")]
         OilAndGasEAndP,
         /// Oil field equipment, services, and engineering
+        #[serde(rename = "oil-gas-equipment-services")]
         OilAndGasEquipmentAndServices,
         /// Vertically integrated oil and gas majors
+        #[serde(rename = "oil-gas-integrated")]
         OilAndGasIntegrated,
         /// Oil and gas pipelines, storage, and transportation
+        #[serde(rename = "oil-gas-midstream")]
         OilAndGasMidstream,
         /// Oil refining, wholesale fuel, and marketing
+        #[serde(rename = "oil-gas-refining-marketing")]
         OilAndGasRefiningAndMarketing,
         /// Solar panel manufacturers and solar energy producers
+        #[serde(rename = "solar")]
         Solar,
         // ── Financial Services ───────────────────────────────────────────────
         /// Asset managers, fund sponsors, and investment advisors
+        #[serde(rename = "asset-management")]
         AssetManagement,
         /// Large diversified national and international banks
+        #[serde(rename = "banks-diversified")]
         BanksDiversified,
         /// Regional and community banks
+        #[serde(rename = "banks-regional")]
         BanksRegional,
         /// Investment banks, brokers, and financial exchanges
+        #[serde(rename = "capital-markets")]
         CapitalMarkets,
         /// Credit card issuers and consumer credit services
+        #[serde(rename = "credit-services")]
         CreditServices,
         /// Financial data, analytics, and stock exchange operators
+        #[serde(rename = "financial-data-stock-exchanges")]
         FinancialDataAndStockExchanges,
         /// Insurance brokers and agencies
+        #[serde(rename = "insurance-brokers")]
         InsuranceBrokers,
         /// Diversified multi-line insurance companies
+        #[serde(rename = "insurance-diversified")]
         InsuranceDiversified,
         /// Life insurance and annuity providers
+        #[serde(rename = "insurance-life")]
         InsuranceLife,
         /// Property and casualty insurance companies
+        #[serde(rename = "insurance-property-casualty")]
         InsurancePropertyAndCasualty,
         /// Reinsurance companies
+        #[serde(rename = "insurance-reinsurance")]
         InsuranceReinsurance,
         /// Specialty insurance lines (title, mortgage, etc.)
+        #[serde(rename = "insurance-specialty")]
         InsuranceSpecialty,
         /// Mortgage banking and loan origination
+        #[serde(rename = "mortgage-finance")]
         MortgageFinance,
         /// Blank-check and shell holding companies
+        #[serde(rename = "shell-companies")]
         ShellCompanies,
         // ── Healthcare ───────────────────────────────────────────────────────
         /// Biotechnology drug development companies
+        #[serde(rename = "biotechnology")]
         Biotechnology,
         /// Medical diagnostics labs and clinical research
+        #[serde(rename = "diagnostics-research")]
         DiagnosticsAndResearch,
         /// Large branded pharmaceutical manufacturers
+        #[serde(rename = "drug-manufacturers-general")]
         DrugManufacturersGeneral,
         /// Specialty drugs, generics, and biosimilars
+        #[serde(rename = "drug-manufacturers-specialty-generic")]
         DrugManufacturersSpecialtyAndGeneric,
         /// Healthcare IT, EHR, and health data services
+        #[serde(rename = "health-information-services")]
         HealthInformationServices,
         /// Managed care organizations and health insurers
+        #[serde(rename = "healthcare-plans")]
         HealthcarePlans,
         /// Hospitals, clinics, and outpatient care facilities
+        #[serde(rename = "medical-care-facilities")]
         MedicalCareFacilities,
         /// Medical device manufacturers (implants, diagnostics equipment)
+        #[serde(rename = "medical-devices")]
         MedicalDevices,
         /// Medical product wholesalers and distributors
+        #[serde(rename = "medical-distribution")]
         MedicalDistribution,
         /// Surgical instruments, disposables, and medical supplies
+        #[serde(rename = "medical-instruments-supplies")]
         MedicalInstrumentsAndSupplies,
         /// Retail pharmacies and drug store chains
+        #[serde(rename = "pharmaceutical-retailers")]
         PharmaceuticalRetailers,
         // ── Industrials ──────────────────────────────────────────────────────
         /// Defense contractors, aircraft, and space systems
+        #[serde(rename = "aerospace-defense")]
         AerospaceAndDefense,
         /// Construction aggregates, cement, and building materials
+        #[serde(rename = "building-materials")]
         BuildingMaterials,
         /// HVAC, plumbing, windows, and building equipment
+        #[serde(rename = "building-products-equipment")]
         BuildingProductsAndEquipment,
         /// Office supplies, commercial equipment, and printers
+        #[serde(rename = "business-equipment-supplies")]
         BusinessEquipmentAndSupplies,
         /// Specialty chemical manufacturing for industrial use
+        #[serde(rename = "chemical-manufacturing")]
         ChemicalManufacturing,
         /// Diversified commodity chemicals producers
+        #[serde(rename = "chemicals")]
         Chemicals,
         /// Diversified industrial holding companies
+        #[serde(rename = "conglomerates")]
         Conglomerates,
         /// Management consulting and professional advisory services
+        #[serde(rename = "consulting-services")]
         ConsultingServices,
         /// Electrical components, motors, and power equipment
+        #[serde(rename = "electrical-equipment-parts")]
         ElectricalEquipmentAndParts,
         /// Civil engineering, construction, and infrastructure projects
+        #[serde(rename = "engineering-construction")]
         EngineeringAndConstruction,
         /// Agricultural equipment and heavy construction machinery
+        #[serde(rename = "farm-heavy-construction-machinery")]
         FarmAndHeavyConstructionMachinery,
         /// Industrial goods wholesalers and distributors
+        #[serde(rename = "industrial-distribution")]
         IndustrialDistribution,
         /// Toll roads, airports, and infrastructure operators
+        #[serde(rename = "infrastructure-operations")]
         InfrastructureOperations,
         /// Third-party logistics and supply chain management
+        #[serde(rename = "integrated-freight-logistics")]
         IntegratedFreightAndLogistics,
         /// Diversified manufacturers across multiple industrial segments
+        #[serde(rename = "manufacturing-diversified")]
         ManufacturingDiversified,
         /// Port operators and marine terminal services
+        #[serde(rename = "marine-ports-services")]
         MarinePortsAndServices,
         /// Bulk cargo and tanker shipping companies
+        #[serde(rename = "marine-shipping")]
         MarineShipping,
         /// Custom metal fabrication and machined components
+        #[serde(rename = "metal-fabrication")]
         MetalFabrication,
         /// Paper, packaging, and pulp product manufacturers
+        #[serde(rename = "paper-paper-products")]
         PaperAndPaperProducts,
         /// Environmental controls, water treatment, and remediation
+        #[serde(rename = "pollution-treatment-controls")]
         PollutionAndTreatmentControls,
         /// Rail freight carriers and passenger rail operators
+        #[serde(rename = "railroads")]
         Railroads,
         /// Equipment rental, leasing, and fleet management
+        #[serde(rename = "rental-leasing-services")]
         RentalAndLeasingServices,
         /// Security systems, guards, and monitoring services
+        #[serde(rename = "security-protection-services")]
         SecurityAndProtectionServices,
         /// Outsourced business services and BPO companies
+        #[serde(rename = "specialty-business-services")]
         SpecialtyBusinessServices,
         /// High-value specialty chemicals and advanced materials
+        #[serde(rename = "specialty-chemicals")]
         SpecialtyChemicals,
         /// Specialized industrial machinery and equipment makers
+        #[serde(rename = "specialty-industrial-machinery")]
         SpecialtyIndustrialMachinery,
         /// Staffing agencies and employment service providers
+        #[serde(rename = "staffing-employment-services")]
         StaffingAndEmploymentServices,
         /// Hand tools, power tools, and hardware accessories
+        #[serde(rename = "tools-accessories")]
         ToolsAndAccessories,
         /// Freight trucking and less-than-truckload carriers
+        #[serde(rename = "trucking")]
         Trucking,
         /// Waste collection, recycling, and disposal services
+        #[serde(rename = "waste-management")]
         WasteManagement,
         // ── Real Estate ──────────────────────────────────────────────────────
         /// Real estate developers and homebuilders
+        #[serde(rename = "real-estate-development")]
         RealEstateDevelopment,
         /// Diversified real estate companies with mixed portfolios
+        #[serde(rename = "real-estate-diversified")]
         RealEstateDiversified,
         /// Real estate brokers, agents, and property managers
+        #[serde(rename = "real-estate-services")]
         RealEstateServices,
         /// Diversified REITs across multiple property types
+        #[serde(rename = "reit-diversified")]
         ReitDiversified,
         /// Healthcare and senior living facility REITs
+        #[serde(rename = "reit-healthcare-facilities")]
         ReitHealthcareFacilities,
         /// Hotel and motel property REITs
+        #[serde(rename = "reit-hotel-motel")]
         ReitHotelAndMotel,
         /// Industrial, warehouse, and logistics property REITs
+        #[serde(rename = "reit-industrial")]
         ReitIndustrial,
         /// Mortgage REITs investing in real estate debt
+        #[serde(rename = "reit-mortgage")]
         ReitMortgage,
         /// Office building and commercial property REITs
+        #[serde(rename = "reit-office")]
         ReitOffice,
         /// Apartment, multifamily, and residential property REITs
+        #[serde(rename = "reit-residential")]
         ReitResidential,
         /// Shopping center and retail property REITs
+        #[serde(rename = "reit-retail")]
         ReitRetail,
         /// Specialty REITs (data centers, cell towers, self-storage)
+        #[serde(rename = "reit-specialty")]
         ReitSpecialty,
         // ── Technology ───────────────────────────────────────────────────────
         /// Networking hardware, routers, and communication equipment
+        #[serde(rename = "communication-equipment")]
         CommunicationEquipment,
         /// PCs, servers, and computer hardware manufacturers
+        #[serde(rename = "computer-hardware")]
         ComputerHardware,
         /// Smartphones, TVs, and consumer electronic devices
+        #[serde(rename = "consumer-electronics")]
         ConsumerElectronics,
         /// Data analytics, business intelligence, and AI platforms
+        #[serde(rename = "data-analytics")]
         DataAnalytics,
         /// Passive electronic components and circuit boards
+        #[serde(rename = "electronic-components")]
         ElectronicComponents,
         /// Distributors of electronics and computer products
+        #[serde(rename = "electronics-computer-distribution")]
         ElectronicsAndComputerDistribution,
         /// Value-added resellers and software/hardware distributors
+        #[serde(rename = "hardware-software-distribution")]
         HardwareAndSoftwareDistribution,
         /// IT services, outsourcing, and technology consulting
+        #[serde(rename = "information-technology-services")]
         InformationTechnologyServices,
         /// Online media, search engines, and digital content platforms
+        #[serde(rename = "internet-content-information")]
         InternetContentAndInformation,
         /// Precision instruments, sensors, and test equipment
+        #[serde(rename = "scientific-technical-instruments")]
         ScientificAndTechnicalInstruments,
         /// Semiconductor manufacturing equipment and materials
+        #[serde(rename = "semiconductor-equipment-materials")]
         SemiconductorEquipmentAndMaterials,
         /// Integrated circuit and chip designers and manufacturers
+        #[serde(rename = "semiconductors")]
         Semiconductors,
         /// Business application software companies
+        #[serde(rename = "software-application")]
         SoftwareApplication,
         /// Operating systems, middleware, and infrastructure software
+        #[serde(rename = "software-infrastructure")]
         SoftwareInfrastructure,
         // ── Communication Services ───────────────────────────────────────────
         /// Television, radio, and broadcast media companies
+        #[serde(rename = "broadcasting")]
         Broadcasting,
         /// Film studios, streaming, and live entertainment
+        #[serde(rename = "entertainment")]
         Entertainment,
         /// Book, magazine, newspaper, and digital media publishers
+        #[serde(rename = "publishing")]
         Publishing,
         /// Wireless carriers and wireline telephone companies
+        #[serde(rename = "telecom-services")]
         TelecomServices,
         // ── Utilities ────────────────────────────────────────────────────────
         /// Multi-utility companies serving electricity, gas, and water
+        #[serde(rename = "utilities-diversified")]
         UtilitiesDiversified,
         /// Independent power producers and energy traders
+        #[serde(rename = "utilities-independent-power-producers")]
         UtilitiesIndependentPowerProducers,
         /// Regulated electric utility companies
+        #[serde(rename = "utilities-regulated-electric")]
         UtilitiesRegulatedElectric,
         /// Regulated natural gas distribution utilities
+        #[serde(rename = "utilities-regulated-gas")]
         UtilitiesRegulatedGas,
         /// Regulated water and wastewater utilities
+        #[serde(rename = "utilities-regulated-water")]
         UtilitiesRegulatedWater,
         /// Renewable energy generation companies (wind, solar, hydro)
+        #[serde(rename = "utilities-renewable")]
         UtilitiesRenewable,
         // ── Special ──────────────────────────────────────────────────────────
         /// Closed-end funds investing in debt instruments
+        #[serde(rename = "closed-end-fund-debt")]
         ClosedEndFundDebt,
         /// Closed-end funds investing in equities
+        #[serde(rename = "closed-end-fund-equity")]
         ClosedEndFundEquity,
         /// Closed-end funds investing in foreign securities
+        #[serde(rename = "closed-end-fund-foreign")]
         ClosedEndFundForeign,
         /// Exchange-traded fund products
+        #[serde(rename = "exchange-traded-fund")]
         ExchangeTradedFund,
     }
 
@@ -2108,6 +2362,177 @@ pub mod industries {
                 Industry::ClosedEndFundEquity => "Closed-End Fund - Equity",
                 Industry::ClosedEndFundForeign => "Closed-End Fund - Foreign",
                 Industry::ExchangeTradedFund => "Exchange Traded Fund",
+            }
+        }
+    }
+
+    impl std::str::FromStr for Industry {
+        type Err = ();
+
+        /// Parses the same kebab-case slug returned by [`Industry::as_slug`].
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "agricultural-inputs" => Ok(Industry::AgriculturalInputs),
+                "aluminum" => Ok(Industry::Aluminum),
+                "coal" => Ok(Industry::Coal),
+                "copper" => Ok(Industry::Copper),
+                "farm-products" => Ok(Industry::FarmProducts),
+                "forest-products" => Ok(Industry::ForestProducts),
+                "gold" => Ok(Industry::Gold),
+                "lumber-wood-production" => Ok(Industry::LumberAndWoodProduction),
+                "other-industrial-metals-mining" => Ok(Industry::OtherIndustrialMetalsAndMining),
+                "other-precious-metals-mining" => Ok(Industry::OtherPreciousMetalsAndMining),
+                "silver" => Ok(Industry::Silver),
+                "steel" => Ok(Industry::Steel),
+                "thermal-coal" => Ok(Industry::ThermalCoal),
+                "uranium" => Ok(Industry::Uranium),
+                "apparel-manufacturing" => Ok(Industry::ApparelManufacturing),
+                "apparel-retail" => Ok(Industry::ApparelRetail),
+                "auto-truck-dealerships" => Ok(Industry::AutoAndTruckDealerships),
+                "auto-manufacturers" => Ok(Industry::AutoManufacturers),
+                "auto-parts" => Ok(Industry::AutoParts),
+                "beverages-brewers" => Ok(Industry::BeveragesBrewers),
+                "beverages-non-alcoholic" => Ok(Industry::BeveragesNonAlcoholic),
+                "beverages-wineries-distilleries" => Ok(Industry::BeveragesWineriesAndDistilleries),
+                "confectioners" => Ok(Industry::Confectioners),
+                "department-stores" => Ok(Industry::DepartmentStores),
+                "discount-stores" => Ok(Industry::DiscountStores),
+                "electronic-gaming-multimedia" => Ok(Industry::ElectronicGamingAndMultimedia),
+                "food-distribution" => Ok(Industry::FoodDistribution),
+                "footwear-accessories" => Ok(Industry::FootwearAndAccessories),
+                "furnishings-fixtures-appliances" => Ok(Industry::FurnishingsFixturesAndAppliances),
+                "gambling" => Ok(Industry::Gambling),
+                "grocery-stores" => Ok(Industry::GroceryStores),
+                "home-improvement-retail" => Ok(Industry::HomeImprovementRetail),
+                "household-personal-products" => Ok(Industry::HouseholdAndPersonalProducts),
+                "internet-retail" => Ok(Industry::InternetRetail),
+                "leisure" => Ok(Industry::Leisure),
+                "lodging" => Ok(Industry::Lodging),
+                "luxury-goods" => Ok(Industry::LuxuryGoods),
+                "packaged-foods" => Ok(Industry::PackagedFoods),
+                "personal-services" => Ok(Industry::PersonalServices),
+                "residential-construction" => Ok(Industry::ResidentialConstruction),
+                "resorts-casinos" => Ok(Industry::ResortsAndCasinos),
+                "restaurants" => Ok(Industry::Restaurants),
+                "specialty-retail" => Ok(Industry::SpecialtyRetail),
+                "textile-manufacturing" => Ok(Industry::TextileManufacturing),
+                "tobacco" => Ok(Industry::Tobacco),
+                "travel-services" => Ok(Industry::TravelServices),
+                "oil-gas-drilling" => Ok(Industry::OilAndGasDrilling),
+                "oil-gas-ep" => Ok(Industry::OilAndGasEAndP),
+                "oil-gas-equipment-services" => Ok(Industry::OilAndGasEquipmentAndServices),
+                "oil-gas-integrated" => Ok(Industry::OilAndGasIntegrated),
+                "oil-gas-midstream" => Ok(Industry::OilAndGasMidstream),
+                "oil-gas-refining-marketing" => Ok(Industry::OilAndGasRefiningAndMarketing),
+                "solar" => Ok(Industry::Solar),
+                "asset-management" => Ok(Industry::AssetManagement),
+                "banks-diversified" => Ok(Industry::BanksDiversified),
+                "banks-regional" => Ok(Industry::BanksRegional),
+                "capital-markets" => Ok(Industry::CapitalMarkets),
+                "credit-services" => Ok(Industry::CreditServices),
+                "financial-data-stock-exchanges" => Ok(Industry::FinancialDataAndStockExchanges),
+                "insurance-brokers" => Ok(Industry::InsuranceBrokers),
+                "insurance-diversified" => Ok(Industry::InsuranceDiversified),
+                "insurance-life" => Ok(Industry::InsuranceLife),
+                "insurance-property-casualty" => Ok(Industry::InsurancePropertyAndCasualty),
+                "insurance-reinsurance" => Ok(Industry::InsuranceReinsurance),
+                "insurance-specialty" => Ok(Industry::InsuranceSpecialty),
+                "mortgage-finance" => Ok(Industry::MortgageFinance),
+                "shell-companies" => Ok(Industry::ShellCompanies),
+                "biotechnology" => Ok(Industry::Biotechnology),
+                "diagnostics-research" => Ok(Industry::DiagnosticsAndResearch),
+                "drug-manufacturers-general" => Ok(Industry::DrugManufacturersGeneral),
+                "drug-manufacturers-specialty-generic" => {
+                    Ok(Industry::DrugManufacturersSpecialtyAndGeneric)
+                }
+                "health-information-services" => Ok(Industry::HealthInformationServices),
+                "healthcare-plans" => Ok(Industry::HealthcarePlans),
+                "medical-care-facilities" => Ok(Industry::MedicalCareFacilities),
+                "medical-devices" => Ok(Industry::MedicalDevices),
+                "medical-distribution" => Ok(Industry::MedicalDistribution),
+                "medical-instruments-supplies" => Ok(Industry::MedicalInstrumentsAndSupplies),
+                "pharmaceutical-retailers" => Ok(Industry::PharmaceuticalRetailers),
+                "aerospace-defense" => Ok(Industry::AerospaceAndDefense),
+                "building-materials" => Ok(Industry::BuildingMaterials),
+                "building-products-equipment" => Ok(Industry::BuildingProductsAndEquipment),
+                "business-equipment-supplies" => Ok(Industry::BusinessEquipmentAndSupplies),
+                "chemical-manufacturing" => Ok(Industry::ChemicalManufacturing),
+                "chemicals" => Ok(Industry::Chemicals),
+                "conglomerates" => Ok(Industry::Conglomerates),
+                "consulting-services" => Ok(Industry::ConsultingServices),
+                "electrical-equipment-parts" => Ok(Industry::ElectricalEquipmentAndParts),
+                "engineering-construction" => Ok(Industry::EngineeringAndConstruction),
+                "farm-heavy-construction-machinery" => {
+                    Ok(Industry::FarmAndHeavyConstructionMachinery)
+                }
+                "industrial-distribution" => Ok(Industry::IndustrialDistribution),
+                "infrastructure-operations" => Ok(Industry::InfrastructureOperations),
+                "integrated-freight-logistics" => Ok(Industry::IntegratedFreightAndLogistics),
+                "manufacturing-diversified" => Ok(Industry::ManufacturingDiversified),
+                "marine-ports-services" => Ok(Industry::MarinePortsAndServices),
+                "marine-shipping" => Ok(Industry::MarineShipping),
+                "metal-fabrication" => Ok(Industry::MetalFabrication),
+                "paper-paper-products" => Ok(Industry::PaperAndPaperProducts),
+                "pollution-treatment-controls" => Ok(Industry::PollutionAndTreatmentControls),
+                "railroads" => Ok(Industry::Railroads),
+                "rental-leasing-services" => Ok(Industry::RentalAndLeasingServices),
+                "security-protection-services" => Ok(Industry::SecurityAndProtectionServices),
+                "specialty-business-services" => Ok(Industry::SpecialtyBusinessServices),
+                "specialty-chemicals" => Ok(Industry::SpecialtyChemicals),
+                "specialty-industrial-machinery" => Ok(Industry::SpecialtyIndustrialMachinery),
+                "staffing-employment-services" => Ok(Industry::StaffingAndEmploymentServices),
+                "tools-accessories" => Ok(Industry::ToolsAndAccessories),
+                "trucking" => Ok(Industry::Trucking),
+                "waste-management" => Ok(Industry::WasteManagement),
+                "real-estate-development" => Ok(Industry::RealEstateDevelopment),
+                "real-estate-diversified" => Ok(Industry::RealEstateDiversified),
+                "real-estate-services" => Ok(Industry::RealEstateServices),
+                "reit-diversified" => Ok(Industry::ReitDiversified),
+                "reit-healthcare-facilities" => Ok(Industry::ReitHealthcareFacilities),
+                "reit-hotel-motel" => Ok(Industry::ReitHotelAndMotel),
+                "reit-industrial" => Ok(Industry::ReitIndustrial),
+                "reit-mortgage" => Ok(Industry::ReitMortgage),
+                "reit-office" => Ok(Industry::ReitOffice),
+                "reit-residential" => Ok(Industry::ReitResidential),
+                "reit-retail" => Ok(Industry::ReitRetail),
+                "reit-specialty" => Ok(Industry::ReitSpecialty),
+                "communication-equipment" => Ok(Industry::CommunicationEquipment),
+                "computer-hardware" => Ok(Industry::ComputerHardware),
+                "consumer-electronics" => Ok(Industry::ConsumerElectronics),
+                "data-analytics" => Ok(Industry::DataAnalytics),
+                "electronic-components" => Ok(Industry::ElectronicComponents),
+                "electronics-computer-distribution" => {
+                    Ok(Industry::ElectronicsAndComputerDistribution)
+                }
+                "hardware-software-distribution" => Ok(Industry::HardwareAndSoftwareDistribution),
+                "information-technology-services" => Ok(Industry::InformationTechnologyServices),
+                "internet-content-information" => Ok(Industry::InternetContentAndInformation),
+                "scientific-technical-instruments" => {
+                    Ok(Industry::ScientificAndTechnicalInstruments)
+                }
+                "semiconductor-equipment-materials" => {
+                    Ok(Industry::SemiconductorEquipmentAndMaterials)
+                }
+                "semiconductors" => Ok(Industry::Semiconductors),
+                "software-application" => Ok(Industry::SoftwareApplication),
+                "software-infrastructure" => Ok(Industry::SoftwareInfrastructure),
+                "broadcasting" => Ok(Industry::Broadcasting),
+                "entertainment" => Ok(Industry::Entertainment),
+                "publishing" => Ok(Industry::Publishing),
+                "telecom-services" => Ok(Industry::TelecomServices),
+                "utilities-diversified" => Ok(Industry::UtilitiesDiversified),
+                "utilities-independent-power-producers" => {
+                    Ok(Industry::UtilitiesIndependentPowerProducers)
+                }
+                "utilities-regulated-electric" => Ok(Industry::UtilitiesRegulatedElectric),
+                "utilities-regulated-gas" => Ok(Industry::UtilitiesRegulatedGas),
+                "utilities-regulated-water" => Ok(Industry::UtilitiesRegulatedWater),
+                "utilities-renewable" => Ok(Industry::UtilitiesRenewable),
+                "closed-end-fund-debt" => Ok(Industry::ClosedEndFundDebt),
+                "closed-end-fund-equity" => Ok(Industry::ClosedEndFundEquity),
+                "closed-end-fund-foreign" => Ok(Industry::ClosedEndFundForeign),
+                "exchange-traded-fund" => Ok(Industry::ExchangeTradedFund),
+                _ => Err(()),
             }
         }
     }

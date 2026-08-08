@@ -145,7 +145,8 @@ stream_handle! {
     ///
     /// Subscribe by underlying (`"AAPL"`) to follow the whole chain, or by full
     /// OCC symbol (`"O:AAPL250117C00150000"`) to follow single contracts.
-    /// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
+    /// Requires the `polygon` feature and the `POLYGON_API_KEY` environment
+    /// variable set.
     ///
     /// # Example
     ///

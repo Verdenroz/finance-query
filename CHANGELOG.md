@@ -5,7 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased (draft vs v2.8.0)
+
+### API surface
+
+No public API changes.
+
+### Performance
+
+| item | instructions | median | p99 | allocs | polls |
+|---|---:|---:|---:|---:|---:|
+| `finance_query::bt_sma_crossover` | 525367 | 77.72µs | 83.14µs | 157 | — |
+| `finance_query::de_chart` | 111625 | 12.23µs | 13.01µs | 13 | — |
+| `finance_query::de_crypto_coins` | 345144 | 40.11µs | 42.95µs | 205 | — |
+| `finance_query::de_currencies` | 539850 | 63.10µs | 65.90µs | 647 | — |
+| `finance_query::de_edgar_facts` | 13157817 | 1.62ms | 1.64ms | 11899 | — |
+| `finance_query::de_edgar_submissions` | 4806556 | 521.88µs | 574.77µs | 6784 | — |
+| `finance_query::de_financials` | 221972 | 29.69µs | 31.76µs | 206 | — |
+| `finance_query::de_fred_series` | 1191899 | 179.33µs | 182.11µs | 873 | — |
+| `finance_query::de_news` | 38265 | 4.85µs | 5.07µs | 53 | — |
+| `finance_query::de_options` | 13419 | 2.07µs | 3.51µs | 6 | — |
+| `finance_query::de_quote` | 9071441 | 1.86ms | 3.28ms | 8235 | — |
+| `finance_query::de_screener` | 3713347 | 722.55µs | 1.34ms | 4498 | — |
+| `finance_query::de_search` | 51806 | 9.37µs | 15.41µs | 55 | — |
+| `finance_query::de_treasury_yields` | 809185 | 91.90µs | 106.80µs | 119 | — |
+| `finance_query::dispatch_select` | 74 | 5.0ns | 8.7ns | 0 | — |
+| `finance_query::ind_momentum` | 1230534 | 168.85µs | 171.82µs | 52 | — |
+| `finance_query::ind_moving_averages` | 586693 | 141.28µs | 146.06µs | 27 | — |
+| `finance_query::ind_patterns` | 105521 | 10.20µs | 10.72µs | 1 | — |
+| `finance_query::ind_sma` | 2400020 | 604.66µs | 652.08µs | 1 | — |
+| `finance_query::ind_trend` | 1069304 | 112.91µs | 136.02µs | 48 | — |
+| `finance_query::ind_volatility` | 668123 | 89.67µs | 99.43µs | 28 | — |
+| `finance_query::ind_volume` | 326269 | 59.48µs | 62.16µs | 14 | — |
+| `finance_query::risk_beta` | 16099 | 5.78µs | 6.00µs | 0 | — |
+| `finance_query::risk_historical_var` | 28553174 | 3.77ms | 3.97ms | 2 | — |
+| `finance_query::risk_max_drawdown` | 43317 | 12.63µs | 13.11µs | 1 | — |
+| `finance_query::risk_parametric_var` | 6206 | 2.94µs | 3.03µs | 0 | — |
+| `finance_query::risk_sharpe` | 6201 | 2.95µs | 2.98µs | 0 | — |
+| `finance_query::risk_sortino` | 9948 | 2.91µs | 2.92µs | 0 | — |
+| `finance_query::rss_parse` | 62130 | 6.83µs | 6.94µs | 48 | — |
+| `finance_query::score_news` | 847240 | 104.02µs | 114.23µs | 976 | — |
+| `finance_query::score_transcript` | 44202338 | 6.14ms | 6.77ms | 42100 | — |
+| `finance_query::ser_currencies` | 254605 | 24.67µs | 26.11µs | 8 | — |
+| `finance_query::stream_deserialize` | 16882 | 1.86µs | 2.00µs | 4 | — |
+| `finance_query::stream_serialize` | 12568 | 1.33µs | 1.39µs | 4 | — |
+| `finance_query::translate_dictionary` | 18937 | 3.63µs | 3.79µs | 65 | — |
+
 
 ### Breaking
 

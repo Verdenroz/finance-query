@@ -159,10 +159,10 @@ pub async fn get_recommendations(
 pub async fn get_splits(
     schema: &FinanceSchema,
     symbol: String,
-    range: Option<String>,
+    range: Option<finance_query::TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("max"));
+    let gql_range = range_to_gql(range.unwrap_or(finance_query::TimeRange::Max));
 
     let field_list = parse_fields(fields);
     let selection = build_selection_or_default(

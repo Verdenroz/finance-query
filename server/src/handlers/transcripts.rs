@@ -12,32 +12,10 @@ use finance_query_server::graphql::{
     },
 };
 use finance_query_server::lang;
-use serde::Deserialize;
+use finance_query_server::params::{EarningsTranscriptQuery, EarningsTranscriptsQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EarningsTranscriptQuery {
-    /// Fiscal quarter (Q1, Q2, Q3, Q4). If not provided, returns latest.
-    quarter: Option<String>,
-    /// Fiscal year. If not provided with quarter, returns latest.
-    year: Option<i32>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EarningsTranscriptsQuery {
-    /// Maximum number of transcripts to return. If not provided, returns all.
-    limit: Option<usize>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-}
 
 /// GET /v2/transcripts/{symbol}
 ///
@@ -54,8 +32,7 @@ pub(crate) async fn get_transcript(
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     let quarter_arg = params
         .quarter
-        .as_deref()
-        .map(|q| format!("quarter: \"{}\"", escape_gql_string(q)));
+        .map(|q| format!("quarter: \"{}\"", escape_gql_string(q.as_str())));
     let year_arg = params.year.map(|y| format!("year: {y}"));
     let lang_arg = lang.as_ref().map(|l| format!("lang: \"{}\"", l));
     let args: Vec<String> = [quarter_arg, year_arg, lang_arg]

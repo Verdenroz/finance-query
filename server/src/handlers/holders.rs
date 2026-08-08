@@ -15,32 +15,18 @@ use finance_query_server::graphql::{
     },
     pagination::{build_paginated_composite_selection, unwrap_nested_connection},
 };
-use serde::Deserialize;
+use finance_query_server::params::{HolderType, HoldersQuery};
 use tracing::info;
 
 use super::gql_bridge::{RestTypeSpec, build_rest_composite_selection, execute_gql_rest};
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct HoldersQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max entries per page for holder types with a list (institutional,
-    /// mutualfund, insider-transactions, insider-roster); omitted (with cursor
-    /// also omitted) = every matching entry as a bare array, unchanged from
-    /// pre-pagination behavior. No-op for major/insider-purchases (no list).
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Which nested list field (if any) is paginated for a given holder type key.
-fn holder_paginated_field(key: &str) -> Option<&'static str> {
-    match key {
-        "institutional" | "mutualfund" => Some("ownershipList"),
-        "insider-transactions" => Some("transactions"),
-        "insider-roster" => Some("holders"),
-        _ => None,
+/// Which nested list field (if any) is paginated for a given holder type.
+fn holder_paginated_field(holder_type: HolderType) -> Option<&'static str> {
+    match holder_type {
+        HolderType::Institutional | HolderType::MutualFund => Some("ownershipList"),
+        HolderType::InsiderTransactions => Some("transactions"),
+        HolderType::InsiderRoster => Some("holders"),
+        HolderType::Major | HolderType::InsiderPurchases => None,
     }
 }
 
@@ -88,20 +74,14 @@ const HOLDER_TYPE_REST_SPECS: &[RestTypeSpec] = &[
 /// Query: `fields` (comma-separated, optional)
 pub(crate) async fn get_holders(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path((symbol, holder_type)): Path<(String, String)>,
+    Path((symbol, holder_type)): Path<(String, HolderType)>,
     Query(params): Query<HoldersQuery>,
 ) -> impl IntoResponse {
-    let key = holder_type.to_lowercase();
-    let Some((_, gql_field, valid_fields, composite_fields)) = HOLDER_TYPE_REST_SPECS
+    let (_, gql_field, valid_fields, composite_fields) = HOLDER_TYPE_REST_SPECS
         .iter()
-        .find(|(k, ..)| *k == key.as_str())
-    else {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": format!("Invalid holder type: '{}'. Valid: major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster", holder_type),
-            "status": 400
-        }))).into_response();
-    };
-    let paginated_field = holder_paginated_field(&key);
+        .find(|(k, ..)| *k == holder_type.as_str())
+        .expect("HOLDER_TYPE_REST_SPECS covers every HolderType variant");
+    let paginated_field = holder_paginated_field(holder_type);
     let selection = match paginated_field {
         Some(pf) => {
             let item_selection = composite_fields
@@ -128,7 +108,7 @@ pub(crate) async fn get_holders(
         "query GetHolders($symbol: String!) {{ ticker(symbol: $symbol) {{ {gql_field} {selection} }} }}"
     );
     info!(
-        "Fetching {} holders for {} (fields={:?})",
+        "Fetching {:?} holders for {} (fields={:?})",
         holder_type, symbol, params.fields
     );
     let mut vars = Variables::default();

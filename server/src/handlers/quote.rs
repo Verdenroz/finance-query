@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use finance_query::ValueFormat;
-use serde::Deserialize;
+use finance_query_server::params::{QuoteQuery, QuotesQuery};
 use tracing::info;
 
 use axum::http::StatusCode;
@@ -19,42 +19,6 @@ use finance_query_server::lang;
 use super::gql_bridge::{build_rest_selection, execute_gql_rest};
 use super::support::parse_format;
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct QuoteQuery {
-    /// Whether to include company logo URL (default: false)
-    #[serde(default)]
-    logo: bool,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct QuotesQuery {
-    symbols: String, // Comma-separated symbols
-    /// Whether to include company logo URLs (default: false)
-    #[serde(default)]
-    logo: bool,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-    /// Max symbols per page; omitted (with cursor also omitted) = every requested
-    /// symbol's quote as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
 /// GET /v2/quote/{symbol}
 ///
 /// Query: `logo` (bool, default: false), `format` (raw|pretty|both), `fields` (comma-separated)
@@ -64,7 +28,7 @@ pub(crate) async fn get_quote(
     Query(params): Query<QuoteQuery>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
 
     // Map REST format to GraphQL enum value string.
@@ -117,7 +81,7 @@ pub(crate) async fn get_quotes(
     Query(params): Query<QuotesQuery>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
 
     let gql_format = match format {

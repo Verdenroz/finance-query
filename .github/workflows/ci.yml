@@ -18,6 +18,7 @@ jobs:
   # docs-only / single-crate PRs don't pay for work that can't have broken.
   changes:
     name: Detect Changes
+    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     outputs:
       rust: ${{ steps.filter.outputs.rust }}

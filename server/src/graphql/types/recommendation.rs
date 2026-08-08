@@ -15,13 +15,16 @@ pub struct GqlSimilarSymbol {
 
 /// Similar-stock recommendations for one symbol, mirroring
 /// `finance_query::Recommendation`, which has no serde rename of its own
-/// (plain snake_case JSON keys, e.g. `provider_id`) — must not rename for
-/// deserialization either, even though GraphQL field names are camelCase.
+/// (plain snake_case JSON keys, e.g. `provider_id`) — `alias` keeps
+/// deserialization accepting those keys while `rename_all` documents the
+/// camelCase names GraphQL actually puts on the wire.
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlRecommendation {
     pub symbol: String,
     pub recommendations: Vec<GqlSimilarSymbol>,
+    #[serde(alias = "provider_id")]
     pub provider_id: Option<String>,
 }
 

@@ -62,7 +62,6 @@ For large changes (new providers, new public API surface, architectural shifts),
 - Rust stable toolchain — install via [rustup](https://rustup.rs/)
 - `cargo` (comes with Rust)
 - Docker (optional, for testing the server image)
-- Python ≥ 3.8 + pip (optional, for the MkDocs documentation site)
 
 **Clone and build:**
 
@@ -95,7 +94,7 @@ make fix               # auto-fix formatting and clippy issues
 make test-fast         # unit tests only (no network)
 make test              # all tests including network integration tests
 make audit             # cargo-deny supply-chain audit
-make docs              # build and serve MkDocs docs at localhost:8080
+make docs              # build and serve the docs site (cargo soothfast) at localhost:8080
 ```
 
 Or directly with Cargo:

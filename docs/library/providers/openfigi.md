@@ -11,22 +11,28 @@
 
 `openfigi` is a **crate-level module**, not a routed provider:
 
-```rust
+```rust no_run feature=openfigi
 use finance_query::openfigi;
+
+fn main() {}
 ```
 
 Identifier resolution is not tied to a symbol handle and maps onto no `Capability`, so it sits alongside [`edgar`](edgar.md) and [`fred`](fred.md) at the crate root rather than behind `Providers::builder()`.
 
 ## Resolving One Identifier
 
-```rust
+```rust no_run feature=openfigi
 use finance_query::openfigi;
 
-for listing in openfigi::resolve_cusip("037833100").await? {
-    println!(
-        "{:?} on {:?} ({:?})",
-        listing.ticker, listing.exchange_code, listing.security_type
-    );
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    for listing in openfigi::resolve_cusip("037833100").await? {
+        println!(
+            "{:?} on {:?} ({:?})",
+            listing.ticker, listing.exchange_code, listing.security_type
+        );
+    }
+    Ok(())
 }
 ```
 
@@ -41,17 +47,21 @@ An identifier that is well-formed but matches nothing returns an **empty list**.
 
 OpenFIGI accepts 10 identifiers per request without a key. `resolve_many` batches automatically:
 
-```rust
+```rust no_run feature=openfigi
 use finance_query::openfigi::{self, SecurityIdKind};
 
-let cusips = ["037833100", "594918104", "02079K305"];
-let results = openfigi::resolve_many(SecurityIdKind::Cusip, &cusips).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cusips = ["037833100", "594918104", "02079K305"];
+    let results = openfigi::resolve_many(SecurityIdKind::Cusip, &cusips).await?;
 
-for (cusip, listings) in cusips.iter().zip(&results) {
-    match listings.iter().find(|l| l.exchange_code.as_deref() == Some("US")) {
-        Some(l) => println!("{cusip} -> {:?}", l.ticker),
-        None => println!("{cusip} -> no US listing"),
+    for (cusip, listings) in cusips.iter().zip(&results) {
+        match listings.iter().find(|l| l.exchange_code.as_deref() == Some("US")) {
+            Some(l) => println!("{cusip} -> {:?}", l.ticker),
+            None => println!("{cusip} -> no US listing"),
+        }
     }
+    Ok(())
 }
 ```
 

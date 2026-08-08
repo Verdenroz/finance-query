@@ -11,15 +11,25 @@ use serde::{Deserialize, Serialize};
 /// Quote type for custom screener queries.
 ///
 /// Yahoo Finance only supports `EQUITY` and `MUTUALFUND` for custom screener queries.
+///
+/// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing a request body takes the same spellings parsing does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum QuoteType {
     /// Equity (stocks) — use [`EquityScreenerQuery`] with [`EquityField`] conditions.
     #[default]
-    #[serde(rename = "EQUITY")]
+    #[serde(rename = "EQUITY", alias = "equity", alias = "stock", alias = "stocks")]
     Equity,
     /// Mutual funds — use [`FundScreenerQuery`] with [`FundField`] conditions.
-    #[serde(rename = "MUTUALFUND")]
+    #[serde(
+        rename = "MUTUALFUND",
+        alias = "mutualfund",
+        alias = "mutual-fund",
+        alias = "mutual_fund",
+        alias = "fund",
+        alias = "funds"
+    )]
     MutualFund,
 }
 
@@ -40,15 +50,18 @@ impl std::str::FromStr for QuoteType {
 // ============================================================================
 
 /// Sort direction for screener results.
+///
+/// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
+/// deserializing a request body takes the same spellings parsing does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum SortType {
     /// Sort ascending (smallest first) — `"ASC"`
-    #[serde(rename = "ASC")]
+    #[serde(rename = "ASC", alias = "asc", alias = "ascending")]
     Asc,
     /// Sort descending (largest first) — `"DESC"`
     #[default]
-    #[serde(rename = "DESC")]
+    #[serde(rename = "DESC", alias = "desc", alias = "descending")]
     Desc,
 }
 

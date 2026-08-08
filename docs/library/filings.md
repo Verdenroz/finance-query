@@ -9,26 +9,59 @@ The `Filings` domain handle fetches SEC filings for a given symbol. It is backed
 
 Create a `Filings` handle from a [`Providers`](getting-started.md) instance and call `.get()` to fetch the filing data:
 
-```rust
+```rust no_run covers=finance_query::models::filings::provider::ProviderFiling
 use finance_query::{Providers, edgar};
 
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-// EDGAR is keyless but SEC requires a contact email in the User-Agent.
-// Initialise it once per process (or set the EDGAR_EMAIL env var).
-edgar::init("you@example.com")?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // EDGAR is keyless but SEC requires a contact email in the User-Agent.
+    // Initialise it once per process (or set the EDGAR_EMAIL env var).
+    edgar::init("you@example.com")?;
 
-let providers = Providers::builder().build().await?;
-let filings = providers.filings("AAPL");
-let result = filings.get().await?;
-# Ok(()) }
+    let providers = Providers::builder().build().await?;
+    let filings = providers.filings("AAPL");
+    let result = filings.get().await?;
+
+    for f in result.filings.iter().take(5) {
+        println!(
+            "{} {}: {}",
+            f.filing_date.as_deref().unwrap_or("?"),
+            f.filing_type.as_deref().unwrap_or("?"),
+            f.filing_url.as_deref().unwrap_or("-")
+        );
+    }
+    Ok(())
+}
 ```
+
+<!-- soothfast:claim finance_query::de_edgar_submissions.walltime.median_ns < 2000000 -->
+- Parsing a company's full submissions index (`edgar::submissions` →
+  `EdgarSubmissions`, roughly a thousand filings) takes **around a
+  millisecond** or less.
 
 !!! note "EDGAR requires a contact email"
     EDGAR needs no API key, but SEC's fair-access policy requires a contact email
     in the request `User-Agent`. Call `edgar::init("you@example.com")` once before
     fetching, or set the `EDGAR_EMAIL` environment variable.
 
-The returned [`ProviderFilings`](https://docs.rs/finance-query/latest/finance_query/models/filings/struct.ProviderFilings.html) value contains the ticker symbol and a list of individual filing entries, each with fields like `filing_type`, `filing_date`, `accession_number`, and `filing_url`.
+<!-- soothfast:bind finance_query::models::filings::provider::ProviderFilings -->
+The returned [`ProviderFilings`](https://docs.rs/finance-query/latest/finance_query/models/filings/struct.ProviderFilings.html) value contains the ticker symbol (`symbol`) and a list of individual filing entries (`filings`).
+<!-- /soothfast:bind -->
+
+Each entry is a `ProviderFiling`:
+
+<!-- soothfast:bind finance_query::models::filings::provider::ProviderFiling -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `accession_number` | `Option<String>` | SEC accession number (unique filing ID) |
+| `filing_date` | `Option<String>` | Filing date as `YYYY-MM-DD` |
+| `filing_type` | `Option<String>` | Filing type (e.g., `"10-K"`, `"10-Q"`, `"8-K"`) |
+| `filing_url` | `Option<String>` | URL to the filing document |
+| `company_name` | `Option<String>` | Company name at time of filing |
+| `cik` | `Option<String>` | SEC CIK number |
+
+<!-- /soothfast:bind -->
 
 ## See Also
 

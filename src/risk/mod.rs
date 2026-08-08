@@ -157,13 +157,15 @@ pub(crate) fn periods_per_year(interval: crate::Interval, cal: TradingCalendar) 
     let days = cal.trading_days();
     match interval {
         Interval::OneDay => days,
-        Interval::OneWeek => 52.0,
+        Interval::FiveDays | Interval::OneWeek => 52.0,
         Interval::OneMonth => 12.0,
         Interval::ThreeMonths => 4.0,
+        Interval::NinetyMinutes => days * cal.session_hours() / 1.5,
         Interval::OneHour => days * cal.session_hours(),
         Interval::ThirtyMinutes => days * cal.session_hours() * 2.0,
         Interval::FifteenMinutes => days * cal.session_hours() * 4.0,
         Interval::FiveMinutes => days * cal.session_hours() * 12.0,
+        Interval::TwoMinutes => days * cal.session_hours() * 30.0,
         Interval::OneMinute => days * cal.session_hours() * 60.0,
     }
 }

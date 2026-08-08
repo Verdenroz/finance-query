@@ -11,26 +11,10 @@ use finance_query_server::graphql::{
         unwrap_field,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::CalendarQuery;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, range_to_gql};
-
-fn default_calendar_range() -> String {
-    "1mo".to_string()
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CalendarQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    /// Forward window: 1wk/5d, 1mo, 3mo, etc. (default: 1mo)
-    #[serde(default = "default_calendar_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
 
 /// Build the `calendar { ... }` selection set, expanding `event` with its
 /// full union inline-fragment selection (see `CALENDAR_EVENT_UNION_SELECTION`).
@@ -59,7 +43,7 @@ pub(crate) async fn get_calendar(
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let syms_literal = gql_string_list_literal(&symbols);
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let selection = build_rest_calendar_selection(params.fields.as_deref());
 
     let query = format!(

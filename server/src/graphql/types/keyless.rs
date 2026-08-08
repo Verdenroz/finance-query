@@ -8,6 +8,8 @@ use serde::Deserialize;
 use crate::graphql::pagination::{self, Page};
 
 /// Mirrors `finance_query::cftc::CommitmentsOfTraders`.
+// The library model is plain snake_case, so a `#[serde(rename_all)]` here would
+// match nothing and `#[serde(default)]` would zero it — see tests/gql_wire_shape.rs.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase", complex)]
 #[serde(default)]
@@ -38,6 +40,7 @@ impl GqlCommitmentsOfTraders {
 
 /// Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
 /// broken down by trader category.
+// Same no-serde-rename rule as `GqlCommitmentsOfTraders` above.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(default)]

@@ -83,7 +83,7 @@ cargo test -- --ignored
 
 Use standard patterns and avoid unnecessary complexity:
 
-```rust
+```rust ignore
 // Good - simple and clear
 pub async fn quote(&self) -> Result<Quote> {
     self.get_quote_data().await
@@ -102,7 +102,7 @@ pub async fn quote(&self) -> Result<Quote, Box<dyn std::error::Error>> {
 
 Add doc comments to public items:
 
-```rust
+```rust ignore
 /// Fetches the latest quote for the ticker.
 ///
 /// # Example
@@ -125,7 +125,7 @@ pub async fn quote(&self) -> Result<Quote> {
 
 Keep tests focused and fast:
 
-```rust
+```rust ignore
 #[tokio::test]
 async fn test_ticker_builder() {
     let ticker = Ticker::builder("AAPL")
@@ -142,7 +142,7 @@ async fn test_ticker_builder() {
 
 Mark network tests with `#[ignore]`:
 
-```rust
+```rust ignore
 use finance_query::format::Raw;
 
 #[tokio::test]
@@ -158,7 +158,7 @@ async fn test_real_quote() {
 
 Use `no_run` for examples that require network access:
 
-```rust
+```rust ignore
 /// # Example
 ///
 /// ```no_run
@@ -211,7 +211,7 @@ Open a pull request on GitHub with:
 
 1. Add endpoint URL in `src/endpoints/`:
 
-    ```rust
+    ```rust ignore
     // src/endpoints/quote.rs
     pub fn options_chain(symbol: &str) -> String {
         format!("{}/v7/finance/options/{}", BASE_URL, symbol)
@@ -220,7 +220,7 @@ Open a pull request on GitHub with:
 
 2. Define model in `src/models/`:
 
-    ```rust
+    ```rust ignore
     // src/models/options.rs
     #[derive(Debug, Clone, Deserialize)]
     pub struct OptionsChain {
@@ -232,7 +232,7 @@ Open a pull request on GitHub with:
 
 3. Add method to `Ticker`:
 
-    ```rust
+    ```rust ignore
     // src/ticker/core.rs
     pub async fn options(&self) -> Result<OptionsChain> {
         let url = endpoints::options_chain(&self.symbol);
@@ -242,7 +242,7 @@ Open a pull request on GitHub with:
 
 **Server side:**
 
-```rust
+```rust ignore
 // server/src/main.rs
 async fn get_options(
     Path(symbol): Path<String>,

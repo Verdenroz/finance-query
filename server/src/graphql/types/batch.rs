@@ -4,7 +4,7 @@
 use async_graphql::SimpleObject;
 
 /// A single symbol's fetch failure within a batch root field.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlBatchError {
     pub symbol: String,

@@ -1,3 +1,4 @@
+use finance_query::{Frequency, StatementType};
 use finance_query_server::graphql::FinanceSchema;
 use finance_query_server::graphql::fields::{
     FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS as SHARED_FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS,
@@ -5,14 +6,12 @@ use finance_query_server::graphql::fields::{
 };
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
-use crate::error::{invalid_params, ser_err};
+use crate::error::ser_err;
 use crate::tools::gql::{
     build_type_spec_selection, execute_query, gql_string_list_literal, parse_fields, unwrap_field,
     unwrap_ticker_field,
 };
-use crate::tools::helpers::{
-    frequency_to_gql, parse_frequency, parse_statement_type, statement_to_gql,
-};
+use crate::tools::helpers::{frequency_to_gql, statement_to_gql};
 
 /// Valid/default fields for `GqlFinancialLineItem` (`{ metric values }`);
 /// `values` (`Vec<GqlFinancialDataPoint>`, composite) needs its nested
@@ -47,8 +46,8 @@ fn build_metrics_arg(metric_list: Option<&[String]>) -> String {
 pub async fn get_financials(
     schema: &FinanceSchema,
     symbols: String,
-    statement: String,
-    frequency: Option<String>,
+    statement: StatementType,
+    frequency: Option<Frequency>,
     metrics: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
@@ -71,24 +70,13 @@ pub async fn get_financials(
 async fn get_one_financials(
     schema: &FinanceSchema,
     symbol: String,
-    statement: String,
-    frequency: Option<String>,
+    statement: StatementType,
+    frequency: Option<Frequency>,
     metrics: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let st = parse_statement_type(&statement).ok_or_else(|| {
-        invalid_params(format!(
-            "Invalid statement type: '{statement}'. Use: income, balance, cashflow"
-        ))
-    })?;
-    let freq_input = frequency.as_deref().unwrap_or("annual");
-    let freq = parse_frequency(freq_input).ok_or_else(|| {
-        invalid_params(format!(
-            "Invalid frequency: '{freq_input}'. Use: annual, quarterly"
-        ))
-    })?;
-    let gql_st = statement_to_gql(st);
-    let gql_freq = frequency_to_gql(freq);
+    let gql_st = statement_to_gql(statement);
+    let gql_freq = frequency_to_gql(frequency.unwrap_or(Frequency::Annual));
     let metric_list = parse_fields(metrics);
     let metrics_arg = build_metrics_arg(metric_list.as_deref());
     let field_list = parse_fields(fields);
@@ -114,24 +102,13 @@ async fn get_one_financials(
 async fn get_many_financials(
     schema: &FinanceSchema,
     syms: Vec<String>,
-    statement: String,
-    frequency: Option<String>,
+    statement: StatementType,
+    frequency: Option<Frequency>,
     metrics: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let st = parse_statement_type(&statement).ok_or_else(|| {
-        invalid_params(format!(
-            "Invalid statement type: '{statement}'. Use: income, balance, cashflow"
-        ))
-    })?;
-    let freq_input = frequency.as_deref().unwrap_or("annual");
-    let freq = parse_frequency(freq_input).ok_or_else(|| {
-        invalid_params(format!(
-            "Invalid frequency: '{freq_input}'. Use: annual, quarterly"
-        ))
-    })?;
-    let gql_st = statement_to_gql(st);
-    let gql_freq = frequency_to_gql(freq);
+    let gql_st = statement_to_gql(statement);
+    let gql_freq = frequency_to_gql(frequency.unwrap_or(Frequency::Annual));
     let metric_list = parse_fields(metrics);
     let metrics_arg = build_metrics_arg(metric_list.as_deref());
     let syms_literal = gql_string_list_literal(&syms);

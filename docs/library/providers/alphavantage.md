@@ -22,16 +22,22 @@ No manual init call needed — the provider reads the key during `TickerBuilder:
 
 ## Usage
 
-```rust
-use finance_query::{Capability, Fetch, Provider, Providers, Raw};
+```rust no_run feature=alphavantage
+use finance_query::format::Raw;
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::QUOTE, [Provider::AlphaVantage, Provider::Yahoo])
-    .fetch(Fetch::Sequential)
-    .build()
-    .await?;
-let ticker = providers.ticker("AAPL").build().await?;
-let quote = ticker.quote::<Raw>().await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, [Provider::AlphaVantage, Provider::Yahoo])
+        .fetch(Fetch::Sequential)
+        .build()
+        .await?;
+    let ticker = providers.ticker("AAPL").build().await?;
+    let quote = ticker.quote::<Raw>().await?;
+    println!("{} quote received", quote.symbol);
+    Ok(())
+}
 ```
 
 ## Capabilities

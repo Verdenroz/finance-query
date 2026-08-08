@@ -1,0 +1,175 @@
+name: Soothfast
+
+# Perf gate + living docs, spec reconciliation, and site build — everything
+# soothfast checks in CI (`cargo soothfast gate`/`docs`/`spec`/`coverage`).
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "proto/**"
+      - "benches/**"
+      - "docs/**"
+      - "README.md"
+      - "soothfast.lock"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/soothfast.yml"
+      - "server/src/**"
+      - "server/benches/**"
+      - "server/openapi.yaml"
+      - "server/asyncapi.yaml"
+      - "server/schema.graphql"
+      - "server/soothfast.toml"
+      - "sdks/**"
+      - "finance-query-mcp/src/**"
+      - "finance-query-mcp/benches/**"
+      - "finance-query-mcp/mcp-tools.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soothfast-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Gate
+    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          # Full history so the merge-base is checkoutable into the gate's
+          # temporary worktree.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install valgrind
+        # Fallback gating backend: CI VMs often expose no PMU, in which case
+        # the auto backend gates on callgrind instruction counts instead.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      - name: Install cargo-soothfast
+        run: cargo install cargo-soothfast --locked
+      - name: Gate against merge-base
+        run: |
+          set -euo pipefail
+          base_sha="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+          # The merge-base may predate the soothfast bench; gate only when it
+          # exists there. Keeps the introducing PR green while still
+          # measuring (and checking assertions on) the head.
+          if git cat-file -e "${base_sha}:benches/soothfast.rs" 2>/dev/null; then
+            cargo soothfast gate -p finance-query --features bench-gate \
+              --against-ref "${{ github.event.pull_request.base.sha }}"
+          else
+            echo "Merge-base has no soothfast bench yet — measuring head without gating."
+            cargo soothfast measure -p finance-query --features bench-gate
+          fi
+      - name: Upload triage artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: soothfast-triage
+          path: .soothfast/triage/
+          if-no-files-found: ignore
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          # Full history: `docs diff` builds the base ref's surface in a
+          # temporary worktree, same requirement as the gate job above.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Install nightly (rustdoc JSON for bind checks)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install cargo-soothfast
+        run: cargo install cargo-soothfast --locked
+      - name: Measure baseline for claims
+        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+      - name: Check binds, claims, and generated doc tests
+        # `full` (not bench-gate): binds cover feature-gated API across every
+        # docs/library page and README.md, which must be visible in the
+        # rustdoc surface.
+        run: |
+          cargo soothfast docs check -p finance-query --features full --baseline base \
+            docs/library README.md
+      - name: Verify captured doc example output is fresh
+        # dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo
+        # Finance data (real prices/timestamps) so excluded here
+        run: |
+          cargo soothfast docs capture -p finance-query --features full --check \
+            docs/library/backtesting.md docs/library/commodities.md \
+            docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
+            docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
+            docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
+            docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
+            docs/library/providers/coingecko.md docs/library/providers/edgar.md \
+            docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
+            docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
+            docs/library/streaming.md docs/library/translation.md README.md
+      - name: Public API doc coverage (ratchet — currently 99%)
+        run: cargo soothfast coverage docs -p finance-query --features full --min 95
+      - name: Public API surface diff vs PR base
+        # Informational only (exits 0 regardless of diff content)
+        run: |
+          cargo soothfast docs diff -p finance-query --features full \
+            --against-ref "${{ github.event.pull_request.base.sha }}"
+      - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
+        run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
+      - name: Generated openapi.yaml/asyncapi.yaml are fresh
+        run: cargo soothfast spec gen -p finance-query-server --target soothfast-routes --check
+      - name: Generated Python SDK is fresh
+        run: cargo soothfast sdk gen -p finance-query-server --target soothfast-routes --check
+      - name: Spec compat gate vs merge-base
+        # Consumer-breaking changes to the generated spec (and therefore the
+        # SDKs derived from it) fail the PR; release one deliberately with
+        # --allow-breaking.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          cargo soothfast spec gate -p finance-query-server --target soothfast-routes \
+            --base "$BASE_SHA"
+      - name: Reconcile MCP tool routes against mcp-tools.json
+        run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes
+      - name: Generated mcp-tools.json is fresh
+        run: cargo soothfast spec gen -p finance-query-mcp --target soothfast-routes --check
+      - name: Reconcile pricing.proto against PricingData
+        run: |
+          cargo soothfast spec check-proto -p finance-query --proto proto/pricing.proto \
+            --message PricingData --source src/streaming/pricing.rs --struct PricingData
+      - name: Check llms.txt freshness
+        run: |
+          mkdir -p target/llms-check
+          cargo soothfast report render -p finance-query --baseline base --features full \
+            --out target/llms-check
+          sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-check/committed.txt
+          sed '/^\*\*Measured:\*\*/d' target/llms-check/llms.txt > target/llms-check/fresh.txt
+          diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
+            (echo "::error::llms.txt is stale — run 'make docs-pages' and commit the result" && exit 1)
+      - name: Docs site builds cleanly
+        # Static build only (not gh-deploy)
+        run: cargo soothfast docs build --baseline base --out target/site-check

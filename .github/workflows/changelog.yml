@@ -1,0 +1,55 @@
+name: Changelog
+
+# Regenerates on the PR branch itself
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  changelog:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - name: Mint a changelog-bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CHANGELOG_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGELOG_APP_PRIVATE_KEY }}
+          permission-contents: write
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 # zizmor: ignore[artipacked]
+        with:
+          fetch-depth: 0 # surface diff + previous-tag lookup need history
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Install nightly (rustdoc JSON for the surface diff)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install cargo-soothfast
+        run: cargo install cargo-soothfast --locked
+      - name: Measure baseline for claims
+        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+      - name: Regenerate CHANGELOG.md
+        run: |
+          PREV=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          cargo soothfast report changelog -p finance-query --baseline base \
+            --against-ref "$PREV" --features full
+      - name: Commit if changed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          USER_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || { git commit -m "docs: regenerate CHANGELOG.md"; git push; }

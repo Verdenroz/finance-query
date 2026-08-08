@@ -77,32 +77,115 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image.suffix }}
 
   deploy-docs:
-    name: Deploy MkDocs to GitHub Pages
+    name: Deploy docs site to GitHub Pages
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    permissions: {} # all repo access comes from the minted App token below
 
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
-      # gh-deploy pushes to gh-pages, so this checkout needs its credentials.
+      - name: Mint a soothfast-bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CHANGELOG_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGELOG_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Get soothfast-bot user id
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      # cargo soothfast docs gh-deploy pushes to gh-pages itself, so this
+      # checkout needs its persisted, token-authenticated origin remote.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.x"
-          cache: "pip"
-          cache-dependency-path: "docs/requirements.txt"
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Install docs dependencies
-        run: pip install --require-hashes -r docs/requirements.txt
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Install nightly (rustdoc JSON for the docs engine)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install valgrind
+        # CI VMs often expose no PMU, in which case
+        # the auto backend gates on callgrind instruction counts instead.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      - name: Install cargo-soothfast
+        run: cargo install cargo-soothfast --locked
 
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+      - name: Configure git identity for the gh-pages commit
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_USER_ID: ${{ steps.app-user.outputs.id }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      # Writes .soothfast/gate-status.json, which `report render` below
+      # reads to color the "soothfast gate" badge — without this the badge
+      # is stuck at "unknown" forever. Gates against the immediately prior
+      # commit (master requires linear history, so HEAD~1 is well-defined)
+      # since the PR that landed this commit was already gated pre-merge.
+      - name: Gate against previous commit
+        run: cargo soothfast gate -p finance-query --features bench-gate --against-ref HEAD~1
+
+      - name: Measure baseline for claims
+        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+
+      - name: Append performance trend point
+        run: cargo soothfast trend append -p finance-query --features bench-gate
+
+      # Direct pushes to master are blocked by the branch ruleset, so the bot
+      # opens a PR and squash-merges it itself instead.
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: cpr
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          add-paths: .soothfast/trend.jsonl
+          commit-message: "chore: append performance trend point"
+          title: "chore: append performance trend point"
+          body: Automated performance trend update.
+          branch: bot/trend-update
+          delete-branch: true
+          author: >-
+            ${{ steps.app-token.outputs.app-slug }}[bot]
+            <${{ steps.app-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
+      - name: Merge pull request
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --squash --delete-branch "$PR_NUMBER"
+
+      - name: Regenerate endpoint reference pages
+        run: |
+          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server
+          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server
+
+      - name: Regenerate API reference, perf report, coverage page, and llms.txt
+        run: |
+          cargo soothfast docs reference -p finance-query --baseline base --features full --out docs/reference
+          cargo soothfast report render -p finance-query --baseline base --features full --out docs/perf
+          mv docs/perf/llms.txt docs/llms.txt
+          cp docs/llms.txt llms.txt
+          { echo "# Coverage"; echo; \
+            echo "> Generated by \`cargo soothfast coverage docs\`."; echo; \
+            echo '```text'; \
+            cargo soothfast coverage docs -p finance-query --features full \
+              --badge docs/perf/badges/coverage.json --badge docs/perf/badges/coverage.svg; \
+            echo '```'; } > docs/coverage.md
+
+      - name: Build and publish docs site
+        run: cargo soothfast docs gh-deploy --baseline base
 
   deploy:
     name: Deploy to VPS
