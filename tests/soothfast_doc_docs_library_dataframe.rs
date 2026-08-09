@@ -2,11 +2,11 @@
 // source: docs/library/dataframe.md
 #![allow(unused)]
 
-// line 870: compile-only (no_run)
+// line 866: compile-only (no_run)
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_870() {
+fn doc_block_line_866() {
         use finance_query::{Interval, Ticker, TimeRange};
         use polars::prelude::*;
 

@@ -5,5 +5,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::Ticker;
 
     let ticker = Ticker::new("AAPL").await?;
+    println!("{}", ticker.symbol());
     Ok(())
 }

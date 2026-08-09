@@ -23,5 +23,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .region(Region::Canada);
 
     let results = finance::search("tesla", &options).await?;
+    println!("Found {} results", results.result_count());
     Ok(())
 }

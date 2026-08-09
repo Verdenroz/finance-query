@@ -2,10 +2,10 @@
 // source: docs/library/ticker.md
 #![allow(unused)]
 
-// line 32: compile-only (no_run)
+// line 34: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_32() {
+fn doc_block_line_34() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Ticker, Region};
@@ -37,10 +37,10 @@ fn doc_block_line_32() {
     }
 }
 
-// line 84: compile-only (no_run)
+// line 86: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_84() {
+fn doc_block_line_86() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Capability, Fetch, Provider, Providers};
@@ -60,10 +60,10 @@ fn doc_block_line_84() {
     }
 }
 
-// line 1833: compile-only (no_run)
+// line 1864: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1833() {
+fn doc_block_line_1864() {
         #[tokio::main]
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use finance_query::{Ticker, Interval, TimeRange};

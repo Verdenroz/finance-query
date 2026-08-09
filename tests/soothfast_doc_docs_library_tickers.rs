@@ -2,11 +2,11 @@
 // source: docs/library/tickers.md
 #![allow(unused)]
 
-// line 116: compile-only (no_run)
+// line 122: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_116() {
+fn doc_block_line_122() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
@@ -21,10 +21,10 @@ fn doc_block_line_116() {
     }
 }
 
-// line 923: compile-only (no_run)
+// line 931: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_923() {
+fn doc_block_line_931() {
         use finance_query::{Interval, Tickers, TimeRange};
 
         #[tokio::main]

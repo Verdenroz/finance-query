@@ -112,14 +112,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get XBRL financial data
     let facts = edgar::company_facts(cik).await?;
-    if let Some(us_gaap) = facts.facts.get("us-gaap") {
-        if let Some(revenue) = us_gaap.0.get("Revenues") {
-            if let Some(usd) = revenue.units.get("USD") {
-                for point in usd.iter().take(3) {
-                    if let (Some(fy), Some(val)) = (point.fy, point.val) {
-                        println!("FY {}: ${}", fy, val);
-                    }
-                }
+    if let Some(us_gaap) = facts.facts.get("us-gaap")
+        && let Some(revenue) = us_gaap.0.get("Revenues")
+        && let Some(usd) = revenue.units.get("USD")
+    {
+        for point in usd.iter().take(3) {
+            if let (Some(fy), Some(val)) = (point.fy, point.val) {
+                println!("FY {}: ${}", fy, val);
             }
         }
     }

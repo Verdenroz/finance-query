@@ -35,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .region(Region::Canada);
 
     let results = finance::search("tesla", &options).await?;
+    println!("Found {} results", results.result_count());
     Ok(())
 }
 ```
@@ -43,11 +44,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Found 7 results
 AAPL (NMS): N/A
 APLE (NYQ): N/A
-AAPL.SW (EBS): N/A
-2788.T (JPX): N/A
+APC.DE (GER): N/A
 D90.F (FRA): N/A
-AAPLC.BA (BUE): N/A
+AAPL01.BK (SET): N/A
 AAPL19.BK (SET): N/A
+AAPL34.SA (SAO): N/A
+Found 15 results
 ```
 
 **SearchOptions Methods:**
@@ -87,6 +89,7 @@ use finance_query::{LookupOptions, LookupType, finance};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Simple lookup
     let results = finance::lookup("NVDA", &LookupOptions::default()).await?;
+    println!("Found {} results", results.result_count());
 
     // Lookup equities with logos
     let options = LookupOptions::new()
@@ -104,16 +107,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
+Found 25 results
 TECH: Bio-Techne Corp - None
+BSEM: BioStem Technologies, Inc. - None
 XDEF: N/A - None
 MU: Micron Technology, Inc. - None
 SPCX: Space Exploration Technologies  - None
 PLTR: Palantir Technologies Inc. - None
-MRVL: Marvell Technology, Inc. - None
-POET: POET Technologies Inc. - None
 SOFI: SoFi Technologies, Inc. - Some("https://s.yimg.com/lb/brands/50x50_sofi.png")
+POET: POET Technologies Inc. - None
+MRVL: Marvell Technology, Inc. - None
 DELL: Dell Technologies Inc. - Some("https://s.yimg.com/lb/brands/50x50_delltechnologies.png")
-UBER: Uber Technologies, Inc. - Some("https://s.yimg.com/lb/brands/50x50_uber.png")
 ```
 
 **Available LookupTypes:**
@@ -144,6 +148,7 @@ use finance_query::{Region, finance};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Default (US market)
     let summary = finance::market_summary(None).await?;
+    println!("Fetched {} quotes (US)", summary.len());
 
     // Specific region
     let summary = finance::market_summary(Some(Region::Canada)).await?;
@@ -166,21 +171,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-^GSPTSE: $35263.85 (-0.22%)
-^GSPC: $7457.69 (-1.01%)
-^DJI: $52146.42 (-0.77%)
-CADUSD=X: $0.71 (+0.14%)
-CL=F: $81.78 (+4.47%)
-BTC-CAD: $90388.92 (+0.73%)
-XRP-CAD: $1.53 (+0.15%)
-GC=F: $4018.80 (+0.67%)
-^RUT: $2962.22 (-0.42%)
-^TNX: $4.54 (-0.61%)
-^IXIC: $25520.24 (-1.40%)
-^VIX: $18.77 (+12.19%)
-^FTSE: $10600.37 (+0.27%)
-^N225: $64141.12 (-4.03%)
-CADEUR=X: $0.62 (+0.19%)
+Fetched 15 quotes (US)
+^GSPTSE: $36381.23 (+0.68%)
+^GSPC: $7757.64 (+0.62%)
+^DJI: $54036.93 (+0.28%)
+CADUSD=X: $0.72 (+0.54%)
+CL=F: $78.18 (+1.15%)
+BTC-CAD: $90897.18 (+0.23%)
+XRP-CAD: $1.45 (-0.16%)
+GC=F: $4399.70 (+2.33%)
+^RUT: $3034.49 (+1.10%)
+^TNX: $4.66 (-0.21%)
+^IXIC: $26690.62 (+1.30%)
+^VIX: $14.90 (-1.65%)
+^FTSE: $10901.09 (+0.31%)
+^N225: $65606.71 (-0.12%)
+CADEUR=X: $0.62 (+0.23%)
 ```
 
 ### Trending
@@ -193,6 +199,7 @@ use finance_query::{Region, finance};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let trending = finance::trending(None).await?;
+    println!("Fetched {} trending symbols", trending.len());
     // Or specify region
     let trending = finance::trending(Some(Region::Singapore)).await?;
 
@@ -204,7 +211,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-MU
+Fetched 20 trending symbols
+SGD=X
 D05.SI
 U11.SI
 Z74.SI
@@ -228,6 +236,7 @@ use finance_query::{Region, finance};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // US market hours (default)
     let hours = finance::hours(None).await?;
+    println!("{} markets (US)", hours.markets.len());
 
     // Japan market hours
     let hours = finance::hours(Some(Region::Japan)).await?;
@@ -242,9 +251,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-U.S. markets: closed
-  Open: Some("2026-07-21T00:00:00Z")
-  Close: Some("2026-07-21T06:30:00Z")
+1 markets (US)
+Japanese markets: closed
+  Open: Some("2026-08-10T00:00:00Z")
+  Close: Some("2026-08-10T06:30:00Z")
 ```
 
 ### Indices
@@ -275,24 +285,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Other regions
     let europe = finance::indices(Some(IndicesRegion::Europe)).await?;
     let asia = finance::indices(Some(IndicesRegion::AsiaPacific)).await?;
+    println!(
+        "Fetched {} Europe, {} Asia-Pacific indices",
+        europe.success_count(),
+        asia.success_count()
+    );
     Ok(())
 }
 ```
 
 ```text soothfast-output
 Fetched 41 indices
-^MERV: 3199934.50 (+0.46%)
-^DJI: 52146.42 (-0.77%)
-^GSPTSE: 35263.85 (-0.22%)
-^MXX: 66634.23 (+0.42%)
-^GSPC: 7457.69 (-1.01%)
-^IPSA: 10887.72 (-0.54%)
-^RUT: 2962.22 (-0.42%)
-^VIX: 18.77 (+12.19%)
-^BVSP: 173714.08 (-0.06%)
-^IXIC: 25520.24 (-1.40%)
-^XAX: 8097.59 (+1.27%)
-^NYA: 23816.97 (-0.56%)
+^BVSP: 172513.42 (-1.73%)
+^RUT: 3034.49 (+1.10%)
+^XAX: 8524.65 (+0.44%)
+^MXX: 66938.64 (+0.82%)
+^MERV: 3086784.50 (-0.45%)
+^NYA: 24595.24 (+0.45%)
+^GSPTSE: 36381.23 (+0.68%)
+^GSPC: 7757.64 (+0.62%)
+^IXIC: 26690.62 (+1.30%)
+^IPSA: 10887.72 (-0.55%)
+^DJI: 54036.93 (+0.28%)
+^VIX: 14.90 (-1.65%)
+Fetched 9 Europe, 12 Asia-Pacific indices
 ```
 
 **Available Regions:**
@@ -319,9 +335,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Most actives
     let actives = finance::screener(Screener::MostActives, 25).await?;
+    println!("Fetched {} most actives", actives.quotes.len());
 
     // Day losers
     let losers = finance::screener(Screener::DayLosers, 25).await?;
+    println!("Fetched {} day losers", losers.quotes.len());
 
     // Process results
     for quote in &gainers.quotes {
@@ -333,31 +351,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-LCID: +13.93%
-SLS: +12.26%
-ORKA: +11.63%
-DNTH: +10.75%
-COAG: +10.69%
-TRVI: +9.85%
-TRV: +9.22%
-SION: +9.10%
-BHVN: +8.96%
-VG: +8.92%
-MBX: +7.89%
-IOVA: +7.30%
-AGL: +7.11%
-PTGX: +6.73%
-FRVO: +6.66%
-MMED: +6.61%
-EROC: +6.50%
-SYRE: +6.49%
-WU: +6.47%
-PVLA: +6.41%
-RAPP: +6.20%
-LQDA: +6.20%
-LEU: +6.11%
-GLUE: +6.04%
-TALO: +5.67%
+Fetched 25 most actives
+Fetched 25 day losers
+TEAM: +35.31%
+DOCS: +32.62%
+FIGS: +26.87%
+TWLO: +24.89%
+BTG: +22.98%
+NTRA: +21.37%
+HALO: +20.24%
+FIVN: +19.81%
+ROAD: +19.55%
+AXTI: +17.84%
+ABNB: +17.43%
+FLR: +16.92%
+BVC: +16.85%
+CELH: +16.83%
+TIC: +15.90%
+SPCX: +15.83%
+RDW: +14.88%
+OKLO: +14.77%
+ONTO: +14.74%
+IAG: +14.29%
+TXG: +14.10%
+APPN: +13.91%
+MCHP: +13.89%
+CAI: +13.70%
+CVSA: +13.46%
 ```
 
 <!-- soothfast:claim finance_query::de_screener.walltime.median_ns < 2000000 -->
@@ -441,14 +461,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```text soothfast-output
 Sector: Technology
   Companies: 851
-  Market Cap: $26834.07B
+  Market Cap: $28923.51B
 Top companies:
   NVDA - NVIDIA Corporation
   AAPL - Apple Inc.
   MSFT - Microsoft Corporation
   AVGO - Broadcom Inc.
-  SKHY - SK hynix Inc.
   MU - Micron Technology, Inc.
+  SKHY - SK hynix Inc.
   AMD - Advanced Micro Devices, Inc.
   INTC - Intel Corporation
   CSCO - Cisco Systems, Inc.
@@ -506,12 +526,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```text soothfast-output
 Industry: Semiconductors
-  Companies: Some(60)
-  Market Cap: $Some(10275.506880512)B
+  Companies: Some(61)
+  Market Cap: $Some(11162.377781248)B
   NVDA - NVIDIA Corporation
   AVGO - Broadcom Inc.
-  SKHY - SK hynix Inc.
   MU - Micron Technology, Inc.
+  SKHY - SK hynix Inc.
   AMD - Advanced Micro Devices, Inc.
 ```
 
@@ -551,46 +571,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-What to Know About the Chinese AI Models Rattling U.S. Stocks
+U.S. Consumer Brands Say Chicken, Soap and Snacks Are Selling Better Overseas
   Source: WSJ
-  Time: 6 hours ago
-  Link: https://www.wsj.com/tech/ai/what-to-know-about-the-chinese-ai-models-rattling-u-s-stocks-1a80a479
-Forget gasoline: Why the price surge in this under-the-radar fuel is the real threat to the U.S. economy
-  Source: Market Watch
-  Time: 6 hours ago
-  Link: https://www.marketwatch.com/story/forget-gasoline-why-the-price-surge-in-this-under-the-radar-fuel-is-the-real-threat-to-the-u-s-economy-710b9470
-'WarshGPT': How Wall Street is adapting to the Fed's new era of communication
-  Source: CNBC
-  Time: 6 hours ago
-  Link: https://www.cnbc.com/2026/07/18/warshgpt-federal-reserve-communications-task-force-warsh.html
-Will the Fed hike interest rates this month?
-  Source: Market Watch
-  Time: 7 hours ago
-  Link: https://www.marketwatch.com/story/will-the-fed-hike-interest-rates-this-month-6e8f952a
-U.S. military says it has completed the latest round of strikes against Iran, amid more disruptions to shipping
-  Source: CNBC
-  Time: 8 hours ago
-  Link: https://www.cnbc.com/2026/07/18/us-military-says-it-completed-latest-round-of-strikes-against-iran.html
-Dow Jones Forecast: Tariff Risks Test Rally as Index Eyes 55,000
+  Time: 3 hours ago
+  Link: https://www.wsj.com/business/hospitality/u-s-consumer-brands-say-chicken-soap-and-snacks-are-selling-better-overseas-3406cb68
+Turbulent Month Leaves Stock Funds Up 10.6% So Far in 2026
+  Source: WSJ
+  Time: 5 hours ago
+  Link: https://www.wsj.com/finance/investing/stock-funds-increase-year-to-date-4085a35d
+US Interest Rate Forecast: Weak Jobs Cut Fed Hike Odds Ahead of CPI
   Source: FXEmpire
   Time: 9 hours ago
-  Link: https://www.fxempire.com/forecasts/article/dow-jones-forecast-tariff-risks-test-rally-as-index-eyes-55000-1611225
-View From the EDGE® July 2026: The Importance of Diversification
-  Source: ETF Trends
+  Link: https://www.fxempire.com/forecasts/article/us-interest-rate-forecast-weak-jobs-cut-fed-hike-odds-ahead-of-cpi-1615671
+The Week That Was, The Week Ahead: Macro and Markets, August 9
+  Source: TipRanks
+  Time: 9 hours ago
+  Link: https://www.tipranks.com/news/the-week-that-was-the-week-ahead-macro-and-markets-august-9
+The Week Ahead, CPI and Earnings Test the Stock Market Rally Near Record Highs
+  Source: FXEmpire
+  Time: 11 hours ago
+  Link: https://www.fxempire.com/forecasts/article/the-week-ahead-cpi-and-earnings-test-the-stock-market-rally-near-record-highs-1615629
+Blockbuster Earnings Bolster Stocks' Record Run
+  Source: WSJ
   Time: 17 hours ago
-  Link: https://www.etftrends.com/etf-strategist-content-hub/view-from-the-edge-july-2026-the-importance-of-diversification/
-Review & Preview: It Could Have Been Worse
-  Source: Barrons
-  Time: 18 hours ago
-  Link: https://www.barrons.com/articles/stocks-today-ai-tech-declines-market-indexes-lower-cc7f100f
-Meet Kimi K3, the newest Chinese AI model haunting Silicon Valley
-  Source: Market Watch
-  Time: 19 hours ago
-  Link: https://www.marketwatch.com/story/meet-kimi-k3-the-newest-chinese-ai-model-haunting-silicon-valley-755ed738
-The average stock is having a moment as semiconductors struggle. It's a sign of a healthy market.
-  Source: Market Watch
-  Time: 20 hours ago
-  Link: https://www.marketwatch.com/story/the-average-stock-is-having-a-moment-as-semiconductors-struggle-its-a-sign-of-a-healthy-market-0dc01e9a
+  Link: https://www.wsj.com/finance/stocks/blockbuster-earnings-bolster-stocks-record-run-97551889
+Iran Demands U.S. Withdrawal to Open Hormuz
+  Source: WSJ
+  Time: 22 hours ago
+  Link: https://www.wsj.com/world/middle-east/u-a-e-says-iran-attacked-one-of-its-ships-in-hormuz-bfbec3b2
+For retirees, staying in the stock market is critical. How much exposure is the make-or-break question
+  Source: CNBC
+  Time: 1 day ago
+  Link: https://www.cnbc.com/2026/08/08/retirement-investing-equity-income-stocks.html
+The Labor Market Might Not Need as Many Jobs to Be Healthy
+  Source: WSJ
+  Time: 1 day ago
+  Link: https://www.wsj.com/articles/the-labor-market-might-not-need-as-many-jobs-to-be-healthy-3ed8046c
+Dow Jones Forecast: Weak Jobs Report Supports Dow Near 55,000
+  Source: FXEmpire
+  Time: 1 day ago
+  Link: https://www.fxempire.com/forecasts/article/dow-jones-forecast-weak-jobs-report-supports-dow-near-55000-1615590
 ```
 
 <!-- soothfast:claim finance_query::de_news.walltime.median_ns < 15000 -->
@@ -614,6 +634,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get specific quarter
     let q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
+    println!("Quarter: {} {}", q4_2024.quarter(), q4_2024.year());
 
     // Get all available transcripts
     let all = finance::earnings_transcripts("MSFT", None).await?;
@@ -634,9 +655,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Quarter: Q2 2026
-Speakers: 13
-Found 64 transcripts
+Quarter: Q3 2026
+Speakers: 12
+Quarter: Q4 2024
+Found 65 transcripts
 Q1 2027 Earnings Call: Q1 2027
 Q4 2026 Earnings Call: Q4 2026
 Q3 2026 Earnings Call: Q3 2026
@@ -681,11 +703,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-What to Know About the Chinese AI Models Rattling U.S. Stocks → Neutral (+0.00)
-Forget gasoline: Why the price surge in this under-the-radar fuel is the real threat to the U.S. economy → Bearish (-0.65)
-'WarshGPT': How Wall Street is adapting to the Fed's new era of communication → Neutral (+0.00)
-Will the Fed hike interest rates this month? → Bullish (+0.49)
-U.S. military says it has completed the latest round of strikes against Iran, amid more disruptions to shipping → Bearish (-0.60)
+U.S. Consumer Brands Say Chicken, Soap and Snacks Are Selling Better Overseas → Bullish (+0.44)
+Turbulent Month Leaves Stock Funds Up 10.6% So Far in 2026 → Neutral (+0.00)
+US Interest Rate Forecast: Weak Jobs Cut Fed Hike Odds Ahead of CPI → Bearish (-0.25)
+The Week That Was, The Week Ahead: Macro and Markets, August 9 → Neutral (+0.00)
+The Week Ahead, CPI and Earnings Test the Stock Market Rally Near Record Highs → Neutral (+0.00)
 ```
 
 You can also score arbitrary text directly — the scoring itself is fully
@@ -736,8 +758,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Fear & Greed: 25 / 100
-Classification: Extreme Fear
+Fear & Greed: 31 / 100
+Classification: Fear
 ```
 
 **`FearAndGreed` fields:**
@@ -907,22 +929,22 @@ FJD: FJD
 MXN: MXN
 SCR: SCR
 CDF: CDF
-BBD: BBD
 GTQ: GTQ
+BBD: BBD
 CLP: CLP
 UGX: UGX
 HNL: HNL
-MXV: MXV
 ZAR: ZAR
+MXV: MXV
 TND: TND
 STN: STN
 SLE: SLE
-SLL: SLL
 BSD: BSD
+SLL: SLL
 SDG: SDG
 IQD: IQD
-GMD: GMD
 CUP: CUP
+GMD: GMD
 TWD: TWD
 RSD: RSD
 DOP: DOP
@@ -935,24 +957,24 @@ UYU: UYU
 MAD: MAD
 CVE: CVE
 TOP: TOP
-OMR: OMR
 PGK: PGK
+OMR: OMR
 AZN: AZN
 SEK: SEK
 KES: KES
-UAH: UAH
 BTN: BTN
+UAH: UAH
 GNF: GNF
-ERN: ERN
 MZN: MZN
+ERN: ERN
 SVC: SVC
 ARS: ARS
 QAR: QAR
 IRR: IRR
 THB: THB
+XPF: XPF
 UZS: UZS
 CNY: CNY
-XPF: XPF
 MRU: MRU
 BDT: BDT
 LYD: LYD
@@ -970,34 +992,34 @@ DZD: DZD
 PAB: PAB
 SGD: SGD
 ETB: ETB
-VUV: VUV
-KGS: KGS
 SOS: SOS
+KGS: KGS
+VUV: VUV
 LAK: LAK
 BND: BND
 XAF: XAF
 LRD: LRD
-CHF: CHF
 HRK: HRK
-DJF: DJF
+CHF: CHF
 ALL: ALL
+DJF: DJF
 VES: VES
 ZMW: ZMW
 TZS: TZS
 VND: VND
 AUD: AUD
 ILS: ILS
-GHS: GHS
 KPW: KPW
 GYD: GYD
+GHS: GHS
 KHR: KHR
-BOB: BOB
 MDL: MDL
+BOB: BOB
 IDR: IDR
 KYD: KYD
 AMD: AMD
-TRY: TRY
 BWP: BWP
+TRY: TRY
 SHP: SHP
 LBP: LBP
 TJS: TJS
@@ -1011,8 +1033,8 @@ DKK: DKK
 CAD: CAD
 BGN: BGN
 MMK: MMK
-NOK: NOK
 MUR: MUR
+NOK: NOK
 SYP: SYP
 GIP: GIP
 RON: RON
@@ -1022,26 +1044,26 @@ CZK: CZK
 CRC: CRC
 PKR: PKR
 XCD: XCD
-ANG: ANG
 HTG: HTG
+ANG: ANG
 XCG: XCG
 BHD: BHD
-KZT: KZT
-SZL: SZL
 SRD: SRD
-TTD: TTD
+SZL: SZL
+KZT: KZT
 SAR: SAR
+TTD: TTD
 YER: YER
 MVR: MVR
 AFN: AFN
 INR: INR
 AWG: AWG
-NPR: NPR
 KRW: KRW
-MNT: MNT
+NPR: NPR
 JPY: JPY
-AOA: AOA
+MNT: MNT
 PLN: PLN
+AOA: AOA
 SBD: SBD
 GBP: GBP
 BYN: BYN
@@ -1058,8 +1080,8 @@ NAD: NAD
 SSP: SSP
 NIO: NIO
 PEN: PEN
-NZD: NZD
 WST: WST
+NZD: NZD
 TMT: TMT
 CLF: CLF
 BRL: BRL

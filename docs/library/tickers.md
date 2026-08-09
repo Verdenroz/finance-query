@@ -18,11 +18,13 @@ use finance_query::Tickers;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
+    println!("{} tickers", tickers.len());
     Ok(())
 }
 ```
 
 ```text soothfast-output
+3 tickers
 ```
 
 ### Builder Pattern
@@ -40,11 +42,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .timeout(Duration::from_secs(30))
         .build()
         .await?;
+    println!("{} tickers", tickers.len());
     Ok(())
 }
 ```
 
 ```text soothfast-output
+2 tickers
 ```
 
 ### Builder Options
@@ -79,11 +83,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .max_concurrency(3)
         .build()
         .await?;
+    println!("{} tickers", tickers.len());
     Ok(())
 }
 ```
 
 ```text soothfast-output
+4 tickers
 ```
 
 ## Provider Configuration
@@ -639,6 +645,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Fetch for specific expiration date (Unix timestamp)
     let specific_date = 1735689600; // 2025-01-01
     let response = tickers.options(Some(specific_date)).await?;
+    println!("Fetched options for {} symbols", response.options.len());
     Ok(())
 }
 ```
@@ -815,6 +822,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Fetch quotes for current symbols
     let response = tickers.quotes().await?;
     // Response will only include AAPL, GOOGL, NVDA
+    println!("Fetched {} quotes", response.success_count());
     Ok(())
 }
 ```

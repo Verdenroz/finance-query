@@ -5,5 +5,6 @@ use finance_query::Tickers;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
+    println!("{} tickers", tickers.len());
     Ok(())
 }

@@ -59,24 +59,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-shape: (20, 7)
-┌────────────┬────────────┬────────────┬────────────┬────────────┬───────────┬───────────┐
-│ timestamp  ┆ open       ┆ high       ┆ low        ┆ close      ┆ volume    ┆ adj_close │
-│ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---       ┆ ---       │
-│ i64        ┆ f64        ┆ f64        ┆ f64        ┆ f64        ┆ i64       ┆ f64       │
-╞════════════╪════════════╪════════════╪════════════╪════════════╪═══════════╪═══════════╡
-│ 1781789400 ┆ 298.109985 ┆ 300.570007 ┆ 295.619995 ┆ 298.01001  ┆ 85962200  ┆ null      │
-│ 1782135000 ┆ 297.309998 ┆ 302.420013 ┆ 296.76001  ┆ 297.01001  ┆ 44879900  ┆ null      │
-│ 1782221400 ┆ 297.540009 ┆ 301.640015 ┆ 294.179993 ┆ 294.299988 ┆ 52010900  ┆ null      │
-│ 1782307800 ┆ 295.359985 ┆ 299.700012 ┆ 292.940002 ┆ 293.079987 ┆ 53081900  ┆ null      │
-│ 1782394200 ┆ 287.399994 ┆ 288.799988 ┆ 273.75     ┆ 275.149994 ┆ 107013700 ┆ null      │
-│ …          ┆ …          ┆ …          ┆ …          ┆ …          ┆ …         ┆ …         │
-│ 1783949400 ┆ 317.019989 ┆ 323.450012 ┆ 315.779999 ┆ 317.309998 ┆ 43257800  ┆ null      │
-│ 1784035800 ┆ 313.76001  ┆ 316.190002 ┆ 311.910004 ┆ 314.859985 ┆ 36336800  ┆ null      │
-│ 1784122200 ┆ 317.619995 ┆ 328.730011 ┆ 317.320007 ┆ 327.5      ┆ 60957600  ┆ null      │
-│ 1784208600 ┆ 328.01001  ┆ 334.679993 ┆ 326.790009 ┆ 333.26001  ┆ 62970600  ┆ null      │
-│ 1784295000 ┆ 331.980011 ┆ 334.98999  ┆ 329.0      ┆ 333.73999  ┆ 63365300  ┆ null      │
-└────────────┴────────────┴────────────┴────────────┴────────────┴───────────┴───────────┘
+shape: (23, 7)
+┌────────────┬────────────┬────────────┬────────────┬────────────┬──────────┬────────────┐
+│ timestamp  ┆ open       ┆ high       ┆ low        ┆ close      ┆ volume   ┆ adj_close  │
+│ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---      ┆ ---        │
+│ i64        ┆ f64        ┆ f64        ┆ f64        ┆ f64        ┆ i64      ┆ f64        │
+╞════════════╪════════════╪════════════╪════════════╪════════════╪══════════╪════════════╡
+│ 1783517400 ┆ 311.910004 ┆ 314.820007 ┆ 307.049988 ┆ 313.390015 ┆ 41323500 ┆ 313.390015 │
+│ 1783603800 ┆ 310.51001  ┆ 316.529999 ┆ 308.160004 ┆ 316.220001 ┆ 48124500 ┆ 316.220001 │
+│ 1783690200 ┆ 314.720001 ┆ 316.910004 ┆ 312.170013 ┆ 315.320007 ┆ 34132300 ┆ 315.320007 │
+│ 1783949400 ┆ 317.019989 ┆ 323.450012 ┆ 315.779999 ┆ 317.309998 ┆ 43257800 ┆ 317.309998 │
+│ 1784035800 ┆ 313.76001  ┆ 316.190002 ┆ 311.910004 ┆ 314.859985 ┆ 36336800 ┆ 314.859985 │
+│ …          ┆ …          ┆ …          ┆ …          ┆ …          ┆ …        ┆ …          │
+│ 1785763800 ┆ 309.579987 ┆ 311.799988 ┆ 302.559998 ┆ 303.420013 ┆ 75052000 ┆ 303.420013 │
+│ 1785850200 ┆ 302.730011 ┆ 310.420013 ┆ 301.320007 ┆ 309.380005 ┆ 68001000 ┆ 309.380005 │
+│ 1785936600 ┆ 309.359985 ┆ 311.709991 ┆ 305.670013 ┆ 311.0      ┆ 49438800 ┆ 311.0      │
+│ 1786023000 ┆ 314.339996 ┆ 316.290009 ┆ 309.230011 ┆ 312.410004 ┆ 46139900 ┆ 312.410004 │
+│ 1786109400 ┆ 311.450012 ┆ 314.809998 ┆ 310.73999  ┆ 313.329987 ┆ 34407100 ┆ 313.329987 │
+└────────────┴────────────┴────────────┴────────────┴────────────┴──────────┴────────────┘
 ```
 
 **Chart DataFrame Columns:**
@@ -199,37 +199,31 @@ shape: (50, 59)
 │        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
 │        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
 ╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
-│ LCID   ┆ Lucid      ┆ Lucid      ┆ Lucid      ┆ … ┆ 178587360 ┆ 178587360 ┆ 178587360 ┆ USD      │
-│        ┆ Group,     ┆ Group,     ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ SLS    ┆ SELLAS     ┆ SELLAS     ┆ SELLAS     ┆ … ┆ 177861600 ┆ 178647840 ┆ 178647840 ┆ USD      │
-│        ┆ Life       ┆ Life       ┆ Life       ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Sciences   ┆ Sciences   ┆ Sciences   ┆   ┆           ┆           ┆           ┆          │
-│        ┆ Group, In… ┆ Group, In… ┆            ┆   ┆           ┆           ┆           ┆          │
-│ ORKA   ┆ Oruka Ther ┆ Oruka Ther ┆ Oruka Ther ┆ … ┆ 177870240 ┆ 178639200 ┆ 178639200 ┆ USD      │
-│        ┆ apeutics,  ┆ apeutics,  ┆ apeutics   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ DNTH   ┆ Dianthus   ┆ Dianthus   ┆ Dianthus   ┆ … ┆ 177801120 ┆ 177801120 ┆ 177801120 ┆ USD      │
-│        ┆ Therapeuti ┆ Therapeuti ┆ Therapeuti ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ cs, Inc.   ┆ cs, Inc.   ┆ cs         ┆   ┆           ┆           ┆           ┆          │
-│ COAG   ┆ Hemab Ther ┆ Hemab Ther ┆ Hemab Ther ┆ … ┆ 177936660 ┆ 178671060 ┆ 178671060 ┆ USD      │
-│        ┆ apeutics   ┆ apeutics   ┆ apeutics   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Holdings,  ┆ Holdings,  ┆            ┆   ┆           ┆           ┆           ┆          │
-│        ┆ I…         ┆ I…         ┆            ┆   ┆           ┆           ┆           ┆          │
-│ …      ┆ …          ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …        │
-│ SSL    ┆ Sasol Ltd. ┆ Sasol      ┆ null       ┆ … ┆ null      ┆ 177185340 ┆ 177185340 ┆ USD      │
-│        ┆            ┆ Limited    ┆            ┆   ┆           ┆ 0         ┆ 0         ┆          │
-│ CLMT   ┆ Calumet,   ┆ Calumet,   ┆ Calumet    ┆ … ┆ 177824340 ┆ 178610580 ┆ 178610580 ┆ USD      │
-│        ┆ Inc        ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ BAND   ┆ Bandwidth  ┆ Bandwidth  ┆ Bandwidth  ┆ … ┆ 178532820 ┆ 178532820 ┆ 178532820 ┆ USD      │
+│ TEAM   ┆ Atlassian  ┆ Atlassian  ┆ Atlassian  ┆ … ┆ 178604640 ┆ 179330400 ┆ 179330400 ┆ USD      │
+│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ n          ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
+│ DOCS   ┆ Doximity,  ┆ Doximity,  ┆ Doximity   ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
 │        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ EWTX   ┆ Edgewise   ┆ Edgewise   ┆ Edgewise   ┆ … ┆ 177815700 ┆ 178601940 ┆ 178601940 ┆ USD      │
-│        ┆ Therapeuti ┆ Therapeuti ┆ Therapeuti ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ cs, Inc.   ┆ cs, Inc.   ┆ cs         ┆   ┆           ┆           ┆           ┆          │
-│ ARWR   ┆ Arrowhead  ┆ Arrowhead  ┆ Arrowhead  ┆ … ┆ 177818400 ┆ 178604640 ┆ 178604640 ┆ USD      │
-│        ┆ Pharmaceut ┆ Pharmaceut ┆ Pharmaceut ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ icals,     ┆ icals,     ┆ icals      ┆   ┆           ┆           ┆           ┆          │
-│        ┆ Inc…       ┆ Inc…       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ FIGS   ┆ FIGS, Inc. ┆ FIGS, Inc. ┆ FIGS       ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
+│        ┆            ┆            ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ TWLO   ┆ Twilio     ┆ Twilio     ┆ Twilio     ┆ … ┆ 178604640 ┆ 179330400 ┆ 179330400 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ BTG    ┆ B2Gold     ┆ B2Gold     ┆ B2Gold     ┆ … ┆ 178604640 ┆ 179382240 ┆ 179382240 ┆ USD      │
+│        ┆ Corp       ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ …      ┆ …          ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …        │
+│ PLSE   ┆ Pulse Bios ┆ Pulse Bios ┆ Pulse Bios ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
+│        ┆ ciences,   ┆ ciences,   ┆ ciences    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc        ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ WGS    ┆ GeneDx     ┆ GeneDx     ┆ GeneDx     ┆ … ┆ 178578720 ┆ 179313120 ┆ 179313120 ┆ USD      │
+│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆           ┆           ┆           ┆          │
+│ ARIS   ┆ Aris       ┆ Aris       ┆ Aris       ┆ … ┆ 178535520 ┆ 179321760 ┆ 179321760 ┆ USD      │
+│        ┆ Mining Cor ┆ Mining Cor ┆ Mining     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
+│ SSRM   ┆ SSR Mining ┆ SSR Mining ┆ SSR Mining ┆ … ┆ 178587360 ┆ 179373600 ┆ 179373600 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ ERO    ┆ Ero Copper ┆ Ero Copper ┆ Ero Copper ┆ … ┆ 178596000 ┆ 179373600 ┆ 179373600 ┆ USD      │
+│        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
 └────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
@@ -265,15 +259,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-RSI(14): Scalar(ScalarColumn { name: "rsi_14", scalar: Scalar { dtype: Float64, value: Float64(36.299227899822874) }, length: 1, materialized: OnceLock(shape: (1,)
+RSI(14): Scalar(ScalarColumn { name: "rsi_14", scalar: Scalar { dtype: Float64, value: Float64(47.64980926070213) }, length: 1, materialized: OnceLock(shape: (1,)
 Series: 'rsi_14' [f64]
 [
-	36.299228
+	47.649809
 ]) })
-ADX(14): Scalar(ScalarColumn { name: "adx_14", scalar: Scalar { dtype: Float64, value: Float64(12.3541707718352) }, length: 1, materialized: OnceLock(shape: (1,)
+ADX(14): Scalar(ScalarColumn { name: "adx_14", scalar: Scalar { dtype: Float64, value: Float64(30.896739718155665) }, length: 1, materialized: OnceLock(shape: (1,)
 Series: 'adx_14' [f64]
 [
-	12.354171
+	30.89674
 ]) })
 ```
 
@@ -312,7 +306,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Total days: 124, high-volume days: 45
+Total days: 125, high-volume days: 42
 ```
 
 ### Computing Statistics
@@ -347,8 +341,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Average close: $278.49
-Range: $243.42 - $334.99
+Average close: $285.81
+Range: $245.51 - $344.57
 ```
 
 ### Adding Calculated Columns
@@ -379,20 +373,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Series(SeriesColumn { inner: shape: (20,)
+Series(SeriesColumn { inner: shape: (23,)
 Series: 'daily_return_pct' [f64]
 [
 	null
-	-0.335559
-	-0.912435
-	-0.414543
-	-6.117781
-	…
+	0.903024
+	-0.28461
 	0.631102
 	-0.772119
-	4.014487
-	1.758782
-	0.144026
+	…
+	-1.777213
+	1.964271
+	0.523626
+	0.453377
+	0.294479
 ], materialized_at: None })
 ```
 
@@ -468,35 +462,35 @@ shape: (10, 59)
 │        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
 │        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
 ╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
-│ TTE    ┆ TotalEnerg ┆ TotalEnerg ┆ null       ┆ … ┆ 178483680 ┆ 178483680 ┆ 178483680 ┆ USD      │
-│        ┆ ies SE     ┆ ies SE     ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ STX    ┆ Seagate    ┆ Seagate    ┆ Seagate    ┆ … ┆ 178526880 ┆ 178526880 ┆ 178526880 ┆ USD      │
-│        ┆ Technology ┆ Technology ┆ Technology ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆           ┆           ┆           ┆          │
-│        ┆ PL…        ┆ pl…        ┆            ┆   ┆           ┆           ┆           ┆          │
-│ VLO    ┆ Valero     ┆ Valero     ┆ Valero     ┆ … ┆ 178541460 ┆ 178541460 ┆ 178541460 ┆ USD      │
-│        ┆ Energy Cor ┆ Energy Cor ┆ Energy     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
-│ EQNR   ┆ Equinor    ┆ Equinor    ┆ null       ┆ … ┆ 178472340 ┆ 178472340 ┆ 178472340 ┆ USD      │
-│        ┆ ASA        ┆ ASA        ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ TRV    ┆ The        ┆ The        ┆ The        ┆ … ┆ 178429140 ┆ 179206740 ┆ 179206740 ┆ USD      │
-│        ┆ Travelers  ┆ Travelers  ┆ Travelers  ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Companies, ┆ Companies, ┆ Companies  ┆   ┆           ┆           ┆           ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ E      ┆ ENI S.p.A. ┆ Eni S.p.A. ┆ Eni S.p.A  ┆ … ┆ 177706080 ┆ 177706080 ┆ 177706080 ┆ USD      │
-│        ┆            ┆            ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ ALL    ┆ Allstate   ┆ The        ┆ The        ┆ … ┆ 177749280 ┆ 177749280 ┆ 177749280 ┆ USD      │
-│        ┆ Corporatio ┆ Allstate   ┆ Allstate   ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ n (The)    ┆ Corporatio ┆            ┆   ┆           ┆           ┆           ┆          │
-│        ┆            ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
-│ BE     ┆ Bloom      ┆ Bloom      ┆ Bloom      ┆ … ┆ 178526880 ┆ 178526880 ┆ 178526880 ┆ USD      │
-│        ┆ Energy Cor ┆ Energy Cor ┆ Energy     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
-│ LITE   ┆ Lumentum   ┆ Lumentum   ┆ Lumentum   ┆ … ┆ 178647840 ┆ 178647840 ┆ 178647840 ┆ USD      │
-│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ HUM    ┆ Humana     ┆ Humana     ┆ Humana     ┆ … ┆ 178532820 ┆ 178532820 ┆ 178532820 ┆ USD      │
+│ SPCX   ┆ Space Expl ┆ Space Expl ┆ Space Expl ┆ … ┆ 178587360 ┆ 179373600 ┆ 179373600 ┆ USD      │
+│        ┆ oration    ┆ oration    ┆ oration    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Technologi ┆ Technologi ┆            ┆   ┆           ┆           ┆           ┆          │
+│        ┆ es…        ┆ es…        ┆            ┆   ┆           ┆           ┆           ┆          │
+│ PLTR   ┆ Palantir   ┆ Palantir   ┆ Palantir   ┆ … ┆ 178578720 ┆ 179364960 ┆ 179364960 ┆ USD      │
+│        ┆ Technologi ┆ Technologi ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ es Inc.    ┆ es Inc.    ┆            ┆   ┆           ┆           ┆           ┆          │
+│ ABNB   ┆ Airbnb,    ┆ Airbnb,    ┆ Airbnb     ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
 │        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ COHR   ┆ Coherent   ┆ Coherent   ┆ Coherent   ┆ … ┆ 178656480 ┆ 178656480 ┆ 178656480 ┆ USD      │
+│        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ HONA   ┆ Honeywell  ┆ Honeywell  ┆ Honeywell  ┆ … ┆ 178596000 ┆ 179382240 ┆ 179382240 ┆ USD      │
+│        ┆ Aerospace  ┆ Aerospace  ┆ Aerospace  ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ RKLB   ┆ Rocket Lab ┆ Rocket Lab ┆ Rocket Lab ┆ … ┆ 178639200 ┆ 178639200 ┆ 178639200 ┆ USD      │
+│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ n          ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
+│ AU     ┆ AngloGold  ┆ AngloGold  ┆ AngloGold  ┆ … ┆ 178550100 ┆ 178550100 ┆ 178550100 ┆ USD      │
+│        ┆ Ashanti    ┆ Ashanti    ┆ Ashanti    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ PLC        ┆ plc        ┆            ┆   ┆           ┆           ┆           ┆          │
+│ CRDO   ┆ Credo      ┆ Credo      ┆ Credo      ┆ … ┆ 178034400 ┆ 178837920 ┆ 178837920 ┆ USD      │
+│        ┆ Technology ┆ Technology ┆ Technology ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Group      ┆ Group      ┆ Group      ┆   ┆           ┆           ┆           ┆          │
+│        ┆ Holding…   ┆ Holding…   ┆ Holding    ┆   ┆           ┆           ┆           ┆          │
+│ NTRA   ┆ Natera,    ┆ Natera,    ┆ Natera     ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ AXON   ┆ Axon Enter ┆ Axon Enter ┆ Axon       ┆ … ┆ 178596000 ┆ 179373600 ┆ 179373600 ┆ USD      │
+│        ┆ prise,     ┆ prise,     ┆ Enterprise ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
 └────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
@@ -531,23 +525,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-shape: (13, 5)
+shape: (14, 5)
 ┌───────┬────────────┬──────────────┬────────────┬────────────┐
 │ month ┆ avg_close  ┆ total_volume ┆ max_high   ┆ min_low    │
 │ ---   ┆ ---        ┆ ---          ┆ ---        ┆ ---        │
 │ i64   ┆ f64        ┆ i64          ┆ f64        ┆ f64        │
 ╞═══════╪════════════╪══════════════╪════════════╪════════════╡
 │ 679   ┆ 261.201363 ┆ 1086109600   ┆ 277.320007 ┆ 244.0      │
-│ 680   ┆ 275.101053 ┆ 870045100    ┆ 288.619995 ┆ 265.320007 │
-│ 678   ┆ 247.65909  ┆ 1257230200   ┆ 259.23999  ┆ 225.949997 │
-│ 682   ┆ 259.249999 ┆ 1186011100   ┆ 279.5      ┆ 243.419998 │
-│ 681   ┆ 273.322498 ┆ 825315400    ┆ 280.149994 ┆ 262.119995 │
-│ …     ┆ …          ┆ …            ┆ …          ┆ …          │
+│ 688   ┆ 322.733637 ┆ 1216397200   ┆ 344.570007 ┆ 300.0      │
+│ 676   ┆ 229.350006 ┆ 113854000    ┆ 231.0      ┆ 219.25     │
 │ 677   ┆ 231.592499 ┆ 943741000    ┆ 241.320007 ┆ 223.779999 │
-│ 686   ┆ 303.452858 ┆ 1001455700   ┆ 316.940002 ┆ 285.779999 │
-│ 688   ┆ 319.492001 ┆ 486548400    ┆ 334.98999  ┆ 307.0      │
-│ 676   ┆ 212.066875 ┆ 1031778200   ┆ 231.0      ┆ 201.5      │
 │ 684   ┆ 253.480499 ┆ 789735900    ┆ 262.480011 ┆ 245.509995 │
+│ …     ┆ …          ┆ …            ┆ …          ┆ …          │
+│ 689   ┆ 312.246663 ┆ 129985800    ┆ 316.290009 ┆ 305.670013 │
+│ 686   ┆ 303.452858 ┆ 1001455700   ┆ 316.940002 ┆ 285.779999 │
+│ 682   ┆ 259.249999 ┆ 1186011100   ┆ 279.5      ┆ 243.419998 │
+│ 685   ┆ 268.947273 ┆ 1041091400   ┆ 288.029999 ┆ 245.699997 │
+│ 678   ┆ 247.65909  ┆ 1257230200   ┆ 259.23999  ┆ 225.949997 │
 └───────┴────────────┴──────────────┴────────────┴────────────┘
 ```
 
@@ -592,7 +586,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Combined data: 60 rows
+Combined data: 69 rows
 ```
 
 ## Exporting Data
@@ -699,7 +693,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-joined shape: (20, 8)
+joined shape: (23, 8)
 ```
 
 ### Custom Analysis
@@ -744,16 +738,16 @@ shape: (10, 2)
 │ ---        ┆ ---       │
 │ i64        ┆ f64       │
 ╞════════════╪═══════════╡
-│ 1782394200 ┆ 5.469739  │
-│ 1782999000 ┆ 5.099965  │
-│ 1782480600 ┆ 4.137015  │
+│ 1784899800 ┆ 3.828599  │
 │ 1784122200 ┆ 3.483971  │
-│ 1782826200 ┆ 3.193251  │
-│ 1782739800 ┆ 3.024061  │
+│ 1785504600 ┆ 3.460556  │
+│ 1784554200 ┆ 3.071129  │
+│ 1785763800 ┆ 3.04528   │
+│ 1785850200 ┆ 2.941369  │
 │ 1783603800 ┆ 2.64689   │
-│ 1782221400 ┆ 2.534836  │
-│ 1782912600 ┆ 2.510355  │
 │ 1783517400 ┆ 2.479345  │
+│ 1783949400 ┆ 2.417199  │
+│ 1784208600 ┆ 2.367516  │
 └────────────┴───────────┘
 ```
 
@@ -772,6 +766,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::new("AAPL").await?;
     let dividends = ticker.dividends(TimeRange::FiveYears).await?;
     let df = Dividend::vec_to_dataframe(&dividends)?;
+    println!("{} dividend rows", df.height());
 
     // SearchQuotes wrapper has to_dataframe() method
     let results = finance::search("tech", &SearchOptions::default()).await?;
@@ -782,6 +777,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
+19 dividend rows
 7 rows
 ```
 
@@ -859,7 +855,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-DataFrame created: 20 rows
+DataFrame created: 23 rows
 ```
 
 ## Best Practices

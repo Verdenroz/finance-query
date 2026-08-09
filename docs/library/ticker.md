@@ -18,11 +18,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::Ticker;
 
     let ticker = Ticker::new("AAPL").await?;
+    println!("{}", ticker.symbol());
     Ok(())
 }
 ```
 
 ```text soothfast-output
+AAPL
 ```
 
 ### Builder Pattern
@@ -671,15 +673,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let macd = chart.macd(8, 21, 5)?; // Fast, slow, signal
 
     // Access latest value
+    if let Some(&latest_sma) = sma_15.last().and_then(|v| v.as_ref()) {
+        println!("SMA(15): {:.2}", latest_sma);
+    }
     if let Some(&latest_rsi) = rsi_21.last().and_then(|v| v.as_ref()) {
         println!("RSI(21): {:.2}", latest_rsi);
+    }
+    if let Some(&latest_macd) = macd.macd_line.last().and_then(|v| v.as_ref()) {
+        println!("MACD: {:.4}", latest_macd);
     }
     Ok(())
 }
 ```
 
 ```text soothfast-output
+SMA(15): 209.72
 RSI(21): 74.80
+MACD: 8.9736
 ```
 
 #### 3. Direct Functions
@@ -699,6 +709,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sma_25 = sma(&closes, 25);
     let rsi_10 = rsi(&closes, 10)?;
 
+    if let Some(&latest) = sma_25.last().and_then(|v| v.as_ref()) {
+        println!("SMA(25): {:.2}", latest);
+    }
     if let Some(&latest) = rsi_10.last().and_then(|v| v.as_ref()) {
         println!("RSI(10): {:.2}", latest);
     }
@@ -707,6 +720,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
+SMA(25): 209.72
 RSI(10): 81.96
 ```
 
@@ -720,7 +734,7 @@ Detect candlestick patterns from chart data (requires `indicators` feature):
 ```rust capture-output
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use finance_query::indicators::{CandlePattern, PatternSentiment};
+    use finance_query::indicators::PatternSentiment;
     use finance_query::{Interval, Ticker, TimeRange};
 
     let ticker = Ticker::new("AAPL").await?;
@@ -835,6 +849,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let risk = ticker
         .risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC"))
         .await?;
+    if let Some(beta) = risk.beta {
+        println!("Beta (vs ^GSPC): {:.2}", beta);
+    }
 
     // Without a benchmark
     let risk = ticker
@@ -924,11 +941,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let balance = ticker
         .financials(StatementType::Balance, Frequency::Quarterly)
         .await?;
+    println!("Balance sheet line items: {}", balance.statement.len());
 
     // Cash flow statement
     let cashflow = ticker
         .financials(StatementType::CashFlow, Frequency::Annual)
         .await?;
+    println!("Cash flow line items: {}", cashflow.statement.len());
     Ok(())
 }
 ```
@@ -1000,6 +1019,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let exp_dates = options.expiration_dates();
     if exp_dates.len() > 1 {
         let options_dated = ticker.options(Some(exp_dates[1])).await?;
+        println!(
+            "\nExpiration {}: {} calls, {} puts",
+            exp_dates[1],
+            options_dated.calls().len(),
+            options_dated.puts().len()
+        );
     }
     Ok(())
 }
@@ -1610,20 +1635,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Default: cached for the lifetime of the handle
     let ticker = Ticker::new("AAPL").await?;
+    println!("default: {}", ticker.symbol());
 
     // Bounded: entries expire after 5 minutes
     let ticker = Ticker::builder("AAPL")
         .cache(Duration::from_secs(300))
         .build()
         .await?;
+    println!("bounded: {}", ticker.symbol());
 
     // Off: every accessor issues a fresh request
     let ticker = Ticker::builder("AAPL").no_cache().build().await?;
+    println!("no_cache: {}", ticker.symbol());
     Ok(())
 }
 ```
 
 ```text soothfast-output
+default: AAPL
+bounded: AAPL
+no_cache: AAPL
 ```
 
 ### Quote Summary Modules
