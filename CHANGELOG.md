@@ -9,340 +9,582 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### API surface
 
-No public API changes.
+```
+ADDED    finance_query::AssetClass
+ADDED    finance_query::CalendarDetail
+ADDED    finance_query::CalendarKind
+ADDED    finance_query::CommitmentsOfTraders
+ADDED    finance_query::CotObservation
+ADDED    finance_query::Discovery
+ADDED    finance_query::EconomicCatalog
+ADDED    finance_query::EconomicCategory
+ADDED    finance_query::EconomicRelease
+ADDED    finance_query::EconomicSeriesMatch
+ADDED    finance_query::EmployeeCount
+ADDED    finance_query::EtfHolding
+ADDED    finance_query::EtfProfile
+ADDED    finance_query::ExchangeInfo
+ADDED    finance_query::ExecutiveCompensation
+ADDED    finance_query::FilingSearchFilters
+ADDED    finance_query::FilingSearchHit
+ADDED    finance_query::FilingSection
+ADDED    finance_query::FilingSectionForm
+ADDED    finance_query::FinancialRatiosTtm
+ADDED    finance_query::IndexConstituent
+ADDED    finance_query::IndexConstituentChange
+ADDED    finance_query::IndustryPe
+ADDED    finance_query::InsiderTrade
+ADDED    finance_query::InstitutionalHolding
+ADDED    finance_query::KeyMetricsTtm
+ADDED    finance_query::MajorIndex
+ADDED    finance_query::Market
+ADDED    finance_query::MarketCalendar
+ADDED    finance_query::MarketCalendarEntry
+ADDED    finance_query::MarketSnapshot
+ADDED    finance_query::MoverDirection
+ADDED    finance_query::MoverQuote
+ADDED    finance_query::PressRelease
+ADDED    finance_query::PriceTargetConsensus
+ADDED    finance_query::PriceTargetSummary
+ADDED    finance_query::ProviderHealth
+ADDED    finance_query::RatingConsensus
+ADDED    finance_query::RetryPolicy
+ADDED    finance_query::RiskFactor
+ADDED    finance_query::ScreenerFilters
+ADDED    finance_query::ScreenerMatch
+ADDED    finance_query::SectorPe
+ADDED    finance_query::SectorPerformance
+ADDED    finance_query::SectorPerformanceHistory
+ADDED    finance_query::ShareFloat
+ADDED    finance_query::ShortInterest
+ADDED    finance_query::ShortVolume
+ADDED    finance_query::Snapshot
+ADDED    finance_query::SymbolDetails
+ADDED    finance_query::SymbolMatch
+ADDED    finance_query::adapters::cftc::futures::fetch_commitments_of_traders_response
+ADDED    finance_query::adapters::coingecko::discovery::fetch_symbol_search_response
+ADDED    finance_query::adapters::coingecko::fetch_crypto_global_response
+ADDED    finance_query::adapters::coingecko::fetch_crypto_trending_response
+ADDED    finance_query::adapters::gdelt::corporate::fetch_news_response
+ADDED    finance_query::adapters::yahoo::client::ClientConfig
+ADDED    finance_query::adapters::yahoo::client::YahooClient
+ADDED    finance_query::backtesting::PositionExtremes
+ADDED    finance_query::backtesting::position::Position::close
+ADDED    finance_query::backtesting::strategy::PositionExtremes
+ADDED    finance_query::cftc
+ADDED    finance_query::cftc::CommitmentsOfTraders
+ADDED    finance_query::cftc::CotObservation
+ADDED    finance_query::cftc::commitments_of_traders
+ADDED    finance_query::constants::industries::Industry::as_slug
+ADDED    finance_query::crypto::GlobalCryptoStats
+ADDED    finance_query::crypto::SymbolMatch
+ADDED    finance_query::crypto::TrendingCoin
+ADDED    finance_query::crypto::global
+ADDED    finance_query::crypto::search
+ADDED    finance_query::crypto::trending
+ADDED    finance_query::defi
+ADDED    finance_query::defi::ChainAllocation
+ADDED    finance_query::defi::ChainTvl
+ADDED    finance_query::defi::ProtocolTvl
+ADDED    finance_query::defi::StablecoinSupply
+ADDED    finance_query::defi::TvlPoint
+ADDED    finance_query::defi::chains
+ADDED    finance_query::defi::stablecoins
+ADDED    finance_query::domains::Discovery
+ADDED    finance_query::domains::EconomicCatalog
+ADDED    finance_query::domains::Market
+ADDED    finance_query::domains::MarketCalendar
+ADDED    finance_query::domains::Snapshot
+ADDED    finance_query::domains::crypto::CryptoCoin::tvl
+ADDED    finance_query::domains::crypto::CryptoCoin::tvl_history
+ADDED    finance_query::domains::discovery::Discovery
+ADDED    finance_query::domains::discovery::Discovery::search
+ADDED    finance_query::domains::economic::EconomicCatalog
+ADDED    finance_query::domains::economic::EconomicIndicator::series
+ADDED    finance_query::domains::filings::Filings::get
+ADDED    finance_query::domains::filings::Filings::search_all
+ADDED    finance_query::domains::forex::ForexPair::quote
+ADDED    finance_query::domains::futures::FuturesContract::commitments_of_traders
+ADDED    finance_query::domains::indices::Index::constituents
+ADDED    finance_query::domains::market::Market
+ADDED    finance_query::domains::market::Market::crypto_global
+ADDED    finance_query::domains::market::Market::crypto_trending
+ADDED    finance_query::domains::market::Market::grouped_daily
+ADDED    finance_query::domains::market::MarketCalendar
+ADDED    finance_query::domains::snapshot::Snapshot
+ADDED    finance_query::finance::fear_and_greed_crypto
+ADDED    finance_query::gdelt
+ADDED    finance_query::gdelt::News
+ADDED    finance_query::gdelt::news
+ADDED    finance_query::indicators::FibonacciLevels
+ADDED    finance_query::indicators::PivotPoints
+ADDED    finance_query::indicators::ZigZagPoint
+ADDED    finance_query::indicators::fibonacci_pivot_points
+ADDED    finance_query::indicators::fibonacci_retracement
+ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels
+ADDED    finance_query::indicators::fibonacci_retracement::fibonacci_retracement
+ADDED    finance_query::indicators::heikin_ashi
+ADDED    finance_query::indicators::heikin_ashi::heikin_ashi
+ADDED    finance_query::indicators::pivot_points
+ADDED    finance_query::indicators::pivot_points::PivotPoints
+ADDED    finance_query::indicators::pivot_points::fibonacci_pivot_points
+ADDED    finance_query::indicators::pivot_points::pivot_points
+ADDED    finance_query::indicators::zigzag
+ADDED    finance_query::indicators::zigzag::ZigZagPoint
+ADDED    finance_query::indicators::zigzag::zigzag
+ADDED    finance_query::models::calendar::market::CalendarDetail
+ADDED    finance_query::models::calendar::market::CalendarKind
+ADDED    finance_query::models::calendar::market::MarketCalendarEntry
+ADDED    finance_query::models::chart::data::Chart::pivot_points
+ADDED    finance_query::models::corporate::governance::EmployeeCount
+ADDED    finance_query::models::corporate::governance::ExecutiveCompensation
+ADDED    finance_query::models::corporate::press_release::PressRelease
+ADDED    finance_query::models::crypto::GlobalCryptoStats
+ADDED    finance_query::models::crypto::TrendingCoin
+ADDED    finance_query::models::crypto::defi::ChainAllocation
+ADDED    finance_query::models::crypto::defi::ChainTvl
+ADDED    finance_query::models::crypto::defi::ProtocolTvl
+ADDED    finance_query::models::crypto::defi::StablecoinSupply
+ADDED    finance_query::models::crypto::defi::TvlPoint
+ADDED    finance_query::models::discovery::figi::SecurityIdKind
+ADDED    finance_query::models::discovery::figi::SecurityMapping
+ADDED    finance_query::models::discovery::reference::ExchangeInfo
+ADDED    finance_query::models::discovery::reference::ScreenerFilters
+ADDED    finance_query::models::discovery::reference::ScreenerFilters::new
+ADDED    finance_query::models::discovery::reference::ScreenerMatch
+ADDED    finance_query::models::discovery::reference::SymbolDetails
+ADDED    finance_query::models::discovery::reference::SymbolMatch
+ADDED    finance_query::models::economic::catalog::EconomicCategory
+ADDED    finance_query::models::economic::catalog::EconomicRelease
+ADDED    finance_query::models::economic::catalog::EconomicSeriesMatch
+ADDED    finance_query::models::filings::full_text::FilingSearchFilters
+ADDED    finance_query::models::filings::full_text::FilingSearchHit
+ADDED    finance_query::models::filings::ownership::InsiderTrade
+ADDED    finance_query::models::filings::ownership::InstitutionalHolding
+ADDED    finance_query::models::filings::sections::FilingSection
+ADDED    finance_query::models::filings::sections::FilingSectionForm
+ADDED    finance_query::models::filings::sections::RiskFactor
+ADDED    finance_query::models::fundamentals::consensus::PriceTargetConsensus
+ADDED    finance_query::models::fundamentals::consensus::PriceTargetSummary
+ADDED    finance_query::models::fundamentals::consensus::RatingConsensus
+ADDED    finance_query::models::fundamentals::etf::EtfHolding
+ADDED    finance_query::models::fundamentals::etf::EtfProfile
+ADDED    finance_query::models::fundamentals::short_activity::ShareFloat
+ADDED    finance_query::models::fundamentals::short_activity::ShortInterest
+ADDED    finance_query::models::fundamentals::short_activity::ShortVolume
+ADDED    finance_query::models::fundamentals::ttm::FinancialRatiosTtm
+ADDED    finance_query::models::fundamentals::ttm::KeyMetricsTtm
+ADDED    finance_query::models::futures::cot::CommitmentsOfTraders
+ADDED    finance_query::models::futures::cot::CotObservation
+ADDED    finance_query::models::indices::IndexConstituent
+ADDED    finance_query::models::indices::IndexConstituentChange
+ADDED    finance_query::models::indices::MajorIndex
+ADDED    finance_query::models::market::performance::IndustryPe
+ADDED    finance_query::models::market::performance::MoverDirection
+ADDED    finance_query::models::market::performance::MoverQuote
+ADDED    finance_query::models::market::performance::SectorPe
+ADDED    finance_query::models::market::performance::SectorPerformance
+ADDED    finance_query::models::market::performance::SectorPerformanceHistory
+ADDED    finance_query::models::quote::response::QuoteSummaryResponse
+ADDED    finance_query::models::quote::snapshot::AssetClass
+ADDED    finance_query::models::quote::snapshot::MarketSnapshot
+ADDED    finance_query::openfigi
+ADDED    finance_query::openfigi::SecurityIdKind
+ADDED    finance_query::openfigi::SecurityMapping
+ADDED    finance_query::openfigi::resolve
+ADDED    finance_query::openfigi::resolve_cusip
+ADDED    finance_query::openfigi::resolve_isin
+ADDED    finance_query::openfigi::resolve_many
+ADDED    finance_query::openfigi::resolve_sedol
+ADDED    finance_query::providers::Capability::name
+ADDED    finance_query::providers::Routes
+ADDED    finance_query::providers::config::Providers::calendar
+ADDED    finance_query::providers::config::Providers::discovery
+ADDED    finance_query::providers::config::Providers::economic_catalog
+ADDED    finance_query::providers::config::Providers::market
+ADDED    finance_query::providers::config::Providers::snapshot
+ADDED    finance_query::providers::config::ProvidersBuilder::retry
+ADDED    finance_query::providers::health::ProviderHealth
+ADDED    finance_query::providers::retry::RetryPolicy
+ADDED    finance_query::providers::retry::RetryPolicy::base_delay
+ADDED    finance_query::providers::retry::RetryPolicy::jitter
+ADDED    finance_query::providers::retry::RetryPolicy::max_delay
+ADDED    finance_query::providers::retry::RetryPolicy::max_retry_after
+ADDED    finance_query::providers::retry::RetryPolicy::multiplier
+ADDED    finance_query::risk::cvar::historical_cvar
+ADDED    finance_query::risk::cvar::parametric_cvar
+ADDED    finance_query::risk::historical_cvar
+ADDED    finance_query::risk::information_ratio
+ADDED    finance_query::risk::kelly_criterion
+ADDED    finance_query::risk::omega_ratio
+ADDED    finance_query::risk::parametric_cvar
+ADDED    finance_query::risk::ratios::information_ratio
+ADDED    finance_query::risk::ratios::kelly_criterion
+ADDED    finance_query::risk::ratios::omega_ratio
+ADDED    finance_query::risk::ratios::tracking_error
+ADDED    finance_query::risk::ratios::ulcer_index
+ADDED    finance_query::risk::ratios::win_loss_stats
+ADDED    finance_query::risk::tracking_error
+ADDED    finance_query::risk::ulcer_index
+ADDED    finance_query::risk::win_loss_stats
+ADDED    finance_query::streaming::AlertCondition
+ADDED    finance_query::streaming::AlertConditionKind
+ADDED    finance_query::streaming::AlertEvaluator
+ADDED    finance_query::streaming::AlertEvent
+ADDED    finance_query::streaming::AlertExt
+ADDED    finance_query::streaming::AlertRule
+ADDED    finance_query::streaming::AlertStream
+ADDED    finance_query::streaming::AssetClass
+ADDED    finance_query::streaming::Batched
+ADDED    finance_query::streaming::BookLevel
+ADDED    finance_query::streaming::DepthStream
+ADDED    finance_query::streaming::DepthStreamBuilder
+ADDED    finance_query::streaming::EconomicStream
+ADDED    finance_query::streaming::EconomicStreamBuilder
+ADDED    finance_query::streaming::Greeks
+ADDED    finance_query::streaming::OptionContractUpdate
+ADDED    finance_query::streaming::OptionsChainStream
+ADDED    finance_query::streaming::OptionsChainStreamBuilder
+ADDED    finance_query::streaming::OrderBookUpdate
+ADDED    finance_query::streaming::PriceSource
+ADDED    finance_query::streaming::SeriesUpdate
+ADDED    finance_query::streaming::StreamBatchExt
+ADDED    finance_query::streaming::TradeStream
+ADDED    finance_query::streaming::TradeStreamBuilder
+ADDED    finance_query::streaming::TradeTick
+ADDED    finance_query::streaming::alerts::AlertCondition
+ADDED    finance_query::streaming::alerts::AlertConditionKind
+ADDED    finance_query::streaming::alerts::AlertEvaluator
+ADDED    finance_query::streaming::alerts::AlertEvent
+ADDED    finance_query::streaming::alerts::AlertExt
+ADDED    finance_query::streaming::alerts::AlertRule
+ADDED    finance_query::streaming::alerts::AlertStream
+ADDED    finance_query::streaming::batch::Batched
+ADDED    finance_query::streaming::batch::StreamBatchExt
+ADDED    finance_query::streaming::book::BookLevel
+ADDED    finance_query::streaming::book::DepthStream
+ADDED    finance_query::streaming::book::DepthStreamBuilder
+ADDED    finance_query::streaming::book::DepthStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::book::OrderBookUpdate
+ADDED    finance_query::streaming::client::PriceSource
+ADDED    finance_query::streaming::client::PriceStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::economic::EconomicStream
+ADDED    finance_query::streaming::economic::EconomicStreamBuilder
+ADDED    finance_query::streaming::economic::SeriesUpdate
+ADDED    finance_query::streaming::options::Greeks
+ADDED    finance_query::streaming::options::OptionContractUpdate
+ADDED    finance_query::streaming::options::OptionsChainStream
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder::greeks_refresh
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::polygon::AssetClass
+ADDED    finance_query::streaming::trades::TradeStream
+ADDED    finance_query::streaming::trades::TradeStreamBuilder
+ADDED    finance_query::streaming::trades::TradeStreamBuilder::build
+ADDED    finance_query::streaming::trades::TradeStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::trades::TradeTick
+ADDED    finance_query::ticker::core::Ticker::calendar
+ADDED    finance_query::ticker::core::Ticker::news
+ADDED    finance_query::ticker::core::Ticker::recommendations
+ADDED    finance_query::ticker::core::TickerBuilder::cache
+ADDED    finance_query::ticker::core::TickerBuilder::no_cache
+ADDED    finance_query::tickers::core::Tickers::client_handle
+REMOVED  finance_query::streaming::pricing::OptionTypeProto
+CHANGED  finance_query::CryptoCoin (body)
+CHANGED  finance_query::FinanceError (body)
+CHANGED  finance_query::Frequency (body)
+CHANGED  finance_query::FuturesContract (body)
+CHANGED  finance_query::Indicator (body)
+CHANGED  finance_query::IndicatorResult (body)
+CHANGED  finance_query::IndicatorsSummary (body)
+CHANGED  finance_query::IndicesRegion (body)
+CHANGED  finance_query::Industry (body)
+CHANGED  finance_query::Interval (body)
+CHANGED  finance_query::Operation (body)
+CHANGED  finance_query::Provider (body)
+CHANGED  finance_query::ProvidersBuilder (body)
+CHANGED  finance_query::QuoteType (body)
+CHANGED  finance_query::Region (body)
+CHANGED  finance_query::Screener (body)
+CHANGED  finance_query::Sector (body)
+CHANGED  finance_query::SortType (body)
+CHANGED  finance_query::StatementType (body)
+CHANGED  finance_query::Ticker (body)
+CHANGED  finance_query::TickerBuilder (body)
+CHANGED  finance_query::Tickers (body)
+CHANGED  finance_query::TickersBuilder (body)
+CHANGED  finance_query::TimeRange (body)
+CHANGED  finance_query::ValueFormat (body)
+CHANGED  finance_query::adapters::fred::series (body)
+CHANGED  finance_query::backtesting::BenchmarkMetrics (body)
+CHANGED  finance_query::backtesting::Signal (body)
+CHANGED  finance_query::backtesting::SignalRecord (body)
+CHANGED  finance_query::backtesting::Strategy (body)
+CHANGED  finance_query::backtesting::StrategyContext (body)
+CHANGED  finance_query::backtesting::condition::Condition (body)
+CHANGED  finance_query::backtesting::engine::BacktestEngine::run_with_dividends (body)
+CHANGED  finance_query::backtesting::refs::HtfCondition (body)
+CHANGED  finance_query::backtesting::refs::htf (body)
+CHANGED  finance_query::backtesting::refs::htf::HtfCondition (body)
+CHANGED  finance_query::backtesting::refs::htf::htf (body)
+CHANGED  finance_query::backtesting::refs::htf::htf_region (body)
+CHANGED  finance_query::backtesting::refs::htf_region (body)
+CHANGED  finance_query::backtesting::result::BenchmarkMetrics (body)
+CHANGED  finance_query::backtesting::result::SignalRecord (body)
+CHANGED  finance_query::backtesting::signal::Signal (body)
+CHANGED  finance_query::backtesting::strategy::Strategy (body)
+CHANGED  finance_query::backtesting::strategy::StrategyContext (body)
+CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
+CHANGED  finance_query::constants::Frequency (body)
+CHANGED  finance_query::constants::Interval (body)
+CHANGED  finance_query::constants::Interval::as_str (body)
+CHANGED  finance_query::constants::Region (body)
+CHANGED  finance_query::constants::StatementType (body)
+CHANGED  finance_query::constants::TimeRange (body)
+CHANGED  finance_query::constants::ValueFormat (body)
+CHANGED  finance_query::constants::indices::Region (body)
+CHANGED  finance_query::constants::industries::Industry (body)
+CHANGED  finance_query::constants::screeners::Screener (body)
+CHANGED  finance_query::constants::sectors::Sector (body)
+CHANGED  finance_query::domains::CryptoCoin (body)
+CHANGED  finance_query::domains::FuturesContract (body)
+CHANGED  finance_query::domains::commodities::Commodity::quote (body)
+CHANGED  finance_query::domains::crypto::CryptoCoin (body)
+CHANGED  finance_query::domains::crypto::CryptoCoin::quote (body)
+CHANGED  finance_query::domains::futures::FuturesContract (body)
+CHANGED  finance_query::error::FinanceError (body)
+CHANGED  finance_query::finance::currencies (body)
+CHANGED  finance_query::finance::custom_screener (body)
+CHANGED  finance_query::finance::earnings_transcript (body)
+CHANGED  finance_query::finance::earnings_transcripts (body)
+CHANGED  finance_query::finance::hours (body)
+CHANGED  finance_query::finance::industry (body)
+CHANGED  finance_query::finance::lookup (body)
+CHANGED  finance_query::finance::market_summary (body)
+CHANGED  finance_query::finance::screener (body)
+CHANGED  finance_query::finance::search (body)
+CHANGED  finance_query::finance::sector (body)
+CHANGED  finance_query::finance::trending (body)
+CHANGED  finance_query::fred::series (body)
+CHANGED  finance_query::indicators::Indicator (body)
+CHANGED  finance_query::indicators::Indicator::warmup_bars (body)
+CHANGED  finance_query::indicators::IndicatorResult (body)
+CHANGED  finance_query::indicators::IndicatorType (body)
+CHANGED  finance_query::indicators::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::summary::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::vwma (body)
+CHANGED  finance_query::indicators::vwma::vwma (body)
+CHANGED  finance_query::models::discovery::screeners::query::QuoteType (body)
+CHANGED  finance_query::models::discovery::screeners::query::SortType (body)
+CHANGED  finance_query::providers::Operation (body)
+CHANGED  finance_query::providers::Operation::capability (body)
+CHANGED  finance_query::providers::Provider (body)
+CHANGED  finance_query::providers::config::ProvidersBuilder (body)
+CHANGED  finance_query::risk::RiskSummary (body)
+CHANGED  finance_query::risk::historical_var (body)
+CHANGED  finance_query::risk::parametric_var (body)
+CHANGED  finance_query::risk::ratios::sharpe_ratio (body)
+CHANGED  finance_query::risk::sharpe_ratio (body)
+CHANGED  finance_query::risk::var::historical_var (body)
+CHANGED  finance_query::risk::var::parametric_var (body)
+CHANGED  finance_query::streaming::PriceStream (body)
+CHANGED  finance_query::streaming::PriceStreamBuilder (body)
+CHANGED  finance_query::streaming::client::PriceStream (body)
+CHANGED  finance_query::streaming::client::PriceStreamBuilder (body)
+CHANGED  finance_query::ticker::core::Ticker (body)
+CHANGED  finance_query::ticker::core::Ticker::edgar_company_facts (body)
+CHANGED  finance_query::ticker::core::Ticker::edgar_submissions (body)
+CHANGED  finance_query::ticker::core::Ticker::filings (body)
+CHANGED  finance_query::ticker::core::Ticker::financials (body)
+CHANGED  finance_query::ticker::core::Ticker::quote (body)
+CHANGED  finance_query::ticker::core::Ticker::risk (body)
+CHANGED  finance_query::ticker::core::TickerBuilder (body)
+CHANGED  finance_query::ticker::core::TickerBuilder::build (body)
+CHANGED  finance_query::tickers::core::Tickers (body)
+CHANGED  finance_query::tickers::core::Tickers::charts (body)
+CHANGED  finance_query::tickers::core::TickersBuilder (body)
+```
 
 ### Performance
 
 | item | instructions | median | p99 | allocs | polls |
 |---|---:|---:|---:|---:|---:|
-| `finance_query::bt_sma_crossover` | 525367 | 77.72µs | 83.14µs | 157 | — |
-| `finance_query::de_chart` | 111625 | 12.23µs | 13.01µs | 13 | — |
-| `finance_query::de_crypto_coins` | 345144 | 40.11µs | 42.95µs | 205 | — |
-| `finance_query::de_currencies` | 539850 | 63.10µs | 65.90µs | 647 | — |
-| `finance_query::de_edgar_facts` | 13157817 | 1.62ms | 1.64ms | 11899 | — |
-| `finance_query::de_edgar_submissions` | 4806556 | 521.88µs | 574.77µs | 6784 | — |
-| `finance_query::de_financials` | 221972 | 29.69µs | 31.76µs | 206 | — |
-| `finance_query::de_fred_series` | 1191899 | 179.33µs | 182.11µs | 873 | — |
-| `finance_query::de_news` | 38265 | 4.85µs | 5.07µs | 53 | — |
-| `finance_query::de_options` | 13419 | 2.07µs | 3.51µs | 6 | — |
-| `finance_query::de_quote` | 9071441 | 1.86ms | 3.28ms | 8235 | — |
-| `finance_query::de_screener` | 3713347 | 722.55µs | 1.34ms | 4498 | — |
-| `finance_query::de_search` | 51806 | 9.37µs | 15.41µs | 55 | — |
-| `finance_query::de_treasury_yields` | 809185 | 91.90µs | 106.80µs | 119 | — |
-| `finance_query::dispatch_select` | 74 | 5.0ns | 8.7ns | 0 | — |
-| `finance_query::ind_momentum` | 1230534 | 168.85µs | 171.82µs | 52 | — |
-| `finance_query::ind_moving_averages` | 586693 | 141.28µs | 146.06µs | 27 | — |
-| `finance_query::ind_patterns` | 105521 | 10.20µs | 10.72µs | 1 | — |
-| `finance_query::ind_sma` | 2400020 | 604.66µs | 652.08µs | 1 | — |
-| `finance_query::ind_trend` | 1069304 | 112.91µs | 136.02µs | 48 | — |
-| `finance_query::ind_volatility` | 668123 | 89.67µs | 99.43µs | 28 | — |
-| `finance_query::ind_volume` | 326269 | 59.48µs | 62.16µs | 14 | — |
-| `finance_query::risk_beta` | 16099 | 5.78µs | 6.00µs | 0 | — |
-| `finance_query::risk_historical_var` | 28553174 | 3.77ms | 3.97ms | 2 | — |
-| `finance_query::risk_max_drawdown` | 43317 | 12.63µs | 13.11µs | 1 | — |
-| `finance_query::risk_parametric_var` | 6206 | 2.94µs | 3.03µs | 0 | — |
-| `finance_query::risk_sharpe` | 6201 | 2.95µs | 2.98µs | 0 | — |
-| `finance_query::risk_sortino` | 9948 | 2.91µs | 2.92µs | 0 | — |
-| `finance_query::rss_parse` | 62130 | 6.83µs | 6.94µs | 48 | — |
-| `finance_query::score_news` | 847240 | 104.02µs | 114.23µs | 976 | — |
-| `finance_query::score_transcript` | 44202338 | 6.14ms | 6.77ms | 42100 | — |
-| `finance_query::ser_currencies` | 254605 | 24.67µs | 26.11µs | 8 | — |
-| `finance_query::stream_deserialize` | 16882 | 1.86µs | 2.00µs | 4 | — |
-| `finance_query::stream_serialize` | 12568 | 1.33µs | 1.39µs | 4 | — |
-| `finance_query::translate_dictionary` | 18937 | 3.63µs | 3.79µs | 65 | — |
+| `finance_query::bt_base_to_htf_index` | n/a | 21.15µs | 23.50µs | 1 | n/a |
+| `finance_query::bt_bayesian_search` | n/a | 2.33ms | 2.40ms | 2382 | n/a |
+| `finance_query::bt_grid_search` | n/a | 500.98µs | 526.30µs | 3012 | n/a |
+| `finance_query::bt_monte_carlo` | n/a | 140.13µs | 141.40µs | 6 | n/a |
+| `finance_query::bt_resample` | n/a | 90.04µs | 91.00µs | 11 | n/a |
+| `finance_query::bt_sma_crossover` | n/a | 749.41µs | 781.20µs | 2373 | n/a |
+| `finance_query::bt_strategy_builder` | n/a | 126.28µs | 130.50µs | 330 | n/a |
+| `finance_query::capability_name` | n/a | 2.7ns | 3.0ns | 0 | n/a |
+| `finance_query::cond_bench_always_false` | n/a | 18.53µs | 18.69µs | 6 | n/a |
+| `finance_query::cond_bench_always_true` | n/a | 345.58µs | 351.34µs | 4045 | n/a |
+| `finance_query::cond_bench_has_position` | n/a | 345.14µs | 353.82µs | 4045 | n/a |
+| `finance_query::cond_bench_held_for_bars` | n/a | 130.70µs | 134.90µs | 1041 | n/a |
+| `finance_query::cond_bench_in_loss` | n/a | 345.42µs | 355.55µs | 4045 | n/a |
+| `finance_query::cond_bench_in_profit` | n/a | 40.54µs | 40.84µs | 142 | n/a |
+| `finance_query::cond_bench_is_long` | n/a | 344.59µs | 351.54µs | 4045 | n/a |
+| `finance_query::cond_bench_is_short` | n/a | 27.69µs | 27.83µs | 13 | n/a |
+| `finance_query::cond_bench_no_position` | n/a | 27.70µs | 27.92µs | 13 | n/a |
+| `finance_query::cond_bench_stop_loss` | n/a | 34.54µs | 35.47µs | 24 | n/a |
+| `finance_query::cond_bench_take_profit` | n/a | 33.69µs | 33.82µs | 13 | n/a |
+| `finance_query::cond_bench_trailing_stop` | n/a | 40.03µs | 44.52µs | 92 | n/a |
+| `finance_query::cond_bench_trailing_take_profit` | n/a | 39.73µs | 40.00µs | 72 | n/a |
+| `finance_query::de_chart` | n/a | 7.79µs | 7.84µs | 13 | n/a |
+| `finance_query::de_crypto_coins` | n/a | 26.42µs | 27.57µs | 205 | n/a |
+| `finance_query::de_currencies` | n/a | 45.40µs | 45.69µs | 647 | n/a |
+| `finance_query::de_edgar_facts` | n/a | 1.15ms | 1.28ms | 11899 | n/a |
+| `finance_query::de_edgar_submissions` | n/a | 355.27µs | 357.46µs | 6784 | n/a |
+| `finance_query::de_fear_and_greed` | n/a | 94.6ns | 103.2ns | 0 | n/a |
+| `finance_query::de_fear_and_greed_crypto_history` | n/a | 1.11µs | 1.12µs | 3 | n/a |
+| `finance_query::de_financials` | n/a | 16.57µs | 16.95µs | 206 | n/a |
+| `finance_query::de_fred_series` | n/a | 91.51µs | 93.41µs | 873 | n/a |
+| `finance_query::de_hours` | n/a | 613.6ns | 624.7ns | 10 | n/a |
+| `finance_query::de_market_summary` | n/a | 25.02µs | 25.42µs | 228 | n/a |
+| `finance_query::de_news` | n/a | 3.20µs | 3.34µs | 53 | n/a |
+| `finance_query::de_options` | n/a | 862.4ns | 871.5ns | 6 | n/a |
+| `finance_query::de_quote` | n/a | 847.41µs | 877.30µs | 8235 | n/a |
+| `finance_query::de_screener` | n/a | 314.98µs | 330.43µs | 4498 | n/a |
+| `finance_query::de_search` | n/a | 4.30µs | 4.84µs | 55 | n/a |
+| `finance_query::de_treasury_yields` | n/a | 62.38µs | 62.94µs | 119 | n/a |
+| `finance_query::de_trending` | n/a | 1.14µs | 1.15µs | 24 | n/a |
+| `finance_query::dispatch_select` | n/a | 3.2ns | 3.6ns | 0 | n/a |
+| `finance_query::ind_accumulation_distribution` | n/a | 3.35µs | 3.45µs | 1 | n/a |
+| `finance_query::ind_alma` | n/a | 4.29µs | 4.34µs | 2 | n/a |
+| `finance_query::ind_aroon` | n/a | 9.37µs | 9.63µs | 9 | n/a |
+| `finance_query::ind_atr` | n/a | 8.48µs | 8.56µs | 2 | n/a |
+| `finance_query::ind_awesome_oscillator` | n/a | 7.58µs | 7.61µs | 4 | n/a |
+| `finance_query::ind_balance_of_power` | n/a | 1.67µs | 1.75µs | 2 | n/a |
+| `finance_query::ind_bull_bear_power` | n/a | 6.01µs | 6.11µs | 3 | n/a |
+| `finance_query::ind_cci` | n/a | 14.64µs | 14.77µs | 2 | n/a |
+| `finance_query::ind_chaikin_oscillator` | n/a | 14.09µs | 14.21µs | 4 | n/a |
+| `finance_query::ind_choppiness_index` | n/a | 16.33µs | 27.80µs | 8 | n/a |
+| `finance_query::ind_cmf` | n/a | 3.54µs | 3.59µs | 2 | n/a |
+| `finance_query::ind_cmo` | n/a | 4.73µs | 4.83µs | 2 | n/a |
+| `finance_query::ind_coppock_curve` | n/a | 6.71µs | 6.84µs | 3 | n/a |
+| `finance_query::ind_dema` | n/a | 10.31µs | 10.43µs | 3 | n/a |
+| `finance_query::ind_donchian_channels` | n/a | 9.04µs | 9.27µs | 9 | n/a |
+| `finance_query::ind_elder_ray` | n/a | 6.01µs | 6.06µs | 3 | n/a |
+| `finance_query::ind_fibonacci_pivot_points` | n/a | 2.20µs | 2.23µs | 1 | n/a |
+| `finance_query::ind_fibonacci_retracement` | n/a | 8.77µs | 9.19µs | 9 | n/a |
+| `finance_query::ind_heikin_ashi` | n/a | 13.03µs | 13.50µs | 9 | n/a |
+| `finance_query::ind_hma` | n/a | 11.89µs | 11.93µs | 5 | n/a |
+| `finance_query::ind_ichimoku` | n/a | 29.15µs | 30.24µs | 27 | n/a |
+| `finance_query::ind_keltner_channels` | n/a | 14.70µs | 14.88µs | 5 | n/a |
+| `finance_query::ind_last_value` | n/a | 2.4ns | 2.5ns | 0 | n/a |
+| `finance_query::ind_macd` | n/a | 17.19µs | 17.25µs | 7 | n/a |
+| `finance_query::ind_mcginley_dynamic` | n/a | 10.71µs | 10.86µs | 1 | n/a |
+| `finance_query::ind_mfi` | n/a | 5.42µs | 5.54µs | 3 | n/a |
+| `finance_query::ind_momentum` | n/a | 103.98µs | 107.38µs | 52 | n/a |
+| `finance_query::ind_momentum_single` | n/a | 453.4ns | 461.8ns | 1 | n/a |
+| `finance_query::ind_moving_averages` | n/a | 74.68µs | 81.97µs | 27 | n/a |
+| `finance_query::ind_parabolic_sar` | n/a | 1.83µs | 1.91µs | 1 | n/a |
+| `finance_query::ind_patterns` | n/a | 86.02µs | 87.31µs | 1 | n/a |
+| `finance_query::ind_pivot_points` | n/a | 2.52µs | 2.55µs | 1 | n/a |
+| `finance_query::ind_roc` | n/a | 1.42µs | 1.55µs | 1 | n/a |
+| `finance_query::ind_sma` | n/a | 331.37µs | 335.13µs | 1 | n/a |
+| `finance_query::ind_stochastic` | n/a | 12.92µs | 13.09µs | 11 | n/a |
+| `finance_query::ind_stochastic_rsi` | n/a | 21.43µs | 21.98µs | 12 | n/a |
+| `finance_query::ind_supertrend` | n/a | 11.32µs | 11.38µs | 4 | n/a |
+| `finance_query::ind_tema` | n/a | 15.23µs | 15.39µs | 4 | n/a |
+| `finance_query::ind_trend` | n/a | 71.68µs | 73.92µs | 48 | n/a |
+| `finance_query::ind_true_range` | n/a | 1.06µs | 1.09µs | 1 | n/a |
+| `finance_query::ind_volatility` | n/a | 55.16µs | 57.04µs | 28 | n/a |
+| `finance_query::ind_volume` | n/a | 34.50µs | 35.10µs | 14 | n/a |
+| `finance_query::ind_vwap` | n/a | 3.36µs | 3.40µs | 1 | n/a |
+| `finance_query::ind_vwma` | n/a | 2.54µs | 2.56µs | 1 | n/a |
+| `finance_query::ind_williams_r` | n/a | 8.47µs | 8.87µs | 7 | n/a |
+| `finance_query::ind_wma` | n/a | 3.96µs | 4.28µs | 7 | n/a |
+| `finance_query::ind_zigzag` | n/a | 1.33µs | 1.39µs | 4 | n/a |
+| `finance_query::ref_bench_accumulation_distribution` | n/a | 39.12µs | 40.36µs | 23 | n/a |
+| `finance_query::ref_bench_adx` | n/a | 422.60µs | 441.74µs | 4930 | n/a |
+| `finance_query::ref_bench_alma` | n/a | 450.50µs | 480.88µs | 5019 | n/a |
+| `finance_query::ref_bench_aroon` | n/a | 429.57µs | 448.15µs | 4950 | n/a |
+| `finance_query::ref_bench_atr` | n/a | 423.47µs | 428.29µs | 4996 | n/a |
+| `finance_query::ref_bench_awesome_oscillator` | n/a | 260.13µs | 269.92µs | 2636 | n/a |
+| `finance_query::ref_bench_balance_of_power` | n/a | 37.91µs | 38.17µs | 25 | n/a |
+| `finance_query::ref_bench_bear_power` | n/a | 113.49µs | 115.40µs | 806 | n/a |
+| `finance_query::ref_bench_bollinger` | n/a | 442.91µs | 448.92µs | 4968 | n/a |
+| `finance_query::ref_bench_bull_power` | n/a | 390.43µs | 396.65µs | 4238 | n/a |
+| `finance_query::ref_bench_candle_body` | n/a | 18.47µs | 18.82µs | 6 | n/a |
+| `finance_query::ref_bench_candle_range` | n/a | 398.50µs | 409.39µs | 5043 | n/a |
+| `finance_query::ref_bench_cci` | n/a | 249.66µs | 251.59µs | 2605 | n/a |
+| `finance_query::ref_bench_chaikin_oscillator` | n/a | 53.69µs | 55.34µs | 26 | n/a |
+| `finance_query::ref_bench_choppiness_index` | n/a | 438.27µs | 445.28µs | 5002 | n/a |
+| `finance_query::ref_bench_close` | n/a | 400.54µs | 425.63µs | 5043 | n/a |
+| `finance_query::ref_bench_cmf` | n/a | 39.60µs | 64.11µs | 25 | n/a |
+| `finance_query::ref_bench_cmo` | n/a | 241.01µs | 362.55µs | 2598 | n/a |
+| `finance_query::ref_bench_coppock_curve` | n/a | 252.33µs | 255.00µs | 2559 | n/a |
+| `finance_query::ref_bench_dema` | n/a | 418.06µs | 471.30µs | 4875 | n/a |
+| `finance_query::ref_bench_donchian` | n/a | 451.74µs | 463.10µs | 4976 | n/a |
+| `finance_query::ref_bench_elder_bear_power` | n/a | 113.00µs | 118.84µs | 806 | n/a |
+| `finance_query::ref_bench_elder_bull_power` | n/a | 391.65µs | 399.22µs | 4238 | n/a |
+| `finance_query::ref_bench_ema` | n/a | 417.80µs | 422.58µs | 4963 | n/a |
+| `finance_query::ref_bench_gap_pct` | n/a | 210.99µs | 215.21µs | 2489 | n/a |
+| `finance_query::ref_bench_high` | n/a | 400.71µs | 426.11µs | 5043 | n/a |
+| `finance_query::ref_bench_hma` | n/a | 423.75µs | 434.83µs | 4957 | n/a |
+| `finance_query::ref_bench_htf` | n/a | 480.84µs | 492.91µs | 7039 | n/a |
+| `finance_query::ref_bench_htf_region` | n/a | 476.49µs | 736.58µs | 7039 | n/a |
+| `finance_query::ref_bench_ichimoku` | n/a | 474.05µs | 486.10µs | 4836 | n/a |
+| `finance_query::ref_bench_ichimoku_custom` | n/a | 475.92µs | 728.82µs | 4836 | n/a |
+| `finance_query::ref_bench_is_bearish` | n/a | 18.51µs | 18.68µs | 6 | n/a |
+| `finance_query::ref_bench_is_bullish` | n/a | 18.53µs | 19.00µs | 6 | n/a |
+| `finance_query::ref_bench_keltner` | n/a | 451.78µs | 479.25µs | 4972 | n/a |
+| `finance_query::ref_bench_low` | n/a | 398.20µs | 408.66µs | 5043 | n/a |
+| `finance_query::ref_bench_macd` | n/a | 258.15µs | 260.79µs | 2541 | n/a |
+| `finance_query::ref_bench_mcginley` | n/a | 425.85µs | 451.69µs | 4963 | n/a |
+| `finance_query::ref_bench_median_price` | n/a | 400.25µs | 402.93µs | 5043 | n/a |
+| `finance_query::ref_bench_mfi` | n/a | 420.79µs | 430.60µs | 4998 | n/a |
+| `finance_query::ref_bench_momentum` | n/a | 234.68µs | 241.87µs | 2552 | n/a |
+| `finance_query::ref_bench_obv` | n/a | 47.51µs | 48.16µs | 30 | n/a |
+| `finance_query::ref_bench_open` | n/a | 404.69µs | 413.35µs | 5043 | n/a |
+| `finance_query::ref_bench_parabolic_sar` | n/a | 453.24µs | 515.24µs | 5056 | n/a |
+| `finance_query::ref_bench_price` | n/a | 399.54µs | 405.46µs | 5043 | n/a |
+| `finance_query::ref_bench_price_change_pct` | n/a | 222.78µs | 252.78µs | 2489 | n/a |
+| `finance_query::ref_bench_relative_volume` | n/a | 431.58µs | 442.30µs | 4949 | n/a |
+| `finance_query::ref_bench_roc` | n/a | 236.59µs | 239.81µs | 2587 | n/a |
+| `finance_query::ref_bench_rsi` | n/a | 423.09µs | 439.29µs | 4994 | n/a |
+| `finance_query::ref_bench_sma` | n/a | 414.86µs | 421.31µs | 4963 | n/a |
+| `finance_query::ref_bench_stochastic` | n/a | 452.87µs | 480.32µs | 4987 | n/a |
+| `finance_query::ref_bench_stochastic_rsi` | n/a | 454.92µs | 479.21µs | 4831 | n/a |
+| `finance_query::ref_bench_supertrend` | n/a | 458.31µs | 464.57µs | 5021 | n/a |
+| `finance_query::ref_bench_tema` | n/a | 415.38µs | 473.91µs | 4781 | n/a |
+| `finance_query::ref_bench_true_range` | n/a | 425.33µs | 434.20µs | 5059 | n/a |
+| `finance_query::ref_bench_typical_price` | n/a | 428.25µs | 447.36µs | 5043 | n/a |
+| `finance_query::ref_bench_volume` | n/a | 401.47µs | 452.58µs | 5043 | n/a |
+| `finance_query::ref_bench_vwap` | n/a | 423.00µs | 428.01µs | 5060 | n/a |
+| `finance_query::ref_bench_vwma` | n/a | 418.03µs | 422.54µs | 4964 | n/a |
+| `finance_query::ref_bench_williams_r` | n/a | 48.88µs | 51.53µs | 29 | n/a |
+| `finance_query::ref_bench_wma` | n/a | 418.10µs | 424.79µs | 4969 | n/a |
+| `finance_query::risk_beta` | n/a | 53.62µs | 54.07µs | 0 | n/a |
+| `finance_query::risk_calmar` | n/a | 12.6ns | 12.9ns | 0 | n/a |
+| `finance_query::risk_historical_cvar` | n/a | 243.55µs | 249.30µs | 2 | n/a |
+| `finance_query::risk_historical_var` | n/a | 2.18ms | 2.25ms | 2 | n/a |
+| `finance_query::risk_information_ratio` | n/a | 30.35µs | 30.68µs | 1 | n/a |
+| `finance_query::risk_kelly_criterion` | n/a | 3.22µs | 3.29µs | 16 | n/a |
+| `finance_query::risk_max_drawdown` | n/a | 7.03µs | 7.08µs | 1 | n/a |
+| `finance_query::risk_omega_ratio` | n/a | 26.80µs | 26.87µs | 0 | n/a |
+| `finance_query::risk_parametric_cvar` | n/a | 26.84µs | 26.95µs | 0 | n/a |
+| `finance_query::risk_parametric_var` | n/a | 26.89µs | 27.26µs | 0 | n/a |
+| `finance_query::risk_sharpe` | n/a | 26.85µs | 27.01µs | 0 | n/a |
+| `finance_query::risk_sortino` | n/a | 26.83µs | 27.10µs | 0 | n/a |
+| `finance_query::risk_tracking_error` | n/a | 30.35µs | 30.50µs | 1 | n/a |
+| `finance_query::risk_ulcer_index` | n/a | 157.51µs | 158.79µs | 2 | n/a |
+| `finance_query::risk_win_loss_stats` | n/a | 48.55µs | 51.42µs | 25 | n/a |
+| `finance_query::rss_parse` | n/a | 4.38µs | 4.43µs | 48 | n/a |
+| `finance_query::score_news` | n/a | 58.66µs | 59.81µs | 976 | n/a |
+| `finance_query::score_transcript` | n/a | 3.62ms | 3.73ms | 42100 | n/a |
+| `finance_query::ser_currencies` | n/a | 12.87µs | 25.00µs | 8 | n/a |
+| `finance_query::stream_deserialize` | n/a | 986.7ns | 1.01µs | 4 | n/a |
+| `finance_query::stream_serialize` | n/a | 833.5ns | 845.3ns | 4 | n/a |
+| `finance_query::ticker_chart_then_cached` | n/a | 1.07µs | 1.12µs | 20 | n/a |
+| `finance_query::ticker_quote_then_cached` | n/a | 8.90µs | 8.98µs | 4 | n/a |
+| `finance_query::tickers_batch_quote_then_cached` | n/a | 7.76µs | 8.08µs | 16 | n/a |
+| `finance_query::translate_dictionary` | n/a | 1.57µs | 1.62µs | 49 | n/a |
+| `finance_query::translation_set_backend` | n/a | 18.3ns | 20.5ns | 1 | n/a |
+| `finance_query::translation_translate` | n/a | 2.72µs | 3.03µs | 79 | n/a |
+| `finance_query::translation_translate_with` | n/a | 2.69µs | 2.82µs | 77 | n/a |
 
-
-### Breaking
-
-- `Ticker`, `Tickers`, and the domain handles cache responses by default for the
-  lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
-  set, so every accessor refetched — which contradicted the documentation. Call
-  `.no_cache()` for the old behavior.
-- `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
-  sorted ascending by timestamp, with the same `InvalidParameter` error already
-  used for unsorted dividends. Conditions binary-search the candle slice, so an
-  unsorted series previously produced a silently wrong entry index. `GridSearch`,
-  `BayesianSearch`, and `WalkForward` apply the same check once per series rather
-  than once per candidate.
-- A Yahoo HTTP 403 whose body names the crumb now surfaces as
-  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared session
-  refreshes instead of failing every later caller on it. A 403 that does *not*
-  mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
-  `UnexpectedResponse`, since no handshake can clear it and retrying would cost
-  an extra handshake and a discarded session per blocked request.
-
-### Changed
-
-- `Capability` values combining several bits display as `"quote|chart"`
-  instead of `"unknown"`; `Capability::name()` keeps its documented
-  single-bit contract.
-- When no routed provider supports the specific operation, the error now
-  names that operation and the providers that could serve it
-  (`NotSupported`) instead of the generic capability-level
-  `NoProviderAvailable`.
-- Yahoo sessions are now shared per tokio runtime and client configuration.
-  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
-  authenticated session instead of running a fresh cookie + crumb handshake per
-  call, cutting each `finance::*` call from three HTTP requests to one.
-
-### Added
-
-- **CoinGecko trending, global stats, and coin search** are exposed keylessly on
-  the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
-  `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
-  GraphQL root fields). The library gains matching `crypto::trending()`,
-  `crypto::global()`, and `crypto::search()` shortcuts alongside
-  `crypto::coins()`/`crypto::coin()`.
-- `CalendarKind::MarketStatus` and `MarketCalendar::market_status()` for live
-  exchange open/closed status, which Alpha Vantage serves. It was previously
-  mapped onto `CalendarKind::MarketHoliday`, so a holiday-calendar query routed
-  to Alpha Vantage silently returned live status rows instead.
-- `SymbolMatch` gains `id`, `market_cap_rank`, `thumbnail`, and `image`. `id`
-  carries a provider-native identifier when it differs from the ticker — the
-  CoinGecko coin id, for instance, is what `Providers::crypto` accepts.
-- **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
-  serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
-  indicators across 200+ economies, closing the gap left by FRED's US focus.
-  Series are addressed as `"<COUNTRY>/<INDICATOR>"`
-  (`providers.economic("USA/NY.GDP.MKTP.CD")`); a bare indicator resolves
-  against the world aggregate `WLD`. Annual/quarterly/monthly period labels are
-  normalised to the `YYYY-MM-DD` start of the period and observations are
-  returned oldest-first, matching every other `ECONOMIC` provider.
-- **US Treasury FiscalData** (`fiscaldata` feature, keyless) —
-  `Provider::FiscalData` serves `Capability::ECONOMIC` from the Treasury's own
-  publishing platform: federal debt (`"DEBT_TO_PENNY"`), average interest rates,
-  and Daily Treasury Statement cash balances. Six curated series ids cover the
-  common cases; any other dataset is reachable through the passthrough form
-  `"<dataset path>:<value column>"`. FiscalData encodes numbers as strings and
-  marks missing figures with the literal string `"null"` — both are normalised.
-- **BLS** (`bls` feature) — `Provider::Bls` serves `Capability::ECONOMIC` with
-  CPI, unemployment, payrolls, wages, and PPI from the primary source, using
-  native BLS series ids (`providers.economic("CUUR0000SA0")`). The first
-  provider with a **keyless/keyed dual mode**: without `BLS_API_KEY` it uses
-  the keyless v1 route (25 queries/day, ~3 years); with a key it uses v2 (500
-  queries/day, 20 years, plus catalog series titles). BLS's `"-"`
-  unpublished-value marker becomes `None`, and annual-aggregate rows (`M13` /
-  `Q05` / `S03`) are dropped so a monthly series stays strictly monthly.
-- **Frankfurter / ECB reference rates** (`frankfurter` feature, keyless) —
-  `Provider::Frankfurter` serves `Capability::FOREX`, the first keyless route
-  for that capability: `providers.forex("USD", "EUR").quote()` now works with
-  nothing configured, where previously every forex route needed an API key.
-  ECB rates are a daily reference fix, so quotes carry a price and a change
-  against the previous *published* day but no bid/ask. A pair of identical
-  currencies is answered locally with `1.0` rather than Frankfurter's HTTP 422.
-- **Binance public market data** (`binance` feature, keyless) —
-  `Provider::Binance` serves `Capability::CRYPTO` (rolling 24-hour quotes) and
-  `Capability::CHART` (arbitrary-interval OHLCV), the first keyless source of
-  exchange-grade crypto data. Symbols normalise across every spelling the
-  library uses (`bitcoin`, `BTC`, `BTC-USD`, `BTCUSDT`); note that Binance
-  lists no USD spot markets, so `"usd"` maps to the USDT stablecoin. Windows
-  longer than Binance's 1000-candle page cap are walked automatically (up to
-  10,000 candles). A geo-block (HTTP 451) is reported as such and names Kraken
-  as the alternative.
-- **Kraken public market data** (`kraken` feature, keyless) —
-  `Provider::Kraken` serves `Capability::CRYPTO` and `Capability::CHART` from
-  endpoints that are keyless *and* reachable from the US, unlike Binance. With
-  both providers, `CRYPTO` finally has a real `Fetch::Sequential` fallback
-  chain. Kraken's own conventions (`XBT` for Bitcoin, `XDG` for Dogecoin, the
-  legacy `X`/`Z` pair prefixes) are translated in both directions, so callers
-  pass normal tickers. Kraken caps `/OHLC` at ~720 candles ending at the
-  present with no way to page further back — deep history needs Binance or a
-  keyed provider.
-- **FINRA short-sale volume** (`finra` feature, keyless) — `Provider::Finra`
-  serves the short-volume slice of `Capability::FUNDAMENTALS`, giving
-  `Ticker::short_volume()` a keyless provider reading from the primary source
-  rather than requiring Polygon. FINRA reports each symbol once per reporting
-  facility per day (Nasdaq / NYSE / OTC); the adapter sums them into one figure
-  per date, matching FINRA's own consolidated daily file. A symbol with no
-  reportable short volume returns an empty series rather than an error. Free
-  for non-commercial use — see the provider docs.
-- **OpenFIGI identifier mapping** (`openfigi` feature, keyless) — new
-  crate-level `openfigi` module resolving a CUSIP, ISIN, SEDOL, or FIGI to the
-  instruments carrying it: `openfigi::resolve_cusip("037833100")`,
-  `resolve_isin`, `resolve_sedol`, and a positional batch `resolve_many` that
-  chunks to OpenFIGI's 10-per-request limit. New public types
-  `SecurityMapping` and `SecurityIdKind`. It sits beside `edgar` and `fred`
-  rather than behind the Providers API because resolution is not tied to a
-  symbol handle and maps onto no `Capability`. `OPENFIGI_API_KEY` is optional
-  and only raises the quota.
-- **DefiLlama** (`defi` feature, keyless) — the library's first on-chain data.
-  `Provider::DefiLlama` adds `CryptoCoin::tvl()` and `.tvl_history()` under
-  `Capability::CRYPTO` (protocol TVL, per-chain split, 1d/7d change, market
-  cap), and a new crate-level `defi` module carries the market-wide views:
-  `defi::chains()` and `defi::stablecoins()`, both ranked largest-first. New
-  public models `ProtocolTvl`, `ChainAllocation`, `TvlPoint`, `ChainTvl`, and
-  `StablecoinSupply`. Per-chain allocations exclude DefiLlama's breakdown keys
-  (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
-  double-count. DefiLlama serves no prices, so `quote()` falls through to
-  another routed provider.
-- **GDELT DOC 2.0** (`gdelt` feature, keyless) — `Provider::Gdelt` serves the
-  news slice of `Capability::CORPORATE` from GDELT's worldwide online news
-  index (65 languages, updated roughly every 15 minutes), giving `Ticker::news()`
-  a keyless alternative to Yahoo's scraper and Alpha Vantage's 25 req/day
-  quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
-  exact phrase match) is the search term — precision over recall. GDELT
-  rejects phrases under 5 characters, so shorter tickers (`AAPL`, `TSLA`, …)
-  error with `InvalidParameter` and dispatch falls through to another
-  CORPORATE provider. GDELT has no corporate calendar, so `fetch_events`
-  reports `NotSupported`.
-- **CFTC Commitments of Traders** (`cftc` feature, keyless) —
-  `Provider::Cftc` serves `Capability::FUTURES` with weekly futures
-  positioning by trader category (commercial hedgers, swap dealers, managed
-  money, other reportables, small traders) via
-  `FuturesContract::commitments_of_traders()`, reading the disaggregated
-  futures-only combined report from `publicreporting.cftc.gov`. A curated
-  table maps common Yahoo-style continuous futures roots (`"GC=F"`, `"CL=F"`,
-  …) to their CFTC contract code; anything else is passed through as a raw
-  `cftc_contract_market_code`. New public model `CommitmentsOfTraders` /
-  `CotObservation`. Covers physical commodities only (agriculture, energy,
-  metals) — CFTC reports financial futures (equity indices, rates,
-  currencies) separately in the Traders in Financial Futures report, which
-  this adapter does not serve; CFTC publishes no price quotes at all, so
-  `fetch_futures_quote` reports `NotSupported` and falls through to another
-  routed provider (e.g. Polygon).
-- Both keyless providers are exposed on the server: `GET /v2/gdelt/news/{symbol}`
-  and `GET /v2/cftc/cot/{symbol}`, plus the `gdeltNews`/`commitmentsOfTraders`
-  GraphQL root fields. The library gains `gdelt::news()` and
-  `cftc::commitments_of_traders()` shortcuts so neither needs provider routing.
-- Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
-  `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
-  (heaviest first) — no other wired provider serves ETF composition —
-  and `providers.discovery()` now routes to Alpha Vantage for `.search(..)`,
-  `.exchanges()`, and the new `.listing_status(active)`, which returns the whole
-  listed (or delisted) universe. New public models `EtfProfile` and
-  `EtfHolding`.
-- FRED series discovery and point-in-time data:
-  `providers.economic_catalog()` is a new market-wide handle with `.search(query,
-  limit)`, `.categories(parent_id)`, and `.releases()`, so a series id no longer
-  has to be known up front. `providers.economic("GDPC1").as_of("2020-06-30")`
-  returns the series as it was actually published on that date (ALFRED vintage)
-  rather than as currently revised — backtesting against revised macro data is
-  look-ahead bias. New public models `EconomicSeriesMatch`, `EconomicCategory`,
-  and `EconomicRelease`.
-- Keyless crypto price history: `Provider::CoinGecko` now serves
-  `Capability::CHART`, so `.route(Capability::CHART, [Provider::CoinGecko])`
-  makes `providers.crypto("bitcoin").history("usd", range)` work without an API
-  key. CoinGecko picks bar granularity from the range (so `interval` is
-  advisory) and its OHLC endpoint reports no volume, so those candles carry
-  `volume: 0` rather than an interpolated figure.
-- Primary-source ownership data from EDGAR, keyless:
-  `providers.filings("AAPL").insider_trades(limit)` parses Form 3/4/5 ownership
-  XML into typed `InsiderTrade` rows (insider, role, transaction code, shares,
-  price, post-transaction holdings, derivative flag), and
-  `providers.filings("BRK-B").institutional_holdings()` parses the latest 13F-HR
-  information table into `InstitutionalHolding` rows (issuer, CUSIP, value,
-  shares, voting authority). XML is read by a small in-crate element reader —
-  no new dependency, same reasoning as the RSS/Atom parser.
-- Routed EDGAR full-text search: `providers.filings("AAPL").search(query,
-  filters)` searches filing *text* within that filer, and `.search_all(..)`
-  across every filer, through the `FILINGS` capability. Returns the flattened
-  `FilingSearchHit` (with a derived archive URL per hit) rather than EDGAR's raw
-  Elasticsearch envelope, which `edgar::search` still exposes unchanged. New
-  public models `FilingSearchHit` and `FilingSearchFilters`.
-- Cross-market snapshots: `providers.snapshot().get(&["AAPL", "X:BTCUSD",
-  "I:SPX"])` answers a mixed watchlist in one request through the `QUOTE` route
-  (Polygon's `/v3/snapshot`, max 250 symbols) instead of one request per asset
-  class. Unresolvable symbols come back as rows with `error` set rather than
-  being dropped. New public models `MarketSnapshot` and `AssetClass`, and a new
-  `Snapshot` handle.
-- Analyst consensus on `Ticker`: `price_target_consensus()` (high/low/mean/median
-  target), `price_target_summary()` (how many targets were published last
-  month/quarter/year/all time and their averages), and `rating_consensus()`
-  (grade distribution plus a headline label) via the `FUNDAMENTALS` route (FMP).
-  These are the provider's own panel-wide rollups, not the raw per-analyst grade
-  actions already available through `UpgradeDowngradeHistory`.
-- TTM fundamentals snapshots on `Ticker`: `key_metrics_ttm()` and `ratios_ttm()`
-  return a single always-current trailing-twelve-month rollup via the
-  `FUNDAMENTALS` route (FMP), instead of requiring callers to fetch the latest
-  fiscal period and reason about whether it is still current. New public models
-  `KeyMetricsTtm` and `FinancialRatiosTtm`.
-- Ownership/governance on `Ticker`: `executive_compensation()` and
-  `employee_count()` via the `CORPORATE` route (FMP), both extracted from the
-  company's own SEC filings and returned newest-first. FMP also now serves
-  `share_float()` on the `FUNDAMENTALS` route, so it works when FMP is routed
-  ahead of Yahoo. New public models `ExecutiveCompensation` and `EmployeeCount`.
-- Index constituents: `providers.index("^GSPC").constituents()` and
-  `.constituent_changes()` list the current members and membership history of
-  the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
-  `MajorIndex::from_symbol` maps common symbol spellings.
-- Short data on `Ticker`: `short_interest()`, `short_volume()`, and
-  `share_float()` via the `FUNDAMENTALS` route. The default Yahoo route
-  derives short interest (current + prior-month snapshots) and float from
-  key statistics keylessly; Polygon adds the full history and daily short
-  volume.
-- Filing text: `providers.filings("AAPL").sections(accession, form)` returns
-  the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
-  risk factors (Polygon; EDGAR still serves metadata).
-- `Ticker::press_releases(limit)` — the company's own releases, distinct from
-  press coverage via `news()` (FMP).
-- `providers.calendar().holidays()` — upcoming market holidays and early
-  closes as a new `CalendarKind::MarketHoliday` (Polygon).
-- `providers.market().sector_performance_history(limit)` (FMP), and market
-  movers now work on the default keyless route: Yahoo serves
-  `gainers()`/`losers()`/`most_active()` derived from its predefined
-  screeners, with Alpha Vantage as a second keyed route. `providers.market()`
-  and the mover/sector models are available without any provider feature.
-- Three market-wide capabilities and handles on the Providers API (each needs
-  at least one of the `fmp`/`polygon`/`alphavantage` features):
-  `Capability::DISCOVERY` with `providers.discovery()` (symbol search,
-  reference data, exchanges, screeners), `Capability::CALENDAR` with
-  `providers.calendar()` (market-wide earnings/IPO/dividend/split/economic
-  calendars), and `Capability::MARKET` with `providers.market()`
-  (sector/industry performance and movers).
-- Batch quotes for FMP, Polygon, and Alpha Vantage. Routing `QUOTE` to a
-  non-Yahoo provider previously fell back to one request per symbol; a
-  10-symbol batch now costs one request instead of ten.
-- `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
-  on the domain handles.
-- `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
-  and lowest bar high/low/close since the open position was entered. The engine
-  folds these once per bar, so `TrailingStop` and `TrailingTakeProfit` read one
-  shared running value instead of rescanning the candle history per bar
-  (O(bars²) → O(bars)). Both conditions stay `Copy`. Custom conditions can read
-  `ctx.extremes`; it is `None` outside the engine's bar loop.
-- Automatic crumb refresh: a request that fails authentication re-runs the
-  Yahoo handshake once and retries. If the refresh itself fails, the shared
-  session is dropped so the next caller builds a fresh one.
-
-### Fixed
-
-- `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
-  when no retry hint was available, and "Some(30)s" when there was one.
-- GDELT's throttle response carries its retry interval in a plain-text body
-  rather than a `Retry-After` header; that interval is now parsed into
-  `RateLimited::retry_after` and the message logged instead of discarded.
-- EDGAR is no longer dropped from the provider set when Alpha Vantage is
-  configured. Auto-injection tested `capabilities().contains(FILINGS)`, and
-  Alpha Vantage advertises FILINGS only to serve insider transactions — so
-  EDGAR, the sole real filings source, was suppressed and every `filings()`
-  call failed. Injection is now keyed on provider identity.
-- CoinGecko symbol search puts the ticker in `SymbolMatch::symbol` (uppercased),
-  matching every other DISCOVERY provider; it previously put the CoinGecko coin
-  id there, which broke the provider-neutral contract for consumers searching
-  across providers.
-- `RetryPolicy` honored an error's `retry_after` hint with no ceiling, so a
-  hostile or buggy upstream could park a caller indefinitely. Capped by the
-  new `max_retry_after` (default 5 minutes), kept separate from `max_delay`
-  so legitimate multi-minute hints are still honored.
-- A stream whose session came up and then failed a few seconds in — auth
-  rejection, subscription error, idle kill — reset the reconnect counter
-  every cycle and retried forever despite `max_reconnect_attempts`. The
-  healthy-session threshold is now 60s, independent of the (short) base
-  delay it was keyed to.
-- A zero base delay produced the maximum delay instead of zero at high
-  attempt counts (`0.0 * inf` is NaN, and `f64::min` returns the other
-  operand for NaN).
-
-- `finance::hours()` no longer labels every region's market "U.S. markets".
-  Yahoo returns correct per-region session times but hardcodes the U.S.
-  label; the name (and its occurrence in the status message) is now derived
-  from the market id, so `region=JP` reads "Japanese markets".
-- `vwma` is computed with rolling sums instead of rescanning the window each
-  bar. Results may differ from previous releases in the last few significant
-  digits; a window whose volumes span extreme magnitudes is now rebuilt rather
-  than returning a value derived from a cancelled-out denominator.
-- A batch quote response whose `result` array contains a non-object element now
-  fails that batch instead of yielding an all-empty quote for it.
 
 ## [2.8.0] - 2026-07-10
 
