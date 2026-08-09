@@ -23,6 +23,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Fetch for specific expiration date (Unix timestamp)
     let specific_date = 1735689600; // 2025-01-01
-    let _response = tickers.options(Some(specific_date)).await?;
+    let response = tickers.options(Some(specific_date)).await?;
     Ok(())
 }

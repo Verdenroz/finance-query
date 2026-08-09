@@ -4,6 +4,6 @@ use finance_query::Tickers;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
+    let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
     Ok(())
 }

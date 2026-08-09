@@ -22,6 +22,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_fuzzy_query(true)
         .region(Region::Canada);
 
-    let _results = finance::search("tesla", &options).await?;
+    let results = finance::search("tesla", &options).await?;
     Ok(())
 }

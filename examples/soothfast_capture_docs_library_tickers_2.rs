@@ -5,7 +5,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _tickers = Tickers::builder(vec!["AAPL", "MSFT"])
+    let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
         .region(Region::UnitedStates)
         .timeout(Duration::from_secs(30))
         .build()

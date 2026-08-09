@@ -9,7 +9,7 @@ mod soothfast_capture_body {
         // Vec of dividends to DataFrame
         let ticker = Ticker::new("AAPL").await?;
         let dividends = ticker.dividends(TimeRange::FiveYears).await?;
-        let _df = Dividend::vec_to_dataframe(&dividends)?;
+        let df = Dividend::vec_to_dataframe(&dividends)?;
 
         // SearchQuotes wrapper has to_dataframe() method
         let results = finance::search("tech", &SearchOptions::default()).await?;

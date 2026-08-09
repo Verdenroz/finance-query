@@ -5,7 +5,7 @@ use finance_query::{Region, finance};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Default (US market)
-    let _summary = finance::market_summary(None).await?;
+    let summary = finance::market_summary(None).await?;
 
     // Specific region
     let summary = finance::market_summary(Some(Region::Canada)).await?;

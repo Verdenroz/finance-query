@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get options for a specific expiration date
     let exp_dates = options.expiration_dates();
     if exp_dates.len() > 1 {
-        let _options_dated = ticker.options(Some(exp_dates[1])).await?;
+        let options_dated = ticker.options(Some(exp_dates[1])).await?;
     }
     Ok(())
 }

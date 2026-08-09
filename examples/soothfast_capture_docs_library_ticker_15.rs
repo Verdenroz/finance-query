@@ -9,7 +9,7 @@ mod soothfast_capture_body {
         let ticker = Ticker::new("AAPL").await?;
 
         // With S&P 500 as benchmark (enables beta calculation)
-        let _risk = ticker
+        let risk = ticker
             .risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC"))
             .await?;
 

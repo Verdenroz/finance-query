@@ -5,7 +5,7 @@ use finance_query::Tickers;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Conservative: 3 concurrent requests (large lists or strict rate limits)
-    let _tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
+    let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
         .max_concurrency(3)
         .build()
         .await?;

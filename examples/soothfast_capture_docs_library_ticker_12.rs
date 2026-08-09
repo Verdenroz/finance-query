@@ -10,9 +10,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     // Custom periods
-    let _sma_15 = chart.sma(15);
+    let sma_15 = chart.sma(15);
     let rsi_21 = chart.rsi(21)?;
-    let _macd = chart.macd(8, 21, 5)?; // Fast, slow, signal
+    let macd = chart.macd(8, 21, 5)?; // Fast, slow, signal
 
     // Access latest value
     if let Some(&latest_rsi) = rsi_21.last().and_then(|v| v.as_ref()) {

@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Get specific quarter
-    let _q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
+    let q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
 
     // Get all available transcripts
     let all = finance::earnings_transcripts("MSFT", None).await?;

@@ -2,10 +2,10 @@
 // source: README.md
 #![allow(unused)]
 
-// line 58
+// line 59
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_58() {
+fn doc_block_line_59() {
     use finance_query::Ticker;
     use finance_query::format::Both;
 
@@ -22,10 +22,10 @@ fn doc_block_line_58() {
     main();
 }
 
-// line 76
+// line 77
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_76() {
+fn doc_block_line_77() {
     use finance_query::{Tickers, Interval, TimeRange};
 
     #[tokio::main]
@@ -44,10 +44,10 @@ fn doc_block_line_76() {
     main();
 }
 
-// line 96
+// line 97
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_96() {
+fn doc_block_line_97() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -65,15 +65,17 @@ fn doc_block_line_96() {
 
         // Get XBRL financial data
         let facts = edgar::company_facts(cik).await?;
-        if let Some(us_gaap) = facts.facts.get("us-gaap")
-            && let Some(revenue) = us_gaap.0.get("Revenues")
-                && let Some(usd) = revenue.units.get("USD") {
+        if let Some(us_gaap) = facts.facts.get("us-gaap") {
+            if let Some(revenue) = us_gaap.0.get("Revenues") {
+                if let Some(usd) = revenue.units.get("USD") {
                     for point in usd.iter().take(3) {
                         if let (Some(fy), Some(val)) = (point.fy, point.val) {
                             println!("FY {}: ${}", fy, val);
                         }
                     }
                 }
+            }
+        }
         Ok(())
     }
     main();

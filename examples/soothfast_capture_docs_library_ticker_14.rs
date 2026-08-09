@@ -2,7 +2,7 @@
 // source: docs/library/ticker.md line 720
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use finance_query::indicators::PatternSentiment;
+    use finance_query::indicators::{CandlePattern, PatternSentiment};
     use finance_query::{Interval, Ticker, TimeRange};
 
     let ticker = Ticker::new("AAPL").await?;

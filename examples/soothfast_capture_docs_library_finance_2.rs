@@ -5,7 +5,7 @@ use finance_query::{LookupOptions, LookupType, finance};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Simple lookup
-    let _results = finance::lookup("NVDA", &LookupOptions::default()).await?;
+    let results = finance::lookup("NVDA", &LookupOptions::default()).await?;
 
     // Lookup equities with logos
     let options = LookupOptions::new()

@@ -25,12 +25,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Quarterly balance sheet
-    let _balance = ticker
+    let balance = ticker
         .financials(StatementType::Balance, Frequency::Quarterly)
         .await?;
 
     // Cash flow statement
-    let _cashflow = ticker
+    let cashflow = ticker
         .financials(StatementType::CashFlow, Frequency::Annual)
         .await?;
     Ok(())

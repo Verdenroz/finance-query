@@ -5,7 +5,7 @@ use finance_query::{Region, finance};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // US market hours (default)
-    let _hours = finance::hours(None).await?;
+    let hours = finance::hours(None).await?;
 
     // Japan market hours
     let hours = finance::hours(Some(Region::Japan)).await?;

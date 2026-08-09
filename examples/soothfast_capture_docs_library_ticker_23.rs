@@ -6,15 +6,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use std::time::Duration;
 
     // Default: cached for the lifetime of the handle
-    let _ticker = Ticker::new("AAPL").await?;
+    let ticker = Ticker::new("AAPL").await?;
 
     // Bounded: entries expire after 5 minutes
-    let _ticker = Ticker::builder("AAPL")
+    let ticker = Ticker::builder("AAPL")
         .cache(Duration::from_secs(300))
         .build()
         .await?;
 
     // Off: every accessor issues a fresh request
-    let _ticker = Ticker::builder("AAPL").no_cache().build().await?;
+    let ticker = Ticker::builder("AAPL").no_cache().build().await?;
     Ok(())
 }

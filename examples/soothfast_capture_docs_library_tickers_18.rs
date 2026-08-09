@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("After removing: {:?}", tickers.symbols());
 
     // Fetch quotes for current symbols
-    let _response = tickers.quotes().await?;
+    let response = tickers.quotes().await?;
     // Response will only include AAPL, GOOGL, NVDA
     Ok(())
 }

@@ -8,10 +8,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let gainers = finance::screener(Screener::DayGainers, 25).await?;
 
     // Most actives
-    let _actives = finance::screener(Screener::MostActives, 25).await?;
+    let actives = finance::screener(Screener::MostActives, 25).await?;
 
     // Day losers
-    let _losers = finance::screener(Screener::DayLosers, 25).await?;
+    let losers = finance::screener(Screener::DayLosers, 25).await?;
 
     // Process results
     for quote in &gainers.quotes {

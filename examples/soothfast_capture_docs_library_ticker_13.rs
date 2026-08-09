@@ -9,7 +9,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let closes: Vec<f64> = chart.candles.iter().map(|c| c.close).collect();
 
-    let _sma_25 = sma(&closes, 25);
+    let sma_25 = sma(&closes, 25);
     let rsi_10 = rsi(&closes, 10)?;
 
     if let Some(&latest) = rsi_10.last().and_then(|v| v.as_ref()) {

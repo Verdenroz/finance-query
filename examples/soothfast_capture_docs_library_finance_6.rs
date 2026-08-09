@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Other regions
-    let _europe = finance::indices(Some(IndicesRegion::Europe)).await?;
-    let _asia = finance::indices(Some(IndicesRegion::AsiaPacific)).await?;
+    let europe = finance::indices(Some(IndicesRegion::Europe)).await?;
+    let asia = finance::indices(Some(IndicesRegion::AsiaPacific)).await?;
     Ok(())
 }

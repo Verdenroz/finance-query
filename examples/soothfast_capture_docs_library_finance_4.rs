@@ -4,7 +4,7 @@ use finance_query::{Region, finance};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _trending = finance::trending(None).await?;
+    let trending = finance::trending(None).await?;
     // Or specify region
     let trending = finance::trending(Some(Region::Singapore)).await?;
 
