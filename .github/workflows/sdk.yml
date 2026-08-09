@@ -19,7 +19,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: sdk-${{ github.event.pull_request.number || github.ref }}
+  # SHA-scoped for the same reason as soothfast.yml
+  group: sdk-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

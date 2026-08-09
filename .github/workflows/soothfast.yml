@@ -30,7 +30,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: soothfast-${{ github.event.pull_request.number }}
+  # Scoped to the commit, not just the PR
+  group: soothfast-${{ github.event.pull_request.number }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
