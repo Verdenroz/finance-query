@@ -101,6 +101,23 @@ class GqlCalendarEvent:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlCandle:
+    """A single OHLCV candle / price bar."""
+
+    close: float
+    high: float
+    low: float
+    open: float
+    timestamp: int
+    volume: int
+    adj_close: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "adj_close": "adjClose",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlCapitalGain:
     """A single capital gain distribution."""
 
@@ -125,6 +142,7 @@ capital gains histories plus any per-symbol fetch errors."""
 class GqlChart:
     """Historical chart data for a single symbol."""
 
+    candles: Page_GqlCandle
     meta: GqlChartMeta
     symbol: str
     interval: str | None = None
@@ -185,6 +203,7 @@ class GqlChartsBatch:
     """Result of the batch `charts` root field: successfully fetched charts plus
 any per-symbol fetch errors."""
 
+    charts: Page_GqlSymbolChart
     errors: list[GqlBatchError]
 
 
@@ -222,11 +241,56 @@ class GqlCommitmentsOfTraders:
 
     cftc_contract_market_code: str
     market_and_exchange_name: str
+    observations: Page_GqlCotObservation
     symbol: str
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "cftc_contract_market_code": "cftcContractMarketCode",
         "market_and_exchange_name": "marketAndExchangeName",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlCotObservation:
+    """Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
+broken down by trader category."""
+
+    report_date: str
+    managed_money_long: int | None = None
+    managed_money_short: int | None = None
+    managed_money_spread: int | None = None
+    nonreportable_long: int | None = None
+    nonreportable_short: int | None = None
+    open_interest: int | None = None
+    other_reportable_long: int | None = None
+    other_reportable_short: int | None = None
+    other_reportable_spread: int | None = None
+    producer_merchant_long: int | None = None
+    producer_merchant_short: int | None = None
+    swap_dealer_long: int | None = None
+    swap_dealer_short: int | None = None
+    swap_dealer_spread: int | None = None
+    total_reportable_long: int | None = None
+    total_reportable_short: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "managed_money_long": "managedMoneyLong",
+        "managed_money_short": "managedMoneyShort",
+        "managed_money_spread": "managedMoneySpread",
+        "nonreportable_long": "nonreportableLong",
+        "nonreportable_short": "nonreportableShort",
+        "open_interest": "openInterest",
+        "other_reportable_long": "otherReportableLong",
+        "other_reportable_short": "otherReportableShort",
+        "other_reportable_spread": "otherReportableSpread",
+        "producer_merchant_long": "producerMerchantLong",
+        "producer_merchant_short": "producerMerchantShort",
+        "report_date": "reportDate",
+        "swap_dealer_long": "swapDealerLong",
+        "swap_dealer_short": "swapDealerShort",
+        "swap_dealer_spread": "swapDealerSpread",
+        "total_reportable_long": "totalReportableLong",
+        "total_reportable_short": "totalReportableShort",
     }
 
 
@@ -279,6 +343,7 @@ class GqlDividends:
     """Dividends response: payment history + computed analytics."""
 
     analytics: GqlDividendAnalytics
+    dividends: Page_GqlDividend
 
 
 @dataclasses.dataclass(frozen=True)
@@ -286,6 +351,7 @@ class GqlDividendsBatch:
     """Result of the batch `dividendsBatch` root field: successfully fetched
 dividend histories plus any per-symbol fetch errors."""
 
+    dividends: Page_GqlSymbolDividends
     errors: list[GqlBatchError]
 
 
@@ -302,6 +368,25 @@ class GqlEdgarCik:
 
     cik: int
     symbol: str
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEdgarFiling:
+    accession_number: str
+    filing_date: str
+    form: str
+    primary_doc_description: str
+    primary_document: str
+    report_date: str
+    size: int
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "accession_number": "accessionNumber",
+        "filing_date": "filingDate",
+        "primary_doc_description": "primaryDocDescription",
+        "primary_document": "primaryDocument",
+        "report_date": "reportDate",
+    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -333,6 +418,7 @@ class GqlEdgarSearchResults:
 @dataclasses.dataclass(frozen=True)
 class GqlEdgarSubmissions:
     exchanges: list[str]
+    filings: Page_GqlEdgarFiling
     tickers: list[str]
     category: str | None = None
     cik: str | None = None
@@ -388,10 +474,28 @@ class GqlFactConcept:
     """A single XBRL fact concept with its data points."""
 
     concept: str
+    data_points: Page_GqlFactDataPoint
     taxonomy: str
     unit: str
     description: str | None = None
     label: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "data_points": "dataPoints",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlFactDataPoint:
+    accn: str | None = None
+    end: str | None = None
+    filed: str | None = None
+    form: str | None = None
+    fp: str | None = None
+    frame: str | None = None
+    fy: int | None = None
+    start: str | None = None
+    val: float | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -512,6 +616,7 @@ class GqlIndicatorsBatch:
 indicators plus any per-symbol fetch errors."""
 
     errors: list[GqlBatchError]
+    indicators: Page_GqlSymbolIndicators
 
 
 @dataclasses.dataclass(frozen=True)
@@ -750,10 +855,19 @@ class GqlMacdData:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlMacroObservation:
+    """A single observation in a FRED data series."""
+
+    date: str
+    value: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlMacroSeries:
     """A FRED macro-economic time series with all its observations."""
 
     id: str
+    observations: Page_GqlMacroObservation
 
 
 @dataclasses.dataclass(frozen=True)
@@ -827,10 +941,44 @@ class GqlNews:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlOptionContract:
+    """An option contract (call or put)."""
+
+    contract_symbol: str
+    strike: float
+    ask: float | None = None
+    bid: float | None = None
+    change: float | None = None
+    contract_size: str | None = None
+    currency: str | None = None
+    expiration: int | None = None
+    implied_volatility: float | None = None
+    in_the_money: bool | None = None
+    last_price: float | None = None
+    last_trade_date: int | None = None
+    open_interest: int | None = None
+    percent_change: float | None = None
+    volume: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "contract_size": "contractSize",
+        "contract_symbol": "contractSymbol",
+        "implied_volatility": "impliedVolatility",
+        "in_the_money": "inTheMoney",
+        "last_price": "lastPrice",
+        "last_trade_date": "lastTradeDate",
+        "open_interest": "openInterest",
+        "percent_change": "percentChange",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlOptions:
     """Options chain data for a symbol."""
 
+    calls: Page_GqlOptionContract
     expiration_dates: list[int]
+    puts: Page_GqlOptionContract
     strikes: list[float]
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
@@ -844,6 +992,7 @@ class GqlOptionsBatch:
 options chains plus any per-symbol fetch errors."""
 
     errors: list[GqlBatchError]
+    options: Page_GqlSymbolOptions
 
 
 @dataclasses.dataclass(frozen=True)
@@ -868,6 +1017,15 @@ top of the offset/size that already did the real work) and add this as a
         "has_previous_page": "hasPreviousPage",
         "start_cursor": "startCursor",
     }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlParagraph:
+    end: float
+    sentences: list[GqlSentence]
+    speaker: int
+    start: float
+    text: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1253,6 +1411,7 @@ class GqlQuotesBatch:
 any per-symbol fetch errors."""
 
     errors: list[GqlBatchError]
+    quotes: Page_GqlQuote
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1278,6 +1437,7 @@ class GqlRecommendationsBatch:
 fetched recommendations plus any per-symbol fetch errors."""
 
     errors: list[GqlBatchError]
+    recommendations: Page_GqlRecommendation
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1476,10 +1636,45 @@ class GqlSearchNews:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlSearchQuote:
+    """A quote/symbol result from `search`."""
+
+    symbol: str
+    disp_sec_ind_flag: bool | None = None
+    exch_disp: str | None = None
+    exchange: str | None = None
+    industry: str | None = None
+    industry_disp: str | None = None
+    is_yahoo_finance: bool | None = None
+    logo_url: str | None = None
+    long_name: str | None = None
+    quote_type: str | None = None
+    score: float | None = None
+    sector: str | None = None
+    sector_disp: str | None = None
+    short_name: str | None = None
+    type_disp: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "disp_sec_ind_flag": "dispSecIndFlag",
+        "exch_disp": "exchDisp",
+        "industry_disp": "industryDisp",
+        "is_yahoo_finance": "isYahooFinance",
+        "logo_url": "logoUrl",
+        "long_name": "longName",
+        "quote_type": "quoteType",
+        "sector_disp": "sectorDisp",
+        "short_name": "shortName",
+        "type_disp": "typeDisp",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlSearchResults:
     """Combined search results: quotes, news, and research reports."""
 
     news: list[GqlSearchNews]
+    quotes: Page_GqlSearchQuote
     research_reports: list[GqlResearchReport]
     count: int | None = None
     total_time: int | None = None
@@ -1644,6 +1839,14 @@ class GqlSectorResearchReport:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlSentence:
+    end: float
+    start: float
+    text: str
+    words: list[GqlWord]
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlSentiment:
     """Lexicon-based sentiment score for a news article's title."""
 
@@ -1746,11 +1949,38 @@ class GqlSymbolCapitalGains:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlSymbolChart:
+    """Wraps a symbol name with its chart data, used by the batch `charts` root field."""
+
+    chart: GqlChart
+    symbol: str
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlSymbolDividends:
+    """Wrapper for batch dividends: `{symbol, dividends}`. `dividends` is a plain
+payment list here (mirrors `BatchDividendsResponse.dividends:
+HashMap<String, Vec<Dividend>>`) — batch dividends has no per-symbol
+analytics, unlike the single-symbol `GqlDividends`."""
+
+    dividends: list[GqlDividend]
+    symbol: str
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlSymbolFinancials:
     """Wrapper for batch financials: `{symbol, statement}` — `statement` is every
 line item in that symbol's statement, not a single one."""
 
     statement: list[GqlFinancialLineItem]
+    symbol: str
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlSymbolIndicators:
+    """Wraps a symbol name with its indicators, used by the batch root field."""
+
+    indicators: GqlIndicatorsSummary
     symbol: str
 
 
@@ -1774,6 +2004,15 @@ discovery shape, here populated from CoinGecko's coin universe."""
         "asset_type": "assetType",
         "market_cap_rank": "marketCapRank",
     }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlSymbolOptions:
+    """Wraps a symbol name with its options chain, used by the batch
+`optionsBatch` root field."""
+
+    options: GqlOptions
+    symbol: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1813,6 +2052,7 @@ class GqlTranscriptContent:
 @dataclasses.dataclass(frozen=True)
 class GqlTranscriptData:
     number_of_speakers: int
+    paragraphs: Page_GqlParagraph
     text: str
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
@@ -1924,6 +2164,19 @@ class GqlTrendingQuote:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlWord:
+    confidence: float
+    end: float
+    punctuated_word: str
+    start: float
+    word: str
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "punctuated_word": "punctuatedWord",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class HealthResponse:
     """Body of `GET /v2/health`."""
 
@@ -1931,6 +2184,171 @@ class HealthResponse:
     status: str
     timestamp: str
     version: str
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlCandle:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlCandle]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlCotObservation:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlCotObservation]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlDividend:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlDividend]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlEdgarFiling:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlEdgarFiling]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlFactDataPoint:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlFactDataPoint]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlMacroObservation:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlMacroObservation]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlOptionContract:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlOptionContract]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlParagraph:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlParagraph]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlQuote:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlQuote]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlRecommendation:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlRecommendation]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlSearchQuote:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlSearchQuote]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlSymbolChart:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlSymbolChart]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlSymbolDividends:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlSymbolDividends]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlSymbolIndicators:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlSymbolIndicators]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlSymbolOptions:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlSymbolOptions]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
 
 
 @dataclasses.dataclass(frozen=True)

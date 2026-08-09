@@ -56,7 +56,7 @@ export function environment(
  * tell the two Linux flavors apart from inside Node.
  */
 function platformSuffix(): string {
-  const cpu = process.arch === "x64" || process.arch === "arm64" ? process.arch : process.arch;
+  const cpu = process.arch;
   if (process.platform !== "linux") return `${process.platform}-${cpu}`;
   const header = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } };
   const musl = header?.header?.glibcVersionRuntime === undefined;
@@ -120,6 +120,8 @@ export class EmbeddedServer {
     }
     // The server must not keep an otherwise-idle process alive.
     child.unref();
+    spawned.add(child);
+    child.once("exit", () => spawned.delete(child));
 
     try {
       const baseUrl = await readReadyLine(child, bin, timeoutMs);
@@ -231,6 +233,9 @@ function detail(stderr: string): string {
 }
 
 const running = new Map<string, Promise<EmbeddedServer>>();
+/** Live children, tracked separately: an `exit` handler cannot await the
+ *  promise that holds one, and a `.then` callback there never runs. */
+const spawned = new Set<ChildProcess>();
 
 /**
  * A base URL resolver for a client constructed without an explicit one.
@@ -274,10 +279,8 @@ export async function stopEmbeddedServers(): Promise<void> {
   );
 }
 
-// Best-effort reaping. `exit` handlers must be synchronous, so this sends
-// the signal without waiting; the OS cleans up the rest.
+// Best-effort reaping. `exit` handlers must be synchronous, so this signals
+// the children directly and does not wait; the OS cleans up the rest.
 process.on("exit", () => {
-  for (const pending of running.values()) {
-    void pending.then((server) => void server.stop()).catch(() => undefined);
-  }
+  for (const child of spawned) child.kill("SIGTERM");
 });

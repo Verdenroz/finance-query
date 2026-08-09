@@ -20,6 +20,7 @@ import pathlib
 import queue
 import subprocess
 import threading
+import time
 import typing
 
 READY_PREFIX = "soothfast-ready "
@@ -187,10 +188,13 @@ def _read_ready_line(
     # Daemon thread: a wedged server must never block interpreter exit.
     threading.Thread(target=pump, daemon=True).start()
 
+    # One deadline for the whole handshake: a server that logs while starting
+    # would otherwise re-arm a per-line timeout and never trip it.
+    deadline = time.monotonic() + timeout
     try:
         while True:
             try:
-                line = lines.get(timeout=timeout)
+                line = lines.get(timeout=max(0.0, deadline - time.monotonic()))
             except queue.Empty:
                 raise RuntimeError(
                     f"embedded server {executable!r} did not announce a base URL "

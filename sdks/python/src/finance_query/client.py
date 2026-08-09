@@ -130,9 +130,7 @@ class Client:
 
         ``server_env`` configures that server — see ``ServerEnv`` for the knobs it reads.
         """
-        base_url = base_url or embedded_base_url(
-            EMBED, typing.cast("typing.Mapping[str, str] | None", server_env)
-        )
+        base_url = base_url or embedded_base_url(EMBED, typing.cast("typing.Mapping[str, str] | None", server_env))
         self._transport = transport or Transport(
             base_url, timeout=timeout, max_retries=max_retries, on_rate_limit=on_rate_limit
         )
@@ -1445,9 +1443,7 @@ class AsyncClient:
 
         ``server_env`` configures that server — see ``ServerEnv`` for the knobs it reads.
         """
-        base_url = base_url or embedded_base_url(
-            EMBED, typing.cast("typing.Mapping[str, str] | None", server_env)
-        )
+        base_url = base_url or embedded_base_url(EMBED, typing.cast("typing.Mapping[str, str] | None", server_env))
         self._transport = transport or AsyncTransport(
             base_url, timeout=timeout, max_retries=max_retries, on_rate_limit=on_rate_limit
         )

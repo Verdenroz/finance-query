@@ -70,6 +70,17 @@ export interface GqlCalendarEvent {
   timestamp: number;
 }
 
+/** A single OHLCV candle / price bar. */
+export interface GqlCandle {
+  adjClose?: number;
+  close: number;
+  high: number;
+  low: number;
+  open: number;
+  timestamp: number;
+  volume: number;
+}
+
 /** A single capital gain distribution. */
 export interface GqlCapitalGain {
   amount: number;
@@ -84,6 +95,8 @@ export interface GqlCapitalGainsBatch {
 
 /** Historical chart data for a single symbol. */
 export interface GqlChart {
+  /** OHLCV candles for the requested interval/range. */
+  candles: Page_GqlCandle;
   /** Time interval used for this chart (e.g. "1d"). */
   interval?: string;
   meta: GqlChartMeta;
@@ -120,6 +133,8 @@ export interface GqlChartMeta {
 
 /** Result of the batch `charts` root field: successfully fetched charts plus any per-symbol fetch errors. */
 export interface GqlChartsBatch {
+  /** Successfully fetched per-symbol charts. */
+  charts: Page_GqlSymbolChart;
   errors: GqlBatchError[];
 }
 
@@ -143,8 +158,32 @@ export interface GqlCommitmentsOfTraders {
   cftcContractMarketCode: string;
   /** CFTC's own market and exchange name. */
   marketAndExchangeName: string;
+  /** Weekly report rows, oldest first. */
+  observations: Page_GqlCotObservation;
   /** The symbol the series was requested with (`"GC=F"`, or a raw CFTC code). */
   symbol: string;
+}
+
+/** Mirrors `finance_query::cftc::CotObservation` — one weekly report row, broken down by trader category. */
+export interface GqlCotObservation {
+  managedMoneyLong?: number;
+  managedMoneyShort?: number;
+  managedMoneySpread?: number;
+  nonreportableLong?: number;
+  nonreportableShort?: number;
+  openInterest?: number;
+  otherReportableLong?: number;
+  otherReportableShort?: number;
+  otherReportableSpread?: number;
+  producerMerchantLong?: number;
+  producerMerchantShort?: number;
+  /** Report date (`YYYY-MM-DD`) — the Tuesday the report is as of. */
+  reportDate: string;
+  swapDealerLong?: number;
+  swapDealerShort?: number;
+  swapDealerSpread?: number;
+  totalReportableLong?: number;
+  totalReportableShort?: number;
 }
 
 /** A currency pair supported by Yahoo Finance. */
@@ -174,10 +213,14 @@ export interface GqlDividendAnalytics {
 /** Dividends response: payment history + computed analytics. */
 export interface GqlDividends {
   analytics: GqlDividendAnalytics;
+  /** Dividend payment history. */
+  dividends: Page_GqlDividend;
 }
 
 /** Result of the batch `dividendsBatch` root field: successfully fetched dividend histories plus any per-symbol fetch errors. */
 export interface GqlDividendsBatch {
+  /** Successfully fetched per-symbol dividend histories. */
+  dividends: Page_GqlSymbolDividends;
   errors: GqlBatchError[];
 }
 
@@ -191,6 +234,16 @@ export interface GqlDonchianChannelsData {
 export interface GqlEdgarCik {
   cik: number;
   symbol: string;
+}
+
+export interface GqlEdgarFiling {
+  accessionNumber: string;
+  filingDate: string;
+  form: string;
+  primaryDocDescription: string;
+  primaryDocument: string;
+  reportDate: string;
+  size: number;
 }
 
 export interface GqlEdgarSearchHit {
@@ -213,6 +266,8 @@ export interface GqlEdgarSubmissions {
   ein?: string;
   entityType?: string;
   exchanges: string[];
+  /** Filing history. Can be large (hundreds+ of filings for established companies) — paginated. */
+  filings: Page_GqlEdgarFiling;
   fiscalYearEnd?: string;
   insiderTransactionForIssuerExists?: number;
   insiderTransactionForOwnerExists?: number;
@@ -241,10 +296,24 @@ export interface GqlExchange {
 /** A single XBRL fact concept with its data points. */
 export interface GqlFactConcept {
   concept: string;
+  /** Reported data points for this concept. */
+  dataPoints: Page_GqlFactDataPoint;
   description?: string;
   label?: string;
   taxonomy: string;
   unit: string;
+}
+
+export interface GqlFactDataPoint {
+  accn?: string;
+  end?: string;
+  filed?: string;
+  form?: string;
+  fp?: string;
+  frame?: string;
+  fy?: number;
+  start?: string;
+  val?: number;
 }
 
 /** Fear & Greed index response, mirroring `finance_query::models::sentiment::FearAndGreed`. */
@@ -325,6 +394,8 @@ export interface GqlIchimokuData {
 /** Result of the batch `indicatorsBatch` root field: successfully computed indicators plus any per-symbol fetch errors. */
 export interface GqlIndicatorsBatch {
   errors: GqlBatchError[];
+  /** Successfully computed per-symbol indicators. */
+  indicators: Page_GqlSymbolIndicators;
 }
 
 /** All technical indicators for a symbol (latest values). */
@@ -475,9 +546,17 @@ export interface GqlMacdData {
   signal?: number;
 }
 
+/** A single observation in a FRED data series. */
+export interface GqlMacroObservation {
+  date: string;
+  value?: number;
+}
+
 /** A FRED macro-economic time series with all its observations. */
 export interface GqlMacroSeries {
   id: string;
+  /** Time series observations. */
+  observations: Page_GqlMacroObservation;
 }
 
 /** Market hours for one or more markets. */
@@ -526,10 +605,33 @@ export interface GqlNews {
   title: string;
 }
 
+/** An option contract (call or put). */
+export interface GqlOptionContract {
+  ask?: number;
+  bid?: number;
+  change?: number;
+  contractSize?: string;
+  contractSymbol: string;
+  currency?: string;
+  expiration?: number;
+  impliedVolatility?: number;
+  inTheMoney?: boolean;
+  lastPrice?: number;
+  lastTradeDate?: number;
+  openInterest?: number;
+  percentChange?: number;
+  strike: number;
+  volume?: number;
+}
+
 /** Options chain data for a symbol. */
 export interface GqlOptions {
+  /** All call contracts across expirations. */
+  calls: Page_GqlOptionContract;
   /** Available expiration dates (Unix timestamps). */
   expirationDates: number[];
+  /** All put contracts across expirations. */
+  puts: Page_GqlOptionContract;
   /** Available strike prices. */
   strikes: number[];
 }
@@ -537,6 +639,8 @@ export interface GqlOptions {
 /** Result of the batch `optionsBatch` root field: successfully fetched options chains plus any per-symbol fetch errors. */
 export interface GqlOptionsBatch {
   errors: GqlBatchError[];
+  /** Successfully fetched per-symbol options chains. */
+  options: Page_GqlSymbolOptions;
 }
 
 /** Pagination metadata for fields whose pagination genuinely happens at the *input* level (an `offset`/`size`-style arg the upstream API already consumes to fetch the requested slice directly — screener's `customScreener`, EDGAR's `edgarSearch`) rather than by fetching everything and slicing in Rust. These fields keep returning a plain `Vec<T>` (no `edges`/`node` wrapping — that would just be redundant pagination vocabulary layered on top of the offset/size that already did the real work) and add this as a `pageInfo` sibling field alongside their existing `total`/`totalHits`. */
@@ -545,6 +649,14 @@ export interface GqlPageInfo {
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   startCursor?: string;
+}
+
+export interface GqlParagraph {
+  end: number;
+  sentences: GqlSentence[];
+  speaker: number;
+  start: number;
+  text: string;
 }
 
 export interface GqlPerformingCompany {
@@ -749,6 +861,8 @@ export interface GqlQuoteTypeData {
 /** Result of the batch `quotes` root field: successfully fetched quotes plus any per-symbol fetch errors. */
 export interface GqlQuotesBatch {
   errors: GqlBatchError[];
+  /** Successfully fetched quotes. */
+  quotes: Page_GqlQuote;
 }
 
 /** Similar-stock recommendations for one symbol, mirroring `finance_query::Recommendation`, which has no serde rename of its own (plain snake_case JSON keys, e.g. `provider_id`) — `alias` keeps deserialization accepting those keys while `rename_all` documents the camelCase names GraphQL actually puts on the wire. */
@@ -761,6 +875,8 @@ export interface GqlRecommendation {
 /** Result of the batch `recommendationsBatch` root field: successfully fetched recommendations plus any per-symbol fetch errors. */
 export interface GqlRecommendationsBatch {
   errors: GqlBatchError[];
+  /** Successfully fetched per-symbol recommendations. */
+  recommendations: Page_GqlRecommendation;
 }
 
 /** A research report result from `search`. */
@@ -872,10 +988,31 @@ export interface GqlSearchNews {
   uuid?: string;
 }
 
+/** A quote/symbol result from `search`. */
+export interface GqlSearchQuote {
+  dispSecIndFlag?: boolean;
+  exchDisp?: string;
+  exchange?: string;
+  industry?: string;
+  industryDisp?: string;
+  isYahooFinance?: boolean;
+  logoUrl?: string;
+  longName?: string;
+  quoteType?: string;
+  score?: number;
+  sector?: string;
+  sectorDisp?: string;
+  shortName?: string;
+  symbol: string;
+  typeDisp?: string;
+}
+
 /** Combined search results: quotes, news, and research reports. */
 export interface GqlSearchResults {
   count?: number;
   news: GqlSearchNews[];
+  /** Quote/symbol results. */
+  quotes: Page_GqlSearchQuote;
   researchReports: GqlResearchReport[];
   totalTime?: number;
 }
@@ -963,6 +1100,13 @@ export interface GqlSectorResearchReport {
   targetPriceStatus?: string;
 }
 
+export interface GqlSentence {
+  end: number;
+  start: number;
+  text: string;
+  words: GqlWord[];
+}
+
 /** Lexicon-based sentiment score for a news article's title. */
 export interface GqlSentiment {
   confidence: number;
@@ -1034,9 +1178,27 @@ export interface GqlSymbolCapitalGains {
   symbol: string;
 }
 
+/** Wraps a symbol name with its chart data, used by the batch `charts` root field. */
+export interface GqlSymbolChart {
+  chart: GqlChart;
+  symbol: string;
+}
+
+/** Wrapper for batch dividends: `{symbol, dividends}`. `dividends` is a plain payment list here (mirrors `BatchDividendsResponse.dividends: HashMap<String, Vec<Dividend>>`) — batch dividends has no per-symbol analytics, unlike the single-symbol `GqlDividends`. */
+export interface GqlSymbolDividends {
+  dividends: GqlDividend[];
+  symbol: string;
+}
+
 /** Wrapper for batch financials: `{symbol, statement}` — `statement` is every line item in that symbol's statement, not a single one. */
 export interface GqlSymbolFinancials {
   statement: GqlFinancialLineItem[];
+  symbol: string;
+}
+
+/** Wraps a symbol name with its indicators, used by the batch root field. */
+export interface GqlSymbolIndicators {
+  indicators: GqlIndicatorsSummary;
   symbol: string;
 }
 
@@ -1052,6 +1214,12 @@ export interface GqlSymbolMatch {
   name?: string;
   symbol: string;
   thumbnail?: string;
+}
+
+/** Wraps a symbol name with its options chain, used by the batch `optionsBatch` root field. */
+export interface GqlSymbolOptions {
+  options: GqlOptions;
+  symbol: string;
 }
 
 /** Wrapper for batch splits: `{symbol, splits}`. */
@@ -1075,6 +1243,8 @@ export interface GqlTranscriptContent {
 
 export interface GqlTranscriptData {
   numberOfSpeakers: number;
+  /** Per-paragraph breakdown (speaker, start/end timestamp, text). A full call's `text` blob can be tens of thousands of tokens — paginate through paragraphs instead when only part of the call is needed. */
+  paragraphs: Page_GqlParagraph;
   text: string;
 }
 
@@ -1137,6 +1307,14 @@ export interface GqlTrendingQuote {
   symbol?: string;
 }
 
+export interface GqlWord {
+  confidence: number;
+  end: number;
+  punctuatedWord: string;
+  start: number;
+  word: string;
+}
+
 /** Body of `GET /v2/health`. */
 export interface HealthResponse {
   /** Data-provider attribution notices. */
@@ -1147,6 +1325,96 @@ export interface HealthResponse {
   timestamp: string;
   /** Server crate version. */
   version: string;
+}
+
+export interface Page_GqlCandle {
+  edges: Record<string, unknown>[];
+  nodes: GqlCandle[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlCotObservation {
+  edges: Record<string, unknown>[];
+  nodes: GqlCotObservation[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlDividend {
+  edges: Record<string, unknown>[];
+  nodes: GqlDividend[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlEdgarFiling {
+  edges: Record<string, unknown>[];
+  nodes: GqlEdgarFiling[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlFactDataPoint {
+  edges: Record<string, unknown>[];
+  nodes: GqlFactDataPoint[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlMacroObservation {
+  edges: Record<string, unknown>[];
+  nodes: GqlMacroObservation[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlOptionContract {
+  edges: Record<string, unknown>[];
+  nodes: GqlOptionContract[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlParagraph {
+  edges: Record<string, unknown>[];
+  nodes: GqlParagraph[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlQuote {
+  edges: Record<string, unknown>[];
+  nodes: GqlQuote[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlRecommendation {
+  edges: Record<string, unknown>[];
+  nodes: GqlRecommendation[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlSearchQuote {
+  edges: Record<string, unknown>[];
+  nodes: GqlSearchQuote[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlSymbolChart {
+  edges: Record<string, unknown>[];
+  nodes: GqlSymbolChart[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlSymbolDividends {
+  edges: Record<string, unknown>[];
+  nodes: GqlSymbolDividends[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlSymbolIndicators {
+  edges: Record<string, unknown>[];
+  nodes: GqlSymbolIndicators[];
+  pageInfo: Record<string, unknown>;
+}
+
+export interface Page_GqlSymbolOptions {
+  edges: Record<string, unknown>[];
+  nodes: GqlSymbolOptions[];
+  pageInfo: Record<string, unknown>;
 }
 
 /** Body of `GET /v2/ping`. */

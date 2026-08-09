@@ -11,6 +11,9 @@
  */
 
 const RETRY_STATUSES: ReadonlySet<number> = new Set([429, 503]);
+/** Longest a retry may sleep. A server free to name any `Retry-After` is a
+ *  server that can park a call for hours; past this the caller decides. */
+const MAX_RETRY_SLEEP_MS = 60_000;
 const IDEMPOTENT: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE"]);
 
 /** Fields an {@link ApiError} can carry beyond its status. */
@@ -115,15 +118,16 @@ function backoffMs(error: ApiError | undefined, attempt: number, baseMs: number)
 
 function shouldRetry(
   method: string,
-  status: number | undefined,
+  error: ApiError | undefined,
   attempt: number,
   maxRetries: number,
 ): boolean {
   if (attempt >= maxRetries) return false;
   // A transport failure may or may not have reached the server, so only
   // idempotent methods are safe to send again.
-  if (status === undefined) return IDEMPOTENT.has(method);
-  return RETRY_STATUSES.has(status);
+  if (error === undefined) return IDEMPOTENT.has(method);
+  if (error.retryAfter !== undefined && error.retryAfter * 1000 > MAX_RETRY_SLEEP_MS) return false;
+  return RETRY_STATUSES.has(error.status);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -221,7 +225,7 @@ export class Transport {
 
       const error = await errorFor(response);
       if (error instanceof RateLimitError) this.onRateLimit?.(error);
-      if (!shouldRetry(method, response.status, attempt, this.maxRetries)) throw error;
+      if (!shouldRetry(method, error, attempt, this.maxRetries)) throw error;
       await sleep(backoffMs(error, attempt, this.backoffBaseMs));
     }
   }

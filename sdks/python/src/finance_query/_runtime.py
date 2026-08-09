@@ -21,6 +21,7 @@ import httpx
 T = typing.TypeVar("T")
 
 _RETRY_STATUSES = frozenset({429, 503})
+_MAX_RETRY_SLEEP = 60.0
 _IDEMPOTENT = frozenset({"GET", "HEAD", "OPTIONS", "PUT", "DELETE"})
 
 
@@ -218,12 +219,14 @@ def _backoff(err: ApiError | None, attempt: int, base: float) -> float:
     return base * (2**attempt) * (0.5 + random.random() / 2)
 
 
-def _should_retry(method: str, status: int | None, attempt: int, max_retries: int) -> bool:
+def _should_retry(method: str, err: ApiError | None, attempt: int, max_retries: int) -> bool:
     if attempt >= max_retries:
         return False
-    if status is None:
+    if err is None:
         return method in _IDEMPOTENT
-    return status in _RETRY_STATUSES
+    if err.retry_after is not None and err.retry_after > _MAX_RETRY_SLEEP:
+        return False
+    return err.status in _RETRY_STATUSES
 
 
 @dataclasses.dataclass(frozen=True)
@@ -353,7 +356,7 @@ class Transport:
                 continue
             if isinstance(err, RateLimitError) and self._on_rate_limit is not None:
                 self._on_rate_limit(err)
-            if not _should_retry(method, status, attempt, self._max_retries):
+            if not _should_retry(method, err, attempt, self._max_retries):
                 raise err
             time.sleep(_backoff(err, attempt, self._backoff_base))
             attempt += 1
@@ -409,7 +412,7 @@ class AsyncTransport:
                 continue
             if isinstance(err, RateLimitError) and self._on_rate_limit is not None:
                 self._on_rate_limit(err)
-            if not _should_retry(method, status, attempt, self._max_retries):
+            if not _should_retry(method, err, attempt, self._max_retries):
                 raise err
             await asyncio.sleep(_backoff(err, attempt, self._backoff_base))
             attempt += 1
