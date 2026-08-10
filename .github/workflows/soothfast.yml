@@ -258,6 +258,15 @@ jobs:
           sed '/^\*\*Measured:\*\*/d' target/llms-check/llms.txt > target/llms-check/fresh.txt
           diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
             (echo "::error::llms.txt is stale — run 'make docs-pages' and commit the result" && exit 1)
+      - name: Regenerate derived docs pages
+        # docs/server/api/, docs/reference/, docs/perf/, docs/coverage.md are
+        # gitignored (regenerated, not committed — see .gitignore), so a
+        # fresh checkout has none of them yet. `docs build` renders a nav
+        # that links to them, so they need to exist before it runs, same as
+        # `make docs` does for local dev. Runs after the freshness check
+        # above, not before: this also touches llms.txt as a side effect,
+        # which would silently mask real staleness if it ran first.
+        run: make docs-pages
       - name: Docs site builds cleanly
         # Static build only (not gh-deploy)
         run: cargo soothfast docs build --baseline base --out target/site-check
