@@ -26,8 +26,8 @@ repos:
       - id: check-yaml
         args: ['--unsafe']
       - id: end-of-file-fixer
-        exclude: ^(docs/|book/)
+        exclude: ^(docs/|book/|llms\.txt$)
       - id: trailing-whitespace
-        exclude: ^(docs/|book/)
+        exclude: ^(docs/|book/|llms\.txt$)
       - id: mixed-line-ending
         args: ['--fix=lf']
