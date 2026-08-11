@@ -1,6 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit bench ci clean \
-        soothfast gate baseline sdk docs docs-pages publish-dry-run \
-        prod bump bump-cli mcp mcp-http
+.PHONY: $(shell grep -hoE '^[a-zA-Z][a-zA-Z0-9_-]*:' $(MAKEFILE_LIST) | tr -d ':')
 
 # Default target
 .DEFAULT_GOAL := help
@@ -118,11 +116,12 @@ CAPTURE_CHECK_PATHS := docs/library/backtesting.md docs/library/commodities.md \
 # merged into one (it accepts --badge alongside its text output in a single
 # pass) since it documents the same crate rustdoc already extracted for the
 # reference/perf pages above — no need to pay for a third redundant pass.
-define REGEN_DOCS_PAGES
-$(SOOTHFAST) docs routes -p finance-query-server --target soothfast-routes --out docs/server
-$(SOOTHFAST) docs routes -p finance-query-mcp --target soothfast-routes --out docs/server
-$(SOOTHFAST) spec html -p finance-query-server --target soothfast-routes --out docs/server/api
-$(SOOTHFAST) spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
+define REGEN_DOCS_ROUTES
+$(SOOTHFAST) docs routes -p finance-query-$(1) --target soothfast-routes --out docs/server
+$(SOOTHFAST) spec html -p finance-query-$(1) --target soothfast-routes --out docs/server/api
+endef
+
+define REGEN_DOCS_PAGES_LIB
 $(SOOTHFAST) docs reference -p finance-query --baseline base --features full --out docs/reference
 $(SOOTHFAST) report render -p finance-query --baseline base --features full --out docs/perf
 mv docs/perf/llms.txt docs/llms.txt
@@ -135,6 +134,7 @@ cp docs/llms.txt llms.txt
   echo '```'; } > docs/coverage.md
 endef
 
+
 sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
 	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes
 	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes
@@ -143,8 +143,20 @@ sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDK
 # The reconciliation-status and spec-html pages are generated and
 # gitignored, so a fresh checkout has none: regenerate before serving
 # rather than leaving `docs` to fail on a page nobody deleted.
-docs-pages: ## Regenerate the derived docs pages (route status, API reference HTML, reference, perf, coverage)
-	$(REGEN_DOCS_PAGES)
+# PAGES lets CI regenerate each package's route pages in the job that already
+# built its soothfast-routes target, instead of rebuilding both here.
+PAGES ?= all
+
+docs-pages: ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
+ifneq ($(filter all server,$(PAGES)),)
+	$(call REGEN_DOCS_ROUTES,server)
+endif
+ifneq ($(filter all mcp,$(PAGES)),)
+	$(call REGEN_DOCS_ROUTES,mcp)
+endif
+ifneq ($(filter all lib,$(PAGES)),)
+	$(REGEN_DOCS_PAGES_LIB)
+endif
 
 docs: docs-pages ## Regenerate derived pages, then serve the docs site locally with live reload
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
@@ -183,7 +195,7 @@ soothfast: gate baseline ## Run every soothfast check + refresh: gate, baseline,
 	@echo "$(GREEN)Checking generated mcp-tools.json freshness...$(NC)"
 	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --check
 	@echo "$(GREEN)Regenerating derived doc pages...$(NC)"
-	$(REGEN_DOCS_PAGES)
+	@$(MAKE) docs-pages
 	@echo "$(GREEN)Appending performance trend point...$(NC)"
 	$(SOOTHFAST) trend append -p finance-query --features bench-gate
 	$(SOOTHFAST) trend render -p finance-query
