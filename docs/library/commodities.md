@@ -126,7 +126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Computes technical indicators or a risk summary from the commodity's own
 chart data (requires the `indicators`/`risk` features respectively):
 
-```rust no_run feature=risk
+```rust no_run feature=risk,fmp
 use finance_query::indicators::Indicator;
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 

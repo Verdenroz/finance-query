@@ -25,7 +25,7 @@ fn doc_block_line_20() {
 }
 
 // line 125: compile-only (no_run)
-#[cfg(feature = "risk")]
+#[cfg(all(feature = "risk", feature = "polygon"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
 fn doc_block_line_125() {

@@ -122,7 +122,7 @@ open_interest = Some(1850000)
 the `indicators` feature) and `risk(interval, range)` (requires the `risk`
 feature) compute directly from this handle's own chart data:
 
-```rust no_run feature=risk
+```rust no_run feature=risk,polygon
 use finance_query::indicators::Indicator;
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 

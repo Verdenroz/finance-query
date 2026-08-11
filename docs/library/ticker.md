@@ -83,7 +83,7 @@ Multi-provider routing (Polygon, FMP, Alpha Vantage, etc.) is configured through
 [`ProvidersBuilder`](providers/index.md), not `TickerBuilder`. Pass the configured
 `Providers` to `providers.ticker()`:
 
-```rust no_run
+```rust no_run feature=polygon,fmp
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::{Capability, Fetch, Provider, Providers};

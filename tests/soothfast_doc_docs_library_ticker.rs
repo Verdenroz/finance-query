@@ -38,6 +38,7 @@ fn doc_block_line_34() {
 }
 
 // line 86: compile-only (no_run)
+#[cfg(all(feature = "polygon", feature = "fmp"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
 fn doc_block_line_86() {

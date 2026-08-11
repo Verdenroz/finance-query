@@ -207,7 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Compute technical indicators or a risk summary directly from the pair's chart data:
 
-```rust no_run feature=risk
+```rust no_run feature=risk,alphavantage
 use finance_query::indicators::Indicator;
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 

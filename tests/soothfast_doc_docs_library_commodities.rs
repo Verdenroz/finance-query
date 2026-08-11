@@ -103,7 +103,7 @@ fn doc_block_line_106() {
 }
 
 // line 129: compile-only (no_run)
-#[cfg(feature = "risk")]
+#[cfg(all(feature = "risk", feature = "fmp"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
 fn doc_block_line_129() {
