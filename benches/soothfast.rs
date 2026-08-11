@@ -2047,3 +2047,30 @@ fn score_transcript() {
     let t: Transcript = serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap();
     keep(keep(&t).overall_sentiment().score);
 }
+
+#[fixture]
+fn canned_ticker_only() -> Ticker {
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap()
+        .block_on(
+            Ticker::builder("AAPL")
+                .with_provider_set(canned_provider_set())
+                .build(),
+        )
+        .unwrap()
+}
+
+/// The same dispatch-then-cache-hit path as `ticker_quote_then_cached`, but
+/// awaited directly so it runs on the counting executor. Gates how many
+/// times the quote future is polled, which instruction counts cannot see.
+#[bench(
+    group = "ticker",
+    setup = canned_ticker_only,
+    covers = "finance_query::Ticker::quote"
+)]
+async fn ticker_quote_polls(ticker: &Ticker) {
+    let first = ticker.quote::<finance_query::format::Raw>().await.unwrap();
+    let second = ticker.quote::<finance_query::format::Raw>().await.unwrap();
+    keep((first, second));
+}
