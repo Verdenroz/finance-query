@@ -27,12 +27,11 @@ make serve             # Start dev server (PORT=8000 by default)
 make test              # Run ALL tests including network integration tests
 make test-fast         # Run only fast tests (excludes network tests)
 make fix               # Auto-fix formatting and clippy issues
-make lint              # Run pre-commit checks (fmt, clippy, check)
-make audit             # Run security audit on dependencies
-make docs              # Build and serve MkDocs documentation
+prek                   # Run pre-commit checks (fmt, clippy, check)
+make docs-pages        # Regenerate the derived docs pages
+make docs              # Serve the docs site at localhost:8080
 make build             # Build library and server in release mode
 docker compose up -d   # Start the full stack (v1, v2, Redis, Caddy, monitoring)
-make clean             # Clean build artifacts
 ```
 
 ## Development Workflow
@@ -56,7 +55,7 @@ Before committing, run the pre-commit checks:
 
 ```bash
 make fix   # Auto-fix formatting and clippy issues
-make lint  # Verify all checks pass
+prek       # Verify all checks pass
 ```
 
 ### 3. Test Thoroughly

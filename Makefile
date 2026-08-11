@@ -22,16 +22,9 @@ help: ## Show available commands
 mcp: ## Run MCP server (stdio transport, for local development)
 	$(CARGO) run -p finance-query-mcp
 
-mcp-http: ## Run MCP server (HTTP streaming transport, for VPS — binds to MCP_ADDR, default 0.0.0.0:3000)
-	MCP_TRANSPORT=http $(CARGO) run -p finance-query-mcp
-
 serve: ## Start development server
 	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"
 	cd server && PORT=$(PORT) $(CARGO) run -p finance-query-server
-
-install: ## Build release binary
-	@echo "$(GREEN)Building release binary...$(NC)"
-	$(CARGO) build --release -p finance-query-server
 
 install-dev: ## Install dev tools and build workspace
 	@echo "$(GREEN)Installing dev tools...$(NC)"
@@ -62,10 +55,6 @@ test-fast: ## Run only fast tests (excludes network tests)
 	@echo "$(GREEN)Running fast tests...$(NC)"
 	$(CARGO) test --workspace -- --nocapture
 
-lint: ## Run all pre-commit checks
-	@echo "$(GREEN)Running pre-commit checks...$(NC)"
-	@prek
-
 fix: ## Auto-fix formatting and linting issues
 	@echo "$(GREEN)Formatting code...$(NC)"
 	@$(CARGO) fmt --all
@@ -73,17 +62,10 @@ fix: ## Auto-fix formatting and linting issues
 	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-audit: ## Run the same dependency policy check as CI (advisories, bans, licenses, sources)
+ci: fix build test soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
 	@echo "$(GREEN)Running cargo-deny...$(NC)"
 	@command -v cargo-deny >/dev/null 2>&1 || $(CARGO) install cargo-deny --locked
 	@cargo deny check advisories bans licenses sources
-
-bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
-	@echo "$(GREEN)Running criterion benchmarks...$(NC)"
-	$(CARGO) bench --features full \
-		--bench ticker --bench tickers --bench dataframe
-
-ci: fix build audit test soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
 
 # The measured regression gate (`cargo soothfast`) runs natively: per-iteration
 # instruction counts via perf_event, plus alloc counts and walltime — no
@@ -140,9 +122,8 @@ sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDK
 	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes
 	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes
 
-# The reconciliation-status and spec-html pages are generated and
-# gitignored, so a fresh checkout has none: regenerate before serving
-# rather than leaving `docs` to fail on a page nobody deleted.
+# The reconciliation-status and spec-html pages are generated and gitignored,
+# so a fresh checkout has none — run this before `docs`.
 # PAGES lets CI regenerate each package's route pages in the job that already
 # built its soothfast-routes target, instead of rebuilding both here.
 PAGES ?= all
@@ -158,28 +139,22 @@ ifneq ($(filter all lib,$(PAGES)),)
 	$(REGEN_DOCS_PAGES_LIB)
 endif
 
-docs: docs-pages ## Regenerate derived pages, then serve the docs site locally with live reload
+docs: ## Serve the docs site locally with live reload (run `make docs-pages` first)
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
 	$(SOOTHFAST) docs serve --baseline base --addr localhost:8080
-
-gate: ## Gate the measured regression suite against the merge-base of $(BASE) — what CI runs
-	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
-	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
-
-baseline: ## Measure the current tree and save/update the local regression baseline "base"
-	@echo "$(GREEN)Measuring baseline...$(NC)"
-	$(SOOTHFAST) measure -p finance-query --features bench-gate --save-baseline base
 
 # Everything soothfast: the merge-base regression gate, living-docs checks,
 # proto reconciliation, derived-page regen, trend, changelog, and llms.txt
 # staleness (the same gates soothfast.yml/deploy.yml run, in one shot).
 # `**Measured:**` lines are excluded from the llms.txt diff: those numbers
 # are point-in-time and jitter between runs — regression detection is the
-# `gate` step above, not this. Only `gate`/`baseline` get their own target
-# (documented in .claude/rules/benches.md as things you run standalone);
-# the rest of this suite has no standalone use case, so it stays inline
-# here instead of one PHONY target per step.
-soothfast: gate baseline ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+# `gate` step below, not this. Every step stays inline rather than becoming
+# its own target; run one standalone with `cargo soothfast <cmd>` directly.
+soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
+	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
+	@echo "$(GREEN)Measuring baseline...$(NC)"
+	$(SOOTHFAST) measure -p finance-query --features bench-gate --save-baseline base
 	@echo "$(GREEN)Checking living docs (binds, claims, generated tests)...$(NC)"
 	$(SOOTHFAST) docs check -p finance-query --features full --baseline base docs/library README.md
 	@echo "$(GREEN)Verifying captured doc example output...$(NC)"
@@ -211,16 +186,6 @@ soothfast: gate baseline ## Run every soothfast check + refresh: gate, baseline,
 		(echo "error: llms.txt is stale — re-run 'make soothfast' and commit the result" >&2 && exit 1)
 	@rm -rf target/llms-check
 	@echo "llms.txt: up to date"
-
-publish-dry-run: ## Test publishing to crates.io (dry run)
-	@echo "$(GREEN)Testing crates.io publish (dry run)...$(NC)"
-	$(CARGO) publish -p finance-query-derive --dry-run
-	$(CARGO) publish -p finance-query --dry-run
-
-clean: ## Clean build artifacts
-	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
-	$(CARGO) clean
-	rm -rf target/ site/
 
 # =============================================================================
 # Production Docker Compose
