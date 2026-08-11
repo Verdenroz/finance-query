@@ -164,7 +164,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
-        run: gh pr merge --squash --delete-branch "$PR_NUMBER"
+        run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
 
       - name: Regenerate endpoint reference pages
         run: |
