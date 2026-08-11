@@ -1,7 +1,6 @@
 name: Soothfast
 
-# Perf gate + living docs, spec reconciliation, and site build — everything
-# soothfast checks in CI (`cargo soothfast gate`/`docs`/`spec`/`coverage`).
+# Perf gate + living docs, spec reconciliation, and site build
 
 on:
   pull_request:
@@ -116,9 +115,6 @@ jobs:
       - name: Measure baseline for claims
         run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
       - name: Check binds, claims, and generated doc tests
-        # `full` (not bench-gate): binds cover feature-gated API across every
-        # docs/library page and README.md, which must be visible in the
-        # rustdoc surface.
         run: |
           cargo soothfast docs check -p finance-query --features full --baseline base \
             docs/library README.md
@@ -170,8 +166,7 @@ jobs:
         run: cargo soothfast sdk gen -p finance-query-server --target soothfast-routes --check
       - name: Spec compat gate vs merge-base
         # Consumer-breaking changes to the generated spec (and therefore the
-        # SDKs derived from it) fail the PR; release one deliberately with
-        # --allow-breaking.
+        # SDKs derived from it) fail the PR
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -259,13 +254,6 @@ jobs:
           diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
             (echo "::error::llms.txt is stale — run 'make docs-pages' and commit the result" && exit 1)
       - name: Regenerate derived docs pages
-        # docs/server/api/, docs/reference/, docs/perf/, docs/coverage.md are
-        # gitignored (regenerated, not committed — see .gitignore), so a
-        # fresh checkout has none of them yet. `docs build` renders a nav
-        # that links to them, so they need to exist before it runs, same as
-        # `make docs` does for local dev. Runs after the freshness check
-        # above, not before: this also touches llms.txt as a side effect,
-        # which would silently mask real staleness if it ran first.
         run: make docs-pages
       - name: Docs site builds cleanly
         # Static build only (not gh-deploy)

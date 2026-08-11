@@ -7,6 +7,300 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased (draft vs v2.8.0)
 
+<!-- soothfast:notes -->
+### Breaking
+
+- `Ticker`, `Tickers`, and the domain handles cache responses by default for the
+  lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
+  set, so every accessor refetched — which contradicted the documentation. Call
+  `.no_cache()` for the old behavior.
+- `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
+  sorted ascending by timestamp, with the same `InvalidParameter` error already
+  used for unsorted dividends. Conditions binary-search the candle slice, so an
+  unsorted series previously produced a silently wrong entry index. `GridSearch`,
+  `BayesianSearch`, and `WalkForward` apply the same check once per series rather
+  than once per candidate.
+- A Yahoo HTTP 403 whose body names the crumb now surfaces as
+  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared session
+  refreshes instead of failing every later caller on it. A 403 that does *not*
+  mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
+  `UnexpectedResponse`, since no handshake can clear it and retrying would cost
+  an extra handshake and a discarded session per blocked request.
+
+### Changed
+
+- `Capability` values combining several bits display as `"quote|chart"`
+  instead of `"unknown"`; `Capability::name()` keeps its documented
+  single-bit contract.
+- When no routed provider supports the specific operation, the error now
+  names that operation and the providers that could serve it
+  (`NotSupported`) instead of the generic capability-level
+  `NoProviderAvailable`.
+- Yahoo sessions are now shared per tokio runtime and client configuration.
+  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
+  authenticated session instead of running a fresh cookie + crumb handshake per
+  call, cutting each `finance::*` call from three HTTP requests to one.
+
+### Added
+
+- **CoinGecko trending, global stats, and coin search** are exposed keylessly on
+  the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
+  `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
+  GraphQL root fields). The library gains matching `crypto::trending()`,
+  `crypto::global()`, and `crypto::search()` shortcuts alongside
+  `crypto::coins()`/`crypto::coin()`.
+- `CalendarKind::MarketStatus` and `MarketCalendar::market_status()` for live
+  exchange open/closed status, which Alpha Vantage serves. It was previously
+  mapped onto `CalendarKind::MarketHoliday`, so a holiday-calendar query routed
+  to Alpha Vantage silently returned live status rows instead.
+- `SymbolMatch` gains `id`, `market_cap_rank`, `thumbnail`, and `image`. `id`
+  carries a provider-native identifier when it differs from the ticker — the
+  CoinGecko coin id, for instance, is what `Providers::crypto` accepts.
+- **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
+  serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
+  indicators across 200+ economies, closing the gap left by FRED's US focus.
+  Series are addressed as `"<COUNTRY>/<INDICATOR>"`
+  (`providers.economic("USA/NY.GDP.MKTP.CD")`); a bare indicator resolves
+  against the world aggregate `WLD`. Annual/quarterly/monthly period labels are
+  normalised to the `YYYY-MM-DD` start of the period and observations are
+  returned oldest-first, matching every other `ECONOMIC` provider.
+- **US Treasury FiscalData** (`fiscaldata` feature, keyless) —
+  `Provider::FiscalData` serves `Capability::ECONOMIC` from the Treasury's own
+  publishing platform: federal debt (`"DEBT_TO_PENNY"`), average interest rates,
+  and Daily Treasury Statement cash balances. Six curated series ids cover the
+  common cases; any other dataset is reachable through the passthrough form
+  `"<dataset path>:<value column>"`. FiscalData encodes numbers as strings and
+  marks missing figures with the literal string `"null"` — both are normalised.
+- **BLS** (`bls` feature) — `Provider::Bls` serves `Capability::ECONOMIC` with
+  CPI, unemployment, payrolls, wages, and PPI from the primary source, using
+  native BLS series ids (`providers.economic("CUUR0000SA0")`). The first
+  provider with a **keyless/keyed dual mode**: without `BLS_API_KEY` it uses
+  the keyless v1 route (25 queries/day, ~3 years); with a key it uses v2 (500
+  queries/day, 20 years, plus catalog series titles). BLS's `"-"`
+  unpublished-value marker becomes `None`, and annual-aggregate rows (`M13` /
+  `Q05` / `S03`) are dropped so a monthly series stays strictly monthly.
+- **Frankfurter / ECB reference rates** (`frankfurter` feature, keyless) —
+  `Provider::Frankfurter` serves `Capability::FOREX`, the first keyless route
+  for that capability: `providers.forex("USD", "EUR").quote()` now works with
+  nothing configured, where previously every forex route needed an API key.
+  ECB rates are a daily reference fix, so quotes carry a price and a change
+  against the previous *published* day but no bid/ask. A pair of identical
+  currencies is answered locally with `1.0` rather than Frankfurter's HTTP 422.
+- **Binance public market data** (`binance` feature, keyless) —
+  `Provider::Binance` serves `Capability::CRYPTO` (rolling 24-hour quotes) and
+  `Capability::CHART` (arbitrary-interval OHLCV), the first keyless source of
+  exchange-grade crypto data. Symbols normalise across every spelling the
+  library uses (`bitcoin`, `BTC`, `BTC-USD`, `BTCUSDT`); note that Binance
+  lists no USD spot markets, so `"usd"` maps to the USDT stablecoin. Windows
+  longer than Binance's 1000-candle page cap are walked automatically (up to
+  10,000 candles). A geo-block (HTTP 451) is reported as such and names Kraken
+  as the alternative.
+- **Kraken public market data** (`kraken` feature, keyless) —
+  `Provider::Kraken` serves `Capability::CRYPTO` and `Capability::CHART` from
+  endpoints that are keyless *and* reachable from the US, unlike Binance. With
+  both providers, `CRYPTO` finally has a real `Fetch::Sequential` fallback
+  chain. Kraken's own conventions (`XBT` for Bitcoin, `XDG` for Dogecoin, the
+  legacy `X`/`Z` pair prefixes) are translated in both directions, so callers
+  pass normal tickers. Kraken caps `/OHLC` at ~720 candles ending at the
+  present with no way to page further back — deep history needs Binance or a
+  keyed provider.
+- **FINRA short-sale volume** (`finra` feature, keyless) — `Provider::Finra`
+  serves the short-volume slice of `Capability::FUNDAMENTALS`, giving
+  `Ticker::short_volume()` a keyless provider reading from the primary source
+  rather than requiring Polygon. FINRA reports each symbol once per reporting
+  facility per day (Nasdaq / NYSE / OTC); the adapter sums them into one figure
+  per date, matching FINRA's own consolidated daily file. A symbol with no
+  reportable short volume returns an empty series rather than an error. Free
+  for non-commercial use — see the provider docs.
+- **OpenFIGI identifier mapping** (`openfigi` feature, keyless) — new
+  crate-level `openfigi` module resolving a CUSIP, ISIN, SEDOL, or FIGI to the
+  instruments carrying it: `openfigi::resolve_cusip("037833100")`,
+  `resolve_isin`, `resolve_sedol`, and a positional batch `resolve_many` that
+  chunks to OpenFIGI's 10-per-request limit. New public types
+  `SecurityMapping` and `SecurityIdKind`. It sits beside `edgar` and `fred`
+  rather than behind the Providers API because resolution is not tied to a
+  symbol handle and maps onto no `Capability`. `OPENFIGI_API_KEY` is optional
+  and only raises the quota.
+- **DefiLlama** (`defi` feature, keyless) — the library's first on-chain data.
+  `Provider::DefiLlama` adds `CryptoCoin::tvl()` and `.tvl_history()` under
+  `Capability::CRYPTO` (protocol TVL, per-chain split, 1d/7d change, market
+  cap), and a new crate-level `defi` module carries the market-wide views:
+  `defi::chains()` and `defi::stablecoins()`, both ranked largest-first. New
+  public models `ProtocolTvl`, `ChainAllocation`, `TvlPoint`, `ChainTvl`, and
+  `StablecoinSupply`. Per-chain allocations exclude DefiLlama's breakdown keys
+  (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
+  double-count. DefiLlama serves no prices, so `quote()` falls through to
+  another routed provider.
+- **GDELT DOC 2.0** (`gdelt` feature, keyless) — `Provider::Gdelt` serves the
+  news slice of `Capability::CORPORATE` from GDELT's worldwide online news
+  index (65 languages, updated roughly every 15 minutes), giving `Ticker::news()`
+  a keyless alternative to Yahoo's scraper and Alpha Vantage's 25 req/day
+  quota. GDELT has no ticker vocabulary, so the symbol itself (quoted for an
+  exact phrase match) is the search term — precision over recall. GDELT
+  rejects phrases under 5 characters, so shorter tickers (`AAPL`, `TSLA`, …)
+  error with `InvalidParameter` and dispatch falls through to another
+  CORPORATE provider. GDELT has no corporate calendar, so `fetch_events`
+  reports `NotSupported`.
+- **CFTC Commitments of Traders** (`cftc` feature, keyless) —
+  `Provider::Cftc` serves `Capability::FUTURES` with weekly futures
+  positioning by trader category (commercial hedgers, swap dealers, managed
+  money, other reportables, small traders) via
+  `FuturesContract::commitments_of_traders()`, reading the disaggregated
+  futures-only combined report from `publicreporting.cftc.gov`. A curated
+  table maps common Yahoo-style continuous futures roots (`"GC=F"`, `"CL=F"`,
+  …) to their CFTC contract code; anything else is passed through as a raw
+  `cftc_contract_market_code`. New public model `CommitmentsOfTraders` /
+  `CotObservation`. Covers physical commodities only (agriculture, energy,
+  metals) — CFTC reports financial futures (equity indices, rates,
+  currencies) separately in the Traders in Financial Futures report, which
+  this adapter does not serve; CFTC publishes no price quotes at all, so
+  `fetch_futures_quote` reports `NotSupported` and falls through to another
+  routed provider (e.g. Polygon).
+- Both keyless providers are exposed on the server: `GET /v2/gdelt/news/{symbol}`
+  and `GET /v2/cftc/cot/{symbol}`, plus the `gdeltNews`/`commitmentsOfTraders`
+  GraphQL root fields. The library gains `gdelt::news()` and
+  `cftc::commitments_of_traders()` shortcuts so neither needs provider routing.
+- Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
+  `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
+  (heaviest first) — no other wired provider serves ETF composition —
+  and `providers.discovery()` now routes to Alpha Vantage for `.search(..)`,
+  `.exchanges()`, and the new `.listing_status(active)`, which returns the whole
+  listed (or delisted) universe. New public models `EtfProfile` and
+  `EtfHolding`.
+- FRED series discovery and point-in-time data:
+  `providers.economic_catalog()` is a new market-wide handle with `.search(query,
+  limit)`, `.categories(parent_id)`, and `.releases()`, so a series id no longer
+  has to be known up front. `providers.economic("GDPC1").as_of("2020-06-30")`
+  returns the series as it was actually published on that date (ALFRED vintage)
+  rather than as currently revised — backtesting against revised macro data is
+  look-ahead bias. New public models `EconomicSeriesMatch`, `EconomicCategory`,
+  and `EconomicRelease`.
+- Keyless crypto price history: `Provider::CoinGecko` now serves
+  `Capability::CHART`, so `.route(Capability::CHART, [Provider::CoinGecko])`
+  makes `providers.crypto("bitcoin").history("usd", range)` work without an API
+  key. CoinGecko picks bar granularity from the range (so `interval` is
+  advisory) and its OHLC endpoint reports no volume, so those candles carry
+  `volume: 0` rather than an interpolated figure.
+- Primary-source ownership data from EDGAR, keyless:
+  `providers.filings("AAPL").insider_trades(limit)` parses Form 3/4/5 ownership
+  XML into typed `InsiderTrade` rows (insider, role, transaction code, shares,
+  price, post-transaction holdings, derivative flag), and
+  `providers.filings("BRK-B").institutional_holdings()` parses the latest 13F-HR
+  information table into `InstitutionalHolding` rows (issuer, CUSIP, value,
+  shares, voting authority). XML is read by a small in-crate element reader —
+  no new dependency, same reasoning as the RSS/Atom parser.
+- Routed EDGAR full-text search: `providers.filings("AAPL").search(query,
+  filters)` searches filing *text* within that filer, and `.search_all(..)`
+  across every filer, through the `FILINGS` capability. Returns the flattened
+  `FilingSearchHit` (with a derived archive URL per hit) rather than EDGAR's raw
+  Elasticsearch envelope, which `edgar::search` still exposes unchanged. New
+  public models `FilingSearchHit` and `FilingSearchFilters`.
+- Cross-market snapshots: `providers.snapshot().get(&["AAPL", "X:BTCUSD",
+  "I:SPX"])` answers a mixed watchlist in one request through the `QUOTE` route
+  (Polygon's `/v3/snapshot`, max 250 symbols) instead of one request per asset
+  class. Unresolvable symbols come back as rows with `error` set rather than
+  being dropped. New public models `MarketSnapshot` and `AssetClass`, and a new
+  `Snapshot` handle.
+- Analyst consensus on `Ticker`: `price_target_consensus()` (high/low/mean/median
+  target), `price_target_summary()` (how many targets were published last
+  month/quarter/year/all time and their averages), and `rating_consensus()`
+  (grade distribution plus a headline label) via the `FUNDAMENTALS` route (FMP).
+  These are the provider's own panel-wide rollups, not the raw per-analyst grade
+  actions already available through `UpgradeDowngradeHistory`.
+- TTM fundamentals snapshots on `Ticker`: `key_metrics_ttm()` and `ratios_ttm()`
+  return a single always-current trailing-twelve-month rollup via the
+  `FUNDAMENTALS` route (FMP), instead of requiring callers to fetch the latest
+  fiscal period and reason about whether it is still current. New public models
+  `KeyMetricsTtm` and `FinancialRatiosTtm`.
+- Ownership/governance on `Ticker`: `executive_compensation()` and
+  `employee_count()` via the `CORPORATE` route (FMP), both extracted from the
+  company's own SEC filings and returned newest-first. FMP also now serves
+  `share_float()` on the `FUNDAMENTALS` route, so it works when FMP is routed
+  ahead of Yahoo. New public models `ExecutiveCompensation` and `EmployeeCount`.
+- Index constituents: `providers.index("^GSPC").constituents()` and
+  `.constituent_changes()` list the current members and membership history of
+  the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
+  `MajorIndex::from_symbol` maps common symbol spellings.
+- Short data on `Ticker`: `short_interest()`, `short_volume()`, and
+  `share_float()` via the `FUNDAMENTALS` route. The default Yahoo route
+  derives short interest (current + prior-month snapshots) and float from
+  key statistics keylessly; Polygon adds the full history and daily short
+  volume.
+- Filing text: `providers.filings("AAPL").sections(accession, form)` returns
+  the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
+  risk factors (Polygon; EDGAR still serves metadata).
+- `Ticker::press_releases(limit)` — the company's own releases, distinct from
+  press coverage via `news()` (FMP).
+- `providers.calendar().holidays()` — upcoming market holidays and early
+  closes as a new `CalendarKind::MarketHoliday` (Polygon).
+- `providers.market().sector_performance_history(limit)` (FMP), and market
+  movers now work on the default keyless route: Yahoo serves
+  `gainers()`/`losers()`/`most_active()` derived from its predefined
+  screeners, with Alpha Vantage as a second keyed route. `providers.market()`
+  and the mover/sector models are available without any provider feature.
+- Three market-wide capabilities and handles on the Providers API (each needs
+  at least one of the `fmp`/`polygon`/`alphavantage` features):
+  `Capability::DISCOVERY` with `providers.discovery()` (symbol search,
+  reference data, exchanges, screeners), `Capability::CALENDAR` with
+  `providers.calendar()` (market-wide earnings/IPO/dividend/split/economic
+  calendars), and `Capability::MARKET` with `providers.market()`
+  (sector/industry performance and movers).
+- Batch quotes for FMP, Polygon, and Alpha Vantage. Routing `QUOTE` to a
+  non-Yahoo provider previously fell back to one request per symbol; a
+  10-symbol batch now costs one request instead of ten.
+- `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
+  on the domain handles.
+- `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
+  and lowest bar high/low/close since the open position was entered. The engine
+  folds these once per bar, so `TrailingStop` and `TrailingTakeProfit` read one
+  shared running value instead of rescanning the candle history per bar
+  (O(bars²) → O(bars)). Both conditions stay `Copy`. Custom conditions can read
+  `ctx.extremes`; it is `None` outside the engine's bar loop.
+- Automatic crumb refresh: a request that fails authentication re-runs the
+  Yahoo handshake once and retries. If the refresh itself fails, the shared
+  session is dropped so the next caller builds a fresh one.
+
+### Fixed
+
+- `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
+  when no retry hint was available, and "Some(30)s" when there was one.
+- GDELT's throttle response carries its retry interval in a plain-text body
+  rather than a `Retry-After` header; that interval is now parsed into
+  `RateLimited::retry_after` and the message logged instead of discarded.
+- EDGAR is no longer dropped from the provider set when Alpha Vantage is
+  configured. Auto-injection tested `capabilities().contains(FILINGS)`, and
+  Alpha Vantage advertises FILINGS only to serve insider transactions — so
+  EDGAR, the sole real filings source, was suppressed and every `filings()`
+  call failed. Injection is now keyed on provider identity.
+- CoinGecko symbol search puts the ticker in `SymbolMatch::symbol` (uppercased),
+  matching every other DISCOVERY provider; it previously put the CoinGecko coin
+  id there, which broke the provider-neutral contract for consumers searching
+  across providers.
+- `RetryPolicy` honored an error's `retry_after` hint with no ceiling, so a
+  hostile or buggy upstream could park a caller indefinitely. Capped by the
+  new `max_retry_after` (default 5 minutes), kept separate from `max_delay`
+  so legitimate multi-minute hints are still honored.
+- A stream whose session came up and then failed a few seconds in — auth
+  rejection, subscription error, idle kill — reset the reconnect counter
+  every cycle and retried forever despite `max_reconnect_attempts`. The
+  healthy-session threshold is now 60s, independent of the (short) base
+  delay it was keyed to.
+- A zero base delay produced the maximum delay instead of zero at high
+  attempt counts (`0.0 * inf` is NaN, and `f64::min` returns the other
+  operand for NaN).
+
+- `finance::hours()` no longer labels every region's market "U.S. markets".
+  Yahoo returns correct per-region session times but hardcodes the U.S.
+  label; the name (and its occurrence in the status message) is now derived
+  from the market id, so `region=JP` reads "Japanese markets".
+- `vwma` is computed with rolling sums instead of rescanning the window each
+  bar. Results may differ from previous releases in the last few significant
+  digits; a window whose volumes span extreme magnitudes is now rebuilt rather
+  than returning a value derived from a cancelled-out denominator.
+- A batch quote response whose `result` array contains a non-object element now
+  fails that batch instead of yielding an all-empty quote for it.
+<!-- /soothfast:notes -->
+
 ### API surface
 
 ```
