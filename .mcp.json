@@ -7,6 +7,10 @@
         "EDGAR_EMAIL": "your@email.com",
         "FRED_API_KEY": "your_fred_api_key"
       }
+    },
+    "soothfast": {
+      "command": "cargo",
+      "args": ["soothfast", "mcp", "-p", "finance-query", "--baseline", "base"]
     }
   }
 }

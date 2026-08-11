@@ -13,7 +13,9 @@ use finance_query_server::graphql::{
     },
     pagination::{build_paginated_composite_selection, unwrap_nested_connection},
 };
-use serde::Deserialize;
+use finance_query_server::params::{
+    EdgarFactsQuery, EdgarFieldsQuery, EdgarSearchQuery, EdgarSubmissionsQuery,
+};
 use tracing::info;
 
 use super::gql_bridge::build_rest_composite_selection;
@@ -31,64 +33,6 @@ const EDGAR_SEARCH_COMPOSITE_FIELDS: &[(&str, &str)] = &[
     ),
 ];
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EdgarSearchQuery {
-    /// Search query string (required)
-    q: String,
-    /// Comma-separated form types (e.g., "10-K,10-Q")
-    forms: Option<String>,
-    /// Start date in YYYY-MM-DD format
-    start_date: Option<String>,
-    /// End date in YYYY-MM-DD format
-    end_date: Option<String>,
-    /// Pagination offset (default: 0)
-    from: Option<usize>,
-    /// Page size (default: 100, max: 100)
-    size: Option<usize>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EdgarFieldsQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// Query parameters for /v2/edgar/submissions/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EdgarSubmissionsQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max filings per page; omitted (with cursor also omitted) = every
-    /// matching filing as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/edgar/facts/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EdgarFactsQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// XBRL taxonomy (default: "us-gaap"); also try "ifrs-full" or "dei"
-    taxonomy: Option<String>,
-    /// Comma-separated XBRL concept names to filter to; omitted = curated defaults
-    concepts: Option<String>,
-    /// Max data points per concept per page; omitted (with cursor also omitted) =
-    /// every matching data point as a bare array, unchanged from pre-pagination
-    /// behavior. Applied uniformly across every returned concept.
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// GET /v2/edgar/cik/{symbol}
 ///
 /// Resolve a ticker symbol to its SEC CIK number.
 /// Requires EDGAR_EMAIL environment variable to be set.

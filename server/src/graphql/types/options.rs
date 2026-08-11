@@ -6,7 +6,7 @@ use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 /// An option contract (call or put).
-#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[derive(SimpleObject, Deserialize, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct GqlOptionContract {
@@ -28,8 +28,9 @@ pub struct GqlOptionContract {
 }
 
 /// Options chain data for a symbol.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase", complex)]
+#[serde(rename_all = "camelCase")]
 pub struct GqlOptions {
     /// Available expiration dates (Unix timestamps).
     pub expiration_dates: Vec<i64>,

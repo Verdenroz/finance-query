@@ -27,12 +27,11 @@ make serve             # Start dev server (PORT=8000 by default)
 make test              # Run ALL tests including network integration tests
 make test-fast         # Run only fast tests (excludes network tests)
 make fix               # Auto-fix formatting and clippy issues
-make lint              # Run pre-commit checks (fmt, clippy, check)
-make audit             # Run security audit on dependencies
-make docs              # Build and serve MkDocs documentation
+prek                   # Run pre-commit checks (fmt, clippy, check)
+make docs-pages        # Regenerate the derived docs pages
+make docs              # Serve the docs site at localhost:8080
 make build             # Build library and server in release mode
 docker compose up -d   # Start the full stack (v1, v2, Redis, Caddy, monitoring)
-make clean             # Clean build artifacts
 ```
 
 ## Development Workflow
@@ -56,7 +55,7 @@ Before committing, run the pre-commit checks:
 
 ```bash
 make fix   # Auto-fix formatting and clippy issues
-make lint  # Verify all checks pass
+prek       # Verify all checks pass
 ```
 
 ### 3. Test Thoroughly
@@ -83,7 +82,7 @@ cargo test -- --ignored
 
 Use standard patterns and avoid unnecessary complexity:
 
-```rust
+```rust ignore
 // Good - simple and clear
 pub async fn quote(&self) -> Result<Quote> {
     self.get_quote_data().await
@@ -102,7 +101,7 @@ pub async fn quote(&self) -> Result<Quote, Box<dyn std::error::Error>> {
 
 Add doc comments to public items:
 
-```rust
+```rust ignore
 /// Fetches the latest quote for the ticker.
 ///
 /// # Example
@@ -125,7 +124,7 @@ pub async fn quote(&self) -> Result<Quote> {
 
 Keep tests focused and fast:
 
-```rust
+```rust ignore
 #[tokio::test]
 async fn test_ticker_builder() {
     let ticker = Ticker::builder("AAPL")
@@ -142,7 +141,7 @@ async fn test_ticker_builder() {
 
 Mark network tests with `#[ignore]`:
 
-```rust
+```rust ignore
 use finance_query::format::Raw;
 
 #[tokio::test]
@@ -158,7 +157,7 @@ async fn test_real_quote() {
 
 Use `no_run` for examples that require network access:
 
-```rust
+```rust ignore
 /// # Example
 ///
 /// ```no_run
@@ -211,7 +210,7 @@ Open a pull request on GitHub with:
 
 1. Add endpoint URL in `src/endpoints/`:
 
-    ```rust
+    ```rust ignore
     // src/endpoints/quote.rs
     pub fn options_chain(symbol: &str) -> String {
         format!("{}/v7/finance/options/{}", BASE_URL, symbol)
@@ -220,7 +219,7 @@ Open a pull request on GitHub with:
 
 2. Define model in `src/models/`:
 
-    ```rust
+    ```rust ignore
     // src/models/options.rs
     #[derive(Debug, Clone, Deserialize)]
     pub struct OptionsChain {
@@ -232,7 +231,7 @@ Open a pull request on GitHub with:
 
 3. Add method to `Ticker`:
 
-    ```rust
+    ```rust ignore
     // src/ticker/core.rs
     pub async fn options(&self) -> Result<OptionsChain> {
         let url = endpoints::options_chain(&self.symbol);
@@ -242,7 +241,7 @@ Open a pull request on GitHub with:
 
 **Server side:**
 
-```rust
+```rust ignore
 // server/src/main.rs
 async fn get_options(
     Path(symbol): Path<String>,

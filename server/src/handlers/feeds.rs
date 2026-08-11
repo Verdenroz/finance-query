@@ -9,27 +9,10 @@ use finance_query_server::graphql::{
     fields::{GQL_FEEDS_VALID_FIELDS, escape_gql_string, gql_string_list_literal, unwrap_field},
     pagination::build_connection_selection,
 };
-use serde::Deserialize;
+use finance_query_server::params::FeedsQuery;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connection};
-
-/// Query parameters for /v2/feeds
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FeedsQuery {
-    /// Comma-separated source slugs (default: federal-reserve, sec, marketwatch, bloomberg)
-    sources: Option<String>,
-    /// SEC form type for sec-filings source (e.g., "10-K", "8-K", default: "10-K")
-    form_type: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max entries to return; omitted (with cursor also omitted) = every matching
-    /// entry as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
 
 /// GET /v2/feeds
 ///

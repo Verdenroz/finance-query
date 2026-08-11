@@ -13,24 +13,23 @@ use finance_query_server::graphql::{
     },
 };
 use finance_query_server::lang;
-use serde::Deserialize;
+use finance_query_server::params::{
+    FearAndGreedQuery, IndicesQuery, MarketSummaryQuery, TrendingQuery,
+};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest};
 use super::support::parse_format;
 
-/// Map a REST `region` string (world-indices region, e.g. "americas",
-/// "asia-pacific") to a `GqlIndicesRegion` enum literal. Returns `None` for
-/// unrecognized input, matching `IndicesRegion::parse`'s permissive-but-strict
-/// behavior (invalid region == no filter, not an error).
-fn indices_region_to_gql(s: &str) -> Option<&'static str> {
-    IndicesRegion::parse(s).map(|region| match region {
+/// Map an `IndicesRegion` to a `GqlIndicesRegion` enum literal.
+fn indices_region_to_gql(region: IndicesRegion) -> &'static str {
+    match region {
         IndicesRegion::Americas => "AMERICAS",
         IndicesRegion::Europe => "EUROPE",
         IndicesRegion::AsiaPacific => "ASIA_PACIFIC",
         IndicesRegion::MiddleEastAfrica => "MIDDLE_EAST_AFRICA",
         IndicesRegion::Currencies => "CURRENCIES",
-    })
+    }
 }
 
 /// Map a REST `format` string to the `GqlValueFormat` enum literal.
@@ -42,43 +41,6 @@ fn format_to_gql(format: ValueFormat) -> &'static str {
     }
 }
 
-/// Query parameters for /v2/indices
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct IndicesQuery {
-    /// Region filter: americas, europe, asia-pacific, middle-east-africa, currencies
-    region: Option<String>,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// Query parameters for /v2/market-summary
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct MarketSummaryQuery {
-    /// Region code for localization (e.g., "US", "JP", "GB")
-    region: Option<String>,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-}
-
-/// Query parameters for /v2/trending
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct TrendingQuery {
-    /// Region code for localization (e.g., "US", "JP", "GB")
-    region: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
 /// GET /v2/indices
 ///
 /// Returns quotes for world market indices, optionally filtered by region.
@@ -86,13 +48,11 @@ pub(crate) async fn get_indices(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<IndicesQuery>,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let selection = build_rest_selection(params.fields.as_deref(), GQL_QUOTE_VALID_FIELDS);
     let region_arg = params
         .region
-        .as_deref()
-        .and_then(indices_region_to_gql)
-        .map(|r| format!("region: {r}, "));
+        .map(|r| format!("region: {}, ", indices_region_to_gql(r)));
     let args = region_arg.unwrap_or_default();
     let query = format!(
         "query {{ indices({}format: {}) {} }}",
@@ -123,14 +83,12 @@ pub(crate) async fn get_market_summary(
     Query(params): Query<MarketSummaryQuery>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     let selection = build_rest_selection(params.fields.as_deref(), GQL_MARKET_SUMMARY_VALID_FIELDS);
     let region_arg = params
         .region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!("region: \"{}\", ", escape_gql_string(r)));
+        .map(|r| format!("region: \"{}\", ", escape_gql_string(r.region())));
     let lang_arg = match &lang {
         Some(l) => format!("lang: \"{}\", ", escape_gql_string(l)),
         None => String::new(),
@@ -169,9 +127,7 @@ pub(crate) async fn get_trending(
     // with empty parens is invalid GraphQL syntax, not "no arguments".
     let region_arg = params
         .region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!("(region: \"{}\")", escape_gql_string(r)));
+        .map(|r| format!("(region: \"{}\")", escape_gql_string(r.region())));
     let args_str = region_arg.unwrap_or_default();
     let query = format!("query {{ trending{args_str} {selection} }}");
 
@@ -185,14 +141,6 @@ pub(crate) async fn get_trending(
         Err(resp) => return resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "trending"))).into_response()
-}
-
-/// Query parameters for /v2/fear-and-greed
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FearAndGreedQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
 }
 
 /// GET /v2/fear-and-greed

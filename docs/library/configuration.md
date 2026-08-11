@@ -13,29 +13,35 @@ Yahoo Finance provides different data based on regional settings. Finance Query 
 
 The easiest way to set regional settings is using the `Region` enum, which automatically pairs the correct language and region codes:
 
-```rust
+```rust no_run covers=finance_query::constants::Region
 use finance_query::{Ticker, Region};
 
-// Taiwan stock with France locale
-let ticker = Ticker::builder("MC.PA")
-    .region(Region::France)
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // French stock with France locale
+    let ticker = Ticker::builder("MC.PA")
+        .region(Region::France)
+        .build()
+        .await?;
 
-// German stock with German locale
-let ticker = Ticker::builder("SAP.DE")
-    .region(Region::Germany)
-    .build()
-    .await?;
+    // German stock with German locale
+    let ticker = Ticker::builder("SAP.DE")
+        .region(Region::Germany)
+        .build()
+        .await?;
 
-// UK stock with UK locale
-let ticker = Ticker::builder("HSBA.L")
-    .region(Region::UnitedKingdom)
-    .build()
-    .await?;
+    // UK stock with UK locale
+    let ticker = Ticker::builder("HSBA.L")
+        .region(Region::UnitedKingdom)
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 **Supported Regions:**
+
+<!-- soothfast:bind finance_query::constants::Region -->
 
 | Region | Language Code | Region Code |
 |---------|---------------|-------------|
@@ -53,10 +59,14 @@ let ticker = Ticker::builder("HSBA.L")
 | `India` | en-IN | IN |
 | `Israel` | he-IL | IL |
 | `Italy` | it-IT | IT |
+| `Japan` | ja-JP | JP |
+| `Korea` | ko-KR | KR |
 | `Malaysia` | ms-MY | MY |
+| `Mexico` | es-MX | MX |
 | `NewZealand` | en-NZ | NZ |
 | `Norway` | nb-NO | NO |
 | `Portugal` | pt-PT | PT |
+| `Qatar` | ar-QA | QA |
 | `Russia` | ru-RU | RU |
 | `Singapore` | en-SG | SG |
 | `Spain` | es-ES | ES |
@@ -68,16 +78,24 @@ let ticker = Ticker::builder("HSBA.L")
 | `UnitedStates` | en-US | US (default) |
 | `Vietnam` | vi-VN | VN |
 
+<!-- /soothfast:bind -->
+
 ### Manual Language and Region
 
 For custom configurations, set language and region separately:
 
-```rust
-let ticker = Ticker::builder("AAPL")
-    .lang("en-US")
-    .region_code("US")
-    .build()
-    .await?;
+```rust no_run
+use finance_query::Ticker;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::builder("AAPL")
+        .lang("en-US")
+        .region_code("US")
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 **Important**: Language and region should match. Using mismatched pairs (e.g., `de-DE` with `US` region) may produce inconsistent results.
@@ -88,30 +106,41 @@ let ticker = Ticker::builder("AAPL")
 
 Set HTTP request timeout (default: 30 seconds):
 
-```rust
+```rust no_run
+use finance_query::Ticker;
 use std::time::Duration;
 
-let ticker = Ticker::builder("AAPL")
-    .timeout(Duration::from_secs(60))  // 60 second timeout
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::builder("AAPL")
+        .timeout(Duration::from_secs(60))  // 60 second timeout
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 ### Proxy
 
 Configure an HTTP proxy:
 
-```rust
-let ticker = Ticker::builder("AAPL")
-    .proxy("http://proxy.example.com:8080")
-    .build()
-    .await?;
+```rust no_run
+use finance_query::Ticker;
 
-// With authentication
-let ticker = Ticker::builder("AAPL")
-    .proxy("http://user:pass@proxy.example.com:8080")
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::builder("AAPL")
+        .proxy("http://proxy.example.com:8080")
+        .build()
+        .await?;
+
+    // With authentication
+    let ticker = Ticker::builder("AAPL")
+        .proxy("http://user:pass@proxy.example.com:8080")
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 Supports:
@@ -124,15 +153,19 @@ Supports:
 
 Configure `Tickers` for batch operations:
 
-```rust
+```rust no_run
 use finance_query::{Tickers, Region};
 use std::time::Duration;
 
-let tickers = Tickers::builder(vec!["2330.TW", "2317.TW", "2454.TW"])
-    .region(Region::Taiwan)
-    .timeout(Duration::from_secs(60))
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let tickers = Tickers::builder(vec!["2330.TW", "2317.TW", "2454.TW"])
+        .region(Region::Taiwan)
+        .timeout(Duration::from_secs(60))
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 `Tickers` supports the same builder methods as `Ticker`:
@@ -147,44 +180,68 @@ let tickers = Tickers::builder(vec!["2330.TW", "2317.TW", "2454.TW"])
 
 ### Chart Intervals
 
-When fetching chart data, choose an appropriate interval:
+<!-- soothfast:bind finance_query::constants::Interval -->
+When fetching chart data, choose an appropriate interval. This block runs as a
+real test — every variant below exists on `Interval`:
+<!-- /soothfast:bind -->
 
-```rust
+```rust capture-output covers=finance_query::constants::Interval
 use finance_query::Interval;
 
 // Intraday trading
-Interval::OneMinute      // 1m candles
-Interval::FiveMinutes    // 5m candles
-Interval::FifteenMinutes // 15m candles
-Interval::ThirtyMinutes  // 30m candles
-Interval::OneHour        // 1h candles
+let _ = Interval::OneMinute; // 1m candles
+let _ = Interval::FiveMinutes; // 5m candles
+let _ = Interval::FifteenMinutes; // 15m candles
+let _ = Interval::ThirtyMinutes; // 30m candles
+let _ = Interval::OneHour; // 1h candles
 
 // Daily and longer
-Interval::OneDay         // Daily candles (most common)
-Interval::OneWeek        // Weekly candles
-Interval::OneMonth       // Monthly candles
-Interval::ThreeMonths    // Quarterly candles
+let _ = Interval::OneDay; // Daily candles (most common)
+let _ = Interval::OneWeek; // Weekly candles
+let _ = Interval::OneMonth; // Monthly candles
+let _ = Interval::ThreeMonths; // Quarterly candles
+
+println!("OneMinute.as_str() = {:?}", Interval::OneMinute.as_str());
+println!("OneDay.as_str()    = {:?}", Interval::OneDay.as_str());
+```
+
+```text soothfast-output
+OneMinute.as_str() = "1m"
+OneDay.as_str()    = "1d"
 ```
 
 ### Time Ranges
 
-```rust
+<!-- soothfast:bind finance_query::constants::TimeRange -->
+Time ranges span from a single day to the full available history — this block
+also runs as a real test against the `TimeRange` enum:
+<!-- /soothfast:bind -->
+
+```rust capture-output covers=finance_query::constants::TimeRange
 use finance_query::TimeRange;
 
 // Short term
-TimeRange::OneDay        // 1 day
-TimeRange::FiveDays      // 5 days
-TimeRange::OneMonth      // 1 month
-TimeRange::ThreeMonths   // 3 months
-TimeRange::SixMonths     // 6 months
+let _ = TimeRange::OneDay; // 1 day
+let _ = TimeRange::FiveDays; // 5 days
+let _ = TimeRange::OneMonth; // 1 month
+let _ = TimeRange::ThreeMonths; // 3 months
+let _ = TimeRange::SixMonths; // 6 months
 
 // Long term
-TimeRange::OneYear       // 1 year
-TimeRange::TwoYears      // 2 years
-TimeRange::FiveYears     // 5 years
-TimeRange::TenYears      // 10 years
-TimeRange::YearToDate    // From Jan 1 of current year
-TimeRange::Max           // All available history
+let _ = TimeRange::OneYear; // 1 year
+let _ = TimeRange::TwoYears; // 2 years
+let _ = TimeRange::FiveYears; // 5 years
+let _ = TimeRange::TenYears; // 10 years
+let _ = TimeRange::YearToDate; // From Jan 1 of current year
+let _ = TimeRange::Max; // All available history
+
+println!("OneMonth.as_str() = {:?}", TimeRange::OneMonth.as_str());
+println!("Max.as_str()      = {:?}", TimeRange::Max.as_str());
+```
+
+```text soothfast-output
+OneMonth.as_str() = "1mo"
+Max.as_str()      = "max"
 ```
 
 ### Interval and Range Compatibility
@@ -200,49 +257,66 @@ Not all interval/range combinations are valid. Yahoo Finance enforces these rest
 
 **Example:**
 
-```rust
+```rust no_run
 use finance_query::{Ticker, Interval, TimeRange};
 
-let ticker = Ticker::new("AAPL").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
 
-// Valid
-let daily = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
-let intraday = ticker.chart(Interval::FiveMinutes, TimeRange::OneDay).await?;
+    // Valid
+    let daily = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
+    let intraday = ticker.chart(Interval::FiveMinutes, TimeRange::OneDay).await?;
 
-// Invalid - will return error
-// let invalid = ticker.chart(Interval::OneMinute, TimeRange::OneMonth).await?;
+    // Invalid - will return error
+    // let invalid = ticker.chart(Interval::OneMinute, TimeRange::OneMonth).await?;
+    Ok(())
+}
 ```
 
 ## Financial Statement Frequencies
 
 When fetching financial statements:
 
-```rust
-use finance_query::{StatementType, Frequency};
+```rust no_run
+use finance_query::{Frequency, StatementType, Ticker};
 
-// Annual statements (default)
-let income_annual = ticker.financials(
-    StatementType::Income,
-    Frequency::Annual
-).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
 
-// Quarterly statements
-let income_quarterly = ticker.financials(
-    StatementType::Income,
-    Frequency::Quarterly
-).await?;
+    // Annual statements (default)
+    let income_annual = ticker.financials(
+        StatementType::Income,
+        Frequency::Annual
+    ).await?;
+
+    // Quarterly statements
+    let income_quarterly = ticker.financials(
+        StatementType::Income,
+        Frequency::Quarterly
+    ).await?;
+    Ok(())
+}
 ```
 
 ## Value Formatting
 
 `quote()` is generic over the output format, so you can choose the representation you want at call sites.
 
-```rust
-use finance_query::{Both, Pretty, Raw};
+```rust no_run
+use finance_query::Ticker;
+use finance_query::format::{Both, Pretty, Raw};
 
-let raw = ticker.quote::<Raw>().await?;       // numeric fields (Option<f64>, Option<i64>)
-let pretty = ticker.quote::<Pretty>().await?; // formatted strings (Option<String>)
-let both = ticker.quote::<Both>().await?;     // raw + formatted pair
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+
+    let raw = ticker.quote::<Raw>().await?;       // numeric fields (Option<f64>, Option<i64>)
+    let pretty = ticker.quote::<Pretty>().await?; // formatted strings (Option<String>)
+    let both = ticker.quote::<Both>().await?;     // raw + formatted pair
+    Ok(())
+}
 ```
 
 For quote sub-modules (like `financial_data()` or `key_stats()`), the return type is still the Both format, so use `.raw` to access the numeric values.
@@ -273,20 +347,25 @@ export FMP_API_KEY="your-fmp-key"
 
 ### Provider Selection
 
-```rust
+```rust no_run feature=polygon
 use finance_query::{Capability, Fetch, Provider, Providers, Ticker};
 
-// Default: Yahoo Finance only
-let ticker = Ticker::new("AAPL").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Default: Yahoo Finance only
+    let ticker = Ticker::new("AAPL").await?;
 
-// Route specific capabilities to preferred providers (routing lives on Providers::builder)
-let providers = Providers::builder()
-    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
-    .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
-    .fetch(Fetch::Sequential)
-    .build()
-    .await?;
-let ticker = providers.ticker("AAPL").build().await?;
+    // Route specific capabilities to preferred providers (routing lives on Providers::builder)
+    // (requires the `polygon` and `fmp` features)
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
+        .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
+        .fetch(Fetch::Sequential)
+        .build()
+        .await?;
+    let ticker = providers.ticker("AAPL").build().await?;
+    Ok(())
+}
 ```
 
 See [Multi-Provider Architecture](providers/index.md) for the complete provider reference.
@@ -300,36 +379,41 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
         - Taiwan stocks (`2330.TW`): `Region::Taiwan`
         - UK stocks (`HSBA.L`): `Region::UnitedKingdom`
 
-    ```rust
-    use finance_query::{Raw, Region, Ticker};
+    ```rust no_run
+    use finance_query::{Region, Ticker, format::Raw};
 
-    // US stock
-    let apple = Ticker::builder("AAPL")
-        .region(Region::UnitedStates)
-        .logo()
-        .build()
-        .await?;
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        // US stock
+        let apple = Ticker::builder("AAPL")
+            .region(Region::UnitedStates)
+            .logo()
+            .build()
+            .await?;
 
-    // Taiwan stock
-    let tsmc = Ticker::builder("2330.TW")
-        .region(Region::Taiwan)
-        .logo()
-        .build()
-        .await?;
+        // Taiwan stock
+        let tsmc = Ticker::builder("2330.TW")
+            .region(Region::Taiwan)
+            .logo()
+            .build()
+            .await?;
 
-    // German stock
-    let sap = Ticker::builder("SAP.DE")
-        .region(Region::Germany)
-        .logo()
-        .build()
-        .await?;
+        // German stock
+        let sap = Ticker::builder("SAP.DE")
+            .region(Region::Germany)
+            .logo()
+            .build()
+            .await?;
 
-    // Fetch quotes in parallel
-    let (apple_quote, tsmc_quote, sap_quote) = tokio::join!(
-        apple.quote::<Raw>(),
-        tsmc.quote::<Raw>(),
-        sap.quote::<Raw>()
-    );
+        // Fetch quotes in parallel
+        let (apple_quote, tsmc_quote, sap_quote) = tokio::join!(
+            apple.quote::<Raw>(),
+            tsmc.quote::<Raw>(),
+            sap.quote::<Raw>()
+        );
+        println!("{:?} {:?} {:?}", apple_quote?.symbol, tsmc_quote?.symbol, sap_quote?.symbol);
+        Ok(())
+    }
     ```
 
 !!! tip "Configure Timeouts and Proxies"
@@ -340,16 +424,20 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
         - Daily charts: 1d
         - Long-term trends: 1wk, 1mo
 
-    ```rust
+    ```rust no_run
     use finance_query::Ticker;
     use std::time::Duration;
 
-    // Configure for corporate network with proxy and longer timeout
-    let ticker = Ticker::builder("AAPL")
-        .proxy("http://corporate-proxy.company.com:8080")
-        .timeout(Duration::from_secs(45))
-        .build()
-        .await?;
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        // Configure for corporate network with proxy and longer timeout
+        let ticker = Ticker::builder("AAPL")
+            .proxy("http://corporate-proxy.company.com:8080")
+            .timeout(Duration::from_secs(45))
+            .build()
+            .await?;
+        Ok(())
+    }
     ```
 
 ## Next Steps

@@ -7,6 +7,8 @@
 [![Crates.io](https://img.shields.io/crates/v/finance-query.svg)](https://crates.io/crates/finance-query)
 [![Documentation](https://docs.rs/finance-query/badge.svg)](https://docs.rs/finance-query)
 [![CI](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml)
+[![Docs coverage](https://verdenroz.github.io/finance-query/perf/badges/coverage.svg)](https://verdenroz.github.io/finance-query/coverage/)
+[![Soothfast gate](https://verdenroz.github.io/finance-query/perf/badges/gate.svg)](https://verdenroz.github.io/finance-query/perf/summary/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Rust library, CLI, and HTTP server for querying financial data.
@@ -56,11 +58,12 @@ finance-query = { version = "2.3", features = ["dataframe", "indicators", "fred"
 
 ```rust
 use finance_query::Ticker;
+use finance_query::format::Both;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::builder("AAPL").logo().build().await?;
-    let quote = ticker.quote().await?;
+    let quote = ticker.quote::<Both>().await?;
 
     if let Some(price) = quote.regular_market_price.as_ref().and_then(|v| v.raw) {
         println!("AAPL: ${:.2}", price);
@@ -109,14 +112,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get XBRL financial data
     let facts = edgar::company_facts(cik).await?;
-    if let Some(us_gaap) = facts.facts.get("us-gaap") {
-        if let Some(revenue) = us_gaap.0.get("Revenues") {
-            if let Some(usd) = revenue.units.get("USD") {
-                for point in usd.iter().take(3) {
-                    if let (Some(fy), Some(val)) = (point.fy, point.val) {
-                        println!("FY {}: ${}", fy, val);
-                    }
-                }
+    if let Some(us_gaap) = facts.facts.get("us-gaap")
+        && let Some(revenue) = us_gaap.0.get("Revenues")
+        && let Some(usd) = revenue.units.get("USD")
+    {
+        for point in usd.iter().take(3) {
+            if let (Some(fy), Some(val)) = (point.fy, point.val) {
+                println!("FY {}: ${}", fy, val);
             }
         }
     }

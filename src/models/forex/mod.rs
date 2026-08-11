@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 /// A forex currency pair quote (e.g., EUR/USD).
 ///
-/// Obtain via [`Ticker::forex_quote`](crate::Ticker::forex_quote).
+/// Obtain via [`Providers::forex`](crate::Providers::forex) then
+/// [`.quote()`](crate::domains::ForexPair::quote).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ForexQuote {

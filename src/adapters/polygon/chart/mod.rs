@@ -63,11 +63,14 @@ pub async fn stock_aggregates(
 fn interval_to_polygon(interval: Interval) -> (u32, Timespan) {
     match interval {
         Interval::OneMinute => (1, Timespan::Minute),
+        Interval::TwoMinutes => (2, Timespan::Minute),
         Interval::FiveMinutes => (5, Timespan::Minute),
         Interval::FifteenMinutes => (15, Timespan::Minute),
         Interval::ThirtyMinutes => (30, Timespan::Minute),
         Interval::OneHour => (1, Timespan::Hour),
+        Interval::NinetyMinutes => (90, Timespan::Minute),
         Interval::OneDay => (1, Timespan::Day),
+        Interval::FiveDays => (5, Timespan::Day),
         Interval::OneWeek => (1, Timespan::Week),
         Interval::OneMonth => (1, Timespan::Month),
         Interval::ThreeMonths => (3, Timespan::Month),
@@ -273,6 +276,19 @@ pub async fn stock_daily_open_close(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn interval_to_polygon_supports_yahoo_verified_intraday_granularities() {
+        assert_eq!(
+            interval_to_polygon(Interval::TwoMinutes),
+            (2, Timespan::Minute)
+        );
+        assert_eq!(
+            interval_to_polygon(Interval::NinetyMinutes),
+            (90, Timespan::Minute)
+        );
+        assert_eq!(interval_to_polygon(Interval::FiveDays), (5, Timespan::Day));
+    }
 
     #[tokio::test]
     async fn test_stock_aggregates_mock() {

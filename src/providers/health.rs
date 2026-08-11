@@ -11,7 +11,7 @@ const WINDOW: usize = 20;
 /// Snapshot of one provider's recent health and (where derivable) remaining
 /// rate-limit budget.
 ///
-/// Purely observational — computed from the last [`WINDOW`] dispatch
+/// Purely observational — computed from the last `WINDOW` dispatch
 /// outcomes recorded in-process by [`super::ProviderSet`]; it is not a
 /// circuit breaker and does not itself change dispatch behavior (routing and
 /// [`RetryPolicy`](super::retry::RetryPolicy) are unaffected by it).
@@ -23,9 +23,9 @@ pub struct ProviderHealth {
     /// `true` when at least half of the recent recorded outcomes succeeded,
     /// or when no calls have been recorded yet (optimistic default).
     pub is_healthy: bool,
-    /// Successes among the last [`WINDOW`] recorded outcomes.
+    /// Successes among the last `WINDOW` recorded outcomes.
     pub recent_successes: u32,
-    /// Failures among the last [`WINDOW`] recorded outcomes.
+    /// Failures among the last `WINDOW` recorded outcomes.
     pub recent_failures: u32,
     /// The most recent failure's message. Cleared by any success, so it is
     /// set only when the latest recorded outcome was a failure.

@@ -3,7 +3,7 @@
 use super::{
     CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider,
     DiscoveryProvider, ForexProvider, FundamentalsProvider, IndicesProvider, MarketProvider,
-    Provider, ProviderAdapter, ProviderCore, QuoteProvider,
+    Operation, Provider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::error::Result;
 
@@ -390,12 +390,10 @@ async fn fetch_candles(
             crate::adapters::fmp::quote::fetch_daily_chart_candles(symbol, Some(params)).await
         }
         _ => {
-            crate::adapters::fmp::quote::fetch_intraday_chart_candles(
-                symbol,
-                fmp_interval_str(interval),
-                Some(params),
-            )
-            .await
+            let code = fmp_interval_str(interval)
+                .ok_or_else(|| Operation::Chart.not_supported(Provider::Fmp))?;
+            crate::adapters::fmp::quote::fetch_intraday_chart_candles(symbol, code, Some(params))
+                .await
         }
     }
 }
@@ -411,16 +409,24 @@ fn timestamp_to_date_str(ts: i64) -> String {
         .unwrap_or_else(|| "1970-01-01".to_string())
 }
 
-/// Map crate::Interval to FMP intraday interval string.
-fn fmp_interval_str(interval: crate::Interval) -> &'static str {
-    match interval {
+/// Map crate::Interval to FMP's intraday interval string. `TwoMinutes`,
+/// `NinetyMinutes`, and `FiveDays` have no FMP equivalent (its
+/// historical-chart endpoint only documents
+/// 1min/5min/15min/30min/1hour/4hour) and return `None`.
+fn fmp_interval_str(interval: crate::Interval) -> Option<&'static str> {
+    Some(match interval {
         crate::Interval::OneMinute => "1min",
         crate::Interval::FiveMinutes => "5min",
         crate::Interval::FifteenMinutes => "15min",
         crate::Interval::ThirtyMinutes => "30min",
         crate::Interval::OneHour => "1hour",
-        _ => "1hour", // fallback for daily/weekly/monthly
-    }
+        crate::Interval::TwoMinutes
+        | crate::Interval::NinetyMinutes
+        | crate::Interval::FiveDays => {
+            return None;
+        }
+        _ => "1hour",
+    })
 }
 
 #[cfg(test)]
@@ -443,14 +449,21 @@ mod tests {
 
     #[test]
     fn fmp_interval_str_maps_intraday_and_falls_back() {
-        assert_eq!(fmp_interval_str(Interval::OneMinute), "1min");
-        assert_eq!(fmp_interval_str(Interval::FiveMinutes), "5min");
-        assert_eq!(fmp_interval_str(Interval::FifteenMinutes), "15min");
-        assert_eq!(fmp_interval_str(Interval::ThirtyMinutes), "30min");
-        assert_eq!(fmp_interval_str(Interval::OneHour), "1hour");
+        assert_eq!(fmp_interval_str(Interval::OneMinute), Some("1min"));
+        assert_eq!(fmp_interval_str(Interval::FiveMinutes), Some("5min"));
+        assert_eq!(fmp_interval_str(Interval::FifteenMinutes), Some("15min"));
+        assert_eq!(fmp_interval_str(Interval::ThirtyMinutes), Some("30min"));
+        assert_eq!(fmp_interval_str(Interval::OneHour), Some("1hour"));
         // Daily/weekly/monthly aren't intraday intervals → documented fallback.
-        assert_eq!(fmp_interval_str(Interval::OneDay), "1hour");
-        assert_eq!(fmp_interval_str(Interval::OneWeek), "1hour");
+        assert_eq!(fmp_interval_str(Interval::OneDay), Some("1hour"));
+        assert_eq!(fmp_interval_str(Interval::OneWeek), Some("1hour"));
+    }
+
+    #[test]
+    fn fmp_interval_str_has_no_mapping_for_unsupported_granularities() {
+        assert_eq!(fmp_interval_str(Interval::TwoMinutes), None);
+        assert_eq!(fmp_interval_str(Interval::NinetyMinutes), None);
+        assert_eq!(fmp_interval_str(Interval::FiveDays), None);
     }
 
     #[test]

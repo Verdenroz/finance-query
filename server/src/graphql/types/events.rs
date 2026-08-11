@@ -22,7 +22,7 @@ pub struct GqlSplit {
 }
 
 /// A single capital gain distribution.
-#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[derive(SimpleObject, Deserialize, Debug, Clone, serde::Serialize)]
 pub struct GqlCapitalGain {
     pub timestamp: i64,
     pub amount: f64,
@@ -35,12 +35,18 @@ pub struct GqlCapitalGain {
 /// for deserialization either, even though GraphQL field names are camelCase.
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlDividendAnalytics {
+    #[serde(alias = "total_paid")]
     pub total_paid: f64,
+    #[serde(alias = "payment_count")]
     pub payment_count: i64,
+    #[serde(alias = "average_payment")]
     pub average_payment: f64,
     pub cagr: Option<f64>,
+    #[serde(alias = "last_payment")]
     pub last_payment: Option<GqlDividend>,
+    #[serde(alias = "first_payment")]
     pub first_payment: Option<GqlDividend>,
 }
 
@@ -121,8 +127,9 @@ pub struct GqlSplitsBatch {
 }
 
 /// Wrapper for batch capital gains: `{symbol, capitalGains}`.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlSymbolCapitalGains {
     pub symbol: String,
     pub capital_gains: Vec<GqlCapitalGain>,
@@ -130,8 +137,9 @@ pub struct GqlSymbolCapitalGains {
 
 /// Result of the batch `capitalGainsBatch` root field: successfully fetched
 /// capital gains histories plus any per-symbol fetch errors.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlCapitalGainsBatch {
     pub capital_gains: Vec<GqlSymbolCapitalGains>,
     pub errors: Vec<GqlBatchError>,

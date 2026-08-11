@@ -11,16 +11,20 @@ It is the **only keyless `FOREX` route** in the library. Polygon, FMP, and Alpha
 
 ## Setup
 
-```rust
+```rust no_run feature=frankfurter
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::FOREX, [Provider::Frankfurter])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::FOREX, [Provider::Frankfurter])
+        .build()
+        .await?;
 
-let quote = providers.forex("USD", "EUR").quote().await?;
-println!("USD/EUR {:?} ({:+.2?}%)", quote.price, quote.change_percent);
+    let quote = providers.forex("USD", "EUR").quote().await?;
+    println!("USD/EUR {:?} ({:+.2?}%)", quote.price, quote.change_percent);
+    Ok(())
+}
 ```
 
 ## What ECB Reference Rates Are
@@ -41,11 +45,17 @@ That shapes the response:
 
 If you need intraday rates or a real bid/ask, route `FOREX` to a keyed provider first and leave Frankfurter as the fallback:
 
-```rust
-let providers = Providers::builder()
-    .route(Capability::FOREX, [Provider::Polygon, Provider::Frankfurter])
-    .build()
-    .await?;
+```rust no_run feature=full
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::FOREX, [Provider::Polygon, Provider::Frankfurter])
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 ## Coverage

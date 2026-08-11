@@ -9,8 +9,13 @@ use serde_json::Value;
 /// Response from the quoteSummary endpoint
 ///
 /// Deserializes all requested modules once on construction to avoid repeated
-/// JSON parsing on every accessor call. Uses Option<T> for each module since
+/// JSON parsing on every accessor call. Uses `Option<T>` for each module since
 /// Yahoo Finance may not return all modules for all symbols.
+///
+/// Reachable from outside the crate only via the `#[doc(hidden)]` re-export
+/// at the crate root (for `benches/soothfast.rs`'s canned `ProviderAdapter`)
+/// — not part of the stable public API, so its fields go undocumented.
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Default)]
 pub struct QuoteSummaryResponse {
     /// The symbol this response is for

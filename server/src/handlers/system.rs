@@ -1,21 +1,6 @@
 use axum::response::{IntoResponse, Json};
 use finance_query_server::metrics;
-use serde::Serialize;
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct HealthResponse {
-    status: String,
-    version: String,
-    timestamp: String,
-    notices: &'static [&'static str],
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PingResponse {
-    message: String,
-}
+use finance_query_server::responses::{HealthResponse, PingResponse};
 
 /// GET /health
 ///

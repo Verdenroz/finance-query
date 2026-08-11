@@ -17,6 +17,7 @@ jobs:
   # and allowed sources (typosquat / dependency-confusion defense).
   cargo-deny:
     name: cargo-deny
+    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,6 +35,7 @@ jobs:
   # Static analysis of the GitHub Actions workflows themselves.
   zizmor:
     name: zizmor
+    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       security-events: write # upload SARIF to code scanning

@@ -1,0 +1,1540 @@
+{
+  "tools": [
+    {
+      "name": "get_analysis",
+      "description": "Get analyst data for a stock: recommendation trends, upgrades/downgrades, earnings estimates, or earnings history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "analysis_type": {
+            "description": "Analysis type: recommendations | upgrades-downgrades | earnings-estimate | earnings-history",
+            "$ref": "#/$defs/AnalysisType"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_type",
+          "symbol"
+        ],
+        "$defs": {
+          "AnalysisType": {
+            "description": "Analysis type for `GET /v2/analysis/{symbol}/{type}`.",
+            "type": "string",
+            "enum": [
+              "recommendations",
+              "upgrades-downgrades",
+              "earnings-estimate",
+              "earnings-history"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_calendar",
+      "description": "Get a time-sorted calendar of upcoming financial events (earnings with estimates, ex-dividend and dividend-payment dates, options expirations, and — when FRED is configured — market-wide economic releases) across multiple symbols. Answers 'what's coming up for my portfolio?' in one call.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "range": {
+            "description": "Forward time window: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbols": {
+            "description": "Comma-separated list of ticker symbols (e.g., \"AAPL,MSFT,TSLA\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "$defs": {
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_chart",
+      "description": "Get historical OHLCV candlestick chart data for one or more stock symbols (comma-separated). A single symbol supports start/end absolute timestamps and returns one chart; multiple symbols return a batch of charts plus per-symbol errors (interval/range only, no start/end).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "end": {
+            "description": "End date as Unix timestamp (seconds). Defaults to now when `start` is set.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "interval": {
+            "description": "Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)",
+            "$ref": "#/$defs/Interval"
+          },
+          "limit": {
+            "description": "Maximum candles per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "range": {
+            "description": "Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo). Ignored when `start` is set.",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "start": {
+            "description": "Start date as Unix timestamp (seconds). When provided, overrides `range`.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "symbols": {
+            "description": "One or more comma-separated ticker symbols (e.g., \"AAPL\" or \"AAPL,MSFT,GOOG\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "$defs": {
+          "Interval": {
+            "description": "Chart intervals",
+            "type": "string",
+            "enum": [
+              "1m",
+              "2m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "90m",
+              "1d",
+              "5d",
+              "1wk",
+              "1mo",
+              "3mo"
+            ]
+          },
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_crypto",
+      "description": "Get top cryptocurrency coins by market cap from CoinGecko (no API key required).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "description": "Number of top coins to return (default: 50, max: 250)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum coins per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "vs_currency": {
+            "description": "Quote currency (default: usd)",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_dividends",
+      "description": "Get dividend history for one or more dividend-paying stocks (comma-separated symbols). A single symbol returns paginated dividend history plus analytics (CAGR, average payment, payout count); multiple symbols return a batch of dividend histories plus per-symbol errors (no analytics for batch).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum dividend payments per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "range": {
+            "description": "Time range: 1y|2y|5y|10y|max (default: max)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbols": {
+            "description": "One or more comma-separated ticker symbols (e.g., \"AAPL\" or \"AAPL,KO,JNJ\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "$defs": {
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_edgar_facts",
+      "description": "Get SEC EDGAR XBRL structured financial data (all reported accounting concepts) for a company. Requires EDGAR_EMAIL env var.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "concepts": {
+            "description": "Comma-separated XBRL concept names to filter to (e.g. \"Revenues,Assets\");\nomitted = curated defaults (headline financials)",
+            "type": "string"
+          },
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated GraphQL sub-fields to include per concept (e.g. \"concept,dataPoints\");\nomitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum data points per concept per page; omitted = curated default (25).\nApplied uniformly across every returned concept.",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol (e.g., \"AAPL\", \"MSFT\", \"TSLA\")",
+            "type": "string"
+          },
+          "taxonomy": {
+            "description": "XBRL taxonomy (default: \"us-gaap\"); also try \"ifrs-full\" or \"dei\"",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_edgar_search",
+      "description": "Full-text search across SEC EDGAR filings with optional form type and date filters. Requires EDGAR_EMAIL env var.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_date": {
+            "description": "End date filter in YYYY-MM-DD format",
+            "type": "string"
+          },
+          "forms": {
+            "description": "Comma-separated form types to filter (e.g., \"10-K,10-Q,8-K\")",
+            "type": "string"
+          },
+          "from": {
+            "description": "Pagination offset; omitted = 0 (first page)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "query": {
+            "description": "Search query (keywords in filing text)",
+            "type": "string"
+          },
+          "size": {
+            "description": "Page size; omitted = 100, max 100",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "start_date": {
+            "description": "Start date filter in YYYY-MM-DD format",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "get_edgar_submissions",
+      "description": "Get SEC filing history and company metadata from EDGAR (up to 1000 most recent filings). Requires EDGAR_EMAIL env var.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum filings per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol (e.g., \"AAPL\", \"MSFT\", \"TSLA\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_fear_and_greed",
+      "description": "Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_feeds",
+      "description": "Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "sources": {
+            "description": "Comma-separated feed sources: federal-reserve|sec|marketwatch|cnbc|bloomberg|ft|nyt|\nguardian|investing|bea|ecb|cfpb|wsj|fortune|businesswire|coindesk|cointelegraph|\ntechcrunch|hackernews|oilprice|calculatedrisk|scmp|nikkei|boe|venturebeat|yc|\neconomist|financialpost|ftlex|ritholtz\n(default: marketwatch, bloomberg, wsj, fortune)",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_financials",
+      "description": "Get income statement, balance sheet, or cash flow statement for one or more stock symbols (comma-separated). A single symbol returns one statement; multiple symbols return a batch plus per-symbol errors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "frequency": {
+            "description": "Reporting frequency: annual | quarterly (default: annual)",
+            "$ref": "#/$defs/Frequency"
+          },
+          "metrics": {
+            "description": "Comma-separated list of line-item metrics to filter to; omitted = all reported metrics",
+            "type": "string"
+          },
+          "statement": {
+            "description": "Statement type: income | balance | cashflow",
+            "$ref": "#/$defs/StatementType"
+          },
+          "symbols": {
+            "description": "One or more comma-separated ticker symbols (e.g., \"AAPL\" or \"AAPL,MSFT,GOOGL\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement",
+          "symbols"
+        ],
+        "$defs": {
+          "Frequency": {
+            "description": "Frequency for financial data (annual or quarterly)",
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "StatementType": {
+            "description": "Statement types for financial data",
+            "type": "string",
+            "enum": [
+              "income",
+              "balance",
+              "cashflow"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_fred_series",
+      "description": "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "id": {
+            "description": "FRED series ID (e.g., \"FEDFUNDS\", \"CPIAUCSL\", \"GDP\", \"UNRATE\")",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum observations per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "get_holders",
+      "description": "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "holder_type": {
+            "description": "Holder type: major | institutional | mutualfund | insider-transactions | insider-purchases | insider-roster",
+            "$ref": "#/$defs/HolderType"
+          },
+          "limit": {
+            "description": "Maximum entries per page for holder types with a list (institutional,\nmutualfund, insider-transactions, insider-roster); omitted = curated\ndefault (25). No-op for major/insider-purchases (no list).",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder_type",
+          "symbol"
+        ],
+        "$defs": {
+          "HolderType": {
+            "description": "Holder type for `GET /v2/holders/{symbol}/{type}`.",
+            "type": "string",
+            "enum": [
+              "major",
+              "institutional",
+              "mutualfund",
+              "insider-transactions",
+              "insider-purchases",
+              "insider-roster"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_indicators",
+      "description": "Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for one or more stock symbols (comma-separated). A single symbol returns one indicators object; multiple symbols return a paginated batch plus per-symbol errors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "interval": {
+            "description": "Candle interval: 1d|1wk|1mo (default: 1d)",
+            "$ref": "#/$defs/Interval"
+          },
+          "limit": {
+            "description": "Maximum symbols per page (only applies when multiple symbols given); omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "range": {
+            "description": "Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbols": {
+            "description": "One or more comma-separated ticker symbols (e.g., \"AAPL\" or \"AAPL,MSFT,GOOG\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "$defs": {
+          "Interval": {
+            "description": "Chart intervals",
+            "type": "string",
+            "enum": [
+              "1m",
+              "2m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "90m",
+              "1d",
+              "5d",
+              "1wk",
+              "1mo",
+              "3mo"
+            ]
+          },
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_indices",
+      "description": "Get world market indices (S&P 500, DAX, Nikkei, etc.), optionally filtered by region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "region": {
+            "description": "Region: americas|europe|asia-pacific|middle-east-africa|currencies (default: all)",
+            "$ref": "#/$defs/indices_Region"
+          }
+        },
+        "$defs": {
+          "indices_Region": {
+            "description": "Region categories for world indices",
+            "type": "string",
+            "enum": [
+              "americas",
+              "europe",
+              "asia-pacific",
+              "middle-east-africa",
+              "currencies"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_industry",
+      "description": "Get comprehensive industry data (overview, performance, top companies) for a specific industry slug.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "industry": {
+            "description": "Industry slug (e.g., semiconductors, biotechnology, banks-diversified)",
+            "$ref": "#/$defs/Industry"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "industry"
+        ],
+        "$defs": {
+          "Industry": {
+            "description": "Typed industry identifier for the industry endpoint and custom screener queries.",
+            "type": "string",
+            "enum": [
+              "agricultural-inputs",
+              "aluminum",
+              "coal",
+              "copper",
+              "farm-products",
+              "forest-products",
+              "gold",
+              "lumber-wood-production",
+              "other-industrial-metals-mining",
+              "other-precious-metals-mining",
+              "silver",
+              "steel",
+              "thermal-coal",
+              "uranium",
+              "apparel-manufacturing",
+              "apparel-retail",
+              "auto-truck-dealerships",
+              "auto-manufacturers",
+              "auto-parts",
+              "beverages-brewers",
+              "beverages-non-alcoholic",
+              "beverages-wineries-distilleries",
+              "confectioners",
+              "department-stores",
+              "discount-stores",
+              "electronic-gaming-multimedia",
+              "food-distribution",
+              "footwear-accessories",
+              "furnishings-fixtures-appliances",
+              "gambling",
+              "grocery-stores",
+              "home-improvement-retail",
+              "household-personal-products",
+              "internet-retail",
+              "leisure",
+              "lodging",
+              "luxury-goods",
+              "packaged-foods",
+              "personal-services",
+              "residential-construction",
+              "resorts-casinos",
+              "restaurants",
+              "specialty-retail",
+              "textile-manufacturing",
+              "tobacco",
+              "travel-services",
+              "oil-gas-drilling",
+              "oil-gas-ep",
+              "oil-gas-equipment-services",
+              "oil-gas-integrated",
+              "oil-gas-midstream",
+              "oil-gas-refining-marketing",
+              "solar",
+              "asset-management",
+              "banks-diversified",
+              "banks-regional",
+              "capital-markets",
+              "credit-services",
+              "financial-data-stock-exchanges",
+              "insurance-brokers",
+              "insurance-diversified",
+              "insurance-life",
+              "insurance-property-casualty",
+              "insurance-reinsurance",
+              "insurance-specialty",
+              "mortgage-finance",
+              "shell-companies",
+              "biotechnology",
+              "diagnostics-research",
+              "drug-manufacturers-general",
+              "drug-manufacturers-specialty-generic",
+              "health-information-services",
+              "healthcare-plans",
+              "medical-care-facilities",
+              "medical-devices",
+              "medical-distribution",
+              "medical-instruments-supplies",
+              "pharmaceutical-retailers",
+              "aerospace-defense",
+              "building-materials",
+              "building-products-equipment",
+              "business-equipment-supplies",
+              "chemical-manufacturing",
+              "chemicals",
+              "conglomerates",
+              "consulting-services",
+              "electrical-equipment-parts",
+              "engineering-construction",
+              "farm-heavy-construction-machinery",
+              "industrial-distribution",
+              "infrastructure-operations",
+              "integrated-freight-logistics",
+              "manufacturing-diversified",
+              "marine-ports-services",
+              "marine-shipping",
+              "metal-fabrication",
+              "paper-paper-products",
+              "pollution-treatment-controls",
+              "railroads",
+              "rental-leasing-services",
+              "security-protection-services",
+              "specialty-business-services",
+              "specialty-chemicals",
+              "specialty-industrial-machinery",
+              "staffing-employment-services",
+              "tools-accessories",
+              "trucking",
+              "waste-management",
+              "real-estate-development",
+              "real-estate-diversified",
+              "real-estate-services",
+              "reit-diversified",
+              "reit-healthcare-facilities",
+              "reit-hotel-motel",
+              "reit-industrial",
+              "reit-mortgage",
+              "reit-office",
+              "reit-residential",
+              "reit-retail",
+              "reit-specialty",
+              "communication-equipment",
+              "computer-hardware",
+              "consumer-electronics",
+              "data-analytics",
+              "electronic-components",
+              "electronics-computer-distribution",
+              "hardware-software-distribution",
+              "information-technology-services",
+              "internet-content-information",
+              "scientific-technical-instruments",
+              "semiconductor-equipment-materials",
+              "semiconductors",
+              "software-application",
+              "software-infrastructure",
+              "broadcasting",
+              "entertainment",
+              "publishing",
+              "telecom-services",
+              "utilities-diversified",
+              "utilities-independent-power-producers",
+              "utilities-regulated-electric",
+              "utilities-regulated-gas",
+              "utilities-regulated-water",
+              "utilities-renewable",
+              "closed-end-fund-debt",
+              "closed-end-fund-equity",
+              "closed-end-fund-foreign",
+              "exchange-traded-fund"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_market_hours",
+      "description": "Get current market hours and open/closed status for a region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "region": {
+            "description": "Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)",
+            "$ref": "#/$defs/Region"
+          }
+        },
+        "$defs": {
+          "Region": {
+            "description": "Supported regions for Yahoo Finance regional APIs",
+            "type": "string",
+            "enum": [
+              "AR",
+              "AU",
+              "BR",
+              "CA",
+              "CN",
+              "DK",
+              "FI",
+              "FR",
+              "DE",
+              "GR",
+              "HK",
+              "IN",
+              "IL",
+              "IT",
+              "JP",
+              "KR",
+              "MY",
+              "MX",
+              "NZ",
+              "NO",
+              "PT",
+              "QA",
+              "RU",
+              "SG",
+              "ES",
+              "SE",
+              "TW",
+              "TH",
+              "TR",
+              "GB",
+              "US",
+              "VN"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_market_summary",
+      "description": "Get market overview with major indices and currencies for a region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "region": {
+            "description": "Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)",
+            "$ref": "#/$defs/Region"
+          }
+        },
+        "$defs": {
+          "Region": {
+            "description": "Supported regions for Yahoo Finance regional APIs",
+            "type": "string",
+            "enum": [
+              "AR",
+              "AU",
+              "BR",
+              "CA",
+              "CN",
+              "DK",
+              "FI",
+              "FR",
+              "DE",
+              "GR",
+              "HK",
+              "IN",
+              "IL",
+              "IT",
+              "JP",
+              "KR",
+              "MY",
+              "MX",
+              "NZ",
+              "NO",
+              "PT",
+              "QA",
+              "RU",
+              "SG",
+              "ES",
+              "SE",
+              "TW",
+              "TH",
+              "TR",
+              "GB",
+              "US",
+              "VN"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_news",
+      "description": "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum articles per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol (optional; omit for general market news)",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_options",
+      "description": "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor` (applied to both calls and puts); omitted = first page",
+            "type": "string"
+          },
+          "expiration": {
+            "description": "Expiration date as Unix timestamp in seconds (optional; defaults to nearest expiration)",
+            "type": "integer",
+            "format": "int64"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum contracts per side (calls/puts) per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_quote",
+      "description": "Get current quote and company data (price, market cap, PE ratio, 52-week range, etc.) for one or more stock symbols (comma-separated). A single symbol returns one quote object; multiple symbols return a paginated batch of quotes plus per-symbol errors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum symbols per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbols": {
+            "description": "Comma-separated list of ticker symbols (e.g., \"AAPL,MSFT,GOOG\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ]
+      }
+    },
+    {
+      "name": "get_recommendations",
+      "description": "Get similar stock recommendations and analyst ratings for a symbol.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of recommendations to return (default: 5)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_risk",
+      "description": "Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "description": "Benchmark symbol for beta calculation (e.g., \"SPY\")",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "interval": {
+            "description": "Candle interval: 1d|1wk (default: 1d)",
+            "$ref": "#/$defs/Interval"
+          },
+          "range": {
+            "description": "Time range: 1y|2y|5y (default: 1y)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "$defs": {
+          "Interval": {
+            "description": "Chart intervals",
+            "type": "string",
+            "enum": [
+              "1m",
+              "2m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "90m",
+              "1d",
+              "5d",
+              "1wk",
+              "1mo",
+              "3mo"
+            ]
+          },
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_sector",
+      "description": "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "sector": {
+            "description": "Sector slug: technology|financial-services|consumer-cyclical|communication-services|\nhealthcare|industrials|consumer-defensive|energy|basic-materials|real-estate|utilities",
+            "$ref": "#/$defs/Sector"
+          }
+        },
+        "required": [
+          "sector"
+        ],
+        "$defs": {
+          "Sector": {
+            "description": "Market sector types available on Yahoo Finance",
+            "type": "string",
+            "enum": [
+              "technology",
+              "financial-services",
+              "consumer-cyclical",
+              "communication-services",
+              "healthcare",
+              "industrials",
+              "consumer-defensive",
+              "energy",
+              "basic-materials",
+              "real-estate",
+              "utilities"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_spark",
+      "description": "Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "interval": {
+            "description": "Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)",
+            "$ref": "#/$defs/Interval"
+          },
+          "range": {
+            "description": "Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbols": {
+            "description": "Comma-separated list of ticker symbols (e.g., \"AAPL,MSFT,GOOG\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "$defs": {
+          "Interval": {
+            "description": "Chart intervals",
+            "type": "string",
+            "enum": [
+              "1m",
+              "2m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "90m",
+              "1d",
+              "5d",
+              "1wk",
+              "1mo",
+              "3mo"
+            ]
+          },
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_splits",
+      "description": "Get historical stock split history for a symbol.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "range": {
+            "description": "Time range: 1y|2y|5y|10y|max (default: max)",
+            "$ref": "#/$defs/TimeRange"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "$defs": {
+          "TimeRange": {
+            "description": "Time ranges for chart data",
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_transcripts",
+      "description": "Get earnings call transcripts for a company. Returns paragraph-by-paragraph text (speaker, timestamp, text), paginated via paragraph_limit/paragraph_cursor since a full call can be tens of thousands of tokens.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of transcripts to return (default: all)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "paragraph_cursor": {
+            "description": "Opaque continuation token from a previous response's paragraphs `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "paragraph_limit": {
+            "description": "Maximum transcript paragraphs per page; omitted = curated default (25). A\nfull call's `text` is returned as paginated paragraphs, not one giant blob",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_treasury_yields",
+      "description": "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum rows per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "year": {
+            "description": "Year to fetch yield curve data for (default: current year)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "get_trending",
+      "description": "Get currently trending stock tickers for a region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "region": {
+            "description": "Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)",
+            "$ref": "#/$defs/Region"
+          }
+        },
+        "$defs": {
+          "Region": {
+            "description": "Supported regions for Yahoo Finance regional APIs",
+            "type": "string",
+            "enum": [
+              "AR",
+              "AU",
+              "BR",
+              "CA",
+              "CN",
+              "DK",
+              "FI",
+              "FR",
+              "DE",
+              "GR",
+              "HK",
+              "IN",
+              "IL",
+              "IT",
+              "JP",
+              "KR",
+              "MY",
+              "MX",
+              "NZ",
+              "NO",
+              "PT",
+              "QA",
+              "RU",
+              "SG",
+              "ES",
+              "SE",
+              "TW",
+              "TH",
+              "TR",
+              "GB",
+              "US",
+              "VN"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "lookup",
+      "description": "Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "logo": {
+            "description": "Include logo URLs (requires an additional upstream API call); default: false",
+            "type": "boolean"
+          },
+          "query": {
+            "description": "Search query (company name or ticker symbol)",
+            "type": "string"
+          },
+          "query_type": {
+            "description": "Filter by type: equity|etf|mutualfund|index|future|currency|cryptocurrency (default: all)",
+            "$ref": "#/$defs/LookupType"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "$defs": {
+          "LookupType": {
+            "description": "Asset types available for lookup",
+            "type": "string",
+            "enum": [
+              "all",
+              "equity",
+              "mutualfund",
+              "etf",
+              "index",
+              "future",
+              "currency",
+              "cryptocurrency"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "screener",
+      "description": "Get results from a predefined stock screener (e.g., most-actives, day-gainers, undervalued-growth-stocks).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "description": "Number of results to return (default: 25, max: 250)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "screener_type": {
+            "description": "Screener type: most-actives | day-gainers | day-losers | growth-technology-stocks |\nundervalued-growth-stocks | undervalued-large-caps | aggressive-small-caps |\nsmall-cap-gainers | most-shorted-stocks | high-yield-bond | top-mutual-funds |\nconservative-foreign-funds | portfolio-anchors | solid-large-growth-funds |\nsolid-midcap-growth-funds",
+            "$ref": "#/$defs/Screener"
+          }
+        },
+        "required": [
+          "screener_type"
+        ],
+        "$defs": {
+          "Screener": {
+            "description": "Predefined Yahoo Finance screener selector",
+            "type": "string",
+            "enum": [
+              "aggressive-small-caps",
+              "day-gainers",
+              "day-losers",
+              "growth-technology-stocks",
+              "most-actives",
+              "most-shorted-stocks",
+              "small-cap-gainers",
+              "undervalued-growth-stocks",
+              "undervalued-large-caps",
+              "conservative-foreign-funds",
+              "high-yield-bond",
+              "portfolio-anchors",
+              "solid-large-growth-funds",
+              "solid-midcap-growth-funds",
+              "top-mutual-funds"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "search",
+      "description": "Search for stocks, ETFs, and companies by name or ticker symbol.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "lang": {
+            "description": "Target language for translated text fields (BCP 47, e.g. \"ja\", \"zh-Hant\"); English or omitted = no translation",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum quotes per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "query": {
+            "description": "Search query string (company name or ticker symbol)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

@@ -5,43 +5,50 @@
 
 The `feeds` module aggregates RSS and Atom news from over 30 named financial sources, or any custom URL. Multiple feeds can be fetched concurrently in a single call with automatic deduplication and chronological sorting.
 
-```rust
-use finance_query::feeds::{self, FeedSource};
-```
+This page is a **living document**: every code block is compiled as a
+generated test (`cargo soothfast docs gen-tests`), the offline parsing example
+actually runs, and the performance statements are `soothfast:claim` markers
+checked against real measurements in CI.
 
 ## Fetching a Single Feed
 
-```rust
+```rust no_run
 use finance_query::feeds::{self, FeedSource};
 
-// Federal Reserve press releases and speeches
-let fed_news = feeds::fetch(FeedSource::FederalReserve).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Federal Reserve press releases and speeches
+    let fed_news = feeds::fetch(FeedSource::FederalReserve).await?;
 
-for entry in fed_news.iter().take(5) {
-    println!("{}: {}", entry.published.as_deref().unwrap_or("?"), entry.title);
-    if let Some(url) = entry.url.as_str().chars().next() {
+    for entry in fed_news.iter().take(5) {
+        println!("{}: {}", entry.published.as_deref().unwrap_or("?"), entry.title);
         println!("  {}", entry.url);
     }
+    Ok(())
 }
 ```
 
 ## Fetching Multiple Feeds
 
-```rust
+```rust no_run
 use finance_query::feeds::{self, FeedSource};
 
-// Aggregate multiple sources concurrently
-let news = feeds::fetch_all([
-    FeedSource::FederalReserve,
-    FeedSource::SecPressReleases,
-    FeedSource::MarketWatch,
-    FeedSource::Bloomberg,
-    FeedSource::WsjMarkets,
-]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Aggregate multiple sources concurrently
+    let news = feeds::fetch_all([
+        FeedSource::FederalReserve,
+        FeedSource::SecPressReleases,
+        FeedSource::MarketWatch,
+        FeedSource::Bloomberg,
+        FeedSource::WsjMarkets,
+    ]).await?;
 
-println!("Total entries (deduplicated): {}", news.len());
-for entry in news.iter().take(10) {
-    println!("[{}] {}: {}", entry.source, entry.published.as_deref().unwrap_or("?"), entry.title);
+    println!("Total entries (deduplicated): {}", news.len());
+    for entry in news.iter().take(10) {
+        println!("[{}] {}: {}", entry.source, entry.published.as_deref().unwrap_or("?"), entry.title);
+    }
+    Ok(())
 }
 ```
 
@@ -49,13 +56,61 @@ for entry in news.iter().take(10) {
 
 ## Custom Feed URLs
 
-```rust
-let custom = feeds::fetch(FeedSource::Custom(
-    "https://example.com/feed.xml".to_string()
-)).await?;
+```rust no_run
+use finance_query::feeds::{self, FeedSource};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let custom = feeds::fetch(FeedSource::Custom(
+        "https://example.com/feed.xml".to_string()
+    )).await?;
+    println!("{} entries", custom.len());
+    Ok(())
+}
 ```
 
+## Offline Parsing
+
+The extractor behind every fetch is `feeds::parse_bytes` — a hand-rolled,
+dependency-free RSS/Atom parser. It works on raw bytes, so you can use it on
+feeds obtained by other means. This example runs as a real test:
+
+```rust capture-output covers=finance_query::rss_parse
+use finance_query::feeds;
+
+let xml = br#"<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <title>Example</title>
+  <item>
+    <title>Markets rally</title>
+    <link>https://example.com/a</link>
+    <pubDate>Mon, 06 Jul 2026 12:00:00 GMT</pubDate>
+  </item>
+</channel></rss>"#;
+
+let entries = feeds::parse_bytes(xml, "Example").unwrap();
+assert_eq!(entries.len(), 1);
+assert_eq!(entries[0].title, "Markets rally");
+assert_eq!(entries[0].url, "https://example.com/a");
+assert_eq!(entries[0].source, "Example");
+println!("parsed {} entr(y/ies)", entries.len());
+println!("title  = {:?}", entries[0].title);
+println!("url    = {:?}", entries[0].url);
+```
+
+```text soothfast-output
+parsed 1 entr(y/ies)
+title  = "Markets rally"
+url    = "https://example.com/a"
+```
+
+<!-- soothfast:claim finance_query::rss_parse.perfcnt.instructions < 100000 -->
+<!-- soothfast:claim finance_query::rss_parse.walltime.median_ns < 30000 -->
+Cheap enough to re-parse on every poll.
+
 ## `FeedEntry` Fields
+
+<!-- soothfast:bind finance_query::feeds::FeedEntry -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -64,6 +119,8 @@ let custom = feeds::fetch(FeedSource::Custom(
 | `published` | `Option<String>` | Publication date/time as RFC 3339 string |
 | `summary` | `Option<String>` | Short summary or description |
 | `source` | `String` | Human-readable source name (e.g., `"Federal Reserve"`) |
+
+<!-- /soothfast:bind -->
 
 ## Available `FeedSource` Variants
 
@@ -126,15 +183,19 @@ let custom = feeds::fetch(FeedSource::Custom(
 
 ## Example: SEC EDGAR Filing Feed
 
-```rust
+```rust no_run
 use finance_query::feeds::{self, FeedSource};
 
-// Stream the latest 10-K filings
-let filings = feeds::fetch(FeedSource::SecFilings("10-K".to_string())).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Stream the latest 10-K filings
+    let filings = feeds::fetch(FeedSource::SecFilings("10-K".to_string())).await?;
 
-for f in &filings {
-    println!("{}: {}", f.published.as_deref().unwrap_or("?"), f.title);
-    println!("  {}", f.url);
+    for f in &filings {
+        println!("{}: {}", f.published.as_deref().unwrap_or("?"), f.title);
+        println!("  {}", f.url);
+    }
+    Ok(())
 }
 ```
 

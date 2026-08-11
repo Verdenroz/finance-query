@@ -1,3 +1,4 @@
+use finance_query::{Interval, TimeRange};
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -62,8 +63,8 @@ fn build_connection_args(limit: Option<u32>, cursor: Option<&str>) -> String {
 pub async fn get_indicators(
     schema: &FinanceSchema,
     symbols: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
@@ -86,12 +87,12 @@ pub async fn get_indicators(
 async fn get_one_indicators(
     schema: &FinanceSchema,
     symbol: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1y"));
+    let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneYear));
     let field_list = parse_fields(fields);
     let selection = build_type_spec_selection(
         field_list.as_deref(),
@@ -114,14 +115,14 @@ async fn get_one_indicators(
 async fn get_many_indicators(
     schema: &FinanceSchema,
     syms: Vec<String>,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1y"));
+    let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneYear));
     let syms_literal = gql_string_list_literal(&syms);
     let field_list = parse_fields(fields);
     // "indicators" (`GqlIndicatorsSummary`) is composite and needs its own

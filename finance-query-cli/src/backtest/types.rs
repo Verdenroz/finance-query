@@ -508,12 +508,14 @@ pub const TRADING_DAYS_PER_YEAR: f64 = 252.0;
 pub fn bars_per_year_for_interval(interval: Interval) -> f64 {
     match interval {
         Interval::OneMinute => TRADING_DAYS_PER_YEAR * 390.0,
+        Interval::TwoMinutes => TRADING_DAYS_PER_YEAR * 195.0,
         Interval::FiveMinutes => TRADING_DAYS_PER_YEAR * 78.0,
         Interval::FifteenMinutes => TRADING_DAYS_PER_YEAR * 26.0,
         Interval::ThirtyMinutes => TRADING_DAYS_PER_YEAR * 13.0,
         Interval::OneHour => TRADING_DAYS_PER_YEAR * 6.5,
+        Interval::NinetyMinutes => TRADING_DAYS_PER_YEAR * 390.0 / 90.0,
         Interval::OneDay => TRADING_DAYS_PER_YEAR,
-        Interval::OneWeek => 52.0,
+        Interval::FiveDays | Interval::OneWeek => 52.0,
         Interval::OneMonth => 12.0,
         Interval::ThreeMonths => 4.0,
     }

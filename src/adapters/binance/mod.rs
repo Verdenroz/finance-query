@@ -111,6 +111,13 @@ mod tests {
     }
 
     #[test]
+    fn binance_rejects_intervals_it_has_no_kline_code_for() {
+        assert_eq!(interval_code(Interval::TwoMinutes), None);
+        assert_eq!(interval_code(Interval::NinetyMinutes), None);
+        assert_eq!(interval_code(Interval::FiveDays), None);
+    }
+
+    #[test]
     fn candles_convert_milliseconds_to_seconds() {
         let candles = to_candles(vec![kline(1_785_628_800_000, 63570.0)]);
         assert_eq!(candles.len(), 1);

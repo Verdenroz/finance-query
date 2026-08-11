@@ -12,43 +12,12 @@ use finance_query_server::graphql::{
     },
     pagination::{build_connection_selection, unwrap_nested_connection},
 };
-use serde::Deserialize;
+use finance_query_server::params::{BatchIndicatorsQuery, IndicatorsQuery};
 use tracing::info;
 
 use super::gql_bridge::{
     build_rest_composite_selection, execute_gql_rest, interval_to_gql, range_to_gql,
 };
-use super::support::{default_interval, default_range};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchIndicatorsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max symbols per page; omitted (with cursor also omitted) = every requested
-    /// symbol's indicators as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query params for /v2/indicators/{symbol}, shared with the chart-range shape.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct IndicatorsQuery {
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
 
 /// GET /v2/indicators/{symbol}
 pub(crate) async fn get_indicators(
@@ -56,8 +25,8 @@ pub(crate) async fn get_indicators(
     Path(symbol): Path<String>,
     Query(params): Query<IndicatorsQuery>,
 ) -> impl IntoResponse {
-    let gql_interval = interval_to_gql(&params.interval);
-    let gql_range = range_to_gql(&params.range);
+    let gql_interval = interval_to_gql(params.interval);
+    let gql_range = range_to_gql(params.range);
     let selection = build_rest_indicators_selection(params.fields.as_deref());
     let query = format!(
         "query GetIndicators($symbol: String!) {{ ticker(symbol: $symbol) {{ indicators(interval: {gql_interval}, range: {gql_range}) {selection} }} }}"
@@ -84,8 +53,8 @@ pub(crate) async fn get_batch_indicators(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<BatchIndicatorsQuery>,
 ) -> impl IntoResponse {
-    let gql_interval = interval_to_gql(&params.interval);
-    let gql_range = range_to_gql(&params.range);
+    let gql_interval = interval_to_gql(params.interval);
+    let gql_range = range_to_gql(params.range);
     let syms: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let syms_literal = gql_string_list_literal(&syms);
     // Top-level batch wrapper fields are "symbol"/"indicators" (GqlSymbolIndicators);

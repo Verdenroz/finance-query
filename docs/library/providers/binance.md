@@ -19,21 +19,25 @@ This is the first keyless source of *exchange-grade* crypto data in the library:
 | `CRYPTO` | Rolling 24-hour quote per spot market |
 | `CHART` | Arbitrary-interval OHLCV klines |
 
-```rust
+```rust no_run feature=binance
 use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-let providers = Providers::builder()
-    .route(Capability::CRYPTO, [Provider::Binance])
-    .route(Capability::CHART, [Provider::Binance])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, [Provider::Binance])
+        .route(Capability::CHART, [Provider::Binance])
+        .build()
+        .await?;
 
-let btc = providers.crypto("bitcoin");
-let quote = btc.quote("usd").await?;
-println!("BTC {:?} ({:+.2?}%)", quote.price, quote.change_percent_24h);
+    let btc = providers.crypto("bitcoin");
+    let quote = btc.quote("usd").await?;
+    println!("BTC {:?} ({:+.2?}%)", quote.price, quote.change_percent_24h);
 
-let chart = btc.chart("usd", Interval::OneHour, TimeRange::OneMonth).await?;
-println!("{} hourly candles", chart.candles.len());
+    let chart = btc.chart("usd", Interval::OneHour, TimeRange::OneMonth).await?;
+    println!("{} hourly candles", chart.candles.len());
+    Ok(())
+}
 ```
 
 !!! note "Routing `CHART` is global"

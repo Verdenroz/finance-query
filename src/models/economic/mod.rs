@@ -9,7 +9,8 @@ pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
 
 /// A provider-agnostic economic data series with metadata.
 ///
-/// Obtain via [`Ticker::economic_series`](crate::Ticker::economic_series). Supported providers:
+/// Obtain via [`Providers::economic`](crate::Providers::economic) then
+/// [`.series()`](crate::domains::EconomicIndicator::series). Supported providers:
 /// Alpha Vantage, Polygon, FRED.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

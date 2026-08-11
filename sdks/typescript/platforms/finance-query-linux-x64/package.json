@@ -1,0 +1,12 @@
+{
+  "name": "finance-query-linux-x64",
+  "version": "2.8.0",
+  "description": "The finance-query-server binary for linux-x64, used by finance-query.",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "libc": ["glibc"],
+  "files": [
+    "bin"
+  ],
+  "preferUnplugged": true
+}

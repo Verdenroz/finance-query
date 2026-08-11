@@ -5,25 +5,10 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use finance_query_server::graphql::{self, fields::unwrap_ticker_field};
-use serde::Deserialize;
+use finance_query_server::params::RiskQuery;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, interval_to_gql, range_to_gql};
-use super::support::{default_interval, default_range};
-
-/// Query parameters for /v2/risk/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RiskQuery {
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Optional benchmark symbol for beta calculation (e.g., "SPY")
-    benchmark: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
 
 /// GET /v2/risk/{symbol}
 ///
@@ -33,8 +18,8 @@ pub(crate) async fn get_risk(
     Path(symbol): Path<String>,
     Query(params): Query<RiskQuery>,
 ) -> impl IntoResponse {
-    let gql_interval = interval_to_gql(&params.interval);
-    let gql_range = range_to_gql(&params.range);
+    let gql_interval = interval_to_gql(params.interval);
+    let gql_range = range_to_gql(params.range);
     let has_benchmark = params.benchmark.as_deref().is_some_and(|b| !b.is_empty());
     let bench_arg = if has_benchmark {
         ", benchmark: $benchmark"

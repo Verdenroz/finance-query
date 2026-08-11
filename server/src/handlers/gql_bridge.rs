@@ -11,7 +11,6 @@ use tracing::error;
 
 use finance_query_server::graphql;
 use finance_query_server::graphql::pagination::{connection_nodes, connection_page_info};
-use finance_query_server::services::{parse_interval, parse_range};
 
 /// (REST path key, GraphQL field name, VALID fields, composite sub-field map).
 pub(crate) type RestTypeSpec = (
@@ -158,25 +157,28 @@ pub(crate) fn connection_args(limit: Option<u32>, cursor: Option<&str>) -> Vec<S
     args
 }
 
-// Map a REST interval string to a GqlInterval enum literal for GraphQL query building.
-pub(crate) fn interval_to_gql(s: &str) -> &'static str {
+// Map an `Interval` to its GqlInterval enum literal for GraphQL query building.
+pub(crate) fn interval_to_gql(interval: finance_query::Interval) -> &'static str {
     use finance_query::Interval;
-    match parse_interval(s) {
+    match interval {
         Interval::OneMinute => "ONE_MINUTE",
+        Interval::TwoMinutes => "TWO_MINUTES",
         Interval::FiveMinutes => "FIVE_MINUTES",
         Interval::FifteenMinutes => "FIFTEEN_MINUTES",
         Interval::ThirtyMinutes => "THIRTY_MINUTES",
         Interval::OneHour => "ONE_HOUR",
+        Interval::NinetyMinutes => "NINETY_MINUTES",
         Interval::OneDay => "ONE_DAY",
+        Interval::FiveDays => "FIVE_DAYS",
         Interval::OneWeek => "ONE_WEEK",
         Interval::OneMonth => "ONE_MONTH",
         Interval::ThreeMonths => "THREE_MONTHS",
     }
 }
 
-pub(crate) fn range_to_gql(s: &str) -> &'static str {
+pub(crate) fn range_to_gql(range: finance_query::TimeRange) -> &'static str {
     use finance_query::TimeRange;
-    match parse_range(s) {
+    match range {
         TimeRange::OneDay => "ONE_DAY",
         TimeRange::FiveDays => "FIVE_DAYS",
         TimeRange::OneMonth => "ONE_MONTH",

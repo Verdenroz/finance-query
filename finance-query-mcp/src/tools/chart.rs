@@ -1,3 +1,4 @@
+use finance_query::{Interval, TimeRange};
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -103,8 +104,8 @@ fn split_symbols(symbols: &str) -> Vec<String> {
 pub async fn get_chart(
     schema: &FinanceSchema,
     symbols: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     start: Option<i64>,
     end: Option<i64>,
     fields: Option<String>,
@@ -136,8 +137,8 @@ pub async fn get_chart(
 /// for a missing `end`).
 fn build_chart_query(
     selection: &str,
-    interval: Option<&str>,
-    range: Option<&str>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     start: Option<i64>,
     end: Option<i64>,
 ) -> String {
@@ -152,8 +153,8 @@ fn build_chart_query(
             "query GetChart($symbol: String!) {{ ticker(symbol: $symbol) {{ chart(start: {start}, end: {end}) {selection} }} }}"
         )
     } else {
-        let gql_interval = interval_to_gql(interval.unwrap_or("1d"));
-        let gql_range = range_to_gql(range.unwrap_or("1mo"));
+        let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+        let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneMonth));
         format!(
             "query GetChart($symbol: String!) {{ ticker(symbol: $symbol) {{ chart(interval: {gql_interval}, range: {gql_range}) {selection} }} }}"
         )
@@ -164,8 +165,8 @@ fn build_chart_query(
 async fn get_one_chart(
     schema: &FinanceSchema,
     symbol: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     start: Option<i64>,
     end: Option<i64>,
     fields: Option<String>,
@@ -188,13 +189,7 @@ async fn get_one_chart(
     );
 
     // Build query based on whether start date is set.
-    let query = build_chart_query(
-        &selection,
-        interval.as_deref(),
-        range.as_deref(),
-        start,
-        end,
-    );
+    let query = build_chart_query(&selection, interval, range, start, end);
     let mut variables = async_graphql::Variables::default();
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
 
@@ -225,12 +220,12 @@ fn build_batch_chart_selection(want_chart: bool, chart_sel: &str) -> String {
 async fn get_many_charts(
     schema: &FinanceSchema,
     syms: Vec<String>,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1mo"));
+    let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneMonth));
 
     let syms_literal = gql_string_list_literal(&syms);
 
@@ -309,12 +304,12 @@ fn build_spark_selection(fields: Option<&[String]>) -> String {
 pub async fn get_spark(
     schema: &FinanceSchema,
     symbols: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1mo"));
+    let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneMonth));
 
     let syms: Vec<String> = symbols.split(',').map(|s| s.trim().to_string()).collect();
     let syms_literal = gql_string_list_literal(&syms);
@@ -426,7 +421,13 @@ mod tests {
 
     #[test]
     fn build_chart_query_without_start_uses_interval_and_range() {
-        let query = build_chart_query("{ symbol }", Some("1h"), Some("5d"), None, None);
+        let query = build_chart_query(
+            "{ symbol }",
+            Some(Interval::OneHour),
+            Some(TimeRange::FiveDays),
+            None,
+            None,
+        );
 
         assert!(query.contains("interval: ONE_HOUR"));
         assert!(query.contains("range: FIVE_DAYS"));

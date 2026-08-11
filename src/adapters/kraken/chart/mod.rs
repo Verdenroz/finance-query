@@ -19,13 +19,15 @@ const EXCHANGE: CryptoExchange = CryptoExchange {
 /// Map a library interval to Kraken's OHLC interval, in minutes.
 ///
 /// Kraken offers 1/5/15/30/60/240/1440/10080/21600. `ThirtyMinutes` and
-/// `OneMonth` land exactly; `ThreeMonths` has no equivalent and returns
-/// `None`, so the caller reports `NotSupported` and dispatch falls through.
+/// `OneMonth` land exactly; `TwoMinutes`/`NinetyMinutes`/`FiveDays`/
+/// `ThreeMonths` have no equivalent and return `None`, so the caller reports
+/// `NotSupported` and dispatch falls through.
 pub(super) fn interval_minutes(interval: Interval) -> Option<u32> {
     match interval {
         // Kraken's longest bucket is 15 days, the closest thing to a month,
         // so this one does not follow from the interval's nominal span.
         Interval::OneMonth => Some(21_600),
+        Interval::TwoMinutes | Interval::NinetyMinutes | Interval::FiveDays => None,
         Interval::ThreeMonths => None,
         other => Some((other.duration_secs() / 60) as u32),
     }

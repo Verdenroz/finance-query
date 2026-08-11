@@ -27,21 +27,29 @@ Without any backend, free-form fields are left in English while dictionary terms
 
 Setting a non-English language on the builder translates text fields automatically:
 
-```rust
+```rust no_run feature=translation
 use finance_query::Ticker;
 
-let ticker = Ticker::builder("7203.T").lang("ja").build().await?;
-let quote = ticker.quote::<finance_query::format::Raw>().await?;
-// quote.sector_disp / long_business_summary are now Japanese.
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::builder("7203.T").lang("ja").build().await?;
+    let quote = ticker.quote::<finance_query::format::Raw>().await?;
+    // quote.sector_disp / long_business_summary are now Japanese.
+    Ok(())
+}
 ```
 
 Batch tickers work the same way:
 
-```rust
+```rust no_run feature=translation
 use finance_query::Tickers;
 
-let tickers = Tickers::builder(["AAPL", "NVDA"]).lang("de").build().await?;
-let news = tickers.news().await?;  // titles translated to German
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let tickers = Tickers::builder(["AAPL", "NVDA"]).lang("de").build().await?;
+    let news = tickers.news().await?; // titles translated to German
+    Ok(())
+}
 ```
 
 ## Via Providers
@@ -50,19 +58,23 @@ Multi-provider setups configure the language once on `ProvidersBuilder` — ever
 `Ticker`/`Tickers` handle created from it inherits the language (and translates
 automatically when it is non-English):
 
-```rust
+```rust no_run feature=translation
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::QUOTE, [Provider::Yahoo])
-    .lang("ja")
-    .build().await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, [Provider::Yahoo])
+        .lang("ja")
+        .build().await?;
 
-let ticker = providers.ticker("7203.T").build().await?;
-let quote = ticker.quote::<finance_query::format::Raw>().await?;  // Japanese
+    let ticker = providers.ticker("7203.T").build().await?;
+    let quote = ticker.quote::<finance_query::format::Raw>().await?; // Japanese
 
-// Override per handle if needed:
-let en = providers.ticker("AAPL").lang("en-US").build().await?;
+    // Override per handle if needed:
+    let en = providers.ticker("AAPL").lang("en-US").build().await?;
+    Ok(())
+}
 ```
 
 `.region()` on `ProvidersBuilder` also sets the language (e.g. `Region::Japan`
@@ -72,31 +84,79 @@ let en = providers.ticker("AAPL").lang("en-US").build().await?;
 
 Results from `finance::*` functions can be translated explicitly:
 
-```rust
+```rust no_run feature=translation
 use finance_query::{SearchOptions, finance, translation};
 
-let mut results = finance::search("toyota", &SearchOptions::default()).await?;
-translation::translate(&mut results, "ja").await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut results = finance::search("toyota", &SearchOptions::default()).await?;
+    translation::translate(&mut results, "ja").await?;
+    Ok(())
+}
 ```
 
 `translate` accepts any type implementing the `Translatable` trait — all text-bearing response models implement it, and `Vec<T>` / `Option<T>` compose.
 
+<!-- soothfast:bind finance_query::translation::translate_texts -->
+Batches of raw English strings go through `translate_texts`, which applies the
+dictionary, the memo cache, and the active backend in that order, preserving
+input order. Dictionary-tier terms translate with no backend configured and no
+network — this example runs as a real test:
+
+```rust feature=translation covers=finance_query::translation::translate_texts
+use finance_query::translation::{self, Lang};
+
+#[tokio::main]
+async fn main() {
+    let lang = Lang::parse("es").unwrap();
+    let translated = translation::translate_texts(
+        ["Technology", "Healthcare", "Chief Executive Officer"],
+        &lang,
+    )
+    .await
+    .unwrap();
+    assert_eq!(translated, ["Tecnología", "Salud", "Director ejecutivo"]);
+}
+```
+<!-- /soothfast:bind -->
+
+<!-- soothfast:claim finance_query::translate_dictionary.walltime.median_ns < 25000 -->
+<!-- soothfast:claim finance_query::translate_dictionary.perfcnt.instructions < 35000 -->
+- Dictionary-tier translation of a batch of UI strings (8 mixed texts →
+  Spanish) completes in **single-digit microseconds** and costs **under 35k
+  CPU instructions** — cheap enough to run on every response.
+
 ## Language Tags
 
-Targets are BCP 47 language tags, parsed and normalized by `Lang`:
+<!-- soothfast:bind finance_query::translation::lang::Lang -->
+Targets are BCP 47 language tags, parsed and normalized by `Lang`. This
+example runs as a real test:
 
-```rust
+```rust capture-output feature=translation covers=finance_query::translation::lang::Lang
 use finance_query::translation::Lang;
 
-let lang = Lang::parse("zh-TW")?;
-assert_eq!(lang.code(), "zh-Hant");   // region implies Traditional script
+let lang = Lang::parse("zh-TW").unwrap();
+assert_eq!(lang.code(), "zh-Hant"); // region implies Traditional script
 assert!(!lang.is_english());
 
-assert!(Lang::parse("en-US")?.is_english());  // English → translation is a no-op
-assert_eq!(Lang::parse("pt_BR")?.code(), "pt");  // underscores accepted
+assert!(Lang::parse("en-US").unwrap().is_english()); // English → translation is a no-op
+assert_eq!(Lang::parse("pt_BR").unwrap().code(), "pt"); // underscores accepted
+
+println!(
+    "zh-TW -> code={:?} is_english={}",
+    lang.code(),
+    lang.is_english()
+);
+println!("pt_BR -> code={:?}", Lang::parse("pt_BR").unwrap().code());
+```
+
+```text soothfast-output
+zh-TW -> code="zh-Hant" is_english=false
+pt_BR -> code="pt"
 ```
 
 English targets are always a no-op; structurally invalid tags return an error.
+<!-- /soothfast:bind -->
 
 ## Offline Backend
 
@@ -117,10 +177,14 @@ packages — the same models LibreTranslate uses:
 - Models load lazily on the first request for each language. Servers and CLIs can
   instead warm a set up front (avoiding the one-time load on the first translated
   request) by listing primary subtags in `FINANCE_QUERY_TRANSLATION_PRELOAD`
-  (e.g. `es,ja,de`) and calling:
+  (e.g. `es,ja,de`) and calling `translation::preload`:
 
-```rust
-finance_query::translation::preload().await?;
+```rust no_run feature=translation-offline
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    finance_query::translation::preload().await?;
+    Ok(())
+}
 ```
 
 ### Language coverage
@@ -168,9 +232,9 @@ client-side, or warm the cache ahead of time.
 
 Plug any translation engine (e.g. a hosted API) by implementing `TranslationBackend` (requires the [`async-trait`](https://crates.io/crates/async-trait) crate) and registering it process-wide. A custom backend takes precedence over the built-in offline backend:
 
-```rust
-use std::sync::Arc;
+```rust capture-output feature=translation covers=finance_query::translation::backend::TranslationBackend
 use finance_query::translation::{self, Lang, TranslationBackend};
+use std::sync::Arc;
 
 struct MyBackend;
 
@@ -191,10 +255,27 @@ impl TranslationBackend for MyBackend {
     }
 }
 
-translation::set_backend(Arc::new(MyBackend));
+#[tokio::main]
+async fn main() {
+    translation::set_backend(Arc::new(MyBackend));
+
+    // Not in the built-in dictionary, so this routes to the custom backend,
+    // which just echoes its input back unchanged.
+    let lang = Lang::parse("es").unwrap();
+    let translated = translation::translate_texts(["Quantum flux capacitor"], &lang)
+        .await
+        .unwrap();
+    println!("{:?}", translated);
+}
 ```
 
+```text soothfast-output
+["Quantum flux capacitor"]
+```
+
+<!-- soothfast:bind finance_query::translation::backend::TranslationBackend -->
 Inputs are English and may contain multiple sentences; implementations must return one translated string per input, preserving order. Results are memoized process-wide, so repeated fields (e.g. the same sector name across symbols) hit the backend only once.
+<!-- /soothfast:bind -->
 
 ## Server, CLI & MCP
 

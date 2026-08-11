@@ -1,5 +1,6 @@
 //! GraphQL types for analysis data (recommendations, upgrades, earnings).
 
+use super::formatted::GqlFormattedValue;
 use async_graphql::{Json, SimpleObject};
 use serde::Deserialize;
 
@@ -75,12 +76,12 @@ pub struct GqlEarningsTrendPeriod {
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlEarningsEstimate {
-    pub avg: Option<Json<serde_json::Value>>,
-    pub low: Option<Json<serde_json::Value>>,
-    pub high: Option<Json<serde_json::Value>>,
-    pub year_ago_eps: Option<Json<serde_json::Value>>,
-    pub number_of_analysts: Option<Json<serde_json::Value>>,
-    pub growth: Option<Json<serde_json::Value>>,
+    pub avg: Option<Json<GqlFormattedValue>>,
+    pub low: Option<Json<GqlFormattedValue>>,
+    pub high: Option<Json<GqlFormattedValue>>,
+    pub year_ago_eps: Option<Json<GqlFormattedValue>>,
+    pub number_of_analysts: Option<Json<GqlFormattedValue>>,
+    pub growth: Option<Json<GqlFormattedValue>>,
     pub earnings_currency: Option<String>,
 }
 
@@ -88,39 +89,39 @@ pub struct GqlEarningsEstimate {
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlRevenueEstimate {
-    pub avg: Option<Json<serde_json::Value>>,
-    pub low: Option<Json<serde_json::Value>>,
-    pub high: Option<Json<serde_json::Value>>,
-    pub number_of_analysts: Option<Json<serde_json::Value>>,
-    pub year_ago_revenue: Option<Json<serde_json::Value>>,
-    pub growth: Option<Json<serde_json::Value>>,
+    pub avg: Option<Json<GqlFormattedValue>>,
+    pub low: Option<Json<GqlFormattedValue>>,
+    pub high: Option<Json<GqlFormattedValue>>,
+    pub number_of_analysts: Option<Json<GqlFormattedValue>>,
+    pub year_ago_revenue: Option<Json<GqlFormattedValue>>,
+    pub growth: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlEpsTrend {
-    pub current: Option<Json<serde_json::Value>>,
+    pub current: Option<Json<GqlFormattedValue>>,
     #[serde(rename = "7daysAgo")]
-    pub seven_days_ago: Option<Json<serde_json::Value>>,
+    pub seven_days_ago: Option<Json<GqlFormattedValue>>,
     #[serde(rename = "30daysAgo")]
-    pub thirty_days_ago: Option<Json<serde_json::Value>>,
+    pub thirty_days_ago: Option<Json<GqlFormattedValue>>,
     #[serde(rename = "60daysAgo")]
-    pub sixty_days_ago: Option<Json<serde_json::Value>>,
+    pub sixty_days_ago: Option<Json<GqlFormattedValue>>,
     #[serde(rename = "90daysAgo")]
-    pub ninety_days_ago: Option<Json<serde_json::Value>>,
+    pub ninety_days_ago: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlEpsRevisions {
-    pub up_last7days: Option<Json<serde_json::Value>>,
-    pub up_last30days: Option<Json<serde_json::Value>>,
+    pub up_last7days: Option<Json<GqlFormattedValue>>,
+    pub up_last30days: Option<Json<GqlFormattedValue>>,
     #[serde(rename = "downLast7Days")]
-    pub down_last7_days: Option<Json<serde_json::Value>>,
-    pub down_last30days: Option<Json<serde_json::Value>>,
-    pub down_last90days: Option<Json<serde_json::Value>>,
+    pub down_last7_days: Option<Json<GqlFormattedValue>>,
+    pub down_last30days: Option<Json<GqlFormattedValue>>,
+    pub down_last90days: Option<Json<GqlFormattedValue>>,
     pub eps_revisions_currency: Option<String>,
 }
 
@@ -139,11 +140,11 @@ pub struct GqlEarningsHistory {
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlEarningsHistoryEntry {
     pub max_age: Option<i64>,
-    pub quarter: Option<Json<serde_json::Value>>,
+    pub quarter: Option<Json<GqlFormattedValue>>,
     pub period: Option<String>,
     pub currency: Option<String>,
-    pub eps_actual: Option<Json<serde_json::Value>>,
-    pub eps_estimate: Option<Json<serde_json::Value>>,
-    pub eps_difference: Option<Json<serde_json::Value>>,
-    pub surprise_percent: Option<Json<serde_json::Value>>,
+    pub eps_actual: Option<Json<GqlFormattedValue>>,
+    pub eps_estimate: Option<Json<GqlFormattedValue>>,
+    pub eps_difference: Option<Json<GqlFormattedValue>>,
+    pub surprise_percent: Option<Json<GqlFormattedValue>>,
 }

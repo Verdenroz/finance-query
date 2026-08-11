@@ -15,40 +15,10 @@ use finance_query_server::graphql::{
         unwrap_nested_connection,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{BatchOptionsQuery, OptionsQuery};
 use tracing::info;
 
 use super::gql_bridge::execute_gql_rest;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct OptionsQuery {
-    date: Option<i64>, // Optional expiration timestamp
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max contracts per side per page; omitted (with cursor also omitted) =
-    /// every matching contract as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    /// (applied to both `calls` and `puts`)
-    cursor: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchOptionsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    /// Expiration date (Unix timestamp, optional)
-    date: Option<i64>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max symbols per page; omitted (with cursor also omitted) = every requested
-    /// symbol's options chain as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
 
 /// Build the options `{ ... }` selection, expanding `calls`/`puts` as paginated
 /// Connections sharing the same `first`/`after` args (both sides of the chain

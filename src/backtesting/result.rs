@@ -40,7 +40,7 @@ pub struct SignalRecord {
     pub reason: Option<String>,
     /// Whether the signal was executed
     pub executed: bool,
-    /// Tags copied from the originating [`Signal`].
+    /// Tags copied from the originating [`Signal`](crate::backtesting::Signal).
     ///
     /// Enables `BacktestResult::signals` to be filtered by tag so callers
     /// can compare total generated vs. executed signal counts per tag.
@@ -1300,7 +1300,7 @@ impl BacktestResult {
 
     /// Return all trades that carry the given tag.
     ///
-    /// Tags are attached to a [`Signal`] at strategy time with `.tag("name")`
+    /// Tags are attached to a [`Signal`](crate::backtesting::Signal) at strategy time with `.tag("name")`
     /// and propagated to [`Trade::tags`] when the position closes.
     ///
     /// Tag comparison is **exact and case-sensitive**: `"Breakout"` and
@@ -1341,7 +1341,8 @@ impl BacktestResult {
     /// so that a sparsely-firing tag is not penalised by an inflated
     /// annualisation factor.
     ///
-    /// Returns [`PerformanceMetrics::empty`] when no tagged trades exist.
+    /// Returns a zero-valued `PerformanceMetrics` (all fields zero except
+    /// `total_return_pct`) when no tagged trades exist.
     pub fn metrics_by_tag(&self, tag: &str) -> PerformanceMetrics {
         // Single pass: collect tagged trades and build synthetic equity curve.
         let mut equity = self.initial_capital;

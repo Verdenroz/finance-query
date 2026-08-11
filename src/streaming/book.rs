@@ -79,7 +79,7 @@ stream_handle! {
     ///
     /// Backed by Polygon's crypto level-2 feed (`XL2`) — the one cluster that
     /// publishes depth — so pairs are crypto pairs (`"BTC-USD"`). Requires the
-    /// `polygon` feature and [`polygon::init`](crate::polygon::init).
+    /// `polygon` feature and the `POLYGON_API_KEY` environment variable set.
     ///
     /// # Example
     ///

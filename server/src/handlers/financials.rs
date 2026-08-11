@@ -12,24 +12,10 @@ use finance_query_server::graphql::{
         gql_string_list_literal, unwrap_field, unwrap_ticker_field,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{BatchFinancialsQuery, FinancialsQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
-
-fn default_frequency() -> String {
-    "annual".to_string()
-}
-
-/// Fallible on purpose: silently defaulting an unrecognized frequency to
-/// `Annual` would mask typos, so invalid input must be rejected by the caller.
-fn parse_frequency(s: &str) -> Option<Frequency> {
-    s.parse().ok()
-}
-
-fn parse_statement_type(s: &str) -> Option<StatementType> {
-    s.parse().ok()
-}
 
 fn statement_to_gql(statement: StatementType) -> &'static str {
     match statement {
@@ -63,49 +49,6 @@ fn metrics_arg(metrics: Option<&str>) -> String {
     }
 }
 
-fn invalid_statement_response(statement: &str) -> axum::response::Response {
-    let error = serde_json::json!({
-        "error": format!("Invalid statement type: '{}'. Valid types: income, balance, cashflow", statement),
-        "status": 400
-    });
-    (StatusCode::BAD_REQUEST, Json(error)).into_response()
-}
-
-fn invalid_frequency_response(frequency: &str) -> axum::response::Response {
-    let error = serde_json::json!({
-        "error": format!("Invalid frequency: '{}'. Valid frequencies: annual, quarterly", frequency),
-        "status": 400
-    });
-    (StatusCode::BAD_REQUEST, Json(error)).into_response()
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FinancialsQuery {
-    /// Frequency: annual or quarterly (default: annual)
-    #[serde(default = "default_frequency")]
-    frequency: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome")
-    metrics: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchFinancialsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    /// Statement type (required): income, balance, cashflow
-    statement: String,
-    #[serde(default = "default_frequency")]
-    frequency: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome")
-    metrics: Option<String>,
-}
-
 /// GET /v2/financials/{symbol}/{statement}
 ///
 /// Path params:
@@ -114,18 +57,9 @@ pub(crate) struct BatchFinancialsQuery {
 /// Query: `frequency` (annual|quarterly, default: annual), `metrics` (comma-separated metric names to include)
 pub(crate) async fn get_financials(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path((symbol, statement)): Path<(String, String)>,
+    Path((symbol, statement)): Path<(String, StatementType)>,
     Query(params): Query<FinancialsQuery>,
 ) -> impl IntoResponse {
-    let frequency = match parse_frequency(&params.frequency) {
-        Some(f) => f,
-        None => return invalid_frequency_response(&params.frequency),
-    };
-    let statement_type = match parse_statement_type(&statement) {
-        Some(st) => st,
-        None => return invalid_statement_response(&statement),
-    };
-
     let selection = build_rest_composite_selection(
         params.fields.as_deref(),
         GQL_FINANCIAL_LINE_ITEM_VALID_FIELDS,
@@ -133,8 +67,8 @@ pub(crate) async fn get_financials(
     );
     let query = format!(
         "query GetFin($symbol: String!) {{ ticker(symbol: $symbol) {{ financials(statement: {}, frequency: {}{}) {} }} }}",
-        statement_to_gql(statement_type),
-        frequency_to_gql(frequency),
+        statement_to_gql(statement),
+        frequency_to_gql(params.frequency),
         metrics_arg(params.metrics.as_deref()),
         selection
     );
@@ -143,8 +77,8 @@ pub(crate) async fn get_financials(
     vars.insert(Name::new("symbol"), symbol.clone().into());
 
     info!(
-        "Fetching {} {} financials for {} (fields={:?}, metrics={:?})",
-        params.frequency, statement, symbol, params.fields, params.metrics
+        "Fetching financials for {} (fields={:?}, metrics={:?})",
+        symbol, params.fields, params.metrics
     );
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
@@ -163,15 +97,6 @@ pub(crate) async fn get_batch_financials(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<BatchFinancialsQuery>,
 ) -> impl IntoResponse {
-    let statement_type = match parse_statement_type(&params.statement) {
-        Some(st) => st,
-        None => return invalid_statement_response(&params.statement),
-    };
-    let frequency = match parse_frequency(&params.frequency) {
-        Some(f) => f,
-        None => return invalid_frequency_response(&params.frequency),
-    };
-
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let syms_literal = gql_string_list_literal(&symbols);
     let item_selection = build_rest_composite_selection(
@@ -183,17 +108,15 @@ pub(crate) async fn get_batch_financials(
     let query = format!(
         "query {{ financialsBatch(symbols: [{}], statement: {}, frequency: {}{}) {{ financials {{ symbol statement {} }} errors {{ symbol message }} }} }}",
         syms_literal,
-        statement_to_gql(statement_type),
-        frequency_to_gql(frequency),
+        statement_to_gql(params.statement),
+        frequency_to_gql(params.frequency),
         metrics_arg(params.metrics.as_deref()),
         item_selection
     );
 
     info!(
-        "Fetching batch financials for {} symbols (statement={}, frequency={}, metrics={:?})",
+        "Fetching batch financials for {} symbols (metrics={:?})",
         symbols.len(),
-        params.statement,
-        params.frequency,
         params.metrics
     );
 

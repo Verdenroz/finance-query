@@ -10,7 +10,7 @@ use finance_query_server::{
     graphql, metrics,
     rate_limit::{RateLimitConfig, RateLimiterState, rate_limit_middleware},
 };
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
@@ -20,6 +20,20 @@ mod handlers;
 
 /// Default server port, overridable via the `PORT` env var.
 const DEFAULT_SERVER_PORT: u16 = 8000;
+
+/// Default bind address, overridable via the `HOST` env var. A deployment
+/// serves the world; an SDK-spawned copy sets `HOST=127.0.0.1` so the
+/// consumer's machine is the only thing that can reach it.
+const DEFAULT_SERVER_HOST: &str = "0.0.0.0";
+
+/// Prefix of the embedded-server readiness line.
+///
+/// An SDK that bundles this binary spawns it and has to learn where it
+/// bound — guessing a port races, so we bind first and say so afterwards.
+/// Deliberately plain text on stdout: launchers scan for this prefix and
+/// ignore every other line, which is what lets the server log freely and
+/// costs us no dependency to participate.
+const READY_PREFIX: &str = "soothfast-ready ";
 
 #[tokio::main]
 async fn main() {
@@ -48,12 +62,18 @@ async fn main() {
     // Build application with routes
     let app = create_app().await;
 
-    // Determine server address
+    // Determine server address. Port 0 is how an embedding SDK asks for
+    // whatever port is free, which is why the announcement below reports
+    // the bound address rather than this one.
     let port = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(DEFAULT_SERVER_PORT);
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let host: IpAddr = std::env::var("HOST")
+        .unwrap_or_else(|_| DEFAULT_SERVER_HOST.to_string())
+        .parse()
+        .expect("HOST must be an IP address");
+    let addr = SocketAddr::new(host, port);
 
     info!("🚀 Starting Finance Query on {}", addr);
 
@@ -62,6 +82,9 @@ async fn main() {
         .await
         .expect("Failed to bind address");
 
+    let bound = listener.local_addr().expect("bound address");
+    announce(&reachable_url(bound));
+
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -69,6 +92,33 @@ async fn main() {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .expect("Server error");
+}
+
+/// A URL a client on this machine can actually reach.
+///
+/// `0.0.0.0` means "every interface", which is not an address anything can
+/// connect *to* — an SDK handed that would fail on Windows and on any host
+/// with no default route.
+fn reachable_url(addr: SocketAddr) -> String {
+    match addr.ip() {
+        IpAddr::V4(ip) if ip.is_unspecified() => format!("http://127.0.0.1:{}", addr.port()),
+        IpAddr::V6(ip) if ip.is_unspecified() => format!("http://[::1]:{}", addr.port()),
+        IpAddr::V4(ip) => format!("http://{ip}:{}", addr.port()),
+        IpAddr::V6(ip) => format!("http://[{ip}]:{}", addr.port()),
+    }
+}
+
+/// Tell a waiting SDK launcher where we bound.
+///
+/// Harmless when nobody is listening — one line on stdout — so it is
+/// unconditional rather than gated on an "am I embedded?" flag we would
+/// have to plumb through and keep honest.
+fn announce(base_url: &str) {
+    use std::io::Write;
+
+    let mut stdout = std::io::stdout().lock();
+    let _ = writeln!(stdout, "{READY_PREFIX}{{\"base_url\":\"{base_url}\"}}");
+    let _ = stdout.flush();
 }
 
 async fn create_app() -> Router {
@@ -201,4 +251,29 @@ async fn shutdown_signal() {
     }
 
     info!("Shutting down gracefully...");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The wildcard bind is the whole reason this function exists: an SDK
+    /// handed `http://0.0.0.0:…` cannot connect to it on Windows.
+    #[test]
+    fn a_wildcard_bind_is_announced_as_loopback() {
+        let addr: SocketAddr = "0.0.0.0:8000".parse().expect("parses");
+        assert_eq!(reachable_url(addr), "http://127.0.0.1:8000");
+
+        let addr: SocketAddr = "[::]:8000".parse().expect("parses");
+        assert_eq!(reachable_url(addr), "http://[::1]:8000");
+    }
+
+    #[test]
+    fn a_specific_bind_is_announced_as_itself() {
+        let addr: SocketAddr = "127.0.0.1:54321".parse().expect("parses");
+        assert_eq!(reachable_url(addr), "http://127.0.0.1:54321");
+
+        let addr: SocketAddr = "[::1]:54321".parse().expect("parses");
+        assert_eq!(reachable_url(addr), "http://[::1]:54321");
+    }
 }

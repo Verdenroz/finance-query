@@ -28,17 +28,21 @@ The tier is resolved on every request, so exporting a key mid-process takes effe
 
 ## Setup
 
-```rust
+```rust no_run feature=bls
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::ECONOMIC, [Provider::Bls])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::Bls])
+        .build()
+        .await?;
 
-let cpi = providers.economic("CUUR0000SA0").series().await?;
-for obs in cpi.observations.iter().rev().take(3) {
-    println!("{} {:?}", obs.date, obs.value);
+    let cpi = providers.economic("CUUR0000SA0").series().await?;
+    for obs in cpi.observations.iter().rev().take(3) {
+        println!("{} {:?}", obs.date, obs.value);
+    }
+    Ok(())
 }
 ```
 

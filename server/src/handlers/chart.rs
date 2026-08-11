@@ -16,77 +16,11 @@ use finance_query_server::graphql::{
         unwrap_nested_connection,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{BatchChartsQuery, ChartQuery, SparkQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, interval_to_gql, range_to_gql};
-use super::support::{default_interval, default_range};
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ChartQuery {
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Start date as Unix timestamp (seconds). When provided together with `end`,
-    /// overrides `range` and uses absolute date boundaries.
-    start: Option<i64>,
-    /// End date as Unix timestamp (seconds). Defaults to now when `start` is set.
-    end: Option<i64>,
-    /// Include events (dividends, splits, capital gains) in response
-    #[serde(default)]
-    events: bool,
-    /// Detect candlestick patterns and include per-candle signals in response.
-    /// The `patterns` array aligns 1:1 with the `candles` array; `null` means
-    /// no pattern was detected on that bar.
-    #[serde(default)]
-    patterns: bool,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max candles per page; omitted (with cursor also omitted) = every matching
-    /// candle as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/spark
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct SparkQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchChartsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_interval")]
-    interval: String,
-    #[serde(default = "default_range")]
-    range: String,
-    /// Detect candlestick patterns and include per-candle signals in response.
-    #[serde(default)]
-    patterns: bool,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max symbols per page; omitted (with cursor also omitted) = every requested
-    /// symbol's chart as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// GET /v2/chart/{symbol}
 ///
 /// Query: `interval` (default 1d), `range` (default 1mo), `start` (opt i64),
 /// `end` (opt i64), `events` (bool), `patterns` (bool), `fields` (csv)
@@ -126,8 +60,8 @@ pub(crate) async fn get_chart(
             "query GetChart($symbol: String!) {{ ticker(symbol: $symbol) {{ chart(start: {start}, end: {end}{events_arg}{patterns_arg}) {selection} }} }}"
         )
     } else {
-        let gql_interval = interval_to_gql(&params.interval);
-        let gql_range = range_to_gql(&params.range);
+        let gql_interval = interval_to_gql(params.interval);
+        let gql_range = range_to_gql(params.range);
         let events_arg = if params.events { ", events: true" } else { "" };
         let patterns_arg = if params.patterns {
             ", patterns: true"
@@ -162,8 +96,8 @@ pub(crate) async fn get_batch_charts(
     Query(params): Query<BatchChartsQuery>,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    let gql_interval = interval_to_gql(&params.interval);
-    let gql_range = range_to_gql(&params.range);
+    let gql_interval = interval_to_gql(params.interval);
+    let gql_range = range_to_gql(params.range);
     let patterns_arg = if params.patterns {
         ", patterns: true"
     } else {
@@ -252,8 +186,8 @@ pub(crate) async fn get_spark(
     Query(params): Query<SparkQuery>,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    let gql_interval = interval_to_gql(&params.interval);
-    let gql_range = range_to_gql(&params.range);
+    let gql_interval = interval_to_gql(params.interval);
+    let gql_range = range_to_gql(params.range);
     let syms_literal = gql_string_list_literal(&symbols);
     let item_selection = build_rest_spark_selection(params.fields.as_deref());
 

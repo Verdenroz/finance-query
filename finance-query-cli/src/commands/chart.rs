@@ -536,17 +536,7 @@ async fn render_interactive_chart(
             }
 
             // Footer with status and controls
-            let interval_str = match current_interval {
-                Interval::OneMinute => "1m",
-                Interval::FiveMinutes => "5m",
-                Interval::FifteenMinutes => "15m",
-                Interval::ThirtyMinutes => "30m",
-                Interval::OneHour => "1h",
-                Interval::OneDay => "1d",
-                Interval::OneWeek => "1wk",
-                Interval::OneMonth => "1mo",
-                Interval::ThreeMonths => "3mo",
-            };
+            let interval_str = current_interval.as_str();
             let status_text = if loading {
                 Span::styled(" Loading...", Style::default().fg(Color::Yellow))
             } else if let Some(ref chart) = chart_data {

@@ -62,7 +62,6 @@ For large changes (new providers, new public API surface, architectural shifts),
 - Rust stable toolchain — install via [rustup](https://rustup.rs/)
 - `cargo` (comes with Rust)
 - Docker (optional, for testing the server image)
-- Python ≥ 3.8 + pip (optional, for the MkDocs documentation site)
 
 **Clone and build:**
 
@@ -90,12 +89,13 @@ Yahoo Finance and CoinGecko require no keys.
 
 ```bash
 make help              # list all available targets
-make lint              # fmt + clippy + check (same as CI)
+prek                   # fmt + clippy + check (same as CI)
 make fix               # auto-fix formatting and clippy issues
 make test-fast         # unit tests only (no network)
 make test              # all tests including network integration tests
-make audit             # cargo-deny supply-chain audit
-make docs              # build and serve MkDocs docs at localhost:8080
+make ci                # everything CI checks, including the cargo-deny audit
+make docs-pages        # regenerate the derived docs pages
+make docs              # serve the docs site (cargo soothfast) at localhost:8080
 ```
 
 Or directly with Cargo:
@@ -135,7 +135,7 @@ All tests must pass before a PR is merged.
    git checkout -b feat/my-feature
    ```
 2. Make your changes, including tests for any new behaviour.
-3. Run `make lint` and `make test-fast` locally. Fix any issues.
+3. Run `prek` and `make test-fast` locally. Fix any issues.
 4. Push your branch and open a PR against `master`.
 5. Fill in the PR description: what changed, why, and how you tested it.
 6. Address any review comments. All CI checks must pass before merge.
