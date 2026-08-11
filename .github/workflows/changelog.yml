@@ -42,11 +42,28 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install cargo-soothfast
         run: cargo install cargo-soothfast --locked
-      - name: Measure baseline for claims
-        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
-      - name: Regenerate CHANGELOG.md
+      # Without a bench on the reference side there are no deterministic
+      # metrics to diff, so the perf table falls back to a full snapshot and
+      # walltime jitter rewrites every row on every push.
+      - name: Check the previous tag has a bench to compare against
+        id: prev
         run: |
           PREV=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          echo "ref=$PREV" >> "$GITHUB_OUTPUT"
+          if git cat-file -e "$PREV:benches/soothfast.rs" 2>/dev/null; then
+            echo "comparable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "comparable=false" >> "$GITHUB_OUTPUT"
+            echo "$PREV predates benches/soothfast.rs — skipping until the next release tag."
+          fi
+      - name: Measure baseline for claims
+        if: steps.prev.outputs.comparable == 'true'
+        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+      - name: Regenerate CHANGELOG.md
+        if: steps.prev.outputs.comparable == 'true'
+        env:
+          PREV: ${{ steps.prev.outputs.ref }}
+        run: |
           cargo soothfast report changelog -p finance-query --baseline base \
             --against-ref "$PREV" --features full
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
