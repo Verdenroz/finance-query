@@ -3309,7 +3309,7 @@ type QueryRoot {
 	cryptoCoin(id: String!, vsCurrency: String! = "usd"): GqlCoinQuote!
 	"""
 	Worldwide news mentioning `symbol`, from GDELT DOC 2.0 (keyless).
-
+	
 	Distinct from the Yahoo-sourced `ticker { news }`: GDELT indexes news
 	across 65 languages, matched on the ticker as an exact phrase.
 	"""
@@ -3429,7 +3429,7 @@ type QueryRoot {
 type SubscriptionRoot {
 	"""
 	Subscribe to real-time price updates for the given ticker symbols.
-
+	
 	The stream yields a `GqlPriceUpdate` whenever the upstream Yahoo Finance
 	WebSocket delivers a matching price tick. Symbols are ref-counted across
 	all active subscriptions — upstream subscribes only once per symbol.
@@ -3437,7 +3437,7 @@ type SubscriptionRoot {
 	priceStream(symbols: [String!]!): GqlPriceUpdate!
 	"""
 	Subscribe to threshold-triggered price alerts.
-
+	
 	Same upstream as `priceStream`, but only ticks that satisfy one of the
 	supplied rules are sent — the predicate is evaluated here rather than
 	pushing every tick to the client. Symbols are derived from the rules
@@ -3447,7 +3447,7 @@ type SubscriptionRoot {
 	"""
 	Subscribe to a continuous stream of new RSS/Atom feed entries from the
 	given sources.
-
+	
 	RSS/Atom has no push transport of its own, so the stream is backed by
 	a shared poll loop (`finance_query::streaming::NewsStream`) — this
 	field yields entries as they're first seen (deduplicated by URL), same
