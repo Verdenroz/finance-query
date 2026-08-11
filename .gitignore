@@ -27,6 +27,10 @@ flamegraph.svg
 **/*.rs.bk
 *.pdb
 
+# Valgrind core dumps (the soothfast gate's callgrind fallback drops these
+# in the repo root when a measured run crashes)
+vgcore.*
+
 # Rustfmt / clippy
 .clippy.toml
 
