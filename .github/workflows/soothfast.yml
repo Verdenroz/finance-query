@@ -70,8 +70,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Gate against merge-base
         run: |
           set -euo pipefail
@@ -113,8 +117,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Measure baseline
         run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
       - name: Upload baseline
@@ -145,8 +153,12 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: test-suite
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -196,8 +208,12 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: spec
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       - name: Generated openapi.yaml/asyncapi.yaml are fresh
@@ -242,8 +258,12 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: spec
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes
       - name: Generated mcp-tools.json is fresh
@@ -274,8 +294,12 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: spec
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Reconcile pricing.proto against PricingData
         run: |
           cargo soothfast spec check-proto -p finance-query --proto proto/pricing.proto \
@@ -297,8 +321,12 @@ jobs:
       - name: Install nightly (rustdoc JSON)
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
