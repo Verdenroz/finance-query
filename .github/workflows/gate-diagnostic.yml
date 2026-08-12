@@ -1,0 +1,73 @@
+name: Gate Diagnostic
+
+# Temporary: reproduces how `cargo soothfast gate --against-ref` builds each
+# side and hashes the resulting machine code, to establish whether the two
+# sides differ before measurement. Delete once the gate flakiness is resolved.
+
+on:
+  push:
+    branches: [diag/gate-binaries]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: Compare head vs base bench binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - name: Environment
+        run: |
+          rustc -vV
+          echo "cargo: $(cargo -V)"
+          echo "repo-local .cargo present: $([ -e .cargo/config.toml ] && echo YES || echo no)"
+          echo "RUSTFLAGS=${RUSTFLAGS:-<unset>}"
+
+      - name: Build HEAD bench binary
+        run: cargo bench -p finance-query --features bench-gate --bench soothfast --no-run
+
+      - name: Build BASE bench binary in a soothfast-shaped worktree
+        run: |
+          set -euo pipefail
+          SHA="$(git merge-base HEAD HEAD~1)"
+          WT=".soothfast/worktrees/${SHA}"
+          git worktree add --detach "$WT" "$SHA"
+          cd "$WT"
+          cargo bench -p finance-query --features bench-gate --bench soothfast --no-run
+
+      - name: Compare machine code
+        run: |
+          set -euo pipefail
+          SHA="$(git merge-base HEAD HEAD~1)"
+          WT=".soothfast/worktrees/${SHA}"
+          H="$(ls -t target/release/deps/soothfast-* | grep -v '\.d$' | head -1)"
+          B="$(ls -t "$WT"/target/release/deps/soothfast-* | grep -v '\.d$' | head -1)"
+          echo "head binary: $H"
+          echo "base binary: $B"
+          echo "head cwd len: ${#PWD}"
+          echo "base cwd len: $(( ${#PWD} + ${#WT} + 1 ))"
+          for f in "$H" "$B"; do
+            objcopy -O binary --only-section=.text "$f" /tmp/text.bin
+            echo "  .text $(sha256sum /tmp/text.bin | cut -d' ' -f1)  $(stat -c%s /tmp/text.bin) bytes  $f"
+            rm -f /tmp/text.bin
+          done
+          HT=$(objcopy -O binary --only-section=.text "$H" /tmp/h.bin && sha256sum /tmp/h.bin | cut -d' ' -f1)
+          BT=$(objcopy -O binary --only-section=.text "$B" /tmp/b.bin && sha256sum /tmp/b.bin | cut -d' ' -f1)
+          if [ "$HT" = "$BT" ]; then
+            echo "::notice::VERDICT: .text IDENTICAL - the two sides run the same machine code, so any gate delta is measurement-side"
+          else
+            echo "::warning::VERDICT: .text DIFFERS - the two sides run different machine code, so the gate is comparing different binaries"
+          fi
