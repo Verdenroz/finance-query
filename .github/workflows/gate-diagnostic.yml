@@ -48,6 +48,20 @@ jobs:
           cd "$WT"
           cargo bench -p finance-query --features bench-gate --bench soothfast --no-run
 
+      - name: Measure the warm-up curve under callgrind
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y valgrind >/dev/null
+          BIN="$(ls -t target/release/deps/soothfast-* | grep -v '\.d$' | head -1)"
+          echo "binary: $BIN"
+          echo "iters,total_ir"
+          for n in 1 2 3 4 5 6 8 10 12 16 20 24; do
+            valgrind --tool=callgrind --callgrind-out-file=/tmp/cg.$n \
+              "$BIN" --callgrind-exec finance_query::de_edgar_submissions --iters $n \
+              >/dev/null 2>/tmp/vg.$n || { echo "$n,FAILED"; continue; }
+            IR=$(grep -a '^summary:' /tmp/cg.$n | awk '{print $2}')
+            echo "$n,$IR"
+          done
       - name: Compare machine code
         run: |
           set -euo pipefail
