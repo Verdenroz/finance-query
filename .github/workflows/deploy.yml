@@ -119,8 +119,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          cargo install cargo-soothfast --locked --version "$RUNNER"
 
       - name: Configure git identity for the gh-pages commit
         env:
