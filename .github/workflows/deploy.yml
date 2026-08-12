@@ -130,12 +130,22 @@ jobs:
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
-      # Writes .soothfast/gate-status.json, which `report render` below
-      # reads to color the "soothfast gate" badge — without this the badge
-      # is stuck at "unknown" forever. Gates against the immediately prior
-      # commit (master requires linear history, so HEAD~1 is well-defined)
-      # since the PR that landed this commit was already gated pre-merge.
+      # soothfast.yml's paths filter and [bot] exclusion let no-code commits
+      # reach master, where gating them can only report noise.
+      - name: Detect benchmarkable changes
+        id: bench_changes
+        run: |
+          if git diff --quiet HEAD~1 HEAD -- src benches Cargo.toml Cargo.lock finance-query-derive; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No benchmarked code changed since HEAD~1 — skipping the perf gate."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Writes .soothfast/gate-status.json, which `report render` reads to
+      # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit
+        if: steps.bench_changes.outputs.changed == 'true'
         run: cargo soothfast gate -p finance-query --features bench-gate --against-ref HEAD~1
 
       - name: Measure baseline for claims
