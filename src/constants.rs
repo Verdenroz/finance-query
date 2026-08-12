@@ -2772,3 +2772,5 @@ mod tests {
         );
     }
 }
+
+// A/A gate control: comment-only change so any reported delta is false.
