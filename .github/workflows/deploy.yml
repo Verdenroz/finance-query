@@ -113,6 +113,10 @@ jobs:
       - name: Install nightly (rustdoc JSON for the docs engine)
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # A failing gate must not throw away the warm build state the
+          # retry (and the docs-regen steps) would otherwise reuse.
+          cache-on-failure: true
       - name: Install valgrind
         # CI VMs often expose no PMU, in which case
         # the auto backend gates on callgrind instruction counts instead.
@@ -195,9 +199,17 @@ jobs:
         run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
 
       - name: Regenerate endpoint reference pages
+        # The two extractions are independent; run them concurrently and
+        # fail if either failed (a bare `wait` would mask the exit codes).
         run: |
-          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server
-          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server
+          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server &
+          server=$!
+          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server &
+          mcp=$!
+          status=0
+          wait "$server" || status=1
+          wait "$mcp" || status=1
+          [ "$status" -eq 0 ] || exit "$status"
           cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
           cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
 

@@ -64,6 +64,8 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: bench-gate
+          # A failing measured run must not cost the retry its warm cache.
+          cache-on-failure: true
       - name: Install valgrind
         # Fallback gating backend: CI VMs often expose no PMU, in which case
         # the auto backend gates on callgrind instruction counts instead.
@@ -117,6 +119,8 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: bench-gate
+          # A failing measured run must not cost the retry its warm cache.
+          cache-on-failure: true
       - name: Install valgrind
         run: |
           sudo apt-get update
