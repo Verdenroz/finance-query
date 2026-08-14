@@ -184,6 +184,8 @@ jobs:
         run: |
           cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server
           cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server
+          cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
+          cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
 
       - name: Regenerate API reference, perf report, coverage page, and llms.txt
         run: |
