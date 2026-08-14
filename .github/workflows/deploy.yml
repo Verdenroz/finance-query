@@ -154,13 +154,23 @@ jobs:
       # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit
         if: steps.bench_changes.outputs.changed == 'true'
-        run: cargo soothfast gate -p finance-query --features bench-gate --against-ref HEAD~1
+        run: |
+          cargo soothfast gate -p finance-query --features bench-gate \
+            --against-ref HEAD~1 --save-baseline base
 
+      # A passing gate saved the baseline above; measure only when the gate
+      # was skipped or short-circuited without saving, so the docs-regen
+      # steps below never run without one.
       - name: Measure baseline for claims
-        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+        run: |
+          if [ -f .soothfast/baselines/base.json ]; then
+            echo "Reusing the baseline the gate saved."
+          else
+            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+          fi
 
       - name: Append performance trend point
-        run: cargo soothfast trend append -p finance-query --features bench-gate
+        run: cargo soothfast trend append -p finance-query --from-baseline base
 
       # Direct pushes to master are blocked by the branch ruleset, so the bot
       # opens a PR and squash-merges it itself instead.
