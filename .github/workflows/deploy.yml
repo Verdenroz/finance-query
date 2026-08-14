@@ -113,6 +113,10 @@ jobs:
       - name: Install nightly (rustdoc JSON for the docs engine)
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # A failing gate must not throw away the warm build state the
+          # retry (and the docs-regen steps) would otherwise reuse.
+          cache-on-failure: true
       - name: Install valgrind
         # CI VMs often expose no PMU, in which case
         # the auto backend gates on callgrind instruction counts instead.
@@ -121,10 +125,14 @@ jobs:
           sudo apt-get install -y valgrind
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
       - name: Install cargo-soothfast
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo install cargo-soothfast --locked --version "$RUNNER"
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
 
       - name: Configure git identity for the gh-pages commit
         env:
@@ -150,13 +158,20 @@ jobs:
       # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit
         if: steps.bench_changes.outputs.changed == 'true'
-        run: cargo soothfast gate -p finance-query --features bench-gate --against-ref HEAD~1
+        run: |
+          cargo soothfast gate -p finance-query --features bench-gate \
+            --against-ref HEAD~1 --save-baseline base
 
+      # A passing gate already saved the baseline; measure only fills in
+      # when the gate was skipped, so docs regen never runs without one.
       - name: Measure baseline for claims
-        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+        run: |
+          if [ ! -f .soothfast/baselines/base.json ]; then
+            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+          fi
 
       - name: Append performance trend point
-        run: cargo soothfast trend append -p finance-query --features bench-gate
+        run: cargo soothfast trend append -p finance-query --from-baseline base
 
       # Direct pushes to master are blocked by the branch ruleset, so the bot
       # opens a PR and squash-merges it itself instead.
@@ -181,9 +196,16 @@ jobs:
         run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
 
       - name: Regenerate endpoint reference pages
+        # A bare `wait` after backgrounding both would mask their exit codes.
         run: |
-          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server
-          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server
+          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server &
+          server=$!
+          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server &
+          mcp=$!
+          status=0
+          wait "$server" || status=1
+          wait "$mcp" || status=1
+          [ "$status" -eq 0 ] || exit "$status"
           cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
           cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
 

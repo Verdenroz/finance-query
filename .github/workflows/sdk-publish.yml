@@ -29,7 +29,11 @@ jobs:
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: false
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: cargo binstall cargo-soothfast --locked --no-confirm
       - name: Publish
         run: cargo soothfast sdk publish -p finance-query-server --target soothfast-routes --only python

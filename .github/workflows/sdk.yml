@@ -80,8 +80,12 @@ jobs:
       - name: Install nightly (rustdoc JSON)
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
       - name: Install cargo-soothfast
-        run: cargo install cargo-soothfast --locked
+        run: cargo binstall cargo-soothfast --locked --no-confirm
       - name: Regenerate
         run: |
           cargo soothfast spec gen -p finance-query-server --target soothfast-routes
