@@ -2,356 +2,356 @@
 <text x="40" y="16" font-size="13">instructions (first point = 100%)</text>
 <line x1="40" y1="132.11413356799443" x2="680" y2="132.11413356799443" stroke="#999" stroke-dasharray="4 3"/>
 <text x="4" y="136.11413356799443" fill="#999">100%</text>
-<polyline points="40.0,132.1 168.0,132.3 296.0,132.3 424.0,132.3 552.0,132.3 680.0,132.3" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.3 253.3,132.3 360.0,132.3 466.7,132.3 573.3,132.3 680.0,132.3" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="20" fill="#4c78a8">bt_base_to_htf_index -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.0 296.0,131.7 424.0,131.9 552.0,132.0 680.0,131.8" fill="none" stroke="#f58518" stroke-width="1.5"/>
-<text x="684" y="34" fill="#f58518">bt_bayesian_search +0.1%</text>
-<polyline points="40.0,132.1 168.0,130.4 296.0,130.9 424.0,131.3 552.0,130.4 680.0,131.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
-<text x="684" y="48" fill="#54a24b">bt_grid_search +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.2 424.0,132.2 552.0,132.2 680.0,132.2" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.0 253.3,131.7 360.0,131.9 466.7,132.0 573.3,131.8 680.0,131.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<text x="684" y="34" fill="#f58518">bt_bayesian_search +0.0%</text>
+<polyline points="40.0,132.1 146.7,130.4 253.3,130.9 360.0,131.3 466.7,130.4 573.3,131.1 680.0,130.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<text x="684" y="48" fill="#54a24b">bt_grid_search +0.4%</text>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.2 360.0,132.2 466.7,132.2 573.3,132.2 680.0,132.2" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="62" fill="#e45756">bt_monte_carlo -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.3 296.0,132.3 424.0,132.3 552.0,132.3 680.0,132.3" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.3 253.3,132.3 360.0,132.3 466.7,132.3 573.3,132.3 680.0,132.3" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="76" fill="#72b7b2">bt_resample -0.0%</text>
-<polyline points="40.0,132.1 168.0,154.3 296.0,154.3 424.0,154.3 552.0,154.3 680.0,154.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,154.3 253.3,154.3 360.0,154.3 466.7,154.3 573.3,154.3 680.0,154.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="90" fill="#b279a2">bt_sma_crossover -4.5%</text>
-<polyline points="40.0,132.1 168.0,132.6 296.0,125.1 424.0,131.9 552.0,131.3 680.0,133.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
-<text x="684" y="104" fill="#4c78a8">bt_strategy_builder -0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.6 253.3,125.1 360.0,131.9 466.7,131.3 573.3,133.2 680.0,131.4" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<text x="684" y="104" fill="#4c78a8">bt_strategy_builder +0.1%</text>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="118" fill="#f58518">capability_name +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="132" fill="#54a24b">cond_bench_always_false +0.0%</text>
-<polyline points="40.0,132.1 168.0,147.1 296.0,147.1 424.0,147.1 552.0,147.1 680.0,147.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,147.1 253.3,147.1 360.0,147.1 466.7,147.1 573.3,147.1 680.0,147.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="146" fill="#e45756">cond_bench_always_true -3.0%</text>
-<polyline points="40.0,132.1 168.0,147.2 296.0,147.2 424.0,147.2 552.0,147.2 680.0,147.2" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,147.2 253.3,147.2 360.0,147.2 466.7,147.2 573.3,147.2 680.0,147.2" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="160" fill="#72b7b2">cond_bench_has_position -3.0%</text>
-<polyline points="40.0,132.1 168.0,110.3 296.0,110.3 424.0,110.3 552.0,110.3 680.0,110.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,110.3 253.3,110.3 360.0,110.3 466.7,110.3 573.3,110.3 680.0,110.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="174" fill="#b279a2">cond_bench_held_for_bars +4.4%</text>
-<polyline points="40.0,132.1 168.0,145.5 296.0,145.5 424.0,145.5 552.0,145.5 680.0,145.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.5 253.3,145.5 360.0,145.5 466.7,145.5 573.3,145.5 680.0,145.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="188" fill="#4c78a8">cond_bench_in_loss -2.7%</text>
-<polyline points="40.0,132.1 168.0,140.8 296.0,140.8 424.0,140.8 552.0,140.8 680.0,140.8" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,140.8 253.3,140.8 360.0,140.8 466.7,140.8 573.3,140.8 680.0,140.8" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="202" fill="#f58518">cond_bench_in_profit -1.7%</text>
-<polyline points="40.0,132.1 168.0,145.6 296.0,145.6 424.0,145.6 552.0,145.6 680.0,145.6" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.6 253.3,145.6 360.0,145.6 466.7,145.6 573.3,145.6 680.0,145.6" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="216" fill="#54a24b">cond_bench_is_long -2.7%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="230" fill="#e45756">cond_bench_is_short +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="244" fill="#72b7b2">cond_bench_no_position +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.7 296.0,131.7 424.0,131.7 552.0,131.7 680.0,131.7" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.7 253.3,131.7 360.0,131.7 466.7,131.7 573.3,131.7 680.0,131.7" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="258" fill="#b279a2">cond_bench_stop_loss +0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="272" fill="#4c78a8">cond_bench_take_profit +0.0%</text>
-<polyline points="40.0,132.1 168.0,134.3 296.0,134.3 424.0,134.3 552.0,134.3 680.0,134.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,134.3 253.3,134.3 360.0,134.3 466.7,134.3 573.3,134.3 680.0,134.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="286" fill="#f58518">cond_bench_trailing_stop -0.4%</text>
-<polyline points="40.0,132.1 168.0,131.8 296.0,131.8 424.0,131.8 552.0,131.8 680.0,131.8" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.8 253.3,131.8 360.0,131.8 466.7,131.8 573.3,131.8 680.0,131.8" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="300" fill="#54a24b">cond_bench_trailing_take_profit +0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="314" fill="#e45756">de_chart +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="328" fill="#72b7b2">de_crypto_coins +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.9 296.0,131.9 424.0,131.9 552.0,131.9 680.0,131.9" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.9 253.3,131.9 360.0,131.9 466.7,131.9 573.3,131.9 680.0,131.9" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="342" fill="#b279a2">de_currencies +0.0%</text>
-<polyline points="40.0,132.1 168.0,133.9 296.0,132.8 424.0,133.3 552.0,131.9 680.0,130.4" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
-<text x="684" y="356" fill="#4c78a8">de_edgar_facts +0.4%</text>
-<polyline points="40.0,132.1 168.0,129.3 296.0,129.3 424.0,129.3 552.0,129.3 680.0,129.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,133.9 253.3,132.8 360.0,133.3 466.7,131.9 573.3,130.4 680.0,133.7" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<text x="684" y="356" fill="#4c78a8">de_edgar_facts -0.3%</text>
+<polyline points="40.0,132.1 146.7,129.3 253.3,129.3 360.0,129.3 466.7,129.3 573.3,129.3 680.0,129.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="370" fill="#f58518">de_edgar_submissions +0.6%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="384" fill="#54a24b">de_fear_and_greed +0.0%</text>
-<polyline points="40.0,132.1 168.0,129.4 296.0,129.4 424.0,129.4 552.0,129.4 680.0,129.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,129.4 253.3,129.4 360.0,129.4 466.7,129.4 573.3,129.4 680.0,129.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="398" fill="#e45756">de_fear_and_greed_crypto_history +0.6%</text>
-<polyline points="40.0,132.1 168.0,129.1 296.0,129.6 424.0,129.5 552.0,128.6 680.0,128.0" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
-<text x="684" y="412" fill="#72b7b2">de_financials +0.8%</text>
-<polyline points="40.0,132.1 168.0,200.0 296.0,200.0 424.0,200.0 552.0,200.0 680.0,200.0" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,129.1 253.3,129.6 360.0,129.5 466.7,128.6 573.3,128.0 680.0,129.6" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<text x="684" y="412" fill="#72b7b2">de_financials +0.5%</text>
+<polyline points="40.0,132.1 146.7,200.0 253.3,200.0 360.0,200.0 466.7,200.0 573.3,200.0 680.0,200.0" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="426" fill="#b279a2">de_fred_series -13.6%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="440" fill="#4c78a8">de_hours +0.0%</text>
-<polyline points="40.0,132.1 168.0,127.5 296.0,127.5 424.0,127.5 552.0,127.5 680.0,127.5" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,127.5 253.3,127.5 360.0,127.5 466.7,127.5 573.3,127.5 680.0,127.5" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="454" fill="#f58518">de_market_summary +0.9%</text>
-<polyline points="40.0,132.1 168.0,130.9 296.0,130.9 424.0,130.9 552.0,130.9 680.0,130.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,130.9 253.3,130.9 360.0,130.9 466.7,130.9 573.3,130.9 680.0,130.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="468" fill="#54a24b">de_news +0.2%</text>
-<polyline points="40.0,132.1 168.0,128.7 296.0,128.7 424.0,128.7 552.0,128.7 680.0,128.7" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,128.7 253.3,128.7 360.0,128.7 466.7,128.7 573.3,128.7 680.0,128.7" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="482" fill="#e45756">de_options +0.7%</text>
-<polyline points="40.0,132.1 168.0,154.8 296.0,154.8 424.0,154.8 552.0,154.8 680.0,154.8" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,154.8 253.3,154.8 360.0,154.8 466.7,154.8 573.3,154.8 680.0,154.8" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="496" fill="#72b7b2">de_quote -4.6%</text>
-<polyline points="40.0,132.1 168.0,134.6 296.0,134.6 424.0,134.6 552.0,134.6 680.0,134.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,134.6 253.3,134.6 360.0,134.6 466.7,134.6 573.3,134.6 680.0,134.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="510" fill="#b279a2">de_screener -0.5%</text>
-<polyline points="40.0,132.1 168.0,133.6 296.0,133.6 424.0,133.6 552.0,133.6 680.0,133.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,133.6 253.3,133.6 360.0,133.6 466.7,133.6 573.3,133.6 680.0,133.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="524" fill="#4c78a8">de_search -0.3%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="538" fill="#f58518">de_treasury_yields +0.0%</text>
-<polyline points="40.0,132.1 168.0,40.0 296.0,40.0 424.0,40.0 552.0,40.0 680.0,40.0" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,40.0 253.3,40.0 360.0,40.0 466.7,40.0 573.3,40.0 680.0,40.0" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="552" fill="#54a24b">de_trending +18.5%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="566" fill="#e45756">dispatch_select +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="580" fill="#72b7b2">ind_accumulation_distribution +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.6 296.0,132.6 424.0,132.6 552.0,132.6 680.0,132.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.6 253.3,132.6 360.0,132.6 466.7,132.6 573.3,132.6 680.0,132.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="594" fill="#b279a2">ind_alma -0.1%</text>
-<polyline points="40.0,132.1 168.0,131.5 296.0,131.5 424.0,131.5 552.0,131.5 680.0,131.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.5 253.3,131.5 360.0,131.5 466.7,131.5 573.3,131.5 680.0,131.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="608" fill="#4c78a8">ind_aroon +0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="622" fill="#f58518">ind_atr +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="636" fill="#54a24b">ind_awesome_oscillator +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="650" fill="#e45756">ind_balance_of_power +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="664" fill="#72b7b2">ind_bull_bear_power +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="678" fill="#b279a2">ind_cci +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="692" fill="#4c78a8">ind_chaikin_oscillator +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.3 296.0,131.3 424.0,131.3 552.0,131.3 680.0,131.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.3 253.3,131.3 360.0,131.3 466.7,131.3 573.3,131.3 680.0,131.3" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="706" fill="#f58518">ind_choppiness_index +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="720" fill="#54a24b">ind_cmf +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="734" fill="#e45756">ind_cmo +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="748" fill="#72b7b2">ind_coppock_curve +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="762" fill="#b279a2">ind_dema +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.6 296.0,132.6 424.0,132.6 552.0,132.6 680.0,132.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.6 253.3,132.6 360.0,132.6 466.7,132.6 573.3,132.6 680.0,132.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="776" fill="#4c78a8">ind_donchian_channels -0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="790" fill="#f58518">ind_elder_ray +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="804" fill="#54a24b">ind_fibonacci_pivot_points +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.3 296.0,131.3 424.0,131.3 552.0,131.3 680.0,131.3" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.3 253.3,131.3 360.0,131.3 466.7,131.3 573.3,131.3 680.0,131.3" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="818" fill="#e45756">ind_fibonacci_retracement +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="832" fill="#72b7b2">ind_heikin_ashi +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="846" fill="#b279a2">ind_hma +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.2 296.0,131.2 424.0,131.2 552.0,131.2 680.0,131.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.2 253.3,131.2 360.0,131.2 466.7,131.2 573.3,131.2 680.0,131.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="860" fill="#4c78a8">ind_ichimoku +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="874" fill="#f58518">ind_keltner_channels +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="888" fill="#54a24b">ind_last_value +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="902" fill="#e45756">ind_macd +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="916" fill="#72b7b2">ind_mcginley_dynamic +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="930" fill="#b279a2">ind_mfi +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.2 296.0,132.2 424.0,132.2 552.0,132.2 680.0,132.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.2 253.3,132.2 360.0,132.2 466.7,132.2 573.3,132.2 680.0,132.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="944" fill="#4c78a8">ind_momentum -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="958" fill="#f58518">ind_momentum_single +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="972" fill="#54a24b">ind_moving_averages +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="986" fill="#e45756">ind_parabolic_sar +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1000" fill="#72b7b2">ind_patterns +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1014" fill="#b279a2">ind_pivot_points +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1028" fill="#4c78a8">ind_roc +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1042" fill="#f58518">ind_sma -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.3 296.0,132.3 424.0,132.3 552.0,132.3 680.0,132.3" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.3 253.3,132.3 360.0,132.3 466.7,132.3 573.3,132.3 680.0,132.3" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1056" fill="#54a24b">ind_stochastic -0.0%</text>
-<polyline points="40.0,132.1 168.0,131.1 296.0,131.1 424.0,131.1 552.0,131.1 680.0,131.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.1 253.3,131.1 360.0,131.1 466.7,131.1 573.3,131.1 680.0,131.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1070" fill="#e45756">ind_stochastic_rsi +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.2 296.0,132.2 424.0,132.2 552.0,132.2 680.0,132.2" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.2 253.3,132.2 360.0,132.2 466.7,132.2 573.3,132.2 680.0,132.2" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1084" fill="#72b7b2">ind_supertrend -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1098" fill="#b279a2">ind_tema +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.8 296.0,131.8 424.0,131.8 552.0,131.8 680.0,131.8" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.8 253.3,131.8 360.0,131.8 466.7,131.8 573.3,131.8 680.0,131.8" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1112" fill="#4c78a8">ind_trend +0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1126" fill="#f58518">ind_true_range +0.0%</text>
-<polyline points="40.0,132.1 168.0,131.9 296.0,131.9 424.0,131.9 552.0,131.9 680.0,131.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,131.9 253.3,131.9 360.0,131.9 466.7,131.9 573.3,131.9 680.0,131.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1140" fill="#54a24b">ind_volatility +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1154" fill="#e45756">ind_volume +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1168" fill="#72b7b2">ind_vwap +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1182" fill="#b279a2">ind_vwma +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.4 296.0,132.4 424.0,132.4 552.0,132.4 680.0,132.4" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.4 253.3,132.4 360.0,132.4 466.7,132.4 573.3,132.4 680.0,132.4" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1196" fill="#4c78a8">ind_williams_r -0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1210" fill="#f58518">ind_wma +0.0%</text>
-<polyline points="40.0,132.1 168.0,129.3 296.0,129.3 424.0,129.3 552.0,129.3 680.0,129.3" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,129.3 253.3,129.3 360.0,129.3 466.7,129.3 573.3,129.3 680.0,129.3" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1224" fill="#54a24b">ind_zigzag +0.6%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,130.4 552.0,130.4 680.0,130.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,130.4 466.7,130.4 573.3,130.4 680.0,130.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1238" fill="#e45756">ref_bench_accumulation_distribution +0.3%</text>
-<polyline points="40.0,132.1 168.0,148.8 296.0,148.8 424.0,148.8 552.0,148.8 680.0,148.8" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,148.8 253.3,148.8 360.0,148.8 466.7,148.8 573.3,148.8 680.0,148.8" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1252" fill="#72b7b2">ref_bench_adx -3.3%</text>
-<polyline points="40.0,132.1 168.0,146.8 296.0,146.8 424.0,146.8 552.0,146.8 680.0,146.8" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,146.8 253.3,146.8 360.0,146.8 466.7,146.8 573.3,146.8 680.0,146.8" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1266" fill="#b279a2">ref_bench_alma -3.0%</text>
-<polyline points="40.0,132.1 168.0,126.0 296.0,124.1 424.0,135.7 552.0,124.1 680.0,126.0" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
-<text x="684" y="1280" fill="#4c78a8">ref_bench_aroon +1.2%</text>
-<polyline points="40.0,132.1 168.0,161.9 296.0,161.9 424.0,161.9 552.0,161.9 680.0,161.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,126.0 253.3,124.1 360.0,135.7 466.7,124.1 573.3,126.0 680.0,118.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<text x="684" y="1280" fill="#4c78a8">ref_bench_aroon +2.7%</text>
+<polyline points="40.0,132.1 146.7,161.9 253.3,161.9 360.0,161.9 466.7,161.9 573.3,161.9 680.0,161.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1294" fill="#f58518">ref_bench_atr -6.0%</text>
-<polyline points="40.0,132.1 168.0,152.9 296.0,152.9 424.0,152.9 552.0,152.9 680.0,152.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,152.9 253.3,152.9 360.0,152.9 466.7,152.9 573.3,152.9 680.0,152.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1308" fill="#54a24b">ref_bench_awesome_oscillator -4.2%</text>
-<polyline points="40.0,132.1 168.0,137.1 296.0,137.1 424.0,137.1 552.0,137.1 680.0,137.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,137.1 253.3,137.1 360.0,137.1 466.7,137.1 573.3,137.1 680.0,137.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1322" fill="#e45756">ref_bench_balance_of_power -1.0%</text>
-<polyline points="40.0,132.1 168.0,159.7 296.0,159.7 424.0,159.7 552.0,159.7 680.0,159.7" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,159.7 253.3,159.7 360.0,159.7 466.7,159.7 573.3,159.7 680.0,159.7" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1336" fill="#72b7b2">ref_bench_bear_power -5.5%</text>
-<polyline points="40.0,132.1 168.0,116.4 296.0,116.4 424.0,116.4 552.0,116.4 680.0,116.4" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,116.4 253.3,116.4 360.0,116.4 466.7,116.4 573.3,116.4 680.0,116.4" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1350" fill="#b279a2">ref_bench_bollinger +3.2%</text>
-<polyline points="40.0,132.1 168.0,180.7 296.0,180.7 424.0,180.7 552.0,180.7 680.0,180.7" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,180.7 253.3,180.7 360.0,180.7 466.7,180.7 573.3,180.7 680.0,180.7" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1364" fill="#4c78a8">ref_bench_bull_power -9.7%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1378" fill="#f58518">ref_bench_candle_body +0.0%</text>
-<polyline points="40.0,132.1 168.0,144.7 296.0,144.7 424.0,144.7 552.0,144.7 680.0,144.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,144.7 253.3,144.7 360.0,144.7 466.7,144.7 573.3,144.7 680.0,144.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1392" fill="#54a24b">ref_bench_candle_range -2.5%</text>
-<polyline points="40.0,132.1 168.0,150.0 296.0,150.0 424.0,150.0 552.0,150.0 680.0,150.0" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,150.0 253.3,150.0 360.0,150.0 466.7,150.0 573.3,150.0 680.0,150.0" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1406" fill="#e45756">ref_bench_cci -3.6%</text>
-<polyline points="40.0,132.1 168.0,130.5 296.0,130.5 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,130.5 253.3,130.5 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1420" fill="#72b7b2">ref_bench_chaikin_oscillator +0.0%</text>
-<polyline points="40.0,132.1 168.0,151.7 296.0,151.7 424.0,151.7 552.0,151.7 680.0,151.7" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,151.7 253.3,151.7 360.0,151.7 466.7,151.7 573.3,151.7 680.0,151.7" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1434" fill="#b279a2">ref_bench_choppiness_index -3.9%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1448" fill="#4c78a8">ref_bench_close -2.8%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1462" fill="#f58518">ref_bench_cmf +0.0%</text>
-<polyline points="40.0,132.1 168.0,125.1 296.0,125.1 424.0,125.1 552.0,125.1 680.0,125.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,125.1 253.3,125.1 360.0,125.1 466.7,125.1 573.3,125.1 680.0,125.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1476" fill="#54a24b">ref_bench_cmo +1.4%</text>
-<polyline points="40.0,132.1 168.0,128.6 296.0,128.6 424.0,128.6 552.0,128.6 680.0,128.6" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,128.6 253.3,128.6 360.0,128.6 466.7,128.6 573.3,128.6 680.0,128.6" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1490" fill="#e45756">ref_bench_coppock_curve +0.7%</text>
-<polyline points="40.0,132.1 168.0,173.9 296.0,173.9 424.0,173.9 552.0,173.9 680.0,173.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,173.9 253.3,173.9 360.0,173.9 466.7,173.9 573.3,173.9 680.0,173.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1504" fill="#72b7b2">ref_bench_dema -8.4%</text>
-<polyline points="40.0,132.1 168.0,139.3 296.0,139.5 424.0,139.5 552.0,139.5 680.0,139.5" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,139.3 253.3,139.5 360.0,139.5 466.7,139.5 573.3,139.5 680.0,139.5" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1518" fill="#b279a2">ref_bench_donchian -1.5%</text>
-<polyline points="40.0,132.1 168.0,160.1 296.0,160.1 424.0,160.1 552.0,160.1 680.0,160.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,160.1 253.3,160.1 360.0,160.1 466.7,160.1 573.3,160.1 680.0,160.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1532" fill="#4c78a8">ref_bench_elder_bear_power -5.6%</text>
-<polyline points="40.0,132.1 168.0,138.4 296.0,138.4 424.0,138.4 552.0,138.4 680.0,138.4" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,138.4 253.3,138.4 360.0,138.4 466.7,138.4 573.3,138.4 680.0,138.4" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1546" fill="#f58518">ref_bench_elder_bull_power -1.3%</text>
-<polyline points="40.0,132.1 168.0,132.7 296.0,132.7 424.0,132.7 552.0,132.7 680.0,132.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.7 253.3,132.7 360.0,132.7 466.7,132.7 573.3,132.7 680.0,132.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1560" fill="#54a24b">ref_bench_ema -0.1%</text>
-<polyline points="40.0,132.1 168.0,158.5 296.0,158.5 424.0,158.5 552.0,158.5 680.0,158.5" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,158.5 253.3,158.5 360.0,158.5 466.7,158.5 573.3,158.5 680.0,158.5" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1574" fill="#e45756">ref_bench_gap_pct -5.3%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1588" fill="#72b7b2">ref_bench_high -2.8%</text>
-<polyline points="40.0,132.1 168.0,158.4 296.0,158.4 424.0,158.4 552.0,158.4 680.0,158.4" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,158.4 253.3,158.4 360.0,158.4 466.7,158.4 573.3,158.4 680.0,158.4" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1602" fill="#b279a2">ref_bench_hma -5.3%</text>
-<polyline points="40.0,132.1 168.0,126.6 296.0,126.6 424.0,126.6 552.0,126.6 680.0,126.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,126.6 253.3,126.6 360.0,126.6 466.7,126.6 573.3,126.6 680.0,126.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1616" fill="#4c78a8">ref_bench_htf +1.1%</text>
-<polyline points="40.0,132.1 168.0,139.6 296.0,139.6 424.0,139.6 552.0,139.6 680.0,139.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,139.6 253.3,139.6 360.0,139.6 466.7,139.6 573.3,139.6 680.0,139.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1630" fill="#f58518">ref_bench_htf_region -1.5%</text>
-<polyline points="40.0,132.1 168.0,129.2 296.0,131.8 424.0,135.7 552.0,133.6 680.0,134.4" fill="none" stroke="#54a24b" stroke-width="1.5"/>
-<text x="684" y="1644" fill="#54a24b">ref_bench_ichimoku -0.5%</text>
-<polyline points="40.0,132.1 168.0,130.9 296.0,128.8 424.0,130.8 552.0,134.2 680.0,135.7" fill="none" stroke="#e45756" stroke-width="1.5"/>
-<text x="684" y="1658" fill="#e45756">ref_bench_ichimoku_custom -0.7%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,129.2 253.3,131.8 360.0,135.7 466.7,133.6 573.3,134.4 680.0,140.3" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<text x="684" y="1644" fill="#54a24b">ref_bench_ichimoku -1.6%</text>
+<polyline points="40.0,132.1 146.7,130.9 253.3,128.8 360.0,130.8 466.7,134.2 573.3,135.7 680.0,141.3" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<text x="684" y="1658" fill="#e45756">ref_bench_ichimoku_custom -1.9%</text>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1672" fill="#72b7b2">ref_bench_is_bearish +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1686" fill="#b279a2">ref_bench_is_bullish +0.0%</text>
-<polyline points="40.0,132.1 168.0,144.8 296.0,144.8 424.0,144.6 552.0,144.8 680.0,144.8" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,144.8 253.3,144.8 360.0,144.6 466.7,144.8 573.3,144.8 680.0,144.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1700" fill="#4c78a8">ref_bench_keltner -2.5%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1714" fill="#f58518">ref_bench_low -2.8%</text>
-<polyline points="40.0,132.1 168.0,148.4 296.0,155.7 424.0,150.7 552.0,153.1 680.0,152.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
-<text x="684" y="1728" fill="#54a24b">ref_bench_macd -4.1%</text>
-<polyline points="40.0,132.1 168.0,123.9 296.0,123.9 424.0,123.9 552.0,123.9 680.0,123.9" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,148.4 253.3,155.7 360.0,150.7 466.7,153.1 573.3,152.7 680.0,148.5" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<text x="684" y="1728" fill="#54a24b">ref_bench_macd -3.3%</text>
+<polyline points="40.0,132.1 146.7,123.9 253.3,123.9 360.0,123.9 466.7,123.9 573.3,123.9 680.0,123.9" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1742" fill="#e45756">ref_bench_mcginley +1.6%</text>
-<polyline points="40.0,132.1 168.0,144.7 296.0,144.7 424.0,144.7 552.0,144.7 680.0,144.7" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,144.7 253.3,144.7 360.0,144.7 466.7,144.7 573.3,144.7 680.0,144.7" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1756" fill="#72b7b2">ref_bench_median_price -2.5%</text>
-<polyline points="40.0,132.1 168.0,148.6 296.0,148.6 424.0,148.6 552.0,148.6 680.0,148.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,148.6 253.3,148.6 360.0,148.6 466.7,148.6 573.3,148.6 680.0,148.6" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1770" fill="#b279a2">ref_bench_mfi -3.3%</text>
-<polyline points="40.0,132.1 168.0,130.9 296.0,130.9 424.0,130.9 552.0,130.9 680.0,130.9" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,130.9 253.3,130.9 360.0,130.9 466.7,130.9 573.3,130.9 680.0,130.9" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1784" fill="#4c78a8">ref_bench_momentum +0.2%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,131.4 552.0,131.4 680.0,131.4" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,131.4 466.7,131.4 573.3,131.4 680.0,131.4" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1798" fill="#f58518">ref_bench_obv +0.2%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1812" fill="#54a24b">ref_bench_open -2.8%</text>
-<polyline points="40.0,132.1 168.0,134.0 296.0,134.0 424.0,134.0 552.0,134.0 680.0,134.0" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,134.0 253.3,134.0 360.0,134.0 466.7,134.0 573.3,134.0 680.0,134.0" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1826" fill="#e45756">ref_bench_parabolic_sar -0.4%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="1840" fill="#72b7b2">ref_bench_price -2.8%</text>
-<polyline points="40.0,132.1 168.0,145.3 296.0,145.3 424.0,145.3 552.0,145.3 680.0,145.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.3 253.3,145.3 360.0,145.3 466.7,145.3 573.3,145.3 680.0,145.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="1854" fill="#b279a2">ref_bench_price_change_pct -2.6%</text>
-<polyline points="40.0,132.1 168.0,117.1 296.0,117.1 424.0,117.1 552.0,117.1 680.0,117.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,117.1 253.3,117.1 360.0,117.1 466.7,117.1 573.3,117.1 680.0,117.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="1868" fill="#4c78a8">ref_bench_relative_volume +3.0%</text>
-<polyline points="40.0,132.1 168.0,125.0 296.0,125.0 424.0,125.0 552.0,125.0 680.0,125.0" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,125.0 253.3,125.0 360.0,125.0 466.7,125.0 573.3,125.0 680.0,125.0" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1882" fill="#f58518">ref_bench_roc +1.4%</text>
-<polyline points="40.0,132.1 168.0,148.9 296.0,148.9 424.0,148.9 552.0,148.9 680.0,148.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,148.9 253.3,148.9 360.0,148.9 466.7,148.9 573.3,148.9 680.0,148.9" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1896" fill="#54a24b">ref_bench_rsi -3.4%</text>
-<polyline points="40.0,132.1 168.0,132.7 296.0,132.7 424.0,132.7 552.0,132.7 680.0,132.7" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.7 253.3,132.7 360.0,132.7 466.7,132.7 573.3,132.7 680.0,132.7" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1910" fill="#e45756">ref_bench_sma -0.1%</text>
-<polyline points="40.0,132.1 168.0,141.8 296.0,141.8 424.0,141.8 552.0,144.1 680.0,140.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
-<text x="684" y="1924" fill="#72b7b2">ref_bench_stochastic -1.8%</text>
-<polyline points="40.0,132.1 168.0,141.0 296.0,136.3 424.0,141.2 552.0,139.8 680.0,145.7" fill="none" stroke="#b279a2" stroke-width="1.5"/>
-<text x="684" y="1938" fill="#b279a2">ref_bench_stochastic_rsi -2.7%</text>
-<polyline points="40.0,132.1 168.0,129.8 296.0,131.2 424.0,131.3 552.0,131.2 680.0,131.2" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
-<text x="684" y="1952" fill="#4c78a8">ref_bench_supertrend +0.2%</text>
-<polyline points="40.0,132.1 168.0,131.6 296.0,131.6 424.0,131.6 552.0,131.6 680.0,131.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,141.8 253.3,141.8 360.0,141.8 466.7,144.1 573.3,140.9 680.0,141.8" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<text x="684" y="1924" fill="#72b7b2">ref_bench_stochastic -1.9%</text>
+<polyline points="40.0,132.1 146.7,141.0 253.3,136.3 360.0,141.2 466.7,139.8 573.3,145.7 680.0,139.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<text x="684" y="1938" fill="#b279a2">ref_bench_stochastic_rsi -1.4%</text>
+<polyline points="40.0,132.1 146.7,129.8 253.3,131.2 360.0,131.3 466.7,131.2 573.3,131.2 680.0,129.5" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<text x="684" y="1952" fill="#4c78a8">ref_bench_supertrend +0.5%</text>
+<polyline points="40.0,132.1 146.7,131.6 253.3,131.6 360.0,131.6 466.7,131.6 573.3,131.6 680.0,131.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="1966" fill="#f58518">ref_bench_tema +0.1%</text>
-<polyline points="40.0,132.1 168.0,146.4 296.0,146.4 424.0,146.5 552.0,146.5 680.0,146.5" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,146.4 253.3,146.4 360.0,146.5 466.7,146.5 573.3,146.5 680.0,146.5" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="1980" fill="#54a24b">ref_bench_true_range -2.9%</text>
-<polyline points="40.0,132.1 168.0,150.4 296.0,150.4 424.0,150.4 552.0,150.4 680.0,150.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,150.4 253.3,150.4 360.0,150.4 466.7,150.4 573.3,150.4 680.0,150.4" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="1994" fill="#e45756">ref_bench_typical_price -3.7%</text>
-<polyline points="40.0,132.1 168.0,145.9 296.0,145.9 424.0,145.9 552.0,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,145.9 253.3,145.9 360.0,145.9 466.7,145.9 573.3,145.9 680.0,145.9" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="2008" fill="#72b7b2">ref_bench_volume -2.8%</text>
-<polyline points="40.0,132.1 168.0,123.2 296.0,123.2 424.0,123.3 552.0,123.3 680.0,123.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,123.2 253.3,123.2 360.0,123.3 466.7,123.3 573.3,123.3 680.0,123.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2022" fill="#b279a2">ref_bench_vwap +1.8%</text>
-<polyline points="40.0,132.1 168.0,112.6 296.0,112.6 424.0,112.6 552.0,112.6 680.0,112.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,112.6 253.3,112.6 360.0,112.6 466.7,112.6 573.3,112.6 680.0,112.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="2036" fill="#4c78a8">ref_bench_vwma +3.9%</text>
-<polyline points="40.0,132.1 168.0,133.6 296.0,133.6 424.0,133.6 552.0,133.6 680.0,133.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,133.6 253.3,133.6 360.0,133.6 466.7,133.6 573.3,133.6 680.0,133.6" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="2050" fill="#f58518">ref_bench_williams_r -0.3%</text>
-<polyline points="40.0,132.1 168.0,132.5 296.0,132.5 424.0,132.5 552.0,132.5 680.0,132.5" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.5 253.3,132.5 360.0,132.5 466.7,132.5 573.3,132.5 680.0,132.5" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="2064" fill="#54a24b">ref_bench_wma -0.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="2078" fill="#e45756">risk_beta +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="2092" fill="#72b7b2">risk_calmar +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2106" fill="#b279a2">risk_historical_cvar +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="2120" fill="#4c78a8">risk_historical_var +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="2134" fill="#f58518">risk_information_ratio +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="2148" fill="#54a24b">risk_kelly_criterion +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="2162" fill="#e45756">risk_max_drawdown +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="2176" fill="#72b7b2">risk_omega_ratio +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2190" fill="#b279a2">risk_parametric_cvar +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="2204" fill="#4c78a8">risk_parametric_var +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="2218" fill="#f58518">risk_sharpe +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="2232" fill="#54a24b">risk_sortino +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="2246" fill="#e45756">risk_tracking_error +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="2260" fill="#72b7b2">risk_ulcer_index +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.9 296.0,132.9 424.0,132.9 552.0,132.9 680.0,132.9" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.9 253.3,132.9 360.0,132.9 466.7,132.9 573.3,132.9 680.0,132.9" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2274" fill="#b279a2">risk_win_loss_stats -0.2%</text>
-<polyline points="40.0,132.1 168.0,128.0 296.0,128.0 424.0,128.0 552.0,128.0 680.0,128.0" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,128.0 253.3,128.0 360.0,128.0 466.7,128.0 573.3,128.0 680.0,128.0" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="2288" fill="#4c78a8">rss_parse +0.8%</text>
-<polyline points="40.0,132.1 168.0,137.9 296.0,137.0 424.0,154.1 552.0,142.4 680.0,140.7" fill="none" stroke="#f58518" stroke-width="1.5"/>
-<text x="684" y="2302" fill="#f58518">score_news -1.7%</text>
-<polyline points="40.0,132.1 168.0,126.4 296.0,109.6 424.0,127.8 552.0,113.6 680.0,137.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
-<text x="684" y="2316" fill="#54a24b">score_transcript -1.1%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,137.9 253.3,137.0 360.0,154.1 466.7,142.4 573.3,140.7 680.0,136.9" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<text x="684" y="2302" fill="#f58518">score_news -1.0%</text>
+<polyline points="40.0,132.1 146.7,126.4 253.3,109.6 360.0,127.8 466.7,113.6 573.3,137.7 680.0,128.7" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<text x="684" y="2316" fill="#54a24b">score_transcript +0.7%</text>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#e45756" stroke-width="1.5"/>
 <text x="684" y="2330" fill="#e45756">ser_currencies +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
 <text x="684" y="2344" fill="#72b7b2">stream_deserialize +0.0%</text>
-<polyline points="40.0,132.1 168.0,128.3 296.0,128.3 424.0,128.3 552.0,128.3 680.0,128.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,128.3 253.3,128.3 360.0,128.3 466.7,128.3 573.3,128.3 680.0,128.3" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2358" fill="#b279a2">stream_serialize +0.8%</text>
-<polyline points="40.0,132.1 168.0,124.6 296.0,124.1 424.0,124.1 552.0,124.6 680.0,124.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,124.6 253.3,124.1 360.0,124.1 466.7,124.6 573.3,124.6 680.0,124.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
 <text x="684" y="2372" fill="#4c78a8">ticker_chart_then_cached +1.5%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.5 424.0,131.8 552.0,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.5 360.0,131.8 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#f58518" stroke-width="1.5"/>
 <text x="684" y="2386" fill="#f58518">ticker_quote_polls +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.4 424.0,132.5 552.0,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.4 360.0,132.5 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#54a24b" stroke-width="1.5"/>
 <text x="684" y="2400" fill="#54a24b">ticker_quote_then_cached +0.0%</text>
-<polyline points="40.0,132.1 168.0,132.4 296.0,132.9 424.0,133.3 552.0,131.6 680.0,132.5" fill="none" stroke="#e45756" stroke-width="1.5"/>
-<text x="684" y="2414" fill="#e45756">tickers_batch_quote_then_cached -0.1%</text>
-<polyline points="40.0,132.1 168.0,125.2 296.0,127.0 424.0,128.9 552.0,127.2 680.0,129.0" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
-<text x="684" y="2428" fill="#72b7b2">translate_dictionary +0.6%</text>
-<polyline points="40.0,132.1 168.0,132.1 296.0,132.1 424.0,132.1 552.0,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
+<polyline points="40.0,132.1 146.7,132.4 253.3,132.9 360.0,133.3 466.7,131.6 573.3,132.5 680.0,131.8" fill="none" stroke="#e45756" stroke-width="1.5"/>
+<text x="684" y="2414" fill="#e45756">tickers_batch_quote_then_cached +0.1%</text>
+<polyline points="40.0,132.1 146.7,125.2 253.3,127.0 360.0,128.9 466.7,127.2 573.3,129.0 680.0,127.7" fill="none" stroke="#72b7b2" stroke-width="1.5"/>
+<text x="684" y="2428" fill="#72b7b2">translate_dictionary +0.9%</text>
+<polyline points="40.0,132.1 146.7,132.1 253.3,132.1 360.0,132.1 466.7,132.1 573.3,132.1 680.0,132.1" fill="none" stroke="#b279a2" stroke-width="1.5"/>
 <text x="684" y="2442" fill="#b279a2">translation_set_backend +0.0%</text>
-<polyline points="40.0,132.1 168.0,138.5 296.0,143.2 424.0,145.9 552.0,144.2 680.0,143.1" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
-<text x="684" y="2456" fill="#4c78a8">translation_translate -2.2%</text>
-<polyline points="40.0,132.1 168.0,127.4 296.0,131.4 424.0,128.5 552.0,138.0 680.0,136.4" fill="none" stroke="#f58518" stroke-width="1.5"/>
-<text x="684" y="2470" fill="#f58518">translation_translate_with -0.9%</text>
+<polyline points="40.0,132.1 146.7,138.5 253.3,143.2 360.0,145.9 466.7,144.2 573.3,143.1 680.0,146.6" fill="none" stroke="#4c78a8" stroke-width="1.5"/>
+<text x="684" y="2456" fill="#4c78a8">translation_translate -2.9%</text>
+<polyline points="40.0,132.1 146.7,127.4 253.3,131.4 360.0,128.5 466.7,138.0 573.3,136.4 680.0,135.5" fill="none" stroke="#f58518" stroke-width="1.5"/>
+<text x="684" y="2470" fill="#f58518">translation_translate_with -0.7%</text>
 </svg>
