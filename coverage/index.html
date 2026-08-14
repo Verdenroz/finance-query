@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coverage · finance-query</title>
+<link rel="icon" href="../assets/logo.png">
+<link rel="stylesheet" href="../_soothfast/tokens.css">
+<link rel="stylesheet" href="../_soothfast/site.css">
+<link rel="stylesheet" href="../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../">
+      <span class="brand-mark"><img src="../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
+    </a>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
+    </div>
+    
+    
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
+    
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</header>
+
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
+
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
+    
+      <li><a href="../">Overview</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
+    
+      <li><a href="../library/getting-started/">Getting Started</a></li>
+    
+      <li><a href="../library/ticker/">Ticker API Reference</a></li>
+    
+      <li><a href="../library/tickers/">Tickers API Reference</a></li>
+    
+      <li><a href="../library/streaming/">Real-time Streaming</a></li>
+    
+      <li><a href="../library/finance/">Finance Module</a></li>
+    
+      <li><a href="../library/screeners/">Screeners</a></li>
+    
+      <li><a href="../library/risk/">Risk Analytics</a></li>
+    
+      <li><a href="../library/translation/">Translations</a></li>
+    
+      <li><a href="../library/feeds/">RSS / Atom Feeds</a></li>
+    
+      <li><a href="../library/dataframe/">DataFrame Support</a></li>
+    
+      <li><a href="../library/configuration/">Configuration</a></li>
+    
+      <li><a href="../library/error-handling/">Error Handling</a></li>
+    
+      <li><a href="../library/indicators/">Indicators</a></li>
+    
+      <li><a href="../library/backtesting/">Backtesting</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
+    
+      <li><a href="../library/providers/">Multi-Provider Architecture</a></li>
+    
+      <li><a href="../library/providers/polygon/">Polygon.io</a></li>
+    
+      <li><a href="../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
+    
+      <li><a href="../library/providers/alphavantage/">Alpha Vantage</a></li>
+    
+      <li><a href="../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
+    
+      <li><a href="../library/providers/edgar/">EDGAR API Reference</a></li>
+    
+      <li><a href="../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
+    
+      <li><a href="../library/providers/worldbank/">World Bank Open Data</a></li>
+    
+      <li><a href="../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
+    
+      <li><a href="../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
+    
+      <li><a href="../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
+    
+      <li><a href="../library/providers/binance/">Binance (public market data)</a></li>
+    
+      <li><a href="../library/providers/kraken/">Kraken (public market data)</a></li>
+    
+      <li><a href="../library/providers/finra/">FINRA (short sale volume)</a></li>
+    
+      <li><a href="../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
+    
+      <li><a href="../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../library/forex/">Forex</a></li>
+    
+      <li><a href="../library/futures/">Futures</a></li>
+    
+      <li><a href="../library/indices/">Indices</a></li>
+    
+      <li><a href="../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../server/api/openapi/">REST API</a></li>
+    
+      <li><a href="../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a href="../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a href="../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../perf/summary/">Performance summary</a></li>
+    
+      <li><a class="active" aria-current="page" href="../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
+</nav>
+
+<main class="doc">
+<h1 id="coverage">Coverage<a class="anchor" href="#coverage" aria-label="Link to this section">#</a></h1>
+<blockquote>
+<p>Generated by <code>cargo soothfast coverage docs</code>.</p>
+</blockquote>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">text</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>documented   finance_query (module)
+documented   finance_query::AnalystEstimate (struct)
+documented   finance_query::AnalystRecommendation (struct)
+documented   finance_query::AroonData (struct)
+documented   finance_query::AssetClass (enum)
+documented   finance_query::BatchCapitalGainsResponse (struct)
+documented   finance_query::BatchChartsResponse (struct)
+documented   finance_query::BatchDividendsResponse (struct)
+documented   finance_query::BatchFinancialsResponse (struct)
+documented   finance_query::BatchIndicatorsResponse (struct)
+documented   finance_query::BatchNewsResponse (struct)
+documented   finance_query::BatchOptionsResponse (struct)
+documented   finance_query::BatchQuotesResponse (struct)
+documented   finance_query::BatchRecommendationsResponse (struct)
+documented   finance_query::BatchSparksResponse (struct)
+documented   finance_query::BatchSplitsResponse (struct)
+documented   finance_query::BollingerBands (struct)
+documented   finance_query::BollingerBandsData (struct)
+documented   finance_query::BullBearPowerData (struct)
+documented   finance_query::CalendarDetail (enum)
+documented   finance_query::CalendarEvent (struct)
+documented   finance_query::CalendarKind (enum)
+documented   finance_query::Candle (struct)
+documented   finance_query::CandlePattern (enum)
+documented   finance_query::Capability (struct)
+documented   finance_query::CapitalGain (struct)
+documented   finance_query::Chart (struct)
+documented   finance_query::ChartMeta (struct)
+documented   finance_query::CikEntry (struct)
+documented   finance_query::ClientHandle (struct)
+documented   finance_query::CommitmentsOfTraders (struct)
+documented   finance_query::Commodity (struct)
+documented   finance_query::CommodityQuote (struct)
+documented   finance_query::CompanyFacts (struct)
+documented   finance_query::ConditionValue (enum)
+documented   finance_query::Contracts (struct)
+documented   finance_query::CotObservation (struct)
+documented   finance_query::CryptoCoin (struct)
+documented   finance_query::CryptoQuote (struct)
+documented   finance_query::Currency (struct)
+documented   finance_query::Discovery (struct)
+documented   finance_query::Dividend (struct)
+documented   finance_query::DividendAnalytics (struct)
+documented   finance_query::DonchianChannelsData (struct)
+documented   finance_query::EarningsCalendarEntry (struct)
+documented   finance_query::EconomicCatalog (struct)
+documented   finance_query::EconomicCategory (struct)
+documented   finance_query::EconomicIndicator (struct)
+documented   finance_query::EconomicRelease (struct)
+documented   finance_query::EconomicSeries (struct)
+documented   finance_query::EconomicSeriesMatch (struct)
+documented   finance_query::EdgarFiling (struct)
+documented   finance_query::EdgarFilingFile (struct)
+documented   finance_query::EdgarFilingIndex (struct)
+documented   finance_query::EdgarFilingIndexItem (struct)
+documented   finance_query::EdgarFilingRecent (struct)
+documented   finance_query::EdgarFilings (struct)
+documented   finance_query::EdgarSearchHit (struct)
+documented   finance_query::EdgarSearchHitsContainer (struct)
+documented   finance_query::EdgarSearchResults (struct)
+documented   finance_query::EdgarSearchSource (struct)
+documented   finance_query::EdgarSearchTotal (struct)
+documented   finance_query::EdgarSubmissions (struct)
+documented   finance_query::ElderRayData (struct)
+documented   finance_query::EmployeeCount (struct)
+documented   finance_query::EquityField (enum)
+documented   finance_query::EquityScreenerQuery (type_alias)
+documented   finance_query::ErrorCategory (enum)
+documented   finance_query::EtfHolding (struct)
+documented   finance_query::EtfProfile (struct)
+documented   finance_query::EventKind (enum)
+documented   finance_query::Exchange (struct)
+documented   finance_query::ExchangeCode (enum)
+documented   finance_query::ExchangeInfo (struct)
+documented   finance_query::ExecutiveCompensation (struct)
+documented   finance_query::FactConcept (struct)
+documented   finance_query::FactUnit (struct)
+documented   finance_query::FactsByTaxonomy (struct)
+documented   finance_query::FearAndGreed (struct)
+documented   finance_query::FearGreedLabel (enum)
+documented   finance_query::Fetch (enum)
+documented   finance_query::FilingSearchFilters (struct)
+documented   finance_query::FilingSearchHit (struct)
+documented   finance_query::FilingSection (struct)
+documented   finance_query::FilingSectionForm (enum)
+documented   finance_query::Filings (struct)
+documented   finance_query::FinanceError (enum)
+documented   finance_query::FinancialRatiosTtm (struct)
+documented   finance_query::FinancialStatement (struct)
+documented   finance_query::ForexPair (struct)
+documented   finance_query::ForexQuote (struct)
+documented   finance_query::FormattedValue (struct)
+documented   finance_query::Frequency (enum)
+documented   finance_query::FundField (enum)
+documented   finance_query::FundScreenerQuery (type_alias)
+documented   finance_query::FuturesContract (struct)
+documented   finance_query::FuturesQuote (struct)
+documented   finance_query::IchimokuData (struct)
+documented   finance_query::Index (struct)
+documented   finance_query::IndexConstituent (struct)
+documented   finance_query::IndexConstituentChange (struct)
+documented   finance_query::IndexQuote (struct)
+documented   finance_query::Indicator (enum)
+documented   finance_query::IndicatorError (enum)
+documented   finance_query::IndicatorResult (enum)
+documented   finance_query::IndicatorsSummary (struct)
+documented   finance_query::IndicesRegion (enum)
+documented   finance_query::Industry (enum)
+documented   finance_query::IndustryData (struct)
+documented   finance_query::IndustryPe (struct)
+documented   finance_query::InsiderTrade (struct)
+documented   finance_query::InsiderTransaction (struct)
+documented   finance_query::InstitutionalHolding (struct)
+documented   finance_query::Interval (enum)
+documented   finance_query::IpoCalendarEntry (struct)
+documented   finance_query::KeltnerChannelsData (struct)
+documented   finance_query::KeyMetricsTtm (struct)
+documented   finance_query::LogicalOperator (enum)
+documented   finance_query::LookupOptions (struct)
+documented   finance_query::LookupQuote (struct)
+documented   finance_query::LookupResults (struct)
+documented   finance_query::LookupType (enum)
+documented   finance_query::MacdData (struct)
+documented   finance_query::MacdResult (struct)
+documented   finance_query::MajorIndex (enum)
+documented   finance_query::Market (struct)
+documented   finance_query::MarketCalendar (struct)
+documented   finance_query::MarketCalendarEntry (struct)
+documented   finance_query::MarketHours (struct)
+documented   finance_query::MarketSnapshot (struct)
+documented   finance_query::MarketSummaryQuote (struct)
+documented   finance_query::MarketTime (struct)
+documented   finance_query::MoverDirection (enum)
+documented   finance_query::MoverQuote (struct)
+documented   finance_query::News (struct)
+documented   finance_query::Operation (enum)
+documented   finance_query::Operator (enum)
+documented   finance_query::OptionChain (struct)
+documented   finance_query::OptionContract (struct)
+documented   finance_query::Options (struct)
+documented   finance_query::OptionsQuote (struct)
+documented   finance_query::PatternSentiment (enum)
+documented   finance_query::Period (enum)
+documented   finance_query::PressRelease (struct)
+documented   finance_query::PriceTargetConsensus (struct)
+documented   finance_query::PriceTargetSummary (struct)
+documented   finance_query::Provider (enum)
+documented   finance_query::ProviderFiling (struct)
+documented   finance_query::ProviderFilings (struct)
+documented   finance_query::ProviderHealth (struct)
+documented   finance_query::Providers (struct)
+documented   finance_query::ProvidersBuilder (struct)
+documented   finance_query::QueryCondition (struct)
+documented   finance_query::QueryGroup (struct)
+documented   finance_query::QueryOperand (enum)
+documented   finance_query::Quote (struct)
+documented   finance_query::QuoteType (enum)
+documented   finance_query::RatingConsensus (struct)
+documented   finance_query::Recommendation (struct)
+documented   finance_query::Region (enum)
+documented   finance_query::ResearchReport (struct)
+documented   finance_query::ResearchReports (struct)
+documented   finance_query::Result (type_alias)
+documented   finance_query::RetryPolicy (struct)
+documented   finance_query::RiskFactor (struct)
+documented   finance_query::Screener (enum)
+documented   finance_query::ScreenerField (trait)
+documented   finance_query::ScreenerFieldExt (trait)
+documented   finance_query::ScreenerFilters (struct)
+documented   finance_query::ScreenerFundCategory (enum)
+documented   finance_query::ScreenerMatch (struct)
+documented   finance_query::ScreenerPeerGroup (enum)
+documented   finance_query::ScreenerQuery (struct)
+documented   finance_query::ScreenerQuote (struct)
+documented   finance_query::ScreenerResults (struct)
+documented   finance_query::SearchNews (struct)
+documented   finance_query::SearchNewsList (struct)
+documented   finance_query::SearchOptions (struct)
+documented   finance_query::SearchQuote (struct)
+documented   finance_query::SearchQuotes (struct)
+documented   finance_query::SearchResults (struct)
+documented   finance_query::Sector (enum)
+documented   finance_query::SectorData (struct)
+documented   finance_query::SectorPe (struct)
+documented   finance_query::SectorPerformance (struct)
+documented   finance_query::SectorPerformanceHistory (struct)
+documented   finance_query::Sentiment (struct)
+documented   finance_query::SentimentLabel (enum)
+documented   finance_query::ShareFloat (struct)
+documented   finance_query::ShortInterest (struct)
+documented   finance_query::ShortVolume (struct)
+documented   finance_query::SimilarSymbol (struct)
+documented   finance_query::Snapshot (struct)
+documented   finance_query::SortType (enum)
+documented   finance_query::Spark (struct)
+documented   finance_query::SparkData (struct)
+documented   finance_query::Split (struct)
+documented   finance_query::StatementType (enum)
+documented   finance_query::StochasticData (struct)
+documented   finance_query::SuperTrendData (struct)
+documented   finance_query::SymbolDetails (struct)
+documented   finance_query::SymbolMatch (struct)
+documented   finance_query::SymbolSentiment (struct)
+documented   finance_query::Ticker (struct)
+documented   finance_query::TickerBuilder (struct)
+documented   finance_query::Tickers (struct)
+documented   finance_query::TickersBuilder (struct)
+documented   finance_query::TimeRange (enum)
+documented   finance_query::Transcript (struct)
+documented   finance_query::TranscriptWithMeta (struct)
+documented   finance_query::TrendingQuote (struct)
+documented   finance_query::ValueFormat (enum)
+documented   finance_query::adapters::alphavantage::models::EarningsCalendarEntryDTO (struct)
+documented   finance_query::adapters::alphavantage::models::IpoCalendarEntryDTO (struct)
+documented   finance_query::adapters::fmp::corporate::insider_trading::InsiderTradeDTO (struct)
+documented   finance_query::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO (struct)
+documented   finance_query::adapters::fmp::fundamentals::estimates::AnalystRecommendationDTO (struct)
+documented   finance_query::adapters::yahoo::client::ClientConfig (struct)
+documented   finance_query::adapters::yahoo::client::YahooClient (struct)
+documented   finance_query::analyst_estimates (function)
+documented   finance_query::analyst_recommendations (function)
+documented   finance_query::analyze_sentiment (function)
+documented   finance_query::atr (function)
+documented   finance_query::backtesting (module)
+documented   finance_query::backtesting::BacktestComparison (struct)
+documented   finance_query::backtesting::BacktestConfig (struct)
+documented   finance_query::backtesting::BacktestConfigBuilder (struct)
+documented   finance_query::backtesting::BacktestEngine (struct)
+documented   finance_query::backtesting::BacktestError (enum)
+documented   finance_query::backtesting::BacktestResult (struct)
+documented   finance_query::backtesting::BayesianSearch (struct)
+documented   finance_query::backtesting::BenchmarkMetrics (struct)
+documented   finance_query::backtesting::BollingerMeanReversion (struct)
+documented   finance_query::backtesting::ComparisonReport (struct)
+documented   finance_query::backtesting::ComparisonRow (struct)
+documented   finance_query::backtesting::DonchianBreakout (struct)
+documented   finance_query::backtesting::EnsembleMode (enum)
+documented   finance_query::backtesting::EnsembleStrategy (struct)
+documented   finance_query::backtesting::EquityPoint (struct)
+documented   finance_query::backtesting::GridSearch (struct)
+documented   finance_query::backtesting::MacdSignal (struct)
+documented   finance_query::backtesting::MonteCarloConfig (struct)
+documented   finance_query::backtesting::MonteCarloMethod (enum)
+documented   finance_query::backtesting::MonteCarloResult (struct)
+documented   finance_query::backtesting::OptimizationReport (struct)
+documented   finance_query::backtesting::OptimizationResult (struct)
+documented   finance_query::backtesting::OptimizeMetric (enum)
+documented   finance_query::backtesting::OrderType (enum)
+documented   finance_query::backtesting::ParamRange (enum)
+documented   finance_query::backtesting::ParamValue (enum)
+documented   finance_query::backtesting::PendingOrder (struct)
+documented   finance_query::backtesting::PercentileStats (struct)
+documented   finance_query::backtesting::PerformanceMetrics (struct)
+documented   finance_query::backtesting::Position (struct)
+documented   finance_query::backtesting::PositionExtremes (struct)
+documented   finance_query::backtesting::PositionSide (enum)
+documented   finance_query::backtesting::Result (type_alias)
+documented   finance_query::backtesting::RsiReversal (struct)
+documented   finance_query::backtesting::Signal (struct)
+documented   finance_query::backtesting::SignalDirection (enum)
+documented   finance_query::backtesting::SignalMetadata (struct)
+documented   finance_query::backtesting::SignalRecord (struct)
+documented   finance_query::backtesting::SignalStrength (struct)
+documented   finance_query::backtesting::SmaCrossover (struct)
+documented   finance_query::backtesting::Strategy (trait)
+documented   finance_query::backtesting::StrategyBuilder (struct)
+documented   finance_query::backtesting::StrategyContext (struct)
+documented   finance_query::backtesting::SuperTrendFollow (struct)
+documented   finance_query::backtesting::Trade (struct)
+documented   finance_query::backtesting::WalkForwardConfig (struct)
+documented   finance_query::backtesting::WalkForwardReport (struct)
+documented   finance_query::backtesting::WindowResult (struct)
+documented   finance_query::backtesting::comparison (module)
+documented   finance_query::backtesting::comparison::BacktestComparison::ranked_by (function)
+documented   finance_query::backtesting::condition (module)
+documented   finance_query::backtesting::condition::Above (struct)
+documented   finance_query::backtesting::condition::AboveRef (struct)
+documented   finance_query::backtesting::condition::All (struct)
+documented   finance_query::backtesting::condition::And (struct)
+documented   finance_query::backtesting::condition::Any (struct)
+documented   finance_query::backtesting::condition::Below (struct)
+documented   finance_query::backtesting::condition::BelowRef (struct)
+documented   finance_query::backtesting::condition::Between (struct)
+documented   finance_query::backtesting::condition::Condition (trait)
+documented   finance_query::backtesting::condition::ConditionBuilder (struct)
+documented   finance_query::backtesting::condition::ConstantCondition (struct)
+documented   finance_query::backtesting::condition::CrossesAbove (struct)
+documented   finance_query::backtesting::condition::CrossesAboveRef (struct)
+documented   finance_query::backtesting::condition::CrossesBelow (struct)
+documented   finance_query::backtesting::condition::CrossesBelowRef (struct)
+documented   finance_query::backtesting::condition::Equals (struct)
+documented   finance_query::backtesting::condition::HasPosition (struct)
+documented   finance_query::backtesting::condition::HeldForBars (struct)
+documented   finance_query::backtesting::condition::HtfIndicatorSpec (struct)
+documented   finance_query::backtesting::condition::InLoss (struct)
+documented   finance_query::backtesting::condition::InProfit (struct)
+documented   finance_query::backtesting::condition::IsLong (struct)
+documented   finance_query::backtesting::condition::IsShort (struct)
+documented   finance_query::backtesting::condition::NoPosition (struct)
+documented   finance_query::backtesting::condition::Not (struct)
+documented   finance_query::backtesting::condition::Or (struct)
+documented   finance_query::backtesting::condition::StopLoss (struct)
+documented   finance_query::backtesting::condition::TakeProfit (struct)
+documented   finance_query::backtesting::condition::TrailingStop (struct)
+documented   finance_query::backtesting::condition::TrailingTakeProfit (struct)
+documented   finance_query::backtesting::condition::always_false (function)
+documented   finance_query::backtesting::condition::always_true (function)
+documented   finance_query::backtesting::condition::has_position (function)
+documented   finance_query::backtesting::condition::held_for_bars (function)
+documented   finance_query::backtesting::condition::in_loss (function)
+documented   finance_query::backtesting::condition::in_profit (function)
+documented   finance_query::backtesting::condition::is_long (function)
+documented   finance_query::backtesting::condition::is_short (function)
+documented   finance_query::backtesting::condition::no_position (function)
+documented   finance_query::backtesting::condition::stop_loss (function)
+documented   finance_query::backtesting::condition::take_profit (function)
+documented   finance_query::backtesting::condition::trailing_stop (function)
+documented   finance_query::backtesting::condition::trailing_take_profit (function)
+documented   finance_query::backtesting::config::CommissionFn (struct)
+documented   finance_query::backtesting::engine::BacktestEngine::run_with_dividends (function)
+documented   finance_query::backtesting::monte_carlo (module)
+documented   finance_query::backtesting::optimizer (module)
+documented   finance_query::backtesting::optimizer::ParamRange::float_bounds (function)
+documented   finance_query::backtesting::optimizer::ParamRange::float_range (function)
+documented   finance_query::backtesting::optimizer::ParamRange::int_bounds (function)
+documented   finance_query::backtesting::optimizer::ParamRange::int_range (function)
+documented   finance_query::backtesting::portfolio (module)
+documented   finance_query::backtesting::portfolio::AllocationSnapshot (struct)
+documented   finance_query::backtesting::portfolio::PortfolioConfig (struct)
+documented   finance_query::backtesting::portfolio::PortfolioEngine (struct)
+documented   finance_query::backtesting::portfolio::PortfolioResult (struct)
+documented   finance_query::backtesting::portfolio::RebalanceMode (enum)
+documented   finance_query::backtesting::portfolio::SymbolData (struct)
+documented   finance_query::backtesting::position::Position::close (function)
+documented   finance_query::backtesting::position::Position::partial_close (function)
+documented   finance_query::backtesting::position::Position::scale_in (function)
+documented   finance_query::backtesting::refs (module)
+documented   finance_query::backtesting::refs::AccumulationDistributionRef (struct)
+documented   finance_query::backtesting::refs::AdxRef (struct)
+documented   finance_query::backtesting::refs::AlmaConfig (struct)
+documented   finance_query::backtesting::refs::AlmaRef (struct)
+documented   finance_query::backtesting::refs::AroonConfig (struct)
+documented   finance_query::backtesting::refs::AroonDownRef (struct)
+documented   finance_query::backtesting::refs::AroonUpRef (struct)
+documented   finance_query::backtesting::refs::AtrRef (struct)
+documented   finance_query::backtesting::refs::AwesomeOscillatorRef (struct)
+documented   finance_query::backtesting::refs::BalanceOfPowerRef (struct)
+documented   finance_query::backtesting::refs::BearPowerRef (struct)
+documented   finance_query::backtesting::refs::BollingerConfig (struct)
+documented   finance_query::backtesting::refs::BollingerLowerRef (struct)
+documented   finance_query::backtesting::refs::BollingerMiddleRef (struct)
+documented   finance_query::backtesting::refs::BollingerUpperRef (struct)
+documented   finance_query::backtesting::refs::BullPowerRef (struct)
+documented   finance_query::backtesting::refs::CandleBody (struct)
+documented   finance_query::backtesting::refs::CandleRange (struct)
+documented   finance_query::backtesting::refs::CciRef (struct)
+documented   finance_query::backtesting::refs::ChaikinOscillatorRef (struct)
+documented   finance_query::backtesting::refs::ChoppinessIndexRef (struct)
+documented   finance_query::backtesting::refs::ClosePrice (struct)
+documented   finance_query::backtesting::refs::CmfRef (struct)
+documented   finance_query::backtesting::refs::CmoRef (struct)
+documented   finance_query::backtesting::refs::CoppockCurveRef (struct)
+documented   finance_query::backtesting::refs::DemaRef (struct)
+documented   finance_query::backtesting::refs::DonchianConfig (struct)
+documented   finance_query::backtesting::refs::DonchianLowerRef (struct)
+documented   finance_query::backtesting::refs::DonchianMiddleRef (struct)
+documented   finance_query::backtesting::refs::DonchianUpperRef (struct)
+documented   finance_query::backtesting::refs::ElderBearPowerRef (struct)
+documented   finance_query::backtesting::refs::ElderBullPowerRef (struct)
+documented   finance_query::backtesting::refs::EmaRef (struct)
+documented   finance_query::backtesting::refs::GapPct (struct)
+documented   finance_query::backtesting::refs::HighPrice (struct)
+documented   finance_query::backtesting::refs::HmaRef (struct)
+documented   finance_query::backtesting::refs::HtfCondition (struct)
+documented   finance_query::backtesting::refs::IchimokuBaseRef (struct)
+documented   finance_query::backtesting::refs::IchimokuConfig (struct)
+documented   finance_query::backtesting::refs::IchimokuConversionRef (struct)
+documented   finance_query::backtesting::refs::IchimokuLaggingRef (struct)
+documented   finance_query::backtesting::refs::IchimokuLeadingARef (struct)
+documented   finance_query::backtesting::refs::IchimokuLeadingBRef (struct)
+documented   finance_query::backtesting::refs::IndicatorRef (trait)
+documented   finance_query::backtesting::refs::IndicatorRefExt (trait)
+documented   finance_query::backtesting::refs::IsBearish (struct)
+documented   finance_query::backtesting::refs::IsBullish (struct)
+documented   finance_query::backtesting::refs::KeltnerConfig (struct)
+documented   finance_query::backtesting::refs::KeltnerLowerRef (struct)
+documented   finance_query::backtesting::refs::KeltnerMiddleRef (struct)
+documented   finance_query::backtesting::refs::KeltnerUpperRef (struct)
+documented   finance_query::backtesting::refs::LowPrice (struct)
+documented   finance_query::backtesting::refs::MacdConfig (struct)
+documented   finance_query::backtesting::refs::MacdHistogramRef (struct)
+documented   finance_query::backtesting::refs::MacdLineRef (struct)
+documented   finance_query::backtesting::refs::MacdSignalRef (struct)
+documented   finance_query::backtesting::refs::McginleyDynamicRef (struct)
+documented   finance_query::backtesting::refs::MedianPrice (struct)
+documented   finance_query::backtesting::refs::MfiRef (struct)
+documented   finance_query::backtesting::refs::MomentumRef (struct)
+documented   finance_query::backtesting::refs::ObvRef (struct)
+documented   finance_query::backtesting::refs::OpenPrice (struct)
+documented   finance_query::backtesting::refs::ParabolicSarConfig (struct)
+documented   finance_query::backtesting::refs::ParabolicSarRef (struct)
+documented   finance_query::backtesting::refs::PriceChangePct (struct)
+documented   finance_query::backtesting::refs::RelativeVolume (struct)
+documented   finance_query::backtesting::refs::RocRef (struct)
+documented   finance_query::backtesting::refs::RsiRef (struct)
+documented   finance_query::backtesting::refs::SmaRef (struct)
+documented   finance_query::backtesting::refs::StochasticConfig (struct)
+documented   finance_query::backtesting::refs::StochasticDRef (struct)
+documented   finance_query::backtesting::refs::StochasticKRef (struct)
+documented   finance_query::backtesting::refs::StochasticRsiConfig (struct)
+documented   finance_query::backtesting::refs::StochasticRsiDRef (struct)
+documented   finance_query::backtesting::refs::StochasticRsiRef (struct)
+documented   finance_query::backtesting::refs::SupertrendConfig (struct)
+documented   finance_query::backtesting::refs::SupertrendUptrendRef (struct)
+documented   finance_query::backtesting::refs::SupertrendValueRef (struct)
+documented   finance_query::backtesting::refs::TemaRef (struct)
+documented   finance_query::backtesting::refs::TrueRangeRef (struct)
+documented   finance_query::backtesting::refs::TypicalPrice (struct)
+documented   finance_query::backtesting::refs::VolumeRef (struct)
+documented   finance_query::backtesting::refs::VwapRef (struct)
+documented   finance_query::backtesting::refs::VwmaRef (struct)
+documented   finance_query::backtesting::refs::WilliamsRRef (struct)
+documented   finance_query::backtesting::refs::WmaRef (struct)
+documented   finance_query::backtesting::refs::accumulation_distribution (function)
+documented   finance_query::backtesting::refs::adx (function)
+documented   finance_query::backtesting::refs::alma (function)
+documented   finance_query::backtesting::refs::aroon (function)
+documented   finance_query::backtesting::refs::atr (function)
+documented   finance_query::backtesting::refs::awesome_oscillator (function)
+documented   finance_query::backtesting::refs::balance_of_power (function)
+documented   finance_query::backtesting::refs::bear_power (function)
+documented   finance_query::backtesting::refs::bollinger (function)
+documented   finance_query::backtesting::refs::bull_power (function)
+documented   finance_query::backtesting::refs::candle_body (function)
+documented   finance_query::backtesting::refs::candle_range (function)
+documented   finance_query::backtesting::refs::cci (function)
+documented   finance_query::backtesting::refs::chaikin_oscillator (function)
+documented   finance_query::backtesting::refs::choppiness_index (function)
+documented   finance_query::backtesting::refs::close (function)
+documented   finance_query::backtesting::refs::cmf (function)
+documented   finance_query::backtesting::refs::cmo (function)
+documented   finance_query::backtesting::refs::computed::StochasticRsiConfig::d (function)
+documented   finance_query::backtesting::refs::computed::StochasticRsiConfig::k (function)
+documented   finance_query::backtesting::refs::coppock_curve (function)
+documented   finance_query::backtesting::refs::dema (function)
+documented   finance_query::backtesting::refs::donchian (function)
+documented   finance_query::backtesting::refs::elder_bear_power (function)
+documented   finance_query::backtesting::refs::elder_bull_power (function)
+documented   finance_query::backtesting::refs::ema (function)
+documented   finance_query::backtesting::refs::gap_pct (function)
+documented   finance_query::backtesting::refs::high (function)
+documented   finance_query::backtesting::refs::hma (function)
+documented   finance_query::backtesting::refs::htf (function)
+documented   finance_query::backtesting::refs::htf_region (function)
+documented   finance_query::backtesting::refs::ichimoku (function)
+documented   finance_query::backtesting::refs::ichimoku_custom (function)
+documented   finance_query::backtesting::refs::is_bearish (function)
+documented   finance_query::backtesting::refs::is_bullish (function)
+documented   finance_query::backtesting::refs::keltner (function)
+documented   finance_query::backtesting::refs::low (function)
+documented   finance_query::backtesting::refs::macd (function)
+documented   finance_query::backtesting::refs::mcginley (function)
+documented   finance_query::backtesting::refs::median_price (function)
+documented   finance_query::backtesting::refs::mfi (function)
+documented   finance_query::backtesting::refs::momentum (function)
+documented   finance_query::backtesting::refs::obv (function)
+documented   finance_query::backtesting::refs::open (function)
+documented   finance_query::backtesting::refs::parabolic_sar (function)
+documented   finance_query::backtesting::refs::price (function)
+documented   finance_query::backtesting::refs::price_change_pct (function)
+documented   finance_query::backtesting::refs::relative_volume (function)
+documented   finance_query::backtesting::refs::roc (function)
+documented   finance_query::backtesting::refs::rsi (function)
+documented   finance_query::backtesting::refs::sma (function)
+documented   finance_query::backtesting::refs::stochastic (function)
+documented   finance_query::backtesting::refs::stochastic_rsi (function)
+documented   finance_query::backtesting::refs::supertrend (function)
+documented   finance_query::backtesting::refs::tema (function)
+documented   finance_query::backtesting::refs::true_range (function)
+documented   finance_query::backtesting::refs::typical_price (function)
+documented   finance_query::backtesting::refs::volume (function)
+documented   finance_query::backtesting::refs::vwap (function)
+documented   finance_query::backtesting::refs::vwma (function)
+documented   finance_query::backtesting::refs::williams_r (function)
+documented   finance_query::backtesting::refs::wma (function)
+documented   finance_query::backtesting::resample (module)
+documented   finance_query::backtesting::resample::base_to_htf_index (function)
+documented   finance_query::backtesting::resample::resample (function)
+documented   finance_query::backtesting::result::BacktestResult::by_day_of_week (function)
+documented   finance_query::backtesting::result::BacktestResult::by_month (function)
+documented   finance_query::backtesting::result::BacktestResult::by_year (function)
+documented   finance_query::backtesting::result::PerformanceMetrics::max_drawdown_percentage (function)
+documented   finance_query::backtesting::signal::Signal::exit (function)
+documented   finance_query::backtesting::signal::Signal::scale_in (function)
+documented   finance_query::backtesting::signal::Signal::scale_out (function)
+documented   finance_query::backtesting::strategy (module)
+documented   finance_query::backtesting::strategy::CustomStrategy (struct)
+documented   finance_query::backtesting::strategy::StrategyContext::crossed_above (function)
+documented   finance_query::backtesting::strategy::StrategyContext::indicator_crossed_above (function)
+documented   finance_query::backtesting::strategy::builder::StrategyBuilder::regime_filter (function)
+documented   finance_query::backtesting::strategy::ensemble::EnsembleStrategy::add (function)
+documented   finance_query::backtesting::strategy::ensemble::EnsembleStrategy::build (function)
+documented   finance_query::backtesting::strategy::ensemble::EnsembleStrategy::mode (function)
+documented   finance_query::backtesting::strategy::prebuilt (module)
+documented   finance_query::backtesting::walk_forward (module)
+documented   finance_query::backtesting::walk_forward::WalkForwardConfig::new (function)
+documented   finance_query::backtesting::walk_forward::WalkForwardConfig::run (function)
+documented   finance_query::cftc (module)
+documented   finance_query::cftc::commitments_of_traders (function)
+documented   finance_query::constants::Interval::as_str (function)
+documented   finance_query::constants::Region::utc_offset_secs (function)
+documented   finance_query::constants::TimeRange::as_str (function)
+documented   finance_query::constants::TimeRange::default_interval (function)
+documented   finance_query::constants::industries::Industry::as_slug (function)
+documented   finance_query::crypto (module)
+documented   finance_query::crypto::CoinQuote (struct)
+documented   finance_query::crypto::GlobalCryptoStats (struct)
+documented   finance_query::crypto::TrendingCoin (struct)
+documented   finance_query::crypto::coin (function)
+documented   finance_query::crypto::coins (function)
+documented   finance_query::crypto::global (function)
+documented   finance_query::crypto::search (function)
+documented   finance_query::crypto::trending (function)
+documented   finance_query::defi (module)
+documented   finance_query::defi::ChainAllocation (struct)
+documented   finance_query::defi::ChainTvl (struct)
+documented   finance_query::defi::ProtocolTvl (struct)
+documented   finance_query::defi::StablecoinSupply (struct)
+documented   finance_query::defi::TvlPoint (struct)
+documented   finance_query::defi::chains (function)
+documented   finance_query::defi::stablecoins (function)
+documented   finance_query::domains (module)
+documented   finance_query::domains::commodities::Commodity::quote (function)
+documented   finance_query::domains::crypto::CryptoCoin::quote (function)
+documented   finance_query::domains::crypto::CryptoCoin::tvl (function)
+documented   finance_query::domains::crypto::CryptoCoin::tvl_history (function)
+documented   finance_query::domains::discovery::Discovery::search (function)
+documented   finance_query::domains::economic::EconomicIndicator::series (function)
+documented   finance_query::domains::filings::Filings::get (function)
+documented   finance_query::domains::filings::Filings::search_all (function)
+documented   finance_query::domains::forex::ForexPair::quote (function)
+documented   finance_query::domains::futures::FuturesContract::commitments_of_traders (function)
+documented   finance_query::domains::indices::Index::constituents (function)
+documented   finance_query::domains::market::Market::crypto_global (function)
+documented   finance_query::domains::market::Market::crypto_trending (function)
+documented   finance_query::domains::market::Market::grouped_daily (function)
+documented   finance_query::earnings_calendar (function)
+documented   finance_query::edgar (module)
+documented   finance_query::edgar::company_facts (function)
+documented   finance_query::edgar::filing_index (function)
+documented   finance_query::edgar::init (function)
+documented   finance_query::edgar::init_with_config (function)
+documented   finance_query::edgar::resolve_cik (function)
+documented   finance_query::edgar::search (function)
+documented   finance_query::edgar::submissions (function)
+documented   finance_query::error (module)
+documented   finance_query::feeds (module)
+documented   finance_query::feeds::FeedEntry (struct)
+documented   finance_query::feeds::FeedSource (enum)
+documented   finance_query::feeds::FeedSource::url (function)
+documented   finance_query::feeds::fetch (function)
+documented   finance_query::feeds::fetch_all (function)
+documented   finance_query::feeds::parse_bytes (function)
+documented   finance_query::finance (module)
+documented   finance_query::finance::currencies (function)
+documented   finance_query::finance::custom_screener (function)
+documented   finance_query::finance::earnings_transcript (function)
+documented   finance_query::finance::earnings_transcripts (function)
+documented   finance_query::finance::exchanges (function)
+documented   finance_query::finance::fear_and_greed (function)
+documented   finance_query::finance::fear_and_greed_crypto (function)
+documented   finance_query::finance::hours (function)
+documented   finance_query::finance::indices (function)
+documented   finance_query::finance::industry (function)
+documented   finance_query::finance::lookup (function)
+documented   finance_query::finance::market_summary (function)
+documented   finance_query::finance::news (function)
+documented   finance_query::finance::screener (function)
+documented   finance_query::finance::search (function)
+documented   finance_query::finance::sector (function)
+documented   finance_query::finance::trending (function)
+documented   finance_query::format (module)
+documented   finance_query::format::Both (struct)
+documented   finance_query::format::Pretty (struct)
+documented   finance_query::format::Raw (struct)
+documented   finance_query::fred (module)
+documented   finance_query::fred::MacroObservation (struct)
+documented   finance_query::fred::MacroSeries (struct)
+documented   finance_query::fred::TreasuryYield (struct)
+documented   finance_query::fred::init (function)
+documented   finance_query::fred::init_with_timeout (function)
+documented   finance_query::fred::series (function)
+documented   finance_query::fred::treasury_yields (function)
+documented   finance_query::gdelt (module)
+documented   finance_query::gdelt::news (function)
+documented   finance_query::indicators (module)
+documented   finance_query::indicators::AroonResult (struct)
+documented   finance_query::indicators::DonchianChannelsResult (struct)
+documented   finance_query::indicators::ElderRayResult (struct)
+documented   finance_query::indicators::FibonacciLevels (struct)
+documented   finance_query::indicators::IchimokuResult (struct)
+documented   finance_query::indicators::Indicator::warmup_bars (function)
+documented   finance_query::indicators::KeltnerChannelsResult (struct)
+documented   finance_query::indicators::PivotPoints (struct)
+documented   finance_query::indicators::Result (type_alias)
+documented   finance_query::indicators::StochasticResult (struct)
+documented   finance_query::indicators::SuperTrendResult (struct)
+documented   finance_query::indicators::ZigZagPoint (struct)
+documented   finance_query::indicators::accumulation_distribution (function)
+documented   finance_query::indicators::adx (function)
+documented   finance_query::indicators::alma (function)
+documented   finance_query::indicators::aroon (function)
+documented   finance_query::indicators::awesome_oscillator (function)
+documented   finance_query::indicators::balance_of_power (function)
+documented   finance_query::indicators::bollinger_bands (function)
+documented   finance_query::indicators::bull_bear_power (function)
+documented   finance_query::indicators::cci (function)
+documented   finance_query::indicators::chaikin_oscillator (function)
+documented   finance_query::indicators::choppiness_index (function)
+documented   finance_query::indicators::cmf (function)
+documented   finance_query::indicators::cmo (function)
+documented   finance_query::indicators::coppock_curve (function)
+documented   finance_query::indicators::dema (function)
+documented   finance_query::indicators::donchian_channels (function)
+documented   finance_query::indicators::elder_ray (function)
+documented   finance_query::indicators::ema (function)
+documented   finance_query::indicators::fibonacci_pivot_points (function)
+documented   finance_query::indicators::fibonacci_retracement (function)
+documented   finance_query::indicators::heikin_ashi (function)
+documented   finance_query::indicators::hma (function)
+documented   finance_query::indicators::ichimoku (function)
+documented   finance_query::indicators::keltner_channels (function)
+documented   finance_query::indicators::last_value (function)
+documented   finance_query::indicators::macd (function)
+documented   finance_query::indicators::mcginley_dynamic (function)
+documented   finance_query::indicators::mfi (function)
+documented   finance_query::indicators::momentum (function)
+documented   finance_query::indicators::obv (function)
+documented   finance_query::indicators::parabolic_sar (function)
+documented   finance_query::indicators::pivot_points (function)
+documented   finance_query::indicators::roc (function)
+documented   finance_query::indicators::rsi (function)
+documented   finance_query::indicators::sma (function)
+documented   finance_query::indicators::stochastic (function)
+documented   finance_query::indicators::stochastic_rsi (function)
+documented   finance_query::indicators::summary (module)
+documented   finance_query::indicators::supertrend (function)
+documented   finance_query::indicators::tema (function)
+documented   finance_query::indicators::true_range (function)
+documented   finance_query::indicators::vwap (function)
+documented   finance_query::indicators::vwma (function)
+documented   finance_query::indicators::williams_r (function)
+documented   finance_query::indicators::wma (function)
+documented   finance_query::indicators::zigzag (function)
+documented   finance_query::insider_trading (function)
+documented   finance_query::ipo_calendar (function)
+documented   finance_query::models::chart::data::Chart::pivot_points (function)
+documented   finance_query::models::corporate::asset_profile::AssetProfile (struct)
+documented   finance_query::models::corporate::asset_profile::CompanyOfficer (struct)
+documented   finance_query::models::corporate::calendar_events::CalendarEvents (struct)
+documented   finance_query::models::corporate::calendar_events::EarningsCalendar (struct)
+documented   finance_query::models::corporate::earnings::Earnings (struct)
+documented   finance_query::models::corporate::earnings::EarningsChart (struct)
+documented   finance_query::models::corporate::earnings::FinancialsChart (struct)
+documented   finance_query::models::corporate::earnings::QuarterlyEarnings (struct)
+documented   finance_query::models::corporate::earnings::QuarterlyFinancials (struct)
+documented   finance_query::models::corporate::earnings::YearlyFinancials (struct)
+documented   finance_query::models::corporate::earnings_history::EarningsHistory (struct)
+documented   finance_query::models::corporate::earnings_history::EarningsHistoryEntry (struct)
+documented   finance_query::models::corporate::earnings_trend::EarningsEstimate (struct)
+documented   finance_query::models::corporate::earnings_trend::EarningsTrend (struct)
+documented   finance_query::models::corporate::earnings_trend::EarningsTrendPeriod (struct)
+documented   finance_query::models::corporate::earnings_trend::EpsRevisions (struct)
+documented   finance_query::models::corporate::earnings_trend::EpsTrend (struct)
+documented   finance_query::models::corporate::earnings_trend::RevenueEstimate (struct)
+documented   finance_query::models::corporate::equity_performance::Benchmark (struct)
+documented   finance_query::models::corporate::equity_performance::EquityPerformance (struct)
+documented   finance_query::models::corporate::equity_performance::PerformanceOverview (struct)
+documented   finance_query::models::corporate::fund_ownership::FundOwner (struct)
+documented   finance_query::models::corporate::fund_ownership::FundOwnership (struct)
+documented   finance_query::models::corporate::fund_performance::AnnualReturn (struct)
+documented   finance_query::models::corporate::fund_performance::AnnualTotalReturns (struct)
+documented   finance_query::models::corporate::fund_performance::FundPerformance (struct)
+documented   finance_query::models::corporate::fund_performance::PastQuarterlyReturns (struct)
+documented   finance_query::models::corporate::fund_performance::PerformanceOverview (struct)
+documented   finance_query::models::corporate::fund_performance::PerformanceOverviewCat (struct)
+documented   finance_query::models::corporate::fund_performance::RiskOverviewStatistics (struct)
+documented   finance_query::models::corporate::fund_performance::RiskOverviewStatisticsCat (struct)
+documented   finance_query::models::corporate::fund_performance::RiskStatistic (struct)
+documented   finance_query::models::corporate::fund_performance::TrailingReturns (struct)
+documented   finance_query::models::corporate::fund_performance::TrailingReturnsCat (struct)
+documented   finance_query::models::corporate::fund_performance::TrailingReturnsNav (struct)
+documented   finance_query::models::corporate::fund_profile::FeesExpenses (struct)
+documented   finance_query::models::corporate::fund_profile::FeesExpensesCat (struct)
+documented   finance_query::models::corporate::fund_profile::FundProfile (struct)
+documented   finance_query::models::corporate::fund_profile::ManagementInfo (struct)
+documented   finance_query::models::corporate::insider_holders::InsiderHolder (struct)
+documented   finance_query::models::corporate::insider_holders::InsiderHolders (struct)
+documented   finance_query::models::corporate::insider_transactions::InsiderTransaction (struct)
+documented   finance_query::models::corporate::insider_transactions::InsiderTransactions (struct)
+documented   finance_query::models::corporate::institution_ownership::InstitutionOwner (struct)
+documented   finance_query::models::corporate::institution_ownership::InstitutionOwnership (struct)
+documented   finance_query::models::corporate::major_holders_breakdown::MajorHoldersBreakdown (struct)
+documented   finance_query::models::corporate::net_share_purchase_activity::NetSharePurchaseActivity (struct)
+documented   finance_query::models::corporate::recommendation_trend::RecommendationPeriod (struct)
+documented   finance_query::models::corporate::recommendation_trend::RecommendationTrend (struct)
+documented   finance_query::models::corporate::sec_filings::SecExhibit (struct)
+documented   finance_query::models::corporate::sec_filings::SecFiling (struct)
+documented   finance_query::models::corporate::sec_filings::SecFilings (struct)
+documented   finance_query::models::corporate::summary_profile::SummaryProfile (struct)
+documented   finance_query::models::corporate::top_holdings::BondRating (struct)
+documented   finance_query::models::corporate::top_holdings::EquityHoldings (struct)
+documented   finance_query::models::corporate::top_holdings::Holding (struct)
+documented   finance_query::models::corporate::top_holdings::SectorWeighting (struct)
+documented   finance_query::models::corporate::top_holdings::TopHoldings (struct)
+documented   finance_query::models::corporate::transcript::Paragraph (struct)
+documented   finance_query::models::corporate::transcript::Sentence (struct)
+documented   finance_query::models::corporate::transcript::SpeakerData (struct)
+documented   finance_query::models::corporate::transcript::SpeakerMapping (struct)
+documented   finance_query::models::corporate::transcript::TranscriptContent (struct)
+documented   finance_query::models::corporate::transcript::TranscriptData (struct)
+documented   finance_query::models::corporate::transcript::TranscriptMetadata (struct)
+documented   finance_query::models::corporate::transcript::Word (struct)
+documented   finance_query::models::corporate::upgrade_downgrade_history::GradeChange (struct)
+documented   finance_query::models::corporate::upgrade_downgrade_history::UpgradeDowngradeHistory (struct)
+documented   finance_query::models::discovery::reference::ScreenerFilters::new (function)
+documented   finance_query::models::discovery::screeners::query::ScreenerQuery::add_or_conditions (function)
+documented   finance_query::models::discovery::search::thumbnail::NewsThumbnail (struct)
+documented   finance_query::models::discovery::search::thumbnail::ThumbnailResolution (struct)
+documented   finance_query::models::filings::filing_index::EdgarFilingIndexDirectory (struct)
+documented   finance_query::models::filings::submissions::EdgarFilingRecent::to_filings (function)
+documented   finance_query::models::format::Format (trait)
+documented   finance_query::models::format::sealed::Sealed (trait)
+documented   finance_query::models::fundamentals::balance_sheet_history::BalanceSheetHistory (struct)
+documented   finance_query::models::fundamentals::balance_sheet_history::BalanceSheetHistoryQuarterly (struct)
+documented   finance_query::models::fundamentals::cashflow_statement_history::CashflowStatementHistory (struct)
+documented   finance_query::models::fundamentals::cashflow_statement_history::CashflowStatementHistoryQuarterly (struct)
+documented   finance_query::models::fundamentals::default_key_statistics::DefaultKeyStatistics (struct)
+documented   finance_query::models::fundamentals::financial_data::FinancialData (struct)
+documented   finance_query::models::fundamentals::income_statement_history::IncomeStatementHistory (struct)
+documented   finance_query::models::fundamentals::income_statement_history::IncomeStatementHistoryQuarterly (struct)
+documented   finance_query::models::fundamentals::summary_detail::SummaryDetail (struct)
+documented   finance_query::models::market::index_trend::IndexTrend (struct)
+documented   finance_query::models::market::index_trend::IndustryTrend (struct)
+documented   finance_query::models::market::index_trend::SectorTrend (struct)
+documented   finance_query::models::market::index_trend::TrendEstimate (struct)
+documented   finance_query::models::market::industries::response::BenchmarkPerformance (struct)
+documented   finance_query::models::market::industries::response::GrowthCompany (struct)
+documented   finance_query::models::market::industries::response::IndustryCompany (struct)
+documented   finance_query::models::market::industries::response::IndustryOverview (struct)
+documented   finance_query::models::market::industries::response::IndustryPerformance (struct)
+documented   finance_query::models::market::industries::response::PerformingCompany (struct)
+documented   finance_query::models::market::industries::response::ResearchReport (struct)
+documented   finance_query::models::market::sectors::response::ResearchReport (struct)
+documented   finance_query::models::market::sectors::response::SectorCompany (struct)
+documented   finance_query::models::market::sectors::response::SectorETF (struct)
+documented   finance_query::models::market::sectors::response::SectorIndustry (struct)
+documented   finance_query::models::market::sectors::response::SectorMutualFund (struct)
+documented   finance_query::models::market::sectors::response::SectorOverview (struct)
+documented   finance_query::models::market::sectors::response::SectorPerformance (struct)
+documented   finance_query::models::quote::data::Quote::as_raw (function)
+documented   finance_query::models::quote::price::Price (struct)
+documented   finance_query::models::quote::quote_type::QuoteTypeData (struct)
+documented   finance_query::models::quote::response::QuoteSummaryResponse (struct)
+documented   finance_query::models::sentiment::score::Sentiment::neutral (function)
+documented   finance_query::openfigi (module)
+documented   finance_query::openfigi::SecurityIdKind (enum)
+documented   finance_query::openfigi::SecurityMapping (struct)
+documented   finance_query::openfigi::resolve (function)
+documented   finance_query::openfigi::resolve_cusip (function)
+documented   finance_query::openfigi::resolve_isin (function)
+documented   finance_query::openfigi::resolve_many (function)
+documented   finance_query::openfigi::resolve_sedol (function)
+documented   finance_query::patterns (function)
+documented   finance_query::providers::Capability::name (function)
+documented   finance_query::providers::Operation::capability (function)
+documented   finance_query::providers::Routes (struct)
+documented   finance_query::providers::config::Providers::builder (function)
+documented   finance_query::providers::config::Providers::calendar (function)
+documented   finance_query::providers::config::Providers::commodity (function)
+documented   finance_query::providers::config::Providers::crypto (function)
+documented   finance_query::providers::config::Providers::discovery (function)
+documented   finance_query::providers::config::Providers::economic (function)
+documented   finance_query::providers::config::Providers::economic_catalog (function)
+documented   finance_query::providers::config::Providers::filings (function)
+documented   finance_query::providers::config::Providers::forex (function)
+documented   finance_query::providers::config::Providers::futures (function)
+documented   finance_query::providers::config::Providers::index (function)
+documented   finance_query::providers::config::Providers::market (function)
+documented   finance_query::providers::config::Providers::snapshot (function)
+documented   finance_query::providers::config::Providers::ticker (function)
+documented   finance_query::providers::config::Providers::tickers (function)
+documented   finance_query::providers::config::ProvidersBuilder::lang (function)
+documented   finance_query::providers::config::ProvidersBuilder::region (function)
+documented   finance_query::providers::config::ProvidersBuilder::retry (function)
+documented   finance_query::providers::retry::RetryPolicy::base_delay (function)
+documented   finance_query::providers::retry::RetryPolicy::jitter (function)
+documented   finance_query::providers::retry::RetryPolicy::max_delay (function)
+documented   finance_query::providers::retry::RetryPolicy::max_retry_after (function)
+documented   finance_query::providers::retry::RetryPolicy::multiplier (function)
+documented   finance_query::risk (module)
+documented   finance_query::risk::RiskSummary (struct)
+documented   finance_query::risk::beta (function)
+documented   finance_query::risk::calmar_ratio (function)
+documented   finance_query::risk::drawdown::DrawdownResult (struct)
+documented   finance_query::risk::historical_cvar (function)
+documented   finance_query::risk::historical_var (function)
+documented   finance_query::risk::information_ratio (function)
+documented   finance_query::risk::kelly_criterion (function)
+documented   finance_query::risk::max_drawdown (function)
+documented   finance_query::risk::omega_ratio (function)
+documented   finance_query::risk::parametric_cvar (function)
+documented   finance_query::risk::parametric_var (function)
+documented   finance_query::risk::sharpe_ratio (function)
+documented   finance_query::risk::sortino_ratio (function)
+documented   finance_query::risk::tracking_error (function)
+documented   finance_query::risk::ulcer_index (function)
+documented   finance_query::risk::win_loss_stats (function)
+documented   finance_query::streaming (module)
+documented   finance_query::streaming::AlertCondition (enum)
+documented   finance_query::streaming::AlertConditionKind (enum)
+documented   finance_query::streaming::AlertEvaluator (struct)
+documented   finance_query::streaming::AlertEvent (struct)
+documented   finance_query::streaming::AlertExt (trait)
+documented   finance_query::streaming::AlertRule (struct)
+documented   finance_query::streaming::AlertStream (struct)
+documented   finance_query::streaming::AssetClass (enum)
+documented   finance_query::streaming::Batched (struct)
+documented   finance_query::streaming::BookLevel (struct)
+documented   finance_query::streaming::DepthStream (struct)
+documented   finance_query::streaming::DepthStreamBuilder (struct)
+documented   finance_query::streaming::EconomicStream (struct)
+documented   finance_query::streaming::EconomicStreamBuilder (struct)
+documented   finance_query::streaming::Greeks (struct)
+documented   finance_query::streaming::MarketHoursType (enum)
+documented   finance_query::streaming::NewsStream (struct)
+documented   finance_query::streaming::NewsStreamBuilder (struct)
+documented   finance_query::streaming::OptionContractUpdate (struct)
+documented   finance_query::streaming::OptionType (enum)
+documented   finance_query::streaming::OptionsChainStream (struct)
+documented   finance_query::streaming::OptionsChainStreamBuilder (struct)
+documented   finance_query::streaming::OrderBookUpdate (struct)
+documented   finance_query::streaming::PriceSource (enum)
+documented   finance_query::streaming::PriceStream (struct)
+documented   finance_query::streaming::PriceStreamBuilder (struct)
+documented   finance_query::streaming::PriceUpdate (struct)
+documented   finance_query::streaming::QuoteType (enum)
+documented   finance_query::streaming::SeriesUpdate (struct)
+documented   finance_query::streaming::StreamBatchExt (trait)
+documented   finance_query::streaming::StreamError (enum)
+documented   finance_query::streaming::StreamResult (type_alias)
+documented   finance_query::streaming::TradeStream (struct)
+documented   finance_query::streaming::TradeStreamBuilder (struct)
+documented   finance_query::streaming::TradeTick (struct)
+documented   finance_query::streaming::book::DepthStreamBuilder::max_reconnect_attempts (function)
+documented   finance_query::streaming::client::PriceStreamBuilder::max_reconnect_attempts (function)
+documented   finance_query::streaming::news::NewsStream::resubscribe (function)
+documented   finance_query::streaming::news::NewsStreamBuilder::poll_interval (function)
+documented   finance_query::streaming::options::OptionsChainStreamBuilder::greeks_refresh (function)
+documented   finance_query::streaming::options::OptionsChainStreamBuilder::max_reconnect_attempts (function)
+documented   finance_query::streaming::pricing::MarketHoursTypeProto (enum)
+documented   finance_query::streaming::pricing::QuoteTypeProto (enum)
+documented   finance_query::streaming::trades::TradeStreamBuilder::build (function)
+documented   finance_query::streaming::trades::TradeStreamBuilder::max_reconnect_attempts (function)
+documented   finance_query::symbol_sentiment (function)
+documented   finance_query::ticker::core::Ticker::builder (function)
+documented   finance_query::ticker::core::Ticker::calendar (function)
+documented   finance_query::ticker::core::Ticker::client_handle (function)
+documented   finance_query::ticker::core::Ticker::dividend_analytics (function)
+documented   finance_query::ticker::core::Ticker::edgar_company_facts (function)
+documented   finance_query::ticker::core::Ticker::edgar_submissions (function)
+documented   finance_query::ticker::core::Ticker::filings (function)
+documented   finance_query::ticker::core::Ticker::financials (function)
+documented   finance_query::ticker::core::Ticker::news (function)
+documented   finance_query::ticker::core::Ticker::quote (function)
+documented   finance_query::ticker::core::Ticker::recommendations (function)
+documented   finance_query::ticker::core::Ticker::risk (function)
+documented   finance_query::ticker::core::TickerBuilder::build (function)
+documented   finance_query::ticker::core::TickerBuilder::cache (function)
+documented   finance_query::ticker::core::TickerBuilder::no_cache (function)
+documented   finance_query::tickers::core::Tickers::builder (function)
+documented   finance_query::tickers::core::Tickers::charts (function)
+documented   finance_query::tickers::core::Tickers::client_handle (function)
+documented   finance_query::tickers::core::TickersBuilder::logo (function)
+documented   finance_query::translation (module)
+documented   finance_query::translation::Lang (struct)
+documented   finance_query::translation::Translatable (trait)
+documented   finance_query::translation::TranslationBackend (trait)
+documented   finance_query::translation::set_backend (function)
+documented   finance_query::translation::translate (function)
+documented   finance_query::translation::translate_texts (function)
+documented   finance_query::translation::translate_with (function)
+coverage: 892/892 public item(s) documented (100%)
+coverage: wrote docs/perf/badges/coverage.json
+coverage: wrote docs/perf/badges/coverage.svg
+</code></pre></figure>
+
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
+</div>
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+</aside>
+
+</div>
+<script src="../_soothfast/site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>finance-query-server endpoints · finance-query</title>
+<link rel="icon" href="../../assets/logo.png">
+<link rel="stylesheet" href="../../_soothfast/tokens.css">
+<link rel="stylesheet" href="../../_soothfast/site.css">
+<link rel="stylesheet" href="../../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../../">
+      <span class="brand-mark"><img src="../../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
+    </a>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
+    </div>
+    
+    
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
+    
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</header>
+
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
+
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
+    
+      <li><a href="../../">Overview</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
+    
+      <li><a href="../../library/getting-started/">Getting Started</a></li>
+    
+      <li><a href="../../library/ticker/">Ticker API Reference</a></li>
+    
+      <li><a href="../../library/tickers/">Tickers API Reference</a></li>
+    
+      <li><a href="../../library/streaming/">Real-time Streaming</a></li>
+    
+      <li><a href="../../library/finance/">Finance Module</a></li>
+    
+      <li><a href="../../library/screeners/">Screeners</a></li>
+    
+      <li><a href="../../library/risk/">Risk Analytics</a></li>
+    
+      <li><a href="../../library/translation/">Translations</a></li>
+    
+      <li><a href="../../library/feeds/">RSS / Atom Feeds</a></li>
+    
+      <li><a href="../../library/dataframe/">DataFrame Support</a></li>
+    
+      <li><a href="../../library/configuration/">Configuration</a></li>
+    
+      <li><a href="../../library/error-handling/">Error Handling</a></li>
+    
+      <li><a href="../../library/indicators/">Indicators</a></li>
+    
+      <li><a href="../../library/backtesting/">Backtesting</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
+    
+      <li><a href="../../library/providers/">Multi-Provider Architecture</a></li>
+    
+      <li><a href="../../library/providers/polygon/">Polygon.io</a></li>
+    
+      <li><a href="../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
+    
+      <li><a href="../../library/providers/alphavantage/">Alpha Vantage</a></li>
+    
+      <li><a href="../../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
+    
+      <li><a href="../../library/providers/edgar/">EDGAR API Reference</a></li>
+    
+      <li><a href="../../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
+    
+      <li><a href="../../library/providers/worldbank/">World Bank Open Data</a></li>
+    
+      <li><a href="../../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
+    
+      <li><a href="../../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
+    
+      <li><a href="../../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
+    
+      <li><a href="../../library/providers/binance/">Binance (public market data)</a></li>
+    
+      <li><a href="../../library/providers/kraken/">Kraken (public market data)</a></li>
+    
+      <li><a href="../../library/providers/finra/">FINRA (short sale volume)</a></li>
+    
+      <li><a href="../../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
+    
+      <li><a href="../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../../library/forex/">Forex</a></li>
+    
+      <li><a href="../../library/futures/">Futures</a></li>
+    
+      <li><a href="../../library/indices/">Indices</a></li>
+    
+      <li><a href="../../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../../server/api/openapi/">REST API</a></li>
+    
+      <li><a href="../../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a class="active" aria-current="page" href="../../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a href="../../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../../perf/summary/">Performance summary</a></li>
+    
+      <li><a href="../../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
+</nav>
+
+<main class="doc">
+<h1 id="finance-query-server-endpoints"><code>finance-query-server</code> endpoints<a class="anchor" href="#finance-query-server-endpoints" aria-label="Link to this section">#</a></h1>
+<blockquote>
+<p>Generated by <code>cargo soothfast docs routes</code>
+Every operation is reconciled against its spec file in CI; drift fails the build.</p>
+</blockquote>
+<h2 id="asyncapi-yaml-asyncapi"><code>asyncapi.yaml</code> <sup>AsyncApi</sup><a class="anchor" href="#asyncapi-yaml-asyncapi" aria-label="Link to this section">#</a></h2>
+<div class="route-summary"><svg class="route-gauge-svg" viewBox="0 0 220 14" aria-hidden="true" focusable="false"><line x1="4" y1="7" x2="216" y2="7" class="route-gauge-rail"/><line x1="4" y1="7" x2="216.0" y2="7" class="route-gauge-fill"/></svg><span class="route-summary-text"><strong>4</strong>/4 reconciled</span></div>
+<details class="route-group" open><summary><svg class="route-group-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>4 reconciled</summary><div class="tablewrap"><table><thead><tr><th>status</th><th>method</th><th>path</th><th>operation</th><th>handler</th></tr></thead><tbody><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>PUBLISH</code></td><td><code>/v2/feeds/stream</code></td><td>sendFeedMessage</td><td><code>soothfast_routes::route_feeds_stream_ws_feeds_stream_handler_send</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>SUBSCRIBE</code></td><td><code>/v2/feeds/stream</code></td><td>receiveFeedEntry</td><td><code>soothfast_routes::route_feeds_stream_ws_feeds_stream_handler_receive</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>PUBLISH</code></td><td><code>/v2/stream</code></td><td>sendMessage</td><td><code>soothfast_routes::route_stream_ws_stream_handler_send</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>SUBSCRIBE</code></td><td><code>/v2/stream</code></td><td>receiveMessage</td><td><code>soothfast_routes::route_stream_ws_stream_handler_receive</code></td></tr></tbody></table></div></details>
+<h2 id="openapi-yaml-openapi"><code>openapi.yaml</code> <sup>OpenApi</sup><a class="anchor" href="#openapi-yaml-openapi" aria-label="Link to this section">#</a></h2>
+<div class="route-summary"><svg class="route-gauge-svg" viewBox="0 0 220 14" aria-hidden="true" focusable="false"><line x1="4" y1="7" x2="216" y2="7" class="route-gauge-rail"/><line x1="4" y1="7" x2="216.0" y2="7" class="route-gauge-fill"/></svg><span class="route-summary-text"><strong>58</strong>/58 reconciled</span></div>
+<details class="route-group" open><summary><svg class="route-group-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>58 reconciled</summary><div class="tablewrap"><table><thead><tr><th>status</th><th>method</th><th>path</th><th>operation</th><th>handler</th></tr></thead><tbody><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/analysis/{symbol}/{type}</code></td><td>getAnalysis</td><td><code>soothfast_routes::route_analysis_get_analysis</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/calendar</code></td><td>getCalendar</td><td><code>soothfast_routes::route_calendar_get_calendar</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/capital-gains</code></td><td>getBatchCapitalGains</td><td><code>soothfast_routes::route_events_get_batch_capital_gains</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/capital-gains/{symbol}</code></td><td>getCapitalGains</td><td><code>soothfast_routes::route_events_get_capital_gains</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/cftc/cot/{symbol}</code></td><td>getCommitmentsOfTraders</td><td><code>soothfast_routes::route_keyless_get_commitments_of_traders</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/chart/{symbol}</code></td><td>getChart</td><td><code>soothfast_routes::route_chart_get_chart</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/charts</code></td><td>getBatchCharts</td><td><code>soothfast_routes::route_chart_get_batch_charts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/crypto/coins</code></td><td>getCryptoCoins</td><td><code>soothfast_routes::route_crypto_get_crypto_coins</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/crypto/coins/{id}</code></td><td>getCryptoCoin</td><td><code>soothfast_routes::route_crypto_get_crypto_coin</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/crypto/global</code></td><td>getCryptoGlobal</td><td><code>soothfast_routes::route_crypto_get_crypto_global</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/crypto/search</code></td><td>getCryptoSearch</td><td><code>soothfast_routes::route_crypto_get_crypto_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/crypto/trending</code></td><td>getCryptoTrending</td><td><code>soothfast_routes::route_crypto_get_crypto_trending</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/currencies</code></td><td>getCurrencies</td><td><code>soothfast_routes::route_metadata_get_currencies</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/dividends</code></td><td>getBatchDividends</td><td><code>soothfast_routes::route_events_get_batch_dividends</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/dividends/{symbol}</code></td><td>getDividends</td><td><code>soothfast_routes::route_events_get_dividends</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/edgar/cik/{symbol}</code></td><td>getEdgarCik</td><td><code>soothfast_routes::route_edgar_get_edgar_cik</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/edgar/facts/{symbol}</code></td><td>getEdgarFacts</td><td><code>soothfast_routes::route_edgar_get_edgar_facts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/edgar/search</code></td><td>getEdgarSearch</td><td><code>soothfast_routes::route_edgar_get_edgar_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/edgar/submissions/{symbol}</code></td><td>getEdgarSubmissions</td><td><code>soothfast_routes::route_edgar_get_edgar_submissions</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/exchanges</code></td><td>getExchanges</td><td><code>soothfast_routes::route_metadata_get_exchanges</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/fear-and-greed</code></td><td>getFearAndGreed</td><td><code>soothfast_routes::route_market_get_fear_and_greed</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/feeds</code></td><td>getFeeds</td><td><code>soothfast_routes::route_feeds_get_feeds</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/financials</code></td><td>getBatchFinancials</td><td><code>soothfast_routes::route_financials_get_batch_financials</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/financials/{symbol}/{statement}</code></td><td>getFinancials</td><td><code>soothfast_routes::route_financials_get_financials</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/fred/series/{id}</code></td><td>getFredSeries</td><td><code>soothfast_routes::route_fred_get_fred_series</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/fred/treasury-yields</code></td><td>getFredTreasuryYields</td><td><code>soothfast_routes::route_fred_get_fred_treasury_yields</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/gdelt/news/{symbol}</code></td><td>getGdeltNews</td><td><code>soothfast_routes::route_keyless_get_gdelt_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/health</code></td><td>healthCheck</td><td><code>soothfast_routes::route_system_health_check</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/holders/{symbol}/{type}</code></td><td>getHolders</td><td><code>soothfast_routes::route_holders_get_holders</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/hours</code></td><td>getHours</td><td><code>soothfast_routes::route_metadata_get_hours</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/indicators</code></td><td>getBatchIndicators</td><td><code>soothfast_routes::route_indicators_get_batch_indicators</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/indicators/{symbol}</code></td><td>getIndicators</td><td><code>soothfast_routes::route_indicators_get_indicators</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/indices</code></td><td>getIndices</td><td><code>soothfast_routes::route_market_get_indices</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/industries/{industry}</code></td><td>getIndustry</td><td><code>soothfast_routes::route_sector_get_industry</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/lookup</code></td><td>lookup</td><td><code>soothfast_routes::route_search_lookup</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/market-summary</code></td><td>getMarketSummary</td><td><code>soothfast_routes::route_market_get_market_summary</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/metrics</code></td><td>getMetrics</td><td><code>soothfast_routes::route_system_get_metrics</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/news</code></td><td>getGeneralNews</td><td><code>soothfast_routes::route_news_get_general_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/news/{symbol}</code></td><td>getNews</td><td><code>soothfast_routes::route_news_get_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/options</code></td><td>getBatchOptions</td><td><code>soothfast_routes::route_options_get_batch_options</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/options/{symbol}</code></td><td>getOptions</td><td><code>soothfast_routes::route_options_get_options</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/ping</code></td><td>ping</td><td><code>soothfast_routes::route_system_ping</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/quote-type/{symbol}</code></td><td>getQuoteType</td><td><code>soothfast_routes::route_metadata_get_quote_type</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/quote/{symbol}</code></td><td>getQuote</td><td><code>soothfast_routes::route_quote_get_quote</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/quotes</code></td><td>getQuotes</td><td><code>soothfast_routes::route_quote_get_quotes</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/recommendations</code></td><td>getBatchRecommendations</td><td><code>soothfast_routes::route_analysis_get_batch_recommendations</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/recommendations/{symbol}</code></td><td>getRecommendations</td><td><code>soothfast_routes::route_analysis_get_recommendations</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/risk/{symbol}</code></td><td>getRisk</td><td><code>soothfast_routes::route_risk_get_risk</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>POST</code></td><td><code>/v2/screeners/custom</code></td><td>postCustomScreener</td><td><code>soothfast_routes::route_screener_post_custom_screener</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/screeners/{screener}</code></td><td>getScreeners</td><td><code>soothfast_routes::route_screener_get_screeners</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/search</code></td><td>search</td><td><code>soothfast_routes::route_search_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/sectors/{sector}</code></td><td>getSector</td><td><code>soothfast_routes::route_sector_get_sector</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/spark</code></td><td>getSpark</td><td><code>soothfast_routes::route_chart_get_spark</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/splits</code></td><td>getBatchSplits</td><td><code>soothfast_routes::route_events_get_batch_splits</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/splits/{symbol}</code></td><td>getSplits</td><td><code>soothfast_routes::route_events_get_splits</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/transcripts/{symbol}</code></td><td>getTranscript</td><td><code>soothfast_routes::route_transcripts_get_transcript</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/transcripts/{symbol}/all</code></td><td>getTranscripts</td><td><code>soothfast_routes::route_transcripts_get_transcripts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>GET</code></td><td><code>/v2/trending</code></td><td>getTrending</td><td><code>soothfast_routes::route_market_get_trending</code></td></tr></tbody></table></div></details>
+<h2 id="schema-graphql-graphql"><code>schema.graphql</code> <sup>GraphQl</sup><a class="anchor" href="#schema-graphql-graphql" aria-label="Link to this section">#</a></h2>
+<div class="route-summary"><svg class="route-gauge-svg" viewBox="0 0 220 14" aria-hidden="true" focusable="false"><line x1="4" y1="7" x2="216" y2="7" class="route-gauge-rail"/><line x1="4" y1="7" x2="216.0" y2="7" class="route-gauge-fill"/></svg><span class="route-summary-text"><strong>42</strong>/42 reconciled</span></div>
+<details class="route-group" open><summary><svg class="route-group-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>42 reconciled</summary><div class="tablewrap"><table><thead><tr><th>status</th><th>method</th><th>path</th><th>operation</th><th>handler</th></tr></thead><tbody><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>calendar</code></td><td>calendar</td><td><code>soothfast_routes::route_gql_root_metadata_calendar</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>capitalGainsBatch</code></td><td>capitalGainsBatch</td><td><code>soothfast_routes::route_gql_root_batch_capital_gains_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>charts</code></td><td>charts</td><td><code>soothfast_routes::route_gql_root_batch_charts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>commitmentsOfTraders</code></td><td>commitmentsOfTraders</td><td><code>soothfast_routes::route_gql_root_metadata_commitments_of_traders</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>cryptoCoin</code></td><td>cryptoCoin</td><td><code>soothfast_routes::route_gql_root_metadata_crypto_coin</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>cryptoCoins</code></td><td>cryptoCoins</td><td><code>soothfast_routes::route_gql_root_metadata_crypto_coins</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>cryptoGlobal</code></td><td>cryptoGlobal</td><td><code>soothfast_routes::route_gql_root_metadata_crypto_global</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>cryptoSearch</code></td><td>cryptoSearch</td><td><code>soothfast_routes::route_gql_root_metadata_crypto_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>cryptoTrending</code></td><td>cryptoTrending</td><td><code>soothfast_routes::route_gql_root_metadata_crypto_trending</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>currencies</code></td><td>currencies</td><td><code>soothfast_routes::route_gql_root_metadata_currencies</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>customScreener</code></td><td>customScreener</td><td><code>soothfast_routes::route_gql_root_discovery_custom_screener</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>dividendsBatch</code></td><td>dividendsBatch</td><td><code>soothfast_routes::route_gql_root_batch_dividends_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>edgarCik</code></td><td>edgarCik</td><td><code>soothfast_routes::route_gql_root_metadata_edgar_cik</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>edgarSearch</code></td><td>edgarSearch</td><td><code>soothfast_routes::route_gql_root_metadata_edgar_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>exchanges</code></td><td>exchanges</td><td><code>soothfast_routes::route_gql_root_metadata_exchanges</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>fearAndGreed</code></td><td>fearAndGreed</td><td><code>soothfast_routes::route_gql_root_market_fear_and_greed</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>SUBSCRIPTION</code></td><td><code>feedStream</code></td><td>feedStream</td><td><code>soothfast_routes::route_gql_subscription_feed_stream</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>feeds</code></td><td>feeds</td><td><code>soothfast_routes::route_gql_root_market_feeds</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>financialsBatch</code></td><td>financialsBatch</td><td><code>soothfast_routes::route_gql_root_batch_financials_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>fredSeries</code></td><td>fredSeries</td><td><code>soothfast_routes::route_gql_root_metadata_fred_series</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>gdeltNews</code></td><td>gdeltNews</td><td><code>soothfast_routes::route_gql_root_metadata_gdelt_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>indicatorsBatch</code></td><td>indicatorsBatch</td><td><code>soothfast_routes::route_gql_root_batch_indicators_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>indices</code></td><td>indices</td><td><code>soothfast_routes::route_gql_root_market_indices</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>industry</code></td><td>industry</td><td><code>soothfast_routes::route_gql_root_market_industry</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>lookup</code></td><td>lookup</td><td><code>soothfast_routes::route_gql_root_discovery_lookup</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>marketHours</code></td><td>marketHours</td><td><code>soothfast_routes::route_gql_root_metadata_market_hours</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>marketSummary</code></td><td>marketSummary</td><td><code>soothfast_routes::route_gql_root_market_market_summary</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>news</code></td><td>news</td><td><code>soothfast_routes::route_gql_root_market_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>optionsBatch</code></td><td>optionsBatch</td><td><code>soothfast_routes::route_gql_root_batch_options_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>SUBSCRIPTION</code></td><td><code>priceAlerts</code></td><td>priceAlerts</td><td><code>soothfast_routes::route_gql_subscription_price_alerts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>SUBSCRIPTION</code></td><td><code>priceStream</code></td><td>priceStream</td><td><code>soothfast_routes::route_gql_subscription_price_stream</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>quoteType</code></td><td>quoteType</td><td><code>soothfast_routes::route_gql_root_metadata_quote_type</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>quotes</code></td><td>quotes</td><td><code>soothfast_routes::route_gql_root_batch_quotes</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>recommendationsBatch</code></td><td>recommendationsBatch</td><td><code>soothfast_routes::route_gql_root_batch_recommendations_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>screener</code></td><td>screener</td><td><code>soothfast_routes::route_gql_root_discovery_screener</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>search</code></td><td>search</td><td><code>soothfast_routes::route_gql_root_discovery_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>sector</code></td><td>sector</td><td><code>soothfast_routes::route_gql_root_market_sector</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>spark</code></td><td>spark</td><td><code>soothfast_routes::route_gql_root_batch_spark</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>splitsBatch</code></td><td>splitsBatch</td><td><code>soothfast_routes::route_gql_root_batch_splits_batch</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>ticker</code></td><td>ticker</td><td><code>soothfast_routes::route_gql_root_batch_ticker</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>treasuryYields</code></td><td>treasuryYields</td><td><code>soothfast_routes::route_gql_root_metadata_treasury_yields</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>QUERY</code></td><td><code>trending</code></td><td>trending</td><td><code>soothfast_routes::route_gql_root_market_trending</code></td></tr></tbody></table></div></details>
+
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
+</div>
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+  <span class="label">On this page</span>
+  <ul class="toc-list" id="toc">
+  
+    <li><a class="toc-l2" href="#asyncapi-yaml-asyncapi">asyncapi.yaml AsyncApi</a></li>
+  
+    <li><a class="toc-l2" href="#openapi-yaml-openapi">openapi.yaml OpenApi</a></li>
+  
+    <li><a class="toc-l2" href="#schema-graphql-graphql">schema.graphql GraphQl</a></li>
+  
+  </ul>
+
+</aside>
+
+</div>
+<script src="../../_soothfast/site.js" defer></script>
+</body>
+</html>

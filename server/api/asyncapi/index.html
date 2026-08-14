@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Query Streaming API · finance-query</title>
+<link rel="icon" href="../../../assets/logo.png">
+<link rel="stylesheet" href="../../../_soothfast/tokens.css">
+<link rel="stylesheet" href="../../../_soothfast/site.css">
+<link rel="stylesheet" href="../../../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../../../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../../../">
+      <span class="brand-mark"><img src="../../../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
+    </a>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
+    </div>
+    
+    
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
+    
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</header>
+
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
+
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
+    
+      <li><a href="../../../">Overview</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
+    
+      <li><a href="../../../library/getting-started/">Getting Started</a></li>
+    
+      <li><a href="../../../library/ticker/">Ticker API Reference</a></li>
+    
+      <li><a href="../../../library/tickers/">Tickers API Reference</a></li>
+    
+      <li><a href="../../../library/streaming/">Real-time Streaming</a></li>
+    
+      <li><a href="../../../library/finance/">Finance Module</a></li>
+    
+      <li><a href="../../../library/screeners/">Screeners</a></li>
+    
+      <li><a href="../../../library/risk/">Risk Analytics</a></li>
+    
+      <li><a href="../../../library/translation/">Translations</a></li>
+    
+      <li><a href="../../../library/feeds/">RSS / Atom Feeds</a></li>
+    
+      <li><a href="../../../library/dataframe/">DataFrame Support</a></li>
+    
+      <li><a href="../../../library/configuration/">Configuration</a></li>
+    
+      <li><a href="../../../library/error-handling/">Error Handling</a></li>
+    
+      <li><a href="../../../library/indicators/">Indicators</a></li>
+    
+      <li><a href="../../../library/backtesting/">Backtesting</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
+    
+      <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
+    
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
+    
+      <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
+    
+      <li><a href="../../../library/providers/alphavantage/">Alpha Vantage</a></li>
+    
+      <li><a href="../../../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
+    
+      <li><a href="../../../library/providers/edgar/">EDGAR API Reference</a></li>
+    
+      <li><a href="../../../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
+    
+      <li><a href="../../../library/providers/worldbank/">World Bank Open Data</a></li>
+    
+      <li><a href="../../../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
+    
+      <li><a href="../../../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
+    
+      <li><a href="../../../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
+    
+      <li><a href="../../../library/providers/binance/">Binance (public market data)</a></li>
+    
+      <li><a href="../../../library/providers/kraken/">Kraken (public market data)</a></li>
+    
+      <li><a href="../../../library/providers/finra/">FINRA (short sale volume)</a></li>
+    
+      <li><a href="../../../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
+    
+      <li><a href="../../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../../../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../../../library/forex/">Forex</a></li>
+    
+      <li><a href="../../../library/futures/">Futures</a></li>
+    
+      <li><a href="../../../library/indices/">Indices</a></li>
+    
+      <li><a href="../../../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../../../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../../../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../../../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../../../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../../../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../../../server/api/openapi/">REST API</a></li>
+    
+      <li><a class="active" aria-current="page" href="../../../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../../../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../../../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a href="../../../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a href="../../../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../../../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../../../perf/summary/">Performance summary</a></li>
+    
+      <li><a href="../../../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../../../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
+</nav>
+
+<main class="doc">
+<h1 id="finance-query-streaming-api">Finance Query Streaming API<a class="anchor" href="#finance-query-streaming-api" aria-label="Link to this section">#</a></h1>
+<blockquote>
+<p>Generated by <code>cargo soothfast spec html</code> from <code>asyncapi.yaml</code> (AsyncAPI 3.0.0). Regenerate with <code>cargo soothfast spec gen</code> + <code>spec html</code>; do not hand-edit.</p>
+</blockquote>
+<p><strong>Version:</strong> <code>2.8.0</code></p>
+<p>High-performance financial data API server built on finance-query library</p>
+<p><strong>Servers:</strong></p>
+<ul>
+<li><code>financeQuery</code> — <code>wss://finance-query.com</code></li>
+<li><code>localhost</code> — <code>ws://localhost:8000</code></li>
+</ul>
+<h2 id="channels-2-channel-s">Channels <sup>2 channel(s)</sup><a class="anchor" href="#channels-2-channel-s" aria-label="Link to this section">#</a></h2>
+<div class="spec-rowlist"><details class="spec-row" open><summary><code class="spec-row-name">/v2/feeds/stream</code><span class="spec-row-desc">FeedStreamCommand, GqlFeedEntry</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Messages</p><p><code>FeedStreamCommand</code>, <code>GqlFeedEntry</code></p></div></details><details class="spec-row" open><summary><code class="spec-row-name">/v2/stream</code><span class="spec-row-desc">PriceStreamMessage, params_StreamCommand</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Messages</p><p><code>PriceStreamMessage</code>, <code>params_StreamCommand</code></p></div></details></div>
+<h2 id="operations-4-operation-s">Operations <sup>4 operation(s)</sup><a class="anchor" href="#operations-4-operation-s" aria-label="Link to this section">#</a></h2>
+<div class="spec-rowlist"><details class="spec-row" open><summary><span class="spec-method spec-method-post">SEND</span><code class="spec-row-path" title="receiveFeedEntry">v2FeedsStream</code><span class="spec-row-desc">Newly-seen RSS/Atom feed entries as the server polls each source.</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Payload · <code>GqlFeedEntry</code></p><div class="tabs"><input type="radio" name="tabs-0" id="tab-0-0" checked><label for="tab-0-0">Example Value</label><input type="radio" name="tabs-0" id="tab-0-1"><label for="tab-0-1">Schema</label><section class="tab-panel"><pre class="spec-example">{
+  &quot;published&quot;: &quot;string&quot;,
+  &quot;source&quot;: &quot;string&quot;,
+  &quot;summary&quot;: &quot;string&quot;,
+  &quot;title&quot;: &quot;string&quot;,
+  &quot;url&quot;: &quot;string&quot;
+}</pre></section><section class="tab-panel"><p><code>GqlFeedEntry</code></p></section></div></div></details><details class="spec-row" open><summary><span class="spec-method spec-method-post">SEND</span><code class="spec-row-path" title="receiveMessage">v2Stream</code><span class="spec-row-desc">Real-time price ticks, or fired alert events while alert rules are active.</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Payload · <code>PriceStreamMessage</code></p><div class="tabs"><input type="radio" name="tabs-1" id="tab-1-0" checked><label for="tab-1-0">Example Value</label><input type="radio" name="tabs-1" id="tab-1-1"><label for="tab-1-1">Schema</label><section class="tab-panel"><pre class="spec-example">{
+  &quot;ask&quot;: 0.0,
+  &quot;askSize&quot;: 0,
+  &quot;bid&quot;: 0.0,
+  &quot;bidSize&quot;: 0,
+  &quot;change&quot;: 0.0,
+  &quot;changePercent&quot;: 0.0,
+  &quot;circulatingSupply&quot;: 0.0,
+  &quot;currency&quot;: &quot;string&quot;,
+  &quot;dayHigh&quot;: 0.0,
+  &quot;dayLow&quot;: 0.0,
+  &quot;dayVolume&quot;: 0,
+  &quot;exchange&quot;: &quot;string&quot;,
+  &quot;expireDate&quot;: 0,
+  &quot;fromCurrency&quot;: &quot;string&quot;,
+  &quot;id&quot;: &quot;string&quot;,
+  &quot;lastMarket&quot;: &quot;string&quot;,
+  &quot;lastSize&quot;: 0,
+  &quot;marketCap&quot;: 0.0,
+  &quot;marketHours&quot;: &quot;PRE_MARKET&quot;,
+  &quot;miniOption&quot;: 0,
+  &quot;openInterest&quot;: 0,
+  &quot;openPrice&quot;: 0.0,
+  &quot;optionsType&quot;: &quot;CALL&quot;,
+  &quot;previousClose&quot;: 0.0,
+  &quot;price&quot;: 0.0,
+  &quot;priceHint&quot;: 0,
+  &quot;quoteType&quot;: &quot;NONE&quot;,
+  &quot;shortName&quot;: &quot;string&quot;,
+  &quot;strikePrice&quot;: 0.0,
+  &quot;time&quot;: 0,
+  &quot;underlyingSymbol&quot;: &quot;string&quot;,
+  &quot;vol24hr&quot;: 0,
+  &quot;volAllCurrencies&quot;: 0
+}</pre></section><section class="tab-panel"><p><code>PriceStreamMessage</code></p></section></div></div></details><details class="spec-row" open><summary><span class="spec-method spec-method-get">RECEIVE</span><code class="spec-row-path" title="sendFeedMessage">v2FeedsStream</code><span class="spec-row-desc">Subscribe/unsubscribe to feed sources.</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Payload · <code>FeedStreamCommand</code></p><div class="tabs"><input type="radio" name="tabs-2" id="tab-2-0" checked><label for="tab-2-0">Example Value</label><input type="radio" name="tabs-2" id="tab-2-1"><label for="tab-2-1">Schema</label><section class="tab-panel"><pre class="spec-example">{
+  &quot;formType&quot;: &quot;string&quot;,
+  &quot;subscribe&quot;: [
+    &quot;string&quot;
+  ],
+  &quot;unsubscribe&quot;: [
+    &quot;string&quot;
+  ]
+}</pre></section><section class="tab-panel"><p><code>FeedStreamCommand</code></p></section></div></div></details><details class="spec-row" open><summary><span class="spec-method spec-method-get">RECEIVE</span><code class="spec-row-path" title="sendMessage">v2Stream</code><span class="spec-row-desc">Subscribe/unsubscribe to symbols, or set alert rules.</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p class="spec-subhead">Payload · <code>params_StreamCommand</code></p><div class="tabs"><input type="radio" name="tabs-3" id="tab-3-0" checked><label for="tab-3-0">Example Value</label><input type="radio" name="tabs-3" id="tab-3-1"><label for="tab-3-1">Schema</label><section class="tab-panel"><pre class="spec-example">{
+  &quot;alerts&quot;: [
+    {
+      &quot;condition&quot;: &quot;crossesAbove&quot;,
+      &quot;repeat&quot;: true,
+      &quot;symbol&quot;: &quot;string&quot;,
+      &quot;value&quot;: 0.0
+    }
+  ],
+  &quot;subscribe&quot;: [
+    &quot;string&quot;
+  ],
+  &quot;unsubscribe&quot;: [
+    &quot;string&quot;
+  ]
+}</pre></section><section class="tab-panel"><p><code>params_StreamCommand</code></p></section></div></div></details></div>
+<h2 id="schemas-12-type-s">Schemas <sup>12 type(s)</sup><a class="anchor" href="#schemas-12-type-s" aria-label="Link to this section">#</a></h2>
+<div class="spec-rowlist"><details class="spec-row"><summary><span class="spec-row-name">AlertCondition</span><span class="spec-row-desc">oneOf · 7 variants</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>A predicate over incoming price ticks.</p><p>one of:</p><ul class="spec-oneof"><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>crossesAbove</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>crossesBelow</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>priceAbove</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>priceBelow</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>percentChangeAbove</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>percentChangeBelow</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li><li><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>volumeAbove</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></li></ul></div></details><details class="spec-row"><summary><span class="spec-row-name">AlertConditionKind</span><span class="spec-row-desc">enum</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Which predicate an [`AlertCondition`] applies, without its threshold.</p><p>one of: <code>&quot;crossesAbove&quot;</code>, <code>&quot;crossesBelow&quot;</code>, <code>&quot;priceAbove&quot;</code>, <code>&quot;priceBelow&quot;</code>, <code>&quot;percentChangeAbove&quot;</code>, <code>&quot;percentChangeBelow&quot;</code>, <code>&quot;volumeAbove&quot;</code></p></div></details><details class="spec-row"><summary><span class="spec-row-name">AlertEvent</span><span class="spec-row-desc">object · 7 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>A fired alert, carrying the tick that triggered it.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>changePercent</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td>Percent change carried by the triggering tick.</td></tr><tr><td><code>condition</code></td><td><code>AlertCondition</code></td><td><span class="spec-required">required</span></td><td>Condition that fired.</td></tr><tr><td><code>previousPrice</code></td><td><code>number</code></td><td><span class="spec-optional">optional</span></td><td>Last price seen before this tick, if any.</td></tr><tr><td><code>price</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td>Price on the triggering tick.</td></tr><tr><td><code>symbol</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td>Symbol that triggered.</td></tr><tr><td><code>time</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td>Tick timestamp (milliseconds).</td></tr><tr><td><code>update</code></td><td><code>PriceUpdate</code></td><td><span class="spec-required">required</span></td><td>The full triggering tick.</td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">FeedStreamCommand</span><span class="spec-row-desc">object · 3 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Inbound control message for `/v2/feeds/stream`.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>formType</code></td><td><code>string</code></td><td><span class="spec-optional">optional</span></td><td>SEC filing form type, used when `sec-filings` is in `subscribe`.</td></tr><tr><td><code>subscribe</code></td><td><code>string[]</code></td><td><span class="spec-optional">optional</span></td><td>Feed source slugs to subscribe to (same slugs as `GET /v2/feeds`&#39;s
+`sources` param).</td></tr><tr><td><code>unsubscribe</code></td><td><code>string[]</code></td><td><span class="spec-optional">optional</span></td><td>Feed source slugs to unsubscribe from.</td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">GqlFeedEntry</span><span class="spec-row-desc">object · 5 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>A single entry from an RSS/Atom feed.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>published</code></td><td><code>string</code></td><td><span class="spec-optional">optional</span></td><td></td></tr><tr><td><code>source</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>summary</code></td><td><code>string</code></td><td><span class="spec-optional">optional</span></td><td></td></tr><tr><td><code>title</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>url</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">MarketHoursType</span><span class="spec-row-desc">enum</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Market hours type enumeration</p><p>one of: <code>&quot;PRE_MARKET&quot;</code>, <code>&quot;REGULAR_MARKET&quot;</code>, <code>&quot;POST_MARKET&quot;</code>, <code>&quot;EXTENDED_HOURS_MARKET&quot;</code></p></div></details><details class="spec-row"><summary><span class="spec-row-name">OptionType</span><span class="spec-row-desc">enum</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Option type enumeration</p><p>one of: <code>&quot;CALL&quot;</code>, <code>&quot;PUT&quot;</code></p></div></details><details class="spec-row"><summary><span class="spec-row-name">PriceStreamMessage</span><span class="spec-row-desc">oneOf · 2 variants</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Outbound message on `/v2/stream`: a live price tick, or — while a
+client&#39;s alert rules are active — a fired alert event instead of the raw
+tick. Schema-only: `deliver()` in `handlers::stream` sends each variant&#39;s
+JSON directly rather than constructing this type.</p><p>one of:</p><ul class="spec-oneof"><li><p><code>PriceUpdate</code></p></li><li><p><code>AlertEvent</code></p></li></ul></div></details><details class="spec-row"><summary><span class="spec-row-name">PriceUpdate</span><span class="spec-row-desc">object · 33 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Real-time price update from Yahoo Finance WebSocket.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>ask</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>askSize</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>bid</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>bidSize</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>change</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>changePercent</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>circulatingSupply</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>currency</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>dayHigh</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>dayLow</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>dayVolume</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>exchange</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>expireDate</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>fromCurrency</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>id</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>lastMarket</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>lastSize</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>marketCap</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>marketHours</code></td><td><code>MarketHoursType</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>miniOption</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>openInterest</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>openPrice</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>optionsType</code></td><td><code>OptionType</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>previousClose</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>price</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>priceHint</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>quoteType</code></td><td><code>pricing_QuoteType</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>shortName</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>strikePrice</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>time</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>underlyingSymbol</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>vol24hr</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr><tr><td><code>volAllCurrencies</code></td><td><code>integer</code></td><td><span class="spec-required">required</span></td><td></td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">WsAlertRule</span><span class="spec-row-desc">object · 4 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>One alert rule as sent over the wire.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>condition</code></td><td><code>AlertConditionKind</code></td><td><span class="spec-required">required</span></td><td>Predicate to evaluate. Crossing conditions compare against the
+previous tick and never fire on a symbol&#39;s first tick.</td></tr><tr><td><code>repeat</code></td><td><code>boolean</code></td><td><span class="spec-optional">optional</span></td><td>Fire every time the condition becomes true again, instead of once.</td></tr><tr><td><code>symbol</code></td><td><code>string</code></td><td><span class="spec-required">required</span></td><td>Ticker symbol to watch.</td></tr><tr><td><code>value</code></td><td><code>number</code></td><td><span class="spec-required">required</span></td><td>Threshold the predicate compares against.</td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">params_StreamCommand</span><span class="spec-row-desc">object · 3 fields</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Inbound control message for `/v2/stream`.</p><div class="tablewrap"><table><thead><tr><th>field</th><th>type</th><th>required</th><th>description</th></tr></thead><tbody><tr><td><code>alerts</code></td><td><code>WsAlertRule[]</code></td><td><span class="spec-optional">optional</span></td><td>Replace the connection&#39;s alert rule set. While a non-empty rule set is
+active the server sends alert events instead of raw price updates;
+send an empty array to revert to raw ticks. Symbols named by rules
+are subscribed automatically.</td></tr><tr><td><code>subscribe</code></td><td><code>string[]</code></td><td><span class="spec-optional">optional</span></td><td>Ticker symbols to subscribe to.</td></tr><tr><td><code>unsubscribe</code></td><td><code>string[]</code></td><td><span class="spec-optional">optional</span></td><td>Ticker symbols to unsubscribe from.</td></tr></tbody></table></div></div></details><details class="spec-row"><summary><span class="spec-row-name">pricing_QuoteType</span><span class="spec-row-desc">enum</span><svg class="spec-row-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary><div class="spec-body"><p>Quote type enumeration</p><p>one of: <code>&quot;NONE&quot;</code>, <code>&quot;ALT_SYMBOL&quot;</code>, <code>&quot;HEARTBEAT&quot;</code>, <code>&quot;EQUITY&quot;</code>, <code>&quot;INDEX&quot;</code>, <code>&quot;MUTUAL_FUND&quot;</code>, <code>&quot;MONEY_MARKET&quot;</code>, <code>&quot;OPTION&quot;</code>, <code>&quot;CURRENCY&quot;</code>, <code>&quot;WARRANT&quot;</code>, <code>&quot;BOND&quot;</code>, <code>&quot;FUTURE&quot;</code>, <code>&quot;ETF&quot;</code>, <code>&quot;COMMODITY&quot;</code>, <code>&quot;ECN_QUOTE&quot;</code>, <code>&quot;CRYPTOCURRENCY&quot;</code>, <code>&quot;INDICATOR&quot;</code>, <code>&quot;INDUSTRY&quot;</code></p></div></details></div>
+
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
+</div>
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+  <span class="label">On this page</span>
+  <ul class="toc-list" id="toc">
+  
+    <li><a class="toc-l2" href="#channels-2-channel-s">Channels 2 channel(s)</a></li>
+  
+    <li><a class="toc-l2" href="#operations-4-operation-s">Operations 4 operation(s)</a></li>
+  
+    <li><a class="toc-l2" href="#schemas-12-type-s">Schemas 12 type(s)</a></li>
+  
+  </ul>
+
+</aside>
+
+</div>
+<script src="../../../_soothfast/site.js" defer></script>
+</body>
+</html>

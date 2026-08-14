@@ -1,2787 +1,312 @@
-
-<!doctype html>
-<html lang="en" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Rust library, CLI, and server for financial data">
-      
-      
-        <meta name="author" content="Harvey Tseng">
-      
-      
-        <link rel="canonical" href="https://verdenroz.github.io/finance-query/library/providers/edgar/">
-      
-      
-        <link rel="prev" href="../coingecko/">
-      
-      
-        <link rel="next" href="../fred/">
-      
-      
-        
-      
-      
-      <link rel="icon" href="../../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
-    
-    
-      
-        <title>EDGAR - Finance Query</title>
-      
-    
-    
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
-      
-        
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
-    
-    
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#edgar-api-reference" class="md-skip">
-          Skip to content
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-<header class="md-header" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Finance Query" class="md-header__button md-logo" aria-label="Finance Query" data-md-component="logo">
-      
-  <img src="../../../assets/logo.png" alt="logo">
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EDGAR API Reference · finance-query</title>
+<link rel="icon" href="../../../assets/logo.png">
+<link rel="stylesheet" href="../../../_soothfast/tokens.css">
+<link rel="stylesheet" href="../../../_soothfast/site.css">
+<link rel="stylesheet" href="../../../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../../../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../../../">
+      <span class="brand-mark"><img src="../../../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
     </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Finance Query
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              EDGAR
-            
-          </span>
-        </div>
-      </div>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
     </div>
     
-      
-        <form class="md-header__option" data-md-component="palette">
-  
     
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
     
-    
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      
-      
-        <label class="md-header__button md-icon" for="__search">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-        </label>
-        <div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
-      <label class="md-search__icon md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-      </label>
-      <nav class="md-search__options" aria-label="Search">
-        
-        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </nav>
-      
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="search-result">
-          <div class="md-search-result__meta">
-            Initializing search
-          </div>
-          <ol class="md-search-result__list" role="presentation"></ol>
-        </div>
-      </div>
-    </div>
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
-</div>
-      
-    
-    
-      <div class="md-header__source">
-        <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    Verdenroz/finance-query
-  </div>
-</a>
-      </div>
-    
-  </nav>
-  
+  <div class="ruler" aria-hidden="true"></div>
 </header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-            
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
-        
-  
-  
-    
-  
-  Home
 
-      </a>
-    </li>
-  
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
 
-      
-        
-  
-  
-  
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
     
-  
-  
+      <li><a href="../../../">Overview</a></li>
     
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../getting-started/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Library
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../cli/installation/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  CLI
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../server/api-reference/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Server
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../development/contributing/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Development
-
-        </a>
-      </li>
-    
-  
-
-      
     </ul>
   </div>
-</nav>
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
 
-
-  
-
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Finance Query" class="md-nav__button md-logo" aria-label="Finance Query" data-md-component="logo">
-      
-  <img src="../../../assets/logo.png" alt="logo">
-
-    </a>
-    Finance Query
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
-  </div>
-  <div class="md-source__repository">
-    Verdenroz/finance-query
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
+      <li><a href="../../../library/getting-started/">Getting Started</a></li>
     
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
+      <li><a href="../../../library/ticker/">Ticker API Reference</a></li>
     
-  
-    Home
-  
-
+      <li><a href="../../../library/tickers/">Tickers API Reference</a></li>
     
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
+      <li><a href="../../../library/streaming/">Real-time Streaming</a></li>
     
-      
-      
-  
-  
+      <li><a href="../../../library/finance/">Finance Module</a></li>
     
-  
-  
-  
+      <li><a href="../../../library/screeners/">Screeners</a></li>
     
+      <li><a href="../../../library/risk/">Risk Analytics</a></li>
     
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
+      <li><a href="../../../library/translation/">Translations</a></li>
     
+      <li><a href="../../../library/feeds/">RSS / Atom Feeds</a></li>
     
+      <li><a href="../../../library/dataframe/">DataFrame Support</a></li>
     
-      
-        
-        
-      
-      
+      <li><a href="../../../library/configuration/">Configuration</a></li>
     
+      <li><a href="../../../library/error-handling/">Error Handling</a></li>
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
+      <li><a href="../../../library/indicators/">Indicators</a></li>
     
-  
-    Library
-  
-
+      <li><a href="../../../library/backtesting/">Backtesting</a></li>
     
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Library
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../ticker/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Ticker
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tickers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Batch Tickers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../streaming/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Real-time Streaming
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../finance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Finance Module
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../screeners/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Screeners
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Providers
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Providers
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../polygon/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Polygon.io
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../fmp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    FMP
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../alphavantage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Alpha Vantage
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../coingecko/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CoinGecko
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    EDGAR
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    EDGAR
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#initialization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Initialization
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Initialization">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-initialization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Initialization
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rate-limiting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rate Limiting
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ticker-to-cik-resolution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ticker to CIK Resolution
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Ticker to CIK Resolution">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#cik-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CIK Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filing-history-submissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filing History (Submissions)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filing History (Submissions)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#submission-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Submission Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-form-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Form Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#company-facts-xbrl-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Company Facts (XBRL Data)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Company Facts (XBRL Data)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#available-taxonomies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Taxonomies
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-xbrl-concepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common XBRL Concepts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#full-text-search" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Full-Text Search
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Full-Text Search">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#filtered-search" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filtered Search
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-form-filters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Form Filters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#routed-search-filings-handle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Routed Search (Filings handle)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Best Practices
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
-  
-</nav>
-      
-    </li>
-  
+  </div>
 
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../fred/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
     
-  
-    FRED
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worldbank/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    World Bank
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../fiscaldata/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    US Treasury FiscalData
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../bls/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    BLS
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../frankfurter/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Frankfurter
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../binance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Binance
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../kraken/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kraken
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../finra/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    FINRA
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../openfigi/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OpenFIGI
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../defillama/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DefiLlama
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Domains
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Domains
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../crypto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Crypto
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../forex/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Forex
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../futures/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Futures
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../indices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Indices
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../commodities/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Commodities
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../economic/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Economic
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../filings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Filings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../risk/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Risk Analytics
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../translation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Translations
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../feeds/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Feeds
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../dataframe/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DataFrame Support
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../error-handling/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Error Handling
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../indicators/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Indicators
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../backtesting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Backtesting
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CLI
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    CLI
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../cli/installation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Installation & Quick Start
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../cli/commands/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Commands
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../cli/examples/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Examples
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Server
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Server
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../server/api-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    REST API Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../server/websocket-api-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    WebSocket API Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../server/graphql-api-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GraphQL API Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../server/mcp-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
+      <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
     
-  
-    MCP Tools Reference
-  
-
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
     
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
+      <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
     
-      
-      
-  
-  
-  
-  
+      <li><a href="../../../library/providers/alphavantage/">Alpha Vantage</a></li>
     
+      <li><a href="../../../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
     
-      
-        
-      
+      <li><a class="active" aria-current="page" href="../../../library/providers/edgar/">EDGAR API Reference</a></li>
     
+      <li><a href="../../../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
     
+      <li><a href="../../../library/providers/worldbank/">World Bank Open Data</a></li>
     
-      
-      
+      <li><a href="../../../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
     
+      <li><a href="../../../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
     
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
+      <li><a href="../../../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
     
-  
-    Development
-  
-
+      <li><a href="../../../library/providers/binance/">Binance (public market data)</a></li>
     
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Development
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../development/contributing/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
+      <li><a href="../../../library/providers/kraken/">Kraken (public market data)</a></li>
     
-  
-    Contributing
-  
-
+      <li><a href="../../../library/providers/finra/">FINRA (short sale volume)</a></li>
     
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
+      <li><a href="../../../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
     
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
+      <li><a href="../../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
     
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#initialization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Initialization
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Initialization">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-initialization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Initialization
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rate-limiting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rate Limiting
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ticker-to-cik-resolution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ticker to CIK Resolution
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Ticker to CIK Resolution">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#cik-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CIK Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filing-history-submissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filing History (Submissions)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filing History (Submissions)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#submission-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Submission Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-form-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Form Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#company-facts-xbrl-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Company Facts (XBRL Data)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Company Facts (XBRL Data)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#available-taxonomies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Taxonomies
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-xbrl-concepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common XBRL Concepts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#full-text-search" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Full-Text Search
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Full-Text Search">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#filtered-search" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filtered Search
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-form-filters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Form Filters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#routed-search-filings-handle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Routed Search (Filings handle)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Best Practices
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
-  
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../../../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../../../library/forex/">Forex</a></li>
+    
+      <li><a href="../../../library/futures/">Futures</a></li>
+    
+      <li><a href="../../../library/indices/">Indices</a></li>
+    
+      <li><a href="../../../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../../../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../../../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../../../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../../../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../../../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../../../server/api/openapi/">REST API</a></li>
+    
+      <li><a href="../../../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../../../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../../../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a href="../../../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a href="../../../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../../../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../../../perf/summary/">Performance summary</a></li>
+    
+      <li><a href="../../../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../../../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
 </nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              
-              <article class="md-content__inner md-typeset">
-                
-                  
 
-
-  
-  
-
-
-<h1 id="edgar-api-reference">EDGAR API Reference<a class="headerlink" href="#edgar-api-reference" title="Permanent link">&para;</a></h1>
-<div class="admonition abstract">
-<p class="admonition-title">Cargo Docs</p>
+<main class="doc">
+<h1 id="edgar-api-reference">EDGAR API Reference<a class="anchor" href="#edgar-api-reference" aria-label="Link to this section">#</a></h1>
+<div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
 <p><a href="https://docs.rs/finance-query/latest/finance_query/edgar/index.html">docs.rs/finance-query — edgar</a></p>
 </div>
-<p>The EDGAR module provides access to SEC (Securities and Exchange Commission) EDGAR filings and XBRL financial data. All EDGAR APIs are free and public, requiring only a proper User-Agent header with a contact email.</p>
-<div class="admonition info">
-<p class="admonition-title">Contact Email Required</p>
+<p>The EDGAR module provides access to SEC (Securities and Exchange Commission) EDGAR filings and XBRL financial data. All EDGAR APIs are free and public, requiring only a proper User-Agent header with a contact email. The module is always available — no feature flag needed.</p>
+<div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Contact Email Required</p>
 <p>SEC EDGAR requires all automated requests to include a User-Agent header with a valid contact email address. Call <code>edgar::init(email)</code> once per process.</p>
 </div>
-<h2 id="initialization">Initialization<a class="headerlink" href="#initialization" title="Permanent link">&para;</a></h2>
-<h3 id="basic-initialization">Basic Initialization<a class="headerlink" href="#basic-initialization" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Required: Contact email for SEC compliance</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="advanced-configuration">Advanced Configuration<a class="headerlink" href="#advanced-configuration" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">time</span><span class="p">::</span><span class="n">Duration</span><span class="p">;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init_with_config</span><span class="p">(</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="s">&quot;user@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="s">&quot;my-financial-app&quot;</span><span class="p">,</span><span class="w">       </span><span class="c1">// Optional: default is &quot;finance-query&quot;</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">Duration</span><span class="p">::</span><span class="n">from_secs</span><span class="p">(</span><span class="mi">60</span><span class="p">),</span><span class="w">   </span><span class="c1">// Optional: default is 30 seconds</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-</code></pre></div>
-<h2 id="rate-limiting">Rate Limiting<a class="headerlink" href="#rate-limiting" title="Permanent link">&para;</a></h2>
+<h2 id="initialization">Initialization<a class="anchor" href="#initialization" aria-label="Link to this section">#</a></h2>
+<h3 id="basic-initialization">Basic Initialization<a class="anchor" href="#basic-initialization" aria-label="Link to this section">#</a></h3>
+<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;&#10;&#10;<span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-com">// Required: Contact email for SEC compliance</span>&#10;    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="run-out run-out-static"><div class="run-out-head"><span>ran — printed nothing</span><span class="run-out-src">cargo soothfast docs capture</span></div></div></figure>
+<h3 id="advanced-configuration">Advanced Configuration<a class="anchor" href="#advanced-configuration" aria-label="Link to this section">#</a></h3>
+<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;&#10;<span class="tok-kw">use</span> std::time::<span class="tok-ty">Duration</span>;&#10;&#10;<span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    edgar::<span class="tok-fn">init_with_config</span>(&#10;        <span class="tok-str">&quot;user@example.com&quot;</span>,&#10;        <span class="tok-str">&quot;my-financial-app&quot;</span>,      <span class="tok-com">// Optional: default is &quot;finance-query&quot;</span>&#10;        <span class="tok-ty">Duration</span>::<span class="tok-fn">from_secs</span>(<span class="tok-num">60</span>), <span class="tok-com">// Optional: default is 30 seconds</span>&#10;    )?;&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="run-out run-out-static"><div class="run-out-head"><span>ran — printed nothing</span><span class="run-out-src">cargo soothfast docs capture</span></div></div></figure>
+<h2 id="rate-limiting">Rate Limiting<a class="anchor" href="#rate-limiting" aria-label="Link to this section">#</a></h2>
 <p>The EDGAR client automatically handles SEC's rate limit of 10 requests per second. You don't need to manage rate limiting manually.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// These requests are automatically rate-limited</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;MSFT&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;GOOGL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1">// Executed at max 10 req/sec automatically</span>
-</code></pre></div>
-<h2 id="ticker-to-cik-resolution">Ticker to CIK Resolution<a class="headerlink" href="#ticker-to-cik-resolution" title="Permanent link">&para;</a></h2>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;
+
+    <span class="tok-com">// These requests are automatically rate-limited</span>
+    <span class="tok-kw">let</span> cik1 = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> cik2 = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;MSFT&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> cik3 = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;GOOGL&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-com">// Executed at max 10 req/sec automatically</span>
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h2 id="ticker-to-cik-resolution">Ticker to CIK Resolution<a class="anchor" href="#ticker-to-cik-resolution" aria-label="Link to this section">#</a></h2>
 <p>Convert a stock ticker symbol to its SEC Central Index Key (CIK) number. The ticker-to-CIK mapping is fetched once and cached for the lifetime of the client.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1">// Resolve ticker to CIK (cached after first fetch)</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Apple CIK: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">cik</span><span class="p">);</span><span class="w"> </span><span class="c1">// Output: Apple CIK: 320193</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1">// Subsequent lookups use the cache (no network request)</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span><span class="w"> </span><span class="c1">// Instant</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1">// Case-insensitive lookup</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;aapl&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span><span class="w"> </span><span class="c1">// Also works</span>
-</code></pre></div>
-<h3 id="cik-structure">CIK Structure<a class="headerlink" href="#cik-structure" title="Permanent link">&para;</a></h3>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;
+
+    <span class="tok-com">// Resolve ticker to CIK (cached after first fetch)</span>
+    <span class="tok-kw">let</span> cik = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Apple CIK: {}&quot;</span>, cik); <span class="tok-com">// Output: Apple CIK: 320193</span>
+
+    <span class="tok-com">// Subsequent lookups use the cache (no network request)</span>
+    <span class="tok-kw">let</span> cik2 = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>?; <span class="tok-com">// Instant</span>
+
+    <span class="tok-com">// Case-insensitive lookup</span>
+    <span class="tok-kw">let</span> cik3 = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;aapl&quot;</span>).<span class="tok-kw">await</span>?; <span class="tok-com">// Also works</span>
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="cik-structure">CIK Structure<a class="anchor" href="#cik-structure" aria-label="Link to this section">#</a></h3>
 <p>A CIK is a unique 10-digit identifier assigned by the SEC to companies and individuals who file with the commission. Examples:</p>
 <ul>
 <li>Apple Inc.: <code>320193</code></li>
 <li>Microsoft Corp.: <code>789019</code></li>
 <li>Alphabet Inc.: <code>1652044</code></li>
 </ul>
-<h2 id="filing-history-submissions">Filing History (Submissions)<a class="headerlink" href="#filing-history-submissions" title="Permanent link">&para;</a></h2>
+<h2 id="filing-history-submissions">Filing History (Submissions)<a class="anchor" href="#filing-history-submissions" aria-label="Link to this section">#</a></h2>
 <p>Fetch filing history and company metadata from SEC EDGAR. Returns the most recent ~1000 filings inline, with references to additional history files for older filings.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1">// Get CIK first</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1">// Fetch filing history</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="kd">let</span><span class="w"> </span><span class="n">submissions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">submissions</span><span class="p">(</span><span class="n">cik</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1">// Company information</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Company: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">cik</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">cik</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;CIK: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">cik</span><span class="p">);</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="p">}</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">sic</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">sic</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;SIC: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">sic</span><span class="p">);</span>
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="p">}</span>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">fiscal_year_end</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">fiscal_year_end</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Fiscal Year End: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fiscal_year_end</span><span class="p">);</span>
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="p">}</span>
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="c1">// Recent filings</span>
-<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">filings</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">filings</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">filings</span><span class="p">.</span><span class="n">recent</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">0</span><span class="o">..</span><span class="mf">5.</span><span class="n">min</span><span class="p">(</span><span class="n">recent</span><span class="p">.</span><span class="n">accession_number</span><span class="p">.</span><span class="n">len</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">recent</span><span class="p">.</span><span class="n">form</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">recent</span><span class="p">.</span><span class="n">filing_date</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">accession</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">recent</span><span class="p">.</span><span class="n">accession_number</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>
-<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;{} filed on {}: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="n">date</span><span class="p">,</span><span class="w"> </span><span class="n">accession</span><span class="p">);</span>
-<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="submission-structure">Submission Structure<a class="headerlink" href="#submission-structure" title="Permanent link">&para;</a></h3>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;&#10;&#10;    <span class="tok-com">// Get CIK first</span>&#10;    <span class="tok-kw">let</span> cik = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-com">// Fetch filing history</span>&#10;    <span class="tok-kw">let</span> submissions = edgar::<span class="tok-fn">submissions</span>(cik).<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-com">// Company information</span>&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(name) = &amp;submissions.name {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Company: {}&quot;</span>, name);&#10;    }&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(cik) = &amp;submissions.cik {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;CIK: {}&quot;</span>, cik);&#10;    }&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(sic) = &amp;submissions.sic {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;SIC: {}&quot;</span>, sic);&#10;    }&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(fiscal_year_end) = &amp;submissions.fiscal_year_end {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Fiscal Year End: {}&quot;</span>, fiscal_year_end);&#10;    }&#10;&#10;    <span class="tok-com">// Recent filings</span>&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(filings) = &amp;submissions.filings&#10;        &amp;&amp; <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(recent) = &amp;filings.recent&#10;    {&#10;        <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-num">0..5.min</span>(recent.accession_number.<span class="tok-fn">len</span>()) {&#10;            <span class="tok-kw">let</span> form = &amp;recent.form[i];&#10;            <span class="tok-kw">let</span> date = &amp;recent.filing_date[i];&#10;            <span class="tok-kw">let</span> accession = &amp;recent.accession_number[i];&#10;&#10;            <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} filed on {}: {}&quot;</span>, form, date, accession);&#10;        }&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::filings::submissions::EdgarSubmissions"><span class="ev-mark">⌖</span><span class="ev-item">EdgarSubmissions</span><span class="ev-detail">verified current</span></div></div></figure>
+<div class="claimline"><span class="chip chip-pass" data-soothfast-claim data-state="pass" title="finance_query::de_edgar_submissions.walltime.median_ns &lt; 2000000"><span class="chip-head"><span class="chip-mark">✓</span><span class="chip-item">de_edgar_submissions</span><span class="chip-sep">—</span><span class="chip-detail">median time 457.3 µs</span><span class="chip-limit">(limit &lt; 2.0 ms)</span></span><span class="chip-gauge"><svg class="chip-scale" viewBox="0 0 220 22" aria-hidden="true" focusable="false"><line x1="8" y1="11" x2="212" y2="11" class="chip-scale-rail"/><line x1="8" y1="7" x2="8" y2="15" class="chip-scale-cap"/><line x1="212" y1="7" x2="212" y2="15" class="chip-scale-cap"/><line x1="180.88" y1="3" x2="180.88" y2="19" class="chip-scale-limit"/><line x1="8" y1="11" x2="47.53" y2="11" class="chip-scale-fill" style="--fill-len:39.53"/><circle cx="47.53" cy="11" r="3.2" class="chip-scale-marker" style="--mx:47.53"/></svg><span class="chip-scale-axis"><span>0</span><span>limit 2.0 ms</span></span></span></span></div>
+<ul>
+<li>Parsing a company's full submissions JSON (~1,000 recent filings) into <code>EdgarSubmissions</code> takes <strong>under 2 ms</strong>.</li>
+</ul>
+<h3 id="submission-structure">Submission Structure<a class="anchor" href="#submission-structure" aria-label="Link to this section">#</a></h3>
 <p>The <code>EdgarSubmissions</code> response contains:</p>
 <ul>
 <li><strong>Company Info</strong>: <code>name</code>, <code>cik</code>, <code>sic</code>, <code>sic_description</code>, <code>fiscal_year_end</code></li>
 <li><strong>Filings</strong>: Recent filings with form types, dates, accession numbers, and document URLs</li>
 <li><strong>History</strong>: References to additional filing history files for older filings</li>
 </ul>
-<h3 id="common-form-types">Common Form Types<a class="headerlink" href="#common-form-types" title="Permanent link">&para;</a></h3>
+<h3 id="common-form-types">Common Form Types<a class="anchor" href="#common-form-types" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><strong>10-K</strong>: Annual report with comprehensive company information</li>
 <li><strong>10-Q</strong>: Quarterly report</li>
@@ -2790,278 +315,263 @@
 <li><strong>S-1</strong>: Registration statement for IPOs</li>
 <li><strong>4</strong>: Insider trading report</li>
 </ul>
-<h2 id="company-facts-xbrl-data">Company Facts (XBRL Data)<a class="headerlink" href="#company-facts-xbrl-data" title="Permanent link">&para;</a></h2>
+<h2 id="company-facts-xbrl-data">Company Facts (XBRL Data)<a class="anchor" href="#company-facts-xbrl-data" aria-label="Link to this section">#</a></h2>
 <p>Fetch structured XBRL financial data from SEC EDGAR. Returns all extracted XBRL facts organized by taxonomy (us-gaap, ifrs, dei). This can be a large response (several MB for major companies).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">// Get CIK</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">cik</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1">// Fetch company facts</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kd">let</span><span class="w"> </span><span class="n">facts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">company_facts</span><span class="p">(</span><span class="n">cik</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1">// Access financial data by taxonomy and concept</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">us_gaap</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">facts</span><span class="p">.</span><span class="n">facts</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;us-gaap&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="c1">// Revenue data (FactsByTaxonomy is a tuple struct, access with .0)</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">revenue</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">us_gaap</span><span class="p">.</span><span class="mf">0.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Revenues&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">label</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">revenue</span><span class="p">.</span><span class="n">label</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Revenue concept: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">label</span><span class="p">);</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">description</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">revenue</span><span class="p">.</span><span class="n">description</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Description: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">description</span><span class="p">);</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">        </span><span class="c1">// Access data points by unit (e.g., USD)</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">usd_data</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">revenue</span><span class="p">.</span><span class="n">units</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;USD&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">usd_data</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">take</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">fy</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">val</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">.</span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="p">.</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">                    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;FY {}: ${}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">);</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>
-<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="w">    </span><span class="c1">// Assets data</span>
-<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">assets</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">us_gaap</span><span class="p">.</span><span class="mf">0.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Assets&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">usd_data</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assets</span><span class="p">.</span><span class="n">units</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;USD&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">usd_data</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">take</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">fy</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">val</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">.</span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="p">.</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="w">                    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;FY {}: ${}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">);</span>
-<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="available-taxonomies">Available Taxonomies<a class="headerlink" href="#available-taxonomies" title="Permanent link">&para;</a></h3>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;&#10;&#10;    <span class="tok-com">// Get CIK</span>&#10;    <span class="tok-kw">let</span> cik = edgar::<span class="tok-fn">resolve_cik</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-com">// Fetch company facts</span>&#10;    <span class="tok-kw">let</span> facts = edgar::<span class="tok-fn">company_facts</span>(cik).<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-com">// Access financial data by taxonomy and concept</span>&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(us_gaap) = facts.facts.<span class="tok-fn">get</span>(<span class="tok-str">&quot;us-gaap&quot;</span>) {&#10;        <span class="tok-com">// Revenue data (FactsByTaxonomy is a tuple struct, access with .0)</span>&#10;        <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(revenue) = us_gaap.<span class="tok-num">0.get</span>(<span class="tok-str">&quot;Revenues&quot;</span>) {&#10;            <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(label) = &amp;revenue.label {&#10;                <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Revenue concept: {}&quot;</span>, label);&#10;            }&#10;            <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(description) = &amp;revenue.description {&#10;                <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Description: {}&quot;</span>, description);&#10;            }&#10;&#10;            <span class="tok-com">// Access data points by unit (e.g., USD)</span>&#10;            <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(usd_data) = revenue.units.<span class="tok-fn">get</span>(<span class="tok-str">&quot;USD&quot;</span>) {&#10;                <span class="tok-kw">for</span> point <span class="tok-kw">in</span> usd_data.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {&#10;                    <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(fy), <span class="tok-ty">Some</span>(val)) = (point.fy, point.val) {&#10;                        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;FY {}: ${}&quot;</span>, fy, val);&#10;                    }&#10;                }&#10;            }&#10;        }&#10;&#10;        <span class="tok-com">// Assets data</span>&#10;        <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(assets) = us_gaap.<span class="tok-num">0.get</span>(<span class="tok-str">&quot;Assets&quot;</span>)&#10;            &amp;&amp; <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(usd_data) = assets.units.<span class="tok-fn">get</span>(<span class="tok-str">&quot;USD&quot;</span>)&#10;        {&#10;            <span class="tok-kw">for</span> point <span class="tok-kw">in</span> usd_data.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {&#10;                <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(fy), <span class="tok-ty">Some</span>(val)) = (point.fy, point.val) {&#10;                    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;FY {}: ${}&quot;</span>, fy, val);&#10;                }&#10;            }&#10;        }&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::filings::company_facts::CompanyFacts"><span class="ev-mark">⌖</span><span class="ev-item">CompanyFacts</span><span class="ev-detail">verified current</span></div></div></figure>
+<div class="claimline"><span class="chip chip-pass" data-soothfast-claim data-state="pass" title="finance_query::de_edgar_facts.walltime.median_ns &lt; 10000000"><span class="chip-head"><span class="chip-mark">✓</span><span class="chip-item">de_edgar_facts</span><span class="chip-sep">—</span><span class="chip-detail">median time 1.4 ms</span><span class="chip-limit">(limit &lt; 10.0 ms)</span></span><span class="chip-gauge"><svg class="chip-scale" viewBox="0 0 220 22" aria-hidden="true" focusable="false"><line x1="8" y1="11" x2="212" y2="11" class="chip-scale-rail"/><line x1="8" y1="7" x2="8" y2="15" class="chip-scale-cap"/><line x1="212" y1="7" x2="212" y2="15" class="chip-scale-cap"/><line x1="180.88" y1="3" x2="180.88" y2="19" class="chip-scale-limit"/><line x1="8" y1="11" x2="31.37" y2="11" class="chip-scale-fill" style="--fill-len:23.37"/><circle cx="31.37" cy="11" r="3.2" class="chip-scale-marker" style="--mx:31.37"/></svg><span class="chip-scale-axis"><span>0</span><span>limit 10.0 ms</span></span></span></span></div>
+<ul>
+<li>Parsing a complete XBRL company-facts payload (several MB for a large filer) into <code>CompanyFacts</code> takes <strong>under 10 ms</strong> — network transfer, not parsing, dominates the call.</li>
+</ul>
+<h3 id="available-taxonomies">Available Taxonomies<a class="anchor" href="#available-taxonomies" aria-label="Link to this section">#</a></h3>
+<p>The <code>CompanyFacts</code> response maps taxonomy names to their extracted concepts:</p>
 <ul>
 <li><strong>us-gaap</strong>: US Generally Accepted Accounting Principles (most common)</li>
 <li><strong>ifrs</strong>: International Financial Reporting Standards</li>
 <li><strong>dei</strong>: Document and Entity Information (metadata)</li>
 </ul>
-<h3 id="common-xbrl-concepts">Common XBRL Concepts<a class="headerlink" href="#common-xbrl-concepts" title="Permanent link">&para;</a></h3>
-<p><strong>Income Statement:</strong>
-- <code>Revenues</code> / <code>RevenueFromContractWithCustomerExcludingAssessedTax</code>
-- <code>NetIncomeLoss</code>
-- <code>OperatingIncomeLoss</code>
-- <code>GrossProfit</code></p>
-<p><strong>Balance Sheet:</strong>
-- <code>Assets</code>
-- <code>Liabilities</code>
-- <code>StockholdersEquity</code>
-- <code>Cash</code> / <code>CashAndCashEquivalentsAtCarryingValue</code></p>
-<p><strong>Cash Flow:</strong>
-- <code>NetCashProvidedByUsedInOperatingActivities</code>
-- <code>NetCashProvidedByUsedInInvestingActivities</code>
-- <code>NetCashProvidedByUsedInFinancingActivities</code></p>
-<h2 id="full-text-search">Full-Text Search<a class="headerlink" href="#full-text-search" title="Permanent link">&para;</a></h2>
-<p>Search SEC EDGAR filings by text content with optional filters for form type and date range.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1">// Basic search</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="s">&quot;artificial intelligence&quot;</span><span class="p">,</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nb">None</span><span class="p">,</span><span class="w">    </span><span class="c1">// No form filter</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nb">None</span><span class="p">,</span><span class="w">    </span><span class="c1">// No start date</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="nb">None</span><span class="p">,</span><span class="w">    </span><span class="c1">// No end date</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1">// Display results</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">results</span><span class="p">.</span><span class="n">hits</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">total</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">hits</span><span class="p">.</span><span class="n">total</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">total</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Total hits: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">);</span>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>
-<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">hit</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">&amp;</span><span class="n">hits</span><span class="p">.</span><span class="n">hits</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">hit</span><span class="p">.</span><span class="n">_source</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">as_deref</span><span class="p">().</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;Unknown&quot;</span><span class="p">);</span>
-<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">file_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">source</span><span class="p">.</span><span class="n">file_date</span><span class="p">.</span><span class="n">as_deref</span><span class="p">().</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;Unknown&quot;</span><span class="p">);</span>
-<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>
-<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;{} filed on {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="n">file_date</span><span class="p">);</span>
-<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>
-<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">source</span><span class="p">.</span><span class="n">display_names</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="o">!</span><span class="n">names</span><span class="p">.</span><span class="n">is_empty</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">                    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  Companies: {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">names</span><span class="p">);</span>
-<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="p">}</span>
-</code></pre></div>
-<h3 id="filtered-search">Filtered Search<a class="headerlink" href="#filtered-search" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Search for 10-K filings only</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="s">&quot;machine learning&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;10-K&quot;</span><span class="p">]),</span><span class="w">              </span><span class="c1">// Only 10-K forms</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nb">Some</span><span class="p">(</span><span class="s">&quot;2024-01-01&quot;</span><span class="p">),</span><span class="w">           </span><span class="c1">// From Jan 1, 2024</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nb">Some</span><span class="p">(</span><span class="s">&quot;2024-12-31&quot;</span><span class="p">),</span><span class="w">           </span><span class="c1">// To Dec 31, 2024</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="common-form-filters">Common Form Filters<a class="headerlink" href="#common-form-filters" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// Annual reports</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span><span class="s">&quot;query&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;10-K&quot;</span><span class="p">]),</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1">// Quarterly reports</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span><span class="s">&quot;query&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;10-Q&quot;</span><span class="p">]),</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1">// Current events</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span><span class="s">&quot;query&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;8-K&quot;</span><span class="p">]),</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1">// Multiple form types</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span><span class="s">&quot;query&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;10-K&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;10-Q&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;8-K&quot;</span><span class="p">]),</span><span class="w"> </span><span class="nb">None</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="routed-search-filings-handle">Routed Search (<code>Filings</code> handle)<a class="headerlink" href="#routed-search-filings-handle" title="Permanent link">&para;</a></h3>
+<h3 id="common-xbrl-concepts">Common XBRL Concepts<a class="anchor" href="#common-xbrl-concepts" aria-label="Link to this section">#</a></h3>
+<p><strong>Income Statement:</strong></p>
+<ul>
+<li><code>Revenues</code> / <code>RevenueFromContractWithCustomerExcludingAssessedTax</code></li>
+<li><code>NetIncomeLoss</code></li>
+<li><code>OperatingIncomeLoss</code></li>
+<li><code>GrossProfit</code></li>
+</ul>
+<p><strong>Balance Sheet:</strong></p>
+<ul>
+<li><code>Assets</code></li>
+<li><code>Liabilities</code></li>
+<li><code>StockholdersEquity</code></li>
+<li><code>Cash</code> / <code>CashAndCashEquivalentsAtCarryingValue</code></li>
+</ul>
+<p><strong>Cash Flow:</strong></p>
+<ul>
+<li><code>NetCashProvidedByUsedInOperatingActivities</code></li>
+<li><code>NetCashProvidedByUsedInInvestingActivities</code></li>
+<li><code>NetCashProvidedByUsedInFinancingActivities</code></li>
+</ul>
+<h2 id="full-text-search">Full-Text Search<a class="anchor" href="#full-text-search" aria-label="Link to this section">#</a></h2>
+<p>Search SEC EDGAR filings by text content with optional filters for form type, date range, and pagination (<code>from</code> offset and <code>size</code> limit — pass <code>None</code> for the defaults).</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;
+
+    <span class="tok-com">// Basic search</span>
+    <span class="tok-kw">let</span> results = edgar::<span class="tok-fn">search</span>(
+        <span class="tok-str">&quot;artificial intelligence&quot;</span>,
+        <span class="tok-ty">None</span>,    <span class="tok-com">// No form filter</span>
+        <span class="tok-ty">None</span>,    <span class="tok-com">// No start date</span>
+        <span class="tok-ty">None</span>,    <span class="tok-com">// No end date</span>
+        <span class="tok-ty">None</span>,    <span class="tok-com">// from (pagination offset)</span>
+        <span class="tok-ty">None</span>,    <span class="tok-com">// size (max results)</span>
+    ).<span class="tok-kw">await</span>?;
+
+    <span class="tok-com">// Display results</span>
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(hits) = &amp;results.hits {
+        <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(value) = hits.total.<span class="tok-fn">as_ref</span>().<span class="tok-fn">and_then</span>(|t| t.value) {
+            <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Total hits: {}&quot;</span>, value);
+        }
+
+        <span class="tok-kw">for</span> hit <span class="tok-kw">in</span> &amp;hits.hits {
+            <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(source) = &amp;hit._source {
+                <span class="tok-kw">let</span> form = source.form.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;Unknown&quot;</span>);
+                <span class="tok-kw">let</span> file_date = source.file_date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;Unknown&quot;</span>);
+
+                <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} filed on {}&quot;</span>, form, file_date);
+
+                <span class="tok-kw">if</span> !source.display_names.<span class="tok-fn">is_empty</span>() {
+                    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;  Companies: {:?}&quot;</span>, source.display_names);
+                }
+            }
+        }
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="filtered-search">Filtered Search<a class="anchor" href="#filtered-search" aria-label="Link to this section">#</a></h3>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-com">// Search for 10-K filings only</span>
+    <span class="tok-kw">let</span> results = edgar::<span class="tok-fn">search</span>(
+        <span class="tok-str">&quot;machine learning&quot;</span>,
+        <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;10-K&quot;</span>]),              <span class="tok-com">// Only 10-K forms</span>
+        <span class="tok-ty">Some</span>(<span class="tok-str">&quot;2024-01-01&quot;</span>),           <span class="tok-com">// From Jan 1, 2024</span>
+        <span class="tok-ty">Some</span>(<span class="tok-str">&quot;2024-12-31&quot;</span>),           <span class="tok-com">// To Dec 31, 2024</span>
+        <span class="tok-ty">None</span>,                         <span class="tok-com">// from (pagination offset)</span>
+        <span class="tok-ty">None</span>,                         <span class="tok-com">// size (max results)</span>
+    ).<span class="tok-kw">await</span>?;
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="common-form-filters">Common Form Filters<a class="anchor" href="#common-form-filters" aria-label="Link to this section">#</a></h3>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-com">// Annual reports</span>
+    edgar::<span class="tok-fn">search</span>(<span class="tok-str">&quot;query&quot;</span>, <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;10-K&quot;</span>]), <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>).<span class="tok-kw">await</span>?;
+
+    <span class="tok-com">// Quarterly reports</span>
+    edgar::<span class="tok-fn">search</span>(<span class="tok-str">&quot;query&quot;</span>, <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;10-Q&quot;</span>]), <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>).<span class="tok-kw">await</span>?;
+
+    <span class="tok-com">// Current events</span>
+    edgar::<span class="tok-fn">search</span>(<span class="tok-str">&quot;query&quot;</span>, <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;8-K&quot;</span>]), <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>).<span class="tok-kw">await</span>?;
+
+    <span class="tok-com">// Multiple form types</span>
+    edgar::<span class="tok-fn">search</span>(<span class="tok-str">&quot;query&quot;</span>, <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;10-K&quot;</span>, <span class="tok-str">&quot;10-Q&quot;</span>, <span class="tok-str">&quot;8-K&quot;</span>]), <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>, <span class="tok-ty">None</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="routed-search-filings-handle">Routed Search (<code>Filings</code> handle)<a class="anchor" href="#routed-search-filings-handle" aria-label="Link to this section">#</a></h3>
 <p>The same EFTS index is reachable through the <code>FILINGS</code> capability, which returns
 the flattened <code>FilingSearchHit</code> model instead of EDGAR's raw Elasticsearch
 envelope — and derives a direct archive URL per hit where possible.</p>
-<p>```rust,ignore
-use finance_query::{FilingSearchFilters, Providers};</p>
-<p>let providers = Providers::builder().build().await?;
-let sec = providers.filings("AAPL");</p>
-<p>// Scoped to AAPL — the handle's symbol is resolved to a CIK filter.
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust,ignore</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>use finance_query::{FilingSearchFilters, Providers};
+
+let providers = Providers::builder().build().await?;
+let sec = providers.filings(&quot;AAPL&quot;);
+
+// Scoped to AAPL — the handle&#39;s symbol is resolved to a CIK filter.
 let hits = sec.search(
-    "artificial intelligence",
-    FilingSearchFilters::default().forms(["10-K"]).from("2024-01-01"),
-).await?;</p>
-<p>// Across every filer.
+    &quot;artificial intelligence&quot;,
+    FilingSearchFilters::default().forms([&quot;10-K&quot;]).from(&quot;2024-01-01&quot;),
+).await?;
+
+// Across every filer.
 let all = sec.search_all(
-    "artificial intelligence",
-    FilingSearchFilters::default().forms(["10-K"]).limit(50),
-).await?;</p>
-<p>for hit in hits {
-    println!("{:?} {:?} {:?}", hit.form, hit.filed_date, hit.url);
+    &quot;artificial intelligence&quot;,
+    FilingSearchFilters::default().forms([&quot;10-K&quot;]).limit(50),
+).await?;
+
+for hit in hits {
+    println!(&quot;{:?} {:?} {:?}&quot;, hit.form, hit.filed_date, hit.url);
 }
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>EFTS caps a page at 100 hits, so `limit` above that is clamped.
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>## Ownership (Forms 3/4/5 and 13F-HR)
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Both are parsed straight from the filed XML — primary-source data, keyless, and
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>structurally typed rather than scraped.
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>```rust,ignore
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>use finance_query::Providers;
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>let providers = Providers::builder().build().await?;
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>// Insider transactions from the most recent 10 Form 3/4/5 filings.
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>for trade in providers.filings(&quot;AAPL&quot;).insider_trades(10).await? {
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    println!(
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>        &quot;{:?} {:?} {:?} shares @ {:?}&quot;,
-<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>        trade.insider_name, trade.transaction_code, trade.shares, trade.price_per_share
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>    );
-<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>}
-<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>
-<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>// The latest 13F-HR information table filed by a listed manager.
-<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>for position in providers.filings(&quot;BRK-B&quot;).institutional_holdings().await? {
-<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>    println!(&quot;{:?} {:?}&quot;, position.issuer_name, position.shares);
-<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>}
-</code></pre></div></p>
+</code></pre></figure>
+<p>EFTS caps a page at 100 hits, so <code>limit</code> above that is clamped.</p>
+<h2 id="ownership-forms-3-4-5-and-13f-hr">Ownership (Forms 3/4/5 and 13F-HR)<a class="anchor" href="#ownership-forms-3-4-5-and-13f-hr" aria-label="Link to this section">#</a></h2>
+<p>Both are parsed straight from the filed XML — primary-source data, keyless, and
+structurally typed rather than scraped.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust,ignore</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>use finance_query::Providers;
+
+let providers = Providers::builder().build().await?;
+
+// Insider transactions from the most recent 10 Form 3/4/5 filings.
+for trade in providers.filings(&quot;AAPL&quot;).insider_trades(10).await? {
+    println!(
+        &quot;{:?} {:?} {:?} shares @ {:?}&quot;,
+        trade.insider_name, trade.transaction_code, trade.shares, trade.price_per_share
+    );
+}
+
+// The latest 13F-HR information table filed by a listed manager.
+for position in providers.filings(&quot;BRK-B&quot;).institutional_holdings().await? {
+    println!(&quot;{:?} {:?}&quot;, position.issuer_name, position.shares);
+}
+</code></pre></figure>
 <p>Notes:</p>
 <ul>
-<li><code>limit</code> on <code>insider_trades</code> caps how many <em>filings</em> are read, not how many
-  transactions come back — one Form 4 can report several lines. Each filing
-  costs an index lookup plus a document fetch, so keep it modest.</li>
-<li>A Form 3 states initial holdings rather than transactions, so it contributes
-  no rows. A filing whose XML cannot be parsed is skipped rather than failing
-  the whole call — ownership schemas vary across two decades of filings.</li>
-<li><code>institutional_holdings</code> treats the handle's symbol as the <em>filer</em>, so it is
-  only meaningful for listed institutional managers. An issuer that files no
-  13F returns an error rather than an empty list.</li>
-<li><code>value</code> on a holding is passed through unscaled: filings before 2023 report
-  thousands of dollars, later ones report whole dollars.</li>
+<li><code>limit</code> on <code>insider_trades</code> caps how many <em>filings</em> are read, not how many transactions come back — one Form 4 can report several lines. Each filing costs an index lookup plus a document fetch, so keep it modest.</li>
+<li>A Form 3 states initial holdings rather than transactions, so it contributes no rows. A filing whose XML cannot be parsed is skipped rather than failing the whole call — ownership schemas vary across two decades of filings.</li>
+<li><code>institutional_holdings</code> treats the handle's symbol as the <em>filer</em>, so it is only meaningful for listed institutional managers. An issuer that files no 13F returns an error rather than an empty list.</li>
+<li><code>value</code> on a holding is passed through unscaled: filings before 2023 report thousands of dollars, later ones report whole dollars.</li>
 </ul>
-<h2 id="complete-example">Complete Example<a class="headerlink" href="#complete-example" title="Permanent link">&para;</a></h2>
+<h2 id="complete-example">Complete Example<a class="anchor" href="#complete-example" aria-label="Link to this section">#</a></h2>
 <p>Here's a complete example combining all EDGAR features:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">edgar</span><span class="p">;</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">analyze_company</span><span class="p">(</span><span class="n">ticker</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span><span class="w"> </span><span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="c1">// Create EDGAR client</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="n">edgar</span><span class="p">::</span><span class="n">init</span><span class="p">(</span><span class="s">&quot;user@example.com&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="c1">// Step 1: Resolve ticker to CIK</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Resolving {} to CIK...&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ticker</span><span class="p">);</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">cik</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">resolve_cik</span><span class="p">(</span><span class="n">ticker</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;CIK: {}</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">cik</span><span class="p">);</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="c1">// Step 2: Get filing history</span>
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Fetching filing history...&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">submissions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">submissions</span><span class="p">(</span><span class="n">cik</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Company: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
-<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">sic_description</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">sic_description</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Industry: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">sic_description</span><span class="p">);</span>
-<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>
-<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="c1">// Show recent 10-K and 10-Q filings</span>
-<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">filings</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">submissions</span><span class="p">.</span><span class="n">filings</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">filings</span><span class="p">.</span><span class="n">recent</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Recent filings:&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">0</span><span class="o">..</span><span class="mf">10.</span><span class="n">min</span><span class="p">(</span><span class="n">recent</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">len</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="w">                </span><span class="kd">let</span><span class="w"> </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">recent</span><span class="p">.</span><span class="n">form</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="n">form</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;10-K&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">form</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;10-Q&quot;</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">                    </span><span class="kd">let</span><span class="w"> </span><span class="n">date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">recent</span><span class="p">.</span><span class="n">filing_date</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="w">                    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  {} filed on {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="n">date</span><span class="p">);</span>
-<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>
-<a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="w">    </span><span class="c1">// Step 3: Get company facts (XBRL data)</span>
-<a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Fetching XBRL financial data...&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">facts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">company_facts</span><span class="p">(</span><span class="n">cik</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>
-<a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">us_gaap</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">facts</span><span class="p">.</span><span class="n">facts</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;us-gaap&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="w">        </span><span class="c1">// Show revenue trend (FactsByTaxonomy is a tuple struct, access with .0)</span>
-<a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">revenue</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">us_gaap</span><span class="p">.</span><span class="mf">0.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Revenues&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">usd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">revenue</span><span class="p">.</span><span class="n">units</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;USD&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="w">                </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Revenue Trend:&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a><span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">usd</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">take</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">fy</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">val</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">.</span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="p">.</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">                        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  FY {}: ${:&gt;15}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">);</span>
-<a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="w">                    </span><span class="p">}</span>
-<a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a>
-<a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a><span class="w">        </span><span class="c1">// Show assets</span>
-<a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">assets</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">us_gaap</span><span class="p">.</span><span class="mf">0.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Assets&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">usd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">assets</span><span class="p">.</span><span class="n">units</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;USD&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">                </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Assets:&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a><span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="n">point</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">usd</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">take</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a><span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">fy</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">val</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">.</span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">point</span><span class="p">.</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a><span class="w">                        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  FY {}: ${:&gt;15}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fy</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">);</span>
-<a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a><span class="w">                    </span><span class="p">}</span>
-<a id="__codelineno-10-61" name="__codelineno-10-61" href="#__codelineno-10-61"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-10-62" name="__codelineno-10-62" href="#__codelineno-10-62"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-10-63" name="__codelineno-10-63" href="#__codelineno-10-63"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-10-64" name="__codelineno-10-64" href="#__codelineno-10-64"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-65" name="__codelineno-10-65" href="#__codelineno-10-65"></a>
-<a id="__codelineno-10-66" name="__codelineno-10-66" href="#__codelineno-10-66"></a><span class="w">    </span><span class="c1">// Step 4: Search for AI mentions in recent filings</span>
-<a id="__codelineno-10-67" name="__codelineno-10-67" href="#__codelineno-10-67"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Searching for &#39;artificial intelligence&#39; mentions...&quot;</span><span class="p">);</span>
-<a id="__codelineno-10-68" name="__codelineno-10-68" href="#__codelineno-10-68"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">search_results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edgar</span><span class="p">::</span><span class="n">search</span><span class="p">(</span>
-<a id="__codelineno-10-69" name="__codelineno-10-69" href="#__codelineno-10-69"></a><span class="w">        </span><span class="s">&quot;artificial intelligence&quot;</span><span class="p">,</span>
-<a id="__codelineno-10-70" name="__codelineno-10-70" href="#__codelineno-10-70"></a><span class="w">        </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="s">&quot;10-K&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;10-Q&quot;</span><span class="p">]),</span>
-<a id="__codelineno-10-71" name="__codelineno-10-71" href="#__codelineno-10-71"></a><span class="w">        </span><span class="nb">Some</span><span class="p">(</span><span class="s">&quot;2024-01-01&quot;</span><span class="p">),</span>
-<a id="__codelineno-10-72" name="__codelineno-10-72" href="#__codelineno-10-72"></a><span class="w">        </span><span class="nb">None</span><span class="p">,</span>
-<a id="__codelineno-10-73" name="__codelineno-10-73" href="#__codelineno-10-73"></a><span class="w">    </span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-10-74" name="__codelineno-10-74" href="#__codelineno-10-74"></a>
-<a id="__codelineno-10-75" name="__codelineno-10-75" href="#__codelineno-10-75"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">search_results</span><span class="p">.</span><span class="n">hits</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-10-76" name="__codelineno-10-76" href="#__codelineno-10-76"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Found {} mentions&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">hits</span><span class="p">.</span><span class="n">total</span><span class="p">.</span><span class="n">value</span><span class="p">);</span>
-<a id="__codelineno-10-77" name="__codelineno-10-77" href="#__codelineno-10-77"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-10-78" name="__codelineno-10-78" href="#__codelineno-10-78"></a>
-<a id="__codelineno-10-79" name="__codelineno-10-79" href="#__codelineno-10-79"></a><span class="w">    </span><span class="nb">Ok</span><span class="p">(())</span>
-<a id="__codelineno-10-80" name="__codelineno-10-80" href="#__codelineno-10-80"></a><span class="p">}</span>
-</code></pre></div>
-<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
-<div class="admonition tip">
-<p class="admonition-title">EDGAR API Usage</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::edgar;
+
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">analyze_company</span>(ticker: &amp;<span class="tok-ty">str</span>) -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-com">// Create EDGAR client</span>
+    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;user@example.com&quot;</span>)?;
+
+    <span class="tok-com">// Step 1: Resolve ticker to CIK</span>
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Resolving {} to CIK...&quot;</span>, ticker);
+    <span class="tok-kw">let</span> cik = edgar::<span class="tok-fn">resolve_cik</span>(ticker).<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;CIK: {}\n&quot;</span>, cik);
+
+    <span class="tok-com">// Step 2: Get filing history</span>
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Fetching filing history...&quot;</span>);
+    <span class="tok-kw">let</span> submissions = edgar::<span class="tok-fn">submissions</span>(cik).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(name) = &amp;submissions.name {
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Company: {}&quot;</span>, name);
+    }
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(sic_description) = &amp;submissions.sic_description {
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Industry: {}&quot;</span>, sic_description);
+    }
+
+    <span class="tok-com">// Show recent 10-K and 10-Q filings</span>
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(filings) = &amp;submissions.filings
+        &amp;&amp; <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(recent) = &amp;filings.recent
+    {
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;\nRecent filings:&quot;</span>);
+        <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-num">0..10.min</span>(recent.form.<span class="tok-fn">len</span>()) {
+            <span class="tok-kw">let</span> form = &amp;recent.form[i];
+            <span class="tok-kw">if</span> form == <span class="tok-str">&quot;10-K&quot;</span> || form == <span class="tok-str">&quot;10-Q&quot;</span> {
+                <span class="tok-kw">let</span> date = &amp;recent.filing_date[i];
+                <span class="tok-mac">println!</span>(<span class="tok-str">&quot;  {} filed on {}&quot;</span>, form, date);
+            }
+        }
+    }
+
+    <span class="tok-com">// Step 3: Get company facts (XBRL data)</span>
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;\nFetching XBRL financial data...&quot;</span>);
+    <span class="tok-kw">let</span> facts = edgar::<span class="tok-fn">company_facts</span>(cik).<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(us_gaap) = facts.facts.<span class="tok-fn">get</span>(<span class="tok-str">&quot;us-gaap&quot;</span>) {
+        <span class="tok-com">// Show revenue trend (FactsByTaxonomy is a tuple struct, access with .0)</span>
+        <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(revenue) = us_gaap.<span class="tok-num">0.get</span>(<span class="tok-str">&quot;Revenues&quot;</span>)
+            &amp;&amp; <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(usd) = revenue.units.<span class="tok-fn">get</span>(<span class="tok-str">&quot;USD&quot;</span>)
+        {
+            <span class="tok-mac">println!</span>(<span class="tok-str">&quot;\nRevenue Trend:&quot;</span>);
+            <span class="tok-kw">for</span> point <span class="tok-kw">in</span> usd.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {
+                <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(fy), <span class="tok-ty">Some</span>(val)) = (point.fy, point.val) {
+                    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;  FY {}: ${:&gt;15}&quot;</span>, fy, val);
+                }
+            }
+        }
+
+        <span class="tok-com">// Show assets</span>
+        <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(assets) = us_gaap.<span class="tok-num">0.get</span>(<span class="tok-str">&quot;Assets&quot;</span>)
+            &amp;&amp; <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(usd) = assets.units.<span class="tok-fn">get</span>(<span class="tok-str">&quot;USD&quot;</span>)
+        {
+            <span class="tok-mac">println!</span>(<span class="tok-str">&quot;\nAssets:&quot;</span>);
+            <span class="tok-kw">for</span> point <span class="tok-kw">in</span> usd.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">3</span>) {
+                <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(fy), <span class="tok-ty">Some</span>(val)) = (point.fy, point.val) {
+                    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;  FY {}: ${:&gt;15}&quot;</span>, fy, val);
+                }
+            }
+        }
+    }
+
+    <span class="tok-com">// Step 4: Search for AI mentions in recent filings</span>
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;\nSearching for &#39;artificial intelligence&#39; mentions...&quot;</span>);
+    <span class="tok-kw">let</span> search_results = edgar::<span class="tok-fn">search</span>(
+        <span class="tok-str">&quot;artificial intelligence&quot;</span>,
+        <span class="tok-ty">Some</span>(&amp;[<span class="tok-str">&quot;10-K&quot;</span>, <span class="tok-str">&quot;10-Q&quot;</span>]),
+        <span class="tok-ty">Some</span>(<span class="tok-str">&quot;2024-01-01&quot;</span>),
+        <span class="tok-ty">None</span>,
+        <span class="tok-ty">None</span>,
+        <span class="tok-ty">None</span>,
+    ).<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(hits) = &amp;search_results.hits {
+        <span class="tok-kw">let</span> count = hits.total.<span class="tok-fn">as_ref</span>().<span class="tok-fn">and_then</span>(|t| t.value).<span class="tok-fn">unwrap_or</span>(<span class="tok-num">0</span>);
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Found {} mentions&quot;</span>, count);
+    }
+
+    <span class="tok-ty">Ok</span>(())
+}
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-fn">analyze_company</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-kw">await</span>
+}
+</code></pre></figure>
+<h2 id="best-practices">Best Practices<a class="anchor" href="#best-practices" aria-label="Link to this section">#</a></h2>
+<div class="adm adm-tip"><p class="adm-title"><span class="adm-kind">tip</span> · EDGAR API Usage</p>
 <ul>
 <li><strong>Respect Rate Limits</strong>: The client automatically handles the 10 req/sec limit, but avoid making thousands of requests in quick succession</li>
 <li><strong>Handle Large Responses</strong>: Company facts can be several MB. Consider streaming or processing incrementally for large datasets</li>
@@ -3069,88 +579,69 @@ let all = sec.search_all(
 <li><strong>Check Data Availability</strong>: Not all companies have complete XBRL data. Always check for <code>None</code> values</li>
 </ul>
 </div>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../ticker/">Ticker API</a> - Yahoo Finance data for real-time quotes and charts</li>
-<li><a href="../../finance/">Finance Module</a> - Market-wide data (screeners, trending, news)</li>
-<li><a href="../../configuration/">Configuration</a> - Network and timeout settings</li>
+<li><a href="../../../library/ticker/">Ticker API</a> - Yahoo Finance data for real-time quotes and charts</li>
+<li><a href="../../../library/finance/">Finance Module</a> - Market-wide data (screeners, trending, news)</li>
+<li><a href="../../../library/configuration/">Configuration</a> - Network and timeout settings</li>
 </ul>
 
-
-
-
-
-
-
-
-
-
-
-
-                
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
-  Back to top
-</button>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-  
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
-  
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
 </div>
-      
-        
-<div class="md-social">
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+  <span class="label">On this page</span>
+  <ul class="toc-list" id="toc">
   
-    
-    
-    
-    
-      
-      
-    
-    <a href="https://github.com/Verdenroz/finance-query" target="_blank" rel="noopener" title="github.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
-    </a>
+    <li><a class="toc-l2" href="#initialization">Initialization</a></li>
   
+    <li><a class="toc-l3" href="#basic-initialization">Basic Initialization</a></li>
+  
+    <li><a class="toc-l3" href="#advanced-configuration">Advanced Configuration</a></li>
+  
+    <li><a class="toc-l2" href="#rate-limiting">Rate Limiting</a></li>
+  
+    <li><a class="toc-l2" href="#ticker-to-cik-resolution">Ticker to CIK Resolution</a></li>
+  
+    <li><a class="toc-l3" href="#cik-structure">CIK Structure</a></li>
+  
+    <li><a class="toc-l2" href="#filing-history-submissions">Filing History (Submissions)</a></li>
+  
+    <li><a class="toc-l3" href="#submission-structure">Submission Structure</a></li>
+  
+    <li><a class="toc-l3" href="#common-form-types">Common Form Types</a></li>
+  
+    <li><a class="toc-l2" href="#company-facts-xbrl-data">Company Facts (XBRL Data)</a></li>
+  
+    <li><a class="toc-l3" href="#available-taxonomies">Available Taxonomies</a></li>
+  
+    <li><a class="toc-l3" href="#common-xbrl-concepts">Common XBRL Concepts</a></li>
+  
+    <li><a class="toc-l2" href="#full-text-search">Full-Text Search</a></li>
+  
+    <li><a class="toc-l3" href="#filtered-search">Filtered Search</a></li>
+  
+    <li><a class="toc-l3" href="#common-form-filters">Common Form Filters</a></li>
+  
+    <li><a class="toc-l3" href="#routed-search-filings-handle">Routed Search (Filings handle)</a></li>
+  
+    <li><a class="toc-l2" href="#ownership-forms-3-4-5-and-13f-hr">Ownership (Forms 3/4/5 and 13F-HR)</a></li>
+  
+    <li><a class="toc-l2" href="#complete-example">Complete Example</a></li>
+  
+    <li><a class="toc-l2" href="#best-practices">Best Practices</a></li>
+  
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
+  
+  </ul>
+
+</aside>
+
 </div>
-      
-    </div>
-  </div>
-</footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate", "navigation.tabs", "navigation.top"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
-    
-    
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
-      
-    
-  </body>
+<script src="../../../_soothfast/site.js" defer></script>
+</body>
 </html>

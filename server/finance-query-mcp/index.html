@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>finance-query-mcp endpoints · finance-query</title>
+<link rel="icon" href="../../assets/logo.png">
+<link rel="stylesheet" href="../../_soothfast/tokens.css">
+<link rel="stylesheet" href="../../_soothfast/site.css">
+<link rel="stylesheet" href="../../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../../">
+      <span class="brand-mark"><img src="../../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
+    </a>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
+    </div>
+    
+    
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
+    
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</header>
+
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
+
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
+    
+      <li><a href="../../">Overview</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
+    
+      <li><a href="../../library/getting-started/">Getting Started</a></li>
+    
+      <li><a href="../../library/ticker/">Ticker API Reference</a></li>
+    
+      <li><a href="../../library/tickers/">Tickers API Reference</a></li>
+    
+      <li><a href="../../library/streaming/">Real-time Streaming</a></li>
+    
+      <li><a href="../../library/finance/">Finance Module</a></li>
+    
+      <li><a href="../../library/screeners/">Screeners</a></li>
+    
+      <li><a href="../../library/risk/">Risk Analytics</a></li>
+    
+      <li><a href="../../library/translation/">Translations</a></li>
+    
+      <li><a href="../../library/feeds/">RSS / Atom Feeds</a></li>
+    
+      <li><a href="../../library/dataframe/">DataFrame Support</a></li>
+    
+      <li><a href="../../library/configuration/">Configuration</a></li>
+    
+      <li><a href="../../library/error-handling/">Error Handling</a></li>
+    
+      <li><a href="../../library/indicators/">Indicators</a></li>
+    
+      <li><a href="../../library/backtesting/">Backtesting</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
+    
+      <li><a href="../../library/providers/">Multi-Provider Architecture</a></li>
+    
+      <li><a href="../../library/providers/polygon/">Polygon.io</a></li>
+    
+      <li><a href="../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
+    
+      <li><a href="../../library/providers/alphavantage/">Alpha Vantage</a></li>
+    
+      <li><a href="../../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
+    
+      <li><a href="../../library/providers/edgar/">EDGAR API Reference</a></li>
+    
+      <li><a href="../../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
+    
+      <li><a href="../../library/providers/worldbank/">World Bank Open Data</a></li>
+    
+      <li><a href="../../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
+    
+      <li><a href="../../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
+    
+      <li><a href="../../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
+    
+      <li><a href="../../library/providers/binance/">Binance (public market data)</a></li>
+    
+      <li><a href="../../library/providers/kraken/">Kraken (public market data)</a></li>
+    
+      <li><a href="../../library/providers/finra/">FINRA (short sale volume)</a></li>
+    
+      <li><a href="../../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
+    
+      <li><a href="../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../../library/forex/">Forex</a></li>
+    
+      <li><a href="../../library/futures/">Futures</a></li>
+    
+      <li><a href="../../library/indices/">Indices</a></li>
+    
+      <li><a href="../../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../../server/api/openapi/">REST API</a></li>
+    
+      <li><a href="../../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a href="../../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a class="active" aria-current="page" href="../../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../../perf/summary/">Performance summary</a></li>
+    
+      <li><a href="../../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
+</nav>
+
+<main class="doc">
+<h1 id="finance-query-mcp-endpoints"><code>finance-query-mcp</code> endpoints<a class="anchor" href="#finance-query-mcp-endpoints" aria-label="Link to this section">#</a></h1>
+<blockquote>
+<p>Generated by <code>cargo soothfast docs routes</code>
+Every operation is reconciled against its spec file in CI; drift fails the build.</p>
+</blockquote>
+<h2 id="mcp-tools-json-mcptools"><code>mcp-tools.json</code> <sup>McpTools</sup><a class="anchor" href="#mcp-tools-json-mcptools" aria-label="Link to this section">#</a></h2>
+<div class="route-summary"><svg class="route-gauge-svg" viewBox="0 0 220 14" aria-hidden="true" focusable="false"><line x1="4" y1="7" x2="216" y2="7" class="route-gauge-rail"/><line x1="4" y1="7" x2="216.0" y2="7" class="route-gauge-fill"/></svg><span class="route-summary-text"><strong>32</strong>/32 reconciled</span></div>
+<details class="route-group" open><summary><svg class="route-group-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>32 reconciled</summary><div class="tablewrap"><table><thead><tr><th>status</th><th>method</th><th>path</th><th>operation</th><th>handler</th></tr></thead><tbody><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_analysis</code></td><td>get_analysis</td><td><code>soothfast_routes::route_mcp_get_analysis</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_calendar</code></td><td>get_calendar</td><td><code>soothfast_routes::route_mcp_get_calendar</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_chart</code></td><td>get_chart</td><td><code>soothfast_routes::route_mcp_get_chart</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_crypto</code></td><td>get_crypto</td><td><code>soothfast_routes::route_mcp_get_crypto</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_dividends</code></td><td>get_dividends</td><td><code>soothfast_routes::route_mcp_get_dividends</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_edgar_facts</code></td><td>get_edgar_facts</td><td><code>soothfast_routes::route_mcp_get_edgar_facts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_edgar_search</code></td><td>get_edgar_search</td><td><code>soothfast_routes::route_mcp_get_edgar_search</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_edgar_submissions</code></td><td>get_edgar_submissions</td><td><code>soothfast_routes::route_mcp_get_edgar_submissions</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_fear_and_greed</code></td><td>get_fear_and_greed</td><td><code>soothfast_routes::route_mcp_get_fear_and_greed</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_feeds</code></td><td>get_feeds</td><td><code>soothfast_routes::route_mcp_get_feeds</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_financials</code></td><td>get_financials</td><td><code>soothfast_routes::route_mcp_get_financials</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_fred_series</code></td><td>get_fred_series</td><td><code>soothfast_routes::route_mcp_get_fred_series</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_holders</code></td><td>get_holders</td><td><code>soothfast_routes::route_mcp_get_holders</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_indicators</code></td><td>get_indicators</td><td><code>soothfast_routes::route_mcp_get_indicators</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_indices</code></td><td>get_indices</td><td><code>soothfast_routes::route_mcp_get_indices</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_industry</code></td><td>get_industry</td><td><code>soothfast_routes::route_mcp_get_industry</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_market_hours</code></td><td>get_market_hours</td><td><code>soothfast_routes::route_mcp_get_market_hours</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_market_summary</code></td><td>get_market_summary</td><td><code>soothfast_routes::route_mcp_get_market_summary</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_news</code></td><td>get_news</td><td><code>soothfast_routes::route_mcp_get_news</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_options</code></td><td>get_options</td><td><code>soothfast_routes::route_mcp_get_options</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_quote</code></td><td>get_quote</td><td><code>soothfast_routes::route_mcp_get_quote</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_recommendations</code></td><td>get_recommendations</td><td><code>soothfast_routes::route_mcp_get_recommendations</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_risk</code></td><td>get_risk</td><td><code>soothfast_routes::route_mcp_get_risk</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_sector</code></td><td>get_sector</td><td><code>soothfast_routes::route_mcp_get_sector</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_spark</code></td><td>get_spark</td><td><code>soothfast_routes::route_mcp_get_spark</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_splits</code></td><td>get_splits</td><td><code>soothfast_routes::route_mcp_get_splits</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_transcripts</code></td><td>get_transcripts</td><td><code>soothfast_routes::route_mcp_get_transcripts</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_treasury_yields</code></td><td>get_treasury_yields</td><td><code>soothfast_routes::route_mcp_get_treasury_yields</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>get_trending</code></td><td>get_trending</td><td><code>soothfast_routes::route_mcp_get_trending</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>lookup</code></td><td>lookup</td><td><code>soothfast_routes::route_mcp_lookup</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>screener</code></td><td>screener</td><td><code>soothfast_routes::route_mcp_screener</code></td></tr><tr><td><span class="route-status route-status-pass">✓ reconciled</span></td><td><code>TOOL</code></td><td><code>search</code></td><td>search</td><td><code>soothfast_routes::route_mcp_search</code></td></tr></tbody></table></div></details>
+
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
+</div>
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+  <span class="label">On this page</span>
+  <ul class="toc-list" id="toc">
+  
+    <li><a class="toc-l2" href="#mcp-tools-json-mcptools">mcp-tools.json McpTools</a></li>
+  
+  </ul>
+
+</aside>
+
+</div>
+<script src="../../_soothfast/site.js" defer></script>
+</body>
+</html>

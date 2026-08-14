@@ -1,0 +1,192 @@
+/* soothfast theme tokens — Material-Design-3-shaped color roles. Override
+   this one file (via theme_dir), or set [site.theme] in soothfast.toml to
+   have `cargo soothfast docs build` generate role overrides for you: either
+   route lets a consumer fully re-skin the site without touching site.css.
+   Defaults below render the built-in "gauge indigo" look unchanged. */
+
+:root {
+  /* ground: background/surface roles */
+  --background: #FAF9F6;
+  --on-background: #191C21;
+  --surface: #FFFFFF;
+  --on-surface: #191C21;
+  --surface-variant: #F0EEE8;
+  --on-surface-variant: #6A6E76;
+  --outline: #C9C5BA;
+
+  /* legacy neutral aliases used throughout site.css */
+  --bg: var(--background);
+  --panel: var(--surface);
+  --ink: var(--on-background);
+  --muted: var(--on-surface-variant);
+  --faint: #686C75;
+  --line: #E5E2DA;
+  --line-strong: var(--outline);
+
+  /* primary — brand/interactive color. Default is "gauge indigo". */
+  --primary: #3A56C5;
+  --on-primary: #FFFFFF;
+  --primary-container: #EDF0FB;
+  --on-primary-container: #3A56C5;
+
+  /* secondary — lower-emphasis interactive states (hover, not selected). */
+  --secondary: #5B6270;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #ECEDF1;
+  --on-secondary-container: #3F4450;
+
+  /* tertiary — reserved spot color; not consumed by the built-in theme yet. */
+  --tertiary: #3C6E7A;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #E3EEF0;
+  --on-tertiary-container: #234A52;
+
+  /* legacy accent aliases (pre-MD3-roles theme_dir overrides keep working) */
+  --accent: var(--primary);
+  --accent-soft: var(--primary-container);
+  --accent-ink: var(--on-primary);
+  --accent-border: #B9C4EC;
+
+  /* semantic (pass/fail/warn are evidence colors, never decoration — kept
+     fully independent of primary/secondary/tertiary brand customization) */
+  --pass: #1D7A3E;
+  --pass-bg: #EAF4EC;
+  --pass-border: #B7DDC1;
+  --fail: #B3362A;
+  --fail-bg: #FAECEA;
+  --fail-border: #E7B7B0;
+  --warn: #855D0A;
+  --warn-bg: #F8F0DC;
+  --warn-border: #E4CD98;
+
+  /* code panels are dark in both themes: instruments, not paper */
+  --code-bg: #191D28;
+  --code-edge: #2A2F3E;
+  --code-ink: #D9DEE9;
+  --code-muted: #838BA0;
+  --tok-kw: #98ABFF;
+  --tok-ty: #7CC7D8;
+  --tok-str: #8FCE9A;
+  --tok-num: #E3B876;
+  --tok-mac: #C9A9EF;
+  --tok-com: #838BA0;
+  --tok-fn: #E6EAF4;
+  /* evidence colors for use on the code panel's always-dark surface — fixed,
+     unlike --pass/--fail/--warn, which flip per theme */
+  --code-pass: #57C97C;
+  --code-fail: #E0685C;
+  --code-warn: #D9A94B;
+
+  --shadow: 0 1px 2px rgba(20, 22, 30, .05), 0 8px 24px rgba(20, 22, 30, .06);
+  --radius: 12px;
+
+  --serif: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+/* OS preference applies only while the viewer hasn't explicitly chosen
+   light — so the light palette lives once, in :root above. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #121419;
+    --on-background: #E9E8E3;
+    --surface: #191C23;
+    --on-surface: #E9E8E3;
+    --surface-variant: #23262E;
+    --on-surface-variant: #9CA0A9;
+    --outline: #3A3F4B;
+
+    --bg: var(--background);
+    --panel: var(--surface);
+    --ink: var(--on-background);
+    --muted: var(--on-surface-variant);
+    --faint: #868B96;
+    --line: #272B34;
+    --line-strong: var(--outline);
+
+    --primary: #93A5F2;
+    --on-primary: #10142B;
+    --primary-container: #232A42;
+    --on-primary-container: #93A5F2;
+
+    --secondary: #A7ADB8;
+    --on-secondary: #232830;
+    --secondary-container: #333944;
+    --on-secondary-container: #C7CCD3;
+
+    --tertiary: #7FB8C4;
+    --on-tertiary: #0E2A2F;
+    --tertiary-container: #1E3A40;
+    --on-tertiary-container: #BEDEE3;
+
+    --accent: var(--primary);
+    --accent-soft: var(--primary-container);
+    --accent-ink: var(--on-primary);
+    --accent-border: #46527D;
+
+    --pass: #57C97C;
+    --pass-bg: #17301F;
+    --pass-border: #33613F;
+    --fail: #E0685C;
+    --fail-bg: #38201D;
+    --fail-border: #6E362D;
+    --warn: #D9A94B;
+    --warn-bg: #33290F;
+    --warn-border: #6B531F;
+    --code-bg: #14171F;
+    --code-edge: #262B3A;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+  }
+}
+
+/* The viewer's explicit toggle wins over the OS preference, both ways. */
+:root[data-theme="dark"] {
+  --background: #121419;
+  --on-background: #E9E8E3;
+  --surface: #191C23;
+  --on-surface: #E9E8E3;
+  --surface-variant: #23262E;
+  --on-surface-variant: #9CA0A9;
+  --outline: #3A3F4B;
+
+  --bg: var(--background);
+  --panel: var(--surface);
+  --ink: var(--on-background);
+  --muted: var(--on-surface-variant);
+  --faint: #868B96;
+  --line: #272B34;
+  --line-strong: var(--outline);
+
+  --primary: #93A5F2;
+  --on-primary: #10142B;
+  --primary-container: #232A42;
+  --on-primary-container: #93A5F2;
+
+  --secondary: #A7ADB8;
+  --on-secondary: #232830;
+  --secondary-container: #333944;
+  --on-secondary-container: #C7CCD3;
+
+  --tertiary: #7FB8C4;
+  --on-tertiary: #0E2A2F;
+  --tertiary-container: #1E3A40;
+  --on-tertiary-container: #BEDEE3;
+
+  --accent: var(--primary);
+  --accent-soft: var(--primary-container);
+  --accent-ink: var(--on-primary);
+  --accent-border: #46527D;
+
+  --pass: #57C97C;
+  --pass-bg: #17301F;
+  --pass-border: #33613F;
+  --fail: #E0685C;
+  --fail-bg: #38201D;
+  --fail-border: #6E362D;
+  --warn: #D9A94B;
+  --warn-bg: #33290F;
+  --warn-border: #6B531F;
+  --code-bg: #14171F;
+  --code-edge: #262B3A;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+}
