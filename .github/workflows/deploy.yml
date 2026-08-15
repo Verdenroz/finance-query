@@ -158,6 +158,14 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Instruction counts are deterministic for identical benchmarked code,
+      # so a hit lets the measure step below skip via its [ ! -f ] guard.
+      - name: Restore measured baseline
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/baselines/base.json
+          key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
+
       # Writes .soothfast/gate-status.json, which `report render` reads to
       # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit
