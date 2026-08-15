@@ -426,35 +426,35 @@ jobs:
         with:
           tool: cargo-fuzz
       - name: Build fuzz targets
-        run: cargo fuzz build --dev
+        run: cargo fuzz build --dev --target x86_64-unknown-linux-gnu
         working-directory: fuzz
       - name: Run fuzz_quote (30 s)
-        run: cargo fuzz run fuzz_quote --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_quote --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_chart (30 s)
-        run: cargo fuzz run fuzz_chart --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_chart --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_atr (30 s)
-        run: cargo fuzz run fuzz_atr --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_atr --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_indicators_series (30 s)
-        run: cargo fuzz run fuzz_indicators_series --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_indicators_series --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_indicators_ohlcv (30 s)
-        run: cargo fuzz run fuzz_indicators_ohlcv --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_indicators_ohlcv --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_patterns (30 s)
-        run: cargo fuzz run fuzz_patterns --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_patterns --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_options (30 s)
-        run: cargo fuzz run fuzz_options --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_options --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_financials (30 s)
-        run: cargo fuzz run fuzz_financials --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_financials --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_edgar (30 s)
-        run: cargo fuzz run fuzz_edgar --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_edgar --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_discovery (30 s)
-        run: cargo fuzz run fuzz_discovery --dev -- -max_total_time=30
+        run: cargo fuzz run fuzz_discovery --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
