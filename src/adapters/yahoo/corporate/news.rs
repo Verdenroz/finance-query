@@ -17,7 +17,7 @@ pub(crate) async fn fetch_news(symbol: &str) -> Result<Vec<News>> {
             title: n.title,
             link: n.link,
             source: n.source,
-            img: String::new(),
+            img: n.img,
             time: n.time,
             provider_id: Some(Provider::Yahoo),
             #[cfg(feature = "sentiment")]

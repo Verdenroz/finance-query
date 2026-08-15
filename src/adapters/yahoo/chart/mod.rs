@@ -547,16 +547,8 @@ pub(crate) fn parse_chart_data(
         .collect();
 
     let chart_meta = crate::models::chart::ChartMeta {
-        symbol: meta.symbol.clone(),
-        currency: meta.currency.clone(),
-        exchange_name: meta.exchange_name.clone(),
-        instrument_type: meta.instrument_type.clone(),
-        previous_close: meta.previous_close,
-        regular_market_price: meta.regular_market_price,
-        chart_previous_close: meta.chart_previous_close,
-        data_granularity: meta.data_granularity.clone(),
         provider_id: Some(Provider::Yahoo),
-        ..Default::default()
+        ..meta.clone()
     };
 
     Ok(crate::models::chart::Chart {

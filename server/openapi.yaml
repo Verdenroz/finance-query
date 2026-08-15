@@ -5168,6 +5168,31 @@ components:
         - title
         - url
         - source
+    GqlFibonacciLevels:
+      description: "Mirrors `finance_query::indicators::FibonacciLevels`, which has no serde\nrename of its own (plain snake_case keys)."
+      type: object
+      properties:
+        level236:
+          type: number
+          format: double
+        level382:
+          type: number
+          format: double
+        level50:
+          type: number
+          format: double
+        level618:
+          type: number
+          format: double
+        level786:
+          type: number
+          format: double
+        swingHigh:
+          type: number
+          format: double
+        swingLow:
+          type: number
+          format: double
     GqlFinancialDataPoint:
       description: A single data point in a financial time series.
       type: object
@@ -5282,6 +5307,31 @@ components:
           format: double
       required:
         - symbol
+    GqlHeikinAshiCandle:
+      description: "Mirrors `finance_query::Candle` (camelCase serde keys)."
+      type: object
+      properties:
+        adjClose:
+          type: number
+          format: double
+        close:
+          type: number
+          format: double
+        high:
+          type: number
+          format: double
+        low:
+          type: number
+          format: double
+        open:
+          type: number
+          format: double
+        timestamp:
+          type: integer
+          format: int64
+        volume:
+          type: integer
+          format: int64
     GqlIchimokuData:
       type: object
       properties:
@@ -5382,6 +5432,12 @@ components:
         ema50:
           type: number
           format: double
+        fibonacciPivotPoints:
+          $ref: "#/components/schemas/GqlPivotPointsData"
+        fibonacciRetracement50:
+          $ref: "#/components/schemas/GqlFibonacciLevels"
+        heikinAshi:
+          $ref: "#/components/schemas/GqlHeikinAshiCandle"
         hma20:
           type: number
           format: double
@@ -5406,6 +5462,8 @@ components:
         parabolicSar:
           type: number
           format: double
+        pivotPoints:
+          $ref: "#/components/schemas/GqlPivotPointsData"
         roc12:
           type: number
           format: double
@@ -5463,6 +5521,8 @@ components:
         wma50:
           type: number
           format: double
+        zigzagLastPivot:
+          $ref: "#/components/schemas/GqlZigZagPoint"
     GqlIndustryCompany:
       type: object
       properties:
@@ -5726,6 +5786,7 @@ components:
           $ref: "#/components/schemas/GqlFormattedValue"
         shortName:
           type: string
+        spark: {}
         symbol:
           type: string
     GqlMarketTime:
@@ -5935,6 +5996,30 @@ components:
           format: double
       required:
         - symbol
+    GqlPivotPointsData:
+      type: object
+      properties:
+        pivot:
+          type: number
+          format: double
+        r1:
+          type: number
+          format: double
+        r2:
+          type: number
+          format: double
+        r3:
+          type: number
+          format: double
+        s1:
+          type: number
+          format: double
+        s2:
+          type: number
+          format: double
+        s3:
+          type: number
+          format: double
     GqlQuote:
       description: "Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`."
       type: object
@@ -6191,6 +6276,8 @@ components:
           $ref: "#/components/schemas/GqlFormattedValue"
         revenuePerShare:
           $ref: "#/components/schemas/GqlFormattedValue"
+        sandP52WeekChange:
+          $ref: "#/components/schemas/GqlFormattedValue"
         secFilings: {}
         sector:
           type: string
@@ -6260,6 +6347,8 @@ components:
           $ref: "#/components/schemas/GqlFormattedValue"
         website:
           type: string
+        week52Change:
+          $ref: "#/components/schemas/GqlFormattedValue"
         yieldValue:
           $ref: "#/components/schemas/GqlFormattedValue"
         zip:
@@ -6365,10 +6454,28 @@ components:
         calmar:
           type: number
           format: double
+        cvar95:
+          type: number
+          format: double
+        cvar99:
+          type: number
+          format: double
+        informationRatio:
+          type: number
+          format: double
+        kelly:
+          type: number
+          format: double
         maxDrawdown:
           type: number
           format: double
         maxDrawdownRecoveryPeriods:
+          type: number
+          format: double
+        omega:
+          type: number
+          format: double
+        parametricCvar95:
           type: number
           format: double
         parametricVar95:
@@ -6378,6 +6485,12 @@ components:
           type: number
           format: double
         sortino:
+          type: number
+          format: double
+        trackingError:
+          type: number
+          format: double
+        ulcerIndex:
           type: number
           format: double
         var95:
@@ -6390,7 +6503,13 @@ components:
         - var95
         - var99
         - parametricVar95
+        - cvar95
+        - cvar99
+        - parametricCvar95
+        - omega
+        - kelly
         - maxDrawdown
+        - ulcerIndex
     GqlScreenerQuote:
       description: A single quote result from a predefined or custom screener.
       type: object
@@ -7299,6 +7418,19 @@ components:
         - start
         - end
         - confidence
+    GqlZigZagPoint:
+      description: "Mirrors `finance_query::indicators::ZigZagPoint`, which has no serde\nrename of its own (plain snake_case keys)."
+      type: object
+      properties:
+        index:
+          type: integer
+          format: int64
+          minimum: 0
+        isHigh:
+          type: boolean
+        price:
+          type: number
+          format: double
     HealthResponse:
       description: "Body of `GET /v2/health`."
       type: object

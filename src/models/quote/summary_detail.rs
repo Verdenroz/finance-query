@@ -108,7 +108,7 @@ pub struct SummaryDetail {
     pub five_year_avg_dividend_yield: Option<FormattedValue<f64>>,
 
     /// Forward price-to-earnings ratio
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "forwardPE", skip_serializing_if = "Option::is_none")]
     pub forward_pe: Option<FormattedValue<f64>>,
 
     /// From currency (for currency pairs)
@@ -212,7 +212,7 @@ pub struct SummaryDetail {
     pub trailing_annual_dividend_yield: Option<FormattedValue<f64>>,
 
     /// Trailing price-to-earnings ratio
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "trailingPE", skip_serializing_if = "Option::is_none")]
     pub trailing_pe: Option<FormattedValue<f64>>,
 
     /// 200-day moving average

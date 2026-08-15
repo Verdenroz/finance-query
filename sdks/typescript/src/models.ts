@@ -332,6 +332,17 @@ export interface GqlFeedEntry {
   url: string;
 }
 
+/** Mirrors `finance_query::indicators::FibonacciLevels`, which has no serde rename of its own (plain snake_case keys). */
+export interface GqlFibonacciLevels {
+  level236?: number;
+  level382?: number;
+  level50?: number;
+  level618?: number;
+  level786?: number;
+  swingHigh?: number;
+  swingLow?: number;
+}
+
 /** A single data point in a financial time series. */
 export interface GqlFinancialDataPoint {
   /** Date string (e.g., "2024-09-30"). */
@@ -383,6 +394,17 @@ export interface GqlGrowthCompany {
   ytdReturn?: number;
 }
 
+/** Mirrors `finance_query::Candle` (camelCase serde keys). */
+export interface GqlHeikinAshiCandle {
+  adjClose?: number;
+  close?: number;
+  high?: number;
+  low?: number;
+  open?: number;
+  timestamp?: number;
+  volume?: number;
+}
+
 export interface GqlIchimokuData {
   baseLine?: number;
   conversionLine?: number;
@@ -423,6 +445,9 @@ export interface GqlIndicatorsSummary {
   ema20?: number;
   ema200?: number;
   ema50?: number;
+  fibonacciPivotPoints?: GqlPivotPointsData;
+  fibonacciRetracement50?: GqlFibonacciLevels;
+  heikinAshi?: GqlHeikinAshiCandle;
   hma20?: number;
   ichimoku?: GqlIchimokuData;
   keltnerChannels?: GqlKeltnerChannelsData;
@@ -432,6 +457,7 @@ export interface GqlIndicatorsSummary {
   momentum10?: number;
   obv?: number;
   parabolicSar?: number;
+  pivotPoints?: GqlPivotPointsData;
   roc12?: number;
   rsi14?: number;
   sma10?: number;
@@ -452,6 +478,7 @@ export interface GqlIndicatorsSummary {
   wma20?: number;
   wma200?: number;
   wma50?: number;
+  zigzagLastPivot?: GqlZigZagPoint;
 }
 
 export interface GqlIndustryCompany {
@@ -576,6 +603,7 @@ export interface GqlMarketSummaryQuote {
   regularMarketPrice?: GqlFormattedValue;
   regularMarketTime?: GqlFormattedValue;
   shortName?: string;
+  spark?: unknown;
   symbol?: string;
 }
 
@@ -665,6 +693,16 @@ export interface GqlPerformingCompany {
   symbol: string;
   targetPrice?: number;
   ytdReturn?: number;
+}
+
+export interface GqlPivotPointsData {
+  pivot?: number;
+  r1?: number;
+  r2?: number;
+  r3?: number;
+  s1?: number;
+  s2?: number;
+  s3?: number;
 }
 
 /** Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`. */
@@ -801,6 +839,7 @@ export interface GqlQuote {
   returnOnEquity?: GqlFormattedValue;
   revenueGrowth?: GqlFormattedValue;
   revenuePerShare?: GqlFormattedValue;
+  sandP52WeekChange?: GqlFormattedValue;
   secFilings?: unknown;
   sector?: string;
   sectorDisp?: string;
@@ -837,6 +876,7 @@ export interface GqlQuote {
   upgradeDowngradeHistory?: unknown;
   volume?: GqlFormattedValue;
   website?: string;
+  week52Change?: GqlFormattedValue;
   yieldValue?: GqlFormattedValue;
   zip?: string;
 }
@@ -892,11 +932,19 @@ export interface GqlResearchReport {
 export interface GqlRiskSummary {
   beta?: number;
   calmar?: number;
+  cvar95: number;
+  cvar99: number;
+  informationRatio?: number;
+  kelly: number;
   maxDrawdown: number;
   maxDrawdownRecoveryPeriods?: number;
+  omega: number;
+  parametricCvar95: number;
   parametricVar95: number;
   sharpe?: number;
   sortino?: number;
+  trackingError?: number;
+  ulcerIndex: number;
   var95: number;
   var99: number;
 }
@@ -1313,6 +1361,13 @@ export interface GqlWord {
   punctuatedWord: string;
   start: number;
   word: string;
+}
+
+/** Mirrors `finance_query::indicators::ZigZagPoint`, which has no serde rename of its own (plain snake_case keys). */
+export interface GqlZigZagPoint {
+  index?: number;
+  isHigh?: boolean;
+  price?: number;
 }
 
 /** Body of `GET /v2/health`. */

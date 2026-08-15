@@ -869,6 +869,20 @@ type GqlFeedEntryEdge {
 }
 
 """
+Mirrors `finance_query::indicators::FibonacciLevels`, which has no serde
+rename of its own (plain snake_case keys).
+"""
+type GqlFibonacciLevels {
+	swingHigh: Float
+	swingLow: Float
+	level236: Float
+	level382: Float
+	level50: Float
+	level618: Float
+	level786: Float
+}
+
+"""
 A single filter condition for `customScreener`. `field`/`operator` are
 validated against `EquityField`/`FundField` server-side (safe to splice
 into the upstream Yahoo query only after that match succeeds) — same
@@ -1019,6 +1033,19 @@ type GqlGrowthCompany {
 	growthEstimate: Float
 }
 
+"""
+Mirrors `finance_query::Candle` (camelCase serde keys).
+"""
+type GqlHeikinAshiCandle {
+	timestamp: Int
+	open: Float
+	high: Float
+	low: Float
+	close: Float
+	volume: Int
+	adjClose: Float
+}
+
 type GqlIchimokuData {
 	conversionLine: Float
 	baseLine: Float
@@ -1109,6 +1136,11 @@ type GqlIndicatorsSummary {
 	accumulationDistribution: Float
 	vwap: Float
 	balanceOfPower: Float
+	pivotPoints: GqlPivotPointsData
+	fibonacciPivotPoints: GqlPivotPointsData
+	heikinAshi: GqlHeikinAshiCandle
+	zigzagLastPivot: GqlZigZagPoint
+	fibonacciRetracement50: GqlFibonacciLevels
 }
 
 enum GqlIndicesRegion {
@@ -1501,6 +1533,7 @@ type GqlMarketSummaryQuote {
 	regularMarketChangePercent: JSON
 	regularMarketPreviousClose: JSON
 	regularMarketTime: JSON
+	spark: JSON
 }
 
 """
@@ -1764,6 +1797,16 @@ type GqlPerformingCompany {
 	targetPrice: Float
 }
 
+type GqlPivotPointsData {
+	pivot: Float
+	r1: Float
+	r2: Float
+	r3: Float
+	s1: Float
+	s2: Float
+	s3: Float
+}
+
 """
 A real-time price update from the streaming WebSocket, mirroring `PriceUpdate`.
 """
@@ -1860,6 +1903,8 @@ type GqlQuote {
 	beta: JSON
 	fiftyTwoWeekHigh: JSON
 	fiftyTwoWeekLow: JSON
+	week52Change: JSON
+	sandP52WeekChange: JSON
 	fiftyDayAverage: JSON
 	twoHundredDayAverage: JSON
 	dividendRate: JSON
@@ -2161,12 +2206,20 @@ type GqlRiskSummary {
 	var95: Float!
 	var99: Float!
 	parametricVar95: Float!
+	cvar95: Float!
+	cvar99: Float!
+	parametricCvar95: Float!
+	omega: Float!
+	kelly: Float!
 	sharpe: Float
 	sortino: Float
 	calmar: Float
 	beta: Float
 	maxDrawdown: Float!
 	maxDrawdownRecoveryPeriods: Float
+	ulcerIndex: Float!
+	informationRatio: Float
+	trackingError: Float
 }
 
 enum GqlScreener {
@@ -2859,7 +2912,7 @@ type GqlTicker {
 		Target language for translated text fields (BCP 47)
 		"""
 		lang: String
-	): GqlTranscriptWithMeta!
+	): GqlTranscript!
 	"""
 	Earnings call transcripts for this symbol.
 	"""
@@ -3076,6 +3129,16 @@ type GqlWord {
 	start: Float!
 	end: Float!
 	confidence: Float!
+}
+
+"""
+Mirrors `finance_query::indicators::ZigZagPoint`, which has no serde
+rename of its own (plain snake_case keys).
+"""
+type GqlZigZagPoint {
+	index: Int
+	price: Float
+	isHigh: Boolean
 }
 
 """

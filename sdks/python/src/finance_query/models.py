@@ -519,6 +519,25 @@ class GqlFeedEntry:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlFibonacciLevels:
+    """Mirrors `finance_query::indicators::FibonacciLevels`, which has no serde
+rename of its own (plain snake_case keys)."""
+
+    level236: float | None = None
+    level382: float | None = None
+    level50: float | None = None
+    level618: float | None = None
+    level786: float | None = None
+    swing_high: float | None = None
+    swing_low: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "swing_high": "swingHigh",
+        "swing_low": "swingLow",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlFinancialDataPoint:
     """A single data point in a financial time series."""
 
@@ -594,6 +613,23 @@ class GqlGrowthCompany:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlHeikinAshiCandle:
+    """Mirrors `finance_query::Candle` (camelCase serde keys)."""
+
+    adj_close: float | None = None
+    close: float | None = None
+    high: float | None = None
+    low: float | None = None
+    open: float | None = None
+    timestamp: int | None = None
+    volume: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "adj_close": "adjClose",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlIchimokuData:
     base_line: float | None = None
     conversion_line: float | None = None
@@ -646,6 +682,9 @@ class GqlIndicatorsSummary:
     ema20: float | None = None
     ema200: float | None = None
     ema50: float | None = None
+    fibonacci_pivot_points: GqlPivotPointsData | None = None
+    fibonacci_retracement50: GqlFibonacciLevels | None = None
+    heikin_ashi: GqlHeikinAshiCandle | None = None
     hma20: float | None = None
     ichimoku: GqlIchimokuData | None = None
     keltner_channels: GqlKeltnerChannelsData | None = None
@@ -655,6 +694,7 @@ class GqlIndicatorsSummary:
     momentum10: float | None = None
     obv: float | None = None
     parabolic_sar: float | None = None
+    pivot_points: GqlPivotPointsData | None = None
     roc12: float | None = None
     rsi14: float | None = None
     sma10: float | None = None
@@ -675,6 +715,7 @@ class GqlIndicatorsSummary:
     wma20: float | None = None
     wma200: float | None = None
     wma50: float | None = None
+    zigzag_last_pivot: GqlZigZagPoint | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "accumulation_distribution": "accumulationDistribution",
@@ -687,12 +728,17 @@ class GqlIndicatorsSummary:
         "coppock_curve": "coppockCurve",
         "donchian_channels": "donchianChannels",
         "elder_ray_index": "elderRayIndex",
+        "fibonacci_pivot_points": "fibonacciPivotPoints",
+        "fibonacci_retracement50": "fibonacciRetracement50",
+        "heikin_ashi": "heikinAshi",
         "keltner_channels": "keltnerChannels",
         "mcginley_dynamic20": "mcginleyDynamic20",
         "parabolic_sar": "parabolicSar",
+        "pivot_points": "pivotPoints",
         "stochastic_rsi": "stochasticRsi",
         "true_range": "trueRange",
         "williams_r14": "williamsR14",
+        "zigzag_last_pivot": "zigzagLastPivot",
     }
 
 
@@ -891,6 +937,7 @@ class GqlMarketSummaryQuote:
     regular_market_price: GqlFormattedValue | None = None
     regular_market_time: GqlFormattedValue | None = None
     short_name: str | None = None
+    spark: typing.Any | None = None
     symbol: str | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
@@ -1044,6 +1091,17 @@ class GqlPerformingCompany:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlPivotPointsData:
+    pivot: float | None = None
+    r1: float | None = None
+    r2: float | None = None
+    r3: float | None = None
+    s1: float | None = None
+    s2: float | None = None
+    s3: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlQuote:
     """Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`."""
 
@@ -1179,6 +1237,7 @@ class GqlQuote:
     return_on_equity: GqlFormattedValue | None = None
     revenue_growth: GqlFormattedValue | None = None
     revenue_per_share: GqlFormattedValue | None = None
+    sand_p52_week_change: GqlFormattedValue | None = None
     sec_filings: typing.Any | None = None
     sector: str | None = None
     sector_disp: str | None = None
@@ -1215,6 +1274,7 @@ class GqlQuote:
     upgrade_downgrade_history: typing.Any | None = None
     volume: GqlFormattedValue | None = None
     website: str | None = None
+    week52_change: GqlFormattedValue | None = None
     yield_value: GqlFormattedValue | None = None
     zip: str | None = None
 
@@ -1339,6 +1399,7 @@ class GqlQuote:
         "return_on_equity": "returnOnEquity",
         "revenue_growth": "revenueGrowth",
         "revenue_per_share": "revenuePerShare",
+        "sand_p52_week_change": "sandP52WeekChange",
         "sec_filings": "secFilings",
         "sector_disp": "sectorDisp",
         "sector_key": "sectorKey",
@@ -1369,6 +1430,7 @@ class GqlQuote:
         "two_hundred_day_average": "twoHundredDayAverage",
         "underlying_symbol": "underlyingSymbol",
         "upgrade_downgrade_history": "upgradeDowngradeHistory",
+        "week52_change": "week52Change",
         "yield_value": "yieldValue",
     }
 
@@ -1460,20 +1522,32 @@ class GqlResearchReport:
 class GqlRiskSummary:
     """Risk/performance summary for a symbol."""
 
+    cvar95: float
+    cvar99: float
+    kelly: float
     max_drawdown: float
+    omega: float
+    parametric_cvar95: float
     parametric_var95: float
+    ulcer_index: float
     var95: float
     var99: float
     beta: float | None = None
     calmar: float | None = None
+    information_ratio: float | None = None
     max_drawdown_recovery_periods: float | None = None
     sharpe: float | None = None
     sortino: float | None = None
+    tracking_error: float | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
+        "information_ratio": "informationRatio",
         "max_drawdown": "maxDrawdown",
         "max_drawdown_recovery_periods": "maxDrawdownRecoveryPeriods",
+        "parametric_cvar95": "parametricCvar95",
         "parametric_var95": "parametricVar95",
+        "tracking_error": "trackingError",
+        "ulcer_index": "ulcerIndex",
     }
 
 
@@ -2173,6 +2247,20 @@ class GqlWord:
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "punctuated_word": "punctuatedWord",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlZigZagPoint:
+    """Mirrors `finance_query::indicators::ZigZagPoint`, which has no serde
+rename of its own (plain snake_case keys)."""
+
+    index: int | None = None
+    is_high: bool | None = None
+    price: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "is_high": "isHigh",
     }
 
 

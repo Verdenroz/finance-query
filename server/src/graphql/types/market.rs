@@ -41,4 +41,5 @@ pub struct GqlMarketSummaryQuote {
     pub regular_market_change_percent: Option<Json<GqlFormattedValue>>,
     pub regular_market_previous_close: Option<Json<GqlFormattedValue>>,
     pub regular_market_time: Option<Json<GqlFormattedValue>>,
+    pub spark: Option<Json<serde_json::Value>>,
 }
