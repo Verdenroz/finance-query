@@ -143,7 +143,8 @@ jobs:
           git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       # soothfast.yml's paths filter and [bot] exclusion let no-code commits
-      # reach master, where gating them can only report noise.
+      # reach master, where gating them can only report noise. Also gates the
+      # trend append
       - name: Detect benchmarkable changes
         id: bench_changes
         run: |
@@ -171,11 +172,13 @@ jobs:
           fi
 
       - name: Append performance trend point
+        if: steps.bench_changes.outputs.changed == 'true'
         run: cargo soothfast trend append -p finance-query --from-baseline base
 
       # Direct pushes to master are blocked by the branch ruleset, so the bot
       # opens a PR and squash-merges it itself instead.
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: steps.bench_changes.outputs.changed == 'true'
         id: cpr
         with:
           token: ${{ steps.app-token.outputs.token }}
