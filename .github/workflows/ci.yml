@@ -278,6 +278,10 @@ jobs:
       # The root crate is a library; the shippable binaries live in the
       # workspace members, so build the whole workspace.
       - name: Build release binaries
+        # PRs validate with thin LTO; master builds the shipped fat-LTO profile
+        env:
+          CARGO_PROFILE_RELEASE_LTO: ${{ github.event_name == 'pull_request' && 'thin' || 'true' }}
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: ${{ github.event_name == 'pull_request' && '16' || '1' }}
         run: cargo auditable build --workspace --release --verbose
       - name: Upload binaries
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
