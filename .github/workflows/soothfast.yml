@@ -190,6 +190,9 @@ jobs:
     name: Docs binds & coverage
     runs-on: ubuntu-latest
     needs: baseline
+    # result-based so the changes job's skip on push events does not
+    # cascade past baseline's always() and starve the master cache warm
+    if: always() && needs.baseline.result == 'success'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -404,6 +407,7 @@ jobs:
     name: Docs site build
     runs-on: ubuntu-latest
     needs: [baseline, spec-server, spec-mcp]
+    if: always() && needs.baseline.result == 'success' && needs.spec-server.result == 'success' && needs.spec-mcp.result == 'success'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
