@@ -168,8 +168,18 @@ jobs:
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
           command -v cargo-soothfast >/dev/null || FORCE=--force
           cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
+      # Same key as deploy.yml so master deploys seed PR restores;
+      # identical benchmarked code measures identically
+      - name: Restore measured baseline
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/baselines/base.json
+          key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
       - name: Measure baseline
-        run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+        run: |
+          if [ ! -f .soothfast/baselines/base.json ]; then
+            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+          fi
       - name: Upload baseline
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
