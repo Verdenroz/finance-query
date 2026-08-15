@@ -34,6 +34,10 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
-        run: cargo binstall cargo-soothfast --locked --no-confirm
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
+        run: |
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --locked --no-confirm ${FORCE:-}
       - name: Publish
         run: cargo soothfast sdk publish -p finance-query-server --target soothfast-routes --only python

@@ -130,9 +130,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
 
       - name: Configure git identity for the gh-pages commit
         env:
@@ -143,7 +146,8 @@ jobs:
           git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       # soothfast.yml's paths filter and [bot] exclusion let no-code commits
-      # reach master, where gating them can only report noise.
+      # reach master, where gating them can only report noise. Also gates the
+      # trend append
       - name: Detect benchmarkable changes
         id: bench_changes
         run: |
@@ -153,6 +157,14 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Instruction counts are deterministic for identical benchmarked code,
+      # so a hit lets the measure step below skip via its [ ! -f ] guard.
+      - name: Restore measured baseline
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/baselines/base.json
+          key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
 
       # Writes .soothfast/gate-status.json, which `report render` reads to
       # color the gate badge. HEAD~1 is well-defined: master is linear.
@@ -171,11 +183,13 @@ jobs:
           fi
 
       - name: Append performance trend point
+        if: steps.bench_changes.outputs.changed == 'true'
         run: cargo soothfast trend append -p finance-query --from-baseline base
 
       # Direct pushes to master are blocked by the branch ruleset, so the bot
       # opens a PR and squash-merges it itself instead.
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: steps.bench_changes.outputs.changed == 'true'
         id: cpr
         with:
           token: ${{ steps.app-token.outputs.token }}

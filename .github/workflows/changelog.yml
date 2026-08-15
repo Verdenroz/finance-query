@@ -45,7 +45,11 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
-        run: cargo binstall cargo-soothfast --locked --no-confirm
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
+        run: |
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --locked --no-confirm ${FORCE:-}
       # Without a bench on the reference side there are no deterministic
       # metrics to diff, so the perf table falls back to a full snapshot and
       # walltime jitter rewrites every row on every push.
