@@ -787,7 +787,7 @@ fn route_events_get_splits() {}
     method = "GET",
     path = "/v2/transcripts/{symbol}",
     params = "EarningsTranscriptQuery",
-    response = "GqlTranscriptWithMeta"
+    response = "GqlTranscript"
 )]
 fn route_transcripts_get_transcript() {}
 

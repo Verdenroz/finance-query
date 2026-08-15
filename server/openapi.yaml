@@ -3659,7 +3659,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GqlTranscriptWithMeta"
+                $ref: "#/components/schemas/GqlTranscript"
         "400":
           description: Bad request
           content:
