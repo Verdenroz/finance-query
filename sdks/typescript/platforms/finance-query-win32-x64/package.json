@@ -1,0 +1,11 @@
+{
+  "name": "finance-query-win32-x64",
+  "version": "2.8.0",
+  "description": "The finance-query-server binary for win32-x64, used by finance-query.",
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "files": [
+    "bin"
+  ],
+  "preferUnplugged": true
+}

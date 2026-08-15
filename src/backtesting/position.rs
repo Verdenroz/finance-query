@@ -298,7 +298,8 @@ impl Position {
     /// dividend balances, and entry cost bases.
     ///
     /// [`Trade::is_partial`] is `true` for all trades returned by this method.
-    /// For a full close prefer [`Position::close_with_tax`], which sets
+    /// For a full close prefer [`Position::close`](crate::backtesting::Position::close)
+    /// (or the crate-internal `close_with_tax` for tax-aware exits), which sets
     /// `is_partial = false`. The engine's `scale_out_position` delegates
     /// `fraction >= 1.0` to `close_position` for exactly this reason.
     ///

@@ -23,17 +23,20 @@ const MAX_PAGES: u32 = 10;
 
 /// Map a library interval to Binance's kline interval code.
 ///
-/// `ThreeMonths` has no Binance equivalent, so it returns `None` and the
-/// caller reports `NotSupported` — dispatch then falls through to the next
-/// routed provider.
+/// `TwoMinutes`, `NinetyMinutes`, `FiveDays`, and `ThreeMonths` have no
+/// Binance equivalent
+/// the next routed provider.
 pub(super) fn interval_code(interval: Interval) -> Option<&'static str> {
     Some(match interval {
         Interval::OneMinute => "1m",
+        Interval::TwoMinutes => return None,
         Interval::FiveMinutes => "5m",
         Interval::FifteenMinutes => "15m",
         Interval::ThirtyMinutes => "30m",
         Interval::OneHour => "1h",
+        Interval::NinetyMinutes => return None,
         Interval::OneDay => "1d",
+        Interval::FiveDays => return None,
         Interval::OneWeek => "1w",
         Interval::OneMonth => "1M",
         Interval::ThreeMonths => return None,

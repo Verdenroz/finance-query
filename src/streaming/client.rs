@@ -213,8 +213,8 @@ pub enum PriceSource {
     /// Yahoo Finance WebSocket — keyless, all asset classes (default).
     #[default]
     Yahoo,
-    /// Polygon.io real-time cluster for one asset class. Requires
-    /// [`polygon::init`](crate::polygon::init).
+    /// Polygon.io real-time cluster for one asset class. Requires the
+    /// `polygon` feature and the `POLYGON_API_KEY` environment variable set.
     #[cfg(feature = "polygon")]
     Polygon(crate::streaming::AssetClass),
 }

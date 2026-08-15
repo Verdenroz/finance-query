@@ -51,6 +51,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 pub(crate) use adapter::*;
+/// Not part of the stable public API — see [`ProviderAdapter`].
+#[doc(hidden)]
+pub use adapter::{ChartProvider, ProviderAdapter, ProviderCore, QuoteProvider};
 pub(crate) use health::HealthTracker;
 pub use health::ProviderHealth;
 pub use retry::RetryPolicy;
@@ -156,7 +159,7 @@ impl Provider {
         }
     }
 
-    /// String identifier matching [`ProviderAdapter::id`].
+    /// String identifier matching [`ProviderCore::id`].
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Yahoo => "yahoo",
@@ -754,6 +757,8 @@ pub struct Routes {
 }
 
 impl Routes {
+    /// An empty route table (every capability falls back to its default
+    /// candidate providers) using the given concurrency [`Fetch`] mode.
     pub fn new(fetch: Fetch) -> Self {
         Self {
             map: HashMap::new(),
@@ -762,7 +767,11 @@ impl Routes {
     }
 }
 
-pub(crate) struct ProviderSet {
+/// Not part of the stable public API — exposed only so `benches/soothfast.rs`
+/// can inject a canned, network-free adapter for gating `Ticker`/`Tickers`
+/// hot paths. No semver guarantees; may change or move without notice.
+#[doc(hidden)]
+pub struct ProviderSet {
     providers: Vec<Arc<dyn ProviderAdapter>>,
     yahoo_client: Option<Arc<YahooClient>>,
     routes: Routes,
@@ -789,6 +798,9 @@ impl std::fmt::Debug for ProviderSet {
 }
 
 impl ProviderSet {
+    /// `YahooClient` stays crate-private (benches pass `None`); the leak in
+    /// this doc-hidden constructor's signature is deliberate.
+    #[allow(private_interfaces)]
     pub fn new(
         providers: Vec<Arc<dyn ProviderAdapter>>,
         yahoo_client: Option<Arc<YahooClient>>,

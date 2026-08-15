@@ -14,77 +14,13 @@ use finance_query_server::graphql::{
         build_connection_selection, build_paginated_composite_selection, unwrap_nested_connection,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{
+    BatchCapitalGainsQuery, BatchDividendsQuery, BatchSplitsQuery, DividendsQuery, RangeQuery,
+};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, range_to_gql};
 
-fn default_max_range() -> String {
-    "max".to_string()
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RangeQuery {
-    #[serde(default = "default_max_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct DividendsQuery {
-    #[serde(default = "default_max_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max dividend payments per page; omitted (with cursor also omitted) = every
-    /// matching payment as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchDividendsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_max_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max symbols per page; omitted (with cursor also omitted) = every requested
-    /// symbol's dividend history as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchSplitsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_max_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchCapitalGainsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_max_range")]
-    range: String,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// GET /v2/dividends/{symbol}
 ///
 /// Query: `range` (str, default "max")
 pub(crate) async fn get_dividends(
@@ -92,7 +28,7 @@ pub(crate) async fn get_dividends(
     Path(symbol): Path<String>,
     Query(params): Query<DividendsQuery>,
 ) -> impl IntoResponse {
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let dividends_item_selection = DIVIDENDS_COMPOSITE_FIELDS
         .iter()
         .find(|(name, _)| *name == "dividends")
@@ -137,7 +73,7 @@ pub(crate) async fn get_splits(
     Path(symbol): Path<String>,
     Query(params): Query<RangeQuery>,
 ) -> impl IntoResponse {
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let selection = build_rest_selection(params.fields.as_deref(), GQL_SPLIT_VALID_FIELDS);
     let query = format!(
         "query GetSplits($symbol: String!) {{ ticker(symbol: $symbol) {{ splits(range: {gql_range}) {selection} }} }}"
@@ -159,7 +95,7 @@ pub(crate) async fn get_capital_gains(
     Path(symbol): Path<String>,
     Query(params): Query<RangeQuery>,
 ) -> impl IntoResponse {
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let selection = build_rest_selection(params.fields.as_deref(), &["timestamp", "amount"]);
     let query = format!(
         "query GetCG($symbol: String!) {{ ticker(symbol: $symbol) {{ capitalGains(range: {gql_range}) {selection} }} }}"
@@ -188,7 +124,7 @@ pub(crate) async fn get_batch_dividends(
     Query(params): Query<BatchDividendsQuery>,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     // Top-level wrapper fields are "symbol"/"dividends" (GqlSymbolDividends); "dividends" is a
     // plain Vec<GqlDividend> list (no per-symbol analytics, unlike single-symbol GqlDividends).
     let want_dividends = params
@@ -246,7 +182,7 @@ pub(crate) async fn get_batch_splits(
     Query(params): Query<BatchSplitsQuery>,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let syms_literal = gql_string_list_literal(&symbols);
     let item_selection = build_rest_selection(params.fields.as_deref(), GQL_SPLIT_VALID_FIELDS);
 
@@ -274,7 +210,7 @@ pub(crate) async fn get_batch_capital_gains(
     Query(params): Query<BatchCapitalGainsQuery>,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    let gql_range = range_to_gql(&params.range);
+    let gql_range = range_to_gql(params.range);
     let syms_literal = gql_string_list_literal(&symbols);
     let item_selection = build_rest_selection(params.fields.as_deref(), &["timestamp", "amount"]);
 

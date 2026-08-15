@@ -17,37 +17,12 @@ use finance_query_server::graphql::{
         build_connection_selection, build_paginated_composite_selection, unwrap_nested_connection,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{CotQuery, GdeltNewsQuery};
 use tracing::info;
 
 use super::gql_bridge::{
     build_rest_composite_selection, connection_args, execute_gql_rest, unwrap_connection,
 };
-
-/// Query parameters for /v2/gdelt/news/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct GdeltNewsQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max articles per page; omitted (with cursor also omitted) = bare array
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/cftc/cot/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CotQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max weekly observations per page; omitted (with cursor also omitted) =
-    /// every observation as a bare array
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
 
 /// GET /v2/gdelt/news/{symbol}
 pub(crate) async fn get_gdelt_news(

@@ -26,7 +26,7 @@ exclude = [
     ".env*",
     "Makefile",
     "docker-compose*.yml",
-    "mkdocs.yml",
+    "soothfast.toml",
 ]
 
 [lib]
@@ -76,7 +76,7 @@ prost = "0.14.3"
 base64 = "0.22"
 
 # Optional: DataFrame support
-polars = { version = "0.53", optional = true, default-features = false, features = ["lazy"] }
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
 finance-query-derive = { version = "2.8.0", path = "finance-query-derive" }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
@@ -215,24 +215,9 @@ serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
-# Deterministic, instruction-count regression benchmarks (run under valgrind).
-# Dev-only — never compiled into the published `finance-query` crate.
-iai-callgrind = "0.16.1"
-
-[[bench]]
-name = "indicators"
-harness = false
-required-features = ["indicators"]
-
-[[bench]]
-name = "risk"
-harness = false
-required-features = ["risk"]
-
-[[bench]]
-name = "backtesting"
-harness = false
-required-features = ["backtesting"]
+# Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
+# never compiled into the published `finance-query` crate.
+soothfast = { version = "0.1", features = ["runner"] }
 
 [[bench]]
 name = "ticker"
@@ -242,43 +227,12 @@ harness = false
 name = "tickers"
 harness = false
 
-[[bench]]
-name = "finance"
-harness = false
-
-[[bench]]
-name = "providers"
-harness = false
-
-[[bench]]
-name = "stream"
-harness = false
-
-# Model (de)serialization over real captured server responses
-# (benches/fixtures/*.json). Always-available types; no extra features needed.
-[[bench]]
-name = "serde"
-harness = false
-
 # Polars DataFrame conversions (Candle/Chart/Options/Quote). Criterion-only —
 # deliberately NOT in the regression gate (Polars is too heavy for the CI gate).
 [[bench]]
 name = "dataframe"
 harness = false
 required-features = ["dataframe"]
-
-# RSS/Atom feed parsing over offline XML fixtures.
-[[bench]]
-name = "feeds"
-harness = false
-
-# Offline VADER sentiment scoring latency over real captured news + transcript
-# payloads. Criterion-only (wall-clock); the regression gate guards the same
-# scoring path via its `sentiment` iai group.
-[[bench]]
-name = "sentiment"
-harness = false
-required-features = ["sentiment"]
 
 # One-shot latency harness (not criterion): downloads opus-mt models on first
 # run and reports cold-batch translation times + cross-language spread.
@@ -287,17 +241,9 @@ name = "translation"
 harness = false
 required-features = ["translation-offline"]
 
-# Deterministic instruction-count regression gate (iai-callgrind, runs under
-# valgrind). Unlike the criterion benches above, these are stable across
-# machines/CI runners and are consumed by `make baseline` as a gate.
-# `risk`+`backtesting` cover the compute/strategy paths; `translation` adds
-# the (cheap, pure-Rust) dictionary-translation gate; feed-parse is always
-# available (feeds has no feature gate). The serde benches use
-# always-available model types. dataframe is deliberately excluded (Polars is
-# too heavy for the gate — it stays a criterion bench).
-# Run with `--features bench-gate` (aggregate of the below).
+# Measured regression gate (`cargo soothfast measure/gate --features bench-gate`).
 [[bench]]
-name = "regression"
+name = "soothfast"
 harness = false
 required-features = ["risk", "backtesting", "translation", "sentiment"]
 
@@ -317,7 +263,7 @@ opt-level = 2
 
 [profile.bench]
 inherits = "release"
-debug = true
+debug = "line-tables-only"
 strip = false
 lto = false
 codegen-units = 16

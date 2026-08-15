@@ -111,7 +111,7 @@ Finance Query is ready to use out of the box. Here's how to get stock data:
 === "Rust Library"
 
     ```rust
-    use finance_query::{Ticker, Interval, TimeRange, Raw};
+    use finance_query::{Ticker, Interval, TimeRange, format::Raw};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -45,8 +45,9 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     echo "fn main() {}" > server/src/main.rs && \
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
+    echo "pub fn dummy() {}" > finance-query-mcp/src/lib.rs && \
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
-    for b in indicators backtesting ticker tickers finance stream translation risk providers regression serde dataframe feeds sentiment; do \
+    for b in ticker tickers translation soothfast dataframe; do \
         echo "fn main() {}" > benches/$b.rs; \
     done
 
@@ -71,7 +72,7 @@ COPY benches ./benches
 # image layer, so a later `COPY --from=builder` can't reach into them.
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/build/target,sharing=locked \
-    touch src/lib.rs server/src/lib.rs finance-query-mcp/src/main.rs && \
+    touch src/lib.rs server/src/lib.rs finance-query-mcp/src/lib.rs finance-query-mcp/src/main.rs && \
     cargo auditable build --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
     OUT_DIR=$([ "${CARGO_PROFILE}" = "dev" ] && echo debug || echo "${CARGO_PROFILE}") && \
     cp target/${OUT_DIR}/fq-mcp /build/fq-mcp

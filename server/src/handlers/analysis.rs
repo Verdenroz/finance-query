@@ -16,54 +16,12 @@ use finance_query_server::graphql::{
     },
     pagination::{build_connection_selection, unwrap_nested_connection},
 };
-use serde::Deserialize;
+use finance_query_server::params::{
+    AnalysisQuery, AnalysisType, BatchRecommendationsQuery, RecommendationsQuery,
+};
 use tracing::info;
 
 use super::gql_bridge::{RestTypeSpec, build_rest_composite_selection, execute_gql_rest};
-
-fn default_limit() -> u32 {
-    std::env::var("RECOMMENDATIONS_LIMIT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(5)
-}
-
-fn default_recommendations_limit() -> u32 {
-    10
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RecommendationsQuery {
-    #[serde(default = "default_limit")]
-    limit: u32,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct BatchRecommendationsQuery {
-    /// Comma-separated symbols (required)
-    symbols: String,
-    #[serde(default = "default_recommendations_limit")]
-    limit: u32,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max symbols per page; omitted (with page_cursor also omitted) = every
-    /// requested symbol's recommendations as a bare array, unchanged from
-    /// pre-pagination behavior
-    page_limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    page_cursor: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct AnalysisQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
 
 /// (GraphQL field name -> (VALID, composite sub-field map)) per analysis type.
 /// The first element must stay in sync with every `services::analysis` per-type
@@ -188,26 +146,20 @@ pub(crate) async fn get_batch_recommendations(
 /// GET /v2/analysis/{symbol}/{analysis_type}
 pub(crate) async fn get_analysis(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path((symbol, analysis_type)): Path<(String, String)>,
+    Path((symbol, analysis_type)): Path<(String, AnalysisType)>,
     Query(params): Query<AnalysisQuery>,
 ) -> impl IntoResponse {
-    let key = analysis_type.to_lowercase();
-    let Some((_, gql_field, valid_fields, composite_fields)) = ANALYSIS_TYPE_REST_SPECS
+    let (_, gql_field, valid_fields, composite_fields) = ANALYSIS_TYPE_REST_SPECS
         .iter()
-        .find(|(k, ..)| *k == key.as_str())
-    else {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "error": format!("Invalid analysis type: '{}'. Valid: recommendations, upgrades-downgrades, earnings-estimate, earnings-history", analysis_type),
-            "status": 400
-        }))).into_response();
-    };
+        .find(|(k, ..)| *k == analysis_type.as_str())
+        .expect("ANALYSIS_TYPE_REST_SPECS covers every AnalysisType variant");
     let selection =
         build_rest_composite_selection(params.fields.as_deref(), valid_fields, composite_fields);
     let query = format!(
         "query GetAnalysis($symbol: String!) {{ ticker(symbol: $symbol) {{ {gql_field} {selection} }} }}"
     );
     info!(
-        "Fetching {} analysis for {} (fields={:?})",
+        "Fetching {:?} analysis for {} (fields={:?})",
         analysis_type, symbol, params.fields
     );
     let mut vars = Variables::default();

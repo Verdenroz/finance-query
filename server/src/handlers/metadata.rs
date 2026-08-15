@@ -12,20 +12,10 @@ use finance_query_server::graphql::{
         unwrap_field,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{CurrenciesQuery, ExchangesQuery, HoursQuery, QuoteTypeQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, build_rest_selection, execute_gql_rest};
-
-/// Query parameters for /v2/hours
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct HoursQuery {
-    /// Region code (e.g., "US", "JP", "GB"). Defaults to US if not specified.
-    region: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
 
 /// GET /v2/hours
 ///
@@ -41,33 +31,20 @@ pub(crate) async fn get_hours(
     );
     let region_arg = params
         .region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!("(region: \"{}\")", escape_gql_string(r)));
+        .map(|r| format!("(region: \"{}\")", escape_gql_string(r.region())));
     let query = format!(
         "query {{ marketHours{} {} }}",
         region_arg.unwrap_or_default(),
         selection
     );
 
-    info!(
-        "Fetching market hours for region: {}",
-        params.region.as_deref().unwrap_or("US")
-    );
+    info!("Fetching market hours for region: {:?}", params.region);
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
         Err(resp) => return resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "marketHours"))).into_response()
-}
-
-/// Query parameters for /v2/quote-type/{symbol}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct QuoteTypeQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
 }
 
 /// GET /v2/quote-type/{symbol}
@@ -92,14 +69,6 @@ pub(crate) async fn get_quote_type(
     (StatusCode::OK, Json(unwrap_field(data, "quoteType"))).into_response()
 }
 
-/// Query parameters for /v2/currencies
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CurrenciesQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
 /// GET /v2/currencies
 ///
 /// Returns available currencies from Yahoo Finance.
@@ -117,14 +86,6 @@ pub(crate) async fn get_currencies(
         Err(resp) => return resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "currencies"))).into_response()
-}
-
-/// Query parameters for /v2/exchanges
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ExchangesQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
 }
 
 /// GET /v2/exchanges

@@ -25,6 +25,8 @@
 use crate::models::quote::FormattedValue;
 
 mod sealed {
+    /// Blocks external crates from implementing [`Format`](super::Format);
+    /// only this module can name `Sealed`, so it can only be satisfied here.
     pub trait Sealed {}
 }
 
@@ -52,8 +54,9 @@ pub trait Format: sealed::Sealed + Clone + std::fmt::Debug + PartialEq + 'static
 
 /// Full format — fields hold `FormattedValue<T>` with `raw`, `fmt`, and `long_fmt`.
 ///
-/// Obtain via [`Quote::into_formatted`](crate::Quote::into_formatted).
-/// This is the form that can be deserialized directly from Yahoo Finance JSON.
+/// Obtain via [`Ticker::quote`](crate::Ticker::quote) with the default `Both`
+/// format parameter. This is the form that can be deserialized directly from
+/// Yahoo Finance JSON.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Both;
 

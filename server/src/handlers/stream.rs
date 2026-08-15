@@ -42,12 +42,11 @@ use axum::{
     },
     response::IntoResponse,
 };
-use finance_query::FinanceError;
-use finance_query::streaming::{AlertConditionKind, AlertEvaluator, AlertEvent, AlertRule};
+use finance_query::streaming::{AlertEvaluator, AlertEvent, AlertRule};
+use finance_query_server::params::{StreamCommand, WsAlertRule};
 use finance_query_server::{AppState, SharedTick, StreamHub, TickStream, metrics};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
-use serde::Deserialize;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -57,37 +56,6 @@ use tracing::{error, info, warn};
 
 /// Outbound control-message channel depth.
 const OUTBOUND_CAPACITY: usize = 32;
-
-/// Stream command from client
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct StreamCommand {
-    subscribe: Option<Vec<String>>,
-    unsubscribe: Option<Vec<String>>,
-    alerts: Option<Vec<WsAlertRule>>,
-}
-
-/// One alert rule as sent over the wire.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct WsAlertRule {
-    symbol: String,
-    condition: String,
-    value: f64,
-    #[serde(default)]
-    repeat: bool,
-}
-
-impl WsAlertRule {
-    fn parse(&self) -> Result<AlertRule, String> {
-        let kind: AlertConditionKind = self
-            .condition
-            .parse()
-            .map_err(|e: FinanceError| e.to_string())?;
-        let rule = AlertRule::new(self.symbol.clone(), kind.with_value(self.value));
-        Ok(if self.repeat { rule.repeating() } else { rule })
-    }
-}
 
 /// Turn wire rules into library rules, reporting the first bad condition.
 fn parse_rules(rules: &[WsAlertRule]) -> Result<Vec<AlertRule>, String> {
@@ -504,10 +472,13 @@ mod tests {
     }
 
     #[test]
-    fn an_unknown_condition_is_reported_not_ignored() {
-        let cmd = command(r#"{"alerts":[{"symbol":"AAPL","condition":"wat","value":1.0}]}"#);
-        let err = parse_rules(&cmd.alerts.unwrap()).expect_err("should reject");
-        assert!(err.contains("wat"), "error should name the bad condition");
+    fn an_unknown_condition_is_rejected_at_deserialization() {
+        // `condition` is typed as `AlertConditionKind` directly, so an
+        // unrecognized value is now a deserialize error, not something that
+        // reaches `parse_rules`.
+        let result: Result<StreamCommand, _> =
+            serde_json::from_str(r#"{"alerts":[{"symbol":"AAPL","condition":"wat","value":1.0}]}"#);
+        assert!(result.is_err(), "should reject unknown condition");
     }
 
     #[test]

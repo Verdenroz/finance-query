@@ -5,10 +5,10 @@
 //!
 //! # Overview
 //!
-//! A [`StreamSource`](source::StreamSource) trait abstracts the provider-specific
-//! transport and wire protocol. Yahoo ([`YahooStreamSource`](yahoo::YahooStreamSource))
-//! is the reference implementation, with additional providers (e.g. Polygon)
-//! supported through the same abstraction.
+//! A `StreamSource` trait abstracts the provider-specific transport and wire
+//! protocol. Yahoo (`YahooStreamSource`) is the reference implementation,
+//! with additional providers (e.g. Polygon) supported through the same
+//! abstraction.
 //!
 //! This module handles:
 //!

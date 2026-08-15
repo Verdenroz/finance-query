@@ -1,5 +1,6 @@
 //! GraphQL types for holders / ownership data.
 
+use super::formatted::GqlFormattedValue;
 use crate::graphql::pagination::{self, Page};
 use async_graphql::{ComplexObject, Json, Object, Result, SimpleObject};
 use serde::Deserialize;
@@ -10,10 +11,10 @@ use serde::Deserialize;
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlMajorHoldersBreakdown {
-    pub insiders_percent_held: Option<Json<serde_json::Value>>,
-    pub institutions_count: Option<Json<serde_json::Value>>,
-    pub institutions_float_percent_held: Option<Json<serde_json::Value>>,
-    pub institutions_percent_held: Option<Json<serde_json::Value>>,
+    pub insiders_percent_held: Option<Json<GqlFormattedValue>>,
+    pub institutions_count: Option<Json<GqlFormattedValue>>,
+    pub institutions_float_percent_held: Option<Json<GqlFormattedValue>>,
+    pub institutions_percent_held: Option<Json<GqlFormattedValue>>,
     pub max_age: Option<i64>,
 }
 
@@ -48,11 +49,11 @@ impl GqlInstitutionOwnership {
 pub struct GqlInstitutionOwner {
     pub max_age: Option<i64>,
     pub organization: Option<String>,
-    pub pct_held: Option<Json<serde_json::Value>>,
-    pub position: Option<Json<serde_json::Value>>,
-    pub value: Option<Json<serde_json::Value>>,
-    pub pct_change: Option<Json<serde_json::Value>>,
-    pub report_date: Option<Json<serde_json::Value>>,
+    pub pct_held: Option<Json<GqlFormattedValue>>,
+    pub position: Option<Json<GqlFormattedValue>>,
+    pub value: Option<Json<GqlFormattedValue>>,
+    pub pct_change: Option<Json<GqlFormattedValue>>,
+    pub report_date: Option<Json<GqlFormattedValue>>,
 }
 
 // ── Fund Ownership ──────────────────────────────────────────────────────────
@@ -86,11 +87,11 @@ impl GqlFundOwnership {
 pub struct GqlFundOwner {
     pub max_age: Option<i64>,
     pub organization: Option<String>,
-    pub pct_held: Option<Json<serde_json::Value>>,
-    pub position: Option<Json<serde_json::Value>>,
-    pub value: Option<Json<serde_json::Value>>,
-    pub pct_change: Option<Json<serde_json::Value>>,
-    pub report_date: Option<Json<serde_json::Value>>,
+    pub pct_held: Option<Json<GqlFormattedValue>>,
+    pub position: Option<Json<GqlFormattedValue>>,
+    pub value: Option<Json<GqlFormattedValue>>,
+    pub pct_change: Option<Json<GqlFormattedValue>>,
+    pub report_date: Option<Json<GqlFormattedValue>>,
 }
 
 // ── Insider Transactions ────────────────────────────────────────────────────
@@ -123,13 +124,13 @@ impl GqlInsiderTransactions {
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlInsiderTransaction {
     pub max_age: Option<i64>,
-    pub shares: Option<Json<serde_json::Value>>,
-    pub value: Option<Json<serde_json::Value>>,
+    pub shares: Option<Json<GqlFormattedValue>>,
+    pub value: Option<Json<GqlFormattedValue>>,
     pub filer_name: Option<String>,
     pub filer_relation: Option<String>,
     pub filer_url: Option<String>,
     pub money_text: Option<String>,
-    pub start_date: Option<Json<serde_json::Value>>,
+    pub start_date: Option<Json<GqlFormattedValue>>,
     pub ownership: Option<String>,
     pub transaction_text: Option<String>,
 }
@@ -141,16 +142,16 @@ pub struct GqlInsiderTransaction {
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlNetSharePurchaseActivity {
     pub period: Option<String>,
-    pub buy_info_count: Option<Json<serde_json::Value>>,
-    pub buy_info_shares: Option<Json<serde_json::Value>>,
-    pub buy_percent_insider_shares: Option<Json<serde_json::Value>>,
-    pub sell_info_count: Option<Json<serde_json::Value>>,
-    pub sell_info_shares: Option<Json<serde_json::Value>>,
-    pub sell_percent_insider_shares: Option<Json<serde_json::Value>>,
-    pub net_info_count: Option<Json<serde_json::Value>>,
-    pub net_info_shares: Option<Json<serde_json::Value>>,
-    pub net_percent_insider_shares: Option<Json<serde_json::Value>>,
-    pub total_insider_shares: Option<Json<serde_json::Value>>,
+    pub buy_info_count: Option<Json<GqlFormattedValue>>,
+    pub buy_info_shares: Option<Json<GqlFormattedValue>>,
+    pub buy_percent_insider_shares: Option<Json<GqlFormattedValue>>,
+    pub sell_info_count: Option<Json<GqlFormattedValue>>,
+    pub sell_info_shares: Option<Json<GqlFormattedValue>>,
+    pub sell_percent_insider_shares: Option<Json<GqlFormattedValue>>,
+    pub net_info_count: Option<Json<GqlFormattedValue>>,
+    pub net_info_shares: Option<Json<GqlFormattedValue>>,
+    pub net_percent_insider_shares: Option<Json<GqlFormattedValue>>,
+    pub total_insider_shares: Option<Json<GqlFormattedValue>>,
     pub max_age: Option<i64>,
 }
 
@@ -188,9 +189,9 @@ pub struct GqlInsiderHolder {
     pub relation: Option<String>,
     pub url: Option<String>,
     pub transaction_description: Option<String>,
-    pub latest_trans_date: Option<Json<serde_json::Value>>,
-    pub position_direct: Option<Json<serde_json::Value>>,
-    pub position_direct_date: Option<Json<serde_json::Value>>,
-    pub position_indirect: Option<Json<serde_json::Value>>,
-    pub position_indirect_date: Option<Json<serde_json::Value>>,
+    pub latest_trans_date: Option<Json<GqlFormattedValue>>,
+    pub position_direct: Option<Json<GqlFormattedValue>>,
+    pub position_direct_date: Option<Json<GqlFormattedValue>>,
+    pub position_indirect: Option<Json<GqlFormattedValue>>,
+    pub position_indirect_date: Option<Json<GqlFormattedValue>>,
 }

@@ -48,7 +48,8 @@ impl TradeTick {
 stream_handle! {
     /// A subscription to every trade print for the given symbols.
     ///
-    /// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
+    /// Requires the `polygon` feature and the `POLYGON_API_KEY` environment
+    /// variable set.
     /// This is a companion to [`PriceStream`](super::PriceStream), not a
     /// replacement — most consumers want the coalesced tick.
     ///

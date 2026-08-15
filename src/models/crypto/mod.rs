@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 /// A provider-agnostic cryptocurrency quote.
 ///
-/// Obtain via [`Ticker::crypto_quote`](crate::Ticker::crypto_quote). Supported providers:
+/// Obtain via [`Providers::crypto`](crate::Providers::crypto) then
+/// [`.quote()`](crate::domains::CryptoCoin::quote). Supported providers:
 /// Alpha Vantage, CoinGecko, FMP, Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

@@ -1,0 +1,100 @@
+# Site configuration for `cargo soothfast docs build|serve`.
+
+[site]
+name = "finance-query"
+version = "2.8.0"
+repo = "https://github.com/Verdenroz/finance-query"
+logo = "assets/logo.png"
+favicon = "assets/logo.png"
+
+[site.theme]
+primary = "#CB6015"
+secondary = "#6E5B4A"
+tertiary = "#2F6B76"
+
+[[site.nav]]
+title = "Home"
+pages = ["Overview: index.md"]
+
+[[site.nav]]
+title = "Library"
+pages = [
+  "library/getting-started.md",
+  "library/ticker.md",
+  "library/tickers.md",
+  "library/streaming.md",
+  "library/finance.md",
+  "library/screeners.md",
+  "library/risk.md",
+  "library/translation.md",
+  "library/feeds.md",
+  "library/dataframe.md",
+  "library/configuration.md",
+  "library/error-handling.md",
+  "library/indicators.md",
+  "library/backtesting.md",
+]
+
+[[site.nav]]
+title = "Providers"
+pages = [
+  "library/providers/index.md",
+  "library/providers/polygon.md",
+  "library/providers/fmp.md",
+  "library/providers/alphavantage.md",
+  "library/providers/coingecko.md",
+  "library/providers/edgar.md",
+  "library/providers/fred.md",
+  "library/providers/worldbank.md",
+  "library/providers/fiscaldata.md",
+  "library/providers/bls.md",
+  "library/providers/frankfurter.md",
+  "library/providers/binance.md",
+  "library/providers/kraken.md",
+  "library/providers/finra.md",
+  "library/providers/openfigi.md",
+  "library/providers/defillama.md",
+]
+
+[[site.nav]]
+title = "Domains"
+pages = [
+  "library/crypto.md",
+  "library/forex.md",
+  "library/futures.md",
+  "library/indices.md",
+  "library/commodities.md",
+  "library/economic.md",
+  "library/filings.md",
+]
+
+[[site.nav]]
+title = "CLI"
+pages = [
+  "cli/installation.md",
+  "cli/commands.md",
+  "cli/examples.md",
+]
+
+[[site.nav]]
+title = "Server"
+pages = [
+  "REST API: server/api/openapi.md",
+  "WebSocket API: server/api/asyncapi.md",
+  "server/graphql-api-reference.md",
+  "MCP tools: server/api/mcp-tools.md",
+  "Reconciliation status: server/finance-query-server.md",
+  "MCP reconciliation status: server/finance-query-mcp.md",
+]
+
+[[site.nav]]
+title = "API reference"
+pages = ["reference/finance-query.md"]
+
+[[site.nav]]
+title = "Performance"
+pages = ["perf/summary.md", "coverage.md"]
+
+[[site.nav]]
+title = "Development"
+pages = ["development/contributing.md"]

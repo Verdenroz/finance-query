@@ -25,8 +25,6 @@ pub mod screener;
 pub mod search;
 pub mod transcripts;
 
-use finance_query::{Interval, TimeRange};
-
 /// Shared error type for service functions.
 pub type ServiceError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -56,16 +54,4 @@ pub async fn translate<T>(_value: &mut T, _lang: Option<&str>) -> Result<(), Ser
 /// Cache-key segment for a resolved language (`en` when untranslated).
 pub fn lang_key(lang: Option<&str>) -> &str {
     lang.unwrap_or("en")
-}
-
-/// Parse an interval string into the library's `Interval` enum, falling back to
-/// `OneDay` for anything invalid (upstream GraphQL enums already validate this).
-pub fn parse_interval(s: &str) -> Interval {
-    s.parse().unwrap_or(Interval::OneDay)
-}
-
-/// Parse a range string into the library's `TimeRange` enum, falling back to
-/// `OneMonth` for anything invalid (upstream GraphQL enums already validate this).
-pub fn parse_range(s: &str) -> TimeRange {
-    s.parse().unwrap_or(TimeRange::OneMonth)
 }

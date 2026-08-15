@@ -1,3 +1,4 @@
+use finance_query::TimeRange;
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -26,7 +27,7 @@ fn split_symbols(symbols: &str) -> Vec<String> {
 pub async fn get_dividends(
     schema: &FinanceSchema,
     symbols: String,
-    range: Option<String>,
+    range: Option<TimeRange>,
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
@@ -76,7 +77,7 @@ fn build_dividends_selection(
 async fn get_one_dividends(
     schema: &FinanceSchema,
     symbol: String,
-    range: Option<String>,
+    range: Option<TimeRange>,
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
@@ -87,8 +88,7 @@ async fn get_one_dividends(
         limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE),
         cursor.as_deref(),
     );
-    let r = range.as_deref().unwrap_or("max").to_lowercase();
-    let gql_range = crate::tools::helpers::range_to_gql(&r);
+    let gql_range = crate::tools::helpers::range_to_gql(range.unwrap_or(TimeRange::Max));
 
     let query = format!(
         "query GetDivs($symbol: String!) {{ ticker(symbol: $symbol) {{ dividends(range: {gql_range}) {selection} }} }}"
@@ -119,11 +119,10 @@ fn build_batch_dividends_selection(want_dividends: bool) -> String {
 async fn get_many_dividends(
     schema: &FinanceSchema,
     syms: Vec<String>,
-    range: Option<String>,
+    range: Option<TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let r = range.as_deref().unwrap_or("1y").to_lowercase();
-    let gql_range = crate::tools::helpers::range_to_gql(&r);
+    let gql_range = crate::tools::helpers::range_to_gql(range.unwrap_or(TimeRange::OneYear));
 
     let field_list = parse_fields(fields);
     // "dividends" here is Vec<GqlDividend> (no per-symbol analytics, unlike

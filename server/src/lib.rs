@@ -5,7 +5,9 @@ pub mod cache;
 pub mod graphql;
 pub mod lang;
 pub mod metrics;
+pub mod params;
 pub mod rate_limit;
+pub mod responses;
 pub mod services;
 
 use finance_query::FinanceError;

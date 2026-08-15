@@ -5,8 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased (draft vs v2.8.0)
 
+<!-- soothfast:notes -->
 ### Breaking
 
 - `Ticker`, `Tickers`, and the domain handles cache responses by default for the
@@ -298,6 +299,587 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than returning a value derived from a cancelled-out denominator.
 - A batch quote response whose `result` array contains a non-object element now
   fails that batch instead of yielding an all-empty quote for it.
+<!-- /soothfast:notes -->
+
+### API surface
+
+```
+ADDED    finance_query::AssetClass
+ADDED    finance_query::CalendarDetail
+ADDED    finance_query::CalendarKind
+ADDED    finance_query::CommitmentsOfTraders
+ADDED    finance_query::CotObservation
+ADDED    finance_query::Discovery
+ADDED    finance_query::EconomicCatalog
+ADDED    finance_query::EconomicCategory
+ADDED    finance_query::EconomicRelease
+ADDED    finance_query::EconomicSeriesMatch
+ADDED    finance_query::EmployeeCount
+ADDED    finance_query::EtfHolding
+ADDED    finance_query::EtfProfile
+ADDED    finance_query::ExchangeInfo
+ADDED    finance_query::ExecutiveCompensation
+ADDED    finance_query::FilingSearchFilters
+ADDED    finance_query::FilingSearchHit
+ADDED    finance_query::FilingSection
+ADDED    finance_query::FilingSectionForm
+ADDED    finance_query::FinancialRatiosTtm
+ADDED    finance_query::IndexConstituent
+ADDED    finance_query::IndexConstituentChange
+ADDED    finance_query::IndustryPe
+ADDED    finance_query::InsiderTrade
+ADDED    finance_query::InstitutionalHolding
+ADDED    finance_query::KeyMetricsTtm
+ADDED    finance_query::MajorIndex
+ADDED    finance_query::Market
+ADDED    finance_query::MarketCalendar
+ADDED    finance_query::MarketCalendarEntry
+ADDED    finance_query::MarketSnapshot
+ADDED    finance_query::MoverDirection
+ADDED    finance_query::MoverQuote
+ADDED    finance_query::PressRelease
+ADDED    finance_query::PriceTargetConsensus
+ADDED    finance_query::PriceTargetSummary
+ADDED    finance_query::ProviderHealth
+ADDED    finance_query::RatingConsensus
+ADDED    finance_query::RetryPolicy
+ADDED    finance_query::RiskFactor
+ADDED    finance_query::ScreenerFilters
+ADDED    finance_query::ScreenerMatch
+ADDED    finance_query::SectorPe
+ADDED    finance_query::SectorPerformance
+ADDED    finance_query::SectorPerformanceHistory
+ADDED    finance_query::ShareFloat
+ADDED    finance_query::ShortInterest
+ADDED    finance_query::ShortVolume
+ADDED    finance_query::Snapshot
+ADDED    finance_query::SymbolDetails
+ADDED    finance_query::SymbolMatch
+ADDED    finance_query::adapters::cftc::futures::fetch_commitments_of_traders_response
+ADDED    finance_query::adapters::coingecko::discovery::fetch_symbol_search_response
+ADDED    finance_query::adapters::coingecko::fetch_crypto_global_response
+ADDED    finance_query::adapters::coingecko::fetch_crypto_trending_response
+ADDED    finance_query::adapters::gdelt::corporate::fetch_news_response
+ADDED    finance_query::adapters::yahoo::client::ClientConfig
+ADDED    finance_query::adapters::yahoo::client::YahooClient
+ADDED    finance_query::backtesting::PositionExtremes
+ADDED    finance_query::backtesting::position::Position::close
+ADDED    finance_query::backtesting::strategy::PositionExtremes
+ADDED    finance_query::cftc
+ADDED    finance_query::cftc::CommitmentsOfTraders
+ADDED    finance_query::cftc::CotObservation
+ADDED    finance_query::cftc::commitments_of_traders
+ADDED    finance_query::constants::industries::Industry::as_slug
+ADDED    finance_query::crypto::GlobalCryptoStats
+ADDED    finance_query::crypto::SymbolMatch
+ADDED    finance_query::crypto::TrendingCoin
+ADDED    finance_query::crypto::global
+ADDED    finance_query::crypto::search
+ADDED    finance_query::crypto::trending
+ADDED    finance_query::defi
+ADDED    finance_query::defi::ChainAllocation
+ADDED    finance_query::defi::ChainTvl
+ADDED    finance_query::defi::ProtocolTvl
+ADDED    finance_query::defi::StablecoinSupply
+ADDED    finance_query::defi::TvlPoint
+ADDED    finance_query::defi::chains
+ADDED    finance_query::defi::stablecoins
+ADDED    finance_query::domains::Discovery
+ADDED    finance_query::domains::EconomicCatalog
+ADDED    finance_query::domains::Market
+ADDED    finance_query::domains::MarketCalendar
+ADDED    finance_query::domains::Snapshot
+ADDED    finance_query::domains::crypto::CryptoCoin::tvl
+ADDED    finance_query::domains::crypto::CryptoCoin::tvl_history
+ADDED    finance_query::domains::discovery::Discovery
+ADDED    finance_query::domains::discovery::Discovery::search
+ADDED    finance_query::domains::economic::EconomicCatalog
+ADDED    finance_query::domains::economic::EconomicIndicator::series
+ADDED    finance_query::domains::filings::Filings::get
+ADDED    finance_query::domains::filings::Filings::search_all
+ADDED    finance_query::domains::forex::ForexPair::quote
+ADDED    finance_query::domains::futures::FuturesContract::commitments_of_traders
+ADDED    finance_query::domains::indices::Index::constituents
+ADDED    finance_query::domains::market::Market
+ADDED    finance_query::domains::market::Market::crypto_global
+ADDED    finance_query::domains::market::Market::crypto_trending
+ADDED    finance_query::domains::market::Market::grouped_daily
+ADDED    finance_query::domains::market::MarketCalendar
+ADDED    finance_query::domains::snapshot::Snapshot
+ADDED    finance_query::finance::fear_and_greed_crypto
+ADDED    finance_query::gdelt
+ADDED    finance_query::gdelt::News
+ADDED    finance_query::gdelt::news
+ADDED    finance_query::indicators::FibonacciLevels
+ADDED    finance_query::indicators::PivotPoints
+ADDED    finance_query::indicators::ZigZagPoint
+ADDED    finance_query::indicators::fibonacci_pivot_points
+ADDED    finance_query::indicators::fibonacci_retracement
+ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels
+ADDED    finance_query::indicators::fibonacci_retracement::fibonacci_retracement
+ADDED    finance_query::indicators::heikin_ashi
+ADDED    finance_query::indicators::heikin_ashi::heikin_ashi
+ADDED    finance_query::indicators::pivot_points
+ADDED    finance_query::indicators::pivot_points::PivotPoints
+ADDED    finance_query::indicators::pivot_points::fibonacci_pivot_points
+ADDED    finance_query::indicators::pivot_points::pivot_points
+ADDED    finance_query::indicators::zigzag
+ADDED    finance_query::indicators::zigzag::ZigZagPoint
+ADDED    finance_query::indicators::zigzag::zigzag
+ADDED    finance_query::models::calendar::market::CalendarDetail
+ADDED    finance_query::models::calendar::market::CalendarKind
+ADDED    finance_query::models::calendar::market::MarketCalendarEntry
+ADDED    finance_query::models::chart::data::Chart::pivot_points
+ADDED    finance_query::models::corporate::governance::EmployeeCount
+ADDED    finance_query::models::corporate::governance::ExecutiveCompensation
+ADDED    finance_query::models::corporate::press_release::PressRelease
+ADDED    finance_query::models::crypto::GlobalCryptoStats
+ADDED    finance_query::models::crypto::TrendingCoin
+ADDED    finance_query::models::crypto::defi::ChainAllocation
+ADDED    finance_query::models::crypto::defi::ChainTvl
+ADDED    finance_query::models::crypto::defi::ProtocolTvl
+ADDED    finance_query::models::crypto::defi::StablecoinSupply
+ADDED    finance_query::models::crypto::defi::TvlPoint
+ADDED    finance_query::models::discovery::figi::SecurityIdKind
+ADDED    finance_query::models::discovery::figi::SecurityMapping
+ADDED    finance_query::models::discovery::reference::ExchangeInfo
+ADDED    finance_query::models::discovery::reference::ScreenerFilters
+ADDED    finance_query::models::discovery::reference::ScreenerFilters::new
+ADDED    finance_query::models::discovery::reference::ScreenerMatch
+ADDED    finance_query::models::discovery::reference::SymbolDetails
+ADDED    finance_query::models::discovery::reference::SymbolMatch
+ADDED    finance_query::models::economic::catalog::EconomicCategory
+ADDED    finance_query::models::economic::catalog::EconomicRelease
+ADDED    finance_query::models::economic::catalog::EconomicSeriesMatch
+ADDED    finance_query::models::filings::full_text::FilingSearchFilters
+ADDED    finance_query::models::filings::full_text::FilingSearchHit
+ADDED    finance_query::models::filings::ownership::InsiderTrade
+ADDED    finance_query::models::filings::ownership::InstitutionalHolding
+ADDED    finance_query::models::filings::sections::FilingSection
+ADDED    finance_query::models::filings::sections::FilingSectionForm
+ADDED    finance_query::models::filings::sections::RiskFactor
+ADDED    finance_query::models::fundamentals::consensus::PriceTargetConsensus
+ADDED    finance_query::models::fundamentals::consensus::PriceTargetSummary
+ADDED    finance_query::models::fundamentals::consensus::RatingConsensus
+ADDED    finance_query::models::fundamentals::etf::EtfHolding
+ADDED    finance_query::models::fundamentals::etf::EtfProfile
+ADDED    finance_query::models::fundamentals::short_activity::ShareFloat
+ADDED    finance_query::models::fundamentals::short_activity::ShortInterest
+ADDED    finance_query::models::fundamentals::short_activity::ShortVolume
+ADDED    finance_query::models::fundamentals::ttm::FinancialRatiosTtm
+ADDED    finance_query::models::fundamentals::ttm::KeyMetricsTtm
+ADDED    finance_query::models::futures::cot::CommitmentsOfTraders
+ADDED    finance_query::models::futures::cot::CotObservation
+ADDED    finance_query::models::indices::IndexConstituent
+ADDED    finance_query::models::indices::IndexConstituentChange
+ADDED    finance_query::models::indices::MajorIndex
+ADDED    finance_query::models::market::performance::IndustryPe
+ADDED    finance_query::models::market::performance::MoverDirection
+ADDED    finance_query::models::market::performance::MoverQuote
+ADDED    finance_query::models::market::performance::SectorPe
+ADDED    finance_query::models::market::performance::SectorPerformance
+ADDED    finance_query::models::market::performance::SectorPerformanceHistory
+ADDED    finance_query::models::quote::response::QuoteSummaryResponse
+ADDED    finance_query::models::quote::snapshot::AssetClass
+ADDED    finance_query::models::quote::snapshot::MarketSnapshot
+ADDED    finance_query::openfigi
+ADDED    finance_query::openfigi::SecurityIdKind
+ADDED    finance_query::openfigi::SecurityMapping
+ADDED    finance_query::openfigi::resolve
+ADDED    finance_query::openfigi::resolve_cusip
+ADDED    finance_query::openfigi::resolve_isin
+ADDED    finance_query::openfigi::resolve_many
+ADDED    finance_query::openfigi::resolve_sedol
+ADDED    finance_query::providers::Capability::name
+ADDED    finance_query::providers::Routes
+ADDED    finance_query::providers::config::Providers::calendar
+ADDED    finance_query::providers::config::Providers::discovery
+ADDED    finance_query::providers::config::Providers::economic_catalog
+ADDED    finance_query::providers::config::Providers::market
+ADDED    finance_query::providers::config::Providers::snapshot
+ADDED    finance_query::providers::config::ProvidersBuilder::retry
+ADDED    finance_query::providers::health::ProviderHealth
+ADDED    finance_query::providers::retry::RetryPolicy
+ADDED    finance_query::providers::retry::RetryPolicy::base_delay
+ADDED    finance_query::providers::retry::RetryPolicy::jitter
+ADDED    finance_query::providers::retry::RetryPolicy::max_delay
+ADDED    finance_query::providers::retry::RetryPolicy::max_retry_after
+ADDED    finance_query::providers::retry::RetryPolicy::multiplier
+ADDED    finance_query::risk::cvar::historical_cvar
+ADDED    finance_query::risk::cvar::parametric_cvar
+ADDED    finance_query::risk::historical_cvar
+ADDED    finance_query::risk::information_ratio
+ADDED    finance_query::risk::kelly_criterion
+ADDED    finance_query::risk::omega_ratio
+ADDED    finance_query::risk::parametric_cvar
+ADDED    finance_query::risk::ratios::information_ratio
+ADDED    finance_query::risk::ratios::kelly_criterion
+ADDED    finance_query::risk::ratios::omega_ratio
+ADDED    finance_query::risk::ratios::tracking_error
+ADDED    finance_query::risk::ratios::ulcer_index
+ADDED    finance_query::risk::ratios::win_loss_stats
+ADDED    finance_query::risk::tracking_error
+ADDED    finance_query::risk::ulcer_index
+ADDED    finance_query::risk::win_loss_stats
+ADDED    finance_query::streaming::AlertCondition
+ADDED    finance_query::streaming::AlertConditionKind
+ADDED    finance_query::streaming::AlertEvaluator
+ADDED    finance_query::streaming::AlertEvent
+ADDED    finance_query::streaming::AlertExt
+ADDED    finance_query::streaming::AlertRule
+ADDED    finance_query::streaming::AlertStream
+ADDED    finance_query::streaming::AssetClass
+ADDED    finance_query::streaming::Batched
+ADDED    finance_query::streaming::BookLevel
+ADDED    finance_query::streaming::DepthStream
+ADDED    finance_query::streaming::DepthStreamBuilder
+ADDED    finance_query::streaming::EconomicStream
+ADDED    finance_query::streaming::EconomicStreamBuilder
+ADDED    finance_query::streaming::Greeks
+ADDED    finance_query::streaming::OptionContractUpdate
+ADDED    finance_query::streaming::OptionsChainStream
+ADDED    finance_query::streaming::OptionsChainStreamBuilder
+ADDED    finance_query::streaming::OrderBookUpdate
+ADDED    finance_query::streaming::PriceSource
+ADDED    finance_query::streaming::SeriesUpdate
+ADDED    finance_query::streaming::StreamBatchExt
+ADDED    finance_query::streaming::TradeStream
+ADDED    finance_query::streaming::TradeStreamBuilder
+ADDED    finance_query::streaming::TradeTick
+ADDED    finance_query::streaming::alerts::AlertCondition
+ADDED    finance_query::streaming::alerts::AlertConditionKind
+ADDED    finance_query::streaming::alerts::AlertEvaluator
+ADDED    finance_query::streaming::alerts::AlertEvent
+ADDED    finance_query::streaming::alerts::AlertExt
+ADDED    finance_query::streaming::alerts::AlertRule
+ADDED    finance_query::streaming::alerts::AlertStream
+ADDED    finance_query::streaming::batch::Batched
+ADDED    finance_query::streaming::batch::StreamBatchExt
+ADDED    finance_query::streaming::book::BookLevel
+ADDED    finance_query::streaming::book::DepthStream
+ADDED    finance_query::streaming::book::DepthStreamBuilder
+ADDED    finance_query::streaming::book::DepthStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::book::OrderBookUpdate
+ADDED    finance_query::streaming::client::PriceSource
+ADDED    finance_query::streaming::client::PriceStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::economic::EconomicStream
+ADDED    finance_query::streaming::economic::EconomicStreamBuilder
+ADDED    finance_query::streaming::economic::SeriesUpdate
+ADDED    finance_query::streaming::options::Greeks
+ADDED    finance_query::streaming::options::OptionContractUpdate
+ADDED    finance_query::streaming::options::OptionsChainStream
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder::greeks_refresh
+ADDED    finance_query::streaming::options::OptionsChainStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::polygon::AssetClass
+ADDED    finance_query::streaming::trades::TradeStream
+ADDED    finance_query::streaming::trades::TradeStreamBuilder
+ADDED    finance_query::streaming::trades::TradeStreamBuilder::build
+ADDED    finance_query::streaming::trades::TradeStreamBuilder::max_reconnect_attempts
+ADDED    finance_query::streaming::trades::TradeTick
+ADDED    finance_query::ticker::core::Ticker::calendar
+ADDED    finance_query::ticker::core::Ticker::news
+ADDED    finance_query::ticker::core::Ticker::recommendations
+ADDED    finance_query::ticker::core::TickerBuilder::cache
+ADDED    finance_query::ticker::core::TickerBuilder::no_cache
+ADDED    finance_query::tickers::core::Tickers::client_handle
+REMOVED  finance_query::streaming::pricing::OptionTypeProto
+CHANGED  finance_query::CryptoCoin (body)
+CHANGED  finance_query::FinanceError (body)
+CHANGED  finance_query::Frequency (body)
+CHANGED  finance_query::FuturesContract (body)
+CHANGED  finance_query::Indicator (body)
+CHANGED  finance_query::IndicatorResult (body)
+CHANGED  finance_query::IndicatorsSummary (body)
+CHANGED  finance_query::IndicesRegion (body)
+CHANGED  finance_query::Industry (body)
+CHANGED  finance_query::Interval (body)
+CHANGED  finance_query::Operation (body)
+CHANGED  finance_query::Provider (body)
+CHANGED  finance_query::ProvidersBuilder (body)
+CHANGED  finance_query::QuoteType (body)
+CHANGED  finance_query::Region (body)
+CHANGED  finance_query::Screener (body)
+CHANGED  finance_query::Sector (body)
+CHANGED  finance_query::SortType (body)
+CHANGED  finance_query::StatementType (body)
+CHANGED  finance_query::Ticker (body)
+CHANGED  finance_query::TickerBuilder (body)
+CHANGED  finance_query::Tickers (body)
+CHANGED  finance_query::TickersBuilder (body)
+CHANGED  finance_query::TimeRange (body)
+CHANGED  finance_query::ValueFormat (body)
+CHANGED  finance_query::adapters::fred::series (body)
+CHANGED  finance_query::backtesting::BenchmarkMetrics (body)
+CHANGED  finance_query::backtesting::Signal (body)
+CHANGED  finance_query::backtesting::SignalRecord (body)
+CHANGED  finance_query::backtesting::Strategy (body)
+CHANGED  finance_query::backtesting::StrategyContext (body)
+CHANGED  finance_query::backtesting::condition::Condition (body)
+CHANGED  finance_query::backtesting::engine::BacktestEngine::run_with_dividends (body)
+CHANGED  finance_query::backtesting::refs::HtfCondition (body)
+CHANGED  finance_query::backtesting::refs::htf (body)
+CHANGED  finance_query::backtesting::refs::htf::HtfCondition (body)
+CHANGED  finance_query::backtesting::refs::htf::htf (body)
+CHANGED  finance_query::backtesting::refs::htf::htf_region (body)
+CHANGED  finance_query::backtesting::refs::htf_region (body)
+CHANGED  finance_query::backtesting::result::BenchmarkMetrics (body)
+CHANGED  finance_query::backtesting::result::SignalRecord (body)
+CHANGED  finance_query::backtesting::signal::Signal (body)
+CHANGED  finance_query::backtesting::strategy::Strategy (body)
+CHANGED  finance_query::backtesting::strategy::StrategyContext (body)
+CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
+CHANGED  finance_query::constants::Frequency (body)
+CHANGED  finance_query::constants::Interval (body)
+CHANGED  finance_query::constants::Interval::as_str (body)
+CHANGED  finance_query::constants::Region (body)
+CHANGED  finance_query::constants::StatementType (body)
+CHANGED  finance_query::constants::TimeRange (body)
+CHANGED  finance_query::constants::ValueFormat (body)
+CHANGED  finance_query::constants::indices::Region (body)
+CHANGED  finance_query::constants::industries::Industry (body)
+CHANGED  finance_query::constants::screeners::Screener (body)
+CHANGED  finance_query::constants::sectors::Sector (body)
+CHANGED  finance_query::domains::CryptoCoin (body)
+CHANGED  finance_query::domains::FuturesContract (body)
+CHANGED  finance_query::domains::commodities::Commodity::quote (body)
+CHANGED  finance_query::domains::crypto::CryptoCoin (body)
+CHANGED  finance_query::domains::crypto::CryptoCoin::quote (body)
+CHANGED  finance_query::domains::futures::FuturesContract (body)
+CHANGED  finance_query::error::FinanceError (body)
+CHANGED  finance_query::finance::currencies (body)
+CHANGED  finance_query::finance::custom_screener (body)
+CHANGED  finance_query::finance::earnings_transcript (body)
+CHANGED  finance_query::finance::earnings_transcripts (body)
+CHANGED  finance_query::finance::hours (body)
+CHANGED  finance_query::finance::industry (body)
+CHANGED  finance_query::finance::lookup (body)
+CHANGED  finance_query::finance::market_summary (body)
+CHANGED  finance_query::finance::screener (body)
+CHANGED  finance_query::finance::search (body)
+CHANGED  finance_query::finance::sector (body)
+CHANGED  finance_query::finance::trending (body)
+CHANGED  finance_query::fred::series (body)
+CHANGED  finance_query::indicators::Indicator (body)
+CHANGED  finance_query::indicators::Indicator::warmup_bars (body)
+CHANGED  finance_query::indicators::IndicatorResult (body)
+CHANGED  finance_query::indicators::IndicatorType (body)
+CHANGED  finance_query::indicators::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::summary::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::vwma (body)
+CHANGED  finance_query::indicators::vwma::vwma (body)
+CHANGED  finance_query::models::discovery::screeners::query::QuoteType (body)
+CHANGED  finance_query::models::discovery::screeners::query::SortType (body)
+CHANGED  finance_query::providers::Operation (body)
+CHANGED  finance_query::providers::Operation::capability (body)
+CHANGED  finance_query::providers::Provider (body)
+CHANGED  finance_query::providers::config::ProvidersBuilder (body)
+CHANGED  finance_query::risk::RiskSummary (body)
+CHANGED  finance_query::risk::historical_var (body)
+CHANGED  finance_query::risk::parametric_var (body)
+CHANGED  finance_query::risk::ratios::sharpe_ratio (body)
+CHANGED  finance_query::risk::sharpe_ratio (body)
+CHANGED  finance_query::risk::var::historical_var (body)
+CHANGED  finance_query::risk::var::parametric_var (body)
+CHANGED  finance_query::streaming::PriceStream (body)
+CHANGED  finance_query::streaming::PriceStreamBuilder (body)
+CHANGED  finance_query::streaming::client::PriceStream (body)
+CHANGED  finance_query::streaming::client::PriceStreamBuilder (body)
+CHANGED  finance_query::ticker::core::Ticker (body)
+CHANGED  finance_query::ticker::core::Ticker::edgar_company_facts (body)
+CHANGED  finance_query::ticker::core::Ticker::edgar_submissions (body)
+CHANGED  finance_query::ticker::core::Ticker::filings (body)
+CHANGED  finance_query::ticker::core::Ticker::financials (body)
+CHANGED  finance_query::ticker::core::Ticker::quote (body)
+CHANGED  finance_query::ticker::core::Ticker::risk (body)
+CHANGED  finance_query::ticker::core::TickerBuilder (body)
+CHANGED  finance_query::ticker::core::TickerBuilder::build (body)
+CHANGED  finance_query::tickers::core::Tickers (body)
+CHANGED  finance_query::tickers::core::Tickers::charts (body)
+CHANGED  finance_query::tickers::core::TickersBuilder (body)
+```
+
+### Performance
+
+| item | instructions | median | p99 | allocs | polls |
+|---|---:|---:|---:|---:|---:|
+| `finance_query::bt_base_to_htf_index` | n/a | 27.40µs | 30.12µs | 1 | n/a |
+| `finance_query::bt_bayesian_search` | n/a | 2.97ms | 3.04ms | 2382 | n/a |
+| `finance_query::bt_grid_search` | n/a | 653.48µs | 822.34µs | 3012 | n/a |
+| `finance_query::bt_monte_carlo` | n/a | 180.65µs | 191.76µs | 6 | n/a |
+| `finance_query::bt_resample` | n/a | 116.35µs | 117.03µs | 11 | n/a |
+| `finance_query::bt_sma_crossover` | n/a | 968.51µs | 1.05ms | 2373 | n/a |
+| `finance_query::bt_strategy_builder` | n/a | 165.43µs | 178.91µs | 330 | n/a |
+| `finance_query::capability_name` | n/a | 3.8ns | 4.2ns | 0 | n/a |
+| `finance_query::cond_bench_always_false` | n/a | 23.86µs | 23.96µs | 6 | n/a |
+| `finance_query::cond_bench_always_true` | n/a | 424.52µs | 443.56µs | 4045 | n/a |
+| `finance_query::cond_bench_has_position` | n/a | 428.25µs | 447.16µs | 4045 | n/a |
+| `finance_query::cond_bench_held_for_bars` | n/a | 165.45µs | 170.11µs | 1041 | n/a |
+| `finance_query::cond_bench_in_loss` | n/a | 430.05µs | 435.44µs | 4045 | n/a |
+| `finance_query::cond_bench_in_profit` | n/a | 51.28µs | 55.85µs | 142 | n/a |
+| `finance_query::cond_bench_is_long` | n/a | 426.91µs | 478.06µs | 4045 | n/a |
+| `finance_query::cond_bench_is_short` | n/a | 35.88µs | 36.98µs | 13 | n/a |
+| `finance_query::cond_bench_no_position` | n/a | 35.89µs | 36.91µs | 13 | n/a |
+| `finance_query::cond_bench_stop_loss` | n/a | 44.72µs | 45.50µs | 24 | n/a |
+| `finance_query::cond_bench_take_profit` | n/a | 43.30µs | 44.72µs | 13 | n/a |
+| `finance_query::cond_bench_trailing_stop` | n/a | 51.32µs | 51.50µs | 92 | n/a |
+| `finance_query::cond_bench_trailing_take_profit` | n/a | 50.67µs | 52.87µs | 72 | n/a |
+| `finance_query::de_chart` | n/a | 9.96µs | 10.05µs | 13 | n/a |
+| `finance_query::de_crypto_coins` | n/a | 34.78µs | 35.32µs | 205 | n/a |
+| `finance_query::de_currencies` | n/a | 59.36µs | 59.58µs | 647 | n/a |
+| `finance_query::de_edgar_facts` | n/a | 1.47ms | 1.58ms | 11899 | n/a |
+| `finance_query::de_edgar_submissions` | n/a | 462.25µs | 474.08µs | 6784 | n/a |
+| `finance_query::de_fear_and_greed` | n/a | 121.3ns | 122.0ns | 0 | n/a |
+| `finance_query::de_fear_and_greed_crypto_history` | n/a | 1.43µs | 1.49µs | 3 | n/a |
+| `finance_query::de_financials` | n/a | 22.39µs | 22.67µs | 206 | n/a |
+| `finance_query::de_fred_series` | n/a | 112.01µs | 117.36µs | 873 | n/a |
+| `finance_query::de_hours` | n/a | 783.8ns | 886.6ns | 10 | n/a |
+| `finance_query::de_market_summary` | n/a | 32.43µs | 37.68µs | 228 | n/a |
+| `finance_query::de_news` | n/a | 4.36µs | 4.60µs | 53 | n/a |
+| `finance_query::de_options` | n/a | 1.09µs | 1.13µs | 6 | n/a |
+| `finance_query::de_quote` | n/a | 1.09ms | 1.17ms | 8235 | n/a |
+| `finance_query::de_screener` | n/a | 405.30µs | 410.44µs | 4498 | n/a |
+| `finance_query::de_search` | n/a | 5.31µs | 5.40µs | 55 | n/a |
+| `finance_query::de_treasury_yields` | n/a | 76.22µs | 79.46µs | 119 | n/a |
+| `finance_query::de_trending` | n/a | 1.47µs | 1.58µs | 24 | n/a |
+| `finance_query::dispatch_select` | n/a | 4.9ns | 5.1ns | 0 | n/a |
+| `finance_query::ind_accumulation_distribution` | n/a | 4.32µs | 4.37µs | 1 | n/a |
+| `finance_query::ind_alma` | n/a | 5.29µs | 5.52µs | 2 | n/a |
+| `finance_query::ind_aroon` | n/a | 12.09µs | 12.14µs | 9 | n/a |
+| `finance_query::ind_atr` | n/a | 11.03µs | 11.11µs | 2 | n/a |
+| `finance_query::ind_awesome_oscillator` | n/a | 9.48µs | 9.51µs | 4 | n/a |
+| `finance_query::ind_balance_of_power` | n/a | 2.22µs | 2.26µs | 2 | n/a |
+| `finance_query::ind_bull_bear_power` | n/a | 7.78µs | 7.85µs | 3 | n/a |
+| `finance_query::ind_cci` | n/a | 18.55µs | 18.70µs | 2 | n/a |
+| `finance_query::ind_chaikin_oscillator` | n/a | 17.85µs | 18.06µs | 4 | n/a |
+| `finance_query::ind_choppiness_index` | n/a | 20.91µs | 22.25µs | 8 | n/a |
+| `finance_query::ind_cmf` | n/a | 4.34µs | 4.82µs | 2 | n/a |
+| `finance_query::ind_cmo` | n/a | 5.66µs | 6.08µs | 2 | n/a |
+| `finance_query::ind_coppock_curve` | n/a | 8.86µs | 9.04µs | 3 | n/a |
+| `finance_query::ind_dema` | n/a | 13.22µs | 13.33µs | 3 | n/a |
+| `finance_query::ind_donchian_channels` | n/a | 11.36µs | 11.49µs | 9 | n/a |
+| `finance_query::ind_elder_ray` | n/a | 7.78µs | 7.86µs | 3 | n/a |
+| `finance_query::ind_fibonacci_pivot_points` | n/a | 2.82µs | 2.86µs | 1 | n/a |
+| `finance_query::ind_fibonacci_retracement` | n/a | 11.40µs | 12.25µs | 9 | n/a |
+| `finance_query::ind_heikin_ashi` | n/a | 16.38µs | 16.70µs | 9 | n/a |
+| `finance_query::ind_hma` | n/a | 15.43µs | 17.52µs | 5 | n/a |
+| `finance_query::ind_ichimoku` | n/a | 33.50µs | 34.26µs | 27 | n/a |
+| `finance_query::ind_keltner_channels` | n/a | 19.13µs | 20.48µs | 5 | n/a |
+| `finance_query::ind_last_value` | n/a | 3.5ns | 3.9ns | 0 | n/a |
+| `finance_query::ind_macd` | n/a | 22.23µs | 22.60µs | 7 | n/a |
+| `finance_query::ind_mcginley_dynamic` | n/a | 13.87µs | 14.31µs | 1 | n/a |
+| `finance_query::ind_mfi` | n/a | 6.96µs | 8.57µs | 3 | n/a |
+| `finance_query::ind_momentum` | n/a | 131.83µs | 139.78µs | 52 | n/a |
+| `finance_query::ind_momentum_single` | n/a | 588.9ns | 598.2ns | 1 | n/a |
+| `finance_query::ind_moving_averages` | n/a | 96.28µs | 100.43µs | 27 | n/a |
+| `finance_query::ind_parabolic_sar` | n/a | 2.37µs | 2.41µs | 1 | n/a |
+| `finance_query::ind_patterns` | n/a | 105.91µs | 113.52µs | 1 | n/a |
+| `finance_query::ind_pivot_points` | n/a | 3.24µs | 3.63µs | 1 | n/a |
+| `finance_query::ind_roc` | n/a | 1.81µs | 1.95µs | 1 | n/a |
+| `finance_query::ind_sma` | n/a | 428.16µs | 436.62µs | 1 | n/a |
+| `finance_query::ind_stochastic` | n/a | 16.53µs | 17.10µs | 11 | n/a |
+| `finance_query::ind_stochastic_rsi` | n/a | 27.67µs | 28.13µs | 12 | n/a |
+| `finance_query::ind_supertrend` | n/a | 14.77µs | 15.12µs | 4 | n/a |
+| `finance_query::ind_tema` | n/a | 19.57µs | 19.68µs | 4 | n/a |
+| `finance_query::ind_trend` | n/a | 91.88µs | 93.33µs | 48 | n/a |
+| `finance_query::ind_true_range` | n/a | 1.40µs | 1.61µs | 1 | n/a |
+| `finance_query::ind_volatility` | n/a | 71.47µs | 86.30µs | 28 | n/a |
+| `finance_query::ind_volume` | n/a | 44.57µs | 45.78µs | 14 | n/a |
+| `finance_query::ind_vwap` | n/a | 4.36µs | 4.42µs | 1 | n/a |
+| `finance_query::ind_vwma` | n/a | 3.28µs | 3.35µs | 1 | n/a |
+| `finance_query::ind_williams_r` | n/a | 10.84µs | 11.08µs | 7 | n/a |
+| `finance_query::ind_wma` | n/a | 5.21µs | 5.28µs | 7 | n/a |
+| `finance_query::ind_zigzag` | n/a | 1.66µs | 1.80µs | 4 | n/a |
+| `finance_query::ref_bench_accumulation_distribution` | n/a | 52.25µs | 52.52µs | 23 | n/a |
+| `finance_query::ref_bench_adx` | n/a | 523.56µs | 552.82µs | 4930 | n/a |
+| `finance_query::ref_bench_alma` | n/a | 559.04µs | 572.81µs | 5019 | n/a |
+| `finance_query::ref_bench_aroon` | n/a | 541.24µs | 550.39µs | 4950 | n/a |
+| `finance_query::ref_bench_atr` | n/a | 527.25µs | 538.09µs | 4996 | n/a |
+| `finance_query::ref_bench_awesome_oscillator` | n/a | 326.42µs | 342.93µs | 2636 | n/a |
+| `finance_query::ref_bench_balance_of_power` | n/a | 50.49µs | 51.53µs | 25 | n/a |
+| `finance_query::ref_bench_bear_power` | n/a | 142.64µs | 150.12µs | 806 | n/a |
+| `finance_query::ref_bench_bollinger` | n/a | 554.63µs | 572.83µs | 4968 | n/a |
+| `finance_query::ref_bench_bull_power` | n/a | 485.87µs | 501.75µs | 4238 | n/a |
+| `finance_query::ref_bench_candle_body` | n/a | 23.81µs | 34.75µs | 6 | n/a |
+| `finance_query::ref_bench_candle_range` | n/a | 493.40µs | 522.73µs | 5043 | n/a |
+| `finance_query::ref_bench_cci` | n/a | 312.93µs | 329.55µs | 2605 | n/a |
+| `finance_query::ref_bench_chaikin_oscillator` | n/a | 68.34µs | 69.01µs | 26 | n/a |
+| `finance_query::ref_bench_choppiness_index` | n/a | 544.10µs | 703.50µs | 5002 | n/a |
+| `finance_query::ref_bench_close` | n/a | 499.29µs | 516.05µs | 5043 | n/a |
+| `finance_query::ref_bench_cmf` | n/a | 51.52µs | 52.49µs | 25 | n/a |
+| `finance_query::ref_bench_cmo` | n/a | 299.29µs | 342.74µs | 2598 | n/a |
+| `finance_query::ref_bench_coppock_curve` | n/a | 316.33µs | 326.90µs | 2559 | n/a |
+| `finance_query::ref_bench_dema` | n/a | 516.78µs | 534.53µs | 4875 | n/a |
+| `finance_query::ref_bench_donchian` | n/a | 571.89µs | 588.05µs | 4976 | n/a |
+| `finance_query::ref_bench_elder_bear_power` | n/a | 143.16µs | 146.01µs | 806 | n/a |
+| `finance_query::ref_bench_elder_bull_power` | n/a | 487.73µs | 500.47µs | 4238 | n/a |
+| `finance_query::ref_bench_ema` | n/a | 517.17µs | 535.57µs | 4963 | n/a |
+| `finance_query::ref_bench_gap_pct` | n/a | 259.53µs | 304.17µs | 2489 | n/a |
+| `finance_query::ref_bench_high` | n/a | 490.60µs | 540.55µs | 5043 | n/a |
+| `finance_query::ref_bench_hma` | n/a | 525.83µs | 544.57µs | 4957 | n/a |
+| `finance_query::ref_bench_htf` | n/a | 598.97µs | 942.40µs | 7039 | n/a |
+| `finance_query::ref_bench_htf_region` | n/a | 598.69µs | 623.95µs | 7039 | n/a |
+| `finance_query::ref_bench_ichimoku` | n/a | 577.78µs | 587.53µs | 4836 | n/a |
+| `finance_query::ref_bench_ichimoku_custom` | n/a | 578.38µs | 614.08µs | 4836 | n/a |
+| `finance_query::ref_bench_is_bearish` | n/a | 23.81µs | 34.76µs | 6 | n/a |
+| `finance_query::ref_bench_is_bullish` | n/a | 23.76µs | 24.13µs | 6 | n/a |
+| `finance_query::ref_bench_keltner` | n/a | 566.97µs | 613.01µs | 4972 | n/a |
+| `finance_query::ref_bench_low` | n/a | 492.13µs | 507.01µs | 5043 | n/a |
+| `finance_query::ref_bench_macd` | n/a | 326.58µs | 337.55µs | 2541 | n/a |
+| `finance_query::ref_bench_mcginley` | n/a | 527.42µs | 537.40µs | 4963 | n/a |
+| `finance_query::ref_bench_median_price` | n/a | 494.53µs | 509.61µs | 5043 | n/a |
+| `finance_query::ref_bench_mfi` | n/a | 525.68µs | 543.82µs | 4998 | n/a |
+| `finance_query::ref_bench_momentum` | n/a | 294.01µs | 322.39µs | 2552 | n/a |
+| `finance_query::ref_bench_obv` | n/a | 62.98µs | 93.54µs | 30 | n/a |
+| `finance_query::ref_bench_open` | n/a | 492.77µs | 511.44µs | 5043 | n/a |
+| `finance_query::ref_bench_parabolic_sar` | n/a | 572.06µs | 603.40µs | 5056 | n/a |
+| `finance_query::ref_bench_price` | n/a | 498.72µs | 532.45µs | 5043 | n/a |
+| `finance_query::ref_bench_price_change_pct` | n/a | 272.29µs | 322.10µs | 2489 | n/a |
+| `finance_query::ref_bench_relative_volume` | n/a | 540.58µs | 568.55µs | 4949 | n/a |
+| `finance_query::ref_bench_roc` | n/a | 294.46µs | 301.26µs | 2587 | n/a |
+| `finance_query::ref_bench_rsi` | n/a | 523.25µs | 551.09µs | 4994 | n/a |
+| `finance_query::ref_bench_sma` | n/a | 518.22µs | 541.95µs | 4963 | n/a |
+| `finance_query::ref_bench_stochastic` | n/a | 573.39µs | 670.74µs | 4987 | n/a |
+| `finance_query::ref_bench_stochastic_rsi` | n/a | 572.43µs | 589.46µs | 4831 | n/a |
+| `finance_query::ref_bench_supertrend` | n/a | 567.70µs | 580.13µs | 5021 | n/a |
+| `finance_query::ref_bench_tema` | n/a | 519.63µs | 539.68µs | 4781 | n/a |
+| `finance_query::ref_bench_true_range` | n/a | 525.24µs | 543.90µs | 5059 | n/a |
+| `finance_query::ref_bench_typical_price` | n/a | 521.65µs | 535.19µs | 5043 | n/a |
+| `finance_query::ref_bench_volume` | n/a | 493.17µs | 501.44µs | 5043 | n/a |
+| `finance_query::ref_bench_vwap` | n/a | 524.91µs | 534.79µs | 5060 | n/a |
+| `finance_query::ref_bench_vwma` | n/a | 516.28µs | 526.29µs | 4964 | n/a |
+| `finance_query::ref_bench_williams_r` | n/a | 60.78µs | 70.72µs | 29 | n/a |
+| `finance_query::ref_bench_wma` | n/a | 517.63µs | 783.05µs | 4969 | n/a |
+| `finance_query::risk_beta` | n/a | 69.05µs | 70.80µs | 0 | n/a |
+| `finance_query::risk_calmar` | n/a | 15.5ns | 15.7ns | 0 | n/a |
+| `finance_query::risk_historical_cvar` | n/a | 312.56µs | 335.38µs | 2 | n/a |
+| `finance_query::risk_historical_var` | n/a | 2.81ms | 2.84ms | 2 | n/a |
+| `finance_query::risk_information_ratio` | n/a | 38.93µs | 39.36µs | 1 | n/a |
+| `finance_query::risk_kelly_criterion` | n/a | 3.85µs | 5.63µs | 16 | n/a |
+| `finance_query::risk_max_drawdown` | n/a | 9.06µs | 9.82µs | 1 | n/a |
+| `finance_query::risk_omega_ratio` | n/a | 34.54µs | 34.73µs | 0 | n/a |
+| `finance_query::risk_parametric_cvar` | n/a | 34.53µs | 34.85µs | 0 | n/a |
+| `finance_query::risk_parametric_var` | n/a | 34.59µs | 34.91µs | 0 | n/a |
+| `finance_query::risk_sharpe` | n/a | 34.55µs | 34.63µs | 0 | n/a |
+| `finance_query::risk_sortino` | n/a | 34.51µs | 34.65µs | 0 | n/a |
+| `finance_query::risk_tracking_error` | n/a | 38.94µs | 39.21µs | 1 | n/a |
+| `finance_query::risk_ulcer_index` | n/a | 202.92µs | 204.75µs | 2 | n/a |
+| `finance_query::risk_win_loss_stats` | n/a | 60.24µs | 62.03µs | 25 | n/a |
+| `finance_query::rss_parse` | n/a | 5.70µs | 5.82µs | 48 | n/a |
+| `finance_query::score_news` | n/a | 77.13µs | 91.77µs | 976 | n/a |
+| `finance_query::score_transcript` | n/a | 5.62ms | 5.72ms | 42100 | n/a |
+| `finance_query::ser_currencies` | n/a | 15.74µs | 16.22µs | 8 | n/a |
+| `finance_query::stream_deserialize` | n/a | 1.56µs | 1.61µs | 4 | n/a |
+| `finance_query::stream_serialize` | n/a | 993.1ns | 1.01µs | 4 | n/a |
+| `finance_query::ticker_chart_then_cached` | n/a | 1.37µs | 1.38µs | 20 | n/a |
+| `finance_query::ticker_quote_polls` | n/a | 7.78µs | 7.82µs | 3 | 1 |
+| `finance_query::ticker_quote_then_cached` | n/a | 11.38µs | 11.92µs | 4 | n/a |
+| `finance_query::tickers_batch_quote_then_cached` | n/a | 10.09µs | 10.20µs | 16 | n/a |
+| `finance_query::translate_dictionary` | n/a | 1.97µs | 1.98µs | 49 | n/a |
+| `finance_query::translation_set_backend` | n/a | 23.5ns | 24.7ns | 1 | n/a |
+| `finance_query::translation_translate` | n/a | 3.78µs | 4.09µs | 79 | n/a |
+| `finance_query::translation_translate_with` | n/a | 3.47µs | 3.52µs | 77 | n/a |
+
 
 ## [2.8.0] - 2026-07-10
 

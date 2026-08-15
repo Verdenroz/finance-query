@@ -1,0 +1,5 @@
+# Package-local soothfast config for finance-query-mcp.
+
+[[spec]]
+path = "mcp-tools.json"
+mode = "generate"

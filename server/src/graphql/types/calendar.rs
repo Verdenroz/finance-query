@@ -8,8 +8,9 @@
 use async_graphql::{Json, SimpleObject, Union};
 
 /// Upcoming earnings report with analyst estimate data.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEarningsEvent {
     pub eps_estimate_low: Option<f64>,
     pub eps_estimate_avg: Option<f64>,
@@ -33,15 +34,17 @@ pub struct GqlDividendPaymentEvent {
 }
 
 /// Standard monthly options expiration (3rd Friday) for a ticker.
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlOptionsExpirationEvent {
     pub contract_count: Option<i64>,
 }
 
 /// Economic data release (requires the `fred` feature).
-#[derive(SimpleObject, Debug, Clone)]
+#[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GqlEconomicReleaseEvent {
     pub name: String,
     pub series_id: String,

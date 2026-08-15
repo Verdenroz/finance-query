@@ -13,11 +13,14 @@ use finance_query::{
 #[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum GqlInterval {
     OneMinute,
+    TwoMinutes,
     FiveMinutes,
     FifteenMinutes,
     ThirtyMinutes,
     OneHour,
+    NinetyMinutes,
     OneDay,
+    FiveDays,
     OneWeek,
     OneMonth,
     ThreeMonths,
@@ -27,11 +30,14 @@ impl From<GqlInterval> for Interval {
     fn from(v: GqlInterval) -> Self {
         match v {
             GqlInterval::OneMinute => Interval::OneMinute,
+            GqlInterval::TwoMinutes => Interval::TwoMinutes,
             GqlInterval::FiveMinutes => Interval::FiveMinutes,
             GqlInterval::FifteenMinutes => Interval::FifteenMinutes,
             GqlInterval::ThirtyMinutes => Interval::ThirtyMinutes,
             GqlInterval::OneHour => Interval::OneHour,
+            GqlInterval::NinetyMinutes => Interval::NinetyMinutes,
             GqlInterval::OneDay => Interval::OneDay,
+            GqlInterval::FiveDays => Interval::FiveDays,
             GqlInterval::OneWeek => Interval::OneWeek,
             GqlInterval::OneMonth => Interval::OneMonth,
             GqlInterval::ThreeMonths => Interval::ThreeMonths,
@@ -44,11 +50,14 @@ impl GqlInterval {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::OneMinute => "1m",
+            Self::TwoMinutes => "2m",
             Self::FiveMinutes => "5m",
             Self::FifteenMinutes => "15m",
             Self::ThirtyMinutes => "30m",
             Self::OneHour => "1h",
+            Self::NinetyMinutes => "90m",
             Self::OneDay => "1d",
+            Self::FiveDays => "5d",
             Self::OneWeek => "1wk",
             Self::OneMonth => "1mo",
             Self::ThreeMonths => "3mo",

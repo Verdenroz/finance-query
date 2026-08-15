@@ -256,8 +256,16 @@ pub mod translation;
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub mod domains;
+/// Not part of the stable public API — see [`ProviderAdapter`].
+#[doc(hidden)]
+pub use models::quote::response::QuoteSummaryResponse;
 pub use providers::config::{Providers, ProvidersBuilder};
 pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
+/// Not part of the stable public API — see [`ProviderAdapter`].
+#[doc(hidden)]
+pub use providers::{
+    ChartProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
+};
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
 // Domain-specific query handles — constructable via Providers factory methods.
@@ -493,7 +501,7 @@ pub mod streaming;
 // Format type parameters — phantom types for compile-time format selection
 // ============================================================================
 
-/// Compile-time format type parameters for [`Quote`](crate::Quote) and other
+/// Compile-time format type parameters for [`Quote`] and other
 /// `FormattedValue`-bearing structs.
 ///
 /// | Marker | `F::Value<f64>` | Access pattern |

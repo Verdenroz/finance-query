@@ -1,5 +1,6 @@
 //! GraphQL type for sector data (market-wide, on QueryRoot).
 
+use super::formatted::GqlFormattedValue;
 use async_graphql::{Json, SimpleObject};
 use serde::Deserialize;
 
@@ -26,22 +27,22 @@ pub struct GqlSectorData {
 #[serde(rename_all = "camelCase")]
 pub struct GqlSectorOverview {
     pub companies_count: Option<i64>,
-    pub market_cap: Option<Json<serde_json::Value>>,
+    pub market_cap: Option<Json<GqlFormattedValue>>,
     pub description: Option<String>,
     pub industries_count: Option<i64>,
-    pub market_weight: Option<Json<serde_json::Value>>,
-    pub employee_count: Option<Json<serde_json::Value>>,
+    pub market_weight: Option<Json<GqlFormattedValue>>,
+    pub employee_count: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct GqlSectorPerformance {
-    pub ytd_change_percent: Option<Json<serde_json::Value>>,
-    pub day_change_percent: Option<Json<serde_json::Value>>,
-    pub one_year_change_percent: Option<Json<serde_json::Value>>,
-    pub three_year_change_percent: Option<Json<serde_json::Value>>,
-    pub five_year_change_percent: Option<Json<serde_json::Value>>,
+    pub ytd_change_percent: Option<Json<GqlFormattedValue>>,
+    pub day_change_percent: Option<Json<GqlFormattedValue>>,
+    pub one_year_change_percent: Option<Json<GqlFormattedValue>>,
+    pub three_year_change_percent: Option<Json<GqlFormattedValue>>,
+    pub five_year_change_percent: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
@@ -50,12 +51,12 @@ pub struct GqlSectorPerformance {
 pub struct GqlSectorCompany {
     pub symbol: String,
     pub name: Option<String>,
-    pub market_cap: Option<Json<serde_json::Value>>,
-    pub market_weight: Option<Json<serde_json::Value>>,
-    pub last_price: Option<Json<serde_json::Value>>,
-    pub target_price: Option<Json<serde_json::Value>>,
-    pub day_change_percent: Option<Json<serde_json::Value>>,
-    pub ytd_return: Option<Json<serde_json::Value>>,
+    pub market_cap: Option<Json<GqlFormattedValue>>,
+    pub market_weight: Option<Json<GqlFormattedValue>>,
+    pub last_price: Option<Json<GqlFormattedValue>>,
+    pub target_price: Option<Json<GqlFormattedValue>>,
+    pub day_change_percent: Option<Json<GqlFormattedValue>>,
+    pub ytd_return: Option<Json<GqlFormattedValue>>,
     pub rating: Option<String>,
 }
 
@@ -65,10 +66,10 @@ pub struct GqlSectorCompany {
 pub struct GqlSectorETF {
     pub symbol: String,
     pub name: Option<String>,
-    pub net_assets: Option<Json<serde_json::Value>>,
-    pub expense_ratio: Option<Json<serde_json::Value>>,
-    pub last_price: Option<Json<serde_json::Value>>,
-    pub ytd_return: Option<Json<serde_json::Value>>,
+    pub net_assets: Option<Json<GqlFormattedValue>>,
+    pub expense_ratio: Option<Json<GqlFormattedValue>>,
+    pub last_price: Option<Json<GqlFormattedValue>>,
+    pub ytd_return: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
@@ -77,10 +78,10 @@ pub struct GqlSectorETF {
 pub struct GqlSectorMutualFund {
     pub symbol: String,
     pub name: Option<String>,
-    pub net_assets: Option<Json<serde_json::Value>>,
-    pub expense_ratio: Option<Json<serde_json::Value>>,
-    pub last_price: Option<Json<serde_json::Value>>,
-    pub ytd_return: Option<Json<serde_json::Value>>,
+    pub net_assets: Option<Json<GqlFormattedValue>>,
+    pub expense_ratio: Option<Json<GqlFormattedValue>>,
+    pub last_price: Option<Json<GqlFormattedValue>>,
+    pub ytd_return: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
@@ -90,9 +91,9 @@ pub struct GqlSectorIndustry {
     pub symbol: Option<String>,
     pub key: Option<String>,
     pub name: String,
-    pub market_weight: Option<Json<serde_json::Value>>,
-    pub day_change_percent: Option<Json<serde_json::Value>>,
-    pub ytd_return: Option<Json<serde_json::Value>>,
+    pub market_weight: Option<Json<GqlFormattedValue>>,
+    pub day_change_percent: Option<Json<GqlFormattedValue>>,
+    pub ytd_return: Option<Json<GqlFormattedValue>>,
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone)]

@@ -77,32 +77,202 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image.suffix }}
 
   deploy-docs:
-    name: Deploy MkDocs to GitHub Pages
+    name: Deploy docs site to GitHub Pages
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    # Parallel runs from rapid merges each branch trend.jsonl off their own
+    # checkout; the second trend PR then conflicts on master and hangs
+    concurrency:
+      group: deploy-docs
+    permissions: {} # all repo access comes from the minted App token below
 
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
-      # gh-deploy pushes to gh-pages, so this checkout needs its credentials.
+      - name: Mint a soothfast-bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CHANGELOG_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGELOG_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Get soothfast-bot user id
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      # cargo soothfast docs gh-deploy pushes to gh-pages itself, so this
+      # checkout needs its persisted, token-authenticated origin remote.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.x"
-          cache: "pip"
-          cache-dependency-path: "docs/requirements.txt"
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Install docs dependencies
-        run: pip install --require-hashes -r docs/requirements.txt
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - name: Install nightly (rustdoc JSON for the docs engine)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # A failing gate must not throw away the warm build state the
+          # retry (and the docs-regen steps) would otherwise reuse.
+          cache-on-failure: true
+      - name: Install valgrind
+        # CI VMs often expose no PMU, in which case
+        # the auto backend gates on callgrind instruction counts instead.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      # Pinned to the locked runner: soothfast-measure builds into the bench
+      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
+      - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
 
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+      - name: Configure git identity for the gh-pages commit
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_USER_ID: ${{ steps.app-user.outputs.id }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      # soothfast.yml's paths filter and [bot] exclusion let no-code commits
+      # reach master, where gating them can only report noise. Also gates the
+      # trend append
+      - name: Detect benchmarkable changes
+        id: bench_changes
+        run: |
+          if git diff --quiet HEAD~1 HEAD -- src benches Cargo.toml Cargo.lock finance-query-derive; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No benchmarked code changed since HEAD~1 — skipping the perf gate."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Instruction counts are deterministic for identical benchmarked code,
+      # so a hit lets the measure step below skip via its [ ! -f ] guard.
+      - name: Restore measured baseline
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/baselines/base.json
+          key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
+
+      # Writes .soothfast/gate-status.json, which `report render` reads to
+      # color the gate badge. HEAD~1 is well-defined: master is linear.
+      - name: Gate against previous commit
+        if: steps.bench_changes.outputs.changed == 'true'
+        run: |
+          cargo soothfast gate -p finance-query --features bench-gate \
+            --against-ref HEAD~1 --save-baseline base
+
+      # A passing gate already saved the baseline; measure only fills in
+      # when the gate was skipped, so docs regen never runs without one.
+      - name: Measure baseline for claims
+        run: |
+          if [ ! -f .soothfast/baselines/base.json ]; then
+            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+          fi
+
+      - name: Append performance trend point
+        if: steps.bench_changes.outputs.changed == 'true'
+        run: |
+          git fetch origin master
+          git checkout origin/master -- .soothfast/trend.jsonl
+          cargo soothfast trend append -p finance-query --from-baseline base
+
+      - name: Regenerate endpoint reference pages
+        # A bare `wait` after backgrounding both would mask their exit codes.
+        run: |
+          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server &
+          server=$!
+          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server &
+          mcp=$!
+          status=0
+          wait "$server" || status=1
+          wait "$mcp" || status=1
+          [ "$status" -eq 0 ] || exit "$status"
+          cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
+          cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
+
+      - name: Regenerate API reference, perf report, coverage page, and llms.txt
+        run: |
+          cargo soothfast docs reference -p finance-query --baseline base --features full --out docs/reference
+          cargo soothfast report render -p finance-query --baseline base --features full --out docs/perf
+          mv docs/perf/llms.txt docs/llms.txt
+          cp docs/llms.txt llms.txt
+          { echo "# Coverage"; echo; \
+            echo "> Generated by \`cargo soothfast coverage docs\`."; echo; \
+            echo '```text'; \
+            cargo soothfast coverage docs -p finance-query --features full \
+              --badge docs/perf/badges/coverage.json --badge docs/perf/badges/coverage.svg; \
+            echo '```'; } > docs/coverage.md
+
+      - name: Regenerate captured doc output
+        # dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo
+        # Finance data (real prices/timestamps) so excluded here
+        run: |
+          cargo soothfast docs capture -p finance-query --features full \
+            docs/library/backtesting.md docs/library/commodities.md \
+            docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
+            docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
+            docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
+            docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
+            docs/library/providers/coingecko.md docs/library/providers/edgar.md \
+            docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
+            docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
+            docs/library/streaming.md docs/library/translation.md README.md
+
+      - name: Keep llms.txt only when the documented surface moved
+        # Measured lines change every run; committing them would make this
+        # job re-trigger itself off its own merges forever
+        run: |
+          if git diff --quiet -- llms.txt; then exit 0; fi
+          mkdir -p target/llms-churn
+          sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-churn/new.txt
+          git show HEAD:llms.txt | sed '/^\*\*Measured:\*\*/d' > target/llms-churn/old.txt
+          cmp -s target/llms-churn/old.txt target/llms-churn/new.txt && git checkout -- llms.txt || true
+
+      # Direct pushes to master are blocked by the branch ruleset, so the bot
+      # opens a PR and squash-merges it itself instead.
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: cpr
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          add-paths: |
+            .soothfast/trend.jsonl
+            llms.txt
+            docs/library/**
+            README.md
+          commit-message: "chore: regenerate derived artifacts"
+          title: "chore: regenerate derived artifacts"
+          body: Automated trend, captured-output, and llms.txt regeneration.
+          branch: bot/derived-artifacts
+          delete-branch: true
+          author: >-
+            ${{ steps.app-token.outputs.app-slug }}[bot]
+            <${{ steps.app-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
+      - name: Merge pull request
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
+
+      - name: Build and publish docs site
+        run: cargo soothfast docs gh-deploy --baseline base
 
   deploy:
     name: Deploy to VPS

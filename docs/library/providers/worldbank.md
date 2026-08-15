@@ -11,25 +11,40 @@ It complements [FRED](fred.md), which is US-centric and needs a key: when you wa
 
 ## Setup
 
-```rust
+```rust no_run feature=worldbank
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::ECONOMIC, [Provider::WorldBank])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::WorldBank])
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 ## Series Identifiers
 
 The `ECONOMIC` capability addresses a series with a single string, so a World Bank series is written as `"<COUNTRY>/<INDICATOR>"`:
 
-```rust
-let gdp = providers.economic("USA/NY.GDP.MKTP.CD").series().await?;
+```rust no_run feature=worldbank
+use finance_query::{Capability, Provider, Providers};
 
-println!("{}", gdp.title.unwrap_or_default());   // "GDP (current US$) — United States"
-for obs in &gdp.observations {
-    println!("{} {:?}", obs.date, obs.value);    // "1960-01-01" Some(543300000000.0)
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::WorldBank])
+        .build()
+        .await?;
+
+    let gdp = providers.economic("USA/NY.GDP.MKTP.CD").series().await?;
+
+    println!("{}", gdp.title.unwrap_or_default());   // "GDP (current US$) — United States"
+    for obs in &gdp.observations {
+        println!("{} {:?}", obs.date, obs.value);    // "1960-01-01" Some(543300000000.0)
+    }
+    Ok(())
 }
 ```
 
@@ -38,9 +53,20 @@ for obs in &gdp.observations {
 
 Omitting the country resolves against the world aggregate:
 
-```rust
-// Equivalent to "WLD/SP.POP.TOTL" — world population
-let world_pop = providers.economic("SP.POP.TOTL").series().await?;
+```rust no_run feature=worldbank
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::WorldBank])
+        .build()
+        .await?;
+
+    // Equivalent to "WLD/SP.POP.TOTL" — world population
+    let world_pop = providers.economic("SP.POP.TOTL").series().await?;
+    Ok(())
+}
 ```
 
 ### Common Indicators
@@ -74,11 +100,17 @@ World Bank period labels (`2023`, `2023Q1`, `2023M04`) are normalised to the `YY
 
 Because it is keyless, World Bank makes a good last resort behind a keyed provider:
 
-```rust
-let providers = Providers::builder()
-    .route(Capability::ECONOMIC, [Provider::Fred, Provider::WorldBank])
-    .build()
-    .await?;
+```rust no_run feature=full
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::Fred, Provider::WorldBank])
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 Note that the two use different identifier schemes — a FRED series id is not a World Bank series id — so a chain like this is useful for *availability*, not for transparently retrying the same identifier.

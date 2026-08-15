@@ -1,3 +1,4 @@
+use finance_query::TimeRange;
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -47,10 +48,10 @@ fn build_calendar_selection(fields: Option<&[String]>) -> String {
 pub async fn get_calendar(
     schema: &FinanceSchema,
     symbols: String,
-    range: Option<String>,
+    range: Option<TimeRange>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1mo"));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneMonth));
     let syms: Vec<String> = symbols.split(',').map(|s| s.trim().to_string()).collect();
     let syms_literal = gql_string_list_literal(&syms);
     let field_list = parse_fields(fields);

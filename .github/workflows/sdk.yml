@@ -1,0 +1,117 @@
+name: SDK
+
+# Generated client SDKs (sdks/)
+
+on:
+  pull_request:
+    paths:
+      - "sdks/**"
+      - ".github/workflows/sdk.yml"
+  push:
+    branches: [master]
+    paths:
+      - "server/src/**"
+      - "server/benches/**"
+      - "server/soothfast.toml"
+      - "Cargo.lock"
+
+permissions:
+  contents: read
+
+concurrency:
+  # SHA-scoped for the same reason as soothfast.yml
+  group: sdk-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # PRs touching sdks/ — the generated package must be importable and pass
+  # strict type checking on its own, no Rust toolchain involved.
+  quality:
+    name: Type-check generated SDK
+    if: github.event_name == 'pull_request' && !endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - name: mypy --strict
+        run: uv run --no-project --with mypy --with httpx mypy --strict sdks/python/src/finance_query
+      - name: Package imports and builds
+        run: |
+          uv run --no-project --with httpx python -c "
+          import sys; sys.path.insert(0, 'sdks/python/src')
+          import finance_query
+          print(finance_query.__version__, len(finance_query.__all__), 'exports')"
+          uv build sdks/python
+
+  # Pushes to master — regenerate the spec and SDKs from the code and
+  # bot-commit whatever changed, so nobody has to remember to.
+  regenerate:
+    name: Regenerate spec + SDKs
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions: {} # all repo access comes from the minted App token below
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - name: Mint a soothfast-bot token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CHANGELOG_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGELOG_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Get soothfast-bot user id
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - name: Install nightly (rustdoc JSON)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
+      - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
+        run: |
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --locked --no-confirm ${FORCE:-}
+      - name: Regenerate
+        run: |
+          cargo soothfast spec gen -p finance-query-server --target soothfast-routes
+          cargo soothfast sdk gen -p finance-query-server --target soothfast-routes
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: cpr
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          add-paths: |
+            server/openapi.yaml
+            sdks/**
+          commit-message: "chore: regenerate spec and SDKs"
+          title: "chore: regenerate spec and SDKs"
+          body: Automated spec/SDK regeneration.
+          branch: bot/sdk-update
+          delete-branch: true
+          author: >-
+            ${{ steps.app-token.outputs.app-slug }}[bot]
+            <${{ steps.app-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
+      - name: Merge pull request
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"

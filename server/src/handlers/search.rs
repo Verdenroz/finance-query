@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json},
 };
+use finance_query::LookupType;
 use finance_query_server::graphql::{
     self,
     fields::{
@@ -14,102 +15,22 @@ use finance_query_server::graphql::{
     pagination::{build_paginated_composite_selection, unwrap_nested_connection},
 };
 use finance_query_server::lang;
-use serde::Deserialize;
+use finance_query_server::params::{LookupQuery, SearchQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 
-fn lookup_type_to_gql(s: &str) -> &'static str {
-    match s.to_lowercase().as_str() {
-        "equity" => "EQUITY",
-        "mutualfund" => "MUTUAL_FUND",
-        "etf" => "ETF",
-        "index" => "INDEX",
-        "future" => "FUTURE",
-        "currency" => "CURRENCY",
-        "cryptocurrency" => "CRYPTOCURRENCY",
-        _ => "ALL",
+fn lookup_type_to_gql(lookup_type: LookupType) -> &'static str {
+    match lookup_type {
+        LookupType::All => "ALL",
+        LookupType::Equity => "EQUITY",
+        LookupType::MutualFund => "MUTUAL_FUND",
+        LookupType::Etf => "ETF",
+        LookupType::Index => "INDEX",
+        LookupType::Future => "FUTURE",
+        LookupType::Currency => "CURRENCY",
+        LookupType::Cryptocurrency => "CRYPTOCURRENCY",
     }
-}
-
-fn default_hits() -> u32 {
-    std::env::var("SEARCH_HITS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(10)
-}
-
-fn default_logo() -> bool {
-    true
-}
-
-fn default_lookup_type() -> String {
-    "all".to_string()
-}
-
-fn default_lookup_count() -> u32 {
-    25
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct SearchQuery {
-    /// Search query string (required)
-    q: String,
-    /// Maximum number of quote results (default: 6)
-    #[serde(default = "default_hits")]
-    quotes: u32,
-    /// Maximum number of news results (default: 0 = disabled)
-    #[serde(default)]
-    news: u32,
-    /// Enable fuzzy matching for typos (default: false)
-    #[serde(default)]
-    fuzzy: bool,
-    /// Enable logo URLs in results (default: true)
-    #[serde(default = "default_logo")]
-    logo: bool,
-    /// Enable research reports (default: false)
-    #[serde(default)]
-    research: bool,
-    /// Enable cultural assets/NFT indices (default: false)
-    #[serde(default)]
-    cultural: bool,
-    /// Region code for lang/region settings (e.g., "US", "JP", "GB")
-    region: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-    /// Max quotes per page; omitted (with cursor also omitted) = every fetched
-    /// quote (up to `quotes`) as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct LookupQuery {
-    /// Lookup query string (required)
-    q: String,
-    /// Asset type filter: all, equity, mutualfund, etf, index, future, currency, cryptocurrency
-    #[serde(default = "default_lookup_type")]
-    #[serde(rename = "type")]
-    lookup_type: String,
-    /// Maximum number of results (default: 25)
-    #[serde(default = "default_lookup_count")]
-    count: u32,
-    /// Include logo URLs (requires additional API call, default: false)
-    #[serde(default)]
-    logo: bool,
-    /// Region code for lang/region settings (e.g., "US", "JP", "GB")
-    region: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
 }
 
 /// GET /v2/search
@@ -148,9 +69,7 @@ pub(crate) async fn search(
     );
     let region_arg = params
         .region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!(", region: \"{}\"", escape_gql_string(r)));
+        .map(|r| format!(", region: \"{}\"", escape_gql_string(r.region())));
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", escape_gql_string(l)),
         None => String::new(),
@@ -213,9 +132,7 @@ pub(crate) async fn lookup(
     );
     let region_arg = params
         .region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!(", region: \"{}\"", escape_gql_string(r)));
+        .map(|r| format!(", region: \"{}\"", escape_gql_string(r.region())));
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", escape_gql_string(l)),
         None => String::new(),
@@ -223,7 +140,7 @@ pub(crate) async fn lookup(
     let query = format!(
         "query {{ lookup(query: \"{}\", type: {}, count: {}, logo: {}{}{}) {} }}",
         escape_gql_string(&params.q),
-        lookup_type_to_gql(&params.lookup_type),
+        lookup_type_to_gql(params.lookup_type),
         params.count,
         params.logo,
         region_arg.unwrap_or_default(),

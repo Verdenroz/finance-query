@@ -7,86 +7,117 @@ Subscribe to live price updates via WebSocket. The streaming API uses a Flow-lik
 
 ## Quick Start
 
-```rust
+```rust no_run covers=finance_query::streaming::pricing::PriceUpdate
 use finance_query::streaming::PriceStream;
 use futures::StreamExt;
 
-let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
 
-while let Some(price) = stream.next().await {
-    println!("{}: ${:.2} ({:+.2}%)",
-        price.id,
-        price.price,
-        price.change_percent
-    );
+    while let Some(price) = stream.next().await {
+        println!("{}: ${:.2} ({:+.2}%)",
+            price.id,
+            price.price,
+            price.change_percent
+        );
+    }
+    Ok(())
 }
 ```
+
+<!-- soothfast:claim finance_query::stream_serialize.walltime.median_ns < 5000 -->
+<!-- soothfast:claim finance_query::stream_serialize.alloc.allocs <= 4 -->
+- Serializing a `PriceUpdate` tick to JSON stays **under 5 µs** and makes
+  exactly **4 allocations** — cheap enough to fan out to many consumers on
+  every tick.
+
+<!-- soothfast:claim finance_query::stream_deserialize.walltime.median_ns < 5000 -->
+- Decoding a JSON tick back into a `PriceUpdate` also stays **under 5 µs**.
 
 ## Subscribing
 
 ### Simple Subscribe
 
-```rust
+```rust no_run
 use finance_query::streaming::PriceStream;
 
-let mut stream = PriceStream::subscribe(["AAPL", "GOOGL"]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream = PriceStream::subscribe(["AAPL", "GOOGL"]).await?;
+    Ok(())
+}
 ```
 
 ### Builder Pattern
 
-```rust
+```rust no_run
 use finance_query::streaming::PriceStreamBuilder;
 use std::time::Duration;
 
-let mut stream = PriceStreamBuilder::new()
-    .symbols(["AAPL", "MSFT", "NVDA"])
-    .retry(Duration::from_secs(5))
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream = PriceStreamBuilder::new()
+        .symbols(["AAPL", "MSFT", "NVDA"])
+        .retry(Duration::from_secs(5))
+        .build()
+        .await?;
+    Ok(())
+}
 ```
 
 ## Dynamic Subscriptions
 
 Add or remove symbols after the stream is created:
 
-```rust
+```rust no_run
 use finance_query::streaming::PriceStream;
 
-let stream = PriceStream::subscribe(["AAPL"]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let stream = PriceStream::subscribe(["AAPL"]).await?;
 
-// Add more symbols
-stream.add_symbols(["NVDA", "TSLA"]).await;
+    // Add more symbols
+    stream.add_symbols(["NVDA", "TSLA"]).await;
 
-// Remove symbols
-stream.remove_symbols(["AAPL"]).await;
+    // Remove symbols
+    stream.remove_symbols(["AAPL"]).await;
+    Ok(())
+}
 ```
 
 ## Multiple Consumers
 
 Use `resubscribe()` to create additional receivers sharing the same WebSocket connection:
 
-```rust
+```rust no_run
 use finance_query::streaming::PriceStream;
 use futures::StreamExt;
 
-let mut stream1 = PriceStream::subscribe(["AAPL", "NVDA"]).await?;
-let mut stream2 = stream1.resubscribe();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream1 = PriceStream::subscribe(["AAPL", "NVDA"]).await?;
+    let mut stream2 = stream1.resubscribe();
 
-// Both streams receive the same updates
-tokio::spawn(async move {
-    while let Some(price) = stream2.next().await {
-        println!("Consumer 2: {} ${:.2}", price.id, price.price);
+    // Both streams receive the same updates
+    tokio::spawn(async move {
+        while let Some(price) = stream2.next().await {
+            println!("Consumer 2: {} ${:.2}", price.id, price.price);
+        }
+    });
+
+    while let Some(price) = stream1.next().await {
+        println!("Consumer 1: {} ${:.2}", price.id, price.price);
     }
-});
-
-while let Some(price) = stream1.next().await {
-    println!("Consumer 1: {} ${:.2}", price.id, price.price);
+    Ok(())
 }
 ```
 
 ## PriceUpdate Fields
 
 Each update yielded by the stream contains:
+
+<!-- soothfast:bind finance_query::streaming::pricing::PriceUpdate -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -106,32 +137,42 @@ Each update yielded by the stream contains:
 | `market_hours` | `MarketHoursType` | Session (PreMarket, RegularMarket, PostMarket) |
 | `time` | `i64` | Unix timestamp in milliseconds |
 
+<!-- /soothfast:bind -->
+
 ## Filtering Updates
 
-```rust
-use finance_query::streaming::{PriceStream, MarketHoursType};
+```rust no_run
+use finance_query::streaming::{MarketHoursType, PriceStream};
 use futures::StreamExt;
 
-let mut stream = PriceStream::subscribe(["AAPL", "MSFT", "GOOGL"]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream = PriceStream::subscribe(["AAPL", "MSFT", "GOOGL"]).await?;
 
-while let Some(price) = stream.next().await {
-    // Only process regular market updates
-    if price.market_hours == MarketHoursType::RegularMarket {
-        println!("{}: ${:.2}", price.id, price.price);
+    while let Some(price) = stream.next().await {
+        // Only process regular market updates
+        if price.market_hours == MarketHoursType::RegularMarket {
+            println!("{}: ${:.2}", price.id, price.price);
+        }
     }
+    Ok(())
 }
 ```
 
 ## Closing the Stream
 
-```rust
+```rust no_run
 use finance_query::streaming::PriceStream;
 
-let stream = PriceStream::subscribe(["AAPL"]).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let stream = PriceStream::subscribe(["AAPL"]).await?;
 
-// ... use stream ...
+    // ... use stream ...
 
-stream.close().await;
+    stream.close().await;
+    Ok(())
+}
 ```
 
 !!! info "Notes"
@@ -142,33 +183,48 @@ stream.close().await;
 
 ## News Streaming
 
+<!-- soothfast:bind finance_query::streaming::news::NewsStream -->
 `NewsStream` gives RSS/Atom feeds (see [Feeds](feeds.md)) the same `Stream` interface as `PriceStream`. Since RSS/Atom has no server push, it works by polling the configured sources on an interval instead of holding a WebSocket connection — yielding an initial batch of entries on subscribe, then only newly-seen ones (deduplicated by URL) on each subsequent poll.
+<!-- /soothfast:bind -->
 
-```rust
+```rust no_run covers=finance_query::streaming::news::NewsStream
 use finance_query::streaming::NewsStream;
 use finance_query::feeds::FeedSource;
 use futures::StreamExt;
 
-let mut stream =
-    NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+#[tokio::main]
+async fn main() {
+    let mut stream =
+        NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
 
-while let Some(entry) = stream.next().await {
-    println!("[{}] {}", entry.source, entry.title);
+    while let Some(entry) = stream.next().await {
+        println!("[{}] {}", entry.source, entry.title);
+    }
 }
 ```
 
 ### Custom Poll Interval
+
+Building a stream never blocks on the network by itself (the poll loop runs in
+the background), so this example runs as a real test:
 
 ```rust
 use finance_query::streaming::NewsStreamBuilder;
 use finance_query::feeds::FeedSource;
 use std::time::Duration;
 
-let mut stream = NewsStreamBuilder::new()
-    .sources(vec![FeedSource::FederalReserve, FeedSource::SecPressReleases])
-    .poll_interval(Duration::from_secs(60))
-    .build()
-    .await;
+#[tokio::main]
+async fn main() {
+    let stream = NewsStreamBuilder::new()
+        .sources(vec![FeedSource::FederalReserve, FeedSource::SecPressReleases])
+        .poll_interval(Duration::from_secs(60))
+        .build()
+        .await;
+
+    // ... consume stream.next() as in the examples above ...
+
+    stream.close().await;
+}
 ```
 
 The default poll interval is 5 minutes.
@@ -177,18 +233,21 @@ The default poll interval is 5 minutes.
 
 `add_sources`, `remove_sources`, `resubscribe`, and `close` work the same way as on `PriceStream`:
 
-```rust
+```rust no_run
 use finance_query::streaming::NewsStream;
 use finance_query::feeds::FeedSource;
 
-let stream = NewsStream::subscribe([FeedSource::Bloomberg]).await;
+#[tokio::main]
+async fn main() {
+    let stream = NewsStream::subscribe([FeedSource::Bloomberg]).await;
 
-stream.add_sources([FeedSource::WsjMarkets]).await;
-stream.remove_sources([FeedSource::Bloomberg]).await;
+    stream.add_sources([FeedSource::WsjMarkets]).await;
+    stream.remove_sources([FeedSource::Bloomberg]).await;
 
-let other_consumer = stream.resubscribe();
+    let other_consumer = stream.resubscribe();
 
-stream.close().await;
+    stream.close().await;
+}
 ```
 
 ## Next Steps

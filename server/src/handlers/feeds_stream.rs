@@ -39,21 +39,12 @@ use axum::{
     response::IntoResponse,
 };
 use finance_query::feeds::FeedSource;
+use finance_query_server::params::FeedStreamCommand;
 use finance_query_server::{AppState, metrics};
 use futures_util::{SinkExt, StreamExt};
-use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{info, warn};
-
-/// Stream command from client
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct FeedStreamCommand {
-    subscribe: Option<Vec<String>>,
-    unsubscribe: Option<Vec<String>>,
-    form_type: Option<String>,
-}
 
 /// RAII guard to decrement WebSocket connection count on drop
 struct ConnectionGuard;

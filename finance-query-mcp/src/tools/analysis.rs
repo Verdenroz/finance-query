@@ -1,22 +1,22 @@
 use finance_query_server::graphql::FinanceSchema;
+use finance_query_server::params::{AnalysisType, HolderType};
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
-use crate::error::{invalid_params, ser_err};
+use crate::error::ser_err;
 use crate::tools::gql::{
     ANALYSIS_TYPE_SPECS, DEFAULT_MCP_PAGE_SIZE, HOLDER_TYPE_SPECS,
     build_paginated_composite_selection, build_type_spec_selection, execute_query, parse_fields,
     unwrap_ticker_field, wrap_nested_connection,
 };
 
-fn holder_type_to_field(ht: &str) -> Option<&'static str> {
-    match ht.to_lowercase().replace('-', "").as_str() {
-        "major" => Some("majorHolders"),
-        "institutional" => Some("institutionalHolders"),
-        "mutualfund" => Some("mutualFundHolders"),
-        "insidertransactions" => Some("insiderTransactions"),
-        "insiderpurchases" => Some("insiderPurchases"),
-        "insiderroster" => Some("insiderRoster"),
-        _ => None,
+fn holder_type_to_field(holder_type: HolderType) -> &'static str {
+    match holder_type {
+        HolderType::Major => "majorHolders",
+        HolderType::Institutional => "institutionalHolders",
+        HolderType::MutualFund => "mutualFundHolders",
+        HolderType::InsiderTransactions => "insiderTransactions",
+        HolderType::InsiderPurchases => "insiderPurchases",
+        HolderType::InsiderRoster => "insiderRoster",
     }
 }
 
@@ -71,13 +71,12 @@ fn build_holders_selection(
 pub async fn get_holders(
     schema: &FinanceSchema,
     symbol: String,
-    holder_type: String,
+    holder_type: HolderType,
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_field = holder_type_to_field(&holder_type)
-        .ok_or_else(|| invalid_params(format!("Invalid holder_type '{}'", holder_type)))?;
+    let gql_field = holder_type_to_field(holder_type);
     let (_, valid_fields, default_fields, composite_fields) = HOLDER_TYPE_SPECS
         .iter()
         .find(|(n, ..)| *n == gql_field)
@@ -110,24 +109,22 @@ pub async fn get_holders(
     )]))
 }
 
-fn analysis_type_to_field(at: &str) -> Option<&'static str> {
-    match at.to_lowercase().replace('-', "").as_str() {
-        "recommendations" => Some("recommendationTrend"),
-        "upgradesdowngrades" => Some("gradingHistory"),
-        "earningsestimate" => Some("earningsEstimate"),
-        "earningshistory" => Some("earningsHistory"),
-        _ => None,
+fn analysis_type_to_field(analysis_type: AnalysisType) -> &'static str {
+    match analysis_type {
+        AnalysisType::Recommendations => "recommendationTrend",
+        AnalysisType::UpgradesDowngrades => "gradingHistory",
+        AnalysisType::EarningsEstimate => "earningsEstimate",
+        AnalysisType::EarningsHistory => "earningsHistory",
     }
 }
 
 pub async fn get_analysis(
     schema: &FinanceSchema,
     symbol: String,
-    analysis_type: String,
+    analysis_type: AnalysisType,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_field = analysis_type_to_field(&analysis_type)
-        .ok_or_else(|| invalid_params(format!("Invalid analysis_type '{}'", analysis_type)))?;
+    let gql_field = analysis_type_to_field(analysis_type);
     let (_, valid_fields, default_fields, composite_fields) = ANALYSIS_TYPE_SPECS
         .iter()
         .find(|(n, ..)| *n == gql_field)
@@ -158,49 +155,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn holder_type_to_field_maps_every_known_value() {
-        assert_eq!(holder_type_to_field("major"), Some("majorHolders"));
+    fn holder_type_to_field_maps_every_variant() {
+        assert_eq!(holder_type_to_field(HolderType::Major), "majorHolders");
         assert_eq!(
-            holder_type_to_field("institutional"),
-            Some("institutionalHolders")
+            holder_type_to_field(HolderType::Institutional),
+            "institutionalHolders"
         );
         assert_eq!(
-            holder_type_to_field("mutualfund"),
-            Some("mutualFundHolders")
+            holder_type_to_field(HolderType::MutualFund),
+            "mutualFundHolders"
         );
         assert_eq!(
-            holder_type_to_field("insidertransactions"),
-            Some("insiderTransactions")
+            holder_type_to_field(HolderType::InsiderTransactions),
+            "insiderTransactions"
         );
         assert_eq!(
-            holder_type_to_field("insiderpurchases"),
-            Some("insiderPurchases")
-        );
-        assert_eq!(holder_type_to_field("insiderroster"), Some("insiderRoster"));
-    }
-
-    #[test]
-    fn holder_type_to_field_normalizes_hyphens_and_case() {
-        assert_eq!(
-            holder_type_to_field("insider-transactions"),
-            Some("insiderTransactions")
+            holder_type_to_field(HolderType::InsiderPurchases),
+            "insiderPurchases"
         );
         assert_eq!(
-            holder_type_to_field("Insider-Purchases"),
-            Some("insiderPurchases")
+            holder_type_to_field(HolderType::InsiderRoster),
+            "insiderRoster"
         );
-        assert_eq!(
-            holder_type_to_field("MUTUAL-FUND"),
-            Some("mutualFundHolders")
-        );
-        assert_eq!(holder_type_to_field("Major"), Some("majorHolders"));
-    }
-
-    #[test]
-    fn holder_type_to_field_rejects_unknown_and_empty_input() {
-        assert_eq!(holder_type_to_field("bogus"), None);
-        assert_eq!(holder_type_to_field(""), None);
-        assert_eq!(holder_type_to_field("-"), None);
     }
 
     #[test]
@@ -229,45 +205,23 @@ mod tests {
     }
 
     #[test]
-    fn analysis_type_to_field_maps_every_known_value() {
+    fn analysis_type_to_field_maps_every_variant() {
         assert_eq!(
-            analysis_type_to_field("recommendations"),
-            Some("recommendationTrend")
+            analysis_type_to_field(AnalysisType::Recommendations),
+            "recommendationTrend"
         );
         assert_eq!(
-            analysis_type_to_field("upgradesdowngrades"),
-            Some("gradingHistory")
+            analysis_type_to_field(AnalysisType::UpgradesDowngrades),
+            "gradingHistory"
         );
         assert_eq!(
-            analysis_type_to_field("earningsestimate"),
-            Some("earningsEstimate")
+            analysis_type_to_field(AnalysisType::EarningsEstimate),
+            "earningsEstimate"
         );
         assert_eq!(
-            analysis_type_to_field("earningshistory"),
-            Some("earningsHistory")
+            analysis_type_to_field(AnalysisType::EarningsHistory),
+            "earningsHistory"
         );
-    }
-
-    #[test]
-    fn analysis_type_to_field_normalizes_hyphens_and_case() {
-        assert_eq!(
-            analysis_type_to_field("upgrades-downgrades"),
-            Some("gradingHistory")
-        );
-        assert_eq!(
-            analysis_type_to_field("Earnings-Estimate"),
-            Some("earningsEstimate")
-        );
-        assert_eq!(
-            analysis_type_to_field("EARNINGS-HISTORY"),
-            Some("earningsHistory")
-        );
-    }
-
-    #[test]
-    fn analysis_type_to_field_rejects_unknown_and_empty_input() {
-        assert_eq!(analysis_type_to_field("bogus"), None);
-        assert_eq!(analysis_type_to_field(""), None);
     }
 
     #[test]

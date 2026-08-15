@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json},
 };
+use finance_query::Sector;
 use finance_query_server::graphql::{
     self,
     fields::{
@@ -12,34 +13,22 @@ use finance_query_server::graphql::{
     },
 };
 use finance_query_server::lang;
-use serde::Deserialize;
+use finance_query_server::params::SectorQuery;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 use super::support::parse_format;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct SectorQuery {
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
-    /// falls back to the Accept-Language header
-    lang: Option<String>,
-}
 
 /// GET /v2/sectors/{sector}
 ///
 /// Query: `format` (raw|pretty|both), `fields` (comma-separated)
 pub(crate) async fn get_sector(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path(sector): Path<String>,
+    Path(sector): Path<Sector>,
     Query(params): Query<SectorQuery>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     let gql_format = match format {
         finance_query::ValueFormat::Raw => "RAW",
@@ -55,13 +44,13 @@ pub(crate) async fn get_sector(
         "query GetSector($sector: String!, $lang: String) {{ sector(sector: $sector, lang: $lang, format: {gql_format}) {selection} }}"
     );
     info!(
-        "Fetching {} sector (format={}, fields={:?})",
+        "Fetching {:?} sector (format={}, fields={:?})",
         sector,
         format.as_str(),
         params.fields
     );
     let mut vars = Variables::default();
-    vars.insert(Name::new("sector"), sector.clone().into());
+    vars.insert(Name::new("sector"), sector.as_api_path().into());
     if let Some(l) = &lang {
         vars.insert(Name::new("lang"), l.clone().into());
     }
@@ -75,11 +64,11 @@ pub(crate) async fn get_sector(
 /// GET /v2/industries/{industry}
 pub(crate) async fn get_industry(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path(industry): Path<String>,
+    Path(industry): Path<finance_query::Industry>,
     Query(params): Query<SectorQuery>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let format = parse_format(params.format.as_deref());
+    let format = parse_format(params.format);
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     let gql_format = match format {
         finance_query::ValueFormat::Raw => "RAW",
@@ -95,11 +84,11 @@ pub(crate) async fn get_industry(
         "query GetIndustry($industry: String!, $lang: String) {{ industry(industry: $industry, lang: $lang, format: {gql_format}) {selection} }}"
     );
     info!(
-        "Fetching {} industry (fields={:?})",
+        "Fetching {:?} industry (fields={:?})",
         industry, params.fields
     );
     let mut vars = Variables::default();
-    vars.insert(Name::new("industry"), industry.clone().into());
+    vars.insert(Name::new("industry"), industry.as_slug().into());
     if let Some(l) = &lang {
         vars.insert(Name::new("lang"), l.clone().into());
     }

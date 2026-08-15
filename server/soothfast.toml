@@ -1,0 +1,86 @@
+# Package-local soothfast config for finance-query-server.
+
+[[spec]]
+path = "openapi.yaml"
+mode = "generate"
+title = "Finance Query v2"
+servers = ["https://finance-query.com", "http://localhost:8000"]
+
+[spec.responses]
+"400" = { type = "ApiError", description = "Bad request" }
+"404" = { type = "ApiError", description = "Symbol or resource not found" }
+"429" = { type = "RateLimitError", description = "Rate limited (global token bucket)", headers = ["Retry-After"] }
+"500" = { type = "ApiError", description = "Internal server error" }
+
+# `Json<T>` is `#[serde(transparent)]`, so the wire shape is T's — forward to it
+# rather than erasing every formatted value to an open schema.
+[spec.types]
+"async_graphql::types::json::Json" = { transparent = true }
+
+[[spec]]
+path = "asyncapi.yaml"
+mode = "generate"
+title = "Finance Query Streaming API"
+servers = ["wss://finance-query.com", "ws://localhost:8000"]
+
+[[sdk]]
+spec = "openapi.yaml"
+lang = "python"
+out = "../sdks/python"
+package = "finance-query"
+description = "Python client for the Finance Query API"
+repository = "https://github.com/Verdenroz/finance-query"
+embed = "finance-query-server"
+embed_env = { HOST = "127.0.0.1", PORT = "0" }
+embed_env_template = ".env.template"
+paginated = [
+  "getBatchCharts",
+  "getBatchDividends",
+  "getBatchIndicators",
+  "getBatchOptions",
+  "getChart",
+  "getCryptoCoins",
+  "getDividends",
+  "getEdgarFacts",
+  "getEdgarSubmissions",
+  "getFeeds",
+  "getFredSeries",
+  "getFredTreasuryYields",
+  "getGeneralNews",
+  "getHolders",
+  "getNews",
+  "getOptions",
+  "getQuotes",
+  "search",
+]
+
+[[sdk]]
+spec = "openapi.yaml"
+lang = "typescript"
+out = "../sdks/typescript"
+package = "finance-query"
+description = "TypeScript client for the Finance Query API"
+repository = "https://github.com/Verdenroz/finance-query"
+embed = "finance-query-server"
+embed_env = { HOST = "127.0.0.1", PORT = "0" }
+embed_env_template = ".env.template"
+paginated = [
+  "getBatchCharts",
+  "getBatchDividends",
+  "getBatchIndicators",
+  "getBatchOptions",
+  "getChart",
+  "getCryptoCoins",
+  "getDividends",
+  "getEdgarFacts",
+  "getEdgarSubmissions",
+  "getFeeds",
+  "getFredSeries",
+  "getFredTreasuryYields",
+  "getGeneralNews",
+  "getHolders",
+  "getNews",
+  "getOptions",
+  "getQuotes",
+  "search",
+]

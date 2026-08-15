@@ -14,22 +14,26 @@ FINRA publishes daily aggregated short-sale volume for every reported security t
 
 ## Setup
 
-```rust
+```rust no_run feature=finra
 use finance_query::{Capability, Provider, Providers};
 
-let providers = Providers::builder()
-    .route(Capability::FUNDAMENTALS, [Provider::Finra, Provider::Yahoo])
-    .build()
-    .await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::FUNDAMENTALS, [Provider::Finra, Provider::Yahoo])
+        .build()
+        .await?;
 
-let ticker = providers.ticker("AAPL").build().await?;
-for day in ticker.short_volume().await? {
-    println!(
-        "{} short {:?} of {:?}",
-        day.date.unwrap_or_default(),
-        day.short_volume,
-        day.total_volume
-    );
+    let ticker = providers.ticker("AAPL").build().await?;
+    for day in ticker.short_volume().await? {
+        println!(
+            "{} short {:?} of {:?}",
+            day.date.unwrap_or_default(),
+            day.short_volume,
+            day.total_volume
+        );
+    }
+    Ok(())
 }
 ```
 

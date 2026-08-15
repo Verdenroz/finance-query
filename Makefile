@@ -1,5 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit bench baseline docs clean publish-dry-run \
-        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http
+.PHONY: $(shell grep -hoE '^[a-zA-Z][a-zA-Z0-9_-]*:' $(MAKEFILE_LIST) | tr -d ':')
 
 # Default target
 .DEFAULT_GOAL := help
@@ -23,16 +22,9 @@ help: ## Show available commands
 mcp: ## Run MCP server (stdio transport, for local development)
 	$(CARGO) run -p finance-query-mcp
 
-mcp-http: ## Run MCP server (HTTP streaming transport, for VPS — binds to MCP_ADDR, default 0.0.0.0:3000)
-	MCP_TRANSPORT=http $(CARGO) run -p finance-query-mcp
-
 serve: ## Start development server
 	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"
 	cd server && PORT=$(PORT) $(CARGO) run -p finance-query-server
-
-install: ## Build release binary
-	@echo "$(GREEN)Building release binary...$(NC)"
-	$(CARGO) build --release -p finance-query-server
 
 install-dev: ## Install dev tools and build workspace
 	@echo "$(GREEN)Installing dev tools...$(NC)"
@@ -46,14 +38,6 @@ install-dev: ## Install dev tools and build workspace
 		fi; \
 	fi
 	@prek install
-	@echo "$(GREEN)Setting up Python environment for docs...$(NC)"
-	@if command -v uv >/dev/null 2>&1; then \
-		uv sync; \
-	else \
-		if ! [ -d .venv ]; then python3 -m venv .venv; fi; \
-		.venv/bin/pip install -q --upgrade pip; \
-		.venv/bin/pip install -q -e .; \
-	fi
 	@echo "$(GREEN)Building workspace in dev mode...$(NC)"
 	$(CARGO) build --workspace
 	@echo "$(GREEN)✓ Dev environment ready!$(NC)"
@@ -71,10 +55,6 @@ test-fast: ## Run only fast tests (excludes network tests)
 	@echo "$(GREEN)Running fast tests...$(NC)"
 	$(CARGO) test --workspace -- --nocapture
 
-lint: ## Run all pre-commit checks
-	@echo "$(GREEN)Running pre-commit checks...$(NC)"
-	@prek
-
 fix: ## Auto-fix formatting and linting issues
 	@echo "$(GREEN)Formatting code...$(NC)"
 	@$(CARGO) fmt --all
@@ -82,43 +62,130 @@ fix: ## Auto-fix formatting and linting issues
 	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-audit: ## Run the same dependency policy check as CI (advisories, bans, licenses, sources)
+ci: fix build test soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
 	@echo "$(GREEN)Running cargo-deny...$(NC)"
 	@command -v cargo-deny >/dev/null 2>&1 || $(CARGO) install cargo-deny --locked
 	@cargo deny check advisories bans licenses sources
 
-bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
-	@echo "$(GREEN)Running criterion benchmarks...$(NC)"
-	$(CARGO) bench --features full \
-		--bench indicators --bench backtesting --bench ticker --bench tickers \
-		--bench finance --bench providers --bench risk --bench stream \
-		--bench serde --bench dataframe --bench feeds
+# The measured regression gate (`cargo soothfast`) runs natively: per-iteration
+# instruction counts via perf_event, plus alloc counts and walltime — no
+# valgrind, no container. Install the CLI once with
+# `cargo install cargo-soothfast` (or `cargo install --path <soothfast>/cargo-soothfast`
+# while it is unpublished).
+SOOTHFAST ?= cargo soothfast
+BASE ?= origin/master
 
-baseline: ARGS ?= --save-baseline=base
-baseline: ## Run the regression gate in a Debian container; saves/updates baseline "base" (ARGS="--baseline=base" to compare without overwriting)
-	@echo "$(GREEN)Running regression gate...$(NC)"
-	$(DOCKER) run --rm --security-opt seccomp=unconfined \
-		-v "$(CURDIR)":/app -w /app \
-		-v fq-bench-cargo:/usr/local/cargo/registry \
-		-v fq-bench-cargobin:/usr/local/cargo/bin \
-		-v fq-bench-target:/app/target \
-		rust:bookworm bash -c 'apt-get update -qq && apt-get install -y -qq valgrind >/dev/null && \
-		(command -v iai-callgrind-runner || cargo install iai-callgrind-runner --version 0.16.1 --locked) && \
-		cargo bench --bench regression --features bench-gate -- $(ARGS)'
+# =============================================================================
+# soothfast: measured regression gate + living docs
+# =============================================================================
 
-docs: ## Build and serve documentation locally
+# dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo Finance
+# data (real prices/timestamps) — their output legitimately differs on every
+# run, so they're excluded from the captured-output freshness check below.
+CAPTURE_CHECK_PATHS := docs/library/backtesting.md docs/library/commodities.md \
+	docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
+	docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
+	docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
+	docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
+	docs/library/providers/coingecko.md docs/library/providers/edgar.md \
+	docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
+	docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
+	docs/library/streaming.md docs/library/translation.md README.md
+
+# Canned recipe (not a target itself) shared by `docs` and `soothfast` so
+# regenerating derived pages isn't its own .PHONY entry just to stay DRY
+# between the two. The two `coverage docs` calls from earlier revisions were
+# merged into one (it accepts --badge alongside its text output in a single
+# pass) since it documents the same crate rustdoc already extracted for the
+# reference/perf pages above — no need to pay for a third redundant pass.
+define REGEN_DOCS_ROUTES
+$(SOOTHFAST) docs routes -p finance-query-$(1) --target soothfast-routes --out docs/server
+$(SOOTHFAST) spec html -p finance-query-$(1) --target soothfast-routes --out docs/server/api
+endef
+
+define REGEN_DOCS_PAGES_LIB
+$(SOOTHFAST) docs reference -p finance-query --baseline base --features full --out docs/reference
+$(SOOTHFAST) report render -p finance-query --baseline base --features full --out docs/perf
+mv docs/perf/llms.txt docs/llms.txt
+cp docs/llms.txt llms.txt
+{ echo "# Coverage"; echo; \
+  echo "> Generated by \`cargo soothfast coverage docs\`."; echo; \
+  echo '```text'; \
+  $(SOOTHFAST) coverage docs -p finance-query --features full \
+    --badge docs/perf/badges/coverage.json --badge docs/perf/badges/coverage.svg; \
+  echo '```'; } > docs/coverage.md
+endef
+
+
+sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
+	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes
+	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes
+	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes
+
+# The reconciliation-status and spec-html pages are generated and gitignored,
+# so a fresh checkout has none — run this before `docs`.
+# PAGES lets CI regenerate each package's route pages in the job that already
+# built its soothfast-routes target, instead of rebuilding both here.
+PAGES ?= all
+
+docs-pages: ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
+ifneq ($(filter all server,$(PAGES)),)
+	$(call REGEN_DOCS_ROUTES,server)
+endif
+ifneq ($(filter all mcp,$(PAGES)),)
+	$(call REGEN_DOCS_ROUTES,mcp)
+endif
+ifneq ($(filter all lib,$(PAGES)),)
+	$(REGEN_DOCS_PAGES_LIB)
+endif
+
+docs: ## Serve the docs site locally with live reload (run `make docs-pages` first)
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
-	uv run mkdocs serve -a localhost:8080 --livereload
+	$(SOOTHFAST) docs serve --baseline base --addr localhost:8080
 
-clean: ## Clean build artifacts
-	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
-	$(CARGO) clean
-	rm -rf target/ site/
-
-publish-dry-run: ## Test publishing to crates.io (dry run)
-	@echo "$(GREEN)Testing crates.io publish (dry run)...$(NC)"
-	$(CARGO) publish -p finance-query-derive --dry-run
-	$(CARGO) publish -p finance-query --dry-run
+# Everything soothfast: the merge-base regression gate, living-docs checks,
+# proto reconciliation, derived-page regen, trend, changelog, and llms.txt
+# staleness (the same gates soothfast.yml/deploy.yml run, in one shot).
+# `**Measured:**` lines are excluded from the llms.txt diff: those numbers
+# are point-in-time and jitter between runs — regression detection is the
+# `gate` step below, not this. Every step stays inline rather than becoming
+# its own target; run one standalone with `cargo soothfast <cmd>` directly.
+soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
+	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
+	@echo "$(GREEN)Measuring baseline...$(NC)"
+	$(SOOTHFAST) measure -p finance-query --features bench-gate --save-baseline base
+	@echo "$(GREEN)Checking living docs (binds, claims, generated tests)...$(NC)"
+	$(SOOTHFAST) docs check -p finance-query --features full --baseline base docs/library README.md
+	@echo "$(GREEN)Verifying captured doc example output...$(NC)"
+	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
+	@echo "$(GREEN)Checking public API doc coverage...$(NC)"
+	$(SOOTHFAST) coverage docs -p finance-query --features full --min 95
+	@echo "$(GREEN)Reconciling pricing.proto against PricingData...$(NC)"
+	$(SOOTHFAST) spec check-proto -p finance-query --proto proto/pricing.proto \
+		--message PricingData --source src/streaming/pricing.rs --struct PricingData
+	@echo "$(GREEN)Checking generated openapi.yaml/asyncapi.yaml and SDK freshness...$(NC)"
+	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes --check
+	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes --check
+	@echo "$(GREEN)Checking generated mcp-tools.json freshness...$(NC)"
+	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --check
+	@echo "$(GREEN)Regenerating derived doc pages...$(NC)"
+	@$(MAKE) docs-pages
+	@echo "$(GREEN)Appending performance trend point...$(NC)"
+	$(SOOTHFAST) trend append -p finance-query --features bench-gate
+	$(SOOTHFAST) trend render -p finance-query
+	@echo "$(GREEN)Regenerating CHANGELOG.md...$(NC)"
+	@PREV=$$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD); \
+	$(SOOTHFAST) report changelog -p finance-query --baseline base --against-ref $$PREV --features full
+	@echo "$(GREEN)Checking llms.txt freshness...$(NC)"
+	@rm -rf target/llms-check && mkdir -p target/llms-check
+	$(SOOTHFAST) report render -p finance-query --baseline base --features full --out target/llms-check
+	@sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-check/committed.txt
+	@sed '/^\*\*Measured:\*\*/d' target/llms-check/llms.txt > target/llms-check/fresh.txt
+	@diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
+		(echo "error: llms.txt is stale — re-run 'make soothfast' and commit the result" >&2 && exit 1)
+	@rm -rf target/llms-check
+	@echo "llms.txt: up to date"
 
 # =============================================================================
 # Production Docker Compose
@@ -127,27 +194,10 @@ publish-dry-run: ## Test publishing to crates.io (dry run)
 # docker-compose.prod.yml is an overlay — both -f flags are required together.
 PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml
 
-prod: ## Start production stack
+prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.yml for down/logs/ps)
 	@echo "$(GREEN)Starting production stack...$(NC)"
-	$(PROD_COMPOSE) up -d
-	@echo "$(GREEN)✓ Running at http://localhost$(NC)"
-
-prod-build: ## Build and start production stack
-	@echo "$(GREEN)Building production stack...$(NC)"
 	$(PROD_COMPOSE) up -d --build
-
-prod-down: ## Stop production stack
-	$(PROD_COMPOSE) down
-
-prod-logs: ## View production logs (use SVC=name for specific service)
-	@if [ -n "$(SVC)" ]; then \
-		$(PROD_COMPOSE) logs -f $(SVC); \
-	else \
-		$(PROD_COMPOSE) logs -f; \
-	fi
-
-prod-status: ## Check production container status
-	$(PROD_COMPOSE) ps
+	@echo "$(GREEN)✓ Running at http://localhost$(NC)"
 
 # =============================================================================
 # Version bumping
@@ -173,7 +223,8 @@ endif
 	@# Update server AsyncAPI version
 	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/asyncapi.yaml
 	@echo "$(GREEN)Regenerating API docs HTML...$(NC)"
-	@$(MAKE) -s generate-api-html
+	@$(SOOTHFAST) spec html -p finance-query-server --target soothfast-routes --out docs/server/api
+	@$(SOOTHFAST) spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
 	@echo "$(GREEN)✓ Version bumped to $(VERSION)$(NC)"
 	@echo "$(YELLOW)Updated files:$(NC)"
 	@echo "  - Cargo.toml"
@@ -182,9 +233,9 @@ endif
 	@echo "  - finance-query-derive/Cargo.toml"
 	@echo "  - server/openapi.yaml"
 	@echo "  - server/asyncapi.yaml"
-	@echo "  - docs/server/openapi-html/index.html"
-	@echo "  - docs/server/asyncapi-html/index.html"
-	@echo "  - docs/server/mcp-html/index.html"
+	@echo "  - docs/server/api/openapi.md"
+	@echo "  - docs/server/api/asyncapi.md"
+	@echo "  - docs/server/api/mcp-tools.md"
 	@echo "$(YELLOW)Remember to also hand-edit:$(NC)"
 	@echo "  - CHANGELOG.md (library)"
 	@echo "  - server/CHANGELOG.md"
@@ -199,59 +250,3 @@ endif
 	@echo "$(GREEN)✓ CLI version bumped to $(VERSION)$(NC)"
 	@echo "$(YELLOW)Updated files:$(NC)"
 	@echo "  - finance-query-cli/Cargo.toml"
-
-
-generate-api-html: ## Regenerate OpenAPI and AsyncAPI HTML docs from server specs
-	@echo "$(GREEN)Generating OpenAPI HTML...$(NC)"
-	@python3 -c '\
-import yaml, json; \
-spec = json.dumps(yaml.safe_load(open("server/openapi.yaml")), indent=2); \
-html = """<!DOCTYPE html>\n\
-<html lang="en">\n\
-<head>\n\
-  <meta charset="UTF-8">\n\
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n\
-  <title>Finance Query API</title>\n\
-  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">\n\
-  <style>\n\
-    html { box-sizing: border-box; overflow-y: scroll; }\n\
-    *, *:before, *:after { box-sizing: inherit; }\n\
-    body { margin: 0; background: #fafafa; }\n\
-    .swagger-ui .topbar { display: none; }\n\
-  </style>\n\
-</head>\n\
-<body>\n\
-  <div id="swagger-ui"></div>\n\
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>\n\
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>\n\
-  <script>\n\
-    window.onload = function() {\n\
-      window.ui = SwaggerUIBundle({\n\
-        spec: """ + spec + """,\n\
-        dom_id: "#swagger-ui",\n\
-        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],\n\
-        layout: "StandaloneLayout"\n\
-      });\n\
-    };\n\
-  </script>\n\
-</body>\n\
-</html>"""; \
-open("docs/server/openapi-html/index.html", "w").write(html)'
-	@echo "$(GREEN)Generating AsyncAPI HTML...$(NC)"
-	@npx -y @asyncapi/generator@2 server/asyncapi.yaml @asyncapi/html-template -o docs/server/asyncapi-html -p singleFile=true --force-write
-	@echo "$(GREEN)Generating MCP tools HTML...$(NC)"
-	@$(MAKE) -s generate-mcp-html
-
-generate-mcp-html: ## Generate MCP tools reference HTML from live server
-	@$(CARGO) build -p finance-query-mcp --quiet
-	@mkdir -p docs/server/mcp-html; \
-	MCP_TRANSPORT=http MCP_ADDR=127.0.0.1:13337 target/debug/fq-mcp 2>/dev/null & \
-	MCP_PID=$$!; \
-	for i in $$(seq 1 15); do sleep 1; curl -sf http://127.0.0.1:13337/health >/dev/null 2>&1 && break; done; \
-	curl -s -X POST http://127.0.0.1:13337/ \
-	    -H 'Content-Type: application/json' \
-	    -H 'Accept: application/json, text/event-stream' \
-	    -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' \
-	| python3 docs/server/generate-mcp-html.py > docs/server/mcp-html/index.html; \
-	STATUS=$$?; kill $$MCP_PID 2>/dev/null; exit $$STATUS
-	@echo "$(GREEN)✓ MCP tools HTML written to docs/server/mcp-html/index.html$(NC)"

@@ -48,7 +48,7 @@ type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
 /// Allows multiple [`Ticker`] and [`Tickers`](crate::Tickers) instances to share
 /// one authenticated session, avoiding redundant auth handshakes.
 ///
-/// Obtain via [`Ticker::client_handle`] or [`Tickers::client_handle`], then
+/// Obtain via [`Ticker::client_handle`] or [`Tickers::client_handle`](crate::Tickers::client_handle), then
 /// pass to other builders via `.client(handle)`.
 ///
 /// # Example
@@ -123,7 +123,10 @@ impl TickerBuilder {
         self
     }
     /// Pre-inject a shared provider set (used by [`Providers::stock`](crate::Providers::stock)).
-    pub(crate) fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
+    ///
+    /// Not part of the stable public API — see [`ProviderAdapter`](crate::ProviderAdapter).
+    #[doc(hidden)]
+    pub fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
         self.injected_providers = Some(set);
         self
     }

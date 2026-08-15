@@ -9,76 +9,20 @@ use finance_query_server::graphql::{
     self,
     fields::{GQL_SCREENER_RESULTS_VALID_FIELDS, SCREENER_RESULTS_COMPOSITE_FIELDS, unwrap_field},
 };
-use serde::Deserialize;
+use finance_query_server::params::{CustomScreenerRequest, ScreenersQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 use super::support::parse_format;
 
-fn default_screeners_count() -> u32 {
-    std::env::var("SCREENERS_COUNT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(25)
-}
-
-// Delegates to the shared `parse_format` (same `fmt`/`full` aliases every other
-// endpoint accepts) instead of re-matching the raw string.
-fn format_to_gql(format: Option<&str>) -> &'static str {
+// Delegates to the shared `parse_format` so an omitted `format` resolves to the
+// same default every other endpoint uses.
+fn format_to_gql(format: Option<ValueFormat>) -> &'static str {
     match parse_format(format) {
         ValueFormat::Raw => "RAW",
         ValueFormat::Pretty => "PRETTY",
         ValueFormat::Both => "BOTH",
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ScreenersQuery {
-    #[serde(default = "default_screeners_count")]
-    count: u32,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// Request body for custom screener endpoint
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct CustomScreenerRequest {
-    /// Number of results (default: 25, max: 250)
-    #[serde(default = "default_screeners_count")]
-    size: u32,
-    /// Pagination offset (default: 0)
-    #[serde(default)]
-    offset: u32,
-    /// Sort direction: "ASC" or "DESC" (default: DESC)
-    #[serde(default)]
-    sort_type: Option<String>,
-    /// Field to sort by (default: intradaymarketcap)
-    sort_field: Option<String>,
-    /// Quote type: EQUITY, ETF, MUTUALFUND, etc. (default: EQUITY)
-    quote_type: Option<String>,
-    /// Filter conditions
-    #[serde(default)]
-    filters: Vec<FilterCondition>,
-    /// Value format: raw, pretty, or both (default: raw)
-    format: Option<String>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-}
-
-/// A single filter condition
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FilterCondition {
-    /// Field name (e.g., "region", "avgdailyvol3m", "intradaymarketcap")
-    field: String,
-    /// Operator: eq, gt, gte, lt, lte, btwn
-    operator: String,
-    /// Value(s) for the condition
-    value: serde_json::Value,
 }
 
 /// GET /v2/screeners/{screener}
@@ -94,21 +38,11 @@ pub(crate) struct FilterCondition {
 /// Query: `count` (u32, default 25, max 250), `format` (raw|pretty|both), `fields` (comma-separated)
 pub(crate) async fn get_screeners(
     Extension(schema): Extension<graphql::FinanceSchema>,
-    Path(screener): Path<String>,
+    Path(screener): Path<Screener>,
     Query(params): Query<ScreenersQuery>,
 ) -> impl IntoResponse {
-    let st = match screener.parse::<Screener>() {
-        Ok(t) => t,
-        Err(_) => {
-            let error = serde_json::json!({
-                "error": format!("Invalid screener: '{}'. Valid types: {}", screener, Screener::valid_types()),
-                "status": 400
-            });
-            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
-        }
-    };
-    let gql_type = st.as_scr_id().to_uppercase();
-    let gql_format = format_to_gql(params.format.as_deref());
+    let gql_type = screener.as_scr_id().to_uppercase();
+    let gql_format = format_to_gql(params.format);
     let selection = build_rest_composite_selection(
         params.fields.as_deref(),
         GQL_SCREENER_RESULTS_VALID_FIELDS,
@@ -121,7 +55,7 @@ pub(crate) async fn get_screeners(
     );
 
     info!(
-        "Fetching {} screener (count={}, format={:?}, fields={:?})",
+        "Fetching {:?} screener (count={}, format={:?}, fields={:?})",
         screener, params.count, params.format, params.fields
     );
 
@@ -156,12 +90,8 @@ pub(crate) async fn post_custom_screener(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Json(body): Json<CustomScreenerRequest>,
 ) -> impl IntoResponse {
-    let sort_ascending = body
-        .sort_type
-        .as_deref()
-        .map(|s| s.to_lowercase() == "asc")
-        .unwrap_or(false);
-    let gql_format = format_to_gql(body.format.as_deref());
+    let sort_ascending = body.sort_type == Some(finance_query::SortType::Asc);
+    let gql_format = format_to_gql(body.format);
     let selection = build_rest_composite_selection(
         body.fields.as_deref(),
         GQL_SCREENER_RESULTS_VALID_FIELDS,

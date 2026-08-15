@@ -16,7 +16,8 @@ use super::Condition;
 /// bar's open** (identical to all strategy-signal exits).
 ///
 /// For intrabar detection (fill same bar at `min(open, stop_level)`), use
-/// [`BacktestConfig::stop_loss_pct`] instead. A −10% intraday move that closes
+/// [`BacktestConfig::stop_loss_pct`](crate::backtesting::BacktestConfig::stop_loss_pct)
+/// instead. A −10% intraday move that closes
 /// at −3% will be caught by the config field but missed by this condition.
 ///
 /// # Example
@@ -85,7 +86,7 @@ pub fn stop_loss(pct: f64) -> StopLoss {
 /// bar's open** (identical to all strategy-signal exits).
 ///
 /// For intrabar detection (fill same bar at `max(open, target_level)`), use
-/// [`BacktestConfig::take_profit_pct`] instead.
+/// [`BacktestConfig::take_profit_pct`](crate::backtesting::BacktestConfig::take_profit_pct) instead.
 ///
 /// # Example
 ///
@@ -377,7 +378,7 @@ fn position_extremes(
 /// trigger test uses the **bar close**. The exit signal is deferred to the
 /// **next bar's open** (identical to all strategy-signal exits).
 ///
-/// For intrabar enforcement, use [`BacktestConfig::trailing_stop_pct`] instead,
+/// For intrabar enforcement, use [`BacktestConfig::trailing_stop_pct`](crate::backtesting::BacktestConfig::trailing_stop_pct) instead,
 /// which fills on the same bar when the trailing level is breached intraday.
 ///
 /// # Example

@@ -90,10 +90,10 @@ const MIN_OBSERVATIONS_FOR_PARALLEL: usize = 120;
 /// Sequential model-based (Bayesian) parameter optimiser.
 ///
 /// Finds near-optimal strategy parameters in a fraction of the evaluations
-/// required by exhaustive [`GridSearch`], making it practical for
+/// required by exhaustive [`GridSearch`](super::grid::GridSearch), making it practical for
 /// high-dimensional spaces or continuous float ranges.
 ///
-/// Returns the same [`OptimizationReport`] as [`GridSearch`], so the two are
+/// Returns the same [`OptimizationReport`] as [`GridSearch`](super::grid::GridSearch), so the two are
 /// drop-in interchangeable and both work with [`WalkForwardConfig`].
 ///
 /// # Overfitting Warning

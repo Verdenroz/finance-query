@@ -1,3 +1,4 @@
+use finance_query::{Interval, TimeRange};
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -30,13 +31,13 @@ fn benchmark_query_parts(benchmark: Option<&str>) -> (bool, &'static str, &'stat
 pub async fn get_risk(
     schema: &FinanceSchema,
     symbol: String,
-    interval: Option<String>,
-    range: Option<String>,
+    interval: Option<Interval>,
+    range: Option<TimeRange>,
     benchmark: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
-    let gql_range = range_to_gql(range.as_deref().unwrap_or("1y"));
+    let gql_interval = interval_to_gql(interval.unwrap_or(Interval::OneDay));
+    let gql_range = range_to_gql(range.unwrap_or(TimeRange::OneYear));
     let (_, bench_arg, benchmark_decl) = benchmark_query_parts(benchmark.as_deref());
 
     let field_list = parse_fields(fields);

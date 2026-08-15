@@ -18,41 +18,67 @@ The `fred` module provides two macro-economic data sources:
 
 Get a free API key at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html), then call `fred::init` once at application startup:
 
-```rust
+```rust no_run feature=fred
 use finance_query::fred;
-
-// Initialize with API key
-fred::init("your-fred-api-key")?;
-
-// Optional: initialize with a custom timeout
 use std::time::Duration;
-fred::init_with_timeout("your-fred-api-key", Duration::from_secs(60))?;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize with API key
+    fred::init("your-fred-api-key")?;
+
+    // Or, instead: initialize with a custom timeout (pick exactly one)
+    fred::init_with_timeout("your-fred-api-key", Duration::from_secs(60))?;
+    Ok(())
+}
 ```
 
 !!! warning
     Calling `init` more than once returns an error. Call it exactly once per process, typically at startup.
 
-## Fetching FRED Series
+The client is a process-wide singleton, so the second call always fails. This example runs as a real test:
 
-```rust
+```rust capture-output feature=fred
 use finance_query::fred;
 
-fred::init("your-fred-api-key")?;
+let _ = fred::init("api-key");
+let second_init = fred::init("another-api-key");
+assert!(second_init.is_err());
+println!("second init is_err = {}", second_init.is_err());
+```
 
-// Fetch all observations for a series
-let cpi = fred::series("CPIAUCSL").await?;
+```text soothfast-output
+second init is_err = true
+```
 
-println!("Series: {}", cpi.id);
-println!("Observations: {}", cpi.observations.len());
+## Fetching FRED Series
 
-// Print the last 5 observations
-for obs in cpi.observations.iter().rev().take(5) {
-    match obs.value {
-        Some(v) => println!("{}: {:.2}", obs.date, v),
-        None    => println!("{}: N/A", obs.date),
+```rust no_run feature=fred covers=finance_query::models::economic::MacroSeries
+use finance_query::fred;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    fred::init("your-fred-api-key")?;
+
+    // Fetch all observations for a series
+    let cpi = fred::series("CPIAUCSL").await?;
+
+    println!("Series: {}", cpi.id);
+    println!("Observations: {}", cpi.observations.len());
+
+    // Print the last 5 observations
+    for obs in cpi.observations.iter().rev().take(5) {
+        match obs.value {
+            Some(v) => println!("{}: {:.2}", obs.date, v),
+            None    => println!("{}: N/A", obs.date),
+        }
     }
+    Ok(())
 }
 ```
+
+<!-- soothfast:claim finance_query::de_fred_series.walltime.median_ns < 300000 -->
+- Parsing a full FRED series response (decades of observations) into
+  `MacroSeries` takes **under 300 µs**.
 
 **Common FRED Series IDs:**
 
@@ -72,15 +98,23 @@ for obs in cpi.observations.iter().rev().take(5) {
 | `"PAYEMS"` | Total Nonfarm Payrolls |
 | `"PCE"` | Personal Consumption Expenditures |
 
+<!-- soothfast:bind finance_query::models::economic::MacroSeries -->
+
 **`MacroSeries` fields:**
 
 - `id: String` — the FRED series ID
 - `observations: Vec<MacroObservation>` — chronologically ordered data points
 
+<!-- /soothfast:bind -->
+
+<!-- soothfast:bind finance_query::models::economic::MacroObservation -->
+
 **`MacroObservation` fields:**
 
 - `date: String` — date as `YYYY-MM-DD`
 - `value: Option<f64>` — `None` when FRED reports a missing value
+
+<!-- /soothfast:bind -->
 
 **Rate limit:** 2 requests/second (enforced automatically).
 
@@ -130,21 +164,27 @@ per date.
 
 No initialization required. Fetches directly from the US Treasury Department:
 
-```rust
+```rust no_run feature=fred covers=finance_query::models::economic::TreasuryYield
 use finance_query::fred;
 
-// Fetch the full yield curve for a given year
-let yields = fred::treasury_yields(2025).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Fetch the full yield curve for a given year
+    let yields = fred::treasury_yields(2025).await?;
 
-// Print the most recent day
-if let Some(latest) = yields.last() {
-    println!("Date: {}", latest.date);
-    println!("2Y:  {:?}%", latest.y2);
-    println!("5Y:  {:?}%", latest.y5);
-    println!("10Y: {:?}%", latest.y10);
-    println!("30Y: {:?}%", latest.y30);
+    // Print the most recent day
+    if let Some(latest) = yields.last() {
+        println!("Date: {}", latest.date);
+        println!("2Y:  {:?}%", latest.y2);
+        println!("5Y:  {:?}%", latest.y5);
+        println!("10Y: {:?}%", latest.y10);
+        println!("30Y: {:?}%", latest.y30);
+    }
+    Ok(())
 }
 ```
+
+<!-- soothfast:bind finance_query::models::economic::TreasuryYield -->
 
 **`TreasuryYield` fields** (all yields are `Option<f64>` in %):
 
@@ -166,21 +206,31 @@ if let Some(latest) = yields.last() {
 
 Dates are formatted as `MM/DD/YYYY` (the Treasury's native format). Fields are `None` on days when that maturity is not published.
 
+<!-- /soothfast:bind -->
+
 ## Example: Yield Curve Inversion Check
 
-```rust
+```rust no_run feature=fred covers=finance_query::de_treasury_yields
 use finance_query::fred;
 
-let yields = fred::treasury_yields(2025).await?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let yields = fred::treasury_yields(2025).await?;
 
-for y in yields.iter().rev().take(5) {
-    if let (Some(y2), Some(y10)) = (y.y2, y.y10) {
-        let spread = y10 - y2;
-        let label = if spread < 0.0 { "INVERTED" } else { "normal" };
-        println!("{}: 10Y-2Y spread = {:.2}bps ({})", y.date, spread * 100.0, label);
+    for y in yields.iter().rev().take(5) {
+        if let (Some(y2), Some(y10)) = (y.y2, y.y10) {
+            let spread = y10 - y2;
+            let label = if spread < 0.0 { "INVERTED" } else { "normal" };
+            println!("{}: 10Y-2Y spread = {:.2}bps ({})", y.date, spread * 100.0, label);
+        }
     }
+    Ok(())
 }
 ```
+
+<!-- soothfast:claim finance_query::de_treasury_yields.walltime.median_ns < 200000 -->
+- Parsing a daily Treasury yield-curve payload (`fred::treasury_yields`)
+  takes **under 200 µs**.
 
 ## Next Steps
 

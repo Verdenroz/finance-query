@@ -14,37 +14,10 @@ use finance_query_server::graphql::{
         build_connection_selection, build_paginated_composite_selection, unwrap_nested_connection,
     },
 };
-use serde::Deserialize;
+use finance_query_server::params::{FredSeriesQuery, TreasuryYieldsQuery};
 use tracing::info;
 
 use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connection};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FredSeriesQuery {
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max observations per page; omitted (with cursor also omitted) = every
-    /// matching observation as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
-
-/// Query parameters for /v2/fred/treasury-yields
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct TreasuryYieldsQuery {
-    /// Calendar year (default: current year)
-    year: Option<u32>,
-    /// Comma-separated list of fields to include in response
-    fields: Option<String>,
-    /// Max rows per page; omitted (with cursor also omitted) = every matching
-    /// row as a bare array, unchanged from pre-pagination behavior
-    limit: Option<u32>,
-    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
-    cursor: Option<String>,
-}
 
 /// GET /v2/fred/series/{id}
 ///

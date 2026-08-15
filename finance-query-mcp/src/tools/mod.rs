@@ -19,7 +19,12 @@ pub mod search;
 pub mod transcripts;
 
 use crate::metrics::ToolCallTimer;
+use finance_query::{
+    Frequency, IndicesRegion, Industry, Interval, LookupType, Region, Screener, Sector,
+    StatementType, TimeRange,
+};
 use finance_query_server::graphql::FinanceSchema;
+use finance_query_server::params::{AnalysisType, HolderType};
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::tool::{ToolCallContext, ToolRouter},
@@ -83,7 +88,8 @@ pub struct CalendarParams {
     /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,TSLA")
     pub symbols: String,
     /// Forward time window: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
 }
@@ -93,9 +99,11 @@ pub struct ChartParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOG")
     pub symbols: String,
     /// Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)
-    pub interval: Option<String>,
+    #[schemars(with = "String")]
+    pub interval: Option<Interval>,
     /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo). Ignored when `start` is set.
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Start date as Unix timestamp (seconds). When provided, overrides `range`.
     pub start: Option<i64>,
     /// End date as Unix timestamp (seconds). Defaults to now when `start` is set.
@@ -113,9 +121,11 @@ pub struct FinancialsParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOGL")
     pub symbols: String,
     /// Statement type: income | balance | cashflow
-    pub statement: String,
+    #[schemars(with = "String")]
+    pub statement: StatementType,
     /// Reporting frequency: annual | quarterly (default: annual)
-    pub frequency: Option<String>,
+    #[schemars(with = "String")]
+    pub frequency: Option<Frequency>,
     /// Comma-separated list of line-item metrics to filter to; omitted = all reported metrics
     pub metrics: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -127,9 +137,11 @@ pub struct IndicatorsParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOG")
     pub symbols: String,
     /// Candle interval: 1d|1wk|1mo (default: 1d)
-    pub interval: Option<String>,
+    #[schemars(with = "String")]
+    pub interval: Option<Interval>,
     /// Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
     /// Maximum symbols per page (only applies when multiple symbols given); omitted = curated default (25)
@@ -159,7 +171,8 @@ pub struct ScreenerParams {
     /// small-cap-gainers | most-shorted-stocks | high-yield-bond | top-mutual-funds |
     /// conservative-foreign-funds | portfolio-anchors | solid-large-growth-funds |
     /// solid-midcap-growth-funds
-    pub screener_type: String,
+    #[schemars(with = "String")]
+    pub screener_type: Screener,
     /// Number of results to return (default: 25, max: 250)
     pub count: Option<u32>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -183,7 +196,8 @@ pub struct NewsParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct MarketSummaryParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
-    pub region: Option<String>,
+    #[schemars(with = "String")]
+    pub region: Option<Region>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -201,7 +215,8 @@ pub struct DividendsParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,KO,JNJ")
     pub symbols: String,
     /// Time range: 1y|2y|5y|10y|max (default: max)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
     /// Maximum dividend payments per page; omitted = curated default (25)
@@ -215,9 +230,11 @@ pub struct RiskParams {
     /// Stock ticker symbol
     pub symbol: String,
     /// Candle interval: 1d|1wk (default: 1d)
-    pub interval: Option<String>,
+    #[schemars(with = "String")]
+    pub interval: Option<Interval>,
     /// Time range: 1y|2y|5y (default: 1y)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Benchmark symbol for beta calculation (e.g., "SPY")
     pub benchmark: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -267,7 +284,8 @@ pub struct SplitsParams {
     /// Stock ticker symbol
     pub symbol: String,
     /// Time range: 1y|2y|5y|10y|max (default: max)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
 }
@@ -275,7 +293,8 @@ pub struct SplitsParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct TrendingParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
-    pub region: Option<String>,
+    #[schemars(with = "String")]
+    pub region: Option<Region>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
 }
@@ -283,7 +302,8 @@ pub struct TrendingParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct IndicesParams {
     /// Region: americas|europe|asia-pacific|middle-east-africa|currencies (default: all)
-    pub region: Option<String>,
+    #[schemars(with = "String")]
+    pub region: Option<IndicesRegion>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
 }
@@ -291,7 +311,8 @@ pub struct IndicesParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct MarketHoursParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
-    pub region: Option<String>,
+    #[schemars(with = "String")]
+    pub region: Option<Region>,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
 }
@@ -300,7 +321,8 @@ pub struct MarketHoursParams {
 pub struct SectorParams {
     /// Sector slug: technology|financial-services|consumer-cyclical|communication-services|
     /// healthcare|industrials|consumer-defensive|energy|basic-materials|real-estate|utilities
-    pub sector: String,
+    #[schemars(with = "String")]
+    pub sector: Sector,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -310,7 +332,8 @@ pub struct SectorParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct IndustryParams {
     /// Industry slug (e.g., semiconductors, biotechnology, banks-diversified)
-    pub industry: String,
+    #[schemars(with = "String")]
+    pub industry: Industry,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -322,7 +345,8 @@ pub struct HoldersParams {
     /// Stock ticker symbol
     pub symbol: String,
     /// Holder type: major | institutional | mutualfund | insider-transactions | insider-purchases | insider-roster
-    pub holder_type: String,
+    #[schemars(with = "String")]
+    pub holder_type: HolderType,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
     /// Maximum entries per page for holder types with a list (institutional,
@@ -338,7 +362,8 @@ pub struct AnalysisParams {
     /// Stock ticker symbol
     pub symbol: String,
     /// Analysis type: recommendations | upgrades-downgrades | earnings-estimate | earnings-history
-    pub analysis_type: String,
+    #[schemars(with = "String")]
+    pub analysis_type: AnalysisType,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
 }
@@ -405,7 +430,8 @@ pub struct LookupParams {
     /// Search query (company name or ticker symbol)
     pub query: String,
     /// Filter by type: equity|etf|mutualfund|index|future|currency|cryptocurrency (default: all)
-    pub query_type: Option<String>,
+    #[schemars(with = "String")]
+    pub query_type: Option<LookupType>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
@@ -419,9 +445,11 @@ pub struct BatchSymbolsParams {
     /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")
     pub symbols: String,
     /// Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)
-    pub interval: Option<String>,
+    #[schemars(with = "String")]
+    pub interval: Option<Interval>,
     /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
-    pub range: Option<String>,
+    #[schemars(with = "String")]
+    pub range: Option<TimeRange>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
 }
@@ -997,7 +1025,7 @@ mod param_tests {
     fn financials_params_defaults_optionals_to_none() {
         let p: FinancialsParams =
             serde_json::from_value(json!({"symbols": "AAPL", "statement": "income"})).unwrap();
-        assert_eq!(p.statement, "income");
+        assert_eq!(p.statement, StatementType::Income);
         assert_eq!(p.frequency, None);
         assert_eq!(p.metrics, None);
         assert_eq!(p.fields, None);
@@ -1011,7 +1039,7 @@ mod param_tests {
         }))
         .unwrap();
         assert_eq!(p.metrics, Some("totalRevenue,netIncome".to_string()));
-        assert_eq!(p.frequency, Some("quarterly".to_string()));
+        assert_eq!(p.frequency, Some(Frequency::Quarterly));
     }
 
     #[test]
@@ -1048,7 +1076,7 @@ mod param_tests {
     fn screener_params_defaults_optionals_to_none() {
         let p: ScreenerParams =
             serde_json::from_value(json!({"screener_type": "day-gainers"})).unwrap();
-        assert_eq!(p.screener_type, "day-gainers");
+        assert_eq!(p.screener_type, Screener::DayGainers);
         assert_eq!(p.count, None);
         assert_eq!(p.fields, None);
     }
