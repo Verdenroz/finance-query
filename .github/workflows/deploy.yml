@@ -79,6 +79,10 @@ jobs:
   deploy-docs:
     name: Deploy docs site to GitHub Pages
     runs-on: ubuntu-latest
+    # Parallel runs from rapid merges each branch trend.jsonl off their own
+    # checkout; the second trend PR then conflicts on master and hangs
+    concurrency:
+      group: deploy-docs
     permissions: {} # all repo access comes from the minted App token below
 
     steps:
@@ -184,7 +188,10 @@ jobs:
 
       - name: Append performance trend point
         if: steps.bench_changes.outputs.changed == 'true'
-        run: cargo soothfast trend append -p finance-query --from-baseline base
+        run: |
+          git fetch origin master
+          git checkout origin/master -- .soothfast/trend.jsonl
+          cargo soothfast trend append -p finance-query --from-baseline base
 
       # Direct pushes to master are blocked by the branch ruleset, so the bot
       # opens a PR and squash-merges it itself instead.
