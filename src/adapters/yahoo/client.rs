@@ -454,26 +454,8 @@ impl YahooClient {
             .collect();
 
         let chart_meta = crate::models::chart::ChartMeta {
-            currency: meta.currency.clone(),
-            symbol: meta.symbol.clone(),
-            exchange_name: meta.exchange_name.clone(),
-            full_exchange_name: meta.full_exchange_name.clone(),
-            instrument_type: meta.instrument_type.clone(),
-            first_trade_date: meta.first_trade_date,
-            regular_market_time: meta.regular_market_time,
-            gmt_offset: meta.gmt_offset,
-            timezone: meta.timezone.clone(),
-            exchange_timezone_name: meta.exchange_timezone_name.clone(),
-            regular_market_price: meta.regular_market_price,
-            fifty_two_week_high: meta.fifty_two_week_high,
-            fifty_two_week_low: meta.fifty_two_week_low,
-            regular_market_day_high: meta.regular_market_day_high,
-            regular_market_day_low: meta.regular_market_day_low,
-            regular_market_volume: meta.regular_market_volume,
-            chart_previous_close: meta.chart_previous_close,
-            data_granularity: meta.data_granularity.clone(),
             provider_id: Some(crate::Provider::Yahoo),
-            ..Default::default()
+            ..meta.clone()
         };
 
         Ok(crate::models::chart::Chart {
@@ -553,26 +535,8 @@ impl YahooClient {
             .collect();
 
         let chart_meta = crate::models::chart::ChartMeta {
-            currency: meta.currency.clone(),
-            symbol: meta.symbol.clone(),
-            exchange_name: meta.exchange_name.clone(),
-            full_exchange_name: meta.full_exchange_name.clone(),
-            instrument_type: meta.instrument_type.clone(),
-            first_trade_date: meta.first_trade_date,
-            regular_market_time: meta.regular_market_time,
-            gmt_offset: meta.gmt_offset,
-            timezone: meta.timezone.clone(),
-            exchange_timezone_name: meta.exchange_timezone_name.clone(),
-            regular_market_price: meta.regular_market_price,
-            fifty_two_week_high: meta.fifty_two_week_high,
-            fifty_two_week_low: meta.fifty_two_week_low,
-            regular_market_day_high: meta.regular_market_day_high,
-            regular_market_day_low: meta.regular_market_day_low,
-            regular_market_volume: meta.regular_market_volume,
-            chart_previous_close: meta.chart_previous_close,
-            data_granularity: meta.data_granularity.clone(),
             provider_id: Some(crate::Provider::Yahoo),
-            ..Default::default()
+            ..meta.clone()
         };
 
         Ok(crate::models::chart::Chart {
@@ -829,14 +793,14 @@ impl YahooClient {
                             currency: c["currency"].as_str().map(String::from),
                             last_price: c["lastPrice"].as_f64(),
                             change: c["change"].as_f64(),
-                            percent_change: None,
+                            percent_change: c["percentChange"].as_f64(),
                             volume: c["volume"].as_u64().map(|v| v as i64),
                             open_interest: c["openInterest"].as_u64().map(|v| v as i64),
                             bid: c["bid"].as_f64(),
                             ask: c["ask"].as_f64(),
-                            contract_size: None,
+                            contract_size: c["contractSize"].as_str().map(String::from),
                             expiration: Some(c["expiration"].as_i64().unwrap_or(0)),
-                            last_trade_date: None,
+                            last_trade_date: c["lastTradeDate"].as_i64(),
                             implied_volatility: c["impliedVolatility"].as_f64(),
                             in_the_money: c["inTheMoney"].as_bool(),
                         })
