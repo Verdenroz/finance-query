@@ -15,6 +15,10 @@ env:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   # Decide which downstream jobs this change set actually needs, so
   # docs-only / single-crate PRs don't pay for work that can't have broken.
@@ -289,7 +293,7 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [changes, fmt, clippy]
+    needs: changes
     if: needs.changes.outputs.server_docker == 'true'
     permissions:
       contents: read
@@ -343,7 +347,7 @@ jobs:
   docker-mcp:
     name: MCP Docker Build
     runs-on: ubuntu-latest
-    needs: [changes, fmt, clippy]
+    needs: changes
     if: needs.changes.outputs.mcp_docker == 'true'
     permissions:
       contents: read
@@ -414,38 +418,39 @@ jobs:
         with:
           workspaces: fuzz -> target
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz
+      - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
+        with:
+          tool: cargo-fuzz
       - name: Build fuzz targets
         run: cargo fuzz build --dev
         working-directory: fuzz
       - name: Run fuzz_quote (30 s)
-        run: cargo fuzz run fuzz_quote -- -max_total_time=30
+        run: cargo fuzz run fuzz_quote --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_chart (30 s)
-        run: cargo fuzz run fuzz_chart -- -max_total_time=30
+        run: cargo fuzz run fuzz_chart --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_atr (30 s)
-        run: cargo fuzz run fuzz_atr -- -max_total_time=30
+        run: cargo fuzz run fuzz_atr --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_indicators_series (30 s)
-        run: cargo fuzz run fuzz_indicators_series -- -max_total_time=30
+        run: cargo fuzz run fuzz_indicators_series --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_indicators_ohlcv (30 s)
-        run: cargo fuzz run fuzz_indicators_ohlcv -- -max_total_time=30
+        run: cargo fuzz run fuzz_indicators_ohlcv --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_patterns (30 s)
-        run: cargo fuzz run fuzz_patterns -- -max_total_time=30
+        run: cargo fuzz run fuzz_patterns --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_options (30 s)
-        run: cargo fuzz run fuzz_options -- -max_total_time=30
+        run: cargo fuzz run fuzz_options --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_financials (30 s)
-        run: cargo fuzz run fuzz_financials -- -max_total_time=30
+        run: cargo fuzz run fuzz_financials --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_edgar (30 s)
-        run: cargo fuzz run fuzz_edgar -- -max_total_time=30
+        run: cargo fuzz run fuzz_edgar --dev -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_discovery (30 s)
-        run: cargo fuzz run fuzz_discovery -- -max_total_time=30
+        run: cargo fuzz run fuzz_discovery --dev -- -max_total_time=30
         working-directory: fuzz

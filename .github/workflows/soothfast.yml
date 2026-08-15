@@ -19,8 +19,7 @@ env:
   CARGO_PROFILE_TEST_DEBUG: "0"
 
 concurrency:
-  # Scoped to the commit, not just the PR
-  group: soothfast-${{ github.event.pull_request.number }}-${{ github.sha }}
+  group: soothfast-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
