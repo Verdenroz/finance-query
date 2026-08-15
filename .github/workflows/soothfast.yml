@@ -2,28 +2,10 @@ name: Soothfast
 
 # Perf gate + living docs, spec reconciliation, and site build
 
+# No paths filter: skipped jobs satisfy required checks, but a workflow
+# that never triggers blocks the merge.
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "proto/**"
-      - "benches/**"
-      - "docs/**"
-      - "README.md"
-      - "soothfast.lock"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/soothfast.yml"
-      - "server/src/**"
-      - "server/benches/**"
-      - "server/openapi.yaml"
-      - "server/asyncapi.yaml"
-      - "server/schema.graphql"
-      - "server/soothfast.toml"
-      - "sdks/**"
-      - "finance-query-mcp/src/**"
-      - "finance-query-mcp/benches/**"
-      - "finance-query-mcp/mcp-tools.json"
 
 permissions:
   contents: read
@@ -38,9 +20,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Soothfast Changes
+    if: "!endsWith(github.actor, '[bot]')"
+    runs-on: ubuntu-latest
+    outputs:
+      soothfast: ${{ steps.filter.outputs.soothfast }}
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            soothfast:
+              - 'src/**'
+              - 'proto/**'
+              - 'benches/**'
+              - 'docs/**'
+              - 'README.md'
+              - 'soothfast.lock'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/soothfast.yml'
+              - 'server/src/**'
+              - 'server/benches/**'
+              - 'server/openapi.yaml'
+              - 'server/asyncapi.yaml'
+              - 'server/schema.graphql'
+              - 'server/soothfast.toml'
+              - 'sdks/**'
+              - 'finance-query-mcp/src/**'
+              - 'finance-query-mcp/benches/**'
+              - 'finance-query-mcp/mcp-tools.json'
+
   gate:
     name: Gate
-    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
+    needs: changes
+    if: needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -109,6 +130,8 @@ jobs:
 
   baseline:
     name: Baseline
+    needs: changes
+    if: needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -217,6 +240,8 @@ jobs:
 
   spec-server:
     name: Spec & SDK (server)
+    needs: changes
+    if: needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -275,6 +300,8 @@ jobs:
 
   spec-mcp:
     name: Spec (MCP)
+    needs: changes
+    if: needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -318,6 +345,8 @@ jobs:
 
   proto-check:
     name: Proto reconciliation
+    needs: changes
+    if: needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
