@@ -118,6 +118,8 @@ pub const GQL_QUOTE_VALID_FIELDS: &[&str] = &[
     // 52-week range & moving averages
     "fiftyTwoWeekHigh",
     "fiftyTwoWeekLow",
+    "week52Change",
+    "sandP52WeekChange",
     "fiftyDayAverage",
     "twoHundredDayAverage",
     // Dividends
@@ -408,6 +410,7 @@ pub const GQL_MARKET_SUMMARY_VALID_FIELDS: &[&str] = &[
     "regularMarketChangePercent",
     "regularMarketPreviousClose",
     "regularMarketTime",
+    "spark",
 ];
 
 /// Valid fields for `GqlFearAndGreed`.
@@ -707,6 +710,11 @@ pub const GQL_INDICATORS_VALID_FIELDS: &[&str] = &[
     "accumulationDistribution",
     "vwap",
     "balanceOfPower",
+    "pivotPoints",
+    "fibonacciPivotPoints",
+    "heikinAshi",
+    "zigzagLastPivot",
+    "fibonacciRetracement50",
 ];
 
 /// Indicator fields whose GraphQL type is a composite object (not a scalar),
@@ -728,6 +736,17 @@ pub const INDICATOR_COMPOSITE_FIELDS: &[(&str, &str)] = &[
     ("donchianChannels", "{ upper middle lower }"),
     ("bullBearPower", "{ bullPower bearPower }"),
     ("elderRayIndex", "{ bullPower bearPower }"),
+    ("pivotPoints", "{ pivot r1 r2 r3 s1 s2 s3 }"),
+    ("fibonacciPivotPoints", "{ pivot r1 r2 r3 s1 s2 s3 }"),
+    (
+        "heikinAshi",
+        "{ timestamp open high low close volume adjClose }",
+    ),
+    ("zigzagLastPivot", "{ index price isHigh }"),
+    (
+        "fibonacciRetracement50",
+        "{ swingHigh swingLow level236 level382 level50 level618 level786 }",
+    ),
 ];
 
 // ── EDGAR company facts (GqlFactConcept sub-field selection) ───────────────
@@ -770,9 +789,13 @@ pub const EDGAR_SUBMISSIONS_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
 
 // ── Transcripts ──────────────────────────────────────────────────────────────
 
-/// Valid fields for `GqlTranscriptWithMeta`.
+/// Valid fields for `GqlTranscriptWithMeta` (the `transcripts` list field).
 pub const GQL_TRANSCRIPT_VALID_FIELDS: &[&str] =
     &["eventId", "quarter", "year", "title", "url", "transcript"];
+
+const TRANSCRIPT_CONTENT_FIELDS: &str = "{ companyId eventId version speakerMapping { speaker speakerData { company name role } } transcript { numberOfSpeakers text } }";
+const TRANSCRIPT_METADATA_FIELDS: &str = "{ date eventId eventType fiscalPeriod fiscalYear isLatest s3Url title transcriptId transcriptType updated }";
+
 /// `transcript` (`GqlTranscript`) is composite and needs its own nested
 /// sub-selection; stops at whole-transcript `text`, excluding
 /// `paragraphs`/`sentences`/`words` (word-level timing data would be huge).
@@ -780,6 +803,15 @@ pub const TRANSCRIPT_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
     "transcript",
     "{ transcriptContent { companyId eventId version speakerMapping { speaker speakerData { company name role } } transcript { numberOfSpeakers text } } transcriptMetadata { date eventId eventType fiscalPeriod fiscalYear isLatest s3Url title transcriptId transcriptType updated } }",
 )];
+
+/// Valid fields for the singular `transcript` field (`GqlTranscript` — the
+/// service returns a bare `Transcript`, no list-entry metadata wrapper).
+pub const GQL_TRANSCRIPT_SINGLE_VALID_FIELDS: &[&str] =
+    &["transcriptContent", "transcriptMetadata"];
+pub const TRANSCRIPT_SINGLE_COMPOSITE_FIELDS: &[(&str, &str)] = &[
+    ("transcriptContent", TRANSCRIPT_CONTENT_FIELDS),
+    ("transcriptMetadata", TRANSCRIPT_METADATA_FIELDS),
+];
 
 // ── Sector / Industry (market-wide, top-level QueryRoot fields) ────────────
 //

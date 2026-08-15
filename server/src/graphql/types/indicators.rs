@@ -102,6 +102,59 @@ pub struct GqlElderRayData {
     pub bear_power: Option<f64>,
 }
 
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlPivotPointsData {
+    pub pivot: Option<f64>,
+    pub r1: Option<f64>,
+    pub r2: Option<f64>,
+    pub r3: Option<f64>,
+    pub s1: Option<f64>,
+    pub s2: Option<f64>,
+    pub s3: Option<f64>,
+}
+
+/// Mirrors `finance_query::Candle` (camelCase serde keys).
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
+pub struct GqlHeikinAshiCandle {
+    pub timestamp: Option<i64>,
+    pub open: Option<f64>,
+    pub high: Option<f64>,
+    pub low: Option<f64>,
+    pub close: Option<f64>,
+    pub volume: Option<i64>,
+    pub adj_close: Option<f64>,
+}
+
+/// Mirrors `finance_query::indicators::ZigZagPoint`, which has no serde
+/// rename of its own (plain snake_case keys).
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlZigZagPoint {
+    pub index: Option<u64>,
+    pub price: Option<f64>,
+    pub is_high: Option<bool>,
+}
+
+/// Mirrors `finance_query::indicators::FibonacciLevels`, which has no serde
+/// rename of its own (plain snake_case keys).
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlFibonacciLevels {
+    pub swing_high: Option<f64>,
+    pub swing_low: Option<f64>,
+    pub level_23_6: Option<f64>,
+    pub level_38_2: Option<f64>,
+    pub level_50: Option<f64>,
+    pub level_61_8: Option<f64>,
+    pub level_78_6: Option<f64>,
+}
+
 // ── Main indicators summary ────────────────────────────────────────────────
 
 /// All technical indicators for a symbol (latest values).
@@ -174,6 +227,12 @@ pub struct GqlIndicatorsSummary {
     pub accumulation_distribution: Option<f64>,
     pub vwap: Option<f64>,
     pub balance_of_power: Option<f64>,
+    // Pivot Points, Heikin-Ashi, ZigZag, Fibonacci
+    pub pivot_points: Option<GqlPivotPointsData>,
+    pub fibonacci_pivot_points: Option<GqlPivotPointsData>,
+    pub heikin_ashi: Option<GqlHeikinAshiCandle>,
+    pub zigzag_last_pivot: Option<GqlZigZagPoint>,
+    pub fibonacci_retracement_50: Option<GqlFibonacciLevels>,
 }
 
 /// Wraps a symbol name with its indicators, used by the batch root field.

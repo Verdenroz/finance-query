@@ -74,13 +74,19 @@ pub struct GqlQuote {
     pub price_to_book: Option<Json<GqlFormattedValue>>,
 
     // ── Valuation ratios ────────────────────────────────────────────────────
+    #[serde(alias = "forwardPE")]
     pub forward_pe: Option<Json<GqlFormattedValue>>,
+    #[serde(alias = "trailingPE")]
     pub trailing_pe: Option<Json<GqlFormattedValue>>,
     pub beta: Option<Json<GqlFormattedValue>>,
 
     // ── 52-week range & moving averages ────────────────────────────────────
     pub fifty_two_week_high: Option<Json<GqlFormattedValue>>,
     pub fifty_two_week_low: Option<Json<GqlFormattedValue>>,
+    #[serde(alias = "52WeekChange")]
+    pub week_52_change: Option<Json<GqlFormattedValue>>,
+    #[serde(alias = "SandP52WeekChange")]
+    pub sand_p_52_week_change: Option<Json<GqlFormattedValue>>,
     pub fifty_day_average: Option<Json<GqlFormattedValue>>,
     pub two_hundred_day_average: Option<Json<GqlFormattedValue>>,
 
@@ -170,6 +176,7 @@ pub struct GqlQuote {
     pub fund_family: Option<String>,
     pub nav_price: Option<Json<GqlFormattedValue>>,
     pub total_assets: Option<Json<GqlFormattedValue>>,
+    #[serde(alias = "yield")]
     pub yield_value: Option<Json<GqlFormattedValue>>,
 
     // ── Governance ──────────────────────────────────────────────────────────

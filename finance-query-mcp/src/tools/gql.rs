@@ -154,12 +154,20 @@ pub const GQL_RISK_VALID_FIELDS: &[&str] = &[
     "var95",
     "var99",
     "parametricVar95",
+    "cvar95",
+    "cvar99",
+    "parametricCvar95",
+    "omega",
+    "kelly",
     "sharpe",
     "sortino",
     "calmar",
     "beta",
     "maxDrawdown",
     "maxDrawdownRecoveryPeriods",
+    "ulcerIndex",
+    "informationRatio",
+    "trackingError",
 ];
 
 /// Default fields for MCP `get_risk` (all fields; risk summary is tiny).

@@ -7,7 +7,8 @@ use axum::{
 use finance_query_server::graphql::{
     self,
     fields::{
-        GQL_TRANSCRIPT_VALID_FIELDS, TRANSCRIPT_COMPOSITE_FIELDS, escape_gql_string,
+        GQL_TRANSCRIPT_SINGLE_VALID_FIELDS, GQL_TRANSCRIPT_VALID_FIELDS,
+        TRANSCRIPT_COMPOSITE_FIELDS, TRANSCRIPT_SINGLE_COMPOSITE_FIELDS, escape_gql_string,
         unwrap_ticker_field,
     },
 };
@@ -46,8 +47,8 @@ pub(crate) async fn get_transcript(
     };
     let selection = build_rest_composite_selection(
         None,
-        GQL_TRANSCRIPT_VALID_FIELDS,
-        TRANSCRIPT_COMPOSITE_FIELDS,
+        GQL_TRANSCRIPT_SINGLE_VALID_FIELDS,
+        TRANSCRIPT_SINGLE_COMPOSITE_FIELDS,
     );
     let query = format!(
         "query GetTranscript($symbol: String!) {{ ticker(symbol: $symbol) {{ transcript{args_str} {selection} }} }}"

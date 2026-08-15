@@ -12,7 +12,7 @@ use crate::graphql::types::{
         GqlEarningsHistory, GqlEarningsTrend, GqlRecommendationTrend, GqlUpgradeDowngradeHistory,
     },
     edgar::{GqlEdgarFiling, GqlEdgarSubmissions, GqlFactConcept, GqlFactDataPoint},
-    transcript::GqlTranscriptWithMeta,
+    transcript::{GqlTranscript, GqlTranscriptWithMeta},
 };
 
 pub(super) struct TickerAnalysisQuery {
@@ -192,7 +192,7 @@ impl TickerAnalysisQuery {
         #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
             String,
         >,
-    ) -> Result<GqlTranscriptWithMeta> {
+    ) -> Result<GqlTranscript> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
         exec_gql(crate::services::transcripts::get_transcript(

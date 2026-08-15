@@ -30,9 +30,12 @@ pub struct GqlTranscript {
     pub transcript_metadata: GqlTranscriptMetadata,
 }
 
+// `TranscriptContent`/`TranscriptData`/`Word` have no serde rename in the
+// library (raw Quartr payloads are snake_case), so these three deserialize
+// snake_case keys while their GraphQL names stay camelCase.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase")]
-#[serde(rename_all = "camelCase", default)]
+#[serde(default)]
 pub struct GqlTranscriptContent {
     pub company_id: i64,
     pub event_id: i64,
@@ -60,7 +63,7 @@ pub struct GqlSpeakerData {
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase", complex)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(default)]
 pub struct GqlTranscriptData {
     pub number_of_speakers: i32,
     pub text: String,
@@ -105,7 +108,7 @@ pub struct GqlSentence {
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
 #[graphql(rename_fields = "camelCase")]
-#[serde(rename_all = "camelCase", default)]
+#[serde(default)]
 pub struct GqlWord {
     pub word: String,
     pub punctuated_word: String,
