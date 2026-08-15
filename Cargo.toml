@@ -263,7 +263,7 @@ opt-level = 2
 
 [profile.bench]
 inherits = "release"
-debug = true
+debug = "line-tables-only"
 strip = false
 lto = false
 codegen-units = 16
