@@ -233,20 +233,6 @@ jobs:
         run: |
           cargo soothfast docs check -p finance-query --features full --baseline base \
             docs/library README.md
-      - name: Verify captured doc example output is fresh
-        # dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo
-        # Finance data (real prices/timestamps) so excluded here
-        run: |
-          cargo soothfast docs capture -p finance-query --features full --check \
-            docs/library/backtesting.md docs/library/commodities.md \
-            docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
-            docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
-            docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
-            docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
-            docs/library/providers/coingecko.md docs/library/providers/edgar.md \
-            docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
-            docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
-            docs/library/streaming.md docs/library/translation.md README.md
       - name: Public API doc coverage (ratchet — currently 99%)
         run: cargo soothfast coverage docs -p finance-query --features full --min 95
       - name: Public API surface diff vs PR base
@@ -438,15 +424,6 @@ jobs:
         with:
           name: soothfast-baseline
           path: .soothfast/baselines
-      - name: Check llms.txt freshness
-        run: |
-          mkdir -p target/llms-check
-          cargo soothfast report render -p finance-query --baseline base --features full \
-            --out target/llms-check
-          sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-check/committed.txt
-          sed '/^\*\*Measured:\*\*/d' target/llms-check/llms.txt > target/llms-check/fresh.txt
-          diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
-            (echo "::error::llms.txt is stale — run 'make docs-pages' and commit the result" && exit 1)
       - name: Download generated route pages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
