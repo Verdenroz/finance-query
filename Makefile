@@ -187,6 +187,14 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	@rm -rf target/llms-check
 	@echo "llms.txt: up to date"
 
+probe: ## Run data-quality probes (probes.toml) against a locally launched release server
+	cargo build --release -p finance-query-server
+	$(SOOTHFAST) spec probe -p finance-query-server
+
+probe-accept: ## Re-lock probes.lock after a deliberate response change
+	cargo build --release -p finance-query-server
+	$(SOOTHFAST) spec probe -p finance-query-server --accept
+
 # =============================================================================
 # Production Docker Compose
 # =============================================================================
