@@ -193,7 +193,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: test-suite
+          shared-key: docs-binds
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -257,7 +257,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec
+          shared-key: spec-server
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -316,7 +316,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec
+          shared-key: spec-mcp
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -361,7 +361,9 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec
+          shared-key: spec-mcp
+          # near-empty target; saving would poison the spec-mcp key
+          save-if: false
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
