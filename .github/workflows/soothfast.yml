@@ -6,6 +6,10 @@ name: Soothfast
 # that never triggers blocks the merge.
 on:
   pull_request:
+  # Master runs warm the job-scoped caches; PR refs can restore them but
+  # their own saves are invisible to sibling PRs.
+  push:
+    branches: [master]
 
 permissions:
   contents: read
@@ -22,7 +26,7 @@ concurrency:
 jobs:
   changes:
     name: Detect Soothfast Changes
-    if: "!endsWith(github.actor, '[bot]')"
+    if: github.event_name == 'pull_request' && !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     outputs:
       soothfast: ${{ steps.filter.outputs.soothfast }}
@@ -61,7 +65,7 @@ jobs:
   gate:
     name: Gate
     needs: changes
-    if: needs.changes.outputs.soothfast == 'true'
+    if: always() && github.event_name == 'pull_request' && needs.changes.outputs.soothfast == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -131,7 +135,7 @@ jobs:
   baseline:
     name: Baseline
     needs: changes
-    if: needs.changes.outputs.soothfast == 'true'
+    if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -194,6 +198,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: docs-binds
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -233,6 +238,7 @@ jobs:
       - name: Public API doc coverage (ratchet — currently 99%)
         run: cargo soothfast coverage docs -p finance-query --features full --min 95
       - name: Public API surface diff vs PR base
+        if: github.event_name == 'pull_request'
         # Informational only (exits 0 regardless of diff content)
         run: |
           cargo soothfast docs diff -p finance-query --features full \
@@ -241,7 +247,7 @@ jobs:
   spec-server:
     name: Spec & SDK (server)
     needs: changes
-    if: needs.changes.outputs.soothfast == 'true'
+    if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -258,6 +264,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: spec-server
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -278,6 +285,7 @@ jobs:
       - name: Generated Python SDK is fresh
         run: cargo soothfast sdk gen -p finance-query-server --target soothfast-routes --check
       - name: Spec compat gate vs merge-base
+        if: github.event_name == 'pull_request'
         # Consumer-breaking changes to the generated spec (and therefore the
         # SDKs derived from it) fail the PR
         env:
@@ -301,7 +309,7 @@ jobs:
   spec-mcp:
     name: Spec (MCP)
     needs: changes
-    if: needs.changes.outputs.soothfast == 'true'
+    if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -317,6 +325,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: spec-mcp
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # Pinned to the locked runner: soothfast-measure builds into the bench
       # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
@@ -346,7 +355,7 @@ jobs:
   proto-check:
     name: Proto reconciliation
     needs: changes
-    if: needs.changes.outputs.soothfast == 'true'
+    if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
