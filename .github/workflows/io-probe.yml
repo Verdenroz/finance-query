@@ -1,0 +1,74 @@
+name: Data-Quality Probe
+
+# Nightly live probe of every REST endpoint against real providers:
+# `cargo soothfast spec probe` launches the release server, fires the
+# requests in server/probes.toml, and gates field population against
+# server/probes.lock plus shape/assertion checks. Deliberately NOT part of
+# PR CI — live Yahoo data and rate limits make it too flaky to block
+# merges; regressions surface here as a filed issue instead.
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EDGAR_EMAIL: harveytseng2@gmail.com
+
+concurrency:
+  group: io-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Probe live endpoints
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: io-probe
+          cache-on-failure: true
+      # Pinned to the locked runner, same as the perf gate: an unpinned CLI
+      # silently outruns the workspace's soothfast version.
+      - name: Install cargo-binstall
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: cargo-binstall
+      - name: Install cargo-soothfast
+        run: |
+          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
+      - name: Build release server
+        run: cargo build --release -p finance-query-server
+      - name: Probe
+        run: cargo soothfast spec probe -p finance-query-server | tee probe.out
+      - name: File or update failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Nightly data-quality probe failing"
+          body="$(printf 'Run: %s\n\n```\n%s\n```\n' \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            "$(grep -E 'FAIL|spec probe:' probe.out | head -60)")"
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --label bug --body "$body"
+          fi
