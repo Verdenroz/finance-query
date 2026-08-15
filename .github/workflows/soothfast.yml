@@ -305,7 +305,7 @@ jobs:
         run: |
           if git cat-file -e "${BASE_SHA}:server/spec/routes.rs" 2>/dev/null; then
             cargo soothfast spec gate -p finance-query-server --target soothfast-routes \
-              --base "$BASE_SHA"
+              --base "$BASE_SHA" --from-committed
           else
             echo "Merge-base has no soothfast-routes bench yet — nothing to gate against."
           fi
