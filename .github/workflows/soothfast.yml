@@ -79,9 +79,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Gate against merge-base
         run: |
           set -euo pipefail
@@ -132,9 +135,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Measure baseline
         run: cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
       - name: Upload baseline
@@ -172,9 +178,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -231,9 +240,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       - name: Generated openapi.yaml/asyncapi.yaml are fresh
@@ -285,9 +297,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes
       - name: Generated mcp-tools.json is fresh
@@ -325,9 +340,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Reconcile pricing.proto against PricingData
         run: |
           cargo soothfast spec check-proto -p finance-query --proto proto/pricing.proto \
@@ -356,9 +374,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

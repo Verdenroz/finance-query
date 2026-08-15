@@ -130,9 +130,12 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # rust-cache can restore binstall's install record without the
+        # binary itself; --force reinstalls past the stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm
+          command -v cargo-soothfast >/dev/null || FORCE=--force
+          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
 
       - name: Configure git identity for the gh-pages commit
         env:
