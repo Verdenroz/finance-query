@@ -193,29 +193,6 @@ jobs:
           git checkout origin/master -- .soothfast/trend.jsonl
           cargo soothfast trend append -p finance-query --from-baseline base
 
-      # Direct pushes to master are blocked by the branch ruleset, so the bot
-      # opens a PR and squash-merges it itself instead.
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        if: steps.bench_changes.outputs.changed == 'true'
-        id: cpr
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          add-paths: .soothfast/trend.jsonl
-          commit-message: "chore: append performance trend point"
-          title: "chore: append performance trend point"
-          body: Automated performance trend update.
-          branch: bot/trend-update
-          delete-branch: true
-          author: >-
-            ${{ steps.app-token.outputs.app-slug }}[bot]
-            <${{ steps.app-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
-      - name: Merge pull request
-        if: steps.cpr.outputs.pull-request-number
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
-        run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
-
       - name: Regenerate endpoint reference pages
         # A bare `wait` after backgrounding both would mask their exit codes.
         run: |
@@ -242,6 +219,57 @@ jobs:
             cargo soothfast coverage docs -p finance-query --features full \
               --badge docs/perf/badges/coverage.json --badge docs/perf/badges/coverage.svg; \
             echo '```'; } > docs/coverage.md
+
+      - name: Regenerate captured doc output
+        # dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo
+        # Finance data (real prices/timestamps) so excluded here
+        run: |
+          cargo soothfast docs capture -p finance-query --features full \
+            docs/library/backtesting.md docs/library/commodities.md \
+            docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
+            docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
+            docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
+            docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
+            docs/library/providers/coingecko.md docs/library/providers/edgar.md \
+            docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
+            docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
+            docs/library/streaming.md docs/library/translation.md README.md
+
+      - name: Keep llms.txt only when the documented surface moved
+        # Measured lines change every run; committing them would make this
+        # job re-trigger itself off its own merges forever
+        run: |
+          if git diff --quiet -- llms.txt; then exit 0; fi
+          mkdir -p target/llms-churn
+          sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-churn/new.txt
+          git show HEAD:llms.txt | sed '/^\*\*Measured:\*\*/d' > target/llms-churn/old.txt
+          cmp -s target/llms-churn/old.txt target/llms-churn/new.txt && git checkout -- llms.txt || true
+
+      # Direct pushes to master are blocked by the branch ruleset, so the bot
+      # opens a PR and squash-merges it itself instead.
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: cpr
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          add-paths: |
+            .soothfast/trend.jsonl
+            llms.txt
+            docs/library/**
+            README.md
+          commit-message: "chore: regenerate derived artifacts"
+          title: "chore: regenerate derived artifacts"
+          body: Automated trend, captured-output, and llms.txt regeneration.
+          branch: bot/derived-artifacts
+          delete-branch: true
+          author: >-
+            ${{ steps.app-token.outputs.app-slug }}[bot]
+            <${{ steps.app-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>
+      - name: Merge pull request
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash --delete-branch "$PR_NUMBER"
 
       - name: Build and publish docs site
         run: cargo soothfast docs gh-deploy --baseline base
