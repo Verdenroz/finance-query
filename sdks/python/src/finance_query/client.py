@@ -1284,13 +1284,13 @@ class Client:
         lang: str | None = None,
         quarter: models.Quarter | None = None,
         year: int | None = None,
-    ) -> models.GqlTranscriptWithMeta:
+    ) -> models.GqlTranscript:
         """Get earnings transcript"""
         return self._transport.request(
             "GET",
             f"/v2/transcripts/{path_seg(symbol)}",
             query=query_of({"lang": lang, "quarter": quarter, "year": year}),
-            into=models.GqlTranscriptWithMeta,
+            into=models.GqlTranscript,
         )
 
     def get_transcripts(
@@ -2597,13 +2597,13 @@ class AsyncClient:
         lang: str | None = None,
         quarter: models.Quarter | None = None,
         year: int | None = None,
-    ) -> models.GqlTranscriptWithMeta:
+    ) -> models.GqlTranscript:
         """Get earnings transcript"""
         return await self._transport.request(
             "GET",
             f"/v2/transcripts/{path_seg(symbol)}",
             query=query_of({"lang": lang, "quarter": quarter, "year": year}),
-            into=models.GqlTranscriptWithMeta,
+            into=models.GqlTranscript,
         )
 
     async def get_transcripts(

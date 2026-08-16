@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Finance Query v2
-  version: 2.8.0
+  version: 3.0.0
   description: High-performance financial data API server built on finance-query library
 servers:
   - url: "https://finance-query.com"
@@ -3659,7 +3659,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GqlTranscriptWithMeta"
+                $ref: "#/components/schemas/GqlTranscript"
         "400":
           description: Bad request
           content:

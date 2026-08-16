@@ -1,0 +1,248 @@
+# Data-quality probes for `cargo soothfast spec probe -p finance-query-server`.
+#
+# Each probe fires one request at a locally launched server and holds the
+# response to three checks: field population against probes.lock, structure
+# against openapi.yaml's response schema, and the assertions below. Live
+# Yahoo data varies by market hours — fields that legitimately come and go
+# are pinned `sometimes` here or demoted by repeated `--accept` runs.
+
+[probes]
+spec = "openapi.yaml"
+command = "../target/release/finance-query-server"
+env = { PORT = "0", HOST = "127.0.0.1" }
+
+[[probe]]
+name = "quote"
+path = "/v2/quote/AAPL"
+sometimes = ["preMarket*", "postMarket*", "bid", "bidSize", "ask", "askSize"]
+assert = [
+  "symbol == \"AAPL\"",
+  "regularMarketPrice > 0",
+  "forwardPe > 0",
+  "trailingPe > 0",
+  "week52Change exists",
+  "marketCap > 0",
+]
+
+# Probes with `shape = false`: their spec response declares the GraphQL
+# Connection shape (Page_*) for paginated list fields, but REST unwraps to a
+# bare array by default (see server.md, Pagination) — or, for transcripts,
+# requires `paragraphs`, which the REST default selection deliberately
+# excludes. Shape validation stays off until the generated spec models the
+# REST default shape.
+
+[[probe]]
+name = "quotes-batch"
+shape = false
+path = "/v2/quotes?symbols=AAPL,MSFT"
+assert = ["quotes[].regularMarketPrice > 0"]
+
+[[probe]]
+name = "quote-type"
+path = "/v2/quote-type/AAPL"
+
+[[probe]]
+name = "chart-daily"
+shape = false
+path = "/v2/chart/AAPL?interval=1d&range=1mo"
+assert = [
+  "meta.chartPreviousClose > 0",
+  "meta.regularMarketPrice > 0",
+  "candles#len >= 1",
+  "candles[].close > 0",
+]
+
+[[probe]]
+name = "chart-intraday"
+shape = false
+path = "/v2/chart/AAPL?interval=5m&range=1d"
+assert = ["meta.previousClose > 0", "candles#len >= 1"]
+
+[[probe]]
+name = "charts-batch"
+shape = false
+path = "/v2/charts?symbols=AAPL,MSFT&interval=1d&range=5d"
+
+[[probe]]
+name = "spark"
+path = "/v2/spark?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "analysis-recommendations"
+path = "/v2/analysis/AAPL/recommendations"
+
+[[probe]]
+name = "analysis-upgrades"
+path = "/v2/analysis/AAPL/upgrades-downgrades"
+
+[[probe]]
+name = "analysis-earnings-estimate"
+path = "/v2/analysis/AAPL/earnings-estimate"
+
+[[probe]]
+name = "analysis-earnings-history"
+path = "/v2/analysis/AAPL/earnings-history"
+
+[[probe]]
+name = "dividends"
+shape = false
+path = "/v2/dividends/AAPL"
+assert = ["dividends#len >= 1", "dividends[].amount > 0"]
+
+[[probe]]
+name = "splits"
+path = "/v2/splits/AAPL"
+
+[[probe]]
+name = "capital-gains"
+path = "/v2/capital-gains/VFIAX"
+
+[[probe]]
+name = "financials-income"
+path = "/v2/financials/AAPL/income"
+
+[[probe]]
+name = "financials-balance"
+path = "/v2/financials/AAPL/balance"
+
+[[probe]]
+name = "financials-cashflow"
+path = "/v2/financials/AAPL/cash-flow"
+
+[[probe]]
+name = "holders-major"
+path = "/v2/holders/AAPL/major"
+
+[[probe]]
+name = "holders-institutional"
+path = "/v2/holders/AAPL/institutional"
+
+[[probe]]
+name = "holders-mutualfund"
+path = "/v2/holders/AAPL/mutualfund"
+
+[[probe]]
+name = "holders-insider-transactions"
+path = "/v2/holders/AAPL/insider-transactions"
+
+[[probe]]
+name = "holders-insider-purchases"
+path = "/v2/holders/AAPL/insider-purchases"
+
+[[probe]]
+name = "holders-insider-roster"
+path = "/v2/holders/AAPL/insider-roster"
+
+[[probe]]
+name = "indicators"
+path = "/v2/indicators/AAPL?range=1y"
+assert = ["sma50 > 0", "rsi14 > 0", "pivotPoints.pivot > 0"]
+
+[[probe]]
+name = "options"
+shape = false
+path = "/v2/options/AAPL"
+assert = [
+  "calls#len >= 1",
+  "puts#len >= 1",
+  "calls[].strike > 0",
+]
+
+[[probe]]
+name = "recommendations"
+path = "/v2/recommendations/AAPL"
+
+[[probe]]
+name = "risk"
+path = "/v2/risk/AAPL"
+assert = ["var95 exists", "cvar95 exists", "maxDrawdown >= 0"]
+
+[[probe]]
+name = "news-symbol"
+path = "/v2/news/AAPL"
+assert = ["[].title exists"]
+
+[[probe]]
+name = "news-general"
+path = "/v2/news"
+
+[[probe]]
+name = "transcripts"
+shape = false
+path = "/v2/transcripts/AAPL"
+assert = [
+  "transcriptContent.companyId > 0",
+  "transcriptContent.eventId > 0",
+  "transcriptContent.speakerMapping#len >= 1",
+]
+
+[[probe]]
+name = "search"
+shape = false
+path = "/v2/search?q=apple"
+assert = ["quotes#len >= 1"]
+
+[[probe]]
+name = "lookup"
+path = "/v2/lookup?q=apple&type=equity"
+
+[[probe]]
+name = "trending"
+path = "/v2/trending"
+
+[[probe]]
+name = "market-summary"
+path = "/v2/market-summary"
+assert = ["[].regularMarketPrice exists"]
+
+[[probe]]
+name = "hours"
+path = "/v2/hours"
+
+[[probe]]
+name = "indices"
+path = "/v2/indices"
+
+[[probe]]
+name = "exchanges"
+path = "/v2/exchanges"
+
+[[probe]]
+name = "currencies"
+path = "/v2/currencies"
+
+[[probe]]
+name = "fear-and-greed"
+path = "/v2/fear-and-greed"
+assert = ["value >= 0", "value <= 100"]
+
+[[probe]]
+name = "feeds"
+path = "/v2/feeds?sources=federal-reserve"
+
+[[probe]]
+name = "fred-treasury"
+path = "/v2/fred/treasury-yields"
+assert = ["[].y10 exists"]
+
+[[probe]]
+name = "crypto-coins"
+path = "/v2/crypto/coins?count=10"
+assert = ["[].currentPrice > 0"]
+
+[[probe]]
+name = "screener-most-actives"
+path = "/v2/screeners/most-actives"
+assert = ["quotes#len >= 1"]
+
+[[probe]]
+name = "sector"
+path = "/v2/sectors/technology"
+
+[[probe]]
+name = "industry"
+path = "/v2/industries/software-infrastructure"
+
+[[probe]]
+name = "edgar-search"
+path = "/v2/edgar/search?q=Apple"

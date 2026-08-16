@@ -1424,8 +1424,8 @@ export class Client {
   }
 
   /** Get earnings transcript */
-  getTranscript(symbol: string, options: GetTranscriptOptions = {}): Promise<models.GqlTranscriptWithMeta> {
-    return this.transport.request<models.GqlTranscriptWithMeta>("GET", `/v2/transcripts/${pathSeg(symbol)}`, {
+  getTranscript(symbol: string, options: GetTranscriptOptions = {}): Promise<models.GqlTranscript> {
+    return this.transport.request<models.GqlTranscript>("GET", `/v2/transcripts/${pathSeg(symbol)}`, {
       query: queryOf(options),
     });
   }
