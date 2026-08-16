@@ -102,7 +102,6 @@ impl PolygonClient {
         }
     }
 
-    /// Retained for the error-parity test; `check_error_envelope` is the live path.
     fn check_error_envelope(env: &ErrorEnvelope, api_key: &str) -> Result<()> {
         let Some(status) = env.status.as_deref() else {
             return Ok(());
@@ -141,6 +140,9 @@ impl PolygonClient {
     }
 
     /// Execute a GET request to a Polygon REST path and return the raw response bytes.
+    ///
+    /// The error envelope is checked here, so callers deserialize the bytes
+    /// straight into their own type.
     async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<impl AsRef<[u8]>> {
         self.limiter.acquire().await;
 
@@ -176,10 +178,6 @@ impl PolygonClient {
     #[cfg(test)]
     pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes.as_ref()) {
-            Self::check_error_envelope(&env, &self.api_key)?;
-        }
-
         Ok(serde_json::from_slice(bytes.as_ref())?)
     }
 
@@ -190,13 +188,8 @@ impl PolygonClient {
         params: &[(&str, &str)],
     ) -> Result<PaginatedResponseDTO<T>> {
         let bytes = self.get_bytes(path, params).await?;
-        let bytes = bytes.as_ref();
 
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
-            Self::check_error_envelope(&env, &self.api_key)?;
-        }
-
-        serde_json::from_slice(bytes).map_err(|e| FinanceError::ResponseStructureError {
+        serde_json::from_slice(bytes.as_ref()).map_err(|e| FinanceError::ResponseStructureError {
             field: "response".to_string(),
             context: format!("Failed to deserialize Polygon response: {e}"),
         })
@@ -212,13 +205,8 @@ impl PolygonClient {
         desc: &str,
     ) -> Result<T> {
         let bytes = self.get_bytes(path, params).await?;
-        let bytes = bytes.as_ref();
 
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
-            Self::check_error_envelope(&env, &self.api_key)?;
-        }
-
-        serde_json::from_slice(bytes).map_err(|e| FinanceError::ResponseStructureError {
+        serde_json::from_slice(bytes.as_ref()).map_err(|e| FinanceError::ResponseStructureError {
             field: field.to_string(),
             context: format!("Failed to parse {desc}: {e}"),
         })

@@ -114,7 +114,7 @@ impl FmpClient {
     }
 
     /// Execute a GET request to an FMP REST path and return the raw response bytes.
-    async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<Vec<u8>> {
+    async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<impl AsRef<[u8]>> {
         self.limiter.acquire().await;
 
         let url = format!("{}{}", self.base_url, path);
@@ -138,7 +138,7 @@ impl FmpClient {
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
         }
-        Ok(bytes.to_vec())
+        Ok(bytes)
     }
 
     fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
@@ -146,24 +146,26 @@ impl FmpClient {
     }
 
     /// Execute a GET request to an FMP REST path and return raw JSON.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
-        Ok(serde_json::from_slice(&bytes)?)
+        Ok(serde_json::from_slice(bytes.as_ref())?)
     }
 
     /// GET and deserialize into `T` directly, parsing the response bytes once.
     pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
         let bytes = self.get_bytes(path, params).await?;
-        serde_json::from_slice::<T>(&bytes).map_err(|e| FinanceError::ResponseStructureError {
-            field: "response".to_string(),
-            context: format!("Failed to deserialize FMP response: {e}"),
+        serde_json::from_slice::<T>(bytes.as_ref()).map_err(|e| {
+            FinanceError::ResponseStructureError {
+                field: "response".to_string(),
+                context: format!("Failed to deserialize FMP response: {e}"),
+            }
         })
     }
 
     pub async fn get_csv_value(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
-        let mut reader = csv::Reader::from_reader(bytes.as_slice());
+        let mut reader = csv::Reader::from_reader(bytes.as_ref());
         let headers = reader
             .headers()
             .map_err(|error| {
