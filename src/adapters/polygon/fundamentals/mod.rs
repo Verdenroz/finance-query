@@ -234,9 +234,17 @@ pub async fn fetch_share_float_response(
     Ok(crate::models::fundamentals::ShareFloat {
         symbol: d.ticker.or_else(|| Some(symbol.to_string())),
         float_shares: d.free_float,
-        outstanding_shares: None,
+        outstanding_shares: outstanding_from_float(d.free_float, d.free_float_percent),
         date: d.effective_date,
     })
+}
+
+/// Recover shares outstanding from the float and the percentage of shares
+/// outstanding it represents, which is all the endpoint reports.
+fn outstanding_from_float(free_float: Option<f64>, free_float_percent: Option<f64>) -> Option<f64> {
+    let float_shares = free_float?;
+    let percent = free_float_percent?;
+    (percent.is_finite() && percent > 0.0).then(|| float_shares * 100.0 / percent)
 }
 
 #[cfg(test)]

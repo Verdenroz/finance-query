@@ -117,62 +117,69 @@ struct StableSectorHistoryDTO {
     average_change: Option<f64>,
 }
 
+/// Sectors covered by the historical sector performance endpoint.
+const SECTORS: [&str; 11] = [
+    "Utilities",
+    "Basic Materials",
+    "Communication Services",
+    "Consumer Cyclical",
+    "Consumer Defensive",
+    "Energy",
+    "Financial Services",
+    "Healthcare",
+    "Industrials",
+    "Real Estate",
+    "Technology",
+];
+
+/// How many weekdays back a snapshot endpoint may be probed before giving up.
+const SNAPSHOT_LOOKBACK_DAYS: usize = 5;
+
 // ============================================================================
 // Public API
 // ============================================================================
 
 /// Fetch sector PE ratios.
 pub async fn sectors_pe() -> Result<Vec<SectorPeDTO>> {
-    let client = build_client()?;
-    let date = latest_completed_market_date();
-    client
-        .get("/stable/sector-pe-snapshot", &[("date", &date)])
-        .await
+    latest_snapshot("/stable/sector-pe-snapshot").await
 }
 
 /// Fetch industry PE ratios.
 pub async fn industries_pe() -> Result<Vec<IndustryPeDTO>> {
-    let client = build_client()?;
-    let date = latest_completed_market_date();
-    client
-        .get("/stable/industry-pe-snapshot", &[("date", &date)])
-        .await
+    latest_snapshot("/stable/industry-pe-snapshot").await
 }
 
 /// Fetch current sector performance.
 pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
-    let client = build_client()?;
-    let date = latest_completed_market_date();
-    client
-        .get("/stable/sector-performance-snapshot", &[("date", &date)])
-        .await
+    latest_snapshot("/stable/sector-performance-snapshot").await
 }
 
 /// Fetch historical sector performance.
+///
+/// The upstream endpoint takes one sector per call, so this fans out across
+/// [`SECTORS`] concurrently and merges the responses by date.
 pub async fn historical_sector_performance(
     limit: u32,
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
     let client = build_client()?;
+    let limit_param = limit.to_string();
+    let responses = ::futures::future::try_join_all(SECTORS.iter().map(|sector| {
+        let client = &client;
+        let limit_param = limit_param.as_str();
+        async move {
+            let rows: Vec<StableSectorHistoryDTO> = client
+                .get(
+                    "/stable/historical-sector-performance",
+                    &[("sector", sector), ("limit", limit_param)],
+                )
+                .await?;
+            Ok::<_, crate::error::FinanceError>((*sector, rows))
+        }
+    }))
+    .await?;
+
     let mut by_date = std::collections::BTreeMap::<String, HistoricalSectorPerformanceDTO>::new();
-    for sector in [
-        "Utilities",
-        "Basic Materials",
-        "Communication Services",
-        "Consumer Cyclical",
-        "Consumer Defensive",
-        "Energy",
-        "Financial Services",
-        "Healthcare",
-        "Industrials",
-        "Real Estate",
-        "Technology",
-    ] {
-        let rows: Vec<StableSectorHistoryDTO> = client
-            .get(
-                "/stable/historical-sector-performance",
-                &[("sector", sector)],
-            )
-            .await?;
+    for (sector, rows) in responses {
         for row in rows {
             let Some(date) = row.date else { continue };
             let entry = by_date.entry(date.clone()).or_default();
@@ -204,14 +211,35 @@ pub async fn historical_sector_performance(
     Ok(by_date.into_values().rev().take(limit as usize).collect())
 }
 
-fn latest_completed_market_date() -> String {
+/// Weekdays before today, most recent first.
+fn recent_weekdays() -> impl Iterator<Item = String> {
     use chrono::Datelike;
 
-    let mut date = chrono::Utc::now().date_naive() - chrono::Days::new(1);
-    while date.weekday() == chrono::Weekday::Sat || date.weekday() == chrono::Weekday::Sun {
-        date = date.pred_opt().expect("valid previous calendar date");
+    let mut date = chrono::Utc::now().date_naive();
+    std::iter::from_fn(move || {
+        loop {
+            date = date.pred_opt()?;
+            if date.weekday() != chrono::Weekday::Sat && date.weekday() != chrono::Weekday::Sun {
+                return Some(date.format("%Y-%m-%d").to_string());
+            }
+        }
+    })
+}
+
+/// Fetch a snapshot endpoint for the most recent date that has data.
+///
+/// These endpoints require an exact session date and answer with an empty
+/// array for market holidays, which a weekday calculation alone cannot skip,
+/// so walk back until one answers.
+async fn latest_snapshot<T: serde::de::DeserializeOwned>(path: &str) -> Result<Vec<T>> {
+    let client = build_client()?;
+    for date in recent_weekdays().take(SNAPSHOT_LOOKBACK_DAYS) {
+        let rows: Vec<T> = client.get(path, &[("date", &date)]).await?;
+        if !rows.is_empty() {
+            return Ok(rows);
+        }
     }
-    date.format("%Y-%m-%d").to_string()
+    Ok(Vec::new())
 }
 
 /// Fetch top stock market gainers.

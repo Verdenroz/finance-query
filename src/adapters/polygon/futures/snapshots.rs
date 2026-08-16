@@ -143,7 +143,9 @@ fn snapshot_to_quote(symbol: &str, response: FuturesSnapshotResponseDTO) -> Futu
             .and_then(|trade| trade.price)
             .or_else(|| session.and_then(|value| value.close)),
         change: session.and_then(|value| value.change),
-        change_percent: session.and_then(|value| value.change_percent),
+        change_percent: session
+            .and_then(|value| value.change_percent)
+            .map(|fraction| fraction * 100.0),
         open_interest: None,
         volume: session.and_then(|value| value.volume),
         timestamp: last_trade.and_then(|trade| trade.last_updated),
@@ -170,5 +172,7 @@ mod tests {
         assert_eq!(quote.price, Some(6052.0));
         assert_eq!(quote.underlying.as_deref(), Some("ES"));
         assert_eq!(quote.volume, Some(1000));
+        assert_eq!(quote.change, Some(12.0));
+        assert!((quote.change_percent.unwrap() - 0.2).abs() < 1e-9);
     }
 }

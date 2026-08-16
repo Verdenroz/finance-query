@@ -138,15 +138,15 @@ pub struct MarketCapDTO {
     pub market_cap: Option<f64>,
 }
 
-/// Stock peer from FMP (v4 endpoint).
+/// Stock peer from FMP. One row per peer, not a nested list.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StockPeersDTO {
-    /// Ticker symbol.
+    /// Ticker symbol of the peer.
     pub symbol: Option<String>,
-    /// List of peer symbols.
-    #[serde(rename = "peersList")]
-    pub peers_list: Option<Vec<String>>,
+    /// Peer company name.
+    #[serde(rename = "companyName")]
+    pub company_name: Option<String>,
 }
 
 /// Delisted company from FMP.
@@ -218,8 +218,7 @@ fn stock_peers_to_canonical(
 ) -> Vec<crate::models::corporate::recommendation::SimilarSymbol> {
     let mut symbols: Vec<crate::models::corporate::recommendation::SimilarSymbol> = peers
         .into_iter()
-        .filter_map(|p| p.peers_list)
-        .flatten()
+        .filter_map(|p| p.symbol)
         .map(
             |s| crate::models::corporate::recommendation::SimilarSymbol {
                 symbol: s,
@@ -306,6 +305,35 @@ mod tests {
         assert_eq!(result[0].company_name.as_deref(), Some("Apple Inc."));
         assert_eq!(result[0].sector.as_deref(), Some("Technology"));
         assert_eq!(result[0].is_etf, Some(false));
+    }
+
+    #[tokio::test]
+    async fn stock_peers_reads_flat_stable_rows() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/stock-peers")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
+            .with_status(200)
+            .with_body(
+                serde_json::json!([
+                    {"symbol": "MSFT", "companyName": "Microsoft Corporation"},
+                    {"symbol": "GOOGL", "companyName": "Alphabet Inc."}
+                ])
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let peers: Vec<StockPeersDTO> = client.get("/stable/stock-peers", &[]).await.unwrap();
+        let canonical = stock_peers_to_canonical(peers, 10);
+
+        assert_eq!(canonical.len(), 2);
+        assert_eq!(canonical[0].symbol, "MSFT");
+        assert_eq!(canonical[1].symbol, "GOOGL");
     }
 
     #[tokio::test]

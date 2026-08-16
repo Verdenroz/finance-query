@@ -1,4 +1,6 @@
 //! Server-calculated stock technical indicators.
+// unrouted: awaiting a capability route; see #264.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

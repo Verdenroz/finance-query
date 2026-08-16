@@ -1,4 +1,6 @@
 //! Options contract reference data.
+// unrouted: awaiting a capability route; see #264.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

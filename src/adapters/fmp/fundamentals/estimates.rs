@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
-use crate::adapters::fmp::fundamentals::consensus::RatingConsensusDTO;
 use crate::adapters::fmp::models::Period;
 
 // ============================================================================
@@ -177,24 +176,12 @@ pub async fn analyst_estimates(
         .await
 }
 
-/// Fetch analyst stock recommendations.
+/// Fetch the dated history of analyst recommendation counts for a symbol.
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendationDTO>> {
     let client = build_client()?;
-    let rows: Vec<RatingConsensusDTO> = client
-        .get("/stable/grades-consensus", &[("symbol", symbol)])
-        .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| AnalystRecommendationDTO {
-            symbol: row.symbol.or_else(|| Some(symbol.to_string())),
-            date: None,
-            analyst_ratings_buy: row.buy.and_then(|value| value.try_into().ok()),
-            analyst_ratings_hold: row.hold.and_then(|value| value.try_into().ok()),
-            analyst_ratings_sell: row.sell.and_then(|value| value.try_into().ok()),
-            analyst_ratings_strong_buy: row.strong_buy.and_then(|value| value.try_into().ok()),
-            analyst_ratings_strong_sell: row.strong_sell.and_then(|value| value.try_into().ok()),
-        })
-        .collect())
+    client
+        .get("/stable/grades-historical", &[("symbol", symbol)])
+        .await
 }
 
 /// Fetch earnings surprises for a symbol.
@@ -211,7 +198,7 @@ pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>>
     let limit_str = limit.to_string();
     client
         .get(
-            "/stable/grades-historical",
+            "/stable/grades",
             &[("symbol", symbol), ("limit", &limit_str)],
         )
         .await
@@ -221,6 +208,7 @@ pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>>
 ///
 /// * `quarter` - Quarter number (1-4)
 /// * `year` - Year (e.g., 2024)
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub async fn earnings_transcript(
     symbol: &str,
     quarter: u32,
@@ -238,6 +226,7 @@ pub async fn earnings_transcript(
 }
 
 /// Fetch a list of available earnings transcripts for a symbol.
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub async fn earnings_transcript_list(symbol: &str) -> Result<Vec<EarningsTranscriptRefDTO>> {
     let client = build_client()?;
     client

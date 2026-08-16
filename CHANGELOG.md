@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `FinanceError::NetworkError` for transport failures whose source is withheld.
+  Providers that authenticate with an API key in the query string use it instead
+  of `HttpError`, whose `reqwest::Error` renders the full URL and would leak the
+  key into logs. It is retriable.
 - **CoinGecko trending, global stats, and coin search** are exposed keylessly on
   the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
   `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
@@ -267,6 +271,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- FMP and Polygon classified an HTTP 429 or 5xx that carried a JSON error body
+  as a non-retriable `InvalidParameter`, because the envelope was inspected
+  before the status. The status is now authoritative and the envelope only
+  applies to an otherwise-successful response.
+- Non-timeout transport failures against FMP and Polygon surfaced as
+  `ApiError`, which `is_retriable()` reports as false, so callers abandoned the
+  request on a transient network blip. They now use `NetworkError`.
+- FMP peer lookups returned an empty list: the request moved to
+  `/stable/stock-peers` while the response type still keyed on the retired v4
+  `peersList` field.
+- FMP sector and industry snapshots asked for "yesterday, skipping weekends",
+  which returns nothing on the day after a market holiday. They now walk back
+  to the most recent date that has data.
+- `analyst_recommendations` returned a single undated row after moving to the
+  consensus snapshot. It reads the dated series from `/stable/grades-historical`
+  again.
+- Polygon futures reported `change_percent` as a fraction in a field documented
+  as a percentage, understating every move by 100x.
+- Polygon `ShareFloat::outstanding_shares` was always `None`; it is recovered
+  from the reported float and float percentage.
+- FMP bulk CSV parsing coerced zero-padded identifiers to integers, turning CIK
+  `0000320193` into `320193`.
 - `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
   when no retry hint was available, and "Some(30)s" when there was one.
 - GDELT's throttle response carries its retry interval in a plain-text body

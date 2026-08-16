@@ -58,9 +58,11 @@ pub use chart::*;
 pub use corporate::*;
 pub use discovery::*;
 pub use fundamentals::*;
+#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
 pub use options::reference::*;
 pub use options::snapshots::fetch_options_response;
 pub use quote::*;
+#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
 pub use technical::*;
 
 // Asset-class modules
@@ -68,6 +70,7 @@ pub use crypto::aggregates::fetch_crypto_grouped_daily_response;
 pub use crypto::snapshots::*;
 pub use forex::aggregates::fetch_forex_grouped_daily_response;
 pub use forex::quotes::*;
+#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
 pub use futures::{aggregates::*, reference::*, snapshots::*, trades::*};
 pub use indices::snapshots::*;
 

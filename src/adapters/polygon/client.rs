@@ -160,10 +160,10 @@ impl PolygonClient {
             .bytes()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
+        Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env)?;
         }
-        Self::check_status(status)?;
         Ok(bytes)
     }
 
@@ -175,7 +175,9 @@ impl PolygonClient {
         }
         // A reqwest error may retain the full URL. Polygon authenticates with
         // an apiKey query parameter, so never bubble that URL into logs.
-        FinanceError::ApiError("Polygon HTTP request failed".to_string())
+        FinanceError::NetworkError {
+            api: "Polygon".to_string(),
+        }
     }
 
     /// Execute a GET request to a Polygon REST path and return raw JSON.

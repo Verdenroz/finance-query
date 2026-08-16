@@ -170,6 +170,7 @@ pub struct MarketHolidayDTO {
 /// Currency-market statuses returned by the market-status endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub struct CurrencyMarketStatusDTO {
     /// Cryptocurrency market status.
     pub crypto: Option<String>,
@@ -180,6 +181,7 @@ pub struct CurrencyMarketStatusDTO {
 /// U.S. exchange statuses returned by the market-status endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub struct ExchangeMarketStatusDTO {
     /// Nasdaq market status.
     pub nasdaq: Option<String>,
@@ -192,6 +194,7 @@ pub struct ExchangeMarketStatusDTO {
 /// Current cross-asset market status.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub struct MarketStatusDTO {
     /// Whether U.S. equities are in after-hours trading.
     #[serde(rename = "afterHours")]
@@ -216,6 +219,7 @@ pub struct MarketStatusDTO {
 /// Trade or quote condition-code definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub struct ConditionCodeDTO {
     /// Asset class for this condition.
     pub asset_class: Option<String>,
@@ -381,6 +385,7 @@ pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
 }
 
 /// Fetch the current status of U.S. equities, currencies, and index groups.
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub async fn market_status() -> Result<MarketStatusDTO> {
     build_client()?
         .get_as(
@@ -393,6 +398,7 @@ pub async fn market_status() -> Result<MarketStatusDTO> {
 }
 
 /// Fetch trade and quote condition-code definitions.
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
 pub async fn condition_codes(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<ConditionCodeDTO>> {

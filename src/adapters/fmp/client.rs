@@ -134,10 +134,10 @@ impl FmpClient {
             .bytes()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
+        Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env)?;
         }
-        Self::check_status(status)?;
         Ok(bytes.to_vec())
     }
 
@@ -147,7 +147,11 @@ impl FmpClient {
                 timeout_ms: self.timeout_ms(),
             };
         }
-        FinanceError::ApiError("FMP HTTP request failed".to_string())
+        // A reqwest error renders the full URL and FMP authenticates with an
+        // apikey query parameter, so the source is dropped rather than logged.
+        FinanceError::NetworkError {
+            api: "FMP".to_string(),
+        }
     }
 
     fn timeout_ms(&self) -> u64 {
@@ -158,20 +162,12 @@ impl FmpClient {
     #[allow(dead_code)]
     pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
-            Self::check_error_envelope(&env)?;
-        }
-
         Ok(serde_json::from_slice(&bytes)?)
     }
 
     /// GET and deserialize into `T` directly, parsing the response bytes once.
     pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
         let bytes = self.get_bytes(path, params).await?;
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
-            Self::check_error_envelope(&env)?;
-        }
-
         serde_json::from_slice::<T>(&bytes).map_err(|e| FinanceError::ResponseStructureError {
             field: "response".to_string(),
             context: format!("Failed to deserialize FMP response: {e}"),
@@ -205,18 +201,36 @@ impl FmpClient {
 
 fn csv_scalar(value: &str) -> Value {
     if value.is_empty() {
-        Value::Null
-    } else if let Ok(value) = value.parse::<i64>() {
-        Value::from(value)
-    } else if let Ok(value) = value.parse::<u64>() {
-        Value::from(value)
-    } else if let Ok(value) = value.parse::<f64>() {
-        Value::from(value)
-    } else if let Ok(value) = value.parse::<bool>() {
-        Value::from(value)
-    } else {
-        Value::from(value)
+        return Value::Null;
     }
+    if let Ok(parsed) = value.parse::<bool>() {
+        return Value::from(parsed);
+    }
+    if !is_plain_number(value) {
+        return Value::from(value);
+    }
+    if let Ok(parsed) = value.parse::<i64>() {
+        return Value::from(parsed);
+    }
+    match value.parse::<f64>() {
+        Ok(parsed) if parsed.is_finite() => Value::from(parsed),
+        _ => Value::from(value),
+    }
+}
+
+/// Reject anything a CSV cell may hold that is an identifier rather than a
+/// quantity: zero-padded CIK/CUSIP codes, exponent-shaped tickers like `1E5`,
+/// and the `inf`/`NaN` literals `f64::from_str` accepts.
+fn is_plain_number(value: &str) -> bool {
+    let digits = value.strip_prefix('-').unwrap_or(value);
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        return false;
+    }
+    if digits.matches('.').count() > 1 {
+        return false;
+    }
+    let leading_zero = digits.starts_with('0') && !digits.starts_with("0.") && digits != "0";
+    !leading_zero
 }
 
 /// Cheap-to-parse subset of an FMP response used to detect the
