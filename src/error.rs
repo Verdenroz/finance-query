@@ -11,6 +11,7 @@ fn join_providers(providers: &[Provider]) -> String {
 
 /// Main error type for the library
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum FinanceError {
     /// Authentication failed (Yahoo Finance, SEC EDGAR, etc.)
     #[error("Authentication failed: {context}")]
