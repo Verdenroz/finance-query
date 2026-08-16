@@ -26,9 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
   `UnexpectedResponse`, since no handshake can clear it and retrying would cost
   an extra handshake and a discarded session per blocked request.
+- `FinanceError` is now `#[non_exhaustive]`, as every other public enum in the
+  crate already is. Downstream `match` expressions over it need a wildcard arm;
+  in exchange, later variants are additive.
 
 ### Changed
 
+- The Polygon adapter now calls `api.massive.com` and
+  `wss://socket.massive.com` rather than the `polygon.io` hosts, following
+  Polygon.io's rebrand to Massive on 2025-10-30. Existing `POLYGON_API_KEY`
+  values and the `polygon` feature flag are unchanged.
 - `Capability` values combining several bits display as `"quote|chart"`
   instead of `"unknown"`; `Capability::name()` keeps its documented
   single-bit contract.
@@ -49,9 +56,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `FinanceError::NetworkError` for transport failures whose source is withheld.
-  Providers that authenticate with an API key in the query string use it instead
-  of `HttpError`, whose `reqwest::Error` renders the full URL and would leak the
-  key into logs. It is retriable.
+  Alpha Vantage, FMP, FRED, and Massive all authenticate with a query
+  parameter, so all four now use it instead of `HttpError`, whose
+  `reqwest::Error` renders the full URL in both `Display` and `Debug` and would
+  leak the key into logs. It is retriable.
+- `finance_query::alphavantage`, `finance_query::fmp`, and
+  `finance_query::polygon` config modules, each exposing `init` and
+  `init_with_timeout` alongside the existing `fred::init`. An API key can now
+  come from application configuration rather than only from the process
+  environment. The adapters' response types stay internal; data still flows
+  through `Providers`.
 - **CoinGecko trending, global stats, and coin search** are exposed keylessly on
   the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
   `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
@@ -271,28 +285,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- FMP and Polygon classified an HTTP 429 or 5xx that carried a JSON error body
-  as a non-retriable `InvalidParameter`, because the envelope was inspected
-  before the status. The status is now authoritative and the envelope only
-  applies to an otherwise-successful response.
-- Non-timeout transport failures against FMP and Polygon surfaced as
-  `ApiError`, which `is_retriable()` reports as false, so callers abandoned the
-  request on a transient network blip. They now use `NetworkError`.
-- FMP peer lookups returned an empty list: the request moved to
-  `/stable/stock-peers` while the response type still keyed on the retired v4
-  `peersList` field.
-- FMP sector and industry snapshots asked for "yesterday, skipping weekends",
-  which returns nothing on the day after a market holiday. They now walk back
-  to the most recent date that has data.
-- `analyst_recommendations` returned a single undated row after moving to the
-  consensus snapshot. It reads the dated series from `/stable/grades-historical`
-  again.
-- Polygon futures reported `change_percent` as a fraction in a field documented
-  as a percentage, understating every move by 100x.
+- Alpha Vantage, FMP, and Massive classified an HTTP 429 or 5xx that carried a
+  JSON error body as a non-retriable `InvalidParameter`, because the envelope
+  was inspected before the status. The status is now authoritative and the
+  envelope only applies to an otherwise-successful response.
+- Non-timeout transport failures against Alpha Vantage, FMP, FRED, and Massive
+  surfaced as `ApiError` or as an `HttpError` rendering the keyed request URL.
+  `ApiError` is not retriable, so callers abandoned the request on a transient
+  network blip. All four now use `NetworkError`.
+- A provider that quotes the submitted API key back in its error text no longer
+  carries it into the resulting `FinanceError`. Alpha Vantage, BLS, FMP, FRED,
+  and Massive redact the configured key from any message they forward.
+- `Providers::builder()` failed for Alpha Vantage, FMP, FRED, and Massive
+  whenever their environment variable was unset, even when the key had already
+  been supplied programmatically through `init(key)`. Provider initialisation
+  now goes through the same client builder as every query, which reads the
+  singleton first and falls back to the environment.
+- `init("")` and an environment variable set to an empty string configured a
+  provider with a blank key, which then failed at the first request with an
+  opaque upstream error. Both are rejected up front.
+- Polygon WebSocket authentication was fire-and-forget: an invalid key yielded
+  a connected stream that silently never produced an event. The handshake is
+  now awaited and a rejection surfaces as `AuthenticationFailed`.
 - Polygon `ShareFloat::outstanding_shares` was always `None`; it is recovered
   from the reported float and float percentage.
-- FMP bulk CSV parsing coerced zero-padded identifiers to integers, turning CIK
-  `0000320193` into `320193`.
 - `FinanceError::RateLimited` rendered as "Rate limited (retry after Nones)"
   when no retry hint was available, and "Some(30)s" when there was one.
 - GDELT's throttle response carries its retry interval in a plain-text body
