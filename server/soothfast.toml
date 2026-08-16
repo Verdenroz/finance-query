@@ -4,6 +4,7 @@
 path = "openapi.yaml"
 mode = "generate"
 title = "Finance Query v2"
+version = "3.0.0"
 servers = ["https://finance-query.com", "http://localhost:8000"]
 
 [spec.responses]
@@ -21,6 +22,7 @@ servers = ["https://finance-query.com", "http://localhost:8000"]
 path = "asyncapi.yaml"
 mode = "generate"
 title = "Finance Query Streaming API"
+version = "3.0.0"
 servers = ["wss://finance-query.com", "ws://localhost:8000"]
 
 [[sdk]]

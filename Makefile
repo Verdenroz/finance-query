@@ -211,7 +211,7 @@ prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.ym
 # Version bumping
 # =============================================================================
 
-bump: ## Bump version for core + server + mcp + derive + API specs (usage: make bump VERSION=x.y.z)
+bump: ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif
@@ -226,10 +226,9 @@ endif
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-mcp/Cargo.toml
 	@# Update derive Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-derive/Cargo.toml
-	@# Update server OpenAPI version
-	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/openapi.yaml
-	@# Update server AsyncAPI version
-	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/asyncapi.yaml
+	@# The API specs version independently of the crates: the spec gate reads
+	@# info.version to acknowledge breaking changes. Bump it in
+	@# server/soothfast.toml instead.
 	@echo "$(GREEN)Regenerating API docs HTML...$(NC)"
 	@$(SOOTHFAST) spec html -p finance-query-server --target soothfast-routes --out docs/server/api
 	@$(SOOTHFAST) spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
@@ -239,8 +238,6 @@ endif
 	@echo "  - server/Cargo.toml"
 	@echo "  - finance-query-mcp/Cargo.toml"
 	@echo "  - finance-query-derive/Cargo.toml"
-	@echo "  - server/openapi.yaml"
-	@echo "  - server/asyncapi.yaml"
 	@echo "  - docs/server/api/openapi.md"
 	@echo "  - docs/server/api/asyncapi.md"
 	@echo "  - docs/server/api/mcp-tools.md"
@@ -248,6 +245,7 @@ endif
 	@echo "  - CHANGELOG.md (library)"
 	@echo "  - server/CHANGELOG.md"
 	@echo "  - finance-query-mcp/CHANGELOG.md"
+	@echo "  - server/soothfast.toml (API spec versions, if the API changed)"
 
 bump-cli: ## Bump version for CLI only (usage: make bump-cli VERSION=x.y.z)
 ifndef VERSION
