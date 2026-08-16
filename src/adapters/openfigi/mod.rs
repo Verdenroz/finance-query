@@ -16,10 +16,12 @@
 pub(crate) mod client;
 pub(crate) mod models;
 
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use crate::error::{FinanceError, Result};
 use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+use crate::rate_limiter::RateLimiter;
 use client::OpenFigiClient;
 use models::{FigiRecord, MappingJob};
 
@@ -28,21 +30,16 @@ const OPENFIGI_AUTHENTICATED_RATE_PER_SEC: f64 = 25.0 / 6.0;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-static ANONYMOUS_LIMITER: std::sync::OnceLock<std::sync::Arc<crate::rate_limiter::RateLimiter>> =
-    std::sync::OnceLock::new();
-static AUTHENTICATED_LIMITER: std::sync::OnceLock<
-    std::sync::Arc<crate::rate_limiter::RateLimiter>,
-> = std::sync::OnceLock::new();
+static ANONYMOUS_LIMITER: OnceLock<Arc<RateLimiter>> = OnceLock::new();
+static AUTHENTICATED_LIMITER: OnceLock<Arc<RateLimiter>> = OnceLock::new();
 
-fn limiter(authenticated: bool) -> std::sync::Arc<crate::rate_limiter::RateLimiter> {
+fn limiter(authenticated: bool) -> Arc<RateLimiter> {
     let (slot, rate) = if authenticated {
         (&AUTHENTICATED_LIMITER, OPENFIGI_AUTHENTICATED_RATE_PER_SEC)
     } else {
         (&ANONYMOUS_LIMITER, OPENFIGI_ANONYMOUS_RATE_PER_SEC)
     };
-    std::sync::Arc::clone(
-        slot.get_or_init(|| std::sync::Arc::new(crate::rate_limiter::RateLimiter::new(rate))),
-    )
+    Arc::clone(slot.get_or_init(|| Arc::new(RateLimiter::new(rate))))
 }
 
 /// Build a client against the live API, reusing the shared token bucket.

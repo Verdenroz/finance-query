@@ -140,6 +140,8 @@ pub async fn mutual_fund_holders(symbol: &str) -> Result<Vec<MutualFundHolderDTO
 /// * `cik` - Central Index Key
 /// * `date` - Filing date (YYYY-MM-DD)
 pub async fn form_13f(cik: &str, date: &str) -> Result<Vec<Form13FDTO>> {
+    use chrono::Datelike;
+
     let client = build_client()?;
     let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| {
         FinanceError::InvalidParameter {
@@ -148,8 +150,7 @@ pub async fn form_13f(cik: &str, date: &str) -> Result<Vec<Form13FDTO>> {
         }
     })?;
     let year = parsed.format("%Y").to_string();
-    let month = parsed.format("%m").to_string().parse::<u32>().unwrap_or(1);
-    let quarter = ((month - 1) / 3 + 1).to_string();
+    let quarter = (parsed.month0() / 3 + 1).to_string();
     client
         .get(
             "/stable/institutional-ownership/extract",

@@ -98,8 +98,7 @@ pub mod alphavantage {
 
 #[cfg(feature = "fmp")]
 pub mod fmp {
-    //! Financial Modeling Prep configuration and provider-specific operations
-    //! (requires the `fmp` feature).
+    //! Financial Modeling Prep configuration (requires the `fmp` feature).
     //!
     //! Quotes, charts, fundamentals, corporate, and research data are served
     //! through [`Providers`](crate::Providers). Only key configuration is
@@ -109,9 +108,8 @@ pub mod fmp {
 
 #[cfg(feature = "polygon")]
 pub mod polygon {
-    //! Massive (formerly Polygon.io) configuration, provider-specific market
-    //! research, and real-time WebSocket streaming
-    //! (requires the `polygon` feature).
+    //! Massive (formerly Polygon.io) configuration and real-time WebSocket
+    //! streaming (requires the `polygon` feature).
     //!
     //! REST operations route through [`Providers`](crate::Providers). Use
     //! [`PolygonStream`] when the application needs Polygon's native streaming

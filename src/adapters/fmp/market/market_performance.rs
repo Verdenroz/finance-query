@@ -1,5 +1,6 @@
 //! Market performance endpoints: sector/industry PE, sector performance, gainers/losers/actives.
 
+use futures::future::try_join_all;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -117,7 +118,6 @@ struct StableSectorHistoryDTO {
     average_change: Option<f64>,
 }
 
-/// Sectors covered by the historical sector performance endpoint.
 const SECTORS: [&str; 11] = [
     "Utilities",
     "Basic Materials",
@@ -132,7 +132,6 @@ const SECTORS: [&str; 11] = [
     "Technology",
 ];
 
-/// How many weekdays back a snapshot endpoint may be probed before giving up.
 const SNAPSHOT_LOOKBACK_DAYS: usize = 5;
 
 // ============================================================================
@@ -163,7 +162,7 @@ pub async fn historical_sector_performance(
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
     let client = build_client()?;
     let limit_param = limit.to_string();
-    let responses = ::futures::future::try_join_all(SECTORS.iter().map(|sector| {
+    let responses = try_join_all(SECTORS.iter().map(|sector| {
         let client = &client;
         let limit_param = limit_param.as_str();
         async move {

@@ -78,7 +78,6 @@ pub use indices::snapshots::*;
 pub use economic::*;
 pub use filings::*;
 
-/// Conservative default request pace.
 const PG_RATE_PER_SEC: f64 = 5.0;
 
 provider_singleton_state!(
