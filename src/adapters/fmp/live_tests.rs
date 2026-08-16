@@ -175,30 +175,6 @@ async fn all_supported_fmp_functions_work_live() {
         failures.push("cot_analysis: no symbol returned by cot_symbols".to_string());
     }
 
-    for indicator in [
-        quote::technical::TechnicalIndicator::Sma,
-        quote::technical::TechnicalIndicator::Ema,
-        quote::technical::TechnicalIndicator::Wma,
-        quote::technical::TechnicalIndicator::Dema,
-        quote::technical::TechnicalIndicator::Tema,
-        quote::technical::TechnicalIndicator::Rsi,
-        quote::technical::TechnicalIndicator::StandardDeviation,
-        quote::technical::TechnicalIndicator::Williams,
-        quote::technical::TechnicalIndicator::Adx,
-    ] {
-        check!(
-            "technical_indicator",
-            quote::technical::technical_indicator(
-                indicator,
-                "AAPL",
-                14,
-                "1day",
-                Some(&from),
-                Some(&to),
-            )
-        );
-    }
-
     check!("name_search", discovery::reference::name_search("Apple"));
     check!("cik_search", discovery::reference::cik_search("320193"));
     check!(

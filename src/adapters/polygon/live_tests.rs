@@ -3,7 +3,7 @@ use chrono::{Days, TimeZone, Utc};
 
 use super::{
     chart, corporate, crypto, discovery, economic, filings, forex, fundamentals, futures, indices,
-    market, options, quote, technical,
+    market, options, quote,
 };
 use crate::{FinanceError, Frequency, Interval, StatementType, TimeRange};
 
@@ -620,25 +620,6 @@ async fn all_supported_polygon_functions_work_live() {
         "fetch_unified_snapshot_response",
         quote::unified::fetch_unified_snapshot_response(&["AAPL", "X:BTCUSD"])
     );
-
-    for indicator in [
-        technical::TechnicalIndicator::Sma,
-        technical::TechnicalIndicator::Ema,
-        technical::TechnicalIndicator::Macd,
-        technical::TechnicalIndicator::Rsi,
-    ] {
-        check!(
-            "technical_indicator",
-            technical::technical_indicator(indicator, "AAPL", &[("limit", "2")])
-        );
-    }
-    check!("stock_sma", technical::stock_sma("AAPL", &[("limit", "2")]));
-    check!("stock_ema", technical::stock_ema("AAPL", &[("limit", "2")]));
-    check!(
-        "stock_macd",
-        technical::stock_macd("AAPL", &[("limit", "2")])
-    );
-    check!("stock_rsi", technical::stock_rsi("AAPL", &[("limit", "2")]));
 
     total += 1;
     match super::websocket::PolygonStream::builder(api_key)

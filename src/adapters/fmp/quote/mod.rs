@@ -5,7 +5,6 @@ pub mod bulk;
 pub mod company;
 pub mod extended;
 pub mod prices;
-pub mod technical;
 
 pub use company::*;
 pub use prices::*;

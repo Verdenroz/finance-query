@@ -38,7 +38,6 @@ mod fundamentals; // FUNDAMENTALS
 #[allow(dead_code)] // unrouted: ETF Global partner data; ETF surface lands with #264
 mod market;
 mod quote; // QUOTE
-mod technical;
 
 // Asset-class subdirectory modules
 mod crypto; // CRYPTO
@@ -62,8 +61,6 @@ pub use fundamentals::*;
 pub use options::reference::*;
 pub use options::snapshots::fetch_options_response;
 pub use quote::*;
-#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
-pub use technical::*;
 
 // Asset-class modules
 pub use crypto::aggregates::fetch_crypto_grouped_daily_response;
