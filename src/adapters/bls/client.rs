@@ -69,6 +69,15 @@ impl BlsClient {
         })
     }
 
+    /// Remove the registration key from a message BLS wrote, which quotes the
+    /// submitted key back when it rejects one.
+    fn scrub(&self, message: &str) -> String {
+        match &self.tier {
+            Tier::V1 => message.to_string(),
+            Tier::V2(key) => crate::adapters::common::redact_key(message, key),
+        }
+    }
+
     /// Fetch one series by its native BLS id (e.g. `"CUUR0000SA0"`).
     ///
     /// Observations come back newest-first, as BLS orders them.
@@ -117,7 +126,7 @@ impl BlsClient {
             })?;
 
         if parsed.status != "REQUEST_SUCCEEDED" {
-            let context = format!("{}: {}", parsed.status, parsed.message.join("; "));
+            let context = self.scrub(&format!("{}: {}", parsed.status, parsed.message.join("; ")));
             let normalized = context.to_ascii_lowercase();
             if normalized.contains("registration key") || normalized.contains("registrationkey") {
                 return Err(FinanceError::AuthenticationFailed { context });
@@ -144,7 +153,7 @@ impl BlsClient {
                 context: if parsed.message.is_empty() {
                     "BLS returned no observations for this series".to_string()
                 } else {
-                    parsed.message.join("; ")
+                    self.scrub(&parsed.message.join("; "))
                 },
             });
         }

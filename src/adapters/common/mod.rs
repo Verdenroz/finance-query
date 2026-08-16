@@ -121,6 +121,25 @@ pub(crate) fn check_status(api: &'static str, status: StatusCode) -> Result<()> 
     Err(status_error(api, status))
 }
 
+/// Error hygiene shared by the adapters that carry an API key.
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fmp",
+    feature = "fred",
+    feature = "polygon"
+))]
+pub(crate) mod keyed;
+
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fmp",
+    feature = "fred",
+    feature = "polygon"
+))]
+pub(crate) use keyed::{redact_key, transport_error};
+
 #[cfg(test)]
 mod tests {
     use super::*;

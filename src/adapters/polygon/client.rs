@@ -10,6 +10,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
+use crate::adapters::common::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -102,23 +103,25 @@ impl PolygonClient {
     }
 
     /// Retained for the error-parity test; `check_error_envelope` is the live path.
-    fn check_error_envelope(env: &ErrorEnvelope) -> Result<()> {
+    fn check_error_envelope(env: &ErrorEnvelope, api_key: &str) -> Result<()> {
         let Some(status) = env.status.as_deref() else {
             return Ok(());
         };
         if status != "ERROR" && status != "NOT_FOUND" && status != "NOT_AUTHORIZED" {
             return Ok(());
         }
-        let msg = env
-            .error
-            .as_ref()
-            .and_then(|v| v.as_str())
-            .or_else(|| env.message.as_ref().and_then(|v| v.as_str()))
-            .unwrap_or("Unknown error");
+        let msg = redact_key(
+            env.error
+                .as_ref()
+                .and_then(|v| v.as_str())
+                .or_else(|| env.message.as_ref().and_then(|v| v.as_str()))
+                .unwrap_or("Unknown error"),
+            api_key,
+        );
         if status == "NOT_FOUND" {
             return Err(FinanceError::SymbolNotFound {
                 symbol: None,
-                context: msg.to_string(),
+                context: msg,
             });
         }
         let normalized = msg.to_ascii_lowercase();
@@ -129,9 +132,7 @@ impl PolygonClient {
             || normalized.contains("not entitled")
             || normalized.contains("upgrade your plan")
         {
-            return Err(FinanceError::AuthenticationFailed {
-                context: msg.to_string(),
-            });
+            return Err(FinanceError::AuthenticationFailed { context: msg });
         }
         Err(FinanceError::ExternalApiError {
             api: "Polygon".to_string(),
@@ -162,22 +163,13 @@ impl PolygonClient {
             .map_err(|error| self.map_transport_error(&error))?;
         Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
-            Self::check_error_envelope(&env)?;
+            Self::check_error_envelope(&env, &self.api_key)?;
         }
         Ok(bytes)
     }
 
     fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
-        if error.is_timeout() {
-            return FinanceError::Timeout {
-                timeout_ms: self.timeout.as_millis() as u64,
-            };
-        }
-        // A reqwest error may retain the full URL. Polygon authenticates with
-        // an apiKey query parameter, so never bubble that URL into logs.
-        FinanceError::NetworkError {
-            api: "Polygon".to_string(),
-        }
+        transport_error("Polygon", self.timeout, error)
     }
 
     /// Execute a GET request to a Polygon REST path and return raw JSON.
@@ -185,7 +177,7 @@ impl PolygonClient {
     pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes.as_ref()) {
-            Self::check_error_envelope(&env)?;
+            Self::check_error_envelope(&env, &self.api_key)?;
         }
 
         Ok(serde_json::from_slice(bytes.as_ref())?)
@@ -201,7 +193,7 @@ impl PolygonClient {
         let bytes = bytes.as_ref();
 
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
-            Self::check_error_envelope(&env)?;
+            Self::check_error_envelope(&env, &self.api_key)?;
         }
 
         serde_json::from_slice(bytes).map_err(|e| FinanceError::ResponseStructureError {
@@ -223,7 +215,7 @@ impl PolygonClient {
         let bytes = bytes.as_ref();
 
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
-            Self::check_error_envelope(&env)?;
+            Self::check_error_envelope(&env, &self.api_key)?;
         }
 
         serde_json::from_slice(bytes).map_err(|e| FinanceError::ResponseStructureError {
@@ -299,7 +291,7 @@ mod tests {
 
         for (body, want) in cases {
             let checked = match serde_json::from_slice::<ErrorEnvelope>(body.as_bytes()) {
-                Ok(env) => PolygonClient::check_error_envelope(&env),
+                Ok(env) => PolygonClient::check_error_envelope(&env, "test-key"),
                 Err(_) => Ok(()),
             };
             match (want, checked) {
@@ -318,6 +310,14 @@ mod tests {
         }
     }
 
+    fn client(api_key: &str, base_url: &str) -> PolygonClient {
+        PolygonClientBuilder::new(api_key)
+            .base_url(base_url)
+            .timeout(Duration::from_secs(5))
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
+    }
+
     #[tokio::test]
     async fn authentication_body_is_preserved_on_http_error() {
         let mut server = mockito::Server::new_async().await;
@@ -332,15 +332,42 @@ mod tests {
             .with_body(r#"{"status":"ERROR","error":"API Key is invalid"}"#)
             .create_async()
             .await;
-        let client = PolygonClientBuilder::new("test-key")
-            .base_url(server.url())
-            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
-            .unwrap();
 
-        let err = client
+        let err = client("test-key", &server.url())
             .get_raw("/v2/aggs/ticker/AAPL/prev", &[])
             .await
             .unwrap_err();
         assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn errors_never_render_the_api_key() {
+        const KEY: &str = "SUPERSECRETKEY123";
+
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/v3/reference/tickers")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{"status":"NOT_AUTHORIZED","message":"API Key {KEY} is not entitled"}}"#
+            ))
+            .create_async()
+            .await;
+
+        let echoed = client(KEY, &server.url())
+            .get_raw("/v3/reference/tickers", &[])
+            .await
+            .unwrap_err();
+        let unreachable = client(KEY, "http://127.0.0.1:1")
+            .get_raw("/v3/reference/tickers", &[])
+            .await
+            .unwrap_err();
+
+        for err in [echoed, unreachable] {
+            assert!(!format!("{err}").contains(KEY), "{err}");
+            assert!(!format!("{err:?}").contains(KEY), "{err:?}");
+        }
     }
 }

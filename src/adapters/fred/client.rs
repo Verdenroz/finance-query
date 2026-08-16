@@ -7,6 +7,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{MacroObservation, MacroSeries, ReleaseDate};
+use crate::adapters::common::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -59,6 +60,7 @@ impl FredClientBuilder {
             api_key: self.api_key,
             http,
             limiter,
+            timeout: self.timeout,
             base_url: self.base_url.unwrap_or_else(|| FRED_BASE.to_string()),
         })
     }
@@ -69,14 +71,16 @@ pub(crate) struct FredClient {
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
+    timeout: Duration,
     base_url: String,
 }
 
 impl FredClient {
-    fn response_error(status: StatusCode, body: &[u8]) -> FinanceError {
+    fn response_error(status: StatusCode, body: &[u8], api_key: &str) -> FinanceError {
         let message = serde_json::from_slice::<FredErrorEnvelope>(body)
             .ok()
             .and_then(|error| error.error_message)
+            .map(|message| redact_key(&message, api_key))
             .unwrap_or_else(|| format!("FRED returned HTTP {status}"));
         let normalized = message.to_ascii_lowercase();
         if normalized.contains("api_key") || normalized.contains("api key") {
@@ -105,13 +109,17 @@ impl FredClient {
     }
 
     async fn decode_json<T: serde::de::DeserializeOwned>(
+        &self,
         response: reqwest::Response,
         field: &str,
     ) -> Result<T> {
         let status = response.status();
-        let bytes = response.bytes().await?;
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
         if !status.is_success() {
-            return Err(Self::response_error(status, &bytes));
+            return Err(Self::response_error(status, &bytes, &self.api_key));
         }
         serde_json::from_slice(&bytes).map_err(|error| FinanceError::ResponseStructureError {
             field: field.to_string(),
@@ -135,8 +143,18 @@ impl FredClient {
         query.extend_from_slice(params);
 
         debug!("FRED request: {path}");
-        let response = self.http.get(&url).query(&query).send().await?;
-        Self::decode_json(response, path).await
+        let response = self
+            .http
+            .get(&url)
+            .query(&query)
+            .send()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
+        self.decode_json(response, path).await
+    }
+
+    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
+        transport_error("FRED", self.timeout, error)
     }
 
     /// Fetch all observations for a FRED series by ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`).
@@ -224,4 +242,45 @@ impl FredClient {
 #[derive(serde::Deserialize)]
 struct FredErrorEnvelope {
     error_message: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn client(api_key: &str, base_url: &str) -> FredClient {
+        FredClientBuilder::new(api_key)
+            .timeout(Duration::from_secs(5))
+            .base_url(base_url)
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn errors_never_render_the_api_key() {
+        const KEY: &str = "SUPERSECRETKEY123";
+
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/series/observations")
+            .match_query(mockito::Matcher::Any)
+            .with_status(400)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{"error_code":400,"error_message":"api_key {KEY} is not registered"}}"#
+            ))
+            .create_async()
+            .await;
+
+        let echoed = client(KEY, &server.url()).series("GDP").await.unwrap_err();
+        let unreachable = client(KEY, "http://127.0.0.1:1")
+            .series("GDP")
+            .await
+            .unwrap_err();
+
+        for err in [echoed, unreachable] {
+            assert!(!format!("{err}").contains(KEY), "{err}");
+            assert!(!format!("{err:?}").contains(KEY), "{err:?}");
+        }
+    }
 }

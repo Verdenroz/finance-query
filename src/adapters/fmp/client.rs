@@ -9,6 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
+use crate::adapters::common::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -97,17 +98,16 @@ impl FmpClient {
         }
     }
 
-    fn check_error_envelope(env: &ErrorEnvelope) -> Result<()> {
+    fn check_error_envelope(env: &ErrorEnvelope, api_key: &str) -> Result<()> {
         if let Some(msg) = &env.error_message {
+            let msg = redact_key(msg, api_key);
             let normalized = msg.to_ascii_lowercase();
             if normalized.contains("api key") || normalized.contains("apikey") {
-                return Err(FinanceError::AuthenticationFailed {
-                    context: msg.clone(),
-                });
+                return Err(FinanceError::AuthenticationFailed { context: msg });
             }
             return Err(FinanceError::InvalidParameter {
                 param: "request".to_string(),
-                reason: msg.clone(),
+                reason: msg,
             });
         }
         Ok(())
@@ -136,26 +136,13 @@ impl FmpClient {
             .map_err(|error| self.map_transport_error(&error))?;
         Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
-            Self::check_error_envelope(&env)?;
+            Self::check_error_envelope(&env, &self.api_key)?;
         }
         Ok(bytes.to_vec())
     }
 
     fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
-        if error.is_timeout() {
-            return FinanceError::Timeout {
-                timeout_ms: self.timeout_ms(),
-            };
-        }
-        // A reqwest error renders the full URL and FMP authenticates with an
-        // apikey query parameter, so the source is dropped rather than logged.
-        FinanceError::NetworkError {
-            api: "FMP".to_string(),
-        }
-    }
-
-    fn timeout_ms(&self) -> u64 {
-        self.timeout.as_millis() as u64
+        transport_error("FMP", self.timeout, error)
     }
 
     /// Execute a GET request to an FMP REST path and return raw JSON.
@@ -257,7 +244,7 @@ mod tests {
         ];
         for (body, expected) in cases {
             let checked = match serde_json::from_slice::<ErrorEnvelope>(body.as_bytes()) {
-                Ok(env) => FmpClient::check_error_envelope(&env),
+                Ok(env) => FmpClient::check_error_envelope(&env, "test-key"),
                 Err(_) => Ok(()),
             };
             match (expected, checked) {
@@ -273,9 +260,17 @@ mod tests {
         let auth = serde_json::from_str::<ErrorEnvelope>(r#"{"Error Message":"Invalid API KEY"}"#)
             .unwrap();
         assert!(matches!(
-            FmpClient::check_error_envelope(&auth),
+            FmpClient::check_error_envelope(&auth, "test-key"),
             Err(FinanceError::AuthenticationFailed { .. })
         ));
+    }
+
+    fn client(api_key: &str, base_url: &str) -> FmpClient {
+        FmpClientBuilder::new(api_key)
+            .base_url(base_url)
+            .timeout(Duration::from_secs(5))
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
     }
 
     #[tokio::test]
@@ -292,15 +287,42 @@ mod tests {
             .with_body(r#"{"Error Message":"Invalid API KEY"}"#)
             .create_async()
             .await;
-        let client = FmpClientBuilder::new("test-key")
-            .base_url(server.url())
-            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
-            .unwrap();
 
-        let err = client
+        let err = client("test-key", &server.url())
             .get_raw("/stable/quote", &[("symbol", "AAPL")])
             .await
             .unwrap_err();
         assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn errors_never_render_the_api_key() {
+        const KEY: &str = "SUPERSECRETKEY123";
+
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/quote")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{"Error Message":"Invalid API KEY {KEY} supplied"}}"#
+            ))
+            .create_async()
+            .await;
+
+        let echoed = client(KEY, &server.url())
+            .get_raw("/stable/quote", &[])
+            .await
+            .unwrap_err();
+        let unreachable = client(KEY, "http://127.0.0.1:1")
+            .get_raw("/stable/quote", &[])
+            .await
+            .unwrap_err();
+
+        for err in [echoed, unreachable] {
+            assert!(!format!("{err}").contains(KEY), "{err}");
+            assert!(!format!("{err:?}").contains(KEY), "{err:?}");
+        }
     }
 }
