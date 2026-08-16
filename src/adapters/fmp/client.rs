@@ -274,7 +274,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn authentication_body_is_preserved_on_http_error() {
+    async fn http_401_maps_to_authentication_error() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/stable/quote")
