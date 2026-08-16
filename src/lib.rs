@@ -108,17 +108,13 @@ pub mod fmp {
 
 #[cfg(feature = "polygon")]
 pub mod polygon {
-    //! Massive (formerly Polygon.io) configuration and real-time WebSocket
-    //! streaming (requires the `polygon` feature).
+    //! Massive (formerly Polygon.io) configuration (requires the `polygon`
+    //! feature).
     //!
-    //! REST operations route through [`Providers`](crate::Providers). Use
-    //! [`PolygonStream`] when the application needs Polygon's native streaming
-    //! channels.
-    pub use crate::adapters::polygon::websocket::{
-        BookSide, ClusterDTO as Cluster, PolygonMessage, PolygonSender, PolygonStream,
-        PolygonStreamBuilder, StreamAggregate, StreamForexQuote, StreamIndexValue, StreamLevel2,
-        StreamQuote, StreamTrade,
-    };
+    //! REST operations route through [`Providers`](crate::Providers) and
+    //! Polygon's real-time channels through
+    //! [`streaming`](crate::streaming). Only key configuration is exposed
+    //! here; the adapter's raw response types stay internal.
     pub use crate::adapters::polygon::{init, init_with_timeout};
 }
 
