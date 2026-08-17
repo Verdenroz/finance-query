@@ -20,18 +20,24 @@ pub struct CompanyProfileDTO {
     /// Beta.
     pub beta: Option<f64>,
     /// Volume average.
-    #[serde(rename = "volAvg")]
+    #[serde(rename = "averageVolume")]
     pub vol_avg: Option<f64>,
     /// Market capitalization.
-    #[serde(rename = "mktCap")]
+    #[serde(rename = "marketCap")]
     pub mkt_cap: Option<f64>,
     /// Last dividend.
-    #[serde(rename = "lastDiv")]
+    #[serde(rename = "lastDividend")]
     pub last_div: Option<f64>,
     /// 52-week range.
     pub range: Option<String>,
-    /// Price changes.
+    /// Price change.
+    #[serde(rename = "change")]
     pub changes: Option<f64>,
+    /// Percentage price change.
+    #[serde(rename = "changePercentage")]
+    pub change_percentage: Option<f64>,
+    /// Latest session volume.
+    pub volume: Option<f64>,
     /// Company name.
     #[serde(rename = "companyName")]
     pub company_name: Option<String>,
@@ -43,11 +49,11 @@ pub struct CompanyProfileDTO {
     pub isin: Option<String>,
     /// CUSIP.
     pub cusip: Option<String>,
-    /// Exchange name.
+    /// Exchange code (e.g. `"NASDAQ"`).
     pub exchange: Option<String>,
-    /// Exchange short name.
-    #[serde(rename = "exchangeShortName")]
-    pub exchange_short_name: Option<String>,
+    /// Full venue name (e.g. `"NASDAQ Global Select"`).
+    #[serde(rename = "exchangeFullName")]
+    pub exchange_full_name: Option<String>,
     /// Industry.
     pub industry: Option<String>,
     /// Website.
@@ -73,11 +79,6 @@ pub struct CompanyProfileDTO {
     pub state: Option<String>,
     /// ZIP code.
     pub zip: Option<String>,
-    /// DCF difference.
-    #[serde(rename = "dcfDiff")]
-    pub dcf_diff: Option<f64>,
-    /// DCF value.
-    pub dcf: Option<f64>,
     /// Image/logo URL.
     pub image: Option<String>,
     /// IPO date.
@@ -275,24 +276,28 @@ mod tests {
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([{
+                r#"[{
                     "symbol": "AAPL",
                     "price": 178.72,
                     "beta": 1.286,
-                    "volAvg": 58405568,
-                    "mktCap": 2794000000000_f64,
+                    "marketCap": 2794000000000,
+                    "lastDividend": 0.96,
+                    "range": "164.08-260.10",
+                    "change": 1.23,
+                    "changePercentage": 0.69,
+                    "volume": 41000000,
+                    "averageVolume": 58405568,
                     "companyName": "Apple Inc.",
                     "currency": "USD",
-                    "exchange": "NASDAQ Global Select",
-                    "exchangeShortName": "NASDAQ",
+                    "exchangeFullName": "NASDAQ Global Select",
+                    "exchange": "NASDAQ",
                     "industry": "Consumer Electronics",
                     "sector": "Technology",
                     "country": "US",
                     "ceo": "Mr. Timothy D. Cook",
                     "isEtf": false,
                     "isActivelyTrading": true
-                }])
-                .to_string(),
+                }]"#,
             )
             .create_async()
             .await;
@@ -300,11 +305,23 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<CompanyProfileDTO> = client.get("/stable/profile", &[]).await.unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result[0].company_name.as_deref(), Some("Apple Inc."));
-        assert_eq!(result[0].sector.as_deref(), Some("Technology"));
-        assert_eq!(result[0].is_etf, Some(false));
+        let profile = &result[0];
+        assert_eq!(profile.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(profile.company_name.as_deref(), Some("Apple Inc."));
+        assert_eq!(profile.sector.as_deref(), Some("Technology"));
+        assert_eq!(profile.is_etf, Some(false));
+        assert_eq!(profile.vol_avg, Some(58_405_568.0));
+        assert_eq!(profile.mkt_cap, Some(2_794_000_000_000.0));
+        assert_eq!(profile.last_div, Some(0.96));
+        assert_eq!(profile.changes, Some(1.23));
+        assert_eq!(profile.change_percentage, Some(0.69));
+        assert_eq!(profile.volume, Some(41_000_000.0));
+        // `exchange` is the short code; the venue name moved to `exchangeFullName`.
+        assert_eq!(profile.exchange.as_deref(), Some("NASDAQ"));
+        assert_eq!(
+            profile.exchange_full_name.as_deref(),
+            Some("NASDAQ Global Select")
+        );
     }
 
     #[tokio::test]

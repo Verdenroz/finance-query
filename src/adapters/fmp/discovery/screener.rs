@@ -59,12 +59,11 @@ pub struct SearchResultDTO {
     pub name: Option<String>,
     /// Currency.
     pub currency: Option<String>,
-    /// Exchange name.
-    #[serde(rename = "stockExchange")]
-    pub stock_exchange: Option<String>,
-    /// Short exchange name.
-    #[serde(rename = "exchangeShortName")]
-    pub exchange_short_name: Option<String>,
+    /// Full venue name (e.g. `"NASDAQ Global Select"`).
+    #[serde(rename = "exchangeFullName")]
+    pub exchange_full_name: Option<String>,
+    /// Exchange code (e.g. `"NASDAQ"`).
+    pub exchange: Option<String>,
 }
 
 /// Screen stocks by various financial criteria.
@@ -112,7 +111,7 @@ pub async fn fetch_symbol_search_response(
                 id: None,
                 name: r.name,
                 // Prefer the short code (e.g. "NASDAQ") over the long venue name.
-                exchange: r.exchange_short_name.or(r.stock_exchange),
+                exchange: r.exchange.or(r.exchange_full_name),
                 asset_type: None,
                 currency: r.currency,
                 active: None,
@@ -169,16 +168,13 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "name": "Apple Inc.",
-                        "currency": "USD",
-                        "stockExchange": "NASDAQ",
-                        "exchangeShortName": "NASDAQ"
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "name": "Apple Inc.",
+                    "currency": "USD",
+                    "exchangeFullName": "NASDAQ Global Select",
+                    "exchange": "NASDAQ"
+                }]"#,
             )
             .create_async()
             .await;
@@ -191,8 +187,44 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result[0].name.as_deref(), Some("Apple Inc."));
+
+        let hit = &result[0];
+        assert_eq!(hit.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(hit.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(hit.currency.as_deref(), Some("USD"));
+        assert_eq!(hit.exchange.as_deref(), Some("NASDAQ"));
+        assert_eq!(
+            hit.exchange_full_name.as_deref(),
+            Some("NASDAQ Global Select")
+        );
+    }
+
+    #[test]
+    fn symbol_search_exposes_the_exchange_code() {
+        let hits: Vec<SearchResultDTO> = serde_json::from_str(
+            r#"[{"symbol":"AAPL","name":"Apple Inc.","currency":"USD",
+                 "exchangeFullName":"NASDAQ Global Select","exchange":"NASDAQ"}]"#,
+        )
+        .unwrap();
+
+        let matched: Vec<_> = hits
+            .into_iter()
+            .filter_map(|r| {
+                Some(crate::models::discovery::reference::SymbolMatch {
+                    symbol: r.symbol?,
+                    id: None,
+                    name: r.name,
+                    exchange: r.exchange.or(r.exchange_full_name),
+                    asset_type: None,
+                    currency: r.currency,
+                    active: None,
+                    market_cap_rank: None,
+                    thumbnail: None,
+                    image: None,
+                })
+            })
+            .collect();
+
+        assert_eq!(matched[0].exchange.as_deref(), Some("NASDAQ"));
     }
 }

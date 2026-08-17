@@ -39,10 +39,11 @@ pub struct InsiderTradeDTO {
     /// Securities owned after transaction.
     #[serde(rename = "securitiesOwned")]
     pub securities_owned: Option<f64>,
-    /// SEC form type.
+    /// Relationship of the reporting person to the issuer (e.g. `"officer"`).
     #[serde(rename = "typeOfOwner")]
     pub type_of_owner: Option<String>,
     /// Link to SEC filing.
+    #[serde(rename = "url")]
     pub link: Option<String>,
 }
 
@@ -141,18 +142,6 @@ pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
         .await
 }
 
-/// Fetch CIK mapping by company name/identifier.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMappingDTO>> {
-    let client = build_client()?;
-    client
-        .get(
-            "/stable/sec-filings-company-search/name",
-            &[("company", name)],
-        )
-        .await
-}
-
 /// Fetch congressional (senate) trading data for a symbol.
 #[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTradeDTO>> {
@@ -189,7 +178,8 @@ mod tests {
                         "securitiesTransacted": 50000.0,
                         "price": 185.50,
                         "securitiesOwned": 3200000.0,
-                        "typeOfOwner": "officer"
+                        "typeOfOwner": "officer",
+                        "url": "https://www.sec.gov/Archives/edgar/data/320193/x.htm"
                     }
                 ])
                 .to_string(),
@@ -205,9 +195,22 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].reporting_name.as_deref(), Some("Cook Timothy D"));
-        assert!((resp[0].price.unwrap() - 185.50).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(row.filing_date.as_deref(), Some("2024-01-15"));
+        assert_eq!(row.transaction_date.as_deref(), Some("2024-01-12"));
+        assert_eq!(row.reporting_cik.as_deref(), Some("0001234567"));
+        assert_eq!(row.reporting_name.as_deref(), Some("Cook Timothy D"));
+        assert_eq!(row.transaction_type.as_deref(), Some("S-Sale"));
+        assert_eq!(row.securities_transacted, Some(50_000.0));
+        assert_eq!(row.price, Some(185.50));
+        assert_eq!(row.securities_owned, Some(3_200_000.0));
+        assert_eq!(row.type_of_owner.as_deref(), Some("officer"));
+        assert_eq!(
+            row.link.as_deref(),
+            Some("https://www.sec.gov/Archives/edgar/data/320193/x.htm")
+        );
     }
 
     #[tokio::test]

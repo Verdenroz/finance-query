@@ -18,11 +18,13 @@ pub struct InstitutionalHolderDTO {
     #[serde(alias = "investorName", alias = "name")]
     pub holder: Option<String>,
     /// Number of shares held.
+    #[serde(rename = "sharesNumber")]
     pub shares: Option<f64>,
-    /// Date reported.
-    #[serde(rename = "dateReported")]
+    /// Quarter the holding was reported for.
+    #[serde(rename = "date")]
     pub date_reported: Option<String>,
-    /// Change in shares.
+    /// Change in shares since the prior quarter.
+    #[serde(rename = "changeInSharesNumber")]
     pub change: Option<f64>,
 }
 
@@ -42,6 +44,7 @@ pub struct EtfHolderDTO {
     #[serde(rename = "marketValue")]
     pub market_value: Option<f64>,
     /// Updated date.
+    #[serde(rename = "updatedAt")]
     pub updated: Option<String>,
 }
 
@@ -60,7 +63,7 @@ pub struct MutualFundHolderDTO {
     /// Change in shares.
     pub change: Option<f64>,
     /// Weight percentage.
-    #[serde(rename = "weightPercentage")]
+    #[serde(rename = "weightPercent")]
     pub weight_percentage: Option<f64>,
 }
 
@@ -71,7 +74,7 @@ pub struct Form13FDTO {
     /// Date.
     pub date: Option<String>,
     /// Filing date.
-    #[serde(rename = "fillingDate")]
+    #[serde(rename = "filingDate")]
     pub filling_date: Option<String>,
     /// Accepted date.
     #[serde(rename = "acceptedDate")]
@@ -79,9 +82,10 @@ pub struct Form13FDTO {
     /// CIK.
     pub cik: Option<String>,
     /// CUSIP.
+    #[serde(rename = "securityCusip")]
     pub cusip: Option<String>,
     /// Ticker symbol.
-    #[serde(rename = "tickercusip")]
+    #[serde(rename = "symbol")]
     pub ticker_cusip: Option<String>,
     /// Company name.
     #[serde(rename = "nameOfIssuer")]
@@ -177,36 +181,54 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_institutional_holders_mock() {
+    async fn institutional_holders_read_the_analytics_by_holder_shape() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/stable/funds/disclosure-holders-latest")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
+            .mock(
+                "GET",
+                "/stable/institutional-ownership/extract-analytics/holder",
+            )
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
+                mockito::Matcher::UrlEncoded("year".into(), "2026".into()),
+                mockito::Matcher::UrlEncoded("quarter".into(), "1".into()),
+            ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "holder": "Vanguard Group Inc",
-                        "shares": 1300000000.0,
-                        "dateReported": "2024-01-15",
-                        "change": 5000000.0
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "date": "2026-03-31",
+                    "investorName": "Vanguard Group Inc",
+                    "symbol": "AAPL",
+                    "sharesNumber": 1300000000,
+                    "changeInSharesNumber": 5000000,
+                    "marketValue": 265000000000
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<InstitutionalHolderDTO> = client
-            .get("/stable/funds/disclosure-holders-latest", &[])
+            .get(
+                "/stable/institutional-ownership/extract-analytics/holder",
+                &[("symbol", "AAPL"), ("year", "2026"), ("quarter", "1")],
+            )
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].holder.as_deref(), Some("Vanguard Group Inc"));
+
+        let row = &resp[0];
+        assert_eq!(row.holder.as_deref(), Some("Vanguard Group Inc"));
+        assert_eq!(row.shares, Some(1_300_000_000.0));
+        assert_eq!(row.date_reported.as_deref(), Some("2026-03-31"));
+        assert_eq!(row.change, Some(5_000_000.0));
+    }
+
+    #[test]
+    fn latest_completed_quarter_never_returns_the_current_one() {
+        let (year, quarter) = latest_completed_quarter();
+        assert!(year.parse::<i32>().unwrap() >= 2024);
+        assert!(matches!(quarter.as_str(), "1" | "2" | "3" | "4"));
     }
 
     #[tokio::test]
@@ -226,7 +248,7 @@ mod tests {
                         "sharesNumber": 170000000.0,
                         "weightPercentage": 7.2,
                         "marketValue": 31450000000.0,
-                        "updated": "2024-01-15"
+                        "updatedAt": "2024-01-15"
                     }
                 ])
                 .to_string(),
@@ -236,8 +258,12 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EtfHolderDTO> = client.get("/stable/etf/holdings", &[]).await.unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].asset.as_deref(), Some("AAPL"));
-        assert!((resp[0].weight_percentage.unwrap() - 7.2).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.asset.as_deref(), Some("AAPL"));
+        assert_eq!(row.shares_number, Some(170_000_000.0));
+        assert_eq!(row.weight_percentage, Some(7.2));
+        assert_eq!(row.market_value, Some(31_450_000_000.0));
+        assert_eq!(row.updated.as_deref(), Some("2024-01-15"));
     }
 }

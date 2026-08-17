@@ -25,6 +25,8 @@ pub struct StockNewsDTO {
     pub image: Option<String>,
     /// News site name.
     pub site: Option<String>,
+    /// Publisher of the article.
+    pub publisher: Option<String>,
     /// Article text / summary.
     pub text: Option<String>,
     /// Article URL.
@@ -37,12 +39,17 @@ pub struct StockNewsDTO {
 pub struct PressReleaseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
-    /// Date.
+    /// Publication date.
+    #[serde(rename = "publishedDate")]
     pub date: Option<String>,
     /// Title.
     pub title: Option<String>,
     /// Full text.
     pub text: Option<String>,
+    /// Wire service that carried the release.
+    pub publisher: Option<String>,
+    /// Release URL.
+    pub url: Option<String>,
 }
 
 // ============================================================================
@@ -58,8 +65,8 @@ fn stock_news_to_canonical(
         .map(|a| crate::models::corporate::news::News {
             title: a.title.unwrap_or_default(),
             link: a.url.unwrap_or_default(),
-            source: a.site.unwrap_or_default(),
-            img: String::new(),
+            source: a.site.or(a.publisher).unwrap_or_default(),
+            img: a.image.unwrap_or_default(),
             time: a.published_date.unwrap_or_default(),
             provider_id: Some(crate::providers::Provider::Fmp),
             #[cfg(feature = "sentiment")]
@@ -167,18 +174,16 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "publishedDate": "2024-01-15 12:00:00",
-                        "title": "Apple Reports Record Quarter",
-                        "image": "https://example.com/image.jpg",
-                        "site": "Reuters",
-                        "text": "Apple Inc. reported record quarterly earnings...",
-                        "url": "https://example.com/article"
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "publishedDate": "2024-01-15 12:00:00",
+                    "publisher": "Reuters",
+                    "title": "Apple Reports Record Quarter",
+                    "image": "https://example.com/image.jpg",
+                    "site": "Reuters",
+                    "text": "Apple Inc. reported record quarterly earnings...",
+                    "url": "https://example.com/article"
+                }]"#,
             )
             .create_async()
             .await;
@@ -188,9 +193,17 @@ mod tests {
             .get("/stable/news/stock", &[("symbols", "AAPL"), ("limit", "5")])
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(resp[0].site.as_deref(), Some("Reuters"));
+
+        let article = &resp[0];
+        assert_eq!(article.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(article.site.as_deref(), Some("Reuters"));
+
+        let news = stock_news_to_canonical(resp);
+        assert_eq!(news[0].title, "Apple Reports Record Quarter");
+        assert_eq!(news[0].link, "https://example.com/article");
+        assert_eq!(news[0].source, "Reuters");
+        assert_eq!(news[0].img, "https://example.com/image.jpg");
+        assert_eq!(news[0].time, "2024-01-15 12:00:00");
     }
 
     #[tokio::test]
@@ -204,15 +217,14 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "date": "2024-01-15",
-                        "title": "Apple Announces New Product",
-                        "text": "Cupertino, CA -- Apple today announced..."
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "publishedDate": "2024-01-15 08:15:00",
+                    "publisher": "Business Wire",
+                    "title": "Apple Announces New Product",
+                    "text": "Cupertino, CA -- Apple today announced...",
+                    "url": "https://example.com/pr"
+                }]"#,
             )
             .create_async()
             .await;
@@ -222,10 +234,13 @@ mod tests {
             .get("/stable/news/press-releases", &[("limit", "10")])
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(
-            resp[0].title.as_deref(),
-            Some("Apple Announces New Product")
-        );
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(row.date.as_deref(), Some("2024-01-15 08:15:00"));
+        assert_eq!(row.title.as_deref(), Some("Apple Announces New Product"));
+        assert!(row.text.is_some());
+        assert_eq!(row.publisher.as_deref(), Some("Business Wire"));
+        assert_eq!(row.url.as_deref(), Some("https://example.com/pr"));
     }
 }
