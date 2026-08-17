@@ -131,15 +131,6 @@ pub(crate) fn check_status(api: &'static str, status: StatusCode) -> Result<()> 
 ))]
 pub(crate) mod keyed;
 
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fmp",
-    feature = "fred",
-    feature = "polygon"
-))]
-pub(crate) use keyed::{redact_key, transport_error};
-
 #[cfg(test)]
 mod tests {
     use super::*;

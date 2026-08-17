@@ -1,20 +1,23 @@
 //! Error hygiene for the adapters that carry an API key.
 
-use std::time::Duration;
-
-use crate::error::FinanceError;
-
 /// Map a transport failure without keeping the `reqwest::Error`.
 ///
 /// A `reqwest::Error` renders the full request URL in both its `Display` and
 /// its `Debug` impl, so wrapping one would put the query string — and with it
 /// the API key — into every log line that formats the error.
-#[allow(dead_code)] // unused when only a body-keyed adapter (BLS) is enabled
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "fred",
+    feature = "polygon"
+))]
 pub(crate) fn transport_error(
     api: &str,
-    timeout: Duration,
+    timeout: std::time::Duration,
     error: &reqwest::Error,
-) -> FinanceError {
+) -> crate::error::FinanceError {
+    use crate::error::FinanceError;
+
     if error.is_timeout() {
         return FinanceError::Timeout {
             timeout_ms: timeout.as_millis() as u64,

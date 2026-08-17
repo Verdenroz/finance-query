@@ -74,7 +74,7 @@ impl BlsClient {
     fn scrub(&self, message: &str) -> String {
         match &self.tier {
             Tier::V1 => message.to_string(),
-            Tier::V2(key) => crate::adapters::common::redact_key(message, key),
+            Tier::V2(key) => crate::adapters::common::keyed::redact_key(message, key),
         }
     }
 

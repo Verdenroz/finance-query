@@ -7,7 +7,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{MacroObservation, MacroSeries, ReleaseDate};
-use crate::adapters::common::{redact_key, transport_error};
+use crate::adapters::common::keyed::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 

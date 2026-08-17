@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::{redact_key, transport_error};
+use crate::adapters::common::keyed::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 

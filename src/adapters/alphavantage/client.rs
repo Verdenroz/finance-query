@@ -7,7 +7,7 @@ use reqwest::{Client, StatusCode};
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::{redact_key, transport_error};
+use crate::adapters::common::keyed::{redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -203,10 +203,6 @@ mod tests {
             .unwrap()
     }
 
-    fn test_client(base_url: &str) -> AlphaVantageClient {
-        client("test-key", base_url)
-    }
-
     #[tokio::test]
     async fn csv_request_recognizes_json_authentication_error() {
         let mut server = mockito::Server::new_async().await;
@@ -222,7 +218,7 @@ mod tests {
             .create_async()
             .await;
 
-        let err = test_client(&server.url())
+        let err = client("test-key", &server.url())
             .get_csv("DIVIDENDS", &[])
             .await
             .unwrap_err();
@@ -241,7 +237,7 @@ mod tests {
             .create_async()
             .await;
 
-        let err = test_client(&server.url())
+        let err = client("test-key", &server.url())
             .get("OVERVIEW", &[])
             .await
             .unwrap_err();
