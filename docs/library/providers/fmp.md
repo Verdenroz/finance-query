@@ -77,19 +77,22 @@ let target = ticker.price_target_consensus().await?;  // high / low / mean / med
 let activity = ticker.price_target_summary().await?;  // targets published per window
 let rating = ticker.rating_consensus().await?;        // grade distribution + label
 
-let metrics = ticker.key_metrics_ttm().await?;        // current TTM per-share/valuation
-let ratios = ticker.ratios_ttm().await?;              // current TTM margins/returns
+let metrics = ticker.key_metrics_ttm().await?;        // current TTM valuation/returns
+let ratios = ticker.ratios_ttm().await?;              // current TTM margins/per-share
 ```
 
 | Method | Returns | FMP endpoint |
 |--------|---------|--------------|
-| `price_target_consensus()` | `PriceTargetConsensus` | `/api/v4/price-target-consensus` |
-| `price_target_summary()` | `PriceTargetSummary` | `/api/v4/price-target-summary` |
-| `rating_consensus()` | `RatingConsensus` | `/api/v4/upgrades-downgrades-consensus` |
-| `key_metrics_ttm()` | `KeyMetricsTtm` | `/api/v3/key-metrics-ttm/{symbol}` |
-| `ratios_ttm()` | `FinancialRatiosTtm` | `/api/v3/ratios-ttm/{symbol}` |
-| `executive_compensation()` | `Vec<ExecutiveCompensation>` | `/api/v4/governance/executive_compensation` |
-| `employee_count()` | `Vec<EmployeeCount>` | `/api/v4/historical/employee_count` |
+| `price_target_consensus()` | `PriceTargetConsensus` | `/stable/price-target-consensus` |
+| `price_target_summary()` | `PriceTargetSummary` | `/stable/price-target-summary` |
+| `rating_consensus()` | `RatingConsensus` | `/stable/grades-consensus` |
+| `key_metrics_ttm()` | `KeyMetricsTtm` | `/stable/key-metrics-ttm` |
+| `ratios_ttm()` | `FinancialRatiosTtm` | `/stable/ratios-ttm` |
+| `executive_compensation()` | `Vec<ExecutiveCompensation>` | `/stable/governance-executive-compensation` |
+| `employee_count()` | `Vec<EmployeeCount>` | `/stable/historical-employee-count` |
+
+Per-share TTM metrics are served by `ratios_ttm()`, not `key_metrics_ttm()` —
+FMP's stable tier moved them between the two endpoints.
 
 `executive_compensation()` and `employee_count()` route through
 `Capability::CORPORATE` instead. FMP also serves `share_float()`, which the
