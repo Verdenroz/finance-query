@@ -24,13 +24,13 @@ pub struct IncomeStatementDTO {
     /// CIK number.
     pub cik: Option<String>,
     /// Filing date.
-    #[serde(rename = "fillingDate")]
+    #[serde(rename = "filingDate")]
     pub filling_date: Option<String>,
     /// Accepted date.
     #[serde(rename = "acceptedDate")]
     pub accepted_date: Option<String>,
     /// Calendar year.
-    #[serde(rename = "calendarYear")]
+    #[serde(rename = "fiscalYear")]
     pub calendar_year: Option<String>,
     /// Fiscal period (e.g., "Q1", "FY").
     pub period: Option<String>,
@@ -42,9 +42,6 @@ pub struct IncomeStatementDTO {
     /// Gross profit.
     #[serde(rename = "grossProfit")]
     pub gross_profit: Option<f64>,
-    /// Gross profit ratio.
-    #[serde(rename = "grossProfitRatio")]
-    pub gross_profit_ratio: Option<f64>,
     /// Research and development expenses.
     #[serde(rename = "researchAndDevelopmentExpenses")]
     pub research_and_development_expenses: Option<f64>,
@@ -66,6 +63,9 @@ pub struct IncomeStatementDTO {
     /// Cost and expenses.
     #[serde(rename = "costAndExpenses")]
     pub cost_and_expenses: Option<f64>,
+    /// Net interest income.
+    #[serde(rename = "netInterestIncome")]
+    pub net_interest_income: Option<f64>,
     /// Interest income.
     #[serde(rename = "interestIncome")]
     pub interest_income: Option<f64>,
@@ -77,37 +77,45 @@ pub struct IncomeStatementDTO {
     pub depreciation_and_amortization: Option<f64>,
     /// EBITDA.
     pub ebitda: Option<f64>,
-    /// EBITDA ratio.
-    #[serde(rename = "ebitdaratio")]
-    pub ebitda_ratio: Option<f64>,
+    /// EBIT.
+    pub ebit: Option<f64>,
+    /// Non-operating income excluding interest.
+    #[serde(rename = "nonOperatingIncomeExcludingInterest")]
+    pub non_operating_income_excluding_interest: Option<f64>,
     /// Operating income.
     #[serde(rename = "operatingIncome")]
     pub operating_income: Option<f64>,
-    /// Operating income ratio.
-    #[serde(rename = "operatingIncomeRatio")]
-    pub operating_income_ratio: Option<f64>,
     /// Total other income/expenses net.
     #[serde(rename = "totalOtherIncomeExpensesNet")]
     pub total_other_income_expenses_net: Option<f64>,
     /// Income before tax.
     #[serde(rename = "incomeBeforeTax")]
     pub income_before_tax: Option<f64>,
-    /// Income before tax ratio.
-    #[serde(rename = "incomeBeforeTaxRatio")]
-    pub income_before_tax_ratio: Option<f64>,
     /// Income tax expense.
     #[serde(rename = "incomeTaxExpense")]
     pub income_tax_expense: Option<f64>,
+    /// Net income from continuing operations.
+    #[serde(rename = "netIncomeFromContinuingOperations")]
+    pub net_income_from_continuing_operations: Option<f64>,
+    /// Net income from discontinued operations.
+    #[serde(rename = "netIncomeFromDiscontinuedOperations")]
+    pub net_income_from_discontinued_operations: Option<f64>,
+    /// Other adjustments to net income.
+    #[serde(rename = "otherAdjustmentsToNetIncome")]
+    pub other_adjustments_to_net_income: Option<f64>,
     /// Net income.
     #[serde(rename = "netIncome")]
     pub net_income: Option<f64>,
-    /// Net income ratio.
-    #[serde(rename = "netIncomeRatio")]
-    pub net_income_ratio: Option<f64>,
+    /// Net income deductions.
+    #[serde(rename = "netIncomeDeductions")]
+    pub net_income_deductions: Option<f64>,
+    /// Bottom-line net income.
+    #[serde(rename = "bottomLineNetIncome")]
+    pub bottom_line_net_income: Option<f64>,
     /// Earnings per share (basic).
     pub eps: Option<f64>,
     /// Earnings per share (diluted).
-    #[serde(rename = "epsdiluted")]
+    #[serde(rename = "epsDiluted")]
     pub eps_diluted: Option<f64>,
     /// Weighted average shares outstanding.
     #[serde(rename = "weightedAverageShsOut")]
@@ -136,13 +144,13 @@ pub struct BalanceSheetDTO {
     /// CIK number.
     pub cik: Option<String>,
     /// Filing date.
-    #[serde(rename = "fillingDate")]
+    #[serde(rename = "filingDate")]
     pub filling_date: Option<String>,
     /// Accepted date.
     #[serde(rename = "acceptedDate")]
     pub accepted_date: Option<String>,
     /// Calendar year.
-    #[serde(rename = "calendarYear")]
+    #[serde(rename = "fiscalYear")]
     pub calendar_year: Option<String>,
     /// Fiscal period.
     pub period: Option<String>,
@@ -158,8 +166,16 @@ pub struct BalanceSheetDTO {
     /// Net receivables.
     #[serde(rename = "netReceivables")]
     pub net_receivables: Option<f64>,
+    /// Accounts receivable.
+    #[serde(rename = "accountsReceivables")]
+    pub accounts_receivables: Option<f64>,
+    /// Other receivables.
+    #[serde(rename = "otherReceivables")]
+    pub other_receivables: Option<f64>,
     /// Inventory.
     pub inventory: Option<f64>,
+    /// Prepaid expenses.
+    pub prepaids: Option<f64>,
     /// Other current assets.
     #[serde(rename = "otherCurrentAssets")]
     pub other_current_assets: Option<f64>,
@@ -195,12 +211,24 @@ pub struct BalanceSheetDTO {
     /// Total assets.
     #[serde(rename = "totalAssets")]
     pub total_assets: Option<f64>,
+    /// Total payables.
+    #[serde(rename = "totalPayables")]
+    pub total_payables: Option<f64>,
     /// Account payables.
     #[serde(rename = "accountPayables")]
     pub account_payables: Option<f64>,
+    /// Other payables.
+    #[serde(rename = "otherPayables")]
+    pub other_payables: Option<f64>,
+    /// Accrued expenses.
+    #[serde(rename = "accruedExpenses")]
+    pub accrued_expenses: Option<f64>,
     /// Short-term debt.
     #[serde(rename = "shortTermDebt")]
     pub short_term_debt: Option<f64>,
+    /// Current capital lease obligations.
+    #[serde(rename = "capitalLeaseObligationsCurrent")]
+    pub capital_lease_obligations_current: Option<f64>,
     /// Tax payables.
     #[serde(rename = "taxPayables")]
     pub tax_payables: Option<f64>,
@@ -216,6 +244,9 @@ pub struct BalanceSheetDTO {
     /// Long-term debt.
     #[serde(rename = "longTermDebt")]
     pub long_term_debt: Option<f64>,
+    /// Non-current capital lease obligations.
+    #[serde(rename = "capitalLeaseObligationsNonCurrent")]
+    pub capital_lease_obligations_non_current: Option<f64>,
     /// Deferred revenue non-current.
     #[serde(rename = "deferredRevenueNonCurrent")]
     pub deferred_revenue_non_current: Option<f64>,
@@ -237,6 +268,9 @@ pub struct BalanceSheetDTO {
     /// Total liabilities.
     #[serde(rename = "totalLiabilities")]
     pub total_liabilities: Option<f64>,
+    /// Treasury stock.
+    #[serde(rename = "treasuryStock")]
+    pub treasury_stock: Option<f64>,
     /// Preferred stock.
     #[serde(rename = "preferredStock")]
     pub preferred_stock: Option<f64>,
@@ -246,11 +280,14 @@ pub struct BalanceSheetDTO {
     /// Retained earnings.
     #[serde(rename = "retainedEarnings")]
     pub retained_earnings: Option<f64>,
+    /// Additional paid-in capital.
+    #[serde(rename = "additionalPaidInCapital")]
+    pub additional_paid_in_capital: Option<f64>,
     /// Accumulated other comprehensive income/loss.
     #[serde(rename = "accumulatedOtherComprehensiveIncomeLoss")]
     pub accumulated_other_comprehensive_income_loss: Option<f64>,
     /// Other total stockholders equity.
-    #[serde(rename = "othertotalStockholdersEquity")]
+    #[serde(rename = "otherTotalStockholdersEquity")]
     pub other_total_stockholders_equity: Option<f64>,
     /// Total stockholders equity.
     #[serde(rename = "totalStockholdersEquity")]
@@ -258,9 +295,6 @@ pub struct BalanceSheetDTO {
     /// Total equity.
     #[serde(rename = "totalEquity")]
     pub total_equity: Option<f64>,
-    /// Total liabilities and stockholders equity.
-    #[serde(rename = "totalLiabilitiesAndStockholdersEquity")]
-    pub total_liabilities_and_stockholders_equity: Option<f64>,
     /// Minority interest.
     #[serde(rename = "minorityInterest")]
     pub minority_interest: Option<f64>,
@@ -297,13 +331,13 @@ pub struct CashFlowDTO {
     /// CIK number.
     pub cik: Option<String>,
     /// Filing date.
-    #[serde(rename = "fillingDate")]
+    #[serde(rename = "filingDate")]
     pub filling_date: Option<String>,
     /// Accepted date.
     #[serde(rename = "acceptedDate")]
     pub accepted_date: Option<String>,
     /// Calendar year.
-    #[serde(rename = "calendarYear")]
+    #[serde(rename = "fiscalYear")]
     pub calendar_year: Option<String>,
     /// Fiscal period.
     pub period: Option<String>,
@@ -352,28 +386,49 @@ pub struct CashFlowDTO {
     #[serde(rename = "salesMaturitiesOfInvestments")]
     pub sales_maturities_of_investments: Option<f64>,
     /// Other investing activities.
-    #[serde(rename = "otherInvestingActivites")]
+    #[serde(rename = "otherInvestingActivities")]
     pub other_investing_activities: Option<f64>,
     /// Net cash used for investing activities.
-    #[serde(rename = "netCashUsedForInvestingActivites")]
+    #[serde(rename = "netCashProvidedByInvestingActivities")]
     pub net_cash_used_for_investing_activities: Option<f64>,
-    /// Debt repayment.
-    #[serde(rename = "debtRepayment")]
+    /// Net debt issued less repaid.
+    #[serde(rename = "netDebtIssuance")]
     pub debt_repayment: Option<f64>,
+    /// Net long-term debt issued less repaid.
+    #[serde(rename = "longTermNetDebtIssuance")]
+    pub long_term_net_debt_issuance: Option<f64>,
+    /// Net short-term debt issued less repaid.
+    #[serde(rename = "shortTermNetDebtIssuance")]
+    pub short_term_net_debt_issuance: Option<f64>,
+    /// Net stock issued less repurchased.
+    #[serde(rename = "netStockIssuance")]
+    pub net_stock_issuance: Option<f64>,
+    /// Net common stock issued less repurchased.
+    #[serde(rename = "netCommonStockIssuance")]
+    pub net_common_stock_issuance: Option<f64>,
     /// Common stock issued.
-    #[serde(rename = "commonStockIssued")]
+    #[serde(rename = "commonStockIssuance")]
     pub common_stock_issued: Option<f64>,
     /// Common stock repurchased.
     #[serde(rename = "commonStockRepurchased")]
     pub common_stock_repurchased: Option<f64>,
-    /// Dividends paid.
-    #[serde(rename = "dividendsPaid")]
+    /// Net preferred stock issued less repurchased.
+    #[serde(rename = "netPreferredStockIssuance")]
+    pub net_preferred_stock_issuance: Option<f64>,
+    /// Dividends paid, net.
+    #[serde(rename = "netDividendsPaid")]
     pub dividends_paid: Option<f64>,
+    /// Common dividends paid.
+    #[serde(rename = "commonDividendsPaid")]
+    pub common_dividends_paid: Option<f64>,
+    /// Preferred dividends paid.
+    #[serde(rename = "preferredDividendsPaid")]
+    pub preferred_dividends_paid: Option<f64>,
     /// Other financing activities.
-    #[serde(rename = "otherFinancingActivites")]
+    #[serde(rename = "otherFinancingActivities")]
     pub other_financing_activities: Option<f64>,
     /// Net cash used/provided by financing activities.
-    #[serde(rename = "netCashUsedProvidedByFinancingActivities")]
+    #[serde(rename = "netCashProvidedByFinancingActivities")]
     pub net_cash_used_provided_by_financing_activities: Option<f64>,
     /// Effect of forex changes on cash.
     #[serde(rename = "effectOfForexChangesOnCash")]
@@ -396,6 +451,12 @@ pub struct CashFlowDTO {
     /// Free cash flow.
     #[serde(rename = "freeCashFlow")]
     pub free_cash_flow: Option<f64>,
+    /// Income taxes paid in cash.
+    #[serde(rename = "incomeTaxesPaid")]
+    pub income_taxes_paid: Option<f64>,
+    /// Interest paid in cash.
+    #[serde(rename = "interestPaid")]
+    pub interest_paid: Option<f64>,
     /// Link to SEC filing.
     pub link: Option<String>,
     /// Final link to filing.
@@ -560,20 +621,22 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([{
+                r#"[{
                     "date": "2024-03-30",
                     "symbol": "AAPL",
                     "reportedCurrency": "USD",
-                    "calendarYear": "2024",
+                    "filingDate": "2024-05-03",
+                    "fiscalYear": "2024",
                     "period": "Q2",
                     "revenue": 90753000000.0,
                     "costOfRevenue": 49141000000.0,
                     "grossProfit": 41612000000.0,
+                    "ebit": 27900000000.0,
                     "netIncome": 23636000000.0,
+                    "bottomLineNetIncome": 23636000000.0,
                     "eps": 1.53,
-                    "epsdiluted": 1.52
-                }])
-                .to_string(),
+                    "epsDiluted": 1.52
+                }]"#,
             )
             .create_async()
             .await;
@@ -587,10 +650,86 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result[0].revenue, Some(90753000000.0));
-        assert_eq!(result[0].eps, Some(1.53));
+        let stmt = &result[0];
+        assert_eq!(stmt.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(stmt.revenue, Some(90_753_000_000.0));
+        assert_eq!(stmt.eps, Some(1.53));
+        assert_eq!(stmt.eps_diluted, Some(1.52));
+        assert_eq!(stmt.filling_date.as_deref(), Some("2024-05-03"));
+        assert_eq!(stmt.calendar_year.as_deref(), Some("2024"));
+        assert_eq!(stmt.ebit, Some(27_900_000_000.0));
+        assert_eq!(stmt.bottom_line_net_income, Some(23_636_000_000.0));
+    }
+
+    #[tokio::test]
+    async fn cash_flow_reads_the_renamed_financing_keys() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/cash-flow-statement")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(
+                r#"[{
+                    "date": "2024-09-28",
+                    "symbol": "AAPL",
+                    "filingDate": "2024-11-01",
+                    "fiscalYear": "2024",
+                    "period": "FY",
+                    "netIncome": 93736000000.0,
+                    "otherInvestingActivities": -1176000000.0,
+                    "netCashProvidedByInvestingActivities": 2935000000.0,
+                    "netDebtIssuance": -5998000000.0,
+                    "commonStockIssuance": 0.0,
+                    "netDividendsPaid": -15234000000.0,
+                    "otherFinancingActivities": -5802000000.0,
+                    "netCashProvidedByFinancingActivities": -121983000000.0,
+                    "freeCashFlow": 108807000000.0
+                }]"#,
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result: Vec<CashFlowDTO> = client
+            .get("/stable/cash-flow-statement", &[])
+            .await
+            .unwrap();
+
+        let stmt = &result[0];
+        assert_eq!(stmt.filling_date.as_deref(), Some("2024-11-01"));
+        assert_eq!(stmt.calendar_year.as_deref(), Some("2024"));
+        assert_eq!(stmt.other_investing_activities, Some(-1_176_000_000.0));
+        assert_eq!(
+            stmt.net_cash_used_for_investing_activities,
+            Some(2_935_000_000.0)
+        );
+        assert_eq!(stmt.debt_repayment, Some(-5_998_000_000.0));
+        assert_eq!(stmt.common_stock_issued, Some(0.0));
+        assert_eq!(stmt.dividends_paid, Some(-15_234_000_000.0));
+        assert_eq!(stmt.other_financing_activities, Some(-5_802_000_000.0));
+        assert_eq!(
+            stmt.net_cash_used_provided_by_financing_activities,
+            Some(-121_983_000_000.0)
+        );
+    }
+
+    /// Non-numeric metadata never reaches the canonical metric map.
+    #[test]
+    fn pivot_keeps_numeric_metrics_only() {
+        let stmts: Vec<IncomeStatementDTO> = serde_json::from_str(
+            r#"[{"date":"2024-09-28","symbol":"AAPL","fiscalYear":"2024","revenue":391035000000.0}]"#,
+        )
+        .unwrap();
+
+        let data = pivot_financials(stmts);
+        assert_eq!(
+            data["revenue"]["2024-09-28"],
+            serde_json::json!(391_035_000_000.0)
+        );
+        assert!(!data.contains_key("symbol"));
+        assert!(!data.contains_key("fiscalYear"));
+        // Absent keys are omitted rather than emitted as explicit nulls.
+        assert!(!data.contains_key("ebit"));
     }
 
     #[tokio::test]
