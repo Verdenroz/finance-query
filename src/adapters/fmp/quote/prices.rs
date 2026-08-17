@@ -259,27 +259,25 @@ mod tests {
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([{
+                r#"[{
                     "symbol": "AAPL",
                     "name": "Apple Inc.",
                     "price": 178.72,
+                    "changePercentage": 1.22,
                     "change": 2.15,
-                    "changesPercentage": 1.22,
+                    "volume": 58405568,
                     "dayLow": 176.21,
                     "dayHigh": 179.63,
-                    "yearLow": 124.17,
                     "yearHigh": 199.62,
-                    "marketCap": 2794000000000_f64,
-                    "volume": 58405568,
-                    "avgVolume": 54638267,
+                    "yearLow": 124.17,
+                    "marketCap": 2794000000000,
+                    "priceAvg50": 172.40,
+                    "priceAvg200": 165.03,
+                    "exchange": "NASDAQ",
                     "open": 177.09,
                     "previousClose": 176.57,
-                    "eps": 6.42,
-                    "pe": 27.84,
-                    "timestamp": 1701460800,
-                    "exchange": "NASDAQ"
-                }])
-                .to_string(),
+                    "timestamp": 1701460800
+                }]"#,
             )
             .create_async()
             .await;
@@ -287,11 +285,25 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<FmpQuoteDTO> = client.get("/stable/quote", &[]).await.unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol, "AAPL");
-        assert_eq!(result[0].name.as_deref(), Some("Apple Inc."));
-        assert_eq!(result[0].price, Some(178.72));
-        assert_eq!(result[0].pe, Some(27.84));
+        let quote = &result[0];
+        assert_eq!(quote.symbol, "AAPL");
+        assert_eq!(quote.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(quote.price, Some(178.72));
+        assert_eq!(quote.changes_percentage, Some(1.22));
+        assert_eq!(quote.market_cap, Some(2_794_000_000_000.0));
+        assert_eq!(quote.exchange.as_deref(), Some("NASDAQ"));
+
+        let canonical = quote_to_canonical("AAPL", &result);
+        let price = canonical.price.unwrap();
+        assert_eq!(price.regular_market_price.and_then(|v| v.raw), Some(178.72));
+        assert_eq!(
+            price.market_cap.and_then(|v| v.raw),
+            Some(2_794_000_000_000)
+        );
+        assert_eq!(
+            price.regular_market_change_percent.and_then(|v| v.raw),
+            Some(1.22)
+        );
     }
 
     #[tokio::test]
