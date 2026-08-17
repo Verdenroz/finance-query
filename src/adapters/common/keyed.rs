@@ -3,8 +3,8 @@
 /// Map a transport failure without keeping the `reqwest::Error`.
 ///
 /// A `reqwest::Error` renders the full request URL in both its `Display` and
-/// its `Debug` impl, so wrapping one would put the query string — and with it
-/// the API key — into every log line that formats the error.
+/// its `Debug` impl, so wrapping one puts the query string, and with it the
+/// API key, into every log line that formats the error.
 #[cfg(any(
     feature = "alphavantage",
     feature = "fmp",
