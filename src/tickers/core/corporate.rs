@@ -1,8 +1,9 @@
 use super::{BatchCapitalGainsResponse, BatchDividendsResponse, BatchSplitsResponse, Tickers};
 use crate::constants::TimeRange;
 use crate::error::Result;
+use crate::models::chart::events::ChartEvents;
 use crate::providers::Capability;
-use crate::utils::filter_by_range;
+use crate::utils::{CacheEntry, filter_by_range};
 use futures::stream::{self, StreamExt};
 use std::sync::Arc;
 
@@ -249,6 +250,89 @@ impl Tickers {
 
         crate::models::calendar::sort_events(&mut events);
         Ok(events)
+    }
+
+    /// Ensures events are loaded for all symbols using chart requests.
+    ///
+    /// Fetches events concurrently for symbols that don't have cached events.
+    /// Uses `TimeRange::Max` to get full event history (Yahoo returns all
+    /// dividends/splits/capital gains regardless of chart range).
+    ///
+    /// Events are always stored regardless of the cache mode because they are
+    /// derived data (not a TTL-bounded cache), so they persist for the lifetime
+    /// of the `Tickers` instance even under [`CacheMode::Off`](crate::utils::CacheMode::Off).
+    pub(super) async fn ensure_events_loaded(&self) -> Result<()> {
+        if self.events_missing().await.is_empty() {
+            return Ok(());
+        }
+
+        let _fetch_guard = self.events_fetch.lock().await;
+
+        // Double-check: another task may have fetched while we waited
+        let symbols_to_fetch = self.events_missing().await;
+        if symbols_to_fetch.is_empty() {
+            return Ok(());
+        }
+
+        // Fetch events concurrently for all symbols that need it via provider dispatch
+        let futures: Vec<_> = symbols_to_fetch
+            .iter()
+            .map(|symbol| {
+                let providers = Arc::clone(&self.providers);
+                let symbol = Arc::clone(symbol);
+                async move {
+                    let sym = symbol.to_string();
+                    let result = providers
+                        .fetch(Capability::CORPORATE, |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move {
+                                p.as_corporate()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::Events)
+                                    })?
+                                    .fetch_events(&sym)
+                                    .await
+                            }
+                        })
+                        .await;
+                    (symbol, result)
+                }
+            })
+            .collect();
+
+        let results: Vec<_> = stream::iter(futures)
+            .buffer_unordered(self.max_concurrency)
+            .collect()
+            .await;
+
+        let mut parsed_events: Vec<(Arc<str>, ChartEvents)> = Vec::new();
+
+        for (symbol, result) in results {
+            if let Ok(events_data) = result {
+                parsed_events.push((symbol, events_data));
+            }
+        }
+
+        // Always store events — they are derived data, not TTL-bounded cache
+        if !parsed_events.is_empty() {
+            let mut events_cache = self.events_cache.write().await;
+            for (symbol, events) in parsed_events {
+                events_cache.insert(symbol, CacheEntry::new(events));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Symbols with no entry in the events cache (existence check, not TTL-based).
+    async fn events_missing(&self) -> Vec<Arc<str>> {
+        let cache = self.events_cache.read().await;
+        self.symbols
+            .iter()
+            .filter(|sym| !cache.contains_key(*sym))
+            .cloned()
+            .collect()
     }
 }
 

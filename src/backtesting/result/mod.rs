@@ -1,6 +1,8 @@
 //! Backtest results and performance metrics.
 
 mod benchmark;
+#[cfg(test)]
+mod fixtures;
 mod metrics;
 mod periods;
 mod rolling;

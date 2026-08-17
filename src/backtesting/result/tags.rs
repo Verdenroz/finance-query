@@ -121,7 +121,7 @@ impl BacktestResult {
 
 #[cfg(test)]
 mod tests {
-    use super::super::stats::fixtures::{equity_point, make_result, make_trade};
+    use super::super::fixtures::{equity_point, make_result, make_trade};
     use super::*;
     use crate::backtesting::position::{Position, PositionSide};
     use crate::backtesting::signal::Signal;

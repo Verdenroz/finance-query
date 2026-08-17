@@ -179,7 +179,7 @@ impl BacktestResult {
 
 #[cfg(test)]
 mod tests {
-    use super::super::stats::fixtures::{equity_point, make_result, make_trade_timed, ts};
+    use super::super::fixtures::{equity_point, make_result, make_trade_timed, ts};
     use super::*;
 
     // ── by_year ───────────────────────────────────────────────────────────────

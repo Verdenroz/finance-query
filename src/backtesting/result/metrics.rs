@@ -477,7 +477,7 @@ impl PerformanceMetrics {
 
 #[cfg(test)]
 mod tests {
-    use super::super::stats::fixtures::make_trade;
+    use super::super::fixtures::make_trade;
     use super::*;
 
     #[test]

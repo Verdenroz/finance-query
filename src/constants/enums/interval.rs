@@ -161,6 +161,7 @@ mod tests {
         assert_eq!(Interval::OneHour.duration_secs(), 3_600);
         assert_eq!(Interval::OneDay.duration_secs(), 86_400);
         assert_eq!(Interval::OneWeek.duration_secs(), 604_800);
+        // Calendar approximations agree with TimeRange's: 30-day months.
         assert_eq!(
             Interval::OneMonth.duration_secs(),
             TimeRange::OneMonth.approx_duration_secs()

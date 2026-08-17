@@ -47,13 +47,15 @@ impl BacktestResult {
     /// means it is 20% below the highest value seen so far.
     ///
     /// **This is not a sliding-window computation.** Values are read directly
-    /// from the precomputed [`EquityPoint::drawdown_pct`](super::EquityPoint::drawdown_pct) field, which tracks
+    /// from the precomputed [`EquityPoint::drawdown_pct`] field, which tracks
     /// the running-peak drawdown since the backtest began.  To compute the
     /// *maximum* drawdown within a rolling N-bar window (regime-change
     /// detection), iterate over [`BacktestResult::equity_curve`] manually.
     ///
     /// The returned vector has the same length as
     /// [`BacktestResult::equity_curve`].
+    ///
+    /// [`EquityPoint::drawdown_pct`]: super::EquityPoint::drawdown_pct
     pub fn drawdown_series(&self) -> Vec<f64> {
         self.equity_curve.iter().map(|p| p.drawdown_pct).collect()
     }
@@ -88,7 +90,7 @@ impl BacktestResult {
 #[cfg(test)]
 mod tests {
     use super::super::EquityPoint;
-    use super::super::stats::fixtures::{equity_point, make_result, make_trade};
+    use super::super::fixtures::{equity_point, make_result, make_trade};
     use crate::backtesting::position::Trade;
 
     // ─── Phase 2 — Rolling & Temporal Analysis ───────────────────────────────
