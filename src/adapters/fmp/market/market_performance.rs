@@ -39,59 +39,19 @@ pub struct IndustryPeDTO {
     pub pe: Option<f64>,
 }
 
-/// Sector performance entry.
+/// Sector performance entry. One row per (sector, exchange) pair.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SectorPerformanceDTO {
-    /// Sector name.
-    pub sector: Option<String>,
-    /// Changes percentage.
-    #[serde(rename = "changesPercentage")]
-    pub changes_percentage: Option<String>,
-    /// Average percentage change returned by the stable snapshot endpoint.
-    #[serde(rename = "averageChange")]
-    pub average_change: Option<f64>,
-}
-
-/// Historical sector performance entry.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct HistoricalSectorPerformanceDTO {
     /// Date.
     pub date: Option<String>,
-    /// Utilities sector performance.
-    #[serde(rename = "utilitiesChangesPercentage")]
-    pub utilities_changes_percentage: Option<f64>,
-    /// Basic materials sector performance.
-    #[serde(rename = "basicMaterialsChangesPercentage")]
-    pub basic_materials_changes_percentage: Option<f64>,
-    /// Communication services sector performance.
-    #[serde(rename = "communicationServicesChangesPercentage")]
-    pub communication_services_changes_percentage: Option<f64>,
-    /// Consumer cyclical sector performance.
-    #[serde(rename = "consumerCyclicalChangesPercentage")]
-    pub consumer_cyclical_changes_percentage: Option<f64>,
-    /// Consumer defensive sector performance.
-    #[serde(rename = "consumerDefensiveChangesPercentage")]
-    pub consumer_defensive_changes_percentage: Option<f64>,
-    /// Energy sector performance.
-    #[serde(rename = "energyChangesPercentage")]
-    pub energy_changes_percentage: Option<f64>,
-    /// Financial services sector performance.
-    #[serde(rename = "financialServicesChangesPercentage")]
-    pub financial_services_changes_percentage: Option<f64>,
-    /// Healthcare sector performance.
-    #[serde(rename = "healthcareChangesPercentage")]
-    pub healthcare_changes_percentage: Option<f64>,
-    /// Industrials sector performance.
-    #[serde(rename = "industrialsChangesPercentage")]
-    pub industrials_changes_percentage: Option<f64>,
-    /// Real estate sector performance.
-    #[serde(rename = "realEstateChangesPercentage")]
-    pub real_estate_changes_percentage: Option<f64>,
-    /// Technology sector performance.
-    #[serde(rename = "technologyChangesPercentage")]
-    pub technology_changes_percentage: Option<f64>,
+    /// Sector name.
+    pub sector: Option<String>,
+    /// Exchange the average was computed over.
+    pub exchange: Option<String>,
+    /// Average percentage change across the sector's constituents.
+    #[serde(rename = "averageChange")]
+    pub average_change: Option<f64>,
 }
 
 /// Market mover entry (gainers, losers, most active).
@@ -107,15 +67,10 @@ pub struct MarketMoverDTO {
     /// Price.
     pub price: Option<f64>,
     /// Change percentage.
-    #[serde(rename = "changePercentage", alias = "changesPercentage")]
+    #[serde(rename = "changesPercentage")]
     pub changes_percentage: Option<f64>,
-}
-
-#[derive(Debug, Deserialize)]
-struct StableSectorHistoryDTO {
-    date: Option<String>,
-    #[serde(rename = "averageChange")]
-    average_change: Option<f64>,
+    /// Exchange the symbol trades on.
+    pub exchange: Option<String>,
 }
 
 const SECTORS: [&str; 11] = [
@@ -153,61 +108,31 @@ pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
     latest_snapshot("/stable/sector-performance-snapshot").await
 }
 
-/// Fetch historical sector performance.
+/// Fetch historical sector performance over `[from, to]`.
 ///
 /// The upstream endpoint takes one sector per call, so this fans out across
-/// [`SECTORS`] concurrently and merges the responses by date.
+/// [`SECTORS`] concurrently and returns the rows flat. Every row is keyed by
+/// (date, sector, exchange) upstream, so callers must not collapse on date
+/// alone.
 pub async fn historical_sector_performance(
-    limit: u32,
-) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
+    from: &str,
+    to: &str,
+) -> Result<Vec<SectorPerformanceDTO>> {
     let client = build_client()?;
-    let limit_param = limit.to_string();
     let responses = try_join_all(SECTORS.iter().map(|sector| {
         let client = &client;
-        let limit_param = limit_param.as_str();
         async move {
-            let rows: Vec<StableSectorHistoryDTO> = client
-                .get(
+            client
+                .get::<Vec<SectorPerformanceDTO>>(
                     "/stable/historical-sector-performance",
-                    &[("sector", sector), ("limit", limit_param)],
+                    &[("sector", sector), ("from", from), ("to", to)],
                 )
-                .await?;
-            Ok::<_, crate::error::FinanceError>((*sector, rows))
+                .await
         }
     }))
     .await?;
 
-    let mut by_date = std::collections::BTreeMap::<String, HistoricalSectorPerformanceDTO>::new();
-    for (sector, rows) in responses {
-        for row in rows {
-            let Some(date) = row.date else { continue };
-            let entry = by_date.entry(date.clone()).or_default();
-            entry.date = Some(date);
-            match sector {
-                "Utilities" => entry.utilities_changes_percentage = row.average_change,
-                "Basic Materials" => entry.basic_materials_changes_percentage = row.average_change,
-                "Communication Services" => {
-                    entry.communication_services_changes_percentage = row.average_change;
-                }
-                "Consumer Cyclical" => {
-                    entry.consumer_cyclical_changes_percentage = row.average_change
-                }
-                "Consumer Defensive" => {
-                    entry.consumer_defensive_changes_percentage = row.average_change;
-                }
-                "Energy" => entry.energy_changes_percentage = row.average_change,
-                "Financial Services" => {
-                    entry.financial_services_changes_percentage = row.average_change;
-                }
-                "Healthcare" => entry.healthcare_changes_percentage = row.average_change,
-                "Industrials" => entry.industrials_changes_percentage = row.average_change,
-                "Real Estate" => entry.real_estate_changes_percentage = row.average_change,
-                "Technology" => entry.technology_changes_percentage = row.average_change,
-                _ => unreachable!(),
-            }
-        }
-    }
-    Ok(by_date.into_values().rev().take(limit as usize).collect())
+    Ok(responses.into_iter().flatten().collect())
 }
 
 /// Weekdays before today, most recent first.
@@ -262,17 +187,21 @@ pub async fn stock_market_most_active() -> Result<Vec<MarketMoverDTO>> {
 /// Fetch sector performance and map to provider-neutral entries.
 pub async fn fetch_sector_performance_response()
 -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
-    use crate::models::market::performance::{SectorPerformance, parse_percent};
     Ok(sector_performance()
         .await?
         .into_iter()
-        .filter_map(|s| {
-            Some(SectorPerformance {
-                sector: s.sector?,
-                change_percent: parse_percent(s.changes_percentage.as_deref()).or(s.average_change),
-            })
-        })
+        .filter_map(to_sector_performance)
         .collect())
+}
+
+fn to_sector_performance(
+    dto: SectorPerformanceDTO,
+) -> Option<crate::models::market::performance::SectorPerformance> {
+    Some(crate::models::market::performance::SectorPerformance {
+        sector: dto.sector?,
+        exchange: dto.exchange,
+        change_percent: dto.average_change,
+    })
 }
 
 /// Fetch market movers for `direction` and map to provider-neutral entries.
@@ -294,6 +223,7 @@ pub async fn fetch_market_movers_response(
                 price: m.price,
                 change: m.change,
                 change_percent: m.changes_percentage,
+                exchange: m.exchange,
             })
         })
         .collect())
@@ -335,84 +265,109 @@ pub async fn fetch_industry_pe_response()
         .collect())
 }
 
-/// Convert one historical row into the canonical per-day sector list.
-fn history_to_canonical(
-    d: HistoricalSectorPerformanceDTO,
-) -> crate::models::market::performance::SectorPerformanceHistory {
-    use crate::models::market::performance::SectorPerformance;
-    let sector = |name: &str, v: Option<f64>| SectorPerformance {
-        sector: name.to_string(),
-        change_percent: v,
-    };
-    crate::models::market::performance::SectorPerformanceHistory {
-        date: d.date,
-        sectors: vec![
-            sector("Utilities", d.utilities_changes_percentage),
-            sector("Basic Materials", d.basic_materials_changes_percentage),
-            sector(
-                "Communication Services",
-                d.communication_services_changes_percentage,
-            ),
-            sector("Consumer Cyclical", d.consumer_cyclical_changes_percentage),
-            sector(
-                "Consumer Defensive",
-                d.consumer_defensive_changes_percentage,
-            ),
-            sector("Energy", d.energy_changes_percentage),
-            sector(
-                "Financial Services",
-                d.financial_services_changes_percentage,
-            ),
-            sector("Healthcare", d.healthcare_changes_percentage),
-            sector("Industrials", d.industrials_changes_percentage),
-            sector("Real Estate", d.real_estate_changes_percentage),
-            sector("Technology", d.technology_changes_percentage),
-        ],
+/// Group flat rows into one entry per date, most recent first.
+///
+/// Upstream rows are keyed by (date, sector, exchange), so grouping keeps every
+/// exchange's row for a sector rather than letting one overwrite another.
+fn group_history_by_date(
+    rows: Vec<SectorPerformanceDTO>,
+    limit: usize,
+) -> Vec<crate::models::market::performance::SectorPerformanceHistory> {
+    use crate::models::market::performance::{SectorPerformance, SectorPerformanceHistory};
+
+    let mut by_date = std::collections::BTreeMap::<String, Vec<SectorPerformance>>::new();
+    for row in rows {
+        let Some(date) = row.date.clone() else {
+            continue;
+        };
+        let Some(sector) = to_sector_performance(row) else {
+            continue;
+        };
+        by_date.entry(date).or_default().push(sector);
     }
+
+    by_date
+        .into_iter()
+        .rev()
+        .take(limit)
+        .map(|(date, sectors)| SectorPerformanceHistory {
+            date: Some(date),
+            sectors,
+        })
+        .collect()
 }
 
-/// Fetch canonical historical sector performance, most recent first.
+/// Fetch canonical historical sector performance for the most recent `limit`
+/// sessions, most recent first.
 pub async fn fetch_sector_performance_history_response(
     limit: u32,
 ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
-    let dtos = historical_sector_performance(limit).await?;
-    Ok(dtos.into_iter().map(history_to_canonical).collect())
+    // The endpoint has no `limit`; ask for a window wide enough to contain
+    // `limit` sessions and trim after grouping.
+    let today = chrono::Utc::now().date_naive();
+    let span = chrono::Days::new(u64::from(limit).saturating_mul(2).max(7));
+    let from = today
+        .checked_sub_days(span)
+        .unwrap_or(today)
+        .format("%Y-%m-%d")
+        .to_string();
+    let to = today.format("%Y-%m-%d").to_string();
+
+    let rows = historical_sector_performance(&from, &to).await?;
+    Ok(group_history_by_date(rows, limit as usize))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn history_rows() -> Vec<SectorPerformanceDTO> {
+        serde_json::from_value(serde_json::json!([
+            {"date": "2026-07-31", "sector": "Technology", "exchange": "NASDAQ", "averageChange": -1.25},
+            {"date": "2026-07-31", "sector": "Technology", "exchange": "NYSE", "averageChange": -0.80},
+            {"date": "2026-07-31", "sector": "Technology", "exchange": "AMEX", "averageChange": 0.10},
+            {"date": "2026-07-30", "sector": "Technology", "exchange": "NASDAQ", "averageChange": 0.50}
+        ]))
+        .unwrap()
+    }
+
+    /// Three exchanges report the same sector on the same date; none may
+    /// overwrite another.
     #[test]
-    fn history_maps_all_eleven_sectors() {
-        let row: HistoricalSectorPerformanceDTO = serde_json::from_value(serde_json::json!({
-            "date": "2026-07-31",
-            "utilitiesChangesPercentage": 0.5,
-            "technologyChangesPercentage": -1.25
-        }))
-        .unwrap();
-        let day = history_to_canonical(row);
-        assert_eq!(day.date.as_deref(), Some("2026-07-31"));
-        assert_eq!(day.sectors.len(), 11);
-        let tech = day
+    fn history_keeps_every_exchange_for_a_date() {
+        let days = group_history_by_date(history_rows(), 10);
+
+        assert_eq!(days.len(), 2);
+        assert_eq!(days[0].date.as_deref(), Some("2026-07-31"));
+        assert_eq!(days[0].sectors.len(), 3);
+
+        let mut exchanges: Vec<_> = days[0]
             .sectors
             .iter()
-            .find(|s| s.sector == "Technology")
-            .unwrap();
-        assert_eq!(tech.change_percent, Some(-1.25));
-        let util = day
+            .map(|s| s.exchange.as_deref().unwrap())
+            .collect();
+        exchanges.sort_unstable();
+        assert_eq!(exchanges, ["AMEX", "NASDAQ", "NYSE"]);
+
+        let nasdaq = days[0]
             .sectors
             .iter()
-            .find(|s| s.sector == "Utilities")
+            .find(|s| s.exchange.as_deref() == Some("NASDAQ"))
             .unwrap();
-        assert_eq!(util.change_percent, Some(0.5));
-        // Absent sectors surface as None, not omitted.
-        let energy = day.sectors.iter().find(|s| s.sector == "Energy").unwrap();
-        assert!(energy.change_percent.is_none());
+        assert_eq!(nasdaq.change_percent, Some(-1.25));
+    }
+
+    /// The limit counts sessions, not rows.
+    #[test]
+    fn history_limit_counts_dates() {
+        let days = group_history_by_date(history_rows(), 1);
+        assert_eq!(days.len(), 1);
+        assert_eq!(days[0].date.as_deref(), Some("2026-07-31"));
+        assert_eq!(days[0].sectors.len(), 3);
     }
 
     #[tokio::test]
-    async fn test_sector_performance_mock() {
+    async fn sector_performance_snapshot_keeps_rows_distinguishable() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/stable/sector-performance-snapshot")
@@ -422,17 +377,11 @@ mod tests {
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "sector": "Technology",
-                        "changesPercentage": "1.25%"
-                    },
-                    {
-                        "sector": "Healthcare",
-                        "changesPercentage": "-0.45%"
-                    }
-                ])
-                .to_string(),
+                r#"[
+                    {"date":"2026-07-31","sector":"Technology","exchange":"NASDAQ","averageChange":1.25},
+                    {"date":"2026-07-31","sector":"Technology","exchange":"NYSE","averageChange":0.62},
+                    {"date":"2026-07-31","sector":"Healthcare","exchange":"NASDAQ","averageChange":-0.45}
+                ]"#,
             )
             .create_async()
             .await;
@@ -442,9 +391,14 @@ mod tests {
             .get("/stable/sector-performance-snapshot", &[])
             .await
             .unwrap();
-        assert_eq!(resp.len(), 2);
-        assert_eq!(resp[0].sector.as_deref(), Some("Technology"));
-        assert_eq!(resp[0].changes_percentage.as_deref(), Some("1.25%"));
+
+        let canonical: Vec<_> = resp.into_iter().filter_map(to_sector_performance).collect();
+        assert_eq!(canonical.len(), 3);
+        assert_eq!(canonical[0].sector, "Technology");
+        assert_eq!(canonical[0].exchange.as_deref(), Some("NASDAQ"));
+        assert_eq!(canonical[0].change_percent, Some(1.25));
+        assert_eq!(canonical[1].exchange.as_deref(), Some("NYSE"));
+        assert_eq!(canonical[1].change_percent, Some(0.62));
     }
 
     #[tokio::test]
@@ -458,24 +412,27 @@ mod tests {
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "XYZ",
-                        "name": "XYZ Corp",
-                        "change": 5.20,
-                        "price": 42.50,
-                        "changesPercentage": 13.93
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "XYZ",
+                    "name": "XYZ Corp",
+                    "change": 5.20,
+                    "price": 42.50,
+                    "changesPercentage": 13.93,
+                    "exchange": "NASDAQ"
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<MarketMoverDTO> = client.get("/stable/biggest-gainers", &[]).await.unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].symbol.as_deref(), Some("XYZ"));
-        assert!((resp[0].change.unwrap() - 5.20).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("XYZ"));
+        assert_eq!(row.name.as_deref(), Some("XYZ Corp"));
+        assert_eq!(row.change, Some(5.20));
+        assert_eq!(row.price, Some(42.50));
+        assert_eq!(row.changes_percentage, Some(13.93));
+        assert_eq!(row.exchange.as_deref(), Some("NASDAQ"));
     }
 }

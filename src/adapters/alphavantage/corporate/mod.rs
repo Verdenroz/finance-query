@@ -308,6 +308,7 @@ fn movers_to_canonical(
             price: num(&t.price),
             change: num(&t.change_amount),
             change_percent: num(&t.change_percentage),
+            exchange: None,
         })
         .collect()
 }
