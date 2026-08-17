@@ -39,7 +39,7 @@
     "finance_query::models::filings::provider::ProviderFilings": "0818196a3a5077ca",
     "finance_query::models::filings::submissions::EdgarSubmissions": "f6dbde02122fbf08",
     "finance_query::models::forex::ForexQuote": "109e0da9a1050f1a",
-    "finance_query::models::futures::FuturesQuote": "b088c32151d257f2",
+    "finance_query::models::futures::FuturesQuote": "e1aade9ab704792d",
     "finance_query::models::indices::IndexQuote": "b62c81a201dfec49",
     "finance_query::models::sentiment::response::FearAndGreed": "9ff1c525f8b3de3d",
     "finance_query::providers::Capability": "2f58b918177f54e7",
