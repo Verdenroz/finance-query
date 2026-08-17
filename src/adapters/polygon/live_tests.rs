@@ -27,11 +27,7 @@ type Check = std::result::Result<(), String>;
 /// Substrings Massive uses when the account is not entitled to a dataset. A
 /// plan gap is the only reason an authentication error may count as anything
 /// other than a failure.
-const PLAN_MARKERS: [&str; 3] = [
-    "not entitled",
-    "upgrade your plan",
-    "insufficient permissions",
-];
+const PLAN_MARKERS: [&str; 2] = ["not entitled", "upgrade your plan"];
 
 fn redact(message: &str) -> String {
     let lowered = message.to_ascii_lowercase();
