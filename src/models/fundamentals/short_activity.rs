@@ -41,8 +41,11 @@ pub struct ShareFloat {
     pub symbol: Option<String>,
     /// Freely tradable shares.
     pub float_shares: Option<f64>,
-    /// Total shares outstanding.
+    /// Total shares outstanding, as reported by the provider. `None` when the
+    /// provider does not report it; it is never derived from `float_percent`.
     pub outstanding_shares: Option<f64>,
+    /// Freely tradable shares as a percentage of shares outstanding (0-100).
+    pub float_percent: Option<f64>,
     /// As-of date (`YYYY-MM-DD`).
     pub date: Option<String>,
 }

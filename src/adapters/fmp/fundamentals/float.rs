@@ -50,6 +50,7 @@ pub(crate) fn to_share_float(dto: SharesFloatDTO, symbol: &str) -> ShareFloat {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         float_shares: dto.float_shares,
         outstanding_shares: dto.outstanding_shares,
+        float_percent: dto.free_float,
         date: date_only(dto.date),
     }
 }
@@ -85,6 +86,7 @@ mod tests {
         let out = to_share_float(dto, "AAPL");
         assert_eq!(out.float_shares, Some(15_200_000_000.0));
         assert_eq!(out.outstanding_shares, Some(15_300_000_000.0));
+        assert_eq!(out.float_percent, Some(99.89));
         assert_eq!(out.date.as_deref(), Some("2024-05-01"));
     }
 
