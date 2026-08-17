@@ -20,37 +20,37 @@ pub struct AnalystEstimateDTO {
     /// Date.
     pub date: Option<String>,
     /// Estimated revenue low.
-    #[serde(rename = "estimatedRevenueLow")]
+    #[serde(rename = "revenueLow")]
     pub estimated_revenue_low: Option<f64>,
     /// Estimated revenue high.
-    #[serde(rename = "estimatedRevenueHigh")]
+    #[serde(rename = "revenueHigh")]
     pub estimated_revenue_high: Option<f64>,
     /// Estimated revenue avg.
-    #[serde(rename = "estimatedRevenueAvg")]
+    #[serde(rename = "revenueAvg")]
     pub estimated_revenue_avg: Option<f64>,
     /// Estimated EBITDA low.
-    #[serde(rename = "estimatedEbitdaLow")]
+    #[serde(rename = "ebitdaLow")]
     pub estimated_ebitda_low: Option<f64>,
     /// Estimated EBITDA high.
-    #[serde(rename = "estimatedEbitdaHigh")]
+    #[serde(rename = "ebitdaHigh")]
     pub estimated_ebitda_high: Option<f64>,
     /// Estimated EBITDA avg.
-    #[serde(rename = "estimatedEbitdaAvg")]
+    #[serde(rename = "ebitdaAvg")]
     pub estimated_ebitda_avg: Option<f64>,
     /// Estimated EPS avg.
-    #[serde(rename = "estimatedEpsAvg")]
+    #[serde(rename = "epsAvg")]
     pub estimated_eps_avg: Option<f64>,
     /// Estimated EPS high.
-    #[serde(rename = "estimatedEpsHigh")]
+    #[serde(rename = "epsHigh")]
     pub estimated_eps_high: Option<f64>,
     /// Estimated EPS low.
-    #[serde(rename = "estimatedEpsLow")]
+    #[serde(rename = "epsLow")]
     pub estimated_eps_low: Option<f64>,
     /// Number of analysts for revenue.
-    #[serde(rename = "numberAnalystEstimatedRevenue")]
+    #[serde(rename = "numAnalystsRevenue")]
     pub number_analyst_estimated_revenue: Option<i32>,
     /// Number of analysts for EPS.
-    #[serde(rename = "numberAnalystsEstimatedEps")]
+    #[serde(rename = "numAnalystsEps")]
     pub number_analysts_estimated_eps: Option<i32>,
 }
 
@@ -281,17 +281,21 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "date": "2024-03-31",
-                        "estimatedRevenueAvg": 90000000000.0,
-                        "estimatedEpsAvg": 1.50,
-                        "numberAnalystEstimatedRevenue": 30,
-                        "numberAnalystsEstimatedEps": 28
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "date": "2024-03-31",
+                    "revenueLow": 85000000000.0,
+                    "revenueHigh": 95000000000.0,
+                    "revenueAvg": 90000000000.0,
+                    "ebitdaLow": 28000000000.0,
+                    "ebitdaHigh": 33000000000.0,
+                    "ebitdaAvg": 30500000000.0,
+                    "epsAvg": 1.50,
+                    "epsHigh": 1.62,
+                    "epsLow": 1.41,
+                    "numAnalystsRevenue": 30,
+                    "numAnalystsEps": 28
+                }]"#,
             )
             .create_async()
             .await;
@@ -304,9 +308,21 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].symbol.as_deref(), Some("AAPL"));
-        assert!((resp[0].estimated_eps_avg.unwrap() - 1.50).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(row.date.as_deref(), Some("2024-03-31"));
+        assert_eq!(row.estimated_revenue_low, Some(85_000_000_000.0));
+        assert_eq!(row.estimated_revenue_high, Some(95_000_000_000.0));
+        assert_eq!(row.estimated_revenue_avg, Some(90_000_000_000.0));
+        assert_eq!(row.estimated_ebitda_low, Some(28_000_000_000.0));
+        assert_eq!(row.estimated_ebitda_high, Some(33_000_000_000.0));
+        assert_eq!(row.estimated_ebitda_avg, Some(30_500_000_000.0));
+        assert_eq!(row.estimated_eps_avg, Some(1.50));
+        assert_eq!(row.estimated_eps_high, Some(1.62));
+        assert_eq!(row.estimated_eps_low, Some(1.41));
+        assert_eq!(row.number_analyst_estimated_revenue, Some(30));
+        assert_eq!(row.number_analysts_estimated_eps, Some(28));
     }
 
     #[tokio::test]

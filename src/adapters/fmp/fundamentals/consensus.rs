@@ -41,25 +41,25 @@ pub struct PriceTargetSummaryDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Targets published in the last month.
-    #[serde(rename = "lastMonth")]
+    #[serde(rename = "lastMonthCount")]
     pub last_month: Option<i64>,
     /// Average target published in the last month.
     #[serde(rename = "lastMonthAvgPriceTarget")]
     pub last_month_avg_price_target: Option<f64>,
     /// Targets published in the last quarter.
-    #[serde(rename = "lastQuarter")]
+    #[serde(rename = "lastQuarterCount")]
     pub last_quarter: Option<i64>,
     /// Average target published in the last quarter.
     #[serde(rename = "lastQuarterAvgPriceTarget")]
     pub last_quarter_avg_price_target: Option<f64>,
     /// Targets published in the last year.
-    #[serde(rename = "lastYear")]
+    #[serde(rename = "lastYearCount")]
     pub last_year: Option<i64>,
     /// Average target published in the last year.
     #[serde(rename = "lastYearAvgPriceTarget")]
     pub last_year_avg_price_target: Option<f64>,
     /// Targets published all time.
-    #[serde(rename = "allTime")]
+    #[serde(rename = "allTimeCount")]
     pub all_time: Option<i64>,
     /// Average target published all time.
     #[serde(rename = "allTimeAvgPriceTarget")]
@@ -208,14 +208,15 @@ mod tests {
     fn price_target_summary_maps_every_window() {
         let dto: PriceTargetSummaryDTO = serde_json::from_value(serde_json::json!({
             "symbol": "AAPL",
-            "lastMonth": 5,
+            "lastMonthCount": 5,
             "lastMonthAvgPriceTarget": 220.5,
-            "lastQuarter": 12,
+            "lastQuarterCount": 12,
             "lastQuarterAvgPriceTarget": 210.0,
-            "lastYear": 45,
+            "lastYearCount": 45,
             "lastYearAvgPriceTarget": 200.0,
-            "allTime": 300,
-            "allTimeAvgPriceTarget": 190.0
+            "allTimeCount": 300,
+            "allTimeAvgPriceTarget": 190.0,
+            "publishers": "[\"StreetInsider\",\"TheFly\"]"
         }))
         .unwrap();
 
