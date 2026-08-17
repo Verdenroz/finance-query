@@ -4,8 +4,13 @@ use crate::models::chart::Candle;
 
 use super::BacktestEngine;
 
+// The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
+// lives in a sibling module, and `[profile.bench]` builds without LTO, so
+// nothing crosses a codegen-unit boundary unless the MIR travels with it.
+
 impl BacktestEngine {
     /// Execute a signal, modifying position and cash
+    #[inline]
     pub(super) fn execute_signal(
         &self,
         signal: &Signal,
@@ -184,6 +189,7 @@ impl BacktestEngine {
     ///
     /// Used for pending limit/stop order fills where the computed order price
     /// (with gap guard) is the fill price rather than the next bar's open.
+    #[inline]
     pub(super) fn open_position_at_price(
         &self,
         position: &mut Option<Position>,
@@ -254,6 +260,7 @@ impl BacktestEngine {
     ///
     /// Used for intrabar SL/TP/trailing-stop exits where the fill price is the
     /// computed stop/TP level (with gap guard) rather than the next bar's open.
+    #[inline]
     pub(super) fn close_position_at(
         &self,
         position: &mut Option<Position>,

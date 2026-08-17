@@ -5,6 +5,10 @@ use crate::models::chart::Candle;
 
 use super::BacktestEngine;
 
+// The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
+// lives in a sibling module, and `[profile.bench]` builds without LTO, so
+// nothing crosses a codegen-unit boundary unless the MIR travels with it.
+
 impl BacktestEngine {
     /// Check if stop-loss, take-profit, or trailing stop should trigger intrabar.
     ///
@@ -28,6 +32,7 @@ impl BacktestEngine {
     /// pessimism (stop-loss before take-profit) for conservative simulation.
     /// Strategies with both SL and TP set should be aware of this ordering
     /// when both levels are close together relative to typical bar ranges.
+    #[inline]
     pub(super) fn check_sl_tp(
         &self,
         position: &Position,
@@ -153,6 +158,7 @@ impl BacktestEngine {
 /// Cleared to `None` when no position is open so it resets on the next entry —
 /// the same lifecycle as [`update_trailing_hwm`], which tracks the single value
 /// the intrabar stop needs while this tracks the four the trailing conditions do.
+#[inline]
 pub(crate) fn update_position_extremes(
     position: Option<&Position>,
     extremes: &mut Option<PositionExtremes>,
@@ -168,6 +174,7 @@ pub(crate) fn update_position_extremes(
     }
 }
 
+#[inline]
 pub(crate) fn update_trailing_hwm(
     position: Option<&Position>,
     hwm: &mut Option<f64>,
