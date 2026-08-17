@@ -29,12 +29,12 @@ pub struct FuturesQuote {
     pub price: Option<f64>,
     /// Price change
     pub change: Option<f64>,
-    /// Price change percentage
+    /// Price change as a percentage (e.g. `9.62` for 9.62%)
     pub change_percent: Option<f64>,
     /// Open interest (number of outstanding contracts)
     pub open_interest: Option<u64>,
-    /// Trading volume
+    /// Session volume in contracts
     pub volume: Option<u64>,
-    /// Unix timestamp of the last update
+    /// Unix timestamp of the last update, in **seconds**
     pub timestamp: Option<i64>,
 }

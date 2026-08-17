@@ -22,7 +22,7 @@ pub struct FuturesTradeDTO {
     /// Trading-session end date.
     pub session_end_date: Option<String>,
     /// Number of contracts traded.
-    pub size: Option<f64>,
+    pub size: Option<u64>,
     /// Contract ticker.
     pub ticker: Option<String>,
     /// Exchange timestamp in Unix nanoseconds.
@@ -36,13 +36,13 @@ pub struct FuturesQuoteDTO {
     /// Ask price.
     pub ask_price: Option<f64>,
     /// Ask size in contracts.
-    pub ask_size: Option<f64>,
+    pub ask_size: Option<u64>,
     /// Ask timestamp in Unix nanoseconds.
     pub ask_timestamp: Option<i64>,
     /// Bid price.
     pub bid_price: Option<f64>,
     /// Bid size in contracts.
-    pub bid_size: Option<f64>,
+    pub bid_size: Option<u64>,
     /// Bid timestamp in Unix nanoseconds.
     pub bid_timestamp: Option<i64>,
     /// CME multicast channel.
