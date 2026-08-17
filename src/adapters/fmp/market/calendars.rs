@@ -203,8 +203,8 @@ pub async fn fetch_market_calendar_response(
                 entry(
                     e.symbol,
                     e.date,
-                    // FMP's stable earnings calendar dropped the fiscal period
-                    // end and the bmo/amc announcement time.
+                    // FMP's stable earnings calendar reports neither the fiscal
+                    // period end nor the bmo/amc announcement time.
                     CalendarDetail::Earnings {
                         eps: e.eps,
                         eps_estimated: e.eps_estimated,

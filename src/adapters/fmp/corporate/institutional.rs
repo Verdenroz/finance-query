@@ -181,7 +181,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn institutional_holders_read_the_analytics_by_holder_shape() {
+    async fn test_institutional_holders_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock(
@@ -225,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn latest_completed_quarter_never_returns_the_current_one() {
+    fn latest_completed_quarter_is_a_valid_year_and_quarter() {
         let (year, quarter) = latest_completed_quarter();
         assert!(year.parse::<i32>().unwrap() >= 2024);
         assert!(matches!(quarter.as_str(), "1" | "2" | "3" | "4"));

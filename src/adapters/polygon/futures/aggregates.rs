@@ -96,8 +96,6 @@ mod tests {
         assert_eq!(bar.window_start, Some(1_785_974_400_000_000_000));
     }
 
-    /// Intraday bars omit `settlement_price`, and a partial bar must not fail
-    /// the whole page.
     #[tokio::test]
     async fn futures_aggregates_tolerates_a_sparse_bar() {
         let mut server = mockito::Server::new_async().await;

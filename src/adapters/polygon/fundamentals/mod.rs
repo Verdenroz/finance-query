@@ -481,8 +481,7 @@ pub async fn fetch_share_float_response(
         symbol: d.ticker.or_else(|| Some(symbol.to_string())),
         float_shares: d.free_float,
         // Massive's float endpoint reports no shares-outstanding figure, and
-        // `free_float_percent` is rounded to 2dp so deriving one would be a
-        // guess dressed as a report.
+        // `free_float_percent` is rounded to 2dp, so a derived one is a guess.
         outstanding_shares: None,
         float_percent: d.free_float_percent,
         date: d.effective_date,
@@ -565,7 +564,6 @@ mod tests {
         );
         assert_eq!(data["total_assets"].len(), 2);
         assert_eq!(data["total_liabilities"].len(), 1);
-        // Period identifiers are not metrics.
         assert!(!data.contains_key("fiscal_year"));
         assert!(!data.contains_key("period_end"));
     }

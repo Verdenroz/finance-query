@@ -331,8 +331,6 @@ mod tests {
         .unwrap()
     }
 
-    /// Three exchanges report the same sector on the same date; none may
-    /// overwrite another.
     #[test]
     fn history_keeps_every_exchange_for_a_date() {
         let days = group_history_by_date(history_rows(), 10);
@@ -357,7 +355,6 @@ mod tests {
         assert_eq!(nasdaq.change_percent, Some(-1.25));
     }
 
-    /// The limit counts sessions, not rows.
     #[test]
     fn history_limit_counts_dates() {
         let days = group_history_by_date(history_rows(), 1);

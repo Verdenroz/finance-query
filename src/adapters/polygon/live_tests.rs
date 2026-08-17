@@ -24,9 +24,8 @@ use crate::{FinanceError, Frequency, Interval, StatementType, TimeRange, error::
 
 type Check = std::result::Result<(), String>;
 
-/// Substrings Massive uses when the account is not entitled to a dataset. A
-/// plan gap is the only reason an authentication error may count as anything
-/// other than a failure.
+/// Substrings Massive uses when the account is not entitled to a dataset.
+/// A plan gap is the only reason an auth error counts as anything but failure.
 const PLAN_MARKERS: [&str; 2] = ["not entitled", "upgrade your plan"];
 
 fn redact(message: &str) -> String {

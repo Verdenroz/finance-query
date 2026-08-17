@@ -124,9 +124,8 @@ pub async fn fetch_futures_quote_response(symbol: &str) -> Result<FuturesQuote> 
     Ok(snapshot_to_quote(symbol, futures_snapshot(symbol).await?))
 }
 
-/// The snapshot mixes precisions: `last_trade.last_updated` is nanoseconds
-/// while `last_minute.last_updated` is milliseconds. The public model is
-/// seconds.
+// The snapshot mixes precisions: `last_trade.last_updated` is nanoseconds while
+// `last_minute.last_updated` is milliseconds. The public model is seconds.
 const NANOS_PER_SECOND: i64 = 1_000_000_000;
 const MILLIS_PER_SECOND: i64 = 1_000;
 
@@ -150,6 +149,8 @@ fn snapshot_to_quote(symbol: &str, response: FuturesSnapshotResponseDTO) -> Futu
             .and_then(|trade| trade.price)
             .or_else(|| session.and_then(|value| value.close)),
         change: session.and_then(|value| value.change),
+        // Massive returns the futures change as a fraction while stocks and
+        // indices return an already-multiplied percent.
         change_percent: session
             .and_then(|value| value.change_percent)
             .map(|fraction| fraction * 100.0),
@@ -208,8 +209,6 @@ mod tests {
         assert_eq!(quote.price, None);
     }
 
-    /// Massive returns the futures change as a fraction while stocks and
-    /// indices return an already-multiplied percent.
     #[test]
     fn session_change_percent_is_a_fraction() {
         let response: FuturesSnapshotResponseDTO = serde_json::from_value(serde_json::json!({

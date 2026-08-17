@@ -713,7 +713,6 @@ mod tests {
         );
     }
 
-    /// Non-numeric metadata never reaches the canonical metric map.
     #[test]
     fn pivot_keeps_numeric_metrics_only() {
         let stmts: Vec<IncomeStatementDTO> = serde_json::from_str(

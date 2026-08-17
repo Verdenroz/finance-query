@@ -24,8 +24,7 @@ pub struct SectorPerformance {
     /// Sector name (e.g. `"Technology"`).
     pub sector: String,
     /// Exchange the average was computed over (e.g. `"NASDAQ"`). Providers
-    /// report one row per sector per exchange, so this is what makes two
-    /// otherwise identical rows distinguishable.
+    /// report one row per sector per exchange.
     pub exchange: Option<String>,
     /// Percentage change, as a number (e.g. `1.23` for `"1.23%"`).
     pub change_percent: Option<f64>,

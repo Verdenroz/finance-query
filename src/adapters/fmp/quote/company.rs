@@ -316,7 +316,6 @@ mod tests {
         assert_eq!(profile.changes, Some(1.23));
         assert_eq!(profile.change_percentage, Some(0.69));
         assert_eq!(profile.volume, Some(41_000_000.0));
-        // `exchange` is the short code; the venue name moved to `exchangeFullName`.
         assert_eq!(profile.exchange.as_deref(), Some("NASDAQ"));
         assert_eq!(
             profile.exchange_full_name.as_deref(),

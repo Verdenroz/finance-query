@@ -961,9 +961,8 @@ async fn all_routed_fmp_endpoints_return_populated_data() {
             non_empty(days, "sector performance history")?;
             let day = &days[0];
             text(day.date.as_deref(), "date")?;
-            // Upstream reports each sector once per exchange. If a date holds
-            // no more entries than it holds sectors, one exchange row
-            // overwrote the others on the way through.
+            // Upstream reports one row per (sector, exchange), so a date must
+            // carry more rows than it has distinct sectors.
             let sectors: std::collections::HashSet<_> =
                 day.sectors.iter().map(|s| s.sector.as_str()).collect();
             if day.sectors.len() <= sectors.len() {

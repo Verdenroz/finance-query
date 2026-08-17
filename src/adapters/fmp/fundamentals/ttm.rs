@@ -220,7 +220,6 @@ mod tests {
         assert_eq!(out.peg_ratio, Some(2.4));
         assert_eq!(out.debt_ratio, Some(0.29));
         assert_eq!(out.payout_ratio, Some(0.15));
-        // Per-share metrics moved here from key-metrics-ttm.
         assert_eq!(out.revenue_per_share, Some(25.5));
         assert_eq!(out.free_cash_flow_per_share, Some(7.1));
 
