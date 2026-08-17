@@ -1,7 +1,7 @@
 use crate::backtesting::strategy::StrategyContext;
 use crate::indicators::Indicator;
 
-use super::super::IndicatorRef;
+use super::IndicatorRef;
 
 /// Relative Strength Index reference.
 #[derive(Debug, Clone)]

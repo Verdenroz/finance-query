@@ -1,9 +1,8 @@
 use crate::backtesting::strategy::StrategyContext;
 use crate::indicators::Indicator;
 
-use super::super::IndicatorRef;
+use super::IndicatorRef;
 
-/// Average Directional Index reference.
 /// Ichimoku Cloud configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct IchimokuConfig {

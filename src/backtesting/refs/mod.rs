@@ -19,13 +19,35 @@
 //! let entry = rsi(14).crosses_below(30.0).and(price().above_ref(sma(200)));
 //! ```
 
-mod computed;
+// The fluent constructors (sma(), rsi(), ...) are the public surface; the ref
+// structs they return carry undocumented fields on purpose.
+#[allow(missing_docs)]
+mod ichimoku;
+#[allow(missing_docs)]
+mod moving_averages;
+#[allow(missing_docs)]
+mod oscillators;
+#[allow(missing_docs)]
+mod power;
+#[allow(missing_docs)]
+mod trend;
+#[allow(missing_docs)]
+mod volatility;
+#[allow(missing_docs)]
+mod volume;
+
 mod htf;
 mod price;
 
-pub use computed::*;
 pub use htf::*;
+pub use ichimoku::*;
+pub use moving_averages::*;
+pub use oscillators::*;
+pub use power::*;
 pub use price::*;
+pub use trend::*;
+pub use volatility::*;
+pub use volume::*;
 
 use crate::indicators::Indicator;
 

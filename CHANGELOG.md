@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
   authenticated session instead of running a fresh cookie + crumb handshake per
   call, cutting each `finance::*` call from three HTTP requests to one.
+- Eight oversized source files were split into directories of focused modules:
+  `constants.rs`, `backtesting/refs/computed.rs`, `backtesting/result.rs`,
+  `backtesting/engine.rs`, `tickers/core.rs`, and the CLI's
+  `dashboard/render.rs`, `backtest/results.rs`, and `backtest/state.rs`. Every
+  existing path is preserved by re-export; no public API or behavior change.
 
 ### Added
 
@@ -880,16 +885,6 @@ CHANGED  finance_query::tickers::core::TickersBuilder (body)
 | `finance_query::translation_translate` | n/a | 3.78µs | 4.09µs | 79 | n/a |
 | `finance_query::translation_translate_with` | n/a | 3.47µs | 3.52µs | 77 | n/a |
 
-
-### Changed
-
-- Split eight oversized source files into focused modules ([#279]). `constants.rs`,
-  `backtesting/refs/computed.rs`, `backtesting/result.rs`, `backtesting/engine.rs`,
-  `tickers/core.rs`, and the CLI's `dashboard/render.rs`, `backtest/results.rs`, and
-  `backtest/state.rs` each became a directory of focused modules. No public API change
-  and no behavior change — every existing path is preserved via re-exports.
-
-[#279]: https://github.com/Verdenroz/finance-query/issues/279
 
 ## [2.8.0] - 2026-07-10
 
