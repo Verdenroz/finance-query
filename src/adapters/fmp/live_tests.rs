@@ -646,7 +646,7 @@ async fn all_routed_fmp_endpoints_return_populated_data() {
 
     m.check(
         "insider_trading",
-        corporate::insider_trading::insider_trading("AAPL", 5),
+        corporate::insider_trading::insider_trading("AAPL", 5, 0),
         |rows| {
             let t = first(rows, "insider trade")?;
             text(t.reporting_name.as_deref(), "reportingName")?;

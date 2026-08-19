@@ -106,26 +106,36 @@ pub struct CongressionalTradeDTO {
 // ============================================================================
 
 /// Fetch insider trading transactions for a symbol.
-pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTradeDTO>> {
+///
+/// * `page` - Zero-based page index; FMP paginates this endpoint by `limit`
+///   rows per page, so a caller wanting more than one page's worth of
+///   history steps `page` forward.
+pub async fn insider_trading(symbol: &str, limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
+    let page_str = page.to_string();
     client
         .get(
             "/stable/insider-trading/search",
-            &[("symbol", symbol), ("page", "0"), ("limit", &limit_str)],
+            &[
+                ("symbol", symbol),
+                ("page", &page_str),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
 
 /// Fetch the insider trading RSS feed.
 #[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
+pub async fn insider_trading_rss(limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
+    let page_str = page.to_string();
     client
         .get(
             "/stable/insider-trading/latest",
-            &[("page", "0"), ("limit", &limit_str)],
+            &[("page", &page_str), ("limit", &limit_str)],
         )
         .await
 }
