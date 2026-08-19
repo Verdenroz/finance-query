@@ -6,8 +6,7 @@ use crate::models::chart::Candle;
 use super::BacktestEngine;
 
 // The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
-// lives in a sibling module, and `[profile.bench]` builds without LTO, so
-// nothing crosses a codegen-unit boundary unless the MIR travels with it.
+// lives in a sibling module and `[profile.bench]` builds without LTO.
 
 impl BacktestEngine {
     /// Check if stop-loss, take-profit, or trailing stop should trigger intrabar.
