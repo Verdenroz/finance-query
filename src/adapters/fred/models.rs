@@ -7,6 +7,7 @@ pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
 /// A single scheduled economic-data release date from the FRED
 /// `releases/dates` endpoint.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct ReleaseDate {
     /// FRED release identifier.
     pub release_id: u64,
