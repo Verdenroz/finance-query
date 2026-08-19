@@ -26,6 +26,7 @@ use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::adapters::common::keyed::redact_key;
 use crate::error::{FinanceError, Result};
 
 const POLYGON_WEBSOCKET_BASE: &str = "wss://socket.massive.com";
@@ -299,7 +300,7 @@ impl PolygonStreamBuilder {
                 })?;
         }
 
-        wait_for_authentication(&mut read).await?;
+        wait_for_authentication(&mut read, &self.api_key).await?;
 
         // Subscribe
         if !self.subscriptions.is_empty() {
@@ -418,7 +419,7 @@ impl PolygonStream {
     }
 }
 
-async fn wait_for_authentication<S>(read: &mut S) -> Result<()>
+async fn wait_for_authentication<S>(read: &mut S, api_key: &str) -> Result<()>
 where
     S: Stream<Item = std::result::Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
@@ -453,7 +454,7 @@ where
                 }
                 if status == "auth_failed" || status == "not_authorized" {
                     return Err(FinanceError::AuthenticationFailed {
-                        context: message.to_string(),
+                        context: redact_key(message, api_key),
                     });
                 }
             }
@@ -651,7 +652,9 @@ mod tests {
             )),
         ];
         let mut stream = futures::stream::iter(frames);
-        wait_for_authentication(&mut stream).await.unwrap();
+        wait_for_authentication(&mut stream, "test-key")
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -661,8 +664,22 @@ mod tests {
         ))];
         let mut stream = futures::stream::iter(frames);
         assert!(matches!(
-            wait_for_authentication(&mut stream).await,
+            wait_for_authentication(&mut stream, "test-key").await,
             Err(FinanceError::AuthenticationFailed { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn authentication_failure_redacts_the_api_key() {
+        const KEY: &str = "abc123";
+        let frames = vec![Ok(Message::Text(
+            format!(
+                r#"[{{"ev":"status","status":"auth_failed","message":"key {KEY} is invalid"}}]"#
+            )
+            .into(),
+        ))];
+        let mut stream = futures::stream::iter(frames);
+        let err = wait_for_authentication(&mut stream, KEY).await.unwrap_err();
+        assert!(!format!("{err}").contains(KEY), "{err}");
     }
 }
