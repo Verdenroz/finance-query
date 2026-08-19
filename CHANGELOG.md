@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
   authenticated session instead of running a fresh cookie + crumb handshake per
   call, cutting each `finance::*` call from three HTTP requests to one.
+- Eight oversized source files were split into directories of focused modules:
+  `constants.rs`, `backtesting/refs/computed.rs`, `backtesting/result.rs`,
+  `backtesting/engine.rs`, `tickers/core.rs`, and the CLI's
+  `dashboard/render.rs`, `backtest/results.rs`, and `backtest/state.rs`. Every
+  existing path is preserved by re-export; no public API or behavior change.
 
 ### Added
 
