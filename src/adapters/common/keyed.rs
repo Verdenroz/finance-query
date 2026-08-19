@@ -39,6 +39,22 @@ pub(crate) fn redact_key(message: &str, api_key: &str) -> String {
     message.replace(api_key, "[redacted]")
 }
 
+/// Whether a lowercased provider error message is complaining about the API key.
+///
+/// Callers with extra provider-specific phrasing (e.g. "not entitled") should
+/// OR this with their own checks rather than restate the base set.
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "fred",
+    feature = "polygon"
+))]
+pub(crate) fn is_auth_error(normalized_message: &str) -> bool {
+    normalized_message.contains("api key")
+        || normalized_message.contains("apikey")
+        || normalized_message.contains("api_key")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,5 +83,13 @@ mod tests {
     #[test]
     fn blank_key_matches_nothing() {
         assert_eq!(redact_key("Invalid request", "   "), "Invalid request");
+    }
+
+    #[test]
+    fn auth_error_matches_known_phrasings() {
+        assert!(is_auth_error("invalid api key supplied"));
+        assert!(is_auth_error("bad apikey"));
+        assert!(is_auth_error("api_key is not registered"));
+        assert!(!is_auth_error("symbol not found"));
     }
 }

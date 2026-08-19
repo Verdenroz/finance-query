@@ -7,7 +7,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{MacroObservation, MacroSeries, ReleaseDate};
-use crate::adapters::common::keyed::{redact_key, transport_error};
+use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -86,8 +86,7 @@ impl FredClient {
             .and_then(|error| error.error_message)
             .map(|message| redact_key(&message, api_key))
             .unwrap_or_else(|| format!("FRED returned HTTP {status}"));
-        let normalized = message.to_ascii_lowercase();
-        if normalized.contains("api_key") || normalized.contains("api key") {
+        if is_auth_error(&message.to_ascii_lowercase()) {
             return FinanceError::AuthenticationFailed { context: message };
         }
         match status {

@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::keyed::{redact_key, transport_error};
+use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -125,8 +125,7 @@ impl PolygonClient {
         }
         let normalized = msg.to_ascii_lowercase();
         if status == "NOT_AUTHORIZED"
-            || normalized.contains("api key")
-            || normalized.contains("apikey")
+            || is_auth_error(&normalized)
             || normalized.contains("not authorized")
             || normalized.contains("not entitled")
             || normalized.contains("upgrade your plan")

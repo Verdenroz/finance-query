@@ -7,7 +7,7 @@ use reqwest::{Client, StatusCode};
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::keyed::{redact_key, transport_error};
+use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -92,8 +92,7 @@ impl AlphaVantageClient {
                 });
             }
             let info = redact_key(info, api_key);
-            let normalized = info.to_ascii_lowercase();
-            if normalized.contains("api key") || normalized.contains("apikey") {
+            if is_auth_error(&info.to_ascii_lowercase()) {
                 return Err(FinanceError::AuthenticationFailed { context: info });
             }
             return Err(FinanceError::ApiError(format!("AlphaVantage: {info}")));

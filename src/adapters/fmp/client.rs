@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::keyed::{redact_key, transport_error};
+use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -101,8 +101,7 @@ impl FmpClient {
     fn check_error_envelope(env: &ErrorEnvelope, api_key: &str) -> Result<()> {
         if let Some(msg) = &env.error_message {
             let msg = redact_key(msg, api_key);
-            let normalized = msg.to_ascii_lowercase();
-            if normalized.contains("api key") || normalized.contains("apikey") {
+            if is_auth_error(&msg.to_ascii_lowercase()) {
                 return Err(FinanceError::AuthenticationFailed { context: msg });
             }
             return Err(FinanceError::InvalidParameter {
