@@ -140,9 +140,6 @@ impl PolygonClient {
     }
 
     /// Execute a GET request to a Polygon REST path and return the raw response bytes.
-    ///
-    /// The error envelope is checked here, so callers deserialize the bytes
-    /// straight into their own type.
     async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<impl AsRef<[u8]>> {
         self.limiter.acquire().await;
 

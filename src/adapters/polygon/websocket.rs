@@ -1,9 +1,8 @@
-//! Polygon/Massive WebSocket streaming for real-time market data (internal).
+//! Polygon/Massive WebSocket streaming for real-time market data.
 //!
 //! Provides real-time trades, quotes, and aggregate bars for stocks, options, forex,
-//! crypto, futures, and indices. This module is an internal adapter — use the public
-//! [`finance_query::streaming`](crate::streaming) API, which wraps it in
-//! provider-neutral types.
+//! crypto, futures, and indices. Internal adapter; the public API is
+//! [`streaming`](crate::streaming), which wraps it in provider-neutral types.
 //!
 //! # Example
 //!

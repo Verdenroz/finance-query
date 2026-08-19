@@ -76,6 +76,10 @@ pub(crate) struct FredClient {
 }
 
 impl FredClient {
+    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
+        transport_error("FRED", self.timeout, error)
+    }
+
     fn response_error(status: StatusCode, body: &[u8], api_key: &str) -> FinanceError {
         let message = serde_json::from_slice::<FredErrorEnvelope>(body)
             .ok()
@@ -151,10 +155,6 @@ impl FredClient {
             .await
             .map_err(|error| self.map_transport_error(&error))?;
         self.decode_json(response, path).await
-    }
-
-    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
-        transport_error("FRED", self.timeout, error)
     }
 
     /// Fetch all observations for a FRED series by ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`).
