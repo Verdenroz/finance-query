@@ -3,7 +3,7 @@
 use futures::future::try_join_all;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 
 use crate::adapters::fmp::build_client;
 
@@ -163,7 +163,9 @@ async fn latest_snapshot<T: serde::de::DeserializeOwned>(path: &str) -> Result<V
             return Ok(rows);
         }
     }
-    Ok(Vec::new())
+    Err(FinanceError::UnexpectedResponse(format!(
+        "FMP {path} returned no data for the last {SNAPSHOT_LOOKBACK_DAYS} weekdays"
+    )))
 }
 
 /// Fetch top stock market gainers.
