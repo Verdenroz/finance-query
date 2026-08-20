@@ -11,6 +11,7 @@ fn join_providers(providers: &[Provider]) -> String {
 
 /// Main error type for the library
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum FinanceError {
     /// Authentication failed (Yahoo Finance, SEC EDGAR, etc.)
     #[error("Authentication failed: {context}")]
@@ -41,6 +42,17 @@ pub enum FinanceError {
     /// HTTP request error
     #[error("HTTP request failed: {0}")]
     HttpError(#[from] reqwest::Error),
+
+    /// Transport-level failure whose source is withheld.
+    ///
+    /// Providers that authenticate with an API key in the query string use
+    /// this instead of [`FinanceError::HttpError`], because a `reqwest::Error`
+    /// renders the full URL and would leak the key into logs.
+    #[error("Network request to {api} failed")]
+    NetworkError {
+        /// Provider whose request failed
+        api: String,
+    },
 
     /// Failed to parse JSON response
     #[error("JSON parse error: {0}")]
@@ -197,6 +209,7 @@ impl FinanceError {
             FinanceError::Timeout { .. }
                 | FinanceError::RateLimited { .. }
                 | FinanceError::HttpError(_)
+                | FinanceError::NetworkError { .. }
                 | FinanceError::AuthenticationFailed { .. }
                 | FinanceError::ServerError { .. }
         ) || matches!(self, FinanceError::ExternalApiError { status, .. } if *status >= 500)

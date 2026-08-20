@@ -1,6 +1,5 @@
 //! FMP price and historical data endpoints.
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::models::{
@@ -88,7 +87,7 @@ pub async fn fetch_canonical_quote(
 
 /// Fetch canonical quote summaries for many symbols in one request.
 ///
-/// FMP's `/api/v3/quote` accepts a comma-separated symbol list, so an N-symbol
+/// FMP's `/stable/batch-quote` accepts a comma-separated symbol list, so an N-symbol
 /// batch costs one request instead of N against the 250 req/day tier.
 pub async fn fetch_canonical_quotes_batch(
     symbols: &[&str],
@@ -183,12 +182,7 @@ pub async fn fetch_intraday_chart_candles(
 /// Fetch real-time quote for a symbol.
 pub async fn quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
     let client = crate::adapters::fmp::build_client()?;
-    client
-        .get(
-            &format!("/api/v3/quote/{}", encode_path_segment(symbol)),
-            &[],
-        )
-        .await
+    client.get("/stable/quote", &[("symbol", symbol)]).await
 }
 
 /// Fetch real-time quotes for multiple symbols (comma-separated).
@@ -196,10 +190,7 @@ pub async fn batch_quote(symbols: &[&str]) -> Result<Vec<FmpQuoteDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     let joined = symbols.join(",");
     client
-        .get(
-            &format!("/api/v3/quote/{}", encode_path_segment(&joined)),
-            &[],
-        )
+        .get("/stable/batch-quote", &[("symbols", &joined)])
         .await
 }
 
@@ -217,15 +208,14 @@ pub async fn historical_price_daily(
     if let Some(ref to) = p.to {
         query_params.push(("to", to));
     }
-    client
-        .get(
-            &format!(
-                "/api/v3/historical-price-full/{}",
-                encode_path_segment(symbol)
-            ),
-            &query_params,
-        )
-        .await
+    query_params.push(("symbol", symbol));
+    let historical = client
+        .get("/stable/historical-price-eod/full", &query_params)
+        .await?;
+    Ok(HistoricalPriceResponseDTO {
+        symbol: Some(symbol.to_string()),
+        historical,
+    })
 }
 
 /// Fetch intraday historical prices for a symbol.
@@ -245,13 +235,10 @@ pub async fn historical_price_intraday(
     if let Some(ref to) = p.to {
         query_params.push(("to", to));
     }
+    query_params.push(("symbol", symbol));
     client
         .get(
-            &format!(
-                "/api/v3/historical-chart/{}/{}",
-                encode_path_segment(interval),
-                encode_path_segment(symbol)
-            ),
+            &format!("/stable/historical-chart/{interval}"),
             &query_params,
         )
         .await
@@ -265,62 +252,72 @@ mod tests {
     async fn test_quote_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/quote/AAPL")
+            .mock("GET", "/stable/quote")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([{
+                r#"[{
                     "symbol": "AAPL",
                     "name": "Apple Inc.",
                     "price": 178.72,
+                    "changePercentage": 1.22,
                     "change": 2.15,
-                    "changesPercentage": 1.22,
+                    "volume": 58405568,
                     "dayLow": 176.21,
                     "dayHigh": 179.63,
-                    "yearLow": 124.17,
                     "yearHigh": 199.62,
-                    "marketCap": 2794000000000_f64,
-                    "volume": 58405568,
-                    "avgVolume": 54638267,
+                    "yearLow": 124.17,
+                    "marketCap": 2794000000000,
+                    "priceAvg50": 172.40,
+                    "priceAvg200": 165.03,
+                    "exchange": "NASDAQ",
                     "open": 177.09,
                     "previousClose": 176.57,
-                    "eps": 6.42,
-                    "pe": 27.84,
-                    "timestamp": 1701460800,
-                    "exchange": "NASDAQ"
-                }])
-                .to_string(),
+                    "timestamp": 1701460800
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<FmpQuoteDTO> = client.get("/api/v3/quote/AAPL", &[]).await.unwrap();
+        let result: Vec<FmpQuoteDTO> = client.get("/stable/quote", &[]).await.unwrap();
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol, "AAPL");
-        assert_eq!(result[0].name.as_deref(), Some("Apple Inc."));
-        assert_eq!(result[0].price, Some(178.72));
-        assert_eq!(result[0].pe, Some(27.84));
+        let quote = &result[0];
+        assert_eq!(quote.symbol, "AAPL");
+        assert_eq!(quote.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(quote.price, Some(178.72));
+        assert_eq!(quote.changes_percentage, Some(1.22));
+        assert_eq!(quote.market_cap, Some(2_794_000_000_000.0));
+        assert_eq!(quote.exchange.as_deref(), Some("NASDAQ"));
+
+        let canonical = quote_to_canonical("AAPL", &result);
+        let price = canonical.price.unwrap();
+        assert_eq!(price.regular_market_price.and_then(|v| v.raw), Some(178.72));
+        assert_eq!(
+            price.market_cap.and_then(|v| v.raw),
+            Some(2_794_000_000_000)
+        );
+        assert_eq!(
+            price.regular_market_change_percent.and_then(|v| v.raw),
+            Some(1.22)
+        );
     }
 
     #[tokio::test]
     async fn test_historical_price_daily_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/historical-price-full/AAPL")
+            .mock("GET", "/stable/historical-price-eod/full")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!({
-                    "symbol": "AAPL",
-                    "historical": [
+                serde_json::json!([
                         {
                             "date": "2024-01-02",
                             "open": 187.15,
@@ -351,30 +348,28 @@ mod tests {
                             "label": "January 03, 2024",
                             "changeOverTime": 0.000163
                         }
-                    ]
-                })
+                ])
                 .to_string(),
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: HistoricalPriceResponseDTO = client
-            .get("/api/v3/historical-price-full/AAPL", &[])
+        let result: Vec<HistoricalPriceDTO> = client
+            .get("/stable/historical-price-eod/full", &[])
             .await
             .unwrap();
 
-        assert_eq!(result.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result.historical.len(), 2);
-        assert_eq!(result.historical[0].date.as_deref(), Some("2024-01-02"));
-        assert_eq!(result.historical[0].close, Some(185.64));
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].date.as_deref(), Some("2024-01-02"));
+        assert_eq!(result[0].close, Some(185.64));
     }
 
     #[tokio::test]
     async fn test_intraday_price_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/historical-chart/5min/AAPL")
+            .mock("GET", "/stable/historical-chart/5min")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -406,7 +401,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<IntradayPriceDTO> = client
-            .get("/api/v3/historical-chart/5min/AAPL", &[])
+            .get("/stable/historical-chart/5min", &[])
             .await
             .unwrap();
 

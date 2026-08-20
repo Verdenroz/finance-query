@@ -1,4 +1,4 @@
-//! Shared types for Polygon.io API responses.
+//! Shared types for Massive (formerly Polygon.io) API responses.
 
 use serde::{Deserialize, Serialize};
 

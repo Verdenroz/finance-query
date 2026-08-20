@@ -52,10 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `expiration_date` | `Option<String>` | Contract expiry as `YYYY-MM-DD` |
 | `price` | `Option<f64>` | Current contract price |
 | `change` | `Option<f64>` | Price change |
-| `change_percent` | `Option<f64>` | Price change percentage |
+| `change_percent` | `Option<f64>` | Price change as a percentage (e.g. `9.62` for 9.62%) |
 | `open_interest` | `Option<u64>` | Number of outstanding contracts |
-| `volume` | `Option<u64>` | Trading volume |
-| `timestamp` | `Option<i64>` | Unix timestamp of the last update |
+| `volume` | `Option<u64>` | Session volume in contracts |
+| `timestamp` | `Option<i64>` | Unix timestamp of the last update, in **seconds** |
 
 <!-- /soothfast:bind -->
 

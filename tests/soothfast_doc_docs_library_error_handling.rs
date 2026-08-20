@@ -2,10 +2,10 @@
 // source: docs/library/error-handling.md
 #![allow(unused)]
 
-// line 41
+// line 42
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_41() {
+fn doc_block_line_42() {
     use finance_query::FinanceError;
 
     let error = FinanceError::RateLimited { retry_after: Some(2) };
@@ -25,10 +25,10 @@ fn doc_block_line_41() {
     }
 }
 
-// line 169: compile-only (no_run)
+// line 170: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_169() {
+fn doc_block_line_170() {
     use finance_query::Tickers;
 
     #[tokio::main]
@@ -50,10 +50,10 @@ fn doc_block_line_169() {
     }
 }
 
-// line 195
+// line 196
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_195() {
+fn doc_block_line_196() {
     use finance_query::{FinanceError, Operation, Provider};
 
     let error = FinanceError::NotSupported {

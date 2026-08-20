@@ -41,9 +41,16 @@ macro_rules! provider_singleton_state {
             api_key: impl Into<::std::string::String>,
             timeout: ::std::time::Duration,
         ) -> crate::error::Result<()> {
+            let api_key = api_key.into();
+            if api_key.trim().is_empty() {
+                return Err(crate::error::FinanceError::InvalidParameter {
+                    param: $provider_key.to_string(),
+                    reason: "API key must not be empty".to_string(),
+                });
+            }
             $static_name
                 .set($struct_name {
-                    api_key: api_key.into(),
+                    api_key,
                     timeout,
                     limiter: ::std::sync::Arc::new(crate::rate_limiter::RateLimiter::new(
                         $rate_const,
@@ -94,6 +101,7 @@ macro_rules! provider_build_client {
         pub(crate) fn build_client() -> crate::error::Result<$client_ty> {
             if $static_name.get().is_none()
                 && let Ok(key) = ::std::env::var($env_var)
+                && !key.trim().is_empty()
             {
                 let _ = $static_name.set($struct_name {
                     api_key: key,

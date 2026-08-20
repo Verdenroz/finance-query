@@ -53,17 +53,7 @@ impl EconomicProvider for FredProvider {
 #[async_trait::async_trait]
 impl ProviderAdapter for FredProvider {
     async fn initialize(&self) -> crate::error::Result<()> {
-        let key = std::env::var("FRED_API_KEY").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "fred".into(),
-                reason:
-                    "FRED_API_KEY not set. Set the environment variable or call fred::init(key)."
-                        .into(),
-            }
-        })?;
-        // Init the FRED singleton from the env var so users don't need
-        // a separate fred::init() call. Ignore "already initialized" errors.
-        let _ = crate::adapters::fred::init(key);
+        let _ = crate::adapters::fred::build_client()?;
         Ok(())
     }
 

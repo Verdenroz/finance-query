@@ -193,6 +193,7 @@ impl FundamentalsProvider for YahooProvider {
         })?;
         Ok(crate::models::fundamentals::ShareFloat {
             symbol: Some(symbol.to_string()),
+            float_percent: None,
             float_shares: stats
                 .float_shares
                 .as_ref()
@@ -281,6 +282,7 @@ fn screener_quotes_to_movers(
             price: q.regular_market_price.raw,
             change: q.regular_market_change.raw,
             change_percent: q.regular_market_change_percent.raw,
+            exchange: None,
         })
         .collect()
 }

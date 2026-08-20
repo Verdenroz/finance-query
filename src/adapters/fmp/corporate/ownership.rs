@@ -13,7 +13,7 @@ use crate::models::corporate::governance::{EmployeeCount, ExecutiveCompensation}
 // Response types
 // ============================================================================
 
-/// Executive compensation entry (`/api/v4/governance/executive_compensation`).
+/// Executive compensation entry (`/stable/governance-executive-compensation`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ExecutiveCompensationDTO {
@@ -34,27 +34,31 @@ pub struct ExecutiveCompensationDTO {
     /// Cash bonus.
     pub bonus: Option<f64>,
     /// Stock awards.
-    #[serde(rename = "stock_award")]
+    #[serde(rename = "stockAward")]
     pub stock_award: Option<f64>,
     /// Option awards.
-    #[serde(rename = "option_award")]
+    #[serde(rename = "optionAward")]
     pub option_award: Option<f64>,
     /// Non-equity incentive plan compensation.
-    #[serde(rename = "incentive_plan_compensation")]
+    #[serde(rename = "incentivePlanCompensation")]
     pub incentive_plan_compensation: Option<f64>,
     /// All other compensation.
-    #[serde(rename = "all_other_compensation")]
+    #[serde(rename = "allOtherCompensation")]
     pub all_other_compensation: Option<f64>,
     /// Total compensation.
     pub total: Option<f64>,
     /// Filing date.
     #[serde(rename = "filingDate")]
     pub filing_date: Option<String>,
+    /// Date the filing was accepted by the SEC.
+    #[serde(rename = "acceptedDate")]
+    pub accepted_date: Option<String>,
     /// Source filing URL.
+    #[serde(rename = "link")]
     pub url: Option<String>,
 }
 
-/// Employee headcount entry (`/api/v4/historical/employee_count`).
+/// Employee headcount entry (`/stable/historical-employee-count`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EmployeeCountDTO {
@@ -89,7 +93,7 @@ pub struct EmployeeCountDTO {
 pub async fn executive_compensation(symbol: &str) -> Result<Vec<ExecutiveCompensationDTO>> {
     build_client()?
         .get(
-            "/api/v4/governance/executive_compensation",
+            "/stable/governance-executive-compensation",
             &[("symbol", symbol)],
         )
         .await
@@ -98,7 +102,7 @@ pub async fn executive_compensation(symbol: &str) -> Result<Vec<ExecutiveCompens
 /// Fetch historical employee headcount for a symbol.
 pub async fn employee_count(symbol: &str) -> Result<Vec<EmployeeCountDTO>> {
     build_client()?
-        .get("/api/v4/historical/employee_count", &[("symbol", symbol)])
+        .get("/stable/historical-employee-count", &[("symbol", symbol)])
         .await
 }
 
@@ -178,31 +182,38 @@ mod tests {
             "year": year,
             "salary": 3_000_000.0,
             "bonus": 0.0,
-            "stock_award": 46_970_283.0,
-            "option_award": 0.0,
-            "incentive_plan_compensation": 10_713_450.0,
-            "all_other_compensation": 2_521_124.0,
+            "stockAward": 46_970_283.0,
+            "optionAward": 0.0,
+            "incentivePlanCompensation": 10_713_450.0,
+            "allOtherCompensation": 2_521_124.0,
             "total": 63_209_845.0,
             "filingDate": "2024-01-11",
-            "url": "https://www.sec.gov/Archives/..."
+            "acceptedDate": "2024-01-11 16:30:00",
+            "link": "https://www.sec.gov/Archives/..."
         }))
         .unwrap()
     }
 
     #[test]
-    fn executive_compensation_maps_snake_case_award_keys() {
+    fn executive_compensation_maps_every_pay_component() {
         let out = to_executive_compensation(comp_dto(2023), "AAPL");
+        assert_eq!(out.cik.as_deref(), Some("0000320193"));
+        assert_eq!(out.company_name.as_deref(), Some("Apple Inc."));
         assert_eq!(
             out.name_and_position.as_deref(),
             Some("Timothy D. Cook Chief Executive Officer")
         );
         assert_eq!(out.year, Some(2023));
         assert_eq!(out.salary, Some(3_000_000.0));
+        assert_eq!(out.bonus, Some(0.0));
         assert_eq!(out.stock_award, Some(46_970_283.0));
+        assert_eq!(out.option_award, Some(0.0));
         assert_eq!(out.incentive_plan_compensation, Some(10_713_450.0));
-        // `all_other_compensation` is exposed under the shorter public name.
+        // `allOtherCompensation` is exposed under the shorter public name.
         assert_eq!(out.other_compensation, Some(2_521_124.0));
         assert_eq!(out.total, Some(63_209_845.0));
+        assert_eq!(out.filing_date.as_deref(), Some("2024-01-11"));
+        assert_eq!(out.url.as_deref(), Some("https://www.sec.gov/Archives/..."));
     }
 
     #[test]

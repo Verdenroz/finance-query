@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -26,6 +25,8 @@ pub struct StockNewsDTO {
     pub image: Option<String>,
     /// News site name.
     pub site: Option<String>,
+    /// Publisher of the article.
+    pub publisher: Option<String>,
     /// Article text / summary.
     pub text: Option<String>,
     /// Article URL.
@@ -38,12 +39,17 @@ pub struct StockNewsDTO {
 pub struct PressReleaseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
-    /// Date.
+    /// Publication date.
+    #[serde(rename = "publishedDate")]
     pub date: Option<String>,
     /// Title.
     pub title: Option<String>,
     /// Full text.
     pub text: Option<String>,
+    /// Wire service that carried the release.
+    pub publisher: Option<String>,
+    /// Release URL.
+    pub url: Option<String>,
 }
 
 // ============================================================================
@@ -59,8 +65,8 @@ fn stock_news_to_canonical(
         .map(|a| crate::models::corporate::news::News {
             title: a.title.unwrap_or_default(),
             link: a.url.unwrap_or_default(),
-            source: a.site.unwrap_or_default(),
-            img: String::new(),
+            source: a.site.or(a.publisher).unwrap_or_default(),
+            img: a.image.unwrap_or_default(),
             time: a.published_date.unwrap_or_default(),
             provider_id: Some(crate::providers::Provider::Fmp),
             #[cfg(feature = "sentiment")]
@@ -91,8 +97,8 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
     let limit_str = limit.to_string();
     client
         .get(
-            "/api/v3/stock_news",
-            &[("tickers", tickers), ("limit", &limit_str)],
+            "/stable/news/stock",
+            &[("symbols", tickers), ("limit", &limit_str)],
         )
         .await
 }
@@ -100,18 +106,25 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
 /// Fetch press releases for a symbol.
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressReleaseDTO>> {
     let client = build_client()?;
-    let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
-    client.get(&path, &[("limit", &*limit_str)]).await
+    client
+        .get(
+            "/stable/news/press-releases",
+            &[("symbols", symbol), ("limit", &limit_str)],
+        )
+        .await
 }
 
 /// Fetch crypto news.
 #[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
-    let size_str = limit.to_string();
+    let limit_str = limit.to_string();
     client
-        .get("/api/v4/crypto_news", &[("page", "0"), ("size", &size_str)])
+        .get(
+            "/stable/news/crypto-latest",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -119,9 +132,12 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 #[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
-    let size_str = limit.to_string();
+    let limit_str = limit.to_string();
     client
-        .get("/api/v4/forex_news", &[("page", "0"), ("size", &size_str)])
+        .get(
+            "/stable/news/forex-latest",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -150,73 +166,81 @@ mod tests {
     async fn test_stock_news_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/stock_news")
+            .mock("GET", "/stable/news/stock")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-                mockito::Matcher::UrlEncoded("tickers".into(), "AAPL".into()),
+                mockito::Matcher::UrlEncoded("symbols".into(), "AAPL".into()),
                 mockito::Matcher::UrlEncoded("limit".into(), "5".into()),
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "publishedDate": "2024-01-15 12:00:00",
-                        "title": "Apple Reports Record Quarter",
-                        "image": "https://example.com/image.jpg",
-                        "site": "Reuters",
-                        "text": "Apple Inc. reported record quarterly earnings...",
-                        "url": "https://example.com/article"
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "publishedDate": "2024-01-15 12:00:00",
+                    "publisher": "Reuters",
+                    "title": "Apple Reports Record Quarter",
+                    "image": "https://example.com/image.jpg",
+                    "site": "Reuters",
+                    "text": "Apple Inc. reported record quarterly earnings...",
+                    "url": "https://example.com/article"
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<StockNewsDTO> = client
-            .get("/api/v3/stock_news", &[("tickers", "AAPL"), ("limit", "5")])
+            .get("/stable/news/stock", &[("symbols", "AAPL"), ("limit", "5")])
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(resp[0].site.as_deref(), Some("Reuters"));
+
+        let article = &resp[0];
+        assert_eq!(article.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(article.site.as_deref(), Some("Reuters"));
+
+        let news = stock_news_to_canonical(resp);
+        assert_eq!(news[0].title, "Apple Reports Record Quarter");
+        assert_eq!(news[0].link, "https://example.com/article");
+        assert_eq!(news[0].source, "Reuters");
+        assert_eq!(news[0].img, "https://example.com/image.jpg");
+        assert_eq!(news[0].time, "2024-01-15 12:00:00");
     }
 
     #[tokio::test]
     async fn test_press_releases_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/press-releases/AAPL")
+            .mock("GET", "/stable/news/press-releases")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("limit".into(), "10".into()),
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "date": "2024-01-15",
-                        "title": "Apple Announces New Product",
-                        "text": "Cupertino, CA -- Apple today announced..."
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "publishedDate": "2024-01-15 08:15:00",
+                    "publisher": "Business Wire",
+                    "title": "Apple Announces New Product",
+                    "text": "Cupertino, CA -- Apple today announced...",
+                    "url": "https://example.com/pr"
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<PressReleaseDTO> = client
-            .get("/api/v3/press-releases/AAPL", &[("limit", "10")])
+            .get("/stable/news/press-releases", &[("limit", "10")])
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(
-            resp[0].title.as_deref(),
-            Some("Apple Announces New Product")
-        );
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(row.date.as_deref(), Some("2024-01-15 08:15:00"));
+        assert_eq!(row.title.as_deref(), Some("Apple Announces New Product"));
+        assert!(row.text.is_some());
+        assert_eq!(row.publisher.as_deref(), Some("Business Wire"));
+        assert_eq!(row.url.as_deref(), Some("https://example.com/pr"));
     }
 }

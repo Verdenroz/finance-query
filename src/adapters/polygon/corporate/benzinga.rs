@@ -16,17 +16,21 @@ pub struct AnalystRatingDTO {
     /// Analyst name.
     pub analyst: Option<String>,
     /// Analyst firm.
-    pub analyst_firm: Option<String>,
+    #[serde(alias = "analyst_firm")]
+    pub firm: Option<String>,
     /// Rating action (e.g., `"Initiates"`, `"Upgrades"`).
-    pub action: Option<String>,
+    #[serde(alias = "action")]
+    pub rating_action: Option<String>,
     /// Rating (e.g., `"Buy"`, `"Hold"`).
     pub rating: Option<String>,
     /// Prior rating.
     pub prior_rating: Option<String>,
     /// Price target.
-    pub target_price: Option<f64>,
+    #[serde(alias = "target_price")]
+    pub price_target: Option<f64>,
     /// Prior price target.
-    pub prior_target_price: Option<f64>,
+    #[serde(alias = "prior_target_price")]
+    pub adjusted_price_target_prior: Option<f64>,
     /// Date.
     pub date: Option<String>,
     /// URL.
@@ -42,15 +46,18 @@ pub struct AnalystInsightDTO {
     /// Analyst.
     pub analyst: Option<String>,
     /// Firm.
-    pub analyst_firm: Option<String>,
+    #[serde(alias = "analyst_firm")]
+    pub firm: Option<String>,
     /// InsightDTO type.
     pub insight_type: Option<String>,
     /// Rating.
     pub rating: Option<String>,
     /// Rationale.
-    pub rationale: Option<String>,
+    #[serde(alias = "rationale")]
+    pub insight: Option<String>,
     /// Target price.
-    pub target_price: Option<f64>,
+    #[serde(alias = "target_price")]
+    pub price_target: Option<f64>,
     /// Date.
     pub date: Option<String>,
 }
@@ -60,11 +67,14 @@ pub struct AnalystInsightDTO {
 #[non_exhaustive]
 pub struct AnalystDetailDTO {
     /// Analyst name.
-    pub analyst_name: Option<String>,
+    #[serde(alias = "analyst_name")]
+    pub name: Option<String>,
     /// Firm name.
-    pub firm_name: Option<String>,
+    #[serde(alias = "firm_name")]
+    pub firm: Option<String>,
     /// Analyst ID.
-    pub analyst_id: Option<String>,
+    #[serde(alias = "analyst_id")]
+    pub benzinga_id: Option<String>,
     /// Firm ID.
     pub firm_id: Option<String>,
     /// Number of ratings.
@@ -78,9 +88,11 @@ pub struct BullBearDTO {
     /// Ticker.
     pub ticker: Option<String>,
     /// Bull case.
-    pub bull_case: Option<String>,
+    #[serde(alias = "bull_case")]
+    pub bull_case_summary: Option<String>,
     /// Bear case.
-    pub bear_case: Option<String>,
+    #[serde(alias = "bear_case")]
+    pub bear_case_summary: Option<String>,
     /// Date.
     pub date: Option<String>,
 }
@@ -154,7 +166,8 @@ pub struct FirmDetailDTO {
     /// Firm name.
     pub name: Option<String>,
     /// Firm ID.
-    pub id: Option<String>,
+    #[serde(alias = "id")]
+    pub benzinga_id: Option<String>,
     /// Number of analysts.
     pub analysts_count: Option<u32>,
 }
@@ -164,9 +177,7 @@ pub async fn analyst_ratings(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<AnalystRatingDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/analyst-ratings", params)
-        .await
+    client.get("/benzinga/v1/ratings", params).await
 }
 
 /// Fetch analyst insights.
@@ -174,9 +185,7 @@ pub async fn analyst_insights(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<AnalystInsightDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/analyst-insights", params)
-        .await
+    client.get("/benzinga/v1/analyst-insights", params).await
 }
 
 /// Fetch analyst details.
@@ -184,27 +193,26 @@ pub async fn analyst_details(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<AnalystDetailDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/analyst-details", params)
-        .await
+    client.get("/benzinga/v1/analysts", params).await
 }
 
 /// Fetch bull/bear summaries.
 pub async fn bulls_bears(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<BullBearDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/bulls-bears-say", params)
-        .await
+    client.get("/benzinga/v1/bulls-bears-say", params).await
 }
 
 /// Fetch consensus ratings.
 pub async fn consensus_ratings(
+    ticker: &str,
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<ConsensusRatingDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/consensus-ratings", params)
-        .await
+    let path = format!(
+        "/benzinga/v1/consensus-ratings/{}",
+        crate::adapters::common::encode_path_segment(ticker)
+    );
+    client.get(&path, params).await
 }
 
 /// Fetch corporate guidance.
@@ -212,9 +220,7 @@ pub async fn corporate_guidance(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<CorporateGuidanceDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/corporate-guidance", params)
-        .await
+    client.get("/benzinga/v1/guidance", params).await
 }
 
 /// Fetch earnings announcements.
@@ -222,15 +228,11 @@ pub async fn benzinga_earnings(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<EarningsAnnouncementDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/earnings", params)
-        .await
+    client.get("/benzinga/v1/earnings", params).await
 }
 
 /// Fetch firm details.
 pub async fn firm_details(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<FirmDetailDTO>> {
     let client = build_client()?;
-    client
-        .get("/v2/reference/news/benzinga/firm-details", params)
-        .await
+    client.get("/benzinga/v1/firms", params).await
 }

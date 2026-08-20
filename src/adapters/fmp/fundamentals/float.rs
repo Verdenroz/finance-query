@@ -1,4 +1,4 @@
-//! FMP share-float endpoint (`/api/v4/shares_float`).
+//! FMP share-float endpoint (`/stable/shares-float`).
 //!
 //! Lives under `fundamentals/` rather than `corporate/` because float routes
 //! through `Capability::FUNDAMENTALS`, alongside the short-interest data it is
@@ -10,7 +10,7 @@ use crate::adapters::fmp::build_client;
 use crate::error::{FinanceError, Result};
 use crate::models::fundamentals::ShareFloat;
 
-/// Share float entry (`/api/v4/shares_float`).
+/// Share float entry (`/stable/shares-float`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SharesFloatDTO {
@@ -32,7 +32,7 @@ pub struct SharesFloatDTO {
 /// Fetch the share float for a symbol.
 pub async fn shares_float(symbol: &str) -> Result<Vec<SharesFloatDTO>> {
     build_client()?
-        .get("/api/v4/shares_float", &[("symbol", symbol)])
+        .get("/stable/shares-float", &[("symbol", symbol)])
         .await
 }
 
@@ -50,6 +50,7 @@ pub(crate) fn to_share_float(dto: SharesFloatDTO, symbol: &str) -> ShareFloat {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         float_shares: dto.float_shares,
         outstanding_shares: dto.outstanding_shares,
+        float_percent: dto.free_float,
         date: date_only(dto.date),
     }
 }
@@ -85,6 +86,7 @@ mod tests {
         let out = to_share_float(dto, "AAPL");
         assert_eq!(out.float_shares, Some(15_200_000_000.0));
         assert_eq!(out.outstanding_shares, Some(15_300_000_000.0));
+        assert_eq!(out.float_percent, Some(99.89));
         assert_eq!(out.date.as_deref(), Some("2024-05-01"));
     }
 

@@ -16,9 +16,10 @@ use crate::rate_limiter::RateLimiter;
 
 pub(super) const OPENFIGI_BASE: &str = "https://api.openfigi.com/v3";
 
-/// Jobs per request without a key. A key raises this to 100, but batching to
-/// the smaller number is always valid, so one constant covers both tiers.
-pub(super) const MAX_JOBS_PER_REQUEST: usize = 10;
+/// Jobs per request without an API key.
+pub(super) const ANONYMOUS_MAX_JOBS_PER_REQUEST: usize = 10;
+/// Jobs per request with an API key.
+pub(super) const AUTHENTICATED_MAX_JOBS_PER_REQUEST: usize = 100;
 
 pub(super) struct OpenFigiClient {
     http: Client,
@@ -28,6 +29,14 @@ pub(super) struct OpenFigiClient {
 }
 
 impl OpenFigiClient {
+    pub(super) fn max_jobs_per_request(&self) -> usize {
+        if self.api_key.is_some() {
+            AUTHENTICATED_MAX_JOBS_PER_REQUEST
+        } else {
+            ANONYMOUS_MAX_JOBS_PER_REQUEST
+        }
+    }
+
     pub(super) fn new(
         timeout: Duration,
         limiter: Arc<RateLimiter>,
@@ -68,7 +77,8 @@ impl OpenFigiClient {
                 StatusCode::PAYLOAD_TOO_LARGE => FinanceError::InvalidParameter {
                     param: "identifiers".to_string(),
                     reason: format!(
-                        "OpenFIGI accepts at most {MAX_JOBS_PER_REQUEST} identifiers per request"
+                        "OpenFIGI accepts at most {} identifiers per request for this tier",
+                        self.max_jobs_per_request()
                     ),
                 },
                 s => status_error("OpenFIGI", s),

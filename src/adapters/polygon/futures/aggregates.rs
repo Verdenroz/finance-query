@@ -1,62 +1,69 @@
-//! Futures aggregate bar endpoints: OHLCV bars.
+//! Current Massive futures aggregate-bar endpoint.
 
-use crate::error::Result;
+use serde::{Deserialize, Serialize};
 
-use super::super::build_client;
-use super::super::models::*;
+use crate::adapters::common::encode_path_segment;
+use crate::error::{FinanceError, Result};
 
-/// Fetch aggregate bars (OHLCV) for a futures ticker over a date range.
+use super::super::{build_client, client::PolygonClient, models::PaginatedResponseDTO};
+
+/// One futures OHLCV aggregate bar.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct FuturesAggregateDTO {
+    /// Close price.
+    pub close: Option<f64>,
+    /// Dollar volume within the window.
+    pub dollar_volume: Option<f64>,
+    /// High price.
+    pub high: Option<f64>,
+    /// Low price.
+    pub low: Option<f64>,
+    /// Open price.
+    pub open: Option<f64>,
+    /// Trading-session end date.
+    pub session_end_date: Option<String>,
+    /// Official settlement price, when available.
+    pub settlement_price: Option<f64>,
+    /// Contract ticker.
+    pub ticker: Option<String>,
+    /// Number of transactions.
+    pub transactions: Option<u64>,
+    /// Contract volume.
+    pub volume: Option<u64>,
+    /// Aggregate-window start timestamp in Unix nanoseconds.
+    pub window_start: Option<i64>,
+}
+
+/// Fetch futures OHLCV bars from the current `/futures/v1/aggs` API.
 ///
-/// # Arguments
-///
-/// * `ticker` - Futures ticker symbol (e.g., `"ESZ4"`, `"CLF5"`)
-/// * `multiplier` - Size of the timespan multiplier (e.g., `1`, `5`, `15`)
-/// * `timespan` - Timespan unit (e.g., `Timespan::Day`)
-/// * `from` - Start date as `"YYYY-MM-DD"` or millisecond timestamp string
-/// * `to` - End date as `"YYYY-MM-DD"` or millisecond timestamp string
-/// * `params` - Optional parameters (adjusted, sort, limit)
+/// `resolution` is a Massive resolution such as `1min`, `1hour`,
+/// `1session`, `1week`, `1month`, `1quarter`, or `1year`. Use `params` for
+/// `window_start` comparisons, `limit`, and `sort`.
 pub async fn futures_aggregates(
     ticker: &str,
-    multiplier: u32,
-    timespan: Timespan,
-    from: &str,
-    to: &str,
-    params: Option<AggregateParams>,
-) -> Result<AggregateResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
-        ticker,
-        multiplier,
-        timespan.as_str(),
-        from,
-        to
-    );
+    resolution: &str,
+    params: &[(&str, &str)],
+) -> Result<PaginatedResponseDTO<FuturesAggregateDTO>> {
+    fetch_aggregates(&build_client()?, ticker, resolution, params).await
+}
 
-    let mut query_params: Vec<(&str, String)> = Vec::new();
-    if let Some(ref p) = params {
-        if let Some(adjusted) = p.adjusted {
-            query_params.push(("adjusted", adjusted.to_string()));
-        }
-        if let Some(sort) = p.sort {
-            query_params.push(("sort", sort.as_str().to_string()));
-        }
-        if let Some(limit) = p.limit {
-            query_params.push(("limit", limit.to_string()));
-        }
+async fn fetch_aggregates(
+    client: &PolygonClient,
+    ticker: &str,
+    resolution: &str,
+    params: &[(&str, &str)],
+) -> Result<PaginatedResponseDTO<FuturesAggregateDTO>> {
+    if resolution.trim().is_empty() {
+        return Err(FinanceError::InvalidParameter {
+            param: "resolution".to_string(),
+            reason: "resolution must not be empty".to_string(),
+        });
     }
-
-    let query_refs: Vec<(&str, &str)> =
-        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
-
-    client
-        .get_as(
-            &path,
-            &query_refs,
-            "futures_aggregates",
-            "futures aggregate response",
-        )
-        .await
+    let path = format!("/futures/v1/aggs/{}", encode_path_segment(ticker));
+    let mut query = vec![("resolution", resolution)];
+    query.extend_from_slice(params);
+    client.get(&path, &query).await
 }
 
 #[cfg(test)]
@@ -64,50 +71,61 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_futures_aggregates_mock() {
+    async fn futures_aggregates_builds_the_path_and_merges_params() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock(
-                "GET",
-                "/v2/aggs/ticker/ESZ4/range/1/day/2024-01-01/2024-01-31",
-            )
+            .mock("GET", "/futures/v1/aggs/ES%20Z6")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("resolution".into(), "1session".into()),
+                mockito::Matcher::UrlEncoded("limit".into(), "1".into()),
             ]))
             .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                serde_json::json!({
-                    "ticker": "ESZ4",
-                    "status": "OK",
-                    "adjusted": true,
-                    "queryCount": 1,
-                    "resultsCount": 2,
-                    "request_id": "abc123",
-                    "results": [
-                        { "o": 4750.0, "h": 4780.0, "l": 4740.0, "c": 4770.0, "v": 1500000.0, "vw": 4760.0, "t": 1704067200000_i64, "n": 800000 },
-                        { "o": 4770.0, "h": 4800.0, "l": 4760.0, "c": 4790.0, "v": 1400000.0, "vw": 4780.0, "t": 1704153600000_i64, "n": 750000 }
-                    ]
-                })
-                .to_string(),
-            )
+            .with_body(r#"{"status":"OK","results":[{"close":6052.0,"high":6060.0,"low":6000.0,"open":6010.0,"session_end_date":"2026-08-06","ticker":"ES Z6","transactions":42,"volume":1000,"window_start":1785974400000000000}]}"#)
             .create_async()
             .await;
-
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get_raw(
-                "/v2/aggs/ticker/ESZ4/range/1/day/2024-01-01/2024-01-31",
-                &[],
-            )
+        let response = fetch_aggregates(&client, "ES Z6", "1session", &[("limit", "1")])
             .await
             .unwrap();
+        let bar = &response.results.unwrap()[0];
+        assert_eq!(bar.ticker.as_deref(), Some("ES Z6"));
+        assert_eq!(bar.close, Some(6052.0));
+        assert_eq!(bar.volume, Some(1000));
+        assert_eq!(bar.transactions, Some(42));
+        assert_eq!(bar.window_start, Some(1_785_974_400_000_000_000));
+    }
 
-        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.ticker.as_deref(), Some("ESZ4"));
-        let results = resp.results.unwrap();
-        assert_eq!(results.len(), 2);
-        assert!((results[0].open - 4750.0).abs() < 0.01);
-        assert!((results[1].close - 4790.0).abs() < 0.01);
+    #[tokio::test]
+    async fn futures_aggregates_tolerates_a_sparse_bar() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/futures/v1/aggs/ESZ6")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"status":"OK","results":[{"close":6052.0,"volume":1000}]}"#)
+            .create_async()
+            .await;
+        let client = super::super::super::build_test_client(&server.url()).unwrap();
+        let response = fetch_aggregates(&client, "ESZ6", "1session", &[])
+            .await
+            .unwrap();
+        let bar = &response.results.unwrap()[0];
+        assert_eq!(bar.volume, Some(1000));
+        assert!(bar.ticker.is_none());
+        assert!(bar.settlement_price.is_none());
+    }
+
+    #[tokio::test]
+    async fn futures_aggregates_rejects_a_blank_resolution() {
+        let server = mockito::Server::new_async().await;
+        let client = super::super::super::build_test_client(&server.url()).unwrap();
+        let error = fetch_aggregates(&client, "ESZ6", "  ", &[])
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, FinanceError::InvalidParameter { ref param, .. } if param == "resolution"),
+            "got {error:?}"
+        );
     }
 }

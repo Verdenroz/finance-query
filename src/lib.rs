@@ -87,12 +87,45 @@ mod tickers;
 mod utils;
 
 // Feature-gated external data source modules
+#[cfg(feature = "alphavantage")]
+pub mod alphavantage {
+    //! Alpha Vantage configuration (requires the `alphavantage` feature).
+    //!
+    //! Call [`init`] before constructing a provider when the API key should
+    //! come from application configuration instead of the process environment.
+    pub use crate::adapters::alphavantage::{init, init_with_timeout};
+}
+
+#[cfg(feature = "fmp")]
+pub mod fmp {
+    //! Financial Modeling Prep configuration (requires the `fmp` feature).
+    //!
+    //! Quotes, charts, fundamentals, corporate, and research data are served
+    //! through [`Providers`](crate::Providers). Only key configuration is
+    //! exposed here; the adapter's raw response types stay internal.
+    pub use crate::adapters::fmp::{init, init_with_timeout};
+}
+
+#[cfg(feature = "polygon")]
+pub mod polygon {
+    //! Massive (formerly Polygon.io) configuration (requires the `polygon`
+    //! feature).
+    //!
+    //! REST operations route through [`Providers`](crate::Providers) and
+    //! Polygon's real-time channels through
+    //! [`streaming`](crate::streaming). Only key configuration is exposed
+    //! here; the adapter's raw response types stay internal.
+    pub use crate::adapters::polygon::{init, init_with_timeout};
+}
+
 #[cfg(feature = "fred")]
 pub mod fred {
     //! FRED economic data API (requires `fred` feature).
     //!
     //! Access 800k+ macroeconomic time series and US Treasury yield curve data.
-    pub use crate::adapters::fred::{init, init_with_timeout, series, treasury_yields};
+    pub use crate::adapters::fred::{
+        ReleaseDate, init, init_with_timeout, release_dates, series, treasury_yields,
+    };
     pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
 }
 

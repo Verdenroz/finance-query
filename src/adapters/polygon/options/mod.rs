@@ -6,6 +6,7 @@
 // (`fetch_chart_response`), so this module stays unrouted.
 #[allow(dead_code)]
 pub mod aggregates;
+pub mod reference;
 pub mod snapshots;
 #[allow(dead_code)] // unrouted: tick-level trades land with #250
 pub mod trades;

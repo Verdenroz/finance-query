@@ -1,7 +1,7 @@
 //! Corporate data: news, dividends, splits, analyst ratings, earnings events.
 
 #[allow(dead_code)] // unrouted: Benzinga premium surface has no capability route yet
-mod benzinga;
+pub(crate) mod benzinga;
 mod corporate_actions;
 mod news;
 

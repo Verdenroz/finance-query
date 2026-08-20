@@ -18,24 +18,21 @@ pub struct EarningsCalendarEntryDTO {
     pub date: Option<String>,
     /// Ticker symbol.
     pub symbol: Option<String>,
-    /// Estimated EPS.
+    /// Reported EPS, once the quarter has been announced.
+    #[serde(rename = "epsActual")]
     pub eps: Option<f64>,
     /// Estimated EPS.
     #[serde(rename = "epsEstimated")]
     pub eps_estimated: Option<f64>,
-    /// Time of announcement (bmo = before market open, amc = after market close).
-    pub time: Option<String>,
-    /// Revenue.
+    /// Reported revenue, once the quarter has been announced.
+    #[serde(rename = "revenueActual")]
     pub revenue: Option<f64>,
     /// Estimated revenue.
     #[serde(rename = "revenueEstimated")]
     pub revenue_estimated: Option<f64>,
-    /// Fiscal date ending.
-    #[serde(rename = "fiscalDateEnding")]
-    pub fiscal_date_ending: Option<String>,
-    /// Updated from date.
-    #[serde(rename = "updatedFromDate")]
-    pub updated_from_date: Option<String>,
+    /// Date the entry was last revised.
+    #[serde(rename = "lastUpdated")]
+    pub last_updated: Option<String>,
 }
 
 /// IPO calendar entry.
@@ -136,7 +133,7 @@ pub struct EconomicCalendarEntryDTO {
 pub async fn earnings_calendar(from: &str, to: &str) -> Result<Vec<EarningsCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/earning_calendar", &[("from", from), ("to", to)])
+        .get("/stable/earnings-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -144,7 +141,7 @@ pub async fn earnings_calendar(from: &str, to: &str) -> Result<Vec<EarningsCalen
 pub async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<IpoCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/ipo_calendar", &[("from", from), ("to", to)])
+        .get("/stable/ipos-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -152,10 +149,7 @@ pub async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<IpoCalendarEntryDT
 pub async fn stock_split_calendar(from: &str, to: &str) -> Result<Vec<StockSplitCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v3/stock_split_calendar",
-            &[("from", from), ("to", to)],
-        )
+        .get("/stable/splits-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -163,10 +157,7 @@ pub async fn stock_split_calendar(from: &str, to: &str) -> Result<Vec<StockSplit
 pub async fn dividend_calendar(from: &str, to: &str) -> Result<Vec<DividendCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v3/stock_dividend_calendar",
-            &[("from", from), ("to", to)],
-        )
+        .get("/stable/dividends-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -174,7 +165,7 @@ pub async fn dividend_calendar(from: &str, to: &str) -> Result<Vec<DividendCalen
 pub async fn economic_calendar(from: &str, to: &str) -> Result<Vec<EconomicCalendarEntryDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/economic_calendar", &[("from", from), ("to", to)])
+        .get("/stable/economic-calendar", &[("from", from), ("to", to)])
         .await
 }
 
@@ -212,13 +203,15 @@ pub async fn fetch_market_calendar_response(
                 entry(
                     e.symbol,
                     e.date,
+                    // FMP's stable earnings calendar reports neither the fiscal
+                    // period end nor the bmo/amc announcement time.
                     CalendarDetail::Earnings {
                         eps: e.eps,
                         eps_estimated: e.eps_estimated,
                         revenue: e.revenue,
                         revenue_estimated: e.revenue_estimated,
-                        fiscal_date_ending: e.fiscal_date_ending,
-                        time: e.time,
+                        fiscal_date_ending: None,
+                        time: None,
                     },
                 )
             })
@@ -304,7 +297,7 @@ mod tests {
     async fn test_earnings_calendar_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/earning_calendar")
+            .mock("GET", "/stable/earnings-calendar")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("from".into(), "2024-01-01".into()),
@@ -312,18 +305,15 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "date": "2024-01-25",
-                        "symbol": "MSFT",
-                        "eps": 2.93,
-                        "epsEstimated": 2.78,
-                        "time": "amc",
-                        "revenue": 62020000000.0,
-                        "revenueEstimated": 61100000000.0
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "MSFT",
+                    "date": "2024-01-25",
+                    "epsActual": 2.93,
+                    "epsEstimated": 2.78,
+                    "revenueActual": 62020000000.0,
+                    "revenueEstimated": 61100000000.0,
+                    "lastUpdated": "2024-01-26"
+                }]"#,
             )
             .create_async()
             .await;
@@ -331,21 +321,27 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EarningsCalendarEntryDTO> = client
             .get(
-                "/api/v3/earning_calendar",
+                "/stable/earnings-calendar",
                 &[("from", "2024-01-01"), ("to", "2024-01-31")],
             )
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].symbol.as_deref(), Some("MSFT"));
-        assert!((resp[0].eps.unwrap() - 2.93).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("MSFT"));
+        assert_eq!(row.date.as_deref(), Some("2024-01-25"));
+        assert_eq!(row.eps, Some(2.93));
+        assert_eq!(row.eps_estimated, Some(2.78));
+        assert_eq!(row.revenue, Some(62_020_000_000.0));
+        assert_eq!(row.revenue_estimated, Some(61_100_000_000.0));
+        assert_eq!(row.last_updated.as_deref(), Some("2024-01-26"));
     }
 
     #[tokio::test]
     async fn test_economic_calendar_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/economic_calendar")
+            .mock("GET", "/stable/economic-calendar")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("from".into(), "2024-01-01".into()),
@@ -372,7 +368,7 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<EconomicCalendarEntryDTO> = client
             .get(
-                "/api/v3/economic_calendar",
+                "/stable/economic-calendar",
                 &[("from", "2024-01-01"), ("to", "2024-01-31")],
             )
             .await

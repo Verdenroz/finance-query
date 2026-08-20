@@ -15,6 +15,7 @@ Finance Query uses a single `FinanceError` enum for all error cases. Every libra
 | `SymbolNotFound` | Ticker symbol doesn't exist or returned no data | ✗ |
 | `RateLimited` | Provider rate limit exceeded | ✓ |
 | `HttpError` | Transport-level HTTP failure (DNS, TLS, connection refused) | ✓ |
+| `NetworkError` | Same, from a provider that authenticates by query string, so the source URL is withheld | ✓ |
 | `JsonParseError` | Provider returned malformed JSON | ✗ |
 | `ResponseStructureError` | Missing or malformed response fields | ✗ |
 | `InvalidParameter` | Bad input: invalid symbols, unsupported interval/range combo | ✗ |
@@ -95,7 +96,7 @@ attempt 4 retriable: false
 retry delay: 10s
 ```
 
-The built-in retriable variants are `RateLimited`, `Timeout`, `HttpError`, `AuthenticationFailed`, `ServerError`, and `RuntimeError`.
+The built-in retriable variants are `RateLimited`, `Timeout`, `HttpError`, `NetworkError`, `AuthenticationFailed`, `ServerError`, and `RuntimeError`.
 
 ## Error Categorization
 

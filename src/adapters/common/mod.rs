@@ -13,6 +13,16 @@ pub(crate) mod coins;
 #[cfg(any(feature = "binance", feature = "kraken"))]
 pub(crate) mod crypto_chart;
 
+/// Error hygiene shared by the adapters that carry an API key.
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fmp",
+    feature = "fred",
+    feature = "polygon"
+))]
+pub(crate) mod keyed;
+
 /// Numeric parsing shared by the macro-data adapters.
 #[cfg(any(feature = "bls", feature = "fiscaldata"))]
 pub(crate) mod numbers;

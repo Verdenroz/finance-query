@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::models::Period;
@@ -213,20 +212,6 @@ pub struct DiscountedCashFlowDTO {
     pub stock_price: Option<f64>,
 }
 
-/// Historical discounted cash flow from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct HistoricalDcfDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Date.
-    pub date: Option<String>,
-    /// DCF value.
-    pub dcf: Option<f64>,
-    /// Stock price.
-    pub price: Option<f64>,
-}
-
 /// Company rating from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -367,8 +352,12 @@ pub async fn financial_ratios(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/ratios/{}", encode_path_segment(symbol)),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/ratios",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -383,8 +372,12 @@ pub async fn key_metrics(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/key-metrics/{}", encode_path_segment(symbol)),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/key-metrics",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -399,8 +392,12 @@ pub async fn enterprise_value(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/enterprise-values/{}", encode_path_segment(symbol)),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/enterprise-values",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -409,32 +406,7 @@ pub async fn enterprise_value(
 pub async fn discounted_cash_flow(symbol: &str) -> Result<Vec<DiscountedCashFlowDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!(
-                "/api/v3/discounted-cash-flow/{}",
-                encode_path_segment(symbol)
-            ),
-            &[],
-        )
-        .await
-}
-
-/// Fetch historical discounted cash flow for a symbol.
-pub async fn historical_dcf(
-    symbol: &str,
-    period: Period,
-    limit: Option<u32>,
-) -> Result<Vec<HistoricalDcfDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(10).to_string();
-    client
-        .get(
-            &format!(
-                "/api/v3/historical-discounted-cash-flow-statement/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
-        )
+        .get("/stable/discounted-cash-flow", &[("symbol", symbol)])
         .await
 }
 
@@ -442,10 +414,7 @@ pub async fn historical_dcf(
 pub async fn company_rating(symbol: &str) -> Result<Vec<CompanyRatingDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!("/api/v3/rating/{}", encode_path_segment(symbol)),
-            &[],
-        )
+        .get("/stable/ratings-snapshot", &[("symbol", symbol)])
         .await
 }
 
@@ -455,8 +424,8 @@ pub async fn historical_rating(symbol: &str, limit: Option<u32>) -> Result<Vec<C
     let limit_str = limit.unwrap_or(100).to_string();
     client
         .get(
-            &format!("/api/v3/historical-rating/{}", encode_path_segment(symbol)),
-            &[("limit", &limit_str)],
+            "/stable/ratings-historical",
+            &[("symbol", symbol), ("limit", &limit_str)],
         )
         .await
 }
@@ -471,8 +440,12 @@ pub async fn financial_growth(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/financial-growth/{}", encode_path_segment(symbol)),
-            &[("period", period.as_str()), ("limit", &limit_str)],
+            "/stable/financial-growth",
+            &[
+                ("symbol", symbol),
+                ("period", period.as_str()),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
@@ -485,7 +458,7 @@ mod tests {
     async fn test_financial_ratios_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/ratios/AAPL")
+            .mock("GET", "/stable/ratios")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "annual".into()),
@@ -513,10 +486,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<FinancialRatiosDTO> = client
-            .get(
-                "/api/v3/ratios/AAPL",
-                &[("period", "annual"), ("limit", "1")],
-            )
+            .get("/stable/ratios", &[("period", "annual"), ("limit", "1")])
             .await
             .unwrap();
 
@@ -530,7 +500,7 @@ mod tests {
     async fn test_company_rating_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/rating/AAPL")
+            .mock("GET", "/stable/ratings-snapshot")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -554,7 +524,8 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyRatingDTO> = client.get("/api/v3/rating/AAPL", &[]).await.unwrap();
+        let result: Vec<CompanyRatingDTO> =
+            client.get("/stable/ratings-snapshot", &[]).await.unwrap();
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].rating.as_deref(), Some("S"));

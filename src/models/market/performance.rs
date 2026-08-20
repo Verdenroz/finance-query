@@ -23,17 +23,21 @@ pub enum MoverDirection {
 pub struct SectorPerformance {
     /// Sector name (e.g. `"Technology"`).
     pub sector: String,
+    /// Exchange the average was computed over (e.g. `"NASDAQ"`). Providers
+    /// report one row per sector per exchange.
+    pub exchange: Option<String>,
     /// Percentage change, as a number (e.g. `1.23` for `"1.23%"`).
     pub change_percent: Option<f64>,
 }
 
-/// One day of aggregate performance across every sector.
+/// One day of aggregate performance across every sector and exchange.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SectorPerformanceHistory {
     /// Date (`YYYY-MM-DD`).
     pub date: Option<String>,
-    /// Per-sector percentage change on that date.
+    /// Per-sector percentage change on that date, one entry per
+    /// (sector, exchange) pair.
     pub sectors: Vec<SectorPerformance>,
 }
 
@@ -79,33 +83,6 @@ pub struct MoverQuote {
     pub change: Option<f64>,
     /// Percentage price change.
     pub change_percent: Option<f64>,
-}
-
-/// Parse a percentage string such as `"1.23%"` or `"-0.4%"` into a number.
-///
-/// FMP returns sector performance as a preformatted string, unlike its movers
-/// endpoints which return a bare number.
-#[cfg(feature = "fmp")]
-pub(crate) fn parse_percent(raw: Option<&str>) -> Option<f64> {
-    raw?.trim().trim_end_matches('%').trim().parse().ok()
-}
-
-#[cfg(all(test, feature = "fmp"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_percent_strings() {
-        assert_eq!(parse_percent(Some("1.23%")), Some(1.23));
-        assert_eq!(parse_percent(Some("-0.4%")), Some(-0.4));
-        assert_eq!(parse_percent(Some(" 2.5 % ")), Some(2.5));
-        assert_eq!(parse_percent(Some("3.75")), Some(3.75));
-    }
-
-    #[test]
-    fn unparseable_percent_yields_none() {
-        assert_eq!(parse_percent(None), None);
-        assert_eq!(parse_percent(Some("")), None);
-        assert_eq!(parse_percent(Some("n/a")), None);
-    }
+    /// Exchange the symbol trades on.
+    pub exchange: Option<String>,
 }

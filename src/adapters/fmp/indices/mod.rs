@@ -81,32 +81,32 @@ pub struct HistoricalConstituentDTO {
 #[allow(dead_code)] // unrouted: batch index quotes deliberately deferred (#297 optional)
 pub async fn major_indexes_quote() -> Result<Vec<FmpQuoteDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/quotes/index", &[]).await
+    client.get("/stable/batch-index-quotes", &[]).await
 }
 
 /// Fetch current S&P 500 constituents.
 pub async fn sp500_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/sp500_constituent", &[]).await
+    client.get("/stable/sp500-constituent", &[]).await
 }
 
 /// Fetch current Nasdaq constituents.
 pub async fn nasdaq_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/nasdaq_constituent", &[]).await
+    client.get("/stable/nasdaq-constituent", &[]).await
 }
 
 /// Fetch current Dow Jones constituents.
 pub async fn dow_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/dowjones_constituent", &[]).await
+    client.get("/stable/dowjones-constituent", &[]).await
 }
 
 /// Fetch historical S&P 500 constituent changes.
 pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v3/historical/sp500_constituent", &[])
+        .get("/stable/historical-sp500-constituent", &[])
         .await
 }
 
@@ -198,7 +198,7 @@ mod tests {
     async fn test_sp500_constituents_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/sp500_constituent")
+            .mock("GET", "/stable/sp500-constituent")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -224,7 +224,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<IndexConstituentDTO> =
-            client.get("/api/v3/sp500_constituent", &[]).await.unwrap();
+            client.get("/stable/sp500-constituent", &[]).await.unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(result[0].sector.as_deref(), Some("Information Technology"));
@@ -236,7 +236,7 @@ mod tests {
     async fn test_index_quote_to_canonical_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/quote/%5EGSPC")
+            .mock("GET", "/stable/quote")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -256,11 +256,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let path = format!(
-            "/api/v3/quote/{}",
-            crate::adapters::common::encode_path_segment("^GSPC")
-        );
-        let quotes: Vec<FmpQuoteDTO> = client.get(&path, &[]).await.unwrap();
+        let quotes: Vec<FmpQuoteDTO> = client.get("/stable/quote", &[]).await.unwrap();
 
         let quote = index_quote_to_canonical("^GSPC", &quotes);
         assert_eq!(quote.symbol, "^GSPC");

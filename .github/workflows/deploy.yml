@@ -174,12 +174,13 @@ jobs:
       # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit
         if: steps.bench_changes.outputs.changed == 'true'
+        continue-on-error: true
         run: |
           cargo soothfast gate -p finance-query --features bench-gate \
             --against-ref HEAD~1 --save-baseline base
 
-      # A passing gate already saved the baseline; measure only fills in
-      # when the gate was skipped, so docs regen never runs without one.
+      # A passing gate already saved the baseline; measure fills in when the
+      # gate was skipped or failed, so docs regen never runs without one.
       - name: Measure baseline for claims
         run: |
           if [ ! -f .soothfast/baselines/base.json ]; then

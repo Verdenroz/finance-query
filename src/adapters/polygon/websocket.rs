@@ -1,8 +1,8 @@
-//! Polygon.io WebSocket streaming for real-time market data (internal).
+//! Polygon/Massive WebSocket streaming for real-time market data.
 //!
 //! Provides real-time trades, quotes, and aggregate bars for stocks, options, forex,
-//! crypto, futures, and indices. This module is an internal adapter — use the public
-//! [`finance_query::streaming::PriceStream`] API for real-time price streaming.
+//! crypto, futures, and indices. Internal adapter; the public API is
+//! [`streaming`](crate::streaming), which wraps it in provider-neutral types.
 //!
 //! # Example
 //!
@@ -26,7 +26,11 @@ use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::adapters::common::keyed::redact_key;
 use crate::error::{FinanceError, Result};
+
+const POLYGON_WEBSOCKET_BASE: &str = "wss://socket.massive.com";
+const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// WebSocket cluster (asset class).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -270,13 +274,13 @@ impl PolygonStreamBuilder {
 
     /// Connect and return a `PolygonStream`.
     pub async fn build(self) -> Result<PolygonStream> {
-        let url = format!("wss://socket.polygon.io/{}", self.cluster.as_str());
+        let url = format!("{POLYGON_WEBSOCKET_BASE}/{}", self.cluster.as_str());
 
         let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
             .await
             .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}")))?;
 
-        let (write, read) = futures::StreamExt::split(ws_stream);
+        let (write, mut read) = futures::StreamExt::split(ws_stream);
         let write = std::sync::Arc::new(tokio::sync::Mutex::new(write));
 
         // Auth
@@ -295,6 +299,8 @@ impl PolygonStreamBuilder {
                     FinanceError::ApiError(format!("Polygon WebSocket auth error: {e}"))
                 })?;
         }
+
+        wait_for_authentication(&mut read, &self.api_key).await?;
 
         // Subscribe
         if !self.subscriptions.is_empty() {
@@ -382,15 +388,27 @@ impl PolygonSender {
 }
 
 impl PolygonStream {
-    /// Create a new builder for a Polygon WebSocket stream.
-    ///
-    /// Requires [`crate::adapters::polygon::init`] to have been called first.
-    pub fn from_singleton() -> Result<PolygonStreamBuilder> {
+    /// Create a stream builder using an explicit API key.
+    pub fn builder(api_key: impl Into<String>) -> Result<PolygonStreamBuilder> {
+        let api_key = api_key.into();
+        if api_key.trim().is_empty() {
+            return Err(FinanceError::InvalidParameter {
+                param: "polygon".to_string(),
+                reason: "API key must not be empty".to_string(),
+            });
+        }
         Ok(PolygonStreamBuilder {
-            api_key: super::api_key()?,
+            api_key,
             cluster: ClusterDTO::Stocks,
             subscriptions: Vec::new(),
         })
+    }
+
+    /// Create a new builder for a Polygon WebSocket stream.
+    ///
+    /// Requires [`crate::polygon::init`] to have been called first.
+    pub fn from_singleton() -> Result<PolygonStreamBuilder> {
+        Self::builder(super::api_key()?)
     }
 
     /// Detach the send half so subscriptions can change mid-session.
@@ -399,6 +417,56 @@ impl PolygonStream {
             write: std::sync::Arc::clone(&self.write),
         }
     }
+}
+
+async fn wait_for_authentication<S>(read: &mut S, api_key: &str) -> Result<()>
+where
+    S: Stream<Item = std::result::Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
+{
+    tokio::time::timeout(AUTH_TIMEOUT, async {
+        while let Some(frame) = futures::StreamExt::next(read).await {
+            let frame = frame.map_err(|error| {
+                FinanceError::ApiError(format!("Polygon WebSocket auth error: {error}"))
+            })?;
+            let Message::Text(text) = frame else {
+                continue;
+            };
+            let events: Vec<serde_json::Value> = serde_json::from_str(&text).map_err(|error| {
+                FinanceError::ResponseStructureError {
+                    field: "polygon.websocket.auth".to_string(),
+                    context: format!("Invalid authentication response: {error}"),
+                }
+            })?;
+            for event in events {
+                if event.get("ev").and_then(|value| value.as_str()) != Some("status") {
+                    continue;
+                }
+                let status = event
+                    .get("status")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default();
+                let message = event
+                    .get("message")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or(status);
+                if status == "auth_success" {
+                    return Ok(());
+                }
+                if status == "auth_failed" || status == "not_authorized" {
+                    return Err(FinanceError::AuthenticationFailed {
+                        context: redact_key(message, api_key),
+                    });
+                }
+            }
+        }
+        Err(FinanceError::ApiError(
+            "Polygon WebSocket closed before authentication completed".to_string(),
+        ))
+    })
+    .await
+    .map_err(|_| FinanceError::AuthenticationFailed {
+        context: "Polygon WebSocket authentication timed out".to_string(),
+    })?
 }
 
 impl Stream for PolygonStream {
@@ -563,5 +631,55 @@ mod tests {
         assert_eq!(ClusterDTO::Crypto.as_str(), "crypto");
         assert_eq!(ClusterDTO::Futures.as_str(), "futures");
         assert_eq!(ClusterDTO::Indices.as_str(), "indices");
+    }
+
+    #[test]
+    fn explicit_builder_rejects_an_empty_key() {
+        assert!(matches!(
+            PolygonStream::builder("  "),
+            Err(FinanceError::InvalidParameter { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn authentication_waits_for_auth_success() {
+        let frames = vec![
+            Ok(Message::Text(
+                r#"[{"ev":"status","status":"connected"}]"#.into(),
+            )),
+            Ok(Message::Text(
+                r#"[{"ev":"status","status":"auth_success","message":"authenticated"}]"#.into(),
+            )),
+        ];
+        let mut stream = futures::stream::iter(frames);
+        wait_for_authentication(&mut stream, "test-key")
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn authentication_failure_is_typed() {
+        let frames = vec![Ok(Message::Text(
+            r#"[{"ev":"status","status":"auth_failed","message":"invalid key"}]"#.into(),
+        ))];
+        let mut stream = futures::stream::iter(frames);
+        assert!(matches!(
+            wait_for_authentication(&mut stream, "test-key").await,
+            Err(FinanceError::AuthenticationFailed { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn authentication_failure_redacts_the_api_key() {
+        const KEY: &str = "abc123";
+        let frames = vec![Ok(Message::Text(
+            format!(
+                r#"[{{"ev":"status","status":"auth_failed","message":"key {KEY} is invalid"}}]"#
+            )
+            .into(),
+        ))];
+        let mut stream = futures::stream::iter(frames);
+        let err = wait_for_authentication(&mut stream, KEY).await.unwrap_err();
+        assert!(!format!("{err}").contains(KEY), "{err}");
     }
 }

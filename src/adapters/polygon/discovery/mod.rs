@@ -167,6 +167,73 @@ pub struct MarketHolidayDTO {
     pub close: Option<String>,
 }
 
+/// Currency-market statuses returned by the market-status endpoint.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub struct CurrencyMarketStatusDTO {
+    /// Cryptocurrency market status.
+    pub crypto: Option<String>,
+    /// Foreign-exchange market status.
+    pub fx: Option<String>,
+}
+
+/// U.S. exchange statuses returned by the market-status endpoint.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub struct ExchangeMarketStatusDTO {
+    /// Nasdaq market status.
+    pub nasdaq: Option<String>,
+    /// NYSE market status.
+    pub nyse: Option<String>,
+    /// OTC market status.
+    pub otc: Option<String>,
+}
+
+/// Current cross-asset market status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub struct MarketStatusDTO {
+    /// Whether U.S. equities are in after-hours trading.
+    #[serde(rename = "afterHours")]
+    pub after_hours: Option<bool>,
+    /// Currency-market statuses.
+    pub currencies: Option<CurrencyMarketStatusDTO>,
+    /// Whether U.S. equities are in pre-market trading.
+    #[serde(rename = "earlyHours")]
+    pub early_hours: Option<bool>,
+    /// U.S. exchange statuses.
+    pub exchanges: Option<ExchangeMarketStatusDTO>,
+    /// Index-group statuses.
+    #[serde(rename = "indicesGroups")]
+    pub indices_groups: Option<serde_json::Value>,
+    /// Overall market status.
+    pub market: Option<String>,
+    /// Massive server time in RFC 3339 format.
+    #[serde(rename = "serverTime")]
+    pub server_time: Option<String>,
+}
+
+/// Trade or quote condition-code definition.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub struct ConditionCodeDTO {
+    /// Asset class for this condition.
+    pub asset_class: Option<String>,
+    /// Data types to which the condition applies.
+    pub data_types: Option<Vec<String>>,
+    /// Numeric condition identifier.
+    pub id: Option<i64>,
+    /// Human-readable condition name.
+    pub name: Option<String>,
+    /// Condition type.
+    #[serde(rename = "type")]
+    pub condition_type: Option<String>,
+}
+
 /// Fetch all tickers.
 ///
 /// * `params` - Query params: `type`, `market`, `exchange`, `cusip`, `cik`, `active`, `sort`, `order`, `limit`, `search`
@@ -314,6 +381,29 @@ pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
             "market_holidays",
             "market holidays",
         )
+        .await
+}
+
+/// Fetch the current status of U.S. equities, currencies, and index groups.
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub async fn market_status() -> Result<MarketStatusDTO> {
+    build_client()?
+        .get_as(
+            "/v1/marketstatus/now",
+            &[],
+            "market_status",
+            "market status response",
+        )
+        .await
+}
+
+/// Fetch trade and quote condition-code definitions.
+#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+pub async fn condition_codes(
+    params: &[(&str, &str)],
+) -> Result<PaginatedResponseDTO<ConditionCodeDTO>> {
+    build_client()?
+        .get("/v3/reference/conditions", params)
         .await
 }
 

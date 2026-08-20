@@ -59,12 +59,11 @@ pub struct SearchResultDTO {
     pub name: Option<String>,
     /// Currency.
     pub currency: Option<String>,
-    /// Exchange name.
-    #[serde(rename = "stockExchange")]
-    pub stock_exchange: Option<String>,
-    /// Short exchange name.
-    #[serde(rename = "exchangeShortName")]
-    pub exchange_short_name: Option<String>,
+    /// Full venue name (e.g. `"NASDAQ Global Select"`).
+    #[serde(rename = "exchangeFullName")]
+    pub exchange_full_name: Option<String>,
+    /// Exchange code (e.g. `"NASDAQ"`).
+    pub exchange: Option<String>,
 }
 
 /// Screen stocks by various financial criteria.
@@ -72,7 +71,7 @@ pub struct SearchResultDTO {
 /// * `params` - Query params such as `marketCapMoreThan`, `sector`, `industry`, `country`, `exchange`, `limit`, etc.
 pub async fn stock_screener(params: &[(&str, &str)]) -> Result<Vec<ScreenerResultDTO>> {
     let client = build_client()?;
-    client.get("/api/v3/stock-screener", params).await
+    client.get("/stable/company-screener", params).await
 }
 
 /// Search for symbols matching a query string.
@@ -94,7 +93,7 @@ pub async fn symbol_search(
     if let Some(e) = exchange {
         params.push(("exchange", e));
     }
-    client.get("/api/v3/search", &params).await
+    client.get("/stable/search-symbol", &params).await
 }
 
 /// Search symbols and return provider-neutral matches.
@@ -112,7 +111,7 @@ pub async fn fetch_symbol_search_response(
                 id: None,
                 name: r.name,
                 // Prefer the short code (e.g. "NASDAQ") over the long venue name.
-                exchange: r.exchange_short_name.or(r.stock_exchange),
+                exchange: r.exchange.or(r.exchange_full_name),
                 asset_type: None,
                 currency: r.currency,
                 active: None,
@@ -161,7 +160,7 @@ mod tests {
     async fn test_symbol_search_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/search")
+            .mock("GET", "/stable/search-symbol")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("query".into(), "apple".into()),
@@ -169,27 +168,63 @@ mod tests {
             ]))
             .with_status(200)
             .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "AAPL",
-                        "name": "Apple Inc.",
-                        "currency": "USD",
-                        "stockExchange": "NASDAQ",
-                        "exchangeShortName": "NASDAQ"
-                    }
-                ])
-                .to_string(),
+                r#"[{
+                    "symbol": "AAPL",
+                    "name": "Apple Inc.",
+                    "currency": "USD",
+                    "exchangeFullName": "NASDAQ Global Select",
+                    "exchange": "NASDAQ"
+                }]"#,
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result: Vec<SearchResultDTO> = client
-            .get("/api/v3/search", &[("query", "apple"), ("limit", "5")])
+            .get(
+                "/stable/search-symbol",
+                &[("query", "apple"), ("limit", "5")],
+            )
             .await
             .unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result[0].name.as_deref(), Some("Apple Inc."));
+
+        let hit = &result[0];
+        assert_eq!(hit.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(hit.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(hit.currency.as_deref(), Some("USD"));
+        assert_eq!(hit.exchange.as_deref(), Some("NASDAQ"));
+        assert_eq!(
+            hit.exchange_full_name.as_deref(),
+            Some("NASDAQ Global Select")
+        );
+    }
+
+    #[test]
+    fn symbol_search_exposes_the_exchange_code() {
+        let hits: Vec<SearchResultDTO> = serde_json::from_str(
+            r#"[{"symbol":"AAPL","name":"Apple Inc.","currency":"USD",
+                 "exchangeFullName":"NASDAQ Global Select","exchange":"NASDAQ"}]"#,
+        )
+        .unwrap();
+
+        let matched: Vec<_> = hits
+            .into_iter()
+            .filter_map(|r| {
+                Some(crate::models::discovery::reference::SymbolMatch {
+                    symbol: r.symbol?,
+                    id: None,
+                    name: r.name,
+                    exchange: r.exchange.or(r.exchange_full_name),
+                    asset_type: None,
+                    currency: r.currency,
+                    active: None,
+                    market_cap_rank: None,
+                    thumbnail: None,
+                    image: None,
+                })
+            })
+            .collect();
+
+        assert_eq!(matched[0].exchange.as_deref(), Some("NASDAQ"));
     }
 }

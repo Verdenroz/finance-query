@@ -1,8 +1,7 @@
-//! Insider trading, congressional trading, CIK mapping, and fail-to-deliver endpoints.
+//! Insider trading, congressional trading, and CIK mapping endpoints.
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -40,10 +39,11 @@ pub struct InsiderTradeDTO {
     /// Securities owned after transaction.
     #[serde(rename = "securitiesOwned")]
     pub securities_owned: Option<f64>,
-    /// SEC form type.
+    /// Relationship of the reporting person to the issuer (e.g. `"officer"`).
     #[serde(rename = "typeOfOwner")]
     pub type_of_owner: Option<String>,
     /// Link to SEC filing.
+    #[serde(rename = "url")]
     pub link: Option<String>,
 }
 
@@ -64,25 +64,6 @@ pub struct CikMappingDTO {
     /// Company name.
     #[serde(rename = "companyName")]
     pub company_name: Option<String>,
-}
-
-/// Fail-to-deliver record.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub struct FailToDeliverDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Date (YYYY-MM-DD).
-    pub date: Option<String>,
-    /// Quantity of fails.
-    pub quantity: Option<f64>,
-    /// Price.
-    pub price: Option<f64>,
-    /// Security name.
-    pub name: Option<String>,
-    /// Description.
-    pub description: Option<String>,
 }
 
 /// Congressional/senate trading record.
@@ -125,24 +106,37 @@ pub struct CongressionalTradeDTO {
 // ============================================================================
 
 /// Fetch insider trading transactions for a symbol.
-pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTradeDTO>> {
+///
+/// * `page` - Zero-based page index; FMP paginates this endpoint by `limit`
+///   rows per page, so a caller wanting more than one page's worth of
+///   history steps `page` forward.
+pub async fn insider_trading(symbol: &str, limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
+    let page_str = page.to_string();
     client
         .get(
-            "/api/v4/insider-trading",
-            &[("symbol", symbol), ("limit", &limit_str)],
+            "/stable/insider-trading/search",
+            &[
+                ("symbol", symbol),
+                ("page", &page_str),
+                ("limit", &limit_str),
+            ],
         )
         .await
 }
 
 /// Fetch the insider trading RSS feed.
 #[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
+pub async fn insider_trading_rss(limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
+    let page_str = page.to_string();
     client
-        .get("/api/v4/insider-trading-rss-feed", &[("limit", &limit_str)])
+        .get(
+            "/stable/insider-trading/latest",
+            &[("page", &page_str), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -151,24 +145,10 @@ pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
 pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/mapper-cik-name", &[("name", name)])
-        .await
-}
-
-/// Fetch CIK mapping by company name/identifier.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMappingDTO>> {
-    let client = build_client()?;
-    let path = format!("/api/v4/mapper-cik-company/{}", encode_path_segment(name));
-    client.get(&path, &[]).await
-}
-
-/// Fetch fail-to-deliver data for a symbol.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
-    let client = build_client()?;
-    client
-        .get("/api/v4/fail_to_deliver", &[("symbol", symbol)])
+        .get(
+            "/stable/sec-filings-company-search/name",
+            &[("company", name)],
+        )
         .await
 }
 
@@ -177,7 +157,7 @@ pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
 pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTradeDTO>> {
     let client = build_client()?;
     client
-        .get("/api/v4/senate-trading", &[("symbol", symbol)])
+        .get("/stable/senate-trades", &[("symbol", symbol)])
         .await
 }
 
@@ -189,7 +169,7 @@ mod tests {
     async fn test_insider_trading_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/insider-trading")
+            .mock("GET", "/stable/insider-trading/search")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
@@ -208,7 +188,8 @@ mod tests {
                         "securitiesTransacted": 50000.0,
                         "price": 185.50,
                         "securitiesOwned": 3200000.0,
-                        "typeOfOwner": "officer"
+                        "typeOfOwner": "officer",
+                        "url": "https://www.sec.gov/Archives/edgar/data/320193/x.htm"
                     }
                 ])
                 .to_string(),
@@ -219,21 +200,34 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<InsiderTradeDTO> = client
             .get(
-                "/api/v4/insider-trading",
+                "/stable/insider-trading/search",
                 &[("symbol", "AAPL"), ("limit", "10")],
             )
             .await
             .unwrap();
-        assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].reporting_name.as_deref(), Some("Cook Timothy D"));
-        assert!((resp[0].price.unwrap() - 185.50).abs() < 0.01);
+
+        let row = &resp[0];
+        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(row.filing_date.as_deref(), Some("2024-01-15"));
+        assert_eq!(row.transaction_date.as_deref(), Some("2024-01-12"));
+        assert_eq!(row.reporting_cik.as_deref(), Some("0001234567"));
+        assert_eq!(row.reporting_name.as_deref(), Some("Cook Timothy D"));
+        assert_eq!(row.transaction_type.as_deref(), Some("S-Sale"));
+        assert_eq!(row.securities_transacted, Some(50_000.0));
+        assert_eq!(row.price, Some(185.50));
+        assert_eq!(row.securities_owned, Some(3_200_000.0));
+        assert_eq!(row.type_of_owner.as_deref(), Some("officer"));
+        assert_eq!(
+            row.link.as_deref(),
+            Some("https://www.sec.gov/Archives/edgar/data/320193/x.htm")
+        );
     }
 
     #[tokio::test]
     async fn test_congressional_trading_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v4/senate-trading")
+            .mock("GET", "/stable/senate-trades")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
                 mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
@@ -259,7 +253,7 @@ mod tests {
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let resp: Vec<CongressionalTradeDTO> = client
-            .get("/api/v4/senate-trading", &[("symbol", "AAPL")])
+            .get("/stable/senate-trades", &[("symbol", "AAPL")])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);

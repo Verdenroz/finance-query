@@ -42,7 +42,7 @@ pub struct FmpQuoteDTO {
     /// Price change.
     pub change: Option<f64>,
     /// Price change percentage.
-    #[serde(rename = "changesPercentage")]
+    #[serde(rename = "changePercentage", alias = "changesPercentage")]
     pub changes_percentage: Option<f64>,
     /// Day low.
     #[serde(rename = "dayLow")]

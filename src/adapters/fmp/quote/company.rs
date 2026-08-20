@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 // ============================================================================
@@ -21,18 +20,24 @@ pub struct CompanyProfileDTO {
     /// Beta.
     pub beta: Option<f64>,
     /// Volume average.
-    #[serde(rename = "volAvg")]
+    #[serde(rename = "averageVolume")]
     pub vol_avg: Option<f64>,
     /// Market capitalization.
-    #[serde(rename = "mktCap")]
+    #[serde(rename = "marketCap")]
     pub mkt_cap: Option<f64>,
     /// Last dividend.
-    #[serde(rename = "lastDiv")]
+    #[serde(rename = "lastDividend")]
     pub last_div: Option<f64>,
     /// 52-week range.
     pub range: Option<String>,
-    /// Price changes.
+    /// Price change.
+    #[serde(rename = "change")]
     pub changes: Option<f64>,
+    /// Percentage price change.
+    #[serde(rename = "changePercentage")]
+    pub change_percentage: Option<f64>,
+    /// Latest session volume.
+    pub volume: Option<f64>,
     /// Company name.
     #[serde(rename = "companyName")]
     pub company_name: Option<String>,
@@ -44,11 +49,11 @@ pub struct CompanyProfileDTO {
     pub isin: Option<String>,
     /// CUSIP.
     pub cusip: Option<String>,
-    /// Exchange name.
+    /// Exchange code (e.g. `"NASDAQ"`).
     pub exchange: Option<String>,
-    /// Exchange short name.
-    #[serde(rename = "exchangeShortName")]
-    pub exchange_short_name: Option<String>,
+    /// Full venue name (e.g. `"NASDAQ Global Select"`).
+    #[serde(rename = "exchangeFullName")]
+    pub exchange_full_name: Option<String>,
     /// Industry.
     pub industry: Option<String>,
     /// Website.
@@ -74,11 +79,6 @@ pub struct CompanyProfileDTO {
     pub state: Option<String>,
     /// ZIP code.
     pub zip: Option<String>,
-    /// DCF difference.
-    #[serde(rename = "dcfDiff")]
-    pub dcf_diff: Option<f64>,
-    /// DCF value.
-    pub dcf: Option<f64>,
     /// Image/logo URL.
     pub image: Option<String>,
     /// IPO date.
@@ -139,39 +139,15 @@ pub struct MarketCapDTO {
     pub market_cap: Option<f64>,
 }
 
-/// Company outlook from FMP (v4 endpoint).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub struct CompanyOutlookDTO {
-    /// Profile section.
-    pub profile: Option<CompanyProfileDTO>,
-    /// Metrics section.
-    pub metrics: Option<serde_json::Value>,
-    /// Ratios section.
-    pub ratios: Option<Vec<serde_json::Value>>,
-    /// Insider trading section.
-    #[serde(rename = "insideTrades")]
-    pub inside_trades: Option<Vec<serde_json::Value>>,
-    /// Key executives.
-    #[serde(rename = "keyExecutives")]
-    pub key_executives: Option<Vec<KeyExecutiveDTO>>,
-    /// Stock news.
-    #[serde(rename = "stockNews")]
-    pub stock_news: Option<Vec<serde_json::Value>>,
-    /// Rating section.
-    pub rating: Option<Vec<serde_json::Value>>,
-}
-
-/// Stock peer from FMP (v4 endpoint).
+/// Stock peer from FMP. One row per peer, not a nested list.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StockPeersDTO {
-    /// Ticker symbol.
+    /// Ticker symbol of the peer.
     pub symbol: Option<String>,
-    /// List of peer symbols.
-    #[serde(rename = "peersList")]
-    pub peers_list: Option<Vec<String>>,
+    /// Peer company name.
+    #[serde(rename = "companyName")]
+    pub company_name: Option<String>,
 }
 
 /// Delisted company from FMP.
@@ -202,12 +178,7 @@ pub struct DelistedCompanyDTO {
 #[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
     let client = crate::adapters::fmp::build_client()?;
-    client
-        .get(
-            &format!("/api/v3/profile/{}", encode_path_segment(symbol)),
-            &[],
-        )
-        .await
+    client.get("/stable/profile", &[("symbol", symbol)]).await
 }
 
 /// Fetch key executives for a symbol.
@@ -215,10 +186,7 @@ pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
 pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!("/api/v3/key-executives/{}", encode_path_segment(symbol)),
-            &[],
-        )
+        .get("/stable/key-executives", &[("symbol", symbol)])
         .await
 }
 
@@ -227,13 +195,7 @@ pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
 pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCapDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get(
-            &format!(
-                "/api/v3/market-capitalization/{}",
-                encode_path_segment(symbol)
-            ),
-            &[],
-        )
+        .get("/stable/market-capitalization", &[("symbol", symbol)])
         .await
 }
 
@@ -244,11 +206,8 @@ pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<V
     let limit_str = limit.unwrap_or(100).to_string();
     client
         .get(
-            &format!(
-                "/api/v3/historical-market-capitalization/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("limit", &limit_str)],
+            "/stable/historical-market-capitalization",
+            &[("symbol", symbol), ("limit", &limit_str)],
         )
         .await
 }
@@ -260,8 +219,7 @@ fn stock_peers_to_canonical(
 ) -> Vec<crate::models::corporate::recommendation::SimilarSymbol> {
     let mut symbols: Vec<crate::models::corporate::recommendation::SimilarSymbol> = peers
         .into_iter()
-        .filter_map(|p| p.peers_list)
-        .flatten()
+        .filter_map(|p| p.symbol)
         .map(
             |s| crate::models::corporate::recommendation::SimilarSymbol {
                 symbol: s,
@@ -282,20 +240,11 @@ pub async fn fetch_canonical_similar_symbols(
     Ok(stock_peers_to_canonical(peers, limit as usize))
 }
 
-/// Fetch company outlook for a symbol (v4 endpoint).
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn company_outlook(symbol: &str) -> Result<CompanyOutlookDTO> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get("/api/v4/company-outlook", &[("symbol", symbol)])
-        .await
-}
-
-/// Fetch stock peers for a symbol (v4 endpoint).
+/// Fetch stock peers for a symbol.
 pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
-        .get("/api/v4/stock_peers", &[("symbol", symbol)])
+        .get("/stable/stock-peers", &[("symbol", symbol)])
         .await
 }
 
@@ -305,7 +254,10 @@ pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompan
     let client = crate::adapters::fmp::build_client()?;
     let limit_str = limit.unwrap_or(100).to_string();
     client
-        .get("/api/v3/delisted-companies", &[("limit", &limit_str)])
+        .get(
+            "/stable/delisted-companies",
+            &[("page", "0"), ("limit", &limit_str)],
+        )
         .await
 }
 
@@ -317,50 +269,94 @@ mod tests {
     async fn test_company_profile_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/profile/AAPL")
+            .mock("GET", "/stable/profile")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
             )]))
             .with_status(200)
             .with_body(
-                serde_json::json!([{
+                r#"[{
                     "symbol": "AAPL",
                     "price": 178.72,
                     "beta": 1.286,
-                    "volAvg": 58405568,
-                    "mktCap": 2794000000000_f64,
+                    "marketCap": 2794000000000,
+                    "lastDividend": 0.96,
+                    "range": "164.08-260.10",
+                    "change": 1.23,
+                    "changePercentage": 0.69,
+                    "volume": 41000000,
+                    "averageVolume": 58405568,
                     "companyName": "Apple Inc.",
                     "currency": "USD",
-                    "exchange": "NASDAQ Global Select",
-                    "exchangeShortName": "NASDAQ",
+                    "exchangeFullName": "NASDAQ Global Select",
+                    "exchange": "NASDAQ",
                     "industry": "Consumer Electronics",
                     "sector": "Technology",
                     "country": "US",
                     "ceo": "Mr. Timothy D. Cook",
                     "isEtf": false,
                     "isActivelyTrading": true
-                }])
+                }]"#,
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result: Vec<CompanyProfileDTO> = client.get("/stable/profile", &[]).await.unwrap();
+
+        let profile = &result[0];
+        assert_eq!(profile.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(profile.company_name.as_deref(), Some("Apple Inc."));
+        assert_eq!(profile.sector.as_deref(), Some("Technology"));
+        assert_eq!(profile.is_etf, Some(false));
+        assert_eq!(profile.vol_avg, Some(58_405_568.0));
+        assert_eq!(profile.mkt_cap, Some(2_794_000_000_000.0));
+        assert_eq!(profile.last_div, Some(0.96));
+        assert_eq!(profile.changes, Some(1.23));
+        assert_eq!(profile.change_percentage, Some(0.69));
+        assert_eq!(profile.volume, Some(41_000_000.0));
+        assert_eq!(profile.exchange.as_deref(), Some("NASDAQ"));
+        assert_eq!(
+            profile.exchange_full_name.as_deref(),
+            Some("NASDAQ Global Select")
+        );
+    }
+
+    #[tokio::test]
+    async fn stock_peers_reads_flat_stable_rows() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/stock-peers")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
+            .with_status(200)
+            .with_body(
+                serde_json::json!([
+                    {"symbol": "MSFT", "companyName": "Microsoft Corporation"},
+                    {"symbol": "GOOGL", "companyName": "Alphabet Inc."}
+                ])
                 .to_string(),
             )
             .create_async()
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyProfileDTO> = client.get("/api/v3/profile/AAPL", &[]).await.unwrap();
+        let peers: Vec<StockPeersDTO> = client.get("/stable/stock-peers", &[]).await.unwrap();
+        let canonical = stock_peers_to_canonical(peers, 10);
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
-        assert_eq!(result[0].company_name.as_deref(), Some("Apple Inc."));
-        assert_eq!(result[0].sector.as_deref(), Some("Technology"));
-        assert_eq!(result[0].is_etf, Some(false));
+        assert_eq!(canonical.len(), 2);
+        assert_eq!(canonical[0].symbol, "MSFT");
+        assert_eq!(canonical[1].symbol, "GOOGL");
     }
 
     #[tokio::test]
     async fn test_key_executives_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v3/key-executives/AAPL")
+            .mock("GET", "/stable/key-executives")
             .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
                 "apikey".into(),
                 "test-key".into(),
@@ -391,10 +387,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<KeyExecutiveDTO> = client
-            .get("/api/v3/key-executives/AAPL", &[])
-            .await
-            .unwrap();
+        let result: Vec<KeyExecutiveDTO> = client.get("/stable/key-executives", &[]).await.unwrap();
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name.as_deref(), Some("Mr. Timothy D. Cook"));
@@ -412,7 +405,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
@@ -431,7 +424,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
@@ -440,7 +433,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fmp_body_error_message_returns_invalid_parameter() {
+    async fn test_fmp_body_api_key_error_returns_authentication_failed() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", mockito::Matcher::Any)
@@ -450,11 +443,11 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,
-            Err(crate::error::FinanceError::InvalidParameter { .. })
+            Err(crate::error::FinanceError::AuthenticationFailed { .. })
         ));
     }
 
@@ -469,7 +462,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+        let result = client.get_raw("/stable/profile", &[]).await;
 
         assert!(matches!(
             result,

@@ -9,6 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
+use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -54,6 +55,7 @@ impl FmpClientBuilder {
             api_key: self.api_key,
             http,
             limiter,
+            timeout: self.timeout,
             base_url: self.base_url.unwrap_or_else(|| FMP_BASE.to_string()),
         })
     }
@@ -64,6 +66,7 @@ pub(crate) struct FmpClient {
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
+    timeout: Duration,
     base_url: String,
 }
 
@@ -95,11 +98,15 @@ impl FmpClient {
         }
     }
 
-    fn check_error_envelope(env: &ErrorEnvelope) -> Result<()> {
+    fn check_error_envelope(env: &ErrorEnvelope, api_key: &str) -> Result<()> {
         if let Some(msg) = &env.error_message {
+            let msg = redact_key(msg, api_key);
+            if is_auth_error(&msg.to_ascii_lowercase()) {
+                return Err(FinanceError::AuthenticationFailed { context: msg });
+            }
             return Err(FinanceError::InvalidParameter {
                 param: "request".to_string(),
-                reason: msg.clone(),
+                reason: msg,
             });
         }
         Ok(())
@@ -114,37 +121,104 @@ impl FmpClient {
         query.extend_from_slice(params);
 
         debug!("FMP request: {path}");
-        let resp = self.http.get(&url).query(&query).send().await?;
+        let resp = self
+            .http
+            .get(&url)
+            .query(&query)
+            .send()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
+        let status = resp.status();
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|error| self.map_transport_error(&error))?;
+        Self::check_status(status)?;
+        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
+            Self::check_error_envelope(&env, &self.api_key)?;
+        }
+        Ok(bytes)
+    }
 
-        Self::check_status(resp.status())?;
-
-        Ok(resp.bytes().await?)
+    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
+        transport_error("FMP", self.timeout, error)
     }
 
     /// Execute a GET request to an FMP REST path and return raw JSON.
+    #[cfg(test)]
     pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes.as_ref()) {
-            Self::check_error_envelope(&env)?;
-        }
-
         Ok(serde_json::from_slice(bytes.as_ref())?)
     }
 
     /// GET and deserialize into `T` directly, parsing the response bytes once.
     pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
         let bytes = self.get_bytes(path, params).await?;
-        let bytes = bytes.as_ref();
-
-        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
-            Self::check_error_envelope(&env)?;
-        }
-
-        serde_json::from_slice::<T>(bytes).map_err(|e| FinanceError::ResponseStructureError {
-            field: "response".to_string(),
-            context: format!("Failed to deserialize FMP response: {e}"),
+        serde_json::from_slice::<T>(bytes.as_ref()).map_err(|e| {
+            FinanceError::ResponseStructureError {
+                field: "response".to_string(),
+                context: format!("Failed to deserialize FMP response: {e}"),
+            }
         })
     }
+
+    pub async fn get_csv_value(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
+        let bytes = self.get_bytes(path, params).await?;
+        let mut reader = csv::Reader::from_reader(bytes.as_ref());
+        let headers = reader
+            .headers()
+            .map_err(|error| {
+                FinanceError::UnexpectedResponse(format!("invalid FMP CSV headers: {error}"))
+            })?
+            .clone();
+        let mut rows = Vec::new();
+        for record in reader.records() {
+            let record = record.map_err(|error| {
+                FinanceError::UnexpectedResponse(format!("invalid FMP CSV row: {error}"))
+            })?;
+            let row = headers
+                .iter()
+                .zip(record.iter())
+                .map(|(name, value)| (name.to_string(), csv_scalar(value)))
+                .collect();
+            rows.push(Value::Object(row));
+        }
+        Ok(Value::Array(rows))
+    }
+}
+
+fn csv_scalar(value: &str) -> Value {
+    if value.is_empty() {
+        return Value::Null;
+    }
+    if let Ok(parsed) = value.parse::<bool>() {
+        return Value::from(parsed);
+    }
+    if !is_plain_number(value) {
+        return Value::from(value);
+    }
+    if let Ok(parsed) = value.parse::<i64>() {
+        return Value::from(parsed);
+    }
+    match value.parse::<f64>() {
+        Ok(parsed) if parsed.is_finite() => Value::from(parsed),
+        _ => Value::from(value),
+    }
+}
+
+/// Reject anything a CSV cell may hold that is an identifier rather than a
+/// quantity: zero-padded CIK/CUSIP codes, exponent-shaped tickers like `1E5`,
+/// and the `inf`/`NaN` literals `f64::from_str` accepts.
+fn is_plain_number(value: &str) -> bool {
+    let digits = value.strip_prefix('-').unwrap_or(value);
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        return false;
+    }
+    if digits.matches('.').count() > 1 {
+        return false;
+    }
+    let leading_zero = digits.starts_with('0') && !digits.starts_with("0.") && digits != "0";
+    !leading_zero
 }
 
 /// Cheap-to-parse subset of an FMP response used to detect the
@@ -163,11 +237,7 @@ mod tests {
     fn error_envelope_maps_bodies_to_errors() {
         // `{"Error Message": <str>}` at HTTP 200 is FMP's error shape; anything
         // else — including a top-level array — must pass through untouched.
-        let cases: [(&str, Option<&str>); 5] = [
-            (
-                r#"{"Error Message":"Invalid API KEY"}"#,
-                Some("Invalid API KEY"),
-            ),
+        let cases: [(&str, Option<&str>); 4] = [
             (r#"{"Error Message":""}"#, Some("")),
             (r#"[{"symbol":"AAPL"}]"#, None),
             (r#"{}"#, None),
@@ -175,7 +245,7 @@ mod tests {
         ];
         for (body, expected) in cases {
             let checked = match serde_json::from_slice::<ErrorEnvelope>(body.as_bytes()) {
-                Ok(env) => FmpClient::check_error_envelope(&env),
+                Ok(env) => FmpClient::check_error_envelope(&env, "test-key"),
                 Err(_) => Ok(()),
             };
             match (expected, checked) {
@@ -186,6 +256,74 @@ mod tests {
                 }
                 (e, got) => panic!("body {body}: expected {e:?}, got {got:?}"),
             }
+        }
+
+        let auth = serde_json::from_str::<ErrorEnvelope>(r#"{"Error Message":"Invalid API KEY"}"#)
+            .unwrap();
+        assert!(matches!(
+            FmpClient::check_error_envelope(&auth, "test-key"),
+            Err(FinanceError::AuthenticationFailed { .. })
+        ));
+    }
+
+    fn client(api_key: &str, base_url: &str) -> FmpClient {
+        FmpClientBuilder::new(api_key)
+            .base_url(base_url)
+            .timeout(Duration::from_secs(5))
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn http_401_maps_to_authentication_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/quote")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
+            ]))
+            .with_status(401)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"Error Message":"Invalid API KEY"}"#)
+            .create_async()
+            .await;
+
+        let err = client("test-key", &server.url())
+            .get_raw("/stable/quote", &[("symbol", "AAPL")])
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn errors_never_render_the_api_key() {
+        const KEY: &str = "SUPERSECRETKEY123";
+
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/quote")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{"Error Message":"Invalid API KEY {KEY} supplied"}}"#
+            ))
+            .create_async()
+            .await;
+
+        let echoed = client(KEY, &server.url())
+            .get_raw("/stable/quote", &[])
+            .await
+            .unwrap_err();
+        let unreachable = client(KEY, "http://127.0.0.1:1")
+            .get_raw("/stable/quote", &[])
+            .await
+            .unwrap_err();
+
+        for err in [echoed, unreachable] {
+            assert!(!format!("{err}").contains(KEY), "{err}");
+            assert!(!format!("{err:?}").contains(KEY), "{err:?}");
         }
     }
 }

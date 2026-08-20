@@ -763,9 +763,16 @@ impl From<crate::adapters::fmp::fundamentals::estimates::AnalystRecommendationDT
 }
 
 /// Fetch insider trading transactions for a symbol.
+///
+/// `page` is zero-based; step it forward to reach transactions beyond the
+/// first `limit` rows.
 #[cfg(feature = "fmp")]
-pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTransaction>> {
-    crate::adapters::fmp::corporate::insider_trading::insider_trading(symbol, limit)
+pub async fn insider_trading(
+    symbol: &str,
+    limit: u32,
+    page: u32,
+) -> Result<Vec<InsiderTransaction>> {
+    crate::adapters::fmp::corporate::insider_trading::insider_trading(symbol, limit, page)
         .await
         .map(|v| v.into_iter().map(Into::into).collect())
 }

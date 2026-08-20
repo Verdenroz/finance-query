@@ -1,7 +1,7 @@
-//! Polygon.io API client for financial data.
+//! Polygon/Massive API client for financial data.
 //!
 //! Requires the **`polygon`** feature flag and an API key from
-//! <https://polygon.io/>.
+//! <https://massive.com/>.
 //!
 //! Call [`init`] once at startup before using any query functions.
 //!
@@ -57,6 +57,8 @@ pub use chart::*;
 pub use corporate::*;
 pub use discovery::*;
 pub use fundamentals::*;
+#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
+pub use options::reference::*;
 pub use options::snapshots::fetch_options_response;
 pub use quote::*;
 
@@ -65,14 +67,14 @@ pub use crypto::aggregates::fetch_crypto_grouped_daily_response;
 pub use crypto::snapshots::*;
 pub use forex::aggregates::fetch_forex_grouped_daily_response;
 pub use forex::quotes::*;
-pub use futures::snapshots::*;
+#[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
+pub use futures::{aggregates::*, reference::*, snapshots::*, trades::*};
 pub use indices::snapshots::*;
 
 // Other capability modules
 pub use economic::*;
 pub use filings::*;
 
-/// Polygon.io free-tier rate limit: 5 req/sec.
 const PG_RATE_PER_SEC: f64 = 5.0;
 
 provider_singleton_state!(
@@ -115,6 +117,9 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 
 /// Internal: read the configured API key. Used by the websocket module.
 pub(crate) fn api_key() -> Result<String> {
+    if PG_SINGLETON.get().is_none() {
+        let _ = build_client()?;
+    }
     PG_SINGLETON
         .get()
         .map(|s| s.api_key.clone())
@@ -123,6 +128,9 @@ pub(crate) fn api_key() -> Result<String> {
             reason: "Polygon not initialized. Call polygon::init(api_key) first.".to_string(),
         })
 }
+
+#[cfg(test)]
+mod live_tests;
 
 #[cfg(test)]
 mod tests {
