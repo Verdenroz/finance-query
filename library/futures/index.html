@@ -277,10 +277,10 @@ try { var t = localStorage.getItem("soothfast-theme");
 <tr><td><code>expiration_date</code></td><td><code>Option&lt;String&gt;</code></td><td>Contract expiry as <code>YYYY-MM-DD</code></td></tr>
 <tr><td><code>price</code></td><td><code>Option&lt;f64&gt;</code></td><td>Current contract price</td></tr>
 <tr><td><code>change</code></td><td><code>Option&lt;f64&gt;</code></td><td>Price change</td></tr>
-<tr><td><code>change_percent</code></td><td><code>Option&lt;f64&gt;</code></td><td>Price change percentage</td></tr>
+<tr><td><code>change_percent</code></td><td><code>Option&lt;f64&gt;</code></td><td>Price change as a percentage (e.g. <code>9.62</code> for 9.62%)</td></tr>
 <tr><td><code>open_interest</code></td><td><code>Option&lt;u64&gt;</code></td><td>Number of outstanding contracts</td></tr>
-<tr><td><code>volume</code></td><td><code>Option&lt;u64&gt;</code></td><td>Trading volume</td></tr>
-<tr><td><code>timestamp</code></td><td><code>Option&lt;i64&gt;</code></td><td>Unix timestamp of the last update</td></tr>
+<tr><td><code>volume</code></td><td><code>Option&lt;u64&gt;</code></td><td>Session volume in contracts</td></tr>
+<tr><td><code>timestamp</code></td><td><code>Option&lt;i64&gt;</code></td><td>Unix timestamp of the last update, in <strong>seconds</strong></td></tr>
 </tbody>
 </table></div>
 <p>This field-verification helper compiles as a real test, so the table above

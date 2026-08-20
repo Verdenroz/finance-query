@@ -301,21 +301,23 @@ let target = ticker.price_target_consensus().await?;  // high / low / mean / med
 let activity = ticker.price_target_summary().await?;  // targets published per window
 let rating = ticker.rating_consensus().await?;        // grade distribution + label
 
-let metrics = ticker.key_metrics_ttm().await?;        // current TTM per-share/valuation
-let ratios = ticker.ratios_ttm().await?;              // current TTM margins/returns
+let metrics = ticker.key_metrics_ttm().await?;        // current TTM valuation/returns
+let ratios = ticker.ratios_ttm().await?;              // current TTM margins/per-share
 </code></pre></figure>
 <div class="tablewrap"><table>
 <thead><tr><th>Method</th><th>Returns</th><th>FMP endpoint</th></tr></thead>
 <tbody>
-<tr><td><code>price_target_consensus()</code></td><td><code>PriceTargetConsensus</code></td><td><code>/api/v4/price-target-consensus</code></td></tr>
-<tr><td><code>price_target_summary()</code></td><td><code>PriceTargetSummary</code></td><td><code>/api/v4/price-target-summary</code></td></tr>
-<tr><td><code>rating_consensus()</code></td><td><code>RatingConsensus</code></td><td><code>/api/v4/upgrades-downgrades-consensus</code></td></tr>
-<tr><td><code>key_metrics_ttm()</code></td><td><code>KeyMetricsTtm</code></td><td><code>/api/v3/key-metrics-ttm/{symbol}</code></td></tr>
-<tr><td><code>ratios_ttm()</code></td><td><code>FinancialRatiosTtm</code></td><td><code>/api/v3/ratios-ttm/{symbol}</code></td></tr>
-<tr><td><code>executive_compensation()</code></td><td><code>Vec&lt;ExecutiveCompensation&gt;</code></td><td><code>/api/v4/governance/executive_compensation</code></td></tr>
-<tr><td><code>employee_count()</code></td><td><code>Vec&lt;EmployeeCount&gt;</code></td><td><code>/api/v4/historical/employee_count</code></td></tr>
+<tr><td><code>price_target_consensus()</code></td><td><code>PriceTargetConsensus</code></td><td><code>/stable/price-target-consensus</code></td></tr>
+<tr><td><code>price_target_summary()</code></td><td><code>PriceTargetSummary</code></td><td><code>/stable/price-target-summary</code></td></tr>
+<tr><td><code>rating_consensus()</code></td><td><code>RatingConsensus</code></td><td><code>/stable/grades-consensus</code></td></tr>
+<tr><td><code>key_metrics_ttm()</code></td><td><code>KeyMetricsTtm</code></td><td><code>/stable/key-metrics-ttm</code></td></tr>
+<tr><td><code>ratios_ttm()</code></td><td><code>FinancialRatiosTtm</code></td><td><code>/stable/ratios-ttm</code></td></tr>
+<tr><td><code>executive_compensation()</code></td><td><code>Vec&lt;ExecutiveCompensation&gt;</code></td><td><code>/stable/governance-executive-compensation</code></td></tr>
+<tr><td><code>employee_count()</code></td><td><code>Vec&lt;EmployeeCount&gt;</code></td><td><code>/stable/historical-employee-count</code></td></tr>
 </tbody>
 </table></div>
+<p>Per-share TTM metrics are served by <code>ratios_ttm()</code>, not <code>key_metrics_ttm()</code> —
+FMP's stable tier moved them between the two endpoints.</p>
 <p><code>executive_compensation()</code> and <code>employee_count()</code> route through
 <code>Capability::CORPORATE</code> instead. FMP also serves <code>share_float()</code>, which the
 default Yahoo route already covers — routing <code>FUNDAMENTALS</code> to FMP just changes
