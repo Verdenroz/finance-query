@@ -170,6 +170,17 @@ jobs:
           path: .soothfast/baselines/base.json
           key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
 
+      # Unique per commit with the prefix in restore-keys: an exact key is
+      # never rewritten once saved, so later commits would all miss.
+      - name: Restore measured reference runs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/runs
+          key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            soothfast-runs-${{ github.ref_name }}-
+            soothfast-runs-
+
       # Writes .soothfast/gate-status.json, which `report render` reads to
       # color the gate badge. HEAD~1 is well-defined: master is linear.
       - name: Gate against previous commit

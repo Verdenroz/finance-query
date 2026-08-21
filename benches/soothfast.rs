@@ -1302,10 +1302,12 @@ fn resampled_pair_sized(n: usize) -> (Vec<Candle>, Vec<Candle>) {
     (base, htf)
 }
 
+// ~20 instructions per element: one more already exceeds +5%, at any size.
 #[bench(
     group = "backtesting_resample",
     setup_sized = resampled_pair_sized,
     complexity = "n",
+    tolerance = "8%",
     covers = "finance_query::backtesting::resample::base_to_htf_index"
 )]
 fn bt_base_to_htf_index(pair: &(Vec<Candle>, Vec<Candle>)) {
@@ -1941,9 +1943,11 @@ fn translation_inputs() -> (tokio::runtime::Runtime, Vec<String>, Lang) {
     (rt, texts, lang)
 }
 
+// Small enough that a codegen change alone crosses +5% with source unchanged.
 #[bench(
     group = "translation",
     setup = translation_inputs,
+    tolerance = "8%",
     covers = "finance_query::translation::translate_texts"
 )]
 fn translate_dictionary(input: &(tokio::runtime::Runtime, Vec<String>, Lang)) {
