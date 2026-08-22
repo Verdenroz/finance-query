@@ -49,6 +49,15 @@ impl FilingsProvider for EdgarProvider {
         crate::adapters::edgar::filings::thirteen_f::fetch_institutional_holdings_response(symbol)
             .await
     }
+
+    #[cfg(feature = "secftd")]
+    async fn fetch_fails_to_deliver(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+        crate::adapters::edgar::filings::fails_to_deliver::fetch_fails_to_deliver_response(symbol)
+            .await
+    }
 }
 
 #[async_trait::async_trait]
