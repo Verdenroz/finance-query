@@ -4,10 +4,57 @@ use crate::constants::TimeRange;
 use crate::models::chart::{CapitalGain, Dividend, Split};
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::{Mutex, RwLock};
 // tokio's Instant tracks the runtime clock, so TTL expiry is testable under
 // `tokio::time::pause`. Outside tests it is std::time::Instant.
 use tokio::time::Instant;
+
+/// Per-key mutex map that collapses concurrent identical cache misses into a
+/// single in-flight fetch, so N callers missing the same key don't each issue
+/// their own upstream request.
+pub(crate) struct FetchGuards<K> {
+    guards: RwLock<HashMap<K, Arc<Mutex<()>>>>,
+}
+
+impl<K: Eq + Hash + Clone> Default for FetchGuards<K> {
+    fn default() -> Self {
+        Self {
+            guards: RwLock::new(HashMap::new()),
+        }
+    }
+}
+
+impl<K: Eq + Hash + Clone> FetchGuards<K> {
+    /// Run `action` while holding the lock for `key`, so concurrent callers
+    /// with the same key serialize instead of each fetching independently.
+    /// `action` is expected to recheck the cache after acquiring the lock,
+    /// since a concurrent holder may have just populated it.
+    pub(crate) async fn dedup<T, Fut>(&self, key: K, action: impl FnOnce() -> Fut) -> T
+    where
+        Fut: std::future::Future<Output = T>,
+    {
+        let guard = {
+            let mut g = self.guards.write().await;
+            Arc::clone(g.entry(key.clone()).or_default())
+        };
+        let _g = guard.lock().await;
+        let result = action().await;
+
+        // Remove only when we're the last holder; a waiter that already
+        // cloned this Arc must still find it, not a fresh mutex.
+        drop(_g);
+        drop(guard);
+        {
+            let mut guards = self.guards.write().await;
+            if guards.get(&key).is_some_and(|g| Arc::strong_count(g) == 1) {
+                guards.remove(&key);
+            }
+        }
+        result
+    }
+}
 
 /// Returns the current time as Unix timestamp in seconds.
 #[inline]
@@ -40,16 +87,25 @@ pub(crate) fn eviction_threshold_for(working_set: usize) -> usize {
     EVICTION_THRESHOLD.max(working_set.saturating_mul(2))
 }
 
+/// Default TTL for handles that don't call `.cache(ttl)` explicitly, matching
+/// the server's own real-time quote TTL (`server/src/cache.rs::ttl::QUOTES`).
+pub(crate) const DEFAULT_CACHE_TTL: Duration = Duration::from_secs(60);
+
 /// How long a cached response stays usable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CacheMode {
     /// Cache until the owning handle is dropped.
-    #[default]
     Lifetime,
     /// Cache for a bounded duration.
     Ttl(Duration),
     /// Never cache.
     Off,
+}
+
+impl Default for CacheMode {
+    fn default() -> Self {
+        Self::Ttl(DEFAULT_CACHE_TTL)
+    }
 }
 
 impl CacheMode {

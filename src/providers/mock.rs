@@ -41,7 +41,6 @@ impl CountingProvider {
         self.chart_calls.load(Ordering::SeqCst)
     }
 
-    #[allow(dead_code)]
     pub(crate) fn news(&self) -> usize {
         self.news_calls.load(Ordering::SeqCst)
     }
@@ -78,6 +77,7 @@ impl ChartProvider for CountingProvider {
         _: crate::TimeRange,
     ) -> Result<Chart> {
         self.chart_calls.fetch_add(1, Ordering::SeqCst);
+        tokio::task::yield_now().await;
         Ok(Chart {
             symbol: symbol.to_string(),
             meta: ChartMeta::default(),
@@ -93,6 +93,7 @@ impl ChartProvider for CountingProvider {
 impl CorporateProvider for CountingProvider {
     async fn fetch_news(&self, _: &str) -> Result<Vec<News>> {
         self.news_calls.fetch_add(1, Ordering::SeqCst);
+        tokio::task::yield_now().await;
         Ok(Vec::new())
     }
 

@@ -49,8 +49,9 @@
 //! - **Chart data**: fetched and cached per (interval, range) combination
 //! - **Recommendations**: fetched once and cached
 //!
-//! A handle caches for as long as it lives. Use `.cache(ttl)` on the builder to
-//! bound that, or `.no_cache()` to fetch fresh on every call.
+//! A handle caches each response for 60 seconds by default. Use `.cache(ttl)`
+//! on the builder to change that window, or `.no_cache()` to fetch fresh on
+//! every call.
 
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]

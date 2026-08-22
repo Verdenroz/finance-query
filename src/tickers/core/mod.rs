@@ -193,7 +193,7 @@ impl TickersBuilder {
         self
     }
 
-    /// Cache responses for `ttl` instead of for the handle's lifetime.
+    /// Cache responses for `ttl` instead of the default 60 seconds.
     ///
     /// Responses are reused until the TTL expires; stale entries are evicted
     /// on a later write.
@@ -217,10 +217,17 @@ impl TickersBuilder {
         self
     }
 
+    /// Cache responses for the handle's lifetime instead of the default 60
+    /// seconds.
+    pub fn cache_forever(mut self) -> Self {
+        self.cache_mode = CacheMode::Lifetime;
+        self
+    }
+
     /// Disable caching — every call fetches fresh data.
     ///
-    /// By default a `Tickers` handle caches each response for as long as it
-    /// lives, so repeated calls reuse one fetch.
+    /// By default a `Tickers` handle caches each response for 60 seconds,
+    /// so repeated calls within that window reuse one fetch.
     pub fn no_cache(mut self) -> Self {
         self.cache_mode = CacheMode::Off;
         self
