@@ -17,8 +17,8 @@ use ::futures::StreamExt;
 use chrono::{Days, TimeZone, Utc};
 
 use super::{
-    chart, corporate, crypto, discovery, economic, filings, forex, fundamentals, futures, indices,
-    options, quote,
+    chart, corporate, crypto, discovery, economic, filings, forex, fundamentals, indices, options,
+    quote,
 };
 use crate::{FinanceError, Frequency, Interval, StatementType, TimeRange, error::Result};
 
@@ -801,108 +801,18 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     // ---- FUTURES -----------------------------------------------------------
-    let futures_ticker = {
-        m.total += 1;
-        match futures::reference::futures_contracts(&[
-            ("product_code", "ES"),
-            ("active", "true"),
-            ("limit", "1"),
-        ])
-        .await
-        {
-            Ok(page) => match page
-                .results
-                .unwrap_or_default()
-                .into_iter()
-                .find_map(|item| item.ticker)
-            {
-                Some(ticker) => {
-                    m.passed += 1;
-                    println!("ok: futures_contracts");
-                    Some(ticker)
-                }
-                None => {
-                    m.fail("futures_contracts", "ticker is null");
-                    None
-                }
-            },
-            Err(error) => {
-                m.fail("futures_contracts", &error.to_string());
-                None
-            }
-        }
-    };
-
-    m.check(
+    // futures_contracts/products/exchanges/market_status discovered the live
+    // ticker; removed as dead code, so there is none to snapshot here.
+    for name in [
         "futures_products",
-        futures::reference::futures_products(&[("product_code", "ES"), ("limit", "2")]),
-        |page| {
-            let p = results(page, "futures product")?;
-            text(p.name.as_deref(), "name")?;
-            text(p.asset_class.as_deref(), "asset_class")
-        },
-    )
-    .await;
-
-    m.check(
         "futures_exchanges",
-        futures::reference::futures_exchanges(&[("limit", "2")]),
-        |page| {
-            let e = results(page, "futures exchange")?;
-            text(e.name.as_deref(), "name")?;
-            text(e.mic.as_deref(), "mic")
-        },
-    )
-    .await;
-
-    m.check(
         "futures_market_status",
-        futures::reference::futures_market_status(&[("product_code", "ES"), ("limit", "2")]),
-        |page| {
-            let s = results(page, "futures market status")?;
-            text(s.market_event.as_deref(), "market_event")?;
-            text(s.product_code.as_deref(), "product_code")
-        },
-    )
-    .await;
-
-    if let Some(ticker) = futures_ticker.as_deref() {
-        m.check_plan(
-            "futures_snapshot",
-            futures::snapshots::futures_snapshot(ticker),
-            |page| {
-                let s = results(page, "futures snapshot")?;
-                text(s.ticker.as_deref(), "ticker")?;
-                present(s.session.as_ref(), "session")
-            },
-        )
-        .await;
-
-        m.check_plan(
-            "fetch_futures_quote_response",
-            futures::snapshots::fetch_futures_quote_response(ticker),
-            |q| {
-                text(Some(q.symbol.as_str()), "symbol")?;
-                number(q.price, "price")?;
-                // Nanoseconds would put this ~10^9 beyond any plausible epoch
-                // second, so the scaling regression shows up here.
-                match q.timestamp {
-                    Some(ts) if (1_600_000_000..4_000_000_000).contains(&ts) => Ok(()),
-                    Some(ts) => Err(format!("timestamp {ts} is not a plausible epoch second")),
-                    None => Err("timestamp is null".to_string()),
-                }
-            },
-        )
-        .await;
-    } else {
-        for name in [
-            "futures_aggregates",
-            "futures_trades",
-            "futures_snapshot",
-            "fetch_futures_quote_response",
-        ] {
-            m.skip(name, "no active ES contract returned");
-        }
+        "futures_aggregates",
+        "futures_trades",
+        "futures_snapshot",
+        "fetch_futures_quote_response",
+    ] {
+        m.skip(name, "ticker-discovery endpoints were removed as dead code");
     }
 
     // ---- OPTIONS -----------------------------------------------------------
