@@ -201,6 +201,20 @@ fn route_crypto_get_crypto_search() {}
 )]
 fn route_crypto_get_crypto_trending() {}
 
+/// Market-wide crypto news
+///
+/// Implements `handlers::crypto::get_crypto_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCryptoNews",
+    method = "GET",
+    path = "/v2/crypto/news",
+    params = "MarketNewsQuery",
+    response = "[GqlNews]"
+)]
+fn route_crypto_get_crypto_news() {}
+
 /// Get available currencies
 ///
 /// Implements `handlers::metadata::get_currencies`.
@@ -411,6 +425,20 @@ fn route_financials_get_batch_financials() {}
     response = "[GqlFinancialLineItem]"
 )]
 fn route_financials_get_financials() {}
+
+/// Market-wide forex news
+///
+/// Implements `handlers::forex::get_forex_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getForexNews",
+    method = "GET",
+    path = "/v2/forex/news",
+    params = "MarketNewsQuery",
+    response = "[GqlNews]"
+)]
+fn route_forex_get_forex_news() {}
 
 /// FRED time series
 ///
@@ -952,7 +980,7 @@ fn route_feeds_stream_ws_feeds_stream_handler_send() {}
 //
 // soothfast's GraphQL provider only sees ROOT-level Query/Subscription/
 // Mutation fields (it line-scans `type <Root>` blocks, not the type graph),
-// so only these 36 fields are reconcilable. `GqlTicker`'s ~26 nested
+// so only these 44 fields are reconcilable. `GqlTicker`'s ~26 nested
 // per-ticker sub-fields (reached via `ticker(symbol: ...) { ... }`,
 // TickerCoreQuery/TickerEventsQuery/TickerHoldersQuery/TickerAnalysisQuery
 // in graphql/query/ticker_*.rs) and the 4 nested pagination resolvers in
@@ -1348,6 +1376,26 @@ fn route_gql_root_metadata_crypto_search() {}
     path = "cryptoGlobal"
 )]
 fn route_gql_root_metadata_crypto_global() {}
+
+/// Implements `graphql::query::root_metadata::crypto_news` (field `cryptoNews`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "cryptoNews",
+    method = "QUERY",
+    path = "cryptoNews"
+)]
+fn route_gql_root_metadata_crypto_news() {}
+
+/// Implements `graphql::query::root_metadata::forex_news` (field `forexNews`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "forexNews",
+    method = "QUERY",
+    path = "forexNews"
+)]
+fn route_gql_root_metadata_forex_news() {}
 
 /// Implements `graphql::subscription::price_stream` (field `priceStream`).
 #[allow(dead_code)]

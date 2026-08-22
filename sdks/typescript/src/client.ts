@@ -387,6 +387,18 @@ export interface GetCryptoGlobalOptions {
   fields?: string;
 }
 
+/** Query parameters for {@link Client.getCryptoNews}. */
+export interface GetCryptoNewsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Maximum number of articles to fetch (default: 20) */
+  limit?: number;
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  pageCursor?: string;
+  /** Max articles per page; omitted (with pageCursor also omitted) = every fetched article (up to `limit`) as a bare array, unchanged from pre-pagination behavior */
+  pageLimit?: number;
+}
+
 /** Query parameters for {@link Client.getCryptoSearch}. */
 export interface GetCryptoSearchOptions {
   /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
@@ -545,6 +557,18 @@ export interface GetFinancialsOptions {
   frequency?: models.Frequency;
   /** Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome") */
   metrics?: string;
+}
+
+/** Query parameters for {@link Client.getForexNews}. */
+export interface GetForexNewsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Maximum number of articles to fetch (default: 20) */
+  limit?: number;
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  pageCursor?: string;
+  /** Max articles per page; omitted (with pageCursor also omitted) = every fetched article (up to `limit`) as a bare array, unchanged from pre-pagination behavior */
+  pageLimit?: number;
 }
 
 /** Query parameters for {@link Client.getFredSeries}. */
@@ -1089,6 +1113,13 @@ export class Client {
     });
   }
 
+  /** Market-wide crypto news */
+  getCryptoNews(options: GetCryptoNewsOptions = {}): Promise<models.GqlNews[]> {
+    return this.transport.request<models.GqlNews[]>("GET", "/v2/crypto/news", {
+      query: queryOf(options),
+    });
+  }
+
   /** Search CoinGecko's coin universe by free-text query */
   getCryptoSearch(options: GetCryptoSearchOptions): Promise<models.GqlSymbolMatch[]> {
     return this.transport.request<models.GqlSymbolMatch[]>("GET", "/v2/crypto/search", {
@@ -1246,6 +1277,13 @@ export class Client {
   /** Get financial statements */
   getFinancials(symbol: string, statement: models.StatementType, options: GetFinancialsOptions = {}): Promise<models.GqlFinancialLineItem[]> {
     return this.transport.request<models.GqlFinancialLineItem[]>("GET", `/v2/financials/${pathSeg(symbol)}/${pathSeg(statement)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Market-wide forex news */
+  getForexNews(options: GetForexNewsOptions = {}): Promise<models.GqlNews[]> {
+    return this.transport.request<models.GqlNews[]>("GET", "/v2/forex/news", {
       query: queryOf(options),
     });
   }

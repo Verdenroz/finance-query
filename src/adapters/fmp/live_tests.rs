@@ -167,11 +167,12 @@ impl Matrix {
 #[ignore = "requires FMP_API_KEY and consumes live API quota and bandwidth"]
 #[allow(clippy::too_many_lines)]
 async fn all_routed_fmp_endpoints_return_populated_data() {
-    super::init_with_timeout(
-        std::env::var("FMP_API_KEY").expect("FMP_API_KEY must be set"),
-        std::time::Duration::from_secs(120),
-    )
-    .expect("FMP client must initialize");
+    let Ok(api_key) = std::env::var("FMP_API_KEY") else {
+        eprintln!("skipping: FMP_API_KEY not set");
+        return;
+    };
+    super::init_with_timeout(api_key, std::time::Duration::from_secs(120))
+        .expect("FMP client must initialize");
 
     let today = Utc::now().date_naive();
     let from = today.checked_sub_days(Days::new(365)).unwrap().to_string();

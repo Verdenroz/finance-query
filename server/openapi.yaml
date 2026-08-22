@@ -722,6 +722,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v2/crypto/news:
+    get:
+      operationId: getCryptoNews
+      summary: Market-wide crypto news
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Maximum number of articles to fetch (default: 20)"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: pageCursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: pageLimit
+          in: query
+          required: false
+          schema:
+            description: "Max articles per page; omitted (with pageCursor also omitted) = every\nfetched article (up to `limit`) as a bare array, unchanged from\npre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlNews"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/crypto/search:
     get:
       operationId: getCryptoSearch
@@ -1861,6 +1931,76 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/GqlFinancialLineItem"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v2/forex/news:
+    get:
+      operationId: getForexNews
+      summary: Market-wide forex news
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Maximum number of articles to fetch (default: 20)"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: pageCursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: pageLimit
+          in: query
+          required: false
+          schema:
+            description: "Max articles per page; omitted (with pageCursor also omitted) = every\nfetched article (up to `limit`) as a bare array, unchanged from\npre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlNews"
         "400":
           description: Bad request
           content:
@@ -8168,6 +8308,26 @@ components:
         - future
         - currency
         - cryptocurrency
+    MarketNewsQuery:
+      description: "Query parameters for `GET /v2/crypto/news` and `GET /v2/forex/news`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        limit:
+          description: "Maximum number of articles to fetch (default: 20)"
+          type: integer
+          format: int32
+          minimum: 0
+        pageCursor:
+          description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+          type: string
+        pageLimit:
+          description: "Max articles per page; omitted (with pageCursor also omitted) = every\nfetched article (up to `limit`) as a bare array, unchanged from\npre-pagination behavior"
+          type: integer
+          format: int32
+          minimum: 0
     MarketSummaryQuery:
       description: "Query parameters for `GET /v2/market-summary`."
       type: object

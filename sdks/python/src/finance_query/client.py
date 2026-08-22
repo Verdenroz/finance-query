@@ -559,6 +559,22 @@ class Client:
             into=models.GqlGlobalCryptoStats,
         )
 
+    def get_crypto_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide crypto news"""
+        return self._transport.request(
+            "GET",
+            "/v2/crypto/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
+        )
+
     def get_crypto_search(
         self,
         *,
@@ -868,6 +884,22 @@ class Client:
             f"/v2/financials/{path_seg(symbol)}/{path_seg(statement)}",
             query=query_of({"fields": fields, "frequency": frequency, "metrics": metrics}),
             into=list[models.GqlFinancialLineItem],
+        )
+
+    def get_forex_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide forex news"""
+        return self._transport.request(
+            "GET",
+            "/v2/forex/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     def get_fred_series(
@@ -1948,6 +1980,22 @@ class AsyncClient:
             into=models.GqlGlobalCryptoStats,
         )
 
+    async def get_crypto_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide crypto news"""
+        return await self._transport.request(
+            "GET",
+            "/v2/crypto/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
+        )
+
     async def get_crypto_search(
         self,
         *,
@@ -2257,6 +2305,22 @@ class AsyncClient:
             f"/v2/financials/{path_seg(symbol)}/{path_seg(statement)}",
             query=query_of({"fields": fields, "frequency": frequency, "metrics": metrics}),
             into=list[models.GqlFinancialLineItem],
+        )
+
+    async def get_forex_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide forex news"""
+        return await self._transport.request(
+            "GET",
+            "/v2/forex/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     async def get_fred_series(

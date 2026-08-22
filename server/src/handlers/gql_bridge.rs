@@ -87,7 +87,6 @@ pub(crate) fn build_rest_selection(fields: Option<&str>, valid_fields: &[&str]) 
 /// (same taxonomy as `error_response`/`gql_errors_to_mcp`) instead of a blanket
 /// 400. Returns the raw (still-enveloped) JSON `data` on success, or a ready
 /// `Response` to return directly on error.
-#[allow(clippy::result_large_err)]
 pub(crate) async fn execute_gql_rest(
     schema: &graphql::FinanceSchema,
     query: &str,

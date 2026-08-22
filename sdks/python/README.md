@@ -78,6 +78,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_crypto_coin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `get_crypto_coins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `get_crypto_global` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
+- `get_crypto_news` — `GET /v2/crypto/news`: Market-wide crypto news
 - `get_crypto_search` — `GET /v2/crypto/search`: Search CoinGecko's coin universe by free-text query
 - `get_crypto_trending` — `GET /v2/crypto/trending`: Coins trending on CoinGecko over the last 24h
 - `get_currencies` — `GET /v2/currencies`: Get available currencies
@@ -93,6 +94,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_fear_and_greed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `get_feeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `get_financials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
+- `get_forex_news` — `GET /v2/forex/news`: Market-wide forex news
 - `get_fred_series` — `GET /v2/fred/series/{id}`: FRED time series
 - `get_fred_treasury_yields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve
 - `get_gdelt_news` — `GET /v2/gdelt/news/{symbol}`: Worldwide news mentioning a symbol (GDELT, keyless)
