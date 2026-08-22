@@ -1,6 +1,7 @@
 //! Per-symbol filings/disclosure fields routed via `Capability::FILINGS`:
-//! congressional trading (FMP only) and fails-to-deliver (FMP, falling back
-//! to keyless EDGAR). Distinct from Yahoo's `insiderTransactions`/
+//! congressional trading (FMP, falling back to keyless House disclosures —
+//! Senate is unrouted) and fails-to-deliver (FMP, falling back to keyless
+//! EDGAR). Distinct from Yahoo's `insiderTransactions`/
 //! `secFilings` (`TickerHoldersQuery`/`TickerCoreQuery`) and SEC EDGAR's own
 //! submissions/facts fields (`TickerAnalysisQuery`).
 
@@ -17,8 +18,9 @@ pub(super) struct TickerFilingsQuery {
 
 #[Object]
 impl TickerFilingsQuery {
-    /// Congressional (senate) trading disclosures for this symbol (currently
-    /// FMP only, requires `FMP_API_KEY`).
+    /// Congressional trading disclosures for this symbol (FMP when
+    /// `FMP_API_KEY` is set, falling back to keyless House disclosures —
+    /// Senate is unrouted).
     async fn congressional_trades(
         &self,
         ctx: &Context<'_>,
