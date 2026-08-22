@@ -34,7 +34,7 @@ use crate::providers::{
 };
 #[cfg(feature = "risk")]
 use crate::risk;
-use crate::utils::{CacheEntry, CacheMode, filter_by_range};
+use crate::utils::{CacheEntry, CacheMode, FetchGuards, filter_by_range};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -141,15 +141,21 @@ impl TickerBuilder {
         self.shared_client = Some(handle);
         self
     }
-    /// Cache responses for `ttl` instead of for the handle's lifetime.
+    /// Cache responses for `ttl` instead of the default 60 seconds.
     pub fn cache(mut self, ttl: Duration) -> Self {
         self.cache_mode = CacheMode::Ttl(ttl);
         self
     }
+    /// Cache responses for the handle's lifetime instead of the default 60
+    /// seconds.
+    pub fn cache_forever(mut self) -> Self {
+        self.cache_mode = CacheMode::Lifetime;
+        self
+    }
     /// Disable caching — every call fetches fresh data.
     ///
-    /// By default a `Ticker` caches each response for as long as the handle
-    /// lives, so repeated accessor calls reuse one fetch.
+    /// By default a `Ticker` caches each response for 60 seconds, so
+    /// repeated accessor calls within that window reuse one fetch.
     pub fn no_cache(mut self) -> Self {
         self.cache_mode = CacheMode::Off;
         self
@@ -197,22 +203,31 @@ impl TickerBuilder {
             quote_cache: Default::default(),
             quote_fetch: Arc::new(tokio::sync::Mutex::new(())),
             chart_cache: Default::default(),
+            chart_guards: Default::default(),
             events_cache: Default::default(),
+            events_fetch: Arc::new(tokio::sync::Mutex::new(())),
             news_cache: Default::default(),
+            news_fetch: Arc::new(tokio::sync::Mutex::new(())),
             logo_cache: Default::default(),
             options_cache: Default::default(),
+            options_guards: Default::default(),
             financials_cache: Default::default(),
+            financials_guards: Default::default(),
             #[cfg(feature = "indicators")]
             indicators_cache: Default::default(),
+            #[cfg(feature = "indicators")]
+            indicators_guards: Default::default(),
             edgar_submissions_cache: Default::default(),
+            edgar_submissions_fetch: Arc::new(tokio::sync::Mutex::new(())),
             edgar_facts_cache: Default::default(),
+            edgar_facts_fetch: Arc::new(tokio::sync::Mutex::new(())),
         })
     }
 }
 
 /// The primary entry point for querying financial data for a single symbol.
 ///
-/// Data is fetched on first access and cached for the lifetime of the handle.
+/// Data is fetched on first access and cached for 60 seconds by default.
 /// Use the builder via [`Ticker::builder`] for custom configuration, including
 /// [`cache`](TickerBuilder::cache) and [`no_cache`](TickerBuilder::no_cache).
 pub struct Ticker {
@@ -225,15 +240,24 @@ pub struct Ticker {
     quote_cache: Cache<QuoteSummaryResponse>,
     quote_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
+    chart_guards: FetchGuards<(Interval, TimeRange)>,
     events_cache: Cache<ChartEvents>,
+    events_fetch: Arc<tokio::sync::Mutex<()>>,
     news_cache: Cache<Vec<News>>,
+    news_fetch: Arc<tokio::sync::Mutex<()>>,
     logo_cache: Cache<(Option<String>, Option<String>)>,
     options_cache: MapCache<Option<i64>, Options>,
+    options_guards: FetchGuards<Option<i64>>,
     financials_cache: MapCache<(StatementType, Frequency), FinancialStatement>,
+    financials_guards: FetchGuards<(StatementType, Frequency)>,
     #[cfg(feature = "indicators")]
     indicators_cache: MapCache<(Interval, TimeRange), indicators::IndicatorsSummary>,
+    #[cfg(feature = "indicators")]
+    indicators_guards: FetchGuards<(Interval, TimeRange)>,
     edgar_submissions_cache: Cache<EdgarSubmissions>,
+    edgar_submissions_fetch: Arc<tokio::sync::Mutex<()>>,
     edgar_facts_cache: Cache<CompanyFacts>,
+    edgar_facts_fetch: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Ticker {
@@ -367,21 +391,35 @@ impl Ticker {
 
     /// Get historical OHLCV chart data.
     pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
+        let key = (interval, range);
         {
             let cache = self.chart_cache.read().await;
-            if let Some(entry) = cache.get(&(interval, range))
+            if let Some(entry) = cache.get(&key)
                 && self.is_cache_fresh(Some(entry))
             {
                 return Ok(entry.value.clone());
             }
         }
-        let data = ticker_fetch!(self, CHART, as_chart, Chart, fetch_chart, interval, range)?;
-        let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
-        if self.cache_mode.enabled() {
-            let mut cache = self.chart_cache.write().await;
-            self.cache_insert(&mut cache, (interval, range), chart.clone());
-        }
-        Ok(chart)
+        self.chart_guards
+            .dedup(key, || async {
+                {
+                    let cache = self.chart_cache.read().await;
+                    if let Some(entry) = cache.get(&key)
+                        && self.is_cache_fresh(Some(entry))
+                    {
+                        return Ok(entry.value.clone());
+                    }
+                }
+                let data =
+                    ticker_fetch!(self, CHART, as_chart, Chart, fetch_chart, interval, range)?;
+                let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
+                if self.cache_mode.enabled() {
+                    let mut cache = self.chart_cache.write().await;
+                    self.cache_insert(&mut cache, key, chart.clone());
+                }
+                Ok(chart)
+            })
+            .await
     }
 
     /// Get chart data for a custom start/end timestamp range.
@@ -406,6 +444,13 @@ impl Ticker {
     }
 
     async fn ensure_events(&self) -> Result<()> {
+        {
+            let cache = self.events_cache.read().await;
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(());
+            }
+        }
+        let _guard = self.events_fetch.lock().await;
         {
             let cache = self.events_cache.read().await;
             if self.is_cache_fresh(cache.as_ref()) {
@@ -498,6 +543,15 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
+        let _guard = self.news_fetch.lock().await;
+        {
+            let cache = self.news_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
         let data = ticker_fetch!(self, CORPORATE, as_corporate, News, fetch_news)?;
         let news = data;
         // Score titles before translation — VADER is English-lexicon based.
@@ -549,12 +603,24 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let opts = ticker_fetch!(self, OPTIONS, as_options, Options, fetch_options, date)?;
-        if self.cache_mode.enabled() {
-            let mut c = self.options_cache.write().await;
-            self.cache_insert(&mut c, date, opts.clone());
-        }
-        Ok(opts)
+        self.options_guards
+            .dedup(date, || async {
+                {
+                    let cache = self.options_cache.read().await;
+                    if let Some(e) = cache.get(&date)
+                        && self.is_cache_fresh(Some(e))
+                    {
+                        return Ok(e.value.clone());
+                    }
+                }
+                let opts = ticker_fetch!(self, OPTIONS, as_options, Options, fetch_options, date)?;
+                if self.cache_mode.enabled() {
+                    let mut c = self.options_cache.write().await;
+                    self.cache_insert(&mut c, date, opts.clone());
+                }
+                Ok(opts)
+            })
+            .await
     }
 
     /// Get financial statements.
@@ -572,20 +638,32 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let stmt = ticker_fetch!(
-            self,
-            FUNDAMENTALS,
-            as_fundamentals,
-            Financials,
-            fetch_financials,
-            stmt_type,
-            frequency
-        )?;
-        if self.cache_mode.enabled() {
-            let mut c = self.financials_cache.write().await;
-            self.cache_insert(&mut c, key, stmt.clone());
-        }
-        Ok(stmt)
+        self.financials_guards
+            .dedup(key, || async {
+                {
+                    let cache = self.financials_cache.read().await;
+                    if let Some(e) = cache.get(&key)
+                        && self.is_cache_fresh(Some(e))
+                    {
+                        return Ok(e.value.clone());
+                    }
+                }
+                let stmt = ticker_fetch!(
+                    self,
+                    FUNDAMENTALS,
+                    as_fundamentals,
+                    Financials,
+                    fetch_financials,
+                    stmt_type,
+                    frequency
+                )?;
+                if self.cache_mode.enabled() {
+                    let mut c = self.financials_cache.write().await;
+                    self.cache_insert(&mut c, key, stmt.clone());
+                }
+                Ok(stmt)
+            })
+            .await
     }
 
     #[cfg(feature = "indicators")]
@@ -595,21 +673,34 @@ impl Ticker {
         interval: Interval,
         range: TimeRange,
     ) -> Result<indicators::IndicatorsSummary> {
+        let key = (interval, range);
         {
             let cache = self.indicators_cache.read().await;
-            if let Some(e) = cache.get(&(interval, range))
+            if let Some(e) = cache.get(&key)
                 && self.is_cache_fresh(Some(e))
             {
                 return Ok(e.value.clone());
             }
         }
-        let chart = self.chart(interval, range).await?;
-        let ind = indicators::summary::calculate_indicators(&chart.candles);
-        if self.cache_mode.enabled() {
-            let mut c = self.indicators_cache.write().await;
-            self.cache_insert(&mut c, (interval, range), ind.clone());
-        }
-        Ok(ind)
+        self.indicators_guards
+            .dedup(key, || async {
+                {
+                    let cache = self.indicators_cache.read().await;
+                    if let Some(e) = cache.get(&key)
+                        && self.is_cache_fresh(Some(e))
+                    {
+                        return Ok(e.value.clone());
+                    }
+                }
+                let chart = self.chart(interval, range).await?;
+                let ind = indicators::summary::calculate_indicators(&chart.candles);
+                if self.cache_mode.enabled() {
+                    let mut c = self.indicators_cache.write().await;
+                    self.cache_insert(&mut c, key, ind.clone());
+                }
+                Ok(ind)
+            })
+            .await
     }
 
     /// Get SEC EDGAR filing history for this symbol.
@@ -618,6 +709,15 @@ impl Ticker {
     /// history and XBRL company facts) that no other provider replicates. For routable
     /// provider-agnostic filing data use [`filings`](Self::filings) instead.
     pub async fn edgar_submissions(&self) -> Result<EdgarSubmissions> {
+        {
+            let cache = self.edgar_submissions_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let _guard = self.edgar_submissions_fetch.lock().await;
         {
             let cache = self.edgar_submissions_cache.read().await;
             if let Some(e) = cache.as_ref()
@@ -639,6 +739,15 @@ impl Ticker {
     /// Always uses EDGAR directly — XBRL `us-gaap`/`ifrs`/`dei` fact data is unique
     /// to the SEC's EDGAR API. For routable filing data use [`filings`](Self::filings).
     pub async fn edgar_company_facts(&self) -> Result<CompanyFacts> {
+        {
+            let cache = self.edgar_facts_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let _guard = self.edgar_facts_fetch.lock().await;
         {
             let cache = self.edgar_facts_cache.read().await;
             if let Some(e) = cache.as_ref()
@@ -1192,6 +1301,57 @@ mod tests {
             ticker.logo_cache.read().await.is_none(),
             "an unresolved logo must not be cached, or one blip is permanent"
         );
+    }
+
+    #[tokio::test]
+    async fn concurrent_chart_misses_dedup_to_one_fetch() {
+        let provider = CountingProvider::new();
+        let ticker = Arc::new(
+            Ticker::builder("AAPL")
+                .with_provider_set(provider_set(Arc::clone(&provider)))
+                .build()
+                .await
+                .unwrap(),
+        );
+
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let ticker = Arc::clone(&ticker);
+            handles.push(tokio::spawn(async move {
+                ticker
+                    .chart(Interval::OneDay, TimeRange::OneMonth)
+                    .await
+                    .unwrap()
+            }));
+        }
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        assert_eq!(provider.charts(), 1);
+    }
+
+    #[tokio::test]
+    async fn concurrent_news_misses_dedup_to_one_fetch() {
+        let provider = CountingProvider::new();
+        let ticker = Arc::new(
+            Ticker::builder("AAPL")
+                .with_provider_set(provider_set(Arc::clone(&provider)))
+                .build()
+                .await
+                .unwrap(),
+        );
+
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let ticker = Arc::clone(&ticker);
+            handles.push(tokio::spawn(async move { ticker.news().await.unwrap() }));
+        }
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        assert_eq!(provider.news(), 1);
     }
 
     #[tokio::test(start_paused = true)]

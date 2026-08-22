@@ -10,21 +10,20 @@
 // ── Caching ─────────────────────────────────────────────────────────
 
 use crate::error::Result;
-use crate::utils::{CacheEntry, CacheMode};
+use crate::utils::{CacheEntry, CacheMode, FetchGuards};
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 /// Per-handle response cache with request deduplication.
 ///
 /// Keyed by a `String` so a handle can cache multiple variants (e.g. a
 /// crypto coin priced in different `vs_currency` values); single-result
-/// handles use the empty string. Caches for the handle's lifetime by
-/// default; `.cache(ttl)` bounds that and `.no_cache()` disables it.
+/// handles use the empty string. Caches for 60 seconds by default;
+/// `.cache(ttl)` changes that window and `.no_cache()` disables it.
 pub(crate) struct DomainCache<V> {
     mode: CacheMode,
     entries: RwLock<HashMap<String, CacheEntry<V>>>,
-    guards: RwLock<HashMap<String, Arc<Mutex<()>>>>,
+    guards: FetchGuards<String>,
 }
 
 impl<V: Clone> DomainCache<V> {
@@ -32,7 +31,7 @@ impl<V: Clone> DomainCache<V> {
         Self {
             mode,
             entries: RwLock::new(HashMap::new()),
-            guards: RwLock::new(HashMap::new()),
+            guards: FetchGuards::default(),
         }
     }
 
@@ -53,51 +52,25 @@ impl<V: Clone> DomainCache<V> {
             return Ok(entry.value.clone());
         }
 
-        // Dedup: hold a per-key guard so concurrent identical misses don't all
-        // fetch, while misses on different keys proceed in parallel.
-        let guard = {
-            let mut g = self.guards.write().await;
-            Arc::clone(g.entry(key.clone()).or_default())
-        };
-        let _g = guard.lock().await;
-        let result = async {
-            if let Some(entry) = self.entries.read().await.get(&key)
-                && entry.is_fresh(self.mode)
-            {
-                return Ok(entry.value.clone());
-            }
+        self.guards
+            .dedup(key.clone(), || async {
+                if let Some(entry) = self.entries.read().await.get(&key)
+                    && entry.is_fresh(self.mode)
+                {
+                    return Ok(entry.value.clone());
+                }
 
-            let value = f().await?;
-            crate::utils::cache_insert(
-                &mut *self.entries.write().await,
-                key.clone(),
-                value.clone(),
-                self.mode,
-                crate::utils::EVICTION_THRESHOLD,
-            );
-            Ok(value)
-        }
-        .await;
-
-        // Drop the guard entry on every exit, not just the success path — under
-        // `Ttl`, repeated expiry or error cycles would otherwise accumulate one
-        // `Arc<Mutex<_>>` per key that is never reclaimed.
-        //
-        // Only when nobody else holds it, though. Waiters clone the `Arc` before
-        // blocking on it, so an unconditional remove lets a waiter and a fresh
-        // arrival end up on two different mutexes and fetch the same key
-        // concurrently — the dedup this guard exists for.
-        drop(_g);
-        drop(guard);
-        {
-            let mut guards = self.guards.write().await;
-            // Our own clone is gone, so a count of 1 means the map is the only
-            // holder: no waiter is parked on this key and dropping it is safe.
-            if guards.get(&key).is_some_and(|g| Arc::strong_count(g) == 1) {
-                guards.remove(&key);
-            }
-        }
-        result
+                let value = f().await?;
+                crate::utils::cache_insert(
+                    &mut *self.entries.write().await,
+                    key.clone(),
+                    value.clone(),
+                    self.mode,
+                    crate::utils::EVICTION_THRESHOLD,
+                );
+                Ok(value)
+            })
+            .await
     }
 }
 
@@ -142,10 +115,23 @@ macro_rules! domain_handle {
                 }
             }
 
-            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// Cache responses for `ttl` instead of the default 60 seconds,
             /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
                 let mode = crate::utils::CacheMode::Ttl(ttl);
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
+                $($(
+                    $(#[$ecfg])*
+                    { self.$ecache = crate::domains::DomainCache::new(mode); }
+                )+)?
+                self
+            }
+
+            /// Cache responses for the handle's lifetime instead of the
+            /// default 60 seconds.
+            pub fn cache_forever(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Lifetime;
                 self.cache = crate::domains::DomainCache::new(mode);
                 self.chart_cache = crate::domains::DomainCache::new(mode);
                 $($(
@@ -207,10 +193,19 @@ macro_rules! domain_handle {
                 }
             }
 
-            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// Cache responses for `ttl` instead of the default 60 seconds,
             /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
                 let mode = crate::utils::CacheMode::Ttl(ttl);
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
+                self
+            }
+
+            /// Cache responses for the handle's lifetime instead of the
+            /// default 60 seconds.
+            pub fn cache_forever(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Lifetime;
                 self.cache = crate::domains::DomainCache::new(mode);
                 self.chart_cache = crate::domains::DomainCache::new(mode);
                 self
@@ -257,10 +252,17 @@ macro_rules! domain_handle {
                 }
             }
 
-            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// Cache responses for `ttl` instead of the default 60 seconds,
             /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
                 self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Ttl(ttl));
+                self
+            }
+
+            /// Cache responses for the handle's lifetime instead of the
+            /// default 60 seconds.
+            pub fn cache_forever(mut self) -> Self {
+                self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Lifetime);
                 self
             }
 
@@ -308,10 +310,18 @@ macro_rules! domain_handle {
                 }
             }
 
-            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// Cache responses for `ttl` instead of the default 60 seconds,
             /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
                 let mode = crate::utils::CacheMode::Ttl(ttl);
+                $(self.$cache = crate::domains::DomainCache::new(mode);)+
+                self
+            }
+
+            /// Cache responses for the handle's lifetime instead of the
+            /// default 60 seconds.
+            pub fn cache_forever(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Lifetime;
                 $(self.$cache = crate::domains::DomainCache::new(mode);)+
                 self
             }
