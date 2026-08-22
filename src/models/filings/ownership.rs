@@ -1,10 +1,13 @@
-//! Ownership models parsed from primary-source SEC filings.
-//!
-//! Served through the [`Capability::FILINGS`](crate::Capability::FILINGS)
-//! route; EDGAR is currently the only provider. Unlike the aggregated holder
-//! summaries on [`Ticker`](crate::Ticker), these come straight from the filed
-//! XML — Forms 3/4/5 for insider activity and 13F-HR information tables for
-//! institutional positions.
+//! Ownership models parsed from primary-source SEC filings, plus two
+//! secondary-source models (congressional trades, fails-to-deliver) served
+//! through the same [`Capability::FILINGS`](crate::Capability::FILINGS)
+//! route. Unlike the aggregated holder summaries on
+//! [`Ticker`](crate::Ticker), [`InsiderTrade`] and [`InstitutionalHolding`]
+//! come straight from the filed XML — Forms 3/4/5 for insider activity and
+//! 13F-HR information tables for institutional positions. EDGAR is the only
+//! source for [`InstitutionalHolding`]; [`InsiderTrade`] also has Alpha
+//! Vantage and FMP fallbacks. Congressional trades and fails-to-deliver are
+//! FMP-only for now.
 
 use serde::{Deserialize, Serialize};
 
@@ -83,4 +86,50 @@ pub struct InstitutionalHolding {
     pub accession_number: Option<String>,
     /// Period the holdings are reported as of (`YYYY-MM-DD`).
     pub report_date: Option<String>,
+}
+
+/// One legislator stock-trade disclosure filed under the STOCK Act.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct CongressionalTrade {
+    /// Ticker symbol traded.
+    pub symbol: Option<String>,
+    /// Legislator's first name.
+    pub first_name: Option<String>,
+    /// Legislator's last name.
+    pub last_name: Option<String>,
+    /// Office held (e.g. a House seat's office name).
+    pub office: Option<String>,
+    /// District, for House members.
+    pub district: Option<String>,
+    /// Transaction type (e.g. `"Purchase"`, `"Sale"`).
+    pub trade_type: Option<String>,
+    /// Reported transaction amount range (e.g. `"$1,001 - $15,000"`).
+    pub amount: Option<String>,
+    /// Description of the asset traded.
+    pub asset_description: Option<String>,
+    /// Date the transaction occurred (`YYYY-MM-DD`).
+    pub transaction_date: Option<String>,
+    /// Date the transaction was publicly disclosed (`YYYY-MM-DD`).
+    pub disclosure_date: Option<String>,
+    /// Link to the source disclosure filing.
+    pub link: Option<String>,
+}
+
+/// One SEC fails-to-deliver record for a settlement date.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct FailToDeliver {
+    /// Ticker symbol.
+    pub symbol: Option<String>,
+    /// Settlement date (`YYYY-MM-DD`).
+    pub date: Option<String>,
+    /// Number of shares that failed to deliver.
+    pub quantity: Option<f64>,
+    /// Closing price on the settlement date.
+    pub price: Option<f64>,
+    /// Security name.
+    pub name: Option<String>,
+    /// Additional description, when reported.
+    pub description: Option<String>,
 }

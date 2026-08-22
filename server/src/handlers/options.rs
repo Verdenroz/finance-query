@@ -102,7 +102,7 @@ pub(crate) async fn get_options(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let mut result = unwrap_ticker_field(data, "options");
@@ -154,7 +154,7 @@ pub(crate) async fn get_batch_options(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let mut outer = unwrap_field(data, "optionsBatch");
     let options_conn = outer

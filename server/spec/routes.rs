@@ -103,6 +103,34 @@ fn route_chart_get_chart() {}
 )]
 fn route_chart_get_batch_charts() {}
 
+/// Get company profile
+///
+/// Implements `handlers::analysis::get_company_profile`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCompanyProfile",
+    method = "GET",
+    path = "/v2/company-profile/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlCompanyProfile"
+)]
+fn route_analysis_get_company_profile() {}
+
+/// Congressional (senate) trading disclosures for a symbol
+///
+/// Implements `handlers::filings::get_congressional_trades`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCongressionalTrades",
+    method = "GET",
+    path = "/v2/filings/{symbol}/congressional-trades",
+    params = "FilingsQuery",
+    response = "[GqlCongressionalTrade]"
+)]
+fn route_filings_get_congressional_trades() {}
+
 /// Top coins by market cap
 ///
 /// Implements `handlers::crypto::get_crypto_coins`.
@@ -173,6 +201,20 @@ fn route_crypto_get_crypto_search() {}
 )]
 fn route_crypto_get_crypto_trending() {}
 
+/// Market-wide crypto news
+///
+/// Implements `handlers::crypto::get_crypto_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCryptoNews",
+    method = "GET",
+    path = "/v2/crypto/news",
+    params = "MarketNewsQuery",
+    response = "[GqlNews]"
+)]
+fn route_crypto_get_crypto_news() {}
+
 /// Get available currencies
 ///
 /// Implements `handlers::metadata::get_currencies`.
@@ -214,6 +256,34 @@ fn route_events_get_batch_dividends() {}
     response = "GqlDividends"
 )]
 fn route_events_get_dividends() {}
+
+/// Get earnings-surprise history
+///
+/// Implements `handlers::analysis::get_earnings_surprises`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getEarningsSurprises",
+    method = "GET",
+    path = "/v2/earnings-surprises/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlEarningsSurpriseHistory"
+)]
+fn route_analysis_get_earnings_surprises() {}
+
+/// Get earnings call transcript
+///
+/// Implements `handlers::analysis::get_earnings_transcript`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getEarningsTranscript",
+    method = "GET",
+    path = "/v2/earnings-transcript/{symbol}",
+    params = "EarningsTranscriptV2Query",
+    response = "GqlEarningsTranscript"
+)]
+fn route_analysis_get_earnings_transcript() {}
 
 /// Resolve ticker to CIK
 ///
@@ -285,6 +355,20 @@ fn route_edgar_get_edgar_submissions() {}
 )]
 fn route_metadata_get_exchanges() {}
 
+/// Fails-to-deliver records for a symbol
+///
+/// Implements `handlers::filings::get_fails_to_deliver`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getFailsToDeliver",
+    method = "GET",
+    path = "/v2/filings/{symbol}/fails-to-deliver",
+    params = "FilingsQuery",
+    response = "[GqlFailToDeliver]"
+)]
+fn route_filings_get_fails_to_deliver() {}
+
 /// Fear & Greed Index
 ///
 /// Implements `handlers::market::get_fear_and_greed`.
@@ -341,6 +425,20 @@ fn route_financials_get_batch_financials() {}
     response = "[GqlFinancialLineItem]"
 )]
 fn route_financials_get_financials() {}
+
+/// Market-wide forex news
+///
+/// Implements `handlers::forex::get_forex_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getForexNews",
+    method = "GET",
+    path = "/v2/forex/news",
+    params = "MarketNewsQuery",
+    response = "[GqlNews]"
+)]
+fn route_forex_get_forex_news() {}
 
 /// FRED time series
 ///
@@ -882,7 +980,7 @@ fn route_feeds_stream_ws_feeds_stream_handler_send() {}
 //
 // soothfast's GraphQL provider only sees ROOT-level Query/Subscription/
 // Mutation fields (it line-scans `type <Root>` blocks, not the type graph),
-// so only these 36 fields are reconcilable. `GqlTicker`'s ~26 nested
+// so only these 44 fields are reconcilable. `GqlTicker`'s ~26 nested
 // per-ticker sub-fields (reached via `ticker(symbol: ...) { ... }`,
 // TickerCoreQuery/TickerEventsQuery/TickerHoldersQuery/TickerAnalysisQuery
 // in graphql/query/ticker_*.rs) and the 4 nested pagination resolvers in
@@ -1278,6 +1376,26 @@ fn route_gql_root_metadata_crypto_search() {}
     path = "cryptoGlobal"
 )]
 fn route_gql_root_metadata_crypto_global() {}
+
+/// Implements `graphql::query::root_metadata::crypto_news` (field `cryptoNews`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "cryptoNews",
+    method = "QUERY",
+    path = "cryptoNews"
+)]
+fn route_gql_root_metadata_crypto_news() {}
+
+/// Implements `graphql::query::root_metadata::forex_news` (field `forexNews`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "forexNews",
+    method = "QUERY",
+    path = "forexNews"
+)]
+fn route_gql_root_metadata_forex_news() {}
 
 /// Implements `graphql::subscription::price_stream` (field `priceStream`).
 #[allow(dead_code)]

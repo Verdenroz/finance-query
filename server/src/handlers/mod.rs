@@ -12,7 +12,9 @@ mod edgar;
 mod events;
 mod feeds;
 mod feeds_stream;
+mod filings;
 mod financials;
+mod forex;
 mod fred;
 mod gql_bridge;
 mod holders;
@@ -62,6 +64,11 @@ pub(crate) fn api_routes() -> Router {
         .route("/chart/{symbol}", get(chart::get_chart))
         // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
         .route("/charts", get(chart::get_batch_charts))
+        // GET /v2/company-profile/{symbol} (currently Alpha Vantage only)
+        .route(
+            "/company-profile/{symbol}",
+            get(analysis::get_company_profile),
+        )
         // GET /v2/crypto/coins?vs_currency=<str>&count=<u32>
         .route("/crypto/coins", get(crypto::get_crypto_coins))
         // GET /v2/crypto/coins/{id}?vs_currency=<str>
@@ -72,12 +79,24 @@ pub(crate) fn api_routes() -> Router {
         .route("/crypto/global", get(crypto::get_crypto_global))
         // GET /v2/crypto/search?query=<str>
         .route("/crypto/search", get(crypto::get_crypto_search))
+        // GET /v2/crypto/news?limit=<u32> (currently FMP only)
+        .route("/crypto/news", get(crypto::get_crypto_news))
         // GET /v2/currencies
         .route("/currencies", get(metadata::get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
         .route("/dividends/{symbol}", get(events::get_dividends))
         // GET /v2/dividends?symbols=<csv>&range=<str>
         .route("/dividends", get(events::get_batch_dividends))
+        // GET /v2/earnings-surprises/{symbol} (currently FMP and Alpha Vantage)
+        .route(
+            "/earnings-surprises/{symbol}",
+            get(analysis::get_earnings_surprises),
+        )
+        // GET /v2/earnings-transcript/{symbol}?quarter=<str>&year=<i32> (Yahoo or Alpha Vantage)
+        .route(
+            "/earnings-transcript/{symbol}",
+            get(analysis::get_earnings_transcript),
+        )
         // GET /v2/edgar/cik/{symbol}
         .route("/edgar/cik/{symbol}", get(edgar::get_edgar_cik))
         // GET /v2/edgar/facts/{symbol}
@@ -97,6 +116,16 @@ pub(crate) fn api_routes() -> Router {
         .route("/feeds", get(feeds::get_feeds))
         // GET /v2/feeds/stream - WebSocket continuous RSS/Atom feed entries
         .route("/feeds/stream", get(feeds_stream::ws_feeds_stream_handler))
+        // GET /v2/filings/{symbol}/congressional-trades (currently FMP only)
+        .route(
+            "/filings/{symbol}/congressional-trades",
+            get(filings::get_congressional_trades),
+        )
+        // GET /v2/filings/{symbol}/fails-to-deliver (currently FMP only)
+        .route(
+            "/filings/{symbol}/fails-to-deliver",
+            get(filings::get_fails_to_deliver),
+        )
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route(
             "/financials/{symbol}/{statement}",
@@ -104,6 +133,8 @@ pub(crate) fn api_routes() -> Router {
         )
         // GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
         .route("/financials", get(financials::get_batch_financials))
+        // GET /v2/forex/news?limit=<u32> (currently FMP only)
+        .route("/forex/news", get(forex::get_forex_news))
         // GET /v2/fred/series/{id}
         .route("/fred/series/{id}", get(fred::get_fred_series))
         // GET /v2/fred/treasury-yields?year=<u32>

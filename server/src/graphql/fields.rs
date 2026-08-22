@@ -650,6 +650,49 @@ pub const GQL_EARNINGS_HISTORY_VALID_FIELDS: &[&str] = &["defaultMethodology", "
 pub const GQL_EARNINGS_HISTORY_COMPOSITE: &str =
     "{ maxAge quarter period currency epsActual epsEstimate epsDifference surprisePercent }";
 
+/// `companyProfile` (`GqlCompanyProfile`) — flat, no composite fields.
+pub const GQL_COMPANY_PROFILE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "description",
+    "assetType",
+    "exchange",
+    "currency",
+    "country",
+    "sector",
+    "industry",
+    "marketCapitalization",
+];
+
+/// `earningsSurprises` (`GqlEarningsSurpriseHistory`) — `surprises` is
+/// `[GqlEarningsSurprise]` (composite).
+pub const GQL_EARNINGS_SURPRISES_VALID_FIELDS: &[&str] = &["surprises"];
+pub const GQL_EARNINGS_SURPRISES_COMPOSITE: &str =
+    "{ symbol date actualEps estimatedEps surprise surprisePercent }";
+
+/// `earningsTranscript` (`GqlEarningsTranscript`) — flat, no composite fields.
+pub const GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS: &[&str] =
+    &["symbol", "quarter", "year", "date", "text"];
+
+/// `congressionalTrades` (`GqlCongressionalTrade`) — flat, no composite fields.
+pub const GQL_CONGRESSIONAL_TRADE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "firstName",
+    "lastName",
+    "office",
+    "district",
+    "tradeType",
+    "amount",
+    "assetDescription",
+    "transactionDate",
+    "disclosureDate",
+    "link",
+];
+
+/// `failsToDeliver` (`GqlFailToDeliver`) — flat, no composite fields.
+pub const GQL_FAIL_TO_DELIVER_VALID_FIELDS: &[&str] =
+    &["symbol", "date", "quantity", "price", "name", "description"];
+
 // ── Technical indicators ─────────────────────────────────────────────────────
 
 /// Valid fields for `GqlIndicatorsSummary` — camelCase GraphQL field names

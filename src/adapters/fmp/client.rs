@@ -6,6 +6,7 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
+#[cfg(test)]
 use serde_json::Value;
 use tracing::debug;
 
@@ -128,12 +129,13 @@ impl FmpClient {
             .send()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
-        let status = resp.status();
+
+        Self::check_status(resp.status())?;
+
         let bytes = resp
             .bytes()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
-        Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
         }
@@ -146,7 +148,7 @@ impl FmpClient {
 
     /// Execute a GET request to an FMP REST path and return raw JSON.
     #[cfg(test)]
-    pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
+    pub(crate) async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let bytes = self.get_bytes(path, params).await?;
         Ok(serde_json::from_slice(bytes.as_ref())?)
     }
@@ -161,64 +163,6 @@ impl FmpClient {
             }
         })
     }
-
-    pub async fn get_csv_value(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
-        let bytes = self.get_bytes(path, params).await?;
-        let mut reader = csv::Reader::from_reader(bytes.as_ref());
-        let headers = reader
-            .headers()
-            .map_err(|error| {
-                FinanceError::UnexpectedResponse(format!("invalid FMP CSV headers: {error}"))
-            })?
-            .clone();
-        let mut rows = Vec::new();
-        for record in reader.records() {
-            let record = record.map_err(|error| {
-                FinanceError::UnexpectedResponse(format!("invalid FMP CSV row: {error}"))
-            })?;
-            let row = headers
-                .iter()
-                .zip(record.iter())
-                .map(|(name, value)| (name.to_string(), csv_scalar(value)))
-                .collect();
-            rows.push(Value::Object(row));
-        }
-        Ok(Value::Array(rows))
-    }
-}
-
-fn csv_scalar(value: &str) -> Value {
-    if value.is_empty() {
-        return Value::Null;
-    }
-    if let Ok(parsed) = value.parse::<bool>() {
-        return Value::from(parsed);
-    }
-    if !is_plain_number(value) {
-        return Value::from(value);
-    }
-    if let Ok(parsed) = value.parse::<i64>() {
-        return Value::from(parsed);
-    }
-    match value.parse::<f64>() {
-        Ok(parsed) if parsed.is_finite() => Value::from(parsed),
-        _ => Value::from(value),
-    }
-}
-
-/// Reject anything a CSV cell may hold that is an identifier rather than a
-/// quantity: zero-padded CIK/CUSIP codes, exponent-shaped tickers like `1E5`,
-/// and the `inf`/`NaN` literals `f64::from_str` accepts.
-fn is_plain_number(value: &str) -> bool {
-    let digits = value.strip_prefix('-').unwrap_or(value);
-    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit() || c == '.') {
-        return false;
-    }
-    if digits.matches('.').count() > 1 {
-        return false;
-    }
-    let leading_zero = digits.starts_with('0') && !digits.starts_with("0.") && digits != "0";
-    !leading_zero
 }
 
 /// Cheap-to-parse subset of an FMP response used to detect the

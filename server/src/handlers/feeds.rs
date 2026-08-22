@@ -55,7 +55,7 @@ pub(crate) async fn get_feeds(
     let query = format!("query {{ feeds{args_str} {selection} }}");
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "feeds"), paginated);

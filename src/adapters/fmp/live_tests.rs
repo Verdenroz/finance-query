@@ -167,11 +167,12 @@ impl Matrix {
 #[ignore = "requires FMP_API_KEY and consumes live API quota and bandwidth"]
 #[allow(clippy::too_many_lines)]
 async fn all_routed_fmp_endpoints_return_populated_data() {
-    super::init_with_timeout(
-        std::env::var("FMP_API_KEY").expect("FMP_API_KEY must be set"),
-        std::time::Duration::from_secs(120),
-    )
-    .expect("FMP client must initialize");
+    let Ok(api_key) = std::env::var("FMP_API_KEY") else {
+        eprintln!("skipping: FMP_API_KEY not set");
+        return;
+    };
+    super::init_with_timeout(api_key, std::time::Duration::from_secs(120))
+        .expect("FMP client must initialize");
 
     let today = Utc::now().date_naive();
     let from = today.checked_sub_days(Days::new(365)).unwrap().to_string();
@@ -646,7 +647,7 @@ async fn all_routed_fmp_endpoints_return_populated_data() {
 
     m.check(
         "insider_trading",
-        corporate::insider_trading::insider_trading("AAPL", 5, 0),
+        corporate::insider_trading::insider_trading("AAPL", 5),
         |rows| {
             let t = first(rows, "insider trade")?;
             text(t.reporting_name.as_deref(), "reportingName")?;
@@ -721,22 +722,6 @@ async fn all_routed_fmp_endpoints_return_populated_data() {
         |rows| {
             non_empty(rows, "similar symbols")?;
             text(Some(rows[0].symbol.as_str()), "symbol")
-        },
-    )
-    .await;
-
-    m.check(
-        "company_profile",
-        quote::company::company_profile("AAPL"),
-        |rows| {
-            let p = first(rows, "profile")?;
-            text(p.company_name.as_deref(), "companyName")?;
-            number(p.mkt_cap, "marketCap")?;
-            number(p.vol_avg, "averageVolume")?;
-            number(p.price, "price")?;
-            text(p.exchange.as_deref(), "exchange")?;
-            text(p.exchange_full_name.as_deref(), "exchangeFullName")?;
-            text(p.sector.as_deref(), "sector")
         },
     )
     .await;

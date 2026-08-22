@@ -77,21 +77,28 @@ Requires Node 18+.
 - `getCapitalGains` — `GET /v2/capital-gains/{symbol}`: Get capital gains distribution history
 - `getChart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `getCommitmentsOfTraders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
+- `getCompanyProfile` — `GET /v2/company-profile/{symbol}`: Get company profile
+- `getCongressionalTrades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
 - `getCryptoCoin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `getCryptoCoins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `getCryptoGlobal` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
+- `getCryptoNews` — `GET /v2/crypto/news`: Market-wide crypto news
 - `getCryptoSearch` — `GET /v2/crypto/search`: Search CoinGecko's coin universe by free-text query
 - `getCryptoTrending` — `GET /v2/crypto/trending`: Coins trending on CoinGecko over the last 24h
 - `getCurrencies` — `GET /v2/currencies`: Get available currencies
 - `getDividends` — `GET /v2/dividends/{symbol}`: Get dividend history and analytics
+- `getEarningsSurprises` — `GET /v2/earnings-surprises/{symbol}`: Get earnings-surprise history
+- `getEarningsTranscript` — `GET /v2/earnings-transcript/{symbol}`: Get earnings call transcript
 - `getEdgarCik` — `GET /v2/edgar/cik/{symbol}`: Resolve ticker to CIK
 - `getEdgarFacts` — `GET /v2/edgar/facts/{symbol}`: Get XBRL financial data
 - `getEdgarSearch` — `GET /v2/edgar/search`: Search SEC filings
 - `getEdgarSubmissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
 - `getExchanges` — `GET /v2/exchanges`: Get supported exchanges
+- `getFailsToDeliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `getFearAndGreed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `getFeeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `getFinancials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
+- `getForexNews` — `GET /v2/forex/news`: Market-wide forex news
 - `getFredSeries` — `GET /v2/fred/series/{id}`: FRED time series
 - `getFredTreasuryYields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve
 - `getGdeltNews` — `GET /v2/gdelt/news/{symbol}`: Worldwide news mentioning a symbol (GDELT, keyless)

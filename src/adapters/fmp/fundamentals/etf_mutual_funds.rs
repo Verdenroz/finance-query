@@ -1,18 +1,10 @@
-//! ETF and mutual fund endpoints for Financial Modeling Prep.
+//! ETF and mutual fund listing endpoints for Financial Modeling Prep.
 
 use crate::error::Result;
+use crate::models::discovery::reference::SymbolMatch;
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::crypto::AvailableSymbolDTO;
-use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO};
-
-/// Fetch a real-time ETF quote.
-///
-/// * `symbol` - e.g., `"SPY"`
-pub async fn etf_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
-    let client = build_client()?;
-    client.get("/stable/quote", &[("symbol", symbol)]).await
-}
 
 /// List all available ETFs.
 pub async fn etf_available() -> Result<Vec<AvailableSymbolDTO>> {
@@ -20,57 +12,78 @@ pub async fn etf_available() -> Result<Vec<AvailableSymbolDTO>> {
     client.get("/stable/etf-list", &[]).await
 }
 
-/// Fetch daily historical prices for an ETF.
-///
-/// * `symbol` - e.g., `"SPY"`
-/// * `params` - Optional query params such as `from`, `to`
-pub async fn etf_historical(
-    symbol: &str,
-    params: &[(&str, &str)],
-) -> Result<HistoricalPriceResponseDTO> {
+/// List all available mutual funds. FMP has not published a `/stable`
+/// replacement for this endpoint.
+pub async fn mutual_fund_available() -> Result<Vec<AvailableSymbolDTO>> {
     let client = build_client()?;
-    let mut query = params.to_vec();
-    query.push(("symbol", symbol));
-    let historical = client
-        .get("/stable/historical-price-eod/full", &query)
-        .await?;
-    Ok(HistoricalPriceResponseDTO {
-        symbol: Some(symbol.to_string()),
-        historical,
+    client
+        .get("/api/v3/symbol/available-mutual-funds", &[])
+        .await
+}
+
+/// Convert a listed-fund entry into a canonical [`SymbolMatch`], tagging its
+/// `asset_type`. Drops entries without a symbol.
+fn to_symbol_match(dto: AvailableSymbolDTO, asset_type: &str) -> Option<SymbolMatch> {
+    Some(SymbolMatch {
+        symbol: dto.symbol?,
+        id: None,
+        name: dto.name,
+        exchange: dto.exchange_short_name.or(dto.stock_exchange),
+        asset_type: Some(asset_type.to_string()),
+        currency: dto.currency,
+        active: Some(true),
+        market_cap_rank: None,
+        thumbnail: None,
+        image: None,
     })
 }
 
-/// Fetch a real-time mutual fund quote.
-///
-/// * `symbol` - e.g., `"VFIAX"`
-pub async fn mutual_fund_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
-    let client = build_client()?;
-    client.get("/stable/quote", &[("symbol", symbol)]).await
-}
-
-/// Fetch daily historical prices for a mutual fund.
-///
-/// * `symbol` - e.g., `"VFIAX"`
-/// * `params` - Optional query params such as `from`, `to`
-pub async fn mutual_fund_historical(
-    symbol: &str,
-    params: &[(&str, &str)],
-) -> Result<HistoricalPriceResponseDTO> {
-    let client = build_client()?;
-    let mut query = params.to_vec();
-    query.push(("symbol", symbol));
-    let historical = client
-        .get("/stable/historical-price-eod/full", &query)
-        .await?;
-    Ok(HistoricalPriceResponseDTO {
-        symbol: Some(symbol.to_string()),
-        historical,
-    })
+/// Fetch canonical active listing status (every available ETF and mutual
+/// fund) for `DiscoveryProvider::fetch_listing_status(active: true)`.
+pub async fn fetch_active_listing_status_response() -> Result<Vec<SymbolMatch>> {
+    let (etfs, funds) = tokio::try_join!(etf_available(), mutual_fund_available())?;
+    let mut out: Vec<SymbolMatch> = etfs
+        .into_iter()
+        .filter_map(|d| to_symbol_match(d, "ETF"))
+        .collect();
+    out.extend(
+        funds
+            .into_iter()
+            .filter_map(|d| to_symbol_match(d, "MUTUAL_FUND")),
+    );
+    Ok(out)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn maps_available_fund_to_symbol_match() {
+        let dto: AvailableSymbolDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "SPY",
+            "name": "SPDR S&P 500 ETF Trust",
+            "currency": "USD",
+            "stockExchange": "NYSE Arca",
+            "exchangeShortName": "AMEX"
+        }))
+        .unwrap();
+
+        let out = to_symbol_match(dto, "ETF").unwrap();
+        assert_eq!(out.symbol, "SPY");
+        assert_eq!(out.asset_type.as_deref(), Some("ETF"));
+        assert_eq!(out.exchange.as_deref(), Some("AMEX"));
+        assert_eq!(out.active, Some(true));
+    }
+
+    #[test]
+    fn drops_available_fund_entries_without_a_symbol() {
+        let dto: AvailableSymbolDTO = serde_json::from_value(serde_json::json!({
+            "name": "No Symbol Fund"
+        }))
+        .unwrap();
+        assert!(to_symbol_match(dto, "ETF").is_none());
+    }
 
     #[tokio::test]
     async fn test_etf_available_mock() {

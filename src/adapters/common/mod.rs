@@ -31,6 +31,10 @@ pub(crate) mod numbers;
 #[cfg(any(feature = "bls", feature = "worldbank"))]
 pub(crate) mod periods;
 
+/// Percent-string parsing shared by the adapters that report `"N%"` values.
+#[cfg(any(feature = "alphavantage", feature = "fmp"))]
+pub(crate) mod percent;
+
 /// Characters that must be percent-encoded inside a URL path segment.
 ///
 /// We use a conservative set: the unreserved characters per RFC 3986

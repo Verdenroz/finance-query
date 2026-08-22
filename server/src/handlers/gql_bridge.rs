@@ -87,12 +87,11 @@ pub(crate) fn build_rest_selection(fields: Option<&str>, valid_fields: &[&str]) 
 /// (same taxonomy as `error_response`/`gql_errors_to_mcp`) instead of a blanket
 /// 400. Returns the raw (still-enveloped) JSON `data` on success, or a ready
 /// `Response` to return directly on error.
-#[allow(clippy::result_large_err)]
 pub(crate) async fn execute_gql_rest(
     schema: &graphql::FinanceSchema,
     query: &str,
     variables: async_graphql::Variables,
-) -> Result<serde_json::Value, axum::response::Response> {
+) -> Result<serde_json::Value, Box<axum::response::Response>> {
     let timer = crate::metrics::GraphqlTimer::new("rest_bridge");
     let response: async_graphql::Response = schema
         .execute(async_graphql::Request::new(query).variables(variables))
@@ -120,7 +119,7 @@ pub(crate) async fn execute_gql_rest(
         };
         error!("GraphQL query failed: {}", msg);
         let error_body = serde_json::json!({ "error": msg, "status": http_status.as_u16() });
-        return Err((http_status, Json(error_body)).into_response());
+        return Err(Box::new((http_status, Json(error_body)).into_response()));
     }
 
     Ok(response.data.into_json().unwrap_or(serde_json::Value::Null))

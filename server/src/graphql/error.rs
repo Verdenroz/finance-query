@@ -47,6 +47,9 @@ fn finance_error_to_gql(err: &FinanceError) -> Error {
         FinanceError::Timeout { .. } => ("TIMEOUT", 408),
         FinanceError::AuthenticationFailed { .. } => ("UNAUTHORIZED", 401),
         FinanceError::ServerError { status, .. } => ("SERVER_ERROR", *status),
+        FinanceError::NotSupported { .. } | FinanceError::NoProviderAvailable { .. } => {
+            ("NOT_SUPPORTED", 501)
+        }
         _ => ("INTERNAL_ERROR", 500),
     };
 

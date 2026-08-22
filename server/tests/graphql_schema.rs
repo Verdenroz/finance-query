@@ -10,6 +10,7 @@ async fn schema_graphql_is_up_to_date() {
         cache: Cache::new(None).await,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
+        providers: finance_query_server::build_providers().await,
     };
     let live_sdl = graphql::build_schema(state).sdl();
     let checked_in =

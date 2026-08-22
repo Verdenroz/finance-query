@@ -9,8 +9,10 @@ use crate::AppState;
 use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::types::{
     analysis::{
-        GqlEarningsHistory, GqlEarningsTrend, GqlRecommendationTrend, GqlUpgradeDowngradeHistory,
+        GqlEarningsHistory, GqlEarningsSurpriseHistory, GqlEarningsTranscript, GqlEarningsTrend,
+        GqlRecommendationTrend, GqlUpgradeDowngradeHistory,
     },
+    company_profile::GqlCompanyProfile,
     edgar::{GqlEdgarFiling, GqlEdgarSubmissions, GqlFactConcept, GqlFactDataPoint},
     transcript::{GqlTranscript, GqlTranscriptWithMeta},
 };
@@ -53,6 +55,52 @@ impl TickerAnalysisQuery {
         exec_gql(crate::services::analysis::get_earnings_history(
             &state.cache,
             &self.symbol,
+        ))
+        .await
+    }
+
+    /// Company identity/classification profile (currently Alpha Vantage
+    /// only, requires `ALPHAVANTAGE_API_KEY`).
+    async fn company_profile(&self, ctx: &Context<'_>) -> Result<GqlCompanyProfile> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::analysis::get_company_profile(
+            &state.cache,
+            &state.providers,
+            &self.symbol,
+        ))
+        .await
+    }
+
+    /// Earnings-surprise history (currently FMP and Alpha Vantage).
+    async fn earnings_surprises(&self, ctx: &Context<'_>) -> Result<GqlEarningsSurpriseHistory> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::analysis::get_earnings_surprises(
+            &state.cache,
+            &state.providers,
+            &self.symbol,
+        ))
+        .await
+    }
+
+    /// Earnings call transcript, provider-neutral shape (Yahoo or Alpha
+    /// Vantage). Distinct from [`transcript`](Self::transcript)'s
+    /// Yahoo-only, richer shape.
+    async fn earnings_transcript(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Fiscal quarter (Q1, Q2, Q3, Q4). Omitted = latest (Yahoo only).")]
+        quarter: Option<String>,
+        #[graphql(desc = "Fiscal year. Omitted with quarter = latest (Yahoo only).")] year: Option<
+            i32,
+        >,
+    ) -> Result<GqlEarningsTranscript> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::analysis::get_earnings_transcript(
+            &state.cache,
+            &state.providers,
+            &self.symbol,
+            quarter.as_deref(),
+            year,
         ))
         .await
     }

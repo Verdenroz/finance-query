@@ -116,7 +116,6 @@ pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressRelease
 }
 
 /// Fetch crypto news.
-#[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
@@ -129,7 +128,6 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 }
 
 /// Fetch forex news.
-#[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
@@ -139,6 +137,20 @@ pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
             &[("page", "0"), ("limit", &limit_str)],
         )
         .await
+}
+
+/// Fetch canonical crypto news.
+pub async fn fetch_crypto_news_response(
+    limit: u32,
+) -> Result<Vec<crate::models::corporate::news::News>> {
+    Ok(stock_news_to_canonical(crypto_news(limit).await?))
+}
+
+/// Fetch canonical forex news.
+pub async fn fetch_forex_news_response(
+    limit: u32,
+) -> Result<Vec<crate::models::corporate::news::News>> {
+    Ok(stock_news_to_canonical(forex_news(limit).await?))
 }
 
 /// Fetch canonical press releases for a symbol.

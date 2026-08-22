@@ -115,7 +115,7 @@ pub(crate) async fn get_holders(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let mut result = unwrap_ticker_field(data, gql_field);
     if let Some(pf) = paginated_field {

@@ -83,7 +83,7 @@ pub(crate) async fn get_chart(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_nested_connection(unwrap_ticker_field(data, "chart"), "candles", paginated);
@@ -150,7 +150,7 @@ pub(crate) async fn get_batch_charts(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let mut outer = unwrap_field(data, "charts");
     let charts_conn = outer
@@ -205,7 +205,7 @@ pub(crate) async fn get_spark(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "spark"))).into_response()
 }

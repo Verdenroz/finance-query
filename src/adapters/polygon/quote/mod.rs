@@ -7,8 +7,6 @@ use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 use super::build_client;
 use super::models::*;
 
-#[allow(dead_code)] // unrouted: tick-level trades land with #250
-pub mod trades;
 pub mod unified;
 
 /// Fetch snapshot for a single stock ticker.

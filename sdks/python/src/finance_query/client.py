@@ -465,6 +465,36 @@ class Client:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    def get_company_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCompanyProfile:
+        """Get company profile"""
+        return self._transport.request(
+            "GET",
+            f"/v2/company-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCompanyProfile,
+        )
+
+    def get_congressional_trades(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlCongressionalTrade]:
+        """Congressional (senate) trading disclosures for a symbol"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/congressional-trades",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlCongressionalTrade],
+        )
+
     def get_crypto_coin(
         self,
         id: str,
@@ -527,6 +557,22 @@ class Client:
             "/v2/crypto/global",
             query=query_of({"fields": fields}),
             into=models.GqlGlobalCryptoStats,
+        )
+
+    def get_crypto_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide crypto news"""
+        return self._transport.request(
+            "GET",
+            "/v2/crypto/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     def get_crypto_search(
@@ -609,6 +655,36 @@ class Client:
             )
 
         return SyncPager(fetch, typing.Any)
+
+    def get_earnings_surprises(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEarningsSurpriseHistory:
+        """Get earnings-surprise history"""
+        return self._transport.request(
+            "GET",
+            f"/v2/earnings-surprises/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEarningsSurpriseHistory,
+        )
+
+    def get_earnings_transcript(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        quarter: models.Quarter | None = None,
+        year: int | None = None,
+    ) -> models.GqlEarningsTranscript:
+        """Get earnings call transcript"""
+        return self._transport.request(
+            "GET",
+            f"/v2/earnings-transcript/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "quarter": quarter, "year": year}),
+            into=models.GqlEarningsTranscript,
+        )
 
     def get_edgar_cik(
         self,
@@ -728,6 +804,22 @@ class Client:
             into=list[models.GqlExchange],
         )
 
+    def get_fails_to_deliver(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlFailToDeliver]:
+        """Fails-to-deliver records for a symbol"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/fails-to-deliver",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlFailToDeliver],
+        )
+
     def get_fear_and_greed(
         self,
         *,
@@ -792,6 +884,22 @@ class Client:
             f"/v2/financials/{path_seg(symbol)}/{path_seg(statement)}",
             query=query_of({"fields": fields, "frequency": frequency, "metrics": metrics}),
             into=list[models.GqlFinancialLineItem],
+        )
+
+    def get_forex_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide forex news"""
+        return self._transport.request(
+            "GET",
+            "/v2/forex/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     def get_fred_series(
@@ -1778,6 +1886,36 @@ class AsyncClient:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    async def get_company_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCompanyProfile:
+        """Get company profile"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/company-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCompanyProfile,
+        )
+
+    async def get_congressional_trades(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlCongressionalTrade]:
+        """Congressional (senate) trading disclosures for a symbol"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/congressional-trades",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlCongressionalTrade],
+        )
+
     async def get_crypto_coin(
         self,
         id: str,
@@ -1840,6 +1978,22 @@ class AsyncClient:
             "/v2/crypto/global",
             query=query_of({"fields": fields}),
             into=models.GqlGlobalCryptoStats,
+        )
+
+    async def get_crypto_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide crypto news"""
+        return await self._transport.request(
+            "GET",
+            "/v2/crypto/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     async def get_crypto_search(
@@ -1922,6 +2076,36 @@ class AsyncClient:
             )
 
         return AsyncPager(fetch, typing.Any)
+
+    async def get_earnings_surprises(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEarningsSurpriseHistory:
+        """Get earnings-surprise history"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/earnings-surprises/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEarningsSurpriseHistory,
+        )
+
+    async def get_earnings_transcript(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        quarter: models.Quarter | None = None,
+        year: int | None = None,
+    ) -> models.GqlEarningsTranscript:
+        """Get earnings call transcript"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/earnings-transcript/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "quarter": quarter, "year": year}),
+            into=models.GqlEarningsTranscript,
+        )
 
     async def get_edgar_cik(
         self,
@@ -2041,6 +2225,22 @@ class AsyncClient:
             into=list[models.GqlExchange],
         )
 
+    async def get_fails_to_deliver(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlFailToDeliver]:
+        """Fails-to-deliver records for a symbol"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/fails-to-deliver",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlFailToDeliver],
+        )
+
     async def get_fear_and_greed(
         self,
         *,
@@ -2105,6 +2305,22 @@ class AsyncClient:
             f"/v2/financials/{path_seg(symbol)}/{path_seg(statement)}",
             query=query_of({"fields": fields, "frequency": frequency, "metrics": metrics}),
             into=list[models.GqlFinancialLineItem],
+        )
+
+    async def get_forex_news(
+        self,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+        page_cursor: str | None = None,
+        page_limit: int | None = None,
+    ) -> list[models.GqlNews]:
+        """Market-wide forex news"""
+        return await self._transport.request(
+            "GET",
+            "/v2/forex/news",
+            query=query_of({"fields": fields, "limit": limit, "pageCursor": page_cursor, "pageLimit": page_limit}),
+            into=list[models.GqlNews],
         )
 
     async def get_fred_series(

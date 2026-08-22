@@ -7,8 +7,10 @@ use axum::{
 use finance_query_server::graphql::{
     self,
     fields::{
-        GQL_EARNINGS_ESTIMATE_COMPOSITE, GQL_EARNINGS_ESTIMATE_VALID_FIELDS,
-        GQL_EARNINGS_HISTORY_COMPOSITE, GQL_EARNINGS_HISTORY_VALID_FIELDS,
+        GQL_COMPANY_PROFILE_VALID_FIELDS, GQL_EARNINGS_ESTIMATE_COMPOSITE,
+        GQL_EARNINGS_ESTIMATE_VALID_FIELDS, GQL_EARNINGS_HISTORY_COMPOSITE,
+        GQL_EARNINGS_HISTORY_VALID_FIELDS, GQL_EARNINGS_SURPRISES_COMPOSITE,
+        GQL_EARNINGS_SURPRISES_VALID_FIELDS, GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
         GQL_GRADING_HISTORY_COMPOSITE, GQL_GRADING_HISTORY_VALID_FIELDS,
         GQL_RECOMMENDATION_TREND_COMPOSITE, GQL_RECOMMENDATION_TREND_VALID_FIELDS,
         GQL_RECOMMENDATION_VALID_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS, gql_string_list_literal,
@@ -17,11 +19,14 @@ use finance_query_server::graphql::{
     pagination::{build_connection_selection, unwrap_nested_connection},
 };
 use finance_query_server::params::{
-    AnalysisQuery, AnalysisType, BatchRecommendationsQuery, RecommendationsQuery,
+    AnalysisQuery, AnalysisType, BatchRecommendationsQuery, EarningsTranscriptV2Query,
+    RecommendationsQuery,
 };
 use tracing::info;
 
-use super::gql_bridge::{RestTypeSpec, build_rest_composite_selection, execute_gql_rest};
+use super::gql_bridge::{
+    RestTypeSpec, build_rest_composite_selection, build_rest_selection, execute_gql_rest,
+};
 
 /// (GraphQL field name -> (VALID, composite sub-field map)) per analysis type.
 /// The first element must stay in sync with every `services::analysis` per-type
@@ -80,7 +85,7 @@ pub(crate) async fn get_recommendations(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (
         StatusCode::OK,
@@ -132,7 +137,7 @@ pub(crate) async fn get_batch_recommendations(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.page_limit.is_some() || params.page_cursor.is_some();
     let result = unwrap_nested_connection(
@@ -166,7 +171,116 @@ pub(crate) async fn get_analysis(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_ticker_field(data, gql_field))).into_response()
+}
+
+/// GET /v2/company-profile/{symbol}
+///
+/// Company identity/classification profile. Currently Alpha Vantage only —
+/// requires `ALPHAVANTAGE_API_KEY` to be configured.
+pub(crate) async fn get_company_profile(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let selection =
+        build_rest_selection(params.fields.as_deref(), GQL_COMPANY_PROFILE_VALID_FIELDS);
+    let query = format!(
+        "query GetCompanyProfile($symbol: String!) {{ ticker(symbol: $symbol) {{ companyProfile {selection} }} }}"
+    );
+    info!(
+        "Fetching company profile for {} (fields={:?})",
+        symbol, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "companyProfile")),
+    )
+        .into_response()
+}
+
+/// GET /v2/earnings-surprises/{symbol}
+///
+/// Earnings-surprise history. Currently FMP and Alpha Vantage.
+pub(crate) async fn get_earnings_surprises(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_composite_selection(
+        params.fields.as_deref(),
+        GQL_EARNINGS_SURPRISES_VALID_FIELDS,
+        &[("surprises", GQL_EARNINGS_SURPRISES_COMPOSITE)],
+    );
+    let query = format!(
+        "query GetEarningsSurprises($symbol: String!) {{ ticker(symbol: $symbol) {{ earningsSurprises {selection} }} }}"
+    );
+    info!(
+        "Fetching earnings surprises for {} (fields={:?})",
+        symbol, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "earningsSurprises")),
+    )
+        .into_response()
+}
+
+/// GET /v2/earnings-transcript/{symbol}
+///
+/// Earnings call transcript, provider-neutral shape (Yahoo or Alpha
+/// Vantage), distinct from `/v2/transcripts/{symbol}`'s richer Yahoo-only
+/// shape. Query: `quarter`, `year` (both required for Alpha Vantage; Yahoo
+/// defaults to latest when omitted).
+pub(crate) async fn get_earnings_transcript(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<EarningsTranscriptV2Query>,
+) -> impl IntoResponse {
+    let quarter_arg = params
+        .quarter
+        .map(|q| format!("quarter: \"{}\"", q.as_str()));
+    let year_arg = params.year.map(|y| format!("year: {y}"));
+    let args: Vec<String> = [quarter_arg, year_arg].into_iter().flatten().collect();
+    let args_str = if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
+    };
+    let selection = build_rest_selection(
+        params.fields.as_deref(),
+        GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
+    );
+    let query = format!(
+        "query GetEarningsTranscript($symbol: String!) {{ ticker(symbol: $symbol) {{ earningsTranscript{args_str} {selection} }} }}"
+    );
+    info!(
+        "Fetching earnings transcript for {} (quarter={:?}, year={:?})",
+        symbol, params.quarter, params.year
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "earningsTranscript")),
+    )
+        .into_response()
 }

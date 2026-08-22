@@ -8,15 +8,6 @@ use crate::error::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct QuoteShortDTO {
-    pub symbol: Option<String>,
-    pub price: Option<f64>,
-    pub change: Option<f64>,
-    pub volume: Option<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
 pub struct AftermarketTradeDTO {
     pub symbol: Option<String>,
     pub price: Option<f64>,
@@ -66,19 +57,6 @@ pub struct StockPriceChangeDTO {
     pub year_10: Option<f64>,
     #[serde(rename = "max")]
     pub maximum: Option<f64>,
-}
-
-pub async fn quote_short(symbol: &str) -> Result<Vec<QuoteShortDTO>> {
-    build_client()?
-        .get("/stable/quote-short", &[("symbol", symbol)])
-        .await
-}
-
-pub async fn batch_quote_short(symbols: &[&str]) -> Result<Vec<QuoteShortDTO>> {
-    let symbols = symbols.join(",");
-    build_client()?
-        .get("/stable/batch-quote-short", &[("symbols", &symbols)])
-        .await
 }
 
 pub async fn aftermarket_trade(symbol: &str) -> Result<Vec<AftermarketTradeDTO>> {

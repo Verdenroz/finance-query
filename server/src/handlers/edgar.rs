@@ -51,7 +51,7 @@ pub(crate) async fn get_edgar_cik(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "edgarCik"))).into_response()
 }
@@ -88,7 +88,7 @@ pub(crate) async fn get_edgar_submissions(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_nested_connection(
@@ -156,7 +156,7 @@ pub(crate) async fn get_edgar_facts(
     }
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let mut concepts = unwrap_ticker_field(data, "edgarFacts");
@@ -205,7 +205,7 @@ pub(crate) async fn get_edgar_search(
     }
     let data = match execute_gql_rest(&schema, &query_str, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "edgarSearch"))).into_response()
 }

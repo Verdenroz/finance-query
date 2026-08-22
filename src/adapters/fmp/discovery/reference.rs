@@ -4,7 +4,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
-use crate::adapters::fmp::quote::company::CompanyProfileDTO;
 use crate::error::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,33 +24,9 @@ pub struct SecuritySearchDTO {
     pub market_cap: Option<f64>,
 }
 
-pub async fn name_search(query: &str) -> Result<Vec<SecuritySearchDTO>> {
-    build_client()?
-        .get("/stable/search-name", &[("query", query)])
-        .await
-}
-
 pub async fn cik_search(cik: &str) -> Result<Vec<SecuritySearchDTO>> {
     build_client()?
         .get("/stable/search-cik", &[("cik", cik)])
-        .await
-}
-
-pub async fn cusip_search(cusip: &str) -> Result<Vec<SecuritySearchDTO>> {
-    build_client()?
-        .get("/stable/search-cusip", &[("cusip", cusip)])
-        .await
-}
-
-pub async fn isin_search(isin: &str) -> Result<Vec<SecuritySearchDTO>> {
-    build_client()?
-        .get("/stable/search-isin", &[("isin", isin)])
-        .await
-}
-
-pub async fn exchange_variants(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
-    build_client()?
-        .get("/stable/search-exchange-variants", &[("symbol", symbol)])
         .await
 }
 

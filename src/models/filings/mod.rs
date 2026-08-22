@@ -17,7 +17,7 @@ pub use cik::CikEntry;
 pub use company_facts::{CompanyFacts, FactConcept, FactUnit, FactsByTaxonomy};
 pub use filing_index::EdgarFilingIndex;
 pub use full_text::{FilingSearchFilters, FilingSearchHit};
-pub use ownership::{InsiderTrade, InstitutionalHolding};
+pub use ownership::{CongressionalTrade, FailToDeliver, InsiderTrade, InstitutionalHolding};
 pub use provider::{ProviderFiling, ProviderFilings};
 pub use search::{
     EdgarSearchHit, EdgarSearchHitsContainer, EdgarSearchResults, EdgarSearchSource,

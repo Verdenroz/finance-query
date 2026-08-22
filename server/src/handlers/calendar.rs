@@ -59,7 +59,7 @@ pub(crate) async fn get_calendar(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "calendar"))).into_response()
 }

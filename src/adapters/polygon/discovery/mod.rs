@@ -101,21 +101,6 @@ pub struct TickerDetailsResponseDTO {
     pub results: Option<TickerDetailsDTO>,
 }
 
-/// Ticker type.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct TickerTypeDTO {
-    /// Type code.
-    pub code: Option<String>,
-    /// Description.
-    pub description: Option<String>,
-    /// Asset class.
-    pub asset_class: Option<String>,
-    /// Locale.
-    pub locale: Option<String>,
-}
-
 /// Related ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -249,13 +234,6 @@ pub async fn ticker_details(ticker: &str) -> Result<TickerDetailsResponseDTO> {
     client
         .get_as(&path, &[], "ticker_details", "ticker details")
         .await
-}
-
-/// Fetch ticker types.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn ticker_types(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<TickerTypeDTO>> {
-    let client = build_client()?;
-    client.get("/v3/reference/tickers/types", params).await
 }
 
 /// Fetch related tickers.

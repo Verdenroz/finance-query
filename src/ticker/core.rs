@@ -843,6 +843,69 @@ impl Ticker {
         )
     }
 
+    /// Fetch earnings-surprise history (most recent first) via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (FMP or Alpha Vantage).
+    pub async fn earnings_surprises(
+        &self,
+    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            EarningsSurprises,
+            fetch_earnings_surprises
+        )
+    }
+
+    /// Fetch the raw per-analyst grade-action history via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (currently FMP only). Distinct
+    /// from [`rating_consensus`](Self::rating_consensus), which returns the
+    /// aggregated rollup over this same history.
+    pub async fn grading_actions(&self) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            GradingHistory,
+            fetch_grading_history
+        )
+    }
+
+    /// Fetch the company's identity/classification profile via the
+    /// configured [`Capability::FUNDAMENTALS`] provider (currently Alpha
+    /// Vantage only).
+    pub async fn company_profile(&self) -> Result<crate::models::fundamentals::CompanyProfile> {
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            CompanyProfile,
+            fetch_company_profile
+        )
+    }
+
+    /// Fetch an earnings call transcript, provider-neutral shape, via the
+    /// configured [`Capability::CORPORATE`] provider (Yahoo or Alpha
+    /// Vantage). `quarter` and `year` narrow to a specific call; Alpha
+    /// Vantage requires both, Yahoo defaults to the latest when omitted.
+    /// Distinct from the Yahoo-only, richer
+    /// [`finance::earnings_transcript`](crate::finance::earnings_transcript).
+    pub async fn earnings_transcript(
+        &self,
+        quarter: Option<&str>,
+        year: Option<i32>,
+    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+        ticker_fetch!(
+            self,
+            CORPORATE,
+            as_corporate,
+            EarningsTranscript,
+            fetch_earnings_transcript,
+            quarter,
+            year
+        )
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

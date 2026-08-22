@@ -139,6 +139,47 @@ impl RootMetadataQuery {
         exec_gql(crate::services::crypto::get_global(&state.cache)).await
     }
 
+    /// Market-wide crypto news (currently FMP only, requires `FMP_API_KEY`).
+    /// Distinct from [`gdelt_news`](Self::gdelt_news)'s per-symbol shape.
+    async fn crypto_news(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(default = 20, desc = "Overall cap on articles fetched")] limit: u32,
+        #[graphql(
+            desc = "Max entries per page; omitted = every fetched article (up to `limit`) in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlNews>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::crypto::get_news(&state.cache, &state.providers, limit)
+            .await
+            .map_err(to_gql_error)?;
+        let entries: Vec<GqlNews> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
+    }
+
+    /// Market-wide forex news (currently FMP only, requires `FMP_API_KEY`).
+    async fn forex_news(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(default = 20, desc = "Overall cap on articles fetched")] limit: u32,
+        #[graphql(
+            desc = "Max entries per page; omitted = every fetched article (up to `limit`) in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlNews>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::forex::get_news(&state.cache, &state.providers, limit)
+            .await
+            .map_err(to_gql_error)?;
+        let entries: Vec<GqlNews> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
+    }
+
     /// Resolve a ticker symbol to its SEC CIK number. Requires `EDGAR_EMAIL`.
     async fn edgar_cik(&self, ctx: &Context<'_>, symbol: String) -> Result<GqlEdgarCik> {
         let state = ctx.data::<AppState>()?;

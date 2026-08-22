@@ -80,7 +80,6 @@ pub(crate) async fn fetch(client: &YahooClient, symbols: &[&str]) -> Result<serd
 /// # Ok(())
 /// # }
 /// ```
-#[allow(dead_code)] // field-filtered variant kept for callers needing partial quotes
 pub(crate) async fn fetch_with_fields(
     client: &YahooClient,
     symbols: &[&str],

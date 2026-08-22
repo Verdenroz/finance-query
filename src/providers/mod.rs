@@ -468,10 +468,14 @@ pub enum Operation {
     Spark,
     /// Cryptocurrency quote.
     CryptoQuote,
+    /// Market-wide crypto news.
+    CryptoNews,
     /// Macro-economic data series.
     EconomicSeries,
     /// Foreign exchange currency pair quote.
     ForexQuote,
+    /// Market-wide forex news.
+    ForexNews,
     /// Stock market index quote.
     IndicesQuote,
     /// Futures contract quote.
@@ -524,6 +528,8 @@ pub enum Operation {
     RiskFactors,
     /// Company press releases.
     PressReleases,
+    /// Earnings call transcript, provider-neutral shape.
+    EarningsTranscript,
     /// Total value locked in a DeFi protocol.
     #[cfg(feature = "defi")]
     ProtocolTvl,
@@ -547,6 +553,8 @@ pub enum Operation {
     ExecutiveCompensation,
     /// Reported employee headcount.
     EmployeeCount,
+    /// Company identity/classification profile.
+    CompanyProfile,
     /// Cross-market snapshot for symbols spanning several asset classes.
     UnifiedSnapshot,
     /// Full-text search over filing content.
@@ -555,6 +563,10 @@ pub enum Operation {
     InsiderTrades,
     /// Institutional holdings reported on Form 13F-HR.
     InstitutionalHoldings,
+    /// Congressional (senate) stock-trade disclosures.
+    CongressionalTrades,
+    /// SEC fails-to-deliver data.
+    FailsToDeliver,
     /// A macro series as it stood on a past date (vintage/ALFRED view).
     EconomicSeriesAsOf,
     /// Free-text search over the macro series catalog.
@@ -565,6 +577,10 @@ pub enum Operation {
     EconomicReleases,
     /// ETF profile and portfolio holdings.
     EtfProfile,
+    /// Earnings-surprise history.
+    EarningsSurprises,
+    /// Raw per-analyst grade-action history.
+    GradingHistory,
     /// The provider's whole listed-security universe.
     ListingStatus,
     /// Grouped daily OHLCV bars for every stock ticker on one date.
@@ -596,8 +612,10 @@ impl Operation {
             Self::QuotesBatch => "quotes_batch",
             Self::Spark => "spark",
             Self::CryptoQuote => "crypto_quote",
+            Self::CryptoNews => "crypto_news",
             Self::EconomicSeries => "economic_series",
             Self::ForexQuote => "forex_quote",
+            Self::ForexNews => "forex_news",
             Self::IndicesQuote => "indices_quote",
             Self::FuturesQuote => "futures_quote",
             Self::CommoditiesQuote => "commodities_quote",
@@ -624,6 +642,7 @@ impl Operation {
             Self::FilingSections => "filing_sections",
             Self::RiskFactors => "risk_factors",
             Self::PressReleases => "press_releases",
+            Self::EarningsTranscript => "earnings_transcript",
             #[cfg(feature = "defi")]
             Self::ProtocolTvl => "protocol_tvl",
             #[cfg(feature = "defi")]
@@ -637,15 +656,20 @@ impl Operation {
             Self::RatiosTtm => "ratios_ttm",
             Self::ExecutiveCompensation => "executive_compensation",
             Self::EmployeeCount => "employee_count",
+            Self::CompanyProfile => "company_profile",
             Self::UnifiedSnapshot => "unified_snapshot",
             Self::FilingSearch => "filing_search",
             Self::InsiderTrades => "insider_trades",
             Self::InstitutionalHoldings => "institutional_holdings",
+            Self::CongressionalTrades => "congressional_trades",
+            Self::FailsToDeliver => "fails_to_deliver",
             Self::EconomicSeriesAsOf => "economic_series_as_of",
             Self::EconomicSearch => "economic_search",
             Self::EconomicCategories => "economic_categories",
             Self::EconomicReleases => "economic_releases",
             Self::EtfProfile => "etf_profile",
+            Self::EarningsSurprises => "earnings_surprises",
+            Self::GradingHistory => "grading_history",
             Self::ListingStatus => "listing_status",
             Self::GroupedDaily => "grouped_daily",
             Self::CryptoGroupedDaily => "crypto_grouped_daily",
@@ -676,15 +700,19 @@ impl Operation {
             | Self::RatingConsensus
             | Self::KeyMetricsTtm
             | Self::RatiosTtm
-            | Self::EtfProfile => Capability::FUNDAMENTALS,
+            | Self::EtfProfile
+            | Self::EarningsSurprises
+            | Self::GradingHistory
+            | Self::CompanyProfile => Capability::FUNDAMENTALS,
             Self::News
             | Self::Recommendations
             | Self::Events
             | Self::PressReleases
             | Self::ExecutiveCompensation
-            | Self::EmployeeCount => Capability::CORPORATE,
+            | Self::EmployeeCount
+            | Self::EarningsTranscript => Capability::CORPORATE,
             Self::Options => Capability::OPTIONS,
-            Self::CryptoQuote => Capability::CRYPTO,
+            Self::CryptoQuote | Self::CryptoNews => Capability::CRYPTO,
             #[cfg(feature = "defi")]
             Self::ProtocolTvl | Self::ProtocolTvlHistory => Capability::CRYPTO,
             #[cfg(feature = "crypto")]
@@ -694,7 +722,7 @@ impl Operation {
             | Self::EconomicSearch
             | Self::EconomicCategories
             | Self::EconomicReleases => Capability::ECONOMIC,
-            Self::ForexQuote => Capability::FOREX,
+            Self::ForexQuote | Self::ForexNews => Capability::FOREX,
             Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
                 Capability::INDICES
             }
@@ -707,7 +735,9 @@ impl Operation {
             | Self::RiskFactors
             | Self::FilingSearch
             | Self::InsiderTrades
-            | Self::InstitutionalHoldings => Capability::FILINGS,
+            | Self::InstitutionalHoldings
+            | Self::CongressionalTrades
+            | Self::FailsToDeliver => Capability::FILINGS,
             Self::SymbolSearch
             | Self::SymbolDetails
             | Self::Exchanges

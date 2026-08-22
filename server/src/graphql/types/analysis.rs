@@ -148,3 +148,41 @@ pub struct GqlEarningsHistoryEntry {
     pub eps_difference: Option<Json<GqlFormattedValue>>,
     pub surprise_percent: Option<Json<GqlFormattedValue>>,
 }
+
+// ── Earnings-Surprise History ───────────────────────────────────────────────
+// Wrapped like `gradingHistory` since the list is bounded, not paginated.
+// `EarningsSurprise` has no serde rename, so fields stay snake_case here.
+
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlEarningsSurpriseHistory {
+    pub surprises: Vec<GqlEarningsSurprise>,
+}
+
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlEarningsSurprise {
+    pub symbol: Option<String>,
+    pub date: Option<String>,
+    pub actual_eps: Option<f64>,
+    pub estimated_eps: Option<f64>,
+    pub surprise: Option<f64>,
+    pub surprise_percent: Option<f64>,
+}
+
+// ── Earnings Call Transcript ────────────────────────────────────────────────
+// Provider-neutral, distinct from the richer Yahoo-only `GqlTranscript`.
+// `EarningsTranscript` has no serde rename, so fields stay snake_case here.
+
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlEarningsTranscript {
+    pub symbol: Option<String>,
+    pub quarter: Option<String>,
+    pub year: Option<i32>,
+    pub date: Option<String>,
+    pub text: String,
+}

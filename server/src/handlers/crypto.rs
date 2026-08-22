@@ -8,17 +8,20 @@ use finance_query_server::graphql::{
     self,
     fields::{
         GQL_COIN_VALID_FIELDS, GQL_CRYPTO_SYMBOL_MATCH_VALID_FIELDS,
-        GQL_GLOBAL_CRYPTO_STATS_VALID_FIELDS, GQL_TRENDING_COIN_VALID_FIELDS, unwrap_field,
+        GQL_GLOBAL_CRYPTO_STATS_VALID_FIELDS, GQL_NEWS_VALID_FIELDS,
+        GQL_TRENDING_COIN_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, unwrap_field,
     },
     pagination::build_connection_selection,
 };
 use finance_query_server::params::{
     CryptoCoinQuery, CryptoCoinsQuery, CryptoGlobalQuery, CryptoSearchQuery, CryptoTrendingQuery,
+    MarketNewsQuery,
 };
 use tracing::info;
 
 use super::gql_bridge::{
-    build_rest_selection, connection_args, execute_gql_rest, unwrap_connection,
+    build_rest_composite_selection, build_rest_selection, connection_args, execute_gql_rest,
+    unwrap_connection,
 };
 
 /// Query: `vs_currency` (str, default "usd"), `count` (u32, default 50)
@@ -46,7 +49,7 @@ pub(crate) async fn get_crypto_coins(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "cryptoCoins"), paginated);
@@ -76,7 +79,7 @@ pub(crate) async fn get_crypto_coin(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "cryptoCoin"))).into_response()
 }
@@ -101,7 +104,7 @@ pub(crate) async fn get_crypto_trending(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "cryptoTrending"), paginated);
@@ -135,7 +138,7 @@ pub(crate) async fn get_crypto_search(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "cryptoSearch"), paginated);
@@ -157,7 +160,42 @@ pub(crate) async fn get_crypto_global(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "cryptoGlobal"))).into_response()
+}
+
+/// GET /v2/crypto/news
+///
+/// Market-wide crypto news. Currently FMP only — requires `FMP_API_KEY`.
+pub(crate) async fn get_crypto_news(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Query(params): Query<MarketNewsQuery>,
+) -> impl IntoResponse {
+    let inner_selection = build_rest_composite_selection(
+        params.fields.as_deref(),
+        GQL_NEWS_VALID_FIELDS,
+        NEWS_COMPOSITE_FIELDS,
+    );
+    let selection = build_connection_selection(&inner_selection);
+    let conn_args = connection_args(params.page_limit, params.page_cursor.as_deref());
+    let conn_args_str = if conn_args.is_empty() {
+        String::new()
+    } else {
+        format!(", {}", conn_args.join(", "))
+    };
+    let query = format!(
+        "query {{ cryptoNews(limit: {}{}) {} }}",
+        params.limit, conn_args_str, selection
+    );
+
+    info!("Fetching crypto news (limit={})", params.limit);
+
+    let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    let paginated = params.page_limit.is_some() || params.page_cursor.is_some();
+    let result = unwrap_connection(unwrap_field(data, "cryptoNews"), paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }

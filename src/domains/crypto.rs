@@ -133,6 +133,20 @@ impl CryptoCoin {
         Ok(crate::indicators::compute_indicator(indicator, &chart)?)
     }
 
+    /// Fetch market-wide crypto news via `Capability::CRYPTO` (currently FMP
+    /// only). Not scoped to this handle's coin id.
+    pub async fn news(&self, limit: u32) -> Result<Vec<crate::models::corporate::news::News>> {
+        dispatch_via!(
+            self,
+            CRYPTO,
+            as_crypto,
+            CryptoNews,
+            fetch_crypto_news,
+            [],
+            limit
+        )
+    }
+
     /// Compute a risk summary from this coin's chart data, annualised with the
     /// 24/7 crypto calendar (365 days/year). `beta` is always `None`.
     #[cfg(feature = "risk")]

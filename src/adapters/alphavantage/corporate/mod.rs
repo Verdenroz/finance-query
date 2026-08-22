@@ -1,5 +1,6 @@
 //! Alpha Intelligence endpoints: news sentiment, earnings call transcripts, top movers.
 
+use crate::adapters::common::percent::strip_percent;
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -110,7 +111,6 @@ pub async fn news_sentiment(
 ///
 /// * `symbol` - Ticker symbol (e.g., `"AAPL"`)
 /// * `quarter` - Quarter identifier in `YYYYQN` format (e.g., `"2024Q1"`)
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn earnings_call_transcript(
     symbol: &str,
     quarter: &str,
@@ -134,6 +134,37 @@ pub async fn earnings_call_transcript(
         quarter: quarter.to_string(),
         transcript,
     })
+}
+
+/// Fetch a canonical [`EarningsTranscript`] for a symbol. Alpha Vantage has
+/// no "latest transcript" shortcut, so both `quarter` and `year` are
+/// required here even though the trait signature allows either to be
+/// omitted for providers that do support one.
+pub(crate) async fn fetch_earnings_transcript_response(
+    symbol: &str,
+    quarter: Option<&str>,
+    year: Option<i32>,
+) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+    let (quarter, year) = match (quarter, year) {
+        (Some(q), Some(y)) => (q, y),
+        _ => {
+            return Err(FinanceError::InvalidParameter {
+                param: "quarter/year".to_string(),
+                reason: "Alpha Vantage requires both quarter and year".to_string(),
+            });
+        }
+    };
+    let av_quarter = format!("{year}Q{}", quarter.trim_start_matches(['Q', 'q']));
+    let dto = earnings_call_transcript(symbol, &av_quarter).await?;
+    Ok(
+        crate::models::corporate::earnings_transcript::EarningsTranscript {
+            symbol: Some(dto.symbol),
+            quarter: Some(quarter.to_string()),
+            year: Some(year),
+            date: None,
+            text: dto.transcript,
+        },
+    )
 }
 
 /// Fetch top gainers, losers, and most actively traded tickers.
@@ -292,10 +323,6 @@ fn movers_to_canonical(
 ) -> Vec<crate::models::market::performance::MoverQuote> {
     use crate::models::market::performance::{MoverDirection, MoverQuote};
 
-    fn num(s: &str) -> Option<f64> {
-        s.trim().trim_end_matches('%').trim().parse().ok()
-    }
-
     let list = match direction {
         MoverDirection::Gainers => movers.top_gainers,
         MoverDirection::Losers => movers.top_losers,
@@ -305,9 +332,9 @@ fn movers_to_canonical(
         .map(|t| MoverQuote {
             symbol: t.ticker,
             name: None,
-            price: num(&t.price),
-            change: num(&t.change_amount),
-            change_percent: num(&t.change_percentage),
+            price: strip_percent(&t.price),
+            change: strip_percent(&t.change_amount),
+            change_percent: strip_percent(&t.change_percentage),
             exchange: None,
         })
         .collect()

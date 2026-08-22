@@ -158,10 +158,13 @@ async fn create_app() -> Router {
         rate_limit_config.requests_per_minute
     );
 
+    let providers = finance_query_server::build_providers().await;
+
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
+        providers,
     };
 
     // Build GraphQL schema (shares AppState with REST handlers).

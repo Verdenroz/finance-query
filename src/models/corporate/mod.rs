@@ -8,6 +8,8 @@ pub mod governance;
 /// News article models.
 pub mod news;
 
+/// Provider-neutral earnings call transcript.
+pub mod earnings_transcript;
 pub mod press_release;
 /// Recommendation/similar symbol models.
 pub mod recommendation;

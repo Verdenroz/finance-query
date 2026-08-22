@@ -341,6 +341,22 @@ export interface GetCommitmentsOfTradersOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getCompanyProfile}. */
+export interface GetCompanyProfileOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
+/** Query parameters for {@link Client.getCongressionalTrades}. */
+export interface GetCongressionalTradesOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getCryptoCoin}. */
 export interface GetCryptoCoinOptions {
   /** Comma-separated list of fields to include in response */
@@ -369,6 +385,18 @@ export interface GetCryptoCoinsIterOptions extends GetCryptoCoinsOptions {
 export interface GetCryptoGlobalOptions {
   /** Comma-separated list of fields to include in response */
   fields?: string;
+}
+
+/** Query parameters for {@link Client.getCryptoNews}. */
+export interface GetCryptoNewsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Maximum number of articles to fetch (default: 20) */
+  limit?: number;
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  pageCursor?: string;
+  /** Max articles per page; omitted (with pageCursor also omitted) = every fetched article (up to `limit`) as a bare array, unchanged from pre-pagination behavior */
+  pageLimit?: number;
 }
 
 /** Query parameters for {@link Client.getCryptoSearch}. */
@@ -413,6 +441,22 @@ export interface GetDividendsOptions {
 export interface GetDividendsIterOptions extends GetDividendsOptions {
   /** Items requested per page. Defaults to 50. */
   limit?: number;
+}
+
+/** Query parameters for {@link Client.getEarningsSurprises}. */
+export interface GetEarningsSurprisesOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
+/** Query parameters for {@link Client.getEarningsTranscript}. */
+export interface GetEarningsTranscriptOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for providers with no "latest" shortcut (Alpha Vantage); Yahoo defaults to latest when omitted. */
+  quarter?: models.Quarter;
+  /** Fiscal year. See `quarter`. */
+  year?: number;
 }
 
 /** Query parameters for {@link Client.getEdgarCik}. */
@@ -473,6 +517,16 @@ export interface GetExchangesOptions {
   fields?: string;
 }
 
+/** Query parameters for {@link Client.getFailsToDeliver}. */
+export interface GetFailsToDeliverOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getFearAndGreed}. */
 export interface GetFearAndGreedOptions {
   /** Comma-separated list of fields to include in response */
@@ -503,6 +557,18 @@ export interface GetFinancialsOptions {
   frequency?: models.Frequency;
   /** Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome") */
   metrics?: string;
+}
+
+/** Query parameters for {@link Client.getForexNews}. */
+export interface GetForexNewsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Maximum number of articles to fetch (default: 20) */
+  limit?: number;
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  pageCursor?: string;
+  /** Max articles per page; omitted (with pageCursor also omitted) = every fetched article (up to `limit`) as a bare array, unchanged from pre-pagination behavior */
+  pageLimit?: number;
 }
 
 /** Query parameters for {@link Client.getFredSeries}. */
@@ -998,6 +1064,20 @@ export class Client {
     });
   }
 
+  /** Get company profile */
+  getCompanyProfile(symbol: string, options: GetCompanyProfileOptions = {}): Promise<models.GqlCompanyProfile> {
+    return this.transport.request<models.GqlCompanyProfile>("GET", `/v2/company-profile/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Congressional (senate) trading disclosures for a symbol */
+  getCongressionalTrades(symbol: string, options: GetCongressionalTradesOptions = {}): Promise<models.GqlCongressionalTrade[]> {
+    return this.transport.request<models.GqlCongressionalTrade[]>("GET", `/v2/filings/${pathSeg(symbol)}/congressional-trades`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Single coin by CoinGecko ID */
   getCryptoCoin(id: string, options: GetCryptoCoinOptions = {}): Promise<models.GqlCoinQuote> {
     return this.transport.request<models.GqlCoinQuote>("GET", `/v2/crypto/coins/${pathSeg(id)}`, {
@@ -1029,6 +1109,13 @@ export class Client {
   /** Aggregate global cryptocurrency market statistics */
   getCryptoGlobal(options: GetCryptoGlobalOptions = {}): Promise<models.GqlGlobalCryptoStats> {
     return this.transport.request<models.GqlGlobalCryptoStats>("GET", "/v2/crypto/global", {
+      query: queryOf(options),
+    });
+  }
+
+  /** Market-wide crypto news */
+  getCryptoNews(options: GetCryptoNewsOptions = {}): Promise<models.GqlNews[]> {
+    return this.transport.request<models.GqlNews[]>("GET", "/v2/crypto/news", {
       query: queryOf(options),
     });
   }
@@ -1073,6 +1160,20 @@ export class Client {
         query: queryOf({ ...rest, limit: pageLimit, cursor: cursor }),
       }),
     );
+  }
+
+  /** Get earnings-surprise history */
+  getEarningsSurprises(symbol: string, options: GetEarningsSurprisesOptions = {}): Promise<models.GqlEarningsSurpriseHistory> {
+    return this.transport.request<models.GqlEarningsSurpriseHistory>("GET", `/v2/earnings-surprises/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get earnings call transcript */
+  getEarningsTranscript(symbol: string, options: GetEarningsTranscriptOptions = {}): Promise<models.GqlEarningsTranscript> {
+    return this.transport.request<models.GqlEarningsTranscript>("GET", `/v2/earnings-transcript/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
   }
 
   /** Resolve ticker to CIK */
@@ -1138,6 +1239,13 @@ export class Client {
     });
   }
 
+  /** Fails-to-deliver records for a symbol */
+  getFailsToDeliver(symbol: string, options: GetFailsToDeliverOptions = {}): Promise<models.GqlFailToDeliver[]> {
+    return this.transport.request<models.GqlFailToDeliver[]>("GET", `/v2/filings/${pathSeg(symbol)}/fails-to-deliver`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Fear & Greed Index */
   getFearAndGreed(options: GetFearAndGreedOptions = {}): Promise<models.GqlFearAndGreed> {
     return this.transport.request<models.GqlFearAndGreed>("GET", "/v2/fear-and-greed", {
@@ -1169,6 +1277,13 @@ export class Client {
   /** Get financial statements */
   getFinancials(symbol: string, statement: models.StatementType, options: GetFinancialsOptions = {}): Promise<models.GqlFinancialLineItem[]> {
     return this.transport.request<models.GqlFinancialLineItem[]>("GET", `/v2/financials/${pathSeg(symbol)}/${pathSeg(statement)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Market-wide forex news */
+  getForexNews(options: GetForexNewsOptions = {}): Promise<models.GqlNews[]> {
+    return this.transport.request<models.GqlNews[]>("GET", "/v2/forex/news", {
       query: queryOf(options),
     });
   }

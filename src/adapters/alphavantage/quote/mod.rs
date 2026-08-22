@@ -1,5 +1,6 @@
 //! Core stock time series endpoints: intraday, daily, weekly, monthly, quotes, search, market status.
 
+use crate::adapters::common::percent::strip_percent;
 use crate::error::{FinanceError, Result};
 use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 use crate::models::chart::{Candle, Chart};
@@ -184,7 +185,6 @@ pub async fn time_series_daily_adjusted(
 }
 
 /// Fetch weekly time series (raw, unadjusted).
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_weekly(symbol: &str) -> Result<TimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -216,7 +216,6 @@ pub async fn time_series_weekly_adjusted(symbol: &str) -> Result<AdjustedTimeSer
 }
 
 /// Fetch monthly time series (raw, unadjusted).
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_monthly(symbol: &str) -> Result<TimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -471,13 +470,11 @@ pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> 
             fmt: None,
             long_fmt: None,
         }),
-        regular_market_change_percent: gq.change_percent.trim_end_matches('%').parse().ok().map(
-            |v| FormattedValue {
-                raw: Some(v),
-                fmt: None,
-                long_fmt: None,
-            },
-        ),
+        regular_market_change_percent: strip_percent(&gq.change_percent).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
         regular_market_volume: Some(FormattedValue {
             raw: Some(gq.volume as i64),
             fmt: None,
@@ -524,10 +521,7 @@ fn bulk_quote_to_canonical(q: &BulkQuoteDTO) -> QuoteSummaryResponse {
     let price = Price {
         regular_market_price: raw(q.price),
         regular_market_change: raw(q.change),
-        regular_market_change_percent: raw(q
-            .change_percent
-            .as_deref()
-            .and_then(|v| v.trim_end_matches('%').parse().ok())),
+        regular_market_change_percent: raw(q.change_percent.as_deref().and_then(strip_percent)),
         regular_market_volume: q.volume.map(|v| FormattedValue {
             raw: Some(v as i64),
             fmt: None,
@@ -585,6 +579,8 @@ pub async fn fetch_chart_response(
         crate::Interval::OneHour => {
             time_series_intraday(symbol, AvInterval::SixtyMin, None).await?
         }
+        crate::Interval::OneWeek => time_series_weekly(symbol).await?,
+        crate::Interval::OneMonth => time_series_monthly(symbol).await?,
         _ => time_series_daily(symbol, None).await?,
     };
 
@@ -1089,5 +1085,91 @@ mod tests {
 
         let symbol = extract_symbol(&json);
         assert_eq!(symbol, "AAPL");
+    }
+
+    #[tokio::test]
+    async fn test_weekly_time_series_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "TIME_SERIES_WEEKLY".into(),
+            )]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "Meta Data": {
+                        "2. Symbol": "AAPL",
+                        "3. Last Refreshed": "2024-01-12"
+                    },
+                    "Weekly Time Series": {
+                        "2024-01-12": {
+                            "1. open": "186.06",
+                            "2. high": "187.01",
+                            "3. low": "184.35",
+                            "4. close": "185.59",
+                            "5. volume": "180000000"
+                        }
+                    }
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get("TIME_SERIES_WEEKLY", &[("symbol", "AAPL")])
+            .await
+            .unwrap();
+
+        let entries = parse_time_series(&json, "Weekly").unwrap();
+        assert_eq!(entries.len(), 1);
+        assert!((entries[0].close - 185.59).abs() < 1e-9);
+    }
+
+    #[tokio::test]
+    async fn test_monthly_time_series_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "TIME_SERIES_MONTHLY".into(),
+            )]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "Meta Data": {
+                        "2. Symbol": "AAPL",
+                        "3. Last Refreshed": "2024-01-31"
+                    },
+                    "Monthly Time Series": {
+                        "2024-01-31": {
+                            "1. open": "185.09",
+                            "2. high": "195.00",
+                            "3. low": "180.00",
+                            "4. close": "192.42",
+                            "5. volume": "800000000"
+                        }
+                    }
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get("TIME_SERIES_MONTHLY", &[("symbol", "AAPL")])
+            .await
+            .unwrap();
+
+        let entries = parse_time_series(&json, "Monthly").unwrap();
+        assert_eq!(entries.len(), 1);
+        assert!((entries[0].close - 192.42).abs() < 1e-9);
     }
 }

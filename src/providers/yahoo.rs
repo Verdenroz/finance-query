@@ -242,6 +242,30 @@ impl CorporateProvider for YahooProvider {
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         crate::adapters::yahoo::corporate::recommendations::fetch(&self.client, symbol, limit).await
     }
+
+    async fn fetch_earnings_transcript(
+        &self,
+        symbol: &str,
+        quarter: Option<&str>,
+        year: Option<i32>,
+    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+        let transcript = crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(
+            &self.client,
+            symbol,
+            quarter,
+            year,
+        )
+        .await?;
+        Ok(
+            crate::models::corporate::earnings_transcript::EarningsTranscript {
+                symbol: Some(symbol.to_string()),
+                quarter: Some(transcript.quarter().to_string()),
+                year: Some(transcript.year()),
+                date: None,
+                text: transcript.text().to_string(),
+            },
+        )
+    }
 }
 
 #[async_trait::async_trait]

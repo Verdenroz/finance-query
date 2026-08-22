@@ -35,8 +35,6 @@ mod discovery; // DISCOVERY
 mod economic; // ECONOMIC
 mod filings; // FILINGS
 mod fundamentals; // FUNDAMENTALS
-#[allow(dead_code)] // unrouted: ETF Global partner data; ETF surface lands with #264
-mod market;
 mod quote; // QUOTE
 
 // Asset-class subdirectory modules
@@ -68,7 +66,7 @@ pub use crypto::snapshots::*;
 pub use forex::aggregates::fetch_forex_grouped_daily_response;
 pub use forex::quotes::*;
 #[allow(unused_imports)] // unrouted: awaiting a capability route; see #264.
-pub use futures::{aggregates::*, reference::*, snapshots::*, trades::*};
+pub use futures::{reference::*, snapshots::*};
 pub use indices::snapshots::*;
 
 // Other capability modules

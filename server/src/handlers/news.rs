@@ -62,7 +62,7 @@ pub(crate) async fn get_general_news(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "news"), paginated);
@@ -102,7 +102,7 @@ pub(crate) async fn get_news(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_ticker_field(data, "news"), paginated);

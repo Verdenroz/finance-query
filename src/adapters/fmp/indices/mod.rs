@@ -77,13 +77,6 @@ pub struct HistoricalConstituentDTO {
     pub reason: Option<String>,
 }
 
-/// Fetch real-time quotes for all major indexes.
-#[allow(dead_code)] // unrouted: batch index quotes deliberately deferred (#297 optional)
-pub async fn major_indexes_quote() -> Result<Vec<FmpQuoteDTO>> {
-    let client = build_client()?;
-    client.get("/stable/batch-index-quotes", &[]).await
-}
-
 /// Fetch current S&P 500 constituents.
 pub async fn sp500_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
