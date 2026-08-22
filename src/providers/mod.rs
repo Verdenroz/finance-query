@@ -18,6 +18,8 @@ pub(crate) mod bls;
 pub(crate) mod cftc;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
+#[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+pub(crate) mod congresstrades;
 #[cfg(feature = "defi")]
 pub(crate) mod defillama;
 pub(crate) mod edgar;
@@ -33,8 +35,6 @@ pub(crate) mod frankfurter;
 pub(crate) mod fred;
 #[cfg(feature = "gdelt")]
 pub(crate) mod gdelt;
-#[cfg(feature = "housetrades")]
-pub(crate) mod housetrades;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
 #[cfg(feature = "polygon")]
@@ -115,10 +115,10 @@ pub enum Provider {
     /// feature, keyless).
     #[cfg(feature = "cftc")]
     Cftc,
-    /// House of Representatives PTR stock-trade disclosures (requires
-    /// `housetrades` feature, keyless).
-    #[cfg(feature = "housetrades")]
-    HouseTrades,
+    /// Combined House + Senate PTR stock-trade disclosures (requires the
+    /// `housetrades` and/or `senatetrades` feature, keyless).
+    #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+    CongressTrades,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -160,8 +160,8 @@ impl Provider {
             "gdelt" => Some(Self::Gdelt),
             #[cfg(feature = "cftc")]
             "cftc" => Some(Self::Cftc),
-            #[cfg(feature = "housetrades")]
-            "housetrades" => Some(Self::HouseTrades),
+            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+            "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -201,8 +201,8 @@ impl Provider {
             Self::Gdelt => "gdelt",
             #[cfg(feature = "cftc")]
             Self::Cftc => "cftc",
-            #[cfg(feature = "housetrades")]
-            Self::HouseTrades => "housetrades",
+            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+            Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
         }
     }
@@ -243,8 +243,8 @@ impl Provider {
         v.push(Self::Gdelt);
         #[cfg(feature = "cftc")]
         v.push(Self::Cftc);
-        #[cfg(feature = "housetrades")]
-        v.push(Self::HouseTrades);
+        #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+        v.push(Self::CongressTrades);
         v.push(Self::Edgar);
         v
     }
@@ -289,8 +289,10 @@ impl Provider {
             Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
-            #[cfg(feature = "housetrades")]
-            Self::HouseTrades => ProviderAdapter::capabilities(&housetrades::HouseTradesProvider),
+            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+            Self::CongressTrades => {
+                ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
+            }
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -1260,8 +1262,8 @@ pub(crate) async fn build_providers(
             Provider::Gdelt => Arc::new(gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Provider::Cftc => Arc::new(cftc::CftcProvider),
-            #[cfg(feature = "housetrades")]
-            Provider::HouseTrades => Arc::new(housetrades::HouseTradesProvider),
+            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+            Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

@@ -11,8 +11,9 @@
 //! `pdf_extract` can read; older or hand-signed ones are scanned images and
 //! are silently skipped rather than OCR'd — see [`filings`] for that boundary.
 //!
-//! Senate PTRs are out of scope: `efdsearch.senate.gov` sits behind Akamai
-//! bot protection this adapter does not attempt to defeat.
+//! Senate PTRs are a separate adapter (`crate::adapters::senatetrades`) —
+//! `efdsearch.senate.gov` renders everything client-side behind Akamai bot
+//! protection, so it needs a real browser rather than a plain HTTP client.
 
 pub(crate) mod client;
 pub(crate) mod filings;

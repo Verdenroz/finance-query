@@ -20,8 +20,9 @@ use super::gql_bridge::{
 
 /// GET /v2/filings/{symbol}/congressional-trades
 ///
-/// Congressional (senate) trading disclosures for a symbol. Currently FMP
-/// only — requires `FMP_API_KEY`.
+/// Congressional (House and Senate) trading disclosures for a symbol. FMP
+/// when `FMP_API_KEY` is set; House and Senate PTR filings otherwise
+/// (keyless, merged when both are compiled in).
 pub(crate) async fn get_congressional_trades(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Path(symbol): Path<String>,

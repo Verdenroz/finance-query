@@ -96,6 +96,9 @@ zip = { version = "2", optional = true, default-features = false, features = ["d
 # Optional: text extraction from born-digital House PTR PDFs
 pdf-extract = { version = "0.12", optional = true }
 
+# Optional: headless-Chromium browser automation for the Senate eFD adapter
+chromiumoxide = { version = "0.9", optional = true }
+
 [features]
 default = []
 # Every feature except `translation-offline`, which compiles CTranslate2 from
@@ -125,6 +128,7 @@ full = [
     "cftc",
     "secftd",
     "housetrades",
+    "senatetrades",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -162,6 +166,8 @@ cftc = []
 secftd = ["dep:zip"]
 # Enable House of Representatives Periodic Transaction Report disclosures (keyless)
 housetrades = ["dep:zip", "dep:pdf-extract"]
+# Enable Senate Periodic Transaction Report disclosures (keyless, headless-Chromium)
+senatetrades = ["dep:chromiumoxide"]
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -215,6 +221,7 @@ features = [
     "cftc",
     "secftd",
     "housetrades",
+    "senatetrades",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 
