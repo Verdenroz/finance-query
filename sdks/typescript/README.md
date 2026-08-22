@@ -78,6 +78,7 @@ Requires Node 18+.
 - `getChart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `getCommitmentsOfTraders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
 - `getCompanyProfile` — `GET /v2/company-profile/{symbol}`: Get company profile
+- `getCongressionalTrades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
 - `getCryptoCoin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `getCryptoCoins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `getCryptoGlobal` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
@@ -92,6 +93,7 @@ Requires Node 18+.
 - `getEdgarSearch` — `GET /v2/edgar/search`: Search SEC filings
 - `getEdgarSubmissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
 - `getExchanges` — `GET /v2/exchanges`: Get supported exchanges
+- `getFailsToDeliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `getFearAndGreed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `getFeeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `getFinancials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements

@@ -1615,6 +1615,140 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/filings/{symbol}/congressional-trades":
+    get:
+      operationId: getCongressionalTrades
+      summary: Congressional (senate) trading disclosures for a symbol
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlCongressionalTrade"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/filings/{symbol}/fails-to-deliver":
+    get:
+      operationId: getFailsToDeliver
+      summary: Fails-to-deliver records for a symbol
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlFailToDeliver"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/financials:
     get:
       operationId: getBatchFinancials
@@ -4535,6 +4669,21 @@ components:
         sources:
           description: "Comma-separated source slugs (default: federal-reserve, sec, marketwatch, bloomberg)"
           type: string
+    FilingsQuery:
+      description: "Query parameters for `GET /v2/filings/{symbol}/congressional-trades` and\n`GET /v2/filings/{symbol}/fails-to-deliver`."
+      type: object
+      properties:
+        cursor:
+          description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+          type: string
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        limit:
+          description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+          type: integer
+          format: int32
+          minimum: 0
     FilterCondition:
       description: A single custom-screener filter condition.
       type: object
@@ -4915,6 +5064,32 @@ components:
         sector:
           type: string
         symbol:
+          type: string
+    GqlCongressionalTrade:
+      description: "Mirrors `finance_query::CongressionalTrade`, which has no serde rename of\nits own — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
+      type: object
+      properties:
+        amount:
+          type: string
+        assetDescription:
+          type: string
+        disclosureDate:
+          type: string
+        district:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        link:
+          type: string
+        office:
+          type: string
+        symbol:
+          type: string
+        tradeType:
+          type: string
+        transactionDate:
           type: string
     GqlCotObservation:
       description: "Mirrors `finance_query::cftc::CotObservation` — one weekly report row,\nbroken down by trader category."
@@ -5387,6 +5562,24 @@ components:
         val:
           type: number
           format: double
+    GqlFailToDeliver:
+      description: "Mirrors `finance_query::FailToDeliver`, which has no serde rename of its\nown — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
+      type: object
+      properties:
+        date:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+        quantity:
+          type: number
+          format: double
+        symbol:
+          type: string
     GqlFearAndGreed:
       description: "Fear & Greed index response, mirroring `finance_query::models::sentiment::FearAndGreed`."
       type: object

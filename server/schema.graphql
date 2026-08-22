@@ -374,6 +374,54 @@ type GqlCompanyProfile {
 }
 
 """
+Mirrors `finance_query::CongressionalTrade`, which has no serde rename of
+its own — this deserializes snake_case keys while its GraphQL name stays
+camelCase.
+"""
+type GqlCongressionalTrade {
+	symbol: String
+	firstName: String
+	lastName: String
+	office: String
+	district: String
+	tradeType: String
+	amount: String
+	assetDescription: String
+	transactionDate: String
+	disclosureDate: String
+	link: String
+}
+
+type GqlCongressionalTradeConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlCongressionalTradeEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlCongressionalTrade!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlCongressionalTradeEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlCongressionalTrade!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
 broken down by trader category.
 """
@@ -852,6 +900,49 @@ type GqlFactDataPointEdge {
 	The item at the end of the edge
 	"""
 	node: GqlFactDataPoint!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
+Mirrors `finance_query::FailToDeliver`, which has no serde rename of its
+own — this deserializes snake_case keys while its GraphQL name stays
+camelCase.
+"""
+type GqlFailToDeliver {
+	symbol: String
+	date: String
+	quantity: Float
+	price: Float
+	name: String
+	description: String
+}
+
+type GqlFailToDeliverConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlFailToDeliverEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlFailToDeliver!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlFailToDeliverEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlFailToDeliver!
 	"""
 	A cursor for use in pagination
 	"""
@@ -2985,6 +3076,34 @@ type GqlTicker {
 		"""
 		lang: String
 	): [GqlTranscriptWithMeta!]!
+	"""
+	Congressional (senate) trading disclosures for this symbol (currently
+	FMP only, requires `FMP_API_KEY`).
+	"""
+	congressionalTrades(
+		"""
+		Max entries per page; omitted = every fetched disclosure in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlCongressionalTradeConnection!
+	"""
+	Fails-to-deliver records for this symbol (currently FMP only,
+	requires `FMP_API_KEY`).
+	"""
+	failsToDeliver(
+		"""
+		Max entries per page; omitted = every fetched record in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlFailToDeliverConnection!
 }
 
 enum GqlTimeRange {
@@ -3485,6 +3604,41 @@ type QueryRoot {
 	Aggregate global cryptocurrency market statistics (CoinGecko).
 	"""
 	cryptoGlobal: GqlGlobalCryptoStats!
+	"""
+	Market-wide crypto news (currently FMP only, requires `FMP_API_KEY`).
+	Distinct from [`gdelt_news`](Self::gdelt_news)'s per-symbol shape.
+	"""
+	cryptoNews(
+		"""
+		Overall cap on articles fetched
+		"""
+		limit: Int! = 20,
+		"""
+		Max entries per page; omitted = every fetched article (up to `limit`) in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlNewsConnection!
+	"""
+	Market-wide forex news (currently FMP only, requires `FMP_API_KEY`).
+	"""
+	forexNews(
+		"""
+		Overall cap on articles fetched
+		"""
+		limit: Int! = 20,
+		"""
+		Max entries per page; omitted = every fetched article (up to `limit`) in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlNewsConnection!
 	"""
 	Resolve a ticker symbol to its SEC CIK number. Requires `EDGAR_EMAIL`.
 	"""

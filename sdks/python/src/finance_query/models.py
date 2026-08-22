@@ -274,6 +274,34 @@ camelCase."""
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlCongressionalTrade:
+    """Mirrors `finance_query::CongressionalTrade`, which has no serde rename of
+its own — this deserializes snake_case keys while its GraphQL name stays
+camelCase."""
+
+    amount: str | None = None
+    asset_description: str | None = None
+    disclosure_date: str | None = None
+    district: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    link: str | None = None
+    office: str | None = None
+    symbol: str | None = None
+    trade_type: str | None = None
+    transaction_date: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "asset_description": "assetDescription",
+        "disclosure_date": "disclosureDate",
+        "first_name": "firstName",
+        "last_name": "lastName",
+        "trade_type": "tradeType",
+        "transaction_date": "transactionDate",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlCotObservation:
     """Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
 broken down by trader category."""
@@ -549,6 +577,20 @@ class GqlFactDataPoint:
     fy: int | None = None
     start: str | None = None
     val: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlFailToDeliver:
+    """Mirrors `finance_query::FailToDeliver`, which has no serde rename of its
+own — this deserializes snake_case keys while its GraphQL name stays
+camelCase."""
+
+    date: str | None = None
+    description: str | None = None
+    name: str | None = None
+    price: float | None = None
+    quantity: float | None = None
+    symbol: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)

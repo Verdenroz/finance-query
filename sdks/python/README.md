@@ -74,6 +74,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_chart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `get_commitments_of_traders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
 - `get_company_profile` — `GET /v2/company-profile/{symbol}`: Get company profile
+- `get_congressional_trades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
 - `get_crypto_coin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `get_crypto_coins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `get_crypto_global` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
@@ -88,6 +89,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_edgar_search` — `GET /v2/edgar/search`: Search SEC filings
 - `get_edgar_submissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
 - `get_exchanges` — `GET /v2/exchanges`: Get supported exchanges
+- `get_fails_to_deliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `get_fear_and_greed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `get_feeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `get_financials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements

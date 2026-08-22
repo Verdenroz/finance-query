@@ -117,6 +117,20 @@ fn route_chart_get_batch_charts() {}
 )]
 fn route_analysis_get_company_profile() {}
 
+/// Congressional (senate) trading disclosures for a symbol
+///
+/// Implements `handlers::filings::get_congressional_trades`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCongressionalTrades",
+    method = "GET",
+    path = "/v2/filings/{symbol}/congressional-trades",
+    params = "FilingsQuery",
+    response = "[GqlCongressionalTrade]"
+)]
+fn route_filings_get_congressional_trades() {}
+
 /// Top coins by market cap
 ///
 /// Implements `handlers::crypto::get_crypto_coins`.
@@ -326,6 +340,20 @@ fn route_edgar_get_edgar_submissions() {}
     response = "[GqlExchange]"
 )]
 fn route_metadata_get_exchanges() {}
+
+/// Fails-to-deliver records for a symbol
+///
+/// Implements `handlers::filings::get_fails_to_deliver`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getFailsToDeliver",
+    method = "GET",
+    path = "/v2/filings/{symbol}/fails-to-deliver",
+    params = "FilingsQuery",
+    response = "[GqlFailToDeliver]"
+)]
+fn route_filings_get_fails_to_deliver() {}
 
 /// Fear & Greed Index
 ///

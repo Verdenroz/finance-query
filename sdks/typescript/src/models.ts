@@ -178,6 +178,21 @@ export interface GqlCompanyProfile {
   symbol?: string;
 }
 
+/** Mirrors `finance_query::CongressionalTrade`, which has no serde rename of its own — this deserializes snake_case keys while its GraphQL name stays camelCase. */
+export interface GqlCongressionalTrade {
+  amount?: string;
+  assetDescription?: string;
+  disclosureDate?: string;
+  district?: string;
+  firstName?: string;
+  lastName?: string;
+  link?: string;
+  office?: string;
+  symbol?: string;
+  tradeType?: string;
+  transactionDate?: string;
+}
+
 /** Mirrors `finance_query::cftc::CotObservation` — one weekly report row, broken down by trader category. */
 export interface GqlCotObservation {
   managedMoneyLong?: number;
@@ -349,6 +364,16 @@ export interface GqlFactDataPoint {
   fy?: number;
   start?: string;
   val?: number;
+}
+
+/** Mirrors `finance_query::FailToDeliver`, which has no serde rename of its own — this deserializes snake_case keys while its GraphQL name stays camelCase. */
+export interface GqlFailToDeliver {
+  date?: string;
+  description?: string;
+  name?: string;
+  price?: number;
+  quantity?: number;
+  symbol?: string;
 }
 
 /** Fear & Greed index response, mirroring `finance_query::models::sentiment::FearAndGreed`. */

@@ -347,6 +347,16 @@ export interface GetCompanyProfileOptions {
   fields?: string;
 }
 
+/** Query parameters for {@link Client.getCongressionalTrades}. */
+export interface GetCongressionalTradesOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getCryptoCoin}. */
 export interface GetCryptoCoinOptions {
   /** Comma-separated list of fields to include in response */
@@ -493,6 +503,16 @@ export interface GetEdgarSubmissionsIterOptions extends GetEdgarSubmissionsOptio
 export interface GetExchangesOptions {
   /** Comma-separated list of fields to include in response */
   fields?: string;
+}
+
+/** Query parameters for {@link Client.getFailsToDeliver}. */
+export interface GetFailsToDeliverOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
 }
 
 /** Query parameters for {@link Client.getFearAndGreed}. */
@@ -1027,6 +1047,13 @@ export class Client {
     });
   }
 
+  /** Congressional (senate) trading disclosures for a symbol */
+  getCongressionalTrades(symbol: string, options: GetCongressionalTradesOptions = {}): Promise<models.GqlCongressionalTrade[]> {
+    return this.transport.request<models.GqlCongressionalTrade[]>("GET", `/v2/filings/${pathSeg(symbol)}/congressional-trades`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Single coin by CoinGecko ID */
   getCryptoCoin(id: string, options: GetCryptoCoinOptions = {}): Promise<models.GqlCoinQuote> {
     return this.transport.request<models.GqlCoinQuote>("GET", `/v2/crypto/coins/${pathSeg(id)}`, {
@@ -1177,6 +1204,13 @@ export class Client {
   /** Get supported exchanges */
   getExchanges(options: GetExchangesOptions = {}): Promise<models.GqlExchange[]> {
     return this.transport.request<models.GqlExchange[]>("GET", "/v2/exchanges", {
+      query: queryOf(options),
+    });
+  }
+
+  /** Fails-to-deliver records for a symbol */
+  getFailsToDeliver(symbol: string, options: GetFailsToDeliverOptions = {}): Promise<models.GqlFailToDeliver[]> {
+    return this.transport.request<models.GqlFailToDeliver[]>("GET", `/v2/filings/${pathSeg(symbol)}/fails-to-deliver`, {
       query: queryOf(options),
     });
   }

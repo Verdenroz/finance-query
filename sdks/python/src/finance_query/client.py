@@ -479,6 +479,22 @@ class Client:
             into=models.GqlCompanyProfile,
         )
 
+    def get_congressional_trades(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlCongressionalTrade]:
+        """Congressional (senate) trading disclosures for a symbol"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/congressional-trades",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlCongressionalTrade],
+        )
+
     def get_crypto_coin(
         self,
         id: str,
@@ -770,6 +786,22 @@ class Client:
             "/v2/exchanges",
             query=query_of({"fields": fields}),
             into=list[models.GqlExchange],
+        )
+
+    def get_fails_to_deliver(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlFailToDeliver]:
+        """Fails-to-deliver records for a symbol"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/fails-to-deliver",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlFailToDeliver],
         )
 
     def get_fear_and_greed(
@@ -1836,6 +1868,22 @@ class AsyncClient:
             into=models.GqlCompanyProfile,
         )
 
+    async def get_congressional_trades(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlCongressionalTrade]:
+        """Congressional (senate) trading disclosures for a symbol"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/congressional-trades",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlCongressionalTrade],
+        )
+
     async def get_crypto_coin(
         self,
         id: str,
@@ -2127,6 +2175,22 @@ class AsyncClient:
             "/v2/exchanges",
             query=query_of({"fields": fields}),
             into=list[models.GqlExchange],
+        )
+
+    async def get_fails_to_deliver(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlFailToDeliver]:
+        """Fails-to-deliver records for a symbol"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/fails-to-deliver",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlFailToDeliver],
         )
 
     async def get_fear_and_greed(
