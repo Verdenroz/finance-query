@@ -65,7 +65,6 @@ macro_rules! provider_singleton_state {
         /// The shared rate limiter backing this provider's singleton, for
         /// health/budget introspection. `None` before `init`/
         /// `init_with_timeout` has been called.
-        #[allow(dead_code)]
         pub(crate) fn rate_limiter()
         -> ::std::option::Option<::std::sync::Arc<crate::rate_limiter::RateLimiter>> {
             $static_name

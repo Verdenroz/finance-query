@@ -21,7 +21,19 @@ pub use ttm::{FinancialRatiosTtm, KeyMetricsTtm};
 
 // ETF profile and holdings (provider-routed)
 mod etf;
-pub use etf::{EtfHolding, EtfProfile};
+pub use etf::{EtfCountryWeighting, EtfHolding, EtfProfile, EtfSectorWeighting};
+
+// Earnings-surprise history (provider-routed)
+mod earnings_surprise;
+pub use earnings_surprise::EarningsSurprise;
+
+// Raw per-analyst grade-action history (provider-routed)
+mod grading_history;
+pub use grading_history::GradingAction;
+
+// Company identity/classification profile (provider-routed)
+mod company_profile;
+pub use company_profile::CompanyProfile;
 
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;

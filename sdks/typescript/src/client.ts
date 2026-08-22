@@ -341,6 +341,12 @@ export interface GetCommitmentsOfTradersOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getCompanyProfile}. */
+export interface GetCompanyProfileOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getCryptoCoin}. */
 export interface GetCryptoCoinOptions {
   /** Comma-separated list of fields to include in response */
@@ -413,6 +419,22 @@ export interface GetDividendsOptions {
 export interface GetDividendsIterOptions extends GetDividendsOptions {
   /** Items requested per page. Defaults to 50. */
   limit?: number;
+}
+
+/** Query parameters for {@link Client.getEarningsSurprises}. */
+export interface GetEarningsSurprisesOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
+/** Query parameters for {@link Client.getEarningsTranscript}. */
+export interface GetEarningsTranscriptOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for providers with no "latest" shortcut (Alpha Vantage); Yahoo defaults to latest when omitted. */
+  quarter?: models.Quarter;
+  /** Fiscal year. See `quarter`. */
+  year?: number;
 }
 
 /** Query parameters for {@link Client.getEdgarCik}. */
@@ -998,6 +1020,13 @@ export class Client {
     });
   }
 
+  /** Get company profile */
+  getCompanyProfile(symbol: string, options: GetCompanyProfileOptions = {}): Promise<models.GqlCompanyProfile> {
+    return this.transport.request<models.GqlCompanyProfile>("GET", `/v2/company-profile/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Single coin by CoinGecko ID */
   getCryptoCoin(id: string, options: GetCryptoCoinOptions = {}): Promise<models.GqlCoinQuote> {
     return this.transport.request<models.GqlCoinQuote>("GET", `/v2/crypto/coins/${pathSeg(id)}`, {
@@ -1073,6 +1102,20 @@ export class Client {
         query: queryOf({ ...rest, limit: pageLimit, cursor: cursor }),
       }),
     );
+  }
+
+  /** Get earnings-surprise history */
+  getEarningsSurprises(symbol: string, options: GetEarningsSurprisesOptions = {}): Promise<models.GqlEarningsSurpriseHistory> {
+    return this.transport.request<models.GqlEarningsSurpriseHistory>("GET", `/v2/earnings-surprises/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get earnings call transcript */
+  getEarningsTranscript(symbol: string, options: GetEarningsTranscriptOptions = {}): Promise<models.GqlEarningsTranscript> {
+    return this.transport.request<models.GqlEarningsTranscript>("GET", `/v2/earnings-transcript/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
   }
 
   /** Resolve ticker to CIK */

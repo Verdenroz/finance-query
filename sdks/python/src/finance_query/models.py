@@ -251,6 +251,29 @@ class GqlCommitmentsOfTraders:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlCompanyProfile:
+    """Mirrors `finance_query::CompanyProfile`, which has no serde rename of its
+own — this deserializes snake_case keys while its GraphQL name stays
+camelCase."""
+
+    asset_type: str | None = None
+    country: str | None = None
+    currency: str | None = None
+    description: str | None = None
+    exchange: str | None = None
+    industry: str | None = None
+    market_capitalization: float | None = None
+    name: str | None = None
+    sector: str | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "asset_type": "assetType",
+        "market_capitalization": "marketCapitalization",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlCotObservation:
     """Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
 broken down by trader category."""
@@ -360,6 +383,36 @@ class GqlDonchianChannelsData:
     lower: float | None = None
     middle: float | None = None
     upper: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEarningsSurprise:
+    actual_eps: float | None = None
+    date: str | None = None
+    estimated_eps: float | None = None
+    surprise: float | None = None
+    surprise_percent: float | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "actual_eps": "actualEps",
+        "estimated_eps": "estimatedEps",
+        "surprise_percent": "surprisePercent",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEarningsSurpriseHistory:
+    surprises: list[GqlEarningsSurprise]
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEarningsTranscript:
+    text: str
+    date: str | None = None
+    quarter: str | None = None
+    symbol: str | None = None
+    year: int | None = None
 
 
 @dataclasses.dataclass(frozen=True)

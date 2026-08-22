@@ -70,7 +70,7 @@ pub(crate) async fn get_risk(
     }
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_ticker_field(data, "risk"))).into_response()
 }

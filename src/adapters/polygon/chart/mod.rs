@@ -201,25 +201,6 @@ pub async fn fetch_chart_range_response(
     })
 }
 
-/// Fetch the previous day's OHLCV bar for a stock ticker.
-///
-/// * `adjusted` - Whether results are adjusted for splits (default: true)
-#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
-pub async fn stock_previous_close(
-    ticker: &str,
-    adjusted: Option<bool>,
-) -> Result<AggregateResponseDTO> {
-    let client = build_client()?;
-    let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
-
-    let adj_str = adjusted.unwrap_or(true).to_string();
-    let params = [("adjusted", adj_str.as_str())];
-
-    client
-        .get_as(&path, &params, "previous_close", "previous close response")
-        .await
-}
-
 /// Fetch grouped daily bars for the entire stock market on a given date.
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
@@ -239,37 +220,6 @@ pub async fn stock_grouped_daily(
 
     client
         .get_as(&path, &params, "grouped_daily", "grouped daily response")
-        .await
-}
-
-/// Fetch daily open/close for a stock ticker on a specific date.
-///
-/// * `ticker` - Stock ticker symbol (e.g., `"AAPL"`)
-/// * `date` - Date as `"YYYY-MM-DD"`
-/// * `adjusted` - Whether results are adjusted for splits (default: true)
-#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
-pub async fn stock_daily_open_close(
-    ticker: &str,
-    date: &str,
-    adjusted: Option<bool>,
-) -> Result<DailyOpenCloseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v1/open-close/{}/{}",
-        encode_path_segment(ticker),
-        encode_path_segment(date)
-    );
-
-    let adj_str = adjusted.unwrap_or(true).to_string();
-    let params = [("adjusted", adj_str.as_str())];
-
-    client
-        .get_as(
-            &path,
-            &params,
-            "daily_open_close",
-            "daily open/close response",
-        )
         .await
 }
 
@@ -337,43 +287,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_stock_previous_close_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/v2/aggs/ticker/MSFT/prev")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                serde_json::json!({
-                    "ticker": "MSFT",
-                    "status": "OK",
-                    "adjusted": true,
-                    "resultsCount": 1,
-                    "results": [
-                        { "o": 380.0, "h": 385.0, "l": 378.0, "c": 383.5, "v": 25000000.0, "t": 1704067200000_i64 }
-                    ]
-                })
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get_raw("/v2/aggs/ticker/MSFT/prev", &[])
-            .await
-            .unwrap();
-
-        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.ticker.as_deref(), Some("MSFT"));
-        let bar = &resp.results.unwrap()[0];
-        assert!((bar.close - 383.5).abs() < 0.01);
-    }
-
-    #[tokio::test]
     async fn test_stock_grouped_daily_mock_maps_per_ticker_candles() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
@@ -412,47 +325,6 @@ mod tests {
         assert!((candles[0].1.close - 186.19).abs() < 0.01);
         assert_eq!(candles[1].0, "MSFT");
         assert!((candles[1].1.close - 383.5).abs() < 0.01);
-    }
-
-    #[tokio::test]
-    async fn test_daily_open_close_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/v1/open-close/AAPL/2024-01-15")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apiKey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                serde_json::json!({
-                    "status": "OK",
-                    "from": "2024-01-15",
-                    "symbol": "AAPL",
-                    "open": 185.09,
-                    "high": 187.01,
-                    "low": 184.35,
-                    "close": 186.19,
-                    "volume": 65076600.0,
-                    "afterHours": 186.50,
-                    "preMarket": 184.80
-                })
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get_raw("/v1/open-close/AAPL/2024-01-15", &[])
-            .await
-            .unwrap();
-
-        let resp: DailyOpenCloseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.symbol.as_deref(), Some("AAPL"));
-        assert!((resp.open.unwrap() - 185.09).abs() < 0.01);
-        assert!((resp.after_hours.unwrap() - 186.50).abs() < 0.01);
     }
 
     #[tokio::test]

@@ -29,6 +29,70 @@ pub struct AppState {
     pub cache: cache::Cache,
     pub stream_hub: StreamHub,
     pub feed_hub: FeedHub,
+    /// Multi-provider routing for capabilities beyond Yahoo (e.g. Alpha
+    /// Vantage-backed company profile/earnings/transcripts). `Providers`
+    /// isn't `Clone`, hence the `Arc`.
+    pub providers: Arc<finance_query::Providers>,
+}
+
+/// Build the multi-provider routing shared by `AppState`. Each keyed
+/// provider is only routed in when its API key env var is set; a field
+/// backed solely by an unconfigured provider falls through to
+/// `NotSupported`, surfaced as a `501` by `finance_error_to_gql`.
+pub async fn build_providers() -> Arc<finance_query::Providers> {
+    use finance_query::{Capability, Provider, Providers};
+
+    let log_routing = |name: &str, key: &str, enabled: bool| match enabled {
+        true => tracing::info!("{name} routing enabled"),
+        false => tracing::info!("{name} not configured (set {key} to enable)"),
+    };
+    let has_alphavantage = std::env::var("ALPHAVANTAGE_API_KEY").is_ok();
+    let has_fmp = std::env::var("FMP_API_KEY").is_ok();
+    log_routing("Alpha Vantage", "ALPHAVANTAGE_API_KEY", has_alphavantage);
+    log_routing("FMP", "FMP_API_KEY", has_fmp);
+
+    let mut builder = Providers::builder();
+    if has_alphavantage {
+        builder = builder.route(
+            Capability::CORPORATE,
+            [Provider::Yahoo, Provider::AlphaVantage],
+        );
+    }
+
+    let mut fundamentals = Vec::new();
+    if has_fmp {
+        fundamentals.push(Provider::Fmp);
+    }
+    if has_alphavantage {
+        fundamentals.push(Provider::AlphaVantage);
+    }
+    if !fundamentals.is_empty() {
+        builder = builder.route(Capability::FUNDAMENTALS, fundamentals);
+    }
+
+    if has_fmp {
+        builder = builder.route(
+            Capability::FILINGS,
+            [Provider::Fmp, Provider::Edgar, Provider::Yahoo],
+        );
+        builder = builder.route(Capability::CRYPTO, [Provider::Fmp]);
+        builder = builder.route(Capability::FOREX, [Provider::Fmp]);
+    }
+
+    match builder.build().await {
+        Ok(providers) => Arc::new(providers),
+        Err(e) => {
+            tracing::warn!(
+                "Failed to initialize provider routing, falling back to Yahoo-only: {e}"
+            );
+            Arc::new(
+                Providers::builder()
+                    .build()
+                    .await
+                    .expect("Yahoo-only Providers build cannot fail"),
+            )
+        }
+    }
 }
 
 /// One price tick plus its wire JSON, shared by every connected client.

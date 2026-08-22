@@ -83,7 +83,7 @@ pub(crate) async fn get_financials(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (
         StatusCode::OK,
@@ -122,7 +122,7 @@ pub(crate) async fn get_batch_financials(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "financialsBatch"))).into_response()
 }

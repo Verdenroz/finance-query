@@ -3,143 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::models::discovery::reference::SymbolMatch;
 
 // ============================================================================
 // Response types
 // ============================================================================
 
-/// Company profile from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub struct CompanyProfileDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Current price.
-    pub price: Option<f64>,
-    /// Beta.
-    pub beta: Option<f64>,
-    /// Volume average.
-    #[serde(rename = "averageVolume")]
-    pub vol_avg: Option<f64>,
-    /// Market capitalization.
-    #[serde(rename = "marketCap")]
-    pub mkt_cap: Option<f64>,
-    /// Last dividend.
-    #[serde(rename = "lastDividend")]
-    pub last_div: Option<f64>,
-    /// 52-week range.
-    pub range: Option<String>,
-    /// Price change.
-    #[serde(rename = "change")]
-    pub changes: Option<f64>,
-    /// Percentage price change.
-    #[serde(rename = "changePercentage")]
-    pub change_percentage: Option<f64>,
-    /// Latest session volume.
-    pub volume: Option<f64>,
-    /// Company name.
-    #[serde(rename = "companyName")]
-    pub company_name: Option<String>,
-    /// Currency.
-    pub currency: Option<String>,
-    /// CIK number.
-    pub cik: Option<String>,
-    /// ISIN.
-    pub isin: Option<String>,
-    /// CUSIP.
-    pub cusip: Option<String>,
-    /// Exchange code (e.g. `"NASDAQ"`).
-    pub exchange: Option<String>,
-    /// Full venue name (e.g. `"NASDAQ Global Select"`).
-    #[serde(rename = "exchangeFullName")]
-    pub exchange_full_name: Option<String>,
-    /// Industry.
-    pub industry: Option<String>,
-    /// Website.
-    pub website: Option<String>,
-    /// Company description.
-    pub description: Option<String>,
-    /// CEO.
-    pub ceo: Option<String>,
-    /// Sector.
-    pub sector: Option<String>,
-    /// Country.
-    pub country: Option<String>,
-    /// Full-time employees.
-    #[serde(rename = "fullTimeEmployees")]
-    pub full_time_employees: Option<String>,
-    /// Phone number.
-    pub phone: Option<String>,
-    /// Address.
-    pub address: Option<String>,
-    /// City.
-    pub city: Option<String>,
-    /// State.
-    pub state: Option<String>,
-    /// ZIP code.
-    pub zip: Option<String>,
-    /// Image/logo URL.
-    pub image: Option<String>,
-    /// IPO date.
-    #[serde(rename = "ipoDate")]
-    pub ipo_date: Option<String>,
-    /// Default image flag.
-    #[serde(rename = "defaultImage")]
-    pub default_image: Option<bool>,
-    /// Is ETF.
-    #[serde(rename = "isEtf")]
-    pub is_etf: Option<bool>,
-    /// Is actively trading.
-    #[serde(rename = "isActivelyTrading")]
-    pub is_actively_trading: Option<bool>,
-    /// Is ADR.
-    #[serde(rename = "isAdr")]
-    pub is_adr: Option<bool>,
-    /// Is fund.
-    #[serde(rename = "isFund")]
-    pub is_fund: Option<bool>,
-}
-
-/// Key executive from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub struct KeyExecutiveDTO {
-    /// Executive title.
-    pub title: Option<String>,
-    /// Executive name.
-    pub name: Option<String>,
-    /// Pay.
-    pub pay: Option<f64>,
-    /// Currency of pay.
-    #[serde(rename = "currencyPay")]
-    pub currency_pay: Option<String>,
-    /// Gender.
-    pub gender: Option<String>,
-    /// Year born.
-    #[serde(rename = "yearBorn")]
-    pub year_born: Option<i32>,
-    /// Title since.
-    #[serde(rename = "titleSince")]
-    pub title_since: Option<String>,
-}
-
-/// Market capitalization from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub struct MarketCapDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Date.
-    pub date: Option<String>,
-    /// Market capitalization.
-    #[serde(rename = "marketCap")]
-    pub market_cap: Option<f64>,
-}
-
-/// Stock peer from FMP. One row per peer, not a nested list.
+/// Stock peer from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StockPeersDTO {
@@ -153,7 +23,6 @@ pub struct StockPeersDTO {
 /// Delisted company from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct DelistedCompanyDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -173,44 +42,6 @@ pub struct DelistedCompanyDTO {
 // ============================================================================
 // Query functions
 // ============================================================================
-
-/// Fetch company profile for a symbol.
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    client.get("/stable/profile", &[("symbol", symbol)]).await
-}
-
-/// Fetch key executives for a symbol.
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get("/stable/key-executives", &[("symbol", symbol)])
-        .await
-}
-
-/// Fetch market capitalization for a symbol.
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCapDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get("/stable/market-capitalization", &[("symbol", symbol)])
-        .await
-}
-
-/// Fetch historical market capitalization for a symbol.
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
-pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<Vec<MarketCapDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(100).to_string();
-    client
-        .get(
-            "/stable/historical-market-capitalization",
-            &[("symbol", symbol), ("limit", &limit_str)],
-        )
-        .await
-}
 
 /// Convert stock peers DTOs into canonical SimilarSymbol items.
 fn stock_peers_to_canonical(
@@ -249,7 +80,6 @@ pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
 }
 
 /// Fetch delisted companies.
-#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompanyDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     let limit_str = limit.unwrap_or(100).to_string();
@@ -261,137 +91,62 @@ pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompan
         .await
 }
 
+/// Convert a delisted-company record into a canonical [`SymbolMatch`],
+/// dropping entries without a symbol.
+fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
+    Some(SymbolMatch {
+        symbol: dto.symbol?,
+        id: None,
+        name: dto.company_name,
+        exchange: dto.exchange,
+        asset_type: None,
+        currency: None,
+        active: Some(false),
+        market_cap_rank: None,
+        thumbnail: None,
+        image: None,
+    })
+}
+
+/// Fetch canonical delisted-security listing status
+/// (`DiscoveryProvider::fetch_listing_status(active: false)`).
+pub async fn fetch_delisted_listing_status_response() -> Result<Vec<SymbolMatch>> {
+    Ok(delisted_companies(None)
+        .await?
+        .into_iter()
+        .filter_map(to_delisted_symbol_match)
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_company_profile_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/stable/profile")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_body(
-                r#"[{
-                    "symbol": "AAPL",
-                    "price": 178.72,
-                    "beta": 1.286,
-                    "marketCap": 2794000000000,
-                    "lastDividend": 0.96,
-                    "range": "164.08-260.10",
-                    "change": 1.23,
-                    "changePercentage": 0.69,
-                    "volume": 41000000,
-                    "averageVolume": 58405568,
-                    "companyName": "Apple Inc.",
-                    "currency": "USD",
-                    "exchangeFullName": "NASDAQ Global Select",
-                    "exchange": "NASDAQ",
-                    "industry": "Consumer Electronics",
-                    "sector": "Technology",
-                    "country": "US",
-                    "ceo": "Mr. Timothy D. Cook",
-                    "isEtf": false,
-                    "isActivelyTrading": true
-                }]"#,
-            )
-            .create_async()
-            .await;
+    #[test]
+    fn maps_delisted_company_to_symbol_match() {
+        let dto: DelistedCompanyDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "XYZ",
+            "companyName": "XYZ Corp",
+            "exchange": "NYSE",
+            "ipoDate": "2001-01-01",
+            "delistedDate": "2023-06-01"
+        }))
+        .unwrap();
 
-        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyProfileDTO> = client.get("/stable/profile", &[]).await.unwrap();
-
-        let profile = &result[0];
-        assert_eq!(profile.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(profile.company_name.as_deref(), Some("Apple Inc."));
-        assert_eq!(profile.sector.as_deref(), Some("Technology"));
-        assert_eq!(profile.is_etf, Some(false));
-        assert_eq!(profile.vol_avg, Some(58_405_568.0));
-        assert_eq!(profile.mkt_cap, Some(2_794_000_000_000.0));
-        assert_eq!(profile.last_div, Some(0.96));
-        assert_eq!(profile.changes, Some(1.23));
-        assert_eq!(profile.change_percentage, Some(0.69));
-        assert_eq!(profile.volume, Some(41_000_000.0));
-        assert_eq!(profile.exchange.as_deref(), Some("NASDAQ"));
-        assert_eq!(
-            profile.exchange_full_name.as_deref(),
-            Some("NASDAQ Global Select")
-        );
+        let out = to_delisted_symbol_match(dto).unwrap();
+        assert_eq!(out.symbol, "XYZ");
+        assert_eq!(out.name.as_deref(), Some("XYZ Corp"));
+        assert_eq!(out.exchange.as_deref(), Some("NYSE"));
+        assert_eq!(out.active, Some(false));
     }
 
-    #[tokio::test]
-    async fn stock_peers_reads_flat_stable_rows() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/stable/stock-peers")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_body(
-                serde_json::json!([
-                    {"symbol": "MSFT", "companyName": "Microsoft Corporation"},
-                    {"symbol": "GOOGL", "companyName": "Alphabet Inc."}
-                ])
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let peers: Vec<StockPeersDTO> = client.get("/stable/stock-peers", &[]).await.unwrap();
-        let canonical = stock_peers_to_canonical(peers, 10);
-
-        assert_eq!(canonical.len(), 2);
-        assert_eq!(canonical[0].symbol, "MSFT");
-        assert_eq!(canonical[1].symbol, "GOOGL");
-    }
-
-    #[tokio::test]
-    async fn test_key_executives_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/stable/key-executives")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_body(
-                serde_json::json!([
-                    {
-                        "title": "Chief Executive Officer",
-                        "name": "Mr. Timothy D. Cook",
-                        "pay": 16425933,
-                        "currencyPay": "USD",
-                        "gender": "male",
-                        "yearBorn": 1960
-                    },
-                    {
-                        "title": "Chief Financial Officer",
-                        "name": "Mr. Luca Maestri",
-                        "pay": 5019783,
-                        "currencyPay": "USD",
-                        "gender": "male",
-                        "yearBorn": 1963
-                    }
-                ])
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<KeyExecutiveDTO> = client.get("/stable/key-executives", &[]).await.unwrap();
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].name.as_deref(), Some("Mr. Timothy D. Cook"));
-        assert_eq!(result[0].pay, Some(16425933.0));
+    #[test]
+    fn drops_delisted_entries_without_a_symbol() {
+        let dto: DelistedCompanyDTO = serde_json::from_value(serde_json::json!({
+            "companyName": "No Symbol Inc"
+        }))
+        .unwrap();
+        assert!(to_delisted_symbol_match(dto).is_none());
     }
 
     #[tokio::test]
@@ -405,7 +160,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/stable/profile", &[]).await;
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
         assert!(matches!(
             result,
@@ -424,7 +179,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/stable/profile", &[]).await;
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
         assert!(matches!(
             result,
@@ -443,7 +198,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/stable/profile", &[]).await;
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
         assert!(matches!(
             result,
@@ -462,7 +217,7 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result = client.get_raw("/stable/profile", &[]).await;
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
         assert!(matches!(
             result,

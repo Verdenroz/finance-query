@@ -35,6 +35,9 @@ pub(crate) fn to_etf_profile(dto: EtfProfileDTO) -> EtfProfile {
         dividend_yield: dto.dividend_yield,
         inception_date: dto.inception_date,
         holdings,
+        // Alpha Vantage's ETF_PROFILE has no sector/country breakdown.
+        sector_weightings: Vec::new(),
+        country_weightings: Vec::new(),
     }
 }
 

@@ -47,6 +47,20 @@ impl ForexPair {
     pub async fn history(&self, range: TimeRange) -> Result<Chart> {
         self.chart(range.default_interval(), range).await
     }
+
+    /// Fetch market-wide forex news via `Capability::FOREX` (currently FMP
+    /// only). Not scoped to this handle's currency pair.
+    pub async fn news(&self, limit: u32) -> Result<Vec<crate::models::corporate::news::News>> {
+        dispatch_via!(
+            self,
+            FOREX,
+            as_forex,
+            ForexNews,
+            fetch_forex_news,
+            [],
+            limit
+        )
+    }
 }
 
 impl_chartable_analytics!(ForexPair, crate::risk::TradingCalendar::Forex);

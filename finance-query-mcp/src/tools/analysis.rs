@@ -1,12 +1,16 @@
 use finance_query_server::graphql::FinanceSchema;
-use finance_query_server::params::{AnalysisType, HolderType};
+use finance_query_server::params::{AnalysisType, HolderType, Quarter};
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    ANALYSIS_TYPE_SPECS, DEFAULT_MCP_PAGE_SIZE, HOLDER_TYPE_SPECS,
-    build_paginated_composite_selection, build_type_spec_selection, execute_query, parse_fields,
-    unwrap_ticker_field, wrap_nested_connection,
+    ANALYSIS_TYPE_SPECS, DEFAULT_MCP_PAGE_SIZE, GQL_COMPANY_PROFILE_DEFAULT_FIELDS,
+    GQL_COMPANY_PROFILE_VALID_FIELDS, GQL_EARNINGS_SURPRISES_COMPOSITE,
+    GQL_EARNINGS_SURPRISES_DEFAULT_FIELDS, GQL_EARNINGS_SURPRISES_VALID_FIELDS,
+    GQL_EARNINGS_TRANSCRIPT_DEFAULT_FIELDS, GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
+    HOLDER_TYPE_SPECS, build_paginated_composite_selection, build_selection_or_default,
+    build_type_spec_selection, execute_query, parse_fields, unwrap_ticker_field,
+    wrap_nested_connection,
 };
 
 fn holder_type_to_field(holder_type: HolderType) -> &'static str {
@@ -145,6 +149,89 @@ pub async fn get_analysis(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, gql_field);
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_company_profile(
+    schema: &FinanceSchema,
+    symbol: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_COMPANY_PROFILE_VALID_FIELDS,
+        GQL_COMPANY_PROFILE_DEFAULT_FIELDS,
+    );
+
+    let query = format!(
+        "query GetCompanyProfile($symbol: String!) {{ ticker(symbol: $symbol) {{ companyProfile {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "companyProfile");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_earnings_surprises(
+    schema: &FinanceSchema,
+    symbol: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_type_spec_selection(
+        field_list.as_deref(),
+        GQL_EARNINGS_SURPRISES_VALID_FIELDS,
+        GQL_EARNINGS_SURPRISES_DEFAULT_FIELDS,
+        &[("surprises", GQL_EARNINGS_SURPRISES_COMPOSITE)],
+    );
+
+    let query = format!(
+        "query GetEarningsSurprises($symbol: String!) {{ ticker(symbol: $symbol) {{ earningsSurprises {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "earningsSurprises");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_earnings_transcript(
+    schema: &FinanceSchema,
+    symbol: String,
+    quarter: Option<Quarter>,
+    year: Option<i32>,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
+        GQL_EARNINGS_TRANSCRIPT_DEFAULT_FIELDS,
+    );
+    let quarter_arg = quarter.map(|q| format!("quarter: \"{}\"", q.as_str()));
+    let year_arg = year.map(|y| format!("year: {y}"));
+    let args: Vec<String> = [quarter_arg, year_arg].into_iter().flatten().collect();
+    let args_str = if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
+    };
+
+    let query = format!(
+        "query GetEarningsTranscript($symbol: String!) {{ ticker(symbol: $symbol) {{ earningsTranscript{args_str} {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "earningsTranscript");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))

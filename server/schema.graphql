@@ -356,6 +356,24 @@ type GqlCommitmentsOfTraders {
 }
 
 """
+Mirrors `finance_query::CompanyProfile`, which has no serde rename of its
+own — this deserializes snake_case keys while its GraphQL name stays
+camelCase.
+"""
+type GqlCompanyProfile {
+	symbol: String
+	name: String
+	description: String
+	assetType: String
+	exchange: String
+	currency: String
+	country: String
+	sector: String
+	industry: String
+	marketCapitalization: Float
+}
+
+"""
 Mirrors `finance_query::cftc::CotObservation` — one weekly report row,
 broken down by trader category.
 """
@@ -593,6 +611,27 @@ type GqlEarningsHistoryEntry {
 	epsEstimate: JSON
 	epsDifference: JSON
 	surprisePercent: JSON
+}
+
+type GqlEarningsSurprise {
+	symbol: String
+	date: String
+	actualEps: Float
+	estimatedEps: Float
+	surprise: Float
+	surprisePercent: Float
+}
+
+type GqlEarningsSurpriseHistory {
+	surprises: [GqlEarningsSurprise!]!
+}
+
+type GqlEarningsTranscript {
+	symbol: String
+	quarter: String
+	year: Int
+	date: String
+	text: String!
 }
 
 type GqlEarningsTrend {
@@ -2879,6 +2918,30 @@ type GqlTicker {
 	gradingHistory: GqlUpgradeDowngradeHistory!
 	earningsEstimate: GqlEarningsTrend!
 	earningsHistory: GqlEarningsHistory!
+	"""
+	Company identity/classification profile (currently Alpha Vantage
+	only, requires `ALPHAVANTAGE_API_KEY`).
+	"""
+	companyProfile: GqlCompanyProfile!
+	"""
+	Earnings-surprise history (currently FMP and Alpha Vantage).
+	"""
+	earningsSurprises: GqlEarningsSurpriseHistory!
+	"""
+	Earnings call transcript, provider-neutral shape (Yahoo or Alpha
+	Vantage). Distinct from [`transcript`](Self::transcript)'s
+	Yahoo-only, richer shape.
+	"""
+	earningsTranscript(
+		"""
+		Fiscal quarter (Q1, Q2, Q3, Q4). Omitted = latest (Yahoo only).
+		"""
+		quarter: String,
+		"""
+		Fiscal year. Omitted with quarter = latest (Yahoo only).
+		"""
+		year: Int
+	): GqlEarningsTranscript!
 	"""
 	SEC EDGAR company facts (XBRL) for this symbol.
 	"""

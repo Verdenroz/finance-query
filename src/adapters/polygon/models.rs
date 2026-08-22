@@ -167,36 +167,6 @@ pub struct DailyOpenCloseDTO {
 // TradeDTO and quote types
 // ============================================================================
 
-/// A single trade.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct TradeDTO {
-    /// TradeDTO conditions.
-    pub conditions: Option<Vec<i32>>,
-    /// TradeDTO correction indicator.
-    pub correction: Option<i32>,
-    /// Exchange ID.
-    pub exchange: Option<i32>,
-    /// TradeDTO ID.
-    pub id: Option<String>,
-    /// Participant timestamp (nanoseconds).
-    pub participant_timestamp: Option<i64>,
-    /// Price.
-    pub price: Option<f64>,
-    /// Sequence number.
-    pub sequence_number: Option<i64>,
-    /// SIP timestamp (nanoseconds).
-    pub sip_timestamp: Option<i64>,
-    /// TradeDTO size.
-    pub size: Option<f64>,
-    /// Tape.
-    pub tape: Option<i32>,
-    /// TRF ID.
-    pub trf_id: Option<i32>,
-    /// TRF timestamp.
-    pub trf_timestamp: Option<i64>,
-}
-
 /// A single last-trade response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -260,30 +230,6 @@ pub struct QuoteDTO {
     pub tape: Option<i32>,
     /// TRF timestamp.
     pub trf_timestamp: Option<i64>,
-}
-
-/// Last quote (NBBO) response wrapper.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct LastQuoteResponseDTO {
-    /// Request ID.
-    pub request_id: Option<String>,
-    /// Response status.
-    pub status: Option<String>,
-    /// The last quote.
-    pub results: Option<QuoteDTO>,
-}
-
-/// Last trade response wrapper.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct LastTradeResponseDTO {
-    /// Request ID.
-    pub request_id: Option<String>,
-    /// Response status.
-    pub status: Option<String>,
-    /// The last trade.
-    pub results: Option<LastTradeDTO>,
 }
 
 // ============================================================================
@@ -381,7 +327,7 @@ pub struct SnapshotsResponseDTO {
 
 /// Sort direction for aggregate bar requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // consumed via AggregateParams.sort; no in-crate caller sets it yet
+#[allow(dead_code)] // consumed via AggregateParams.sort; no in-crate caller constructs a variant yet
 pub enum Sort {
     /// Ascending (oldest first)
     Asc,
@@ -391,7 +337,6 @@ pub enum Sort {
 
 impl Sort {
     /// Convert to Polygon API parameter string.
-    #[allow(dead_code)] // consumed via AggregateParams.sort; no in-crate caller sets it yet
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Asc => "asc",

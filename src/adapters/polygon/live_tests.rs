@@ -18,7 +18,7 @@ use chrono::{Days, TimeZone, Utc};
 
 use super::{
     chart, corporate, crypto, discovery, economic, filings, forex, fundamentals, futures, indices,
-    market, options, quote,
+    options, quote,
 };
 use crate::{FinanceError, Frequency, Interval, StatementType, TimeRange, error::Result};
 
@@ -269,16 +269,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     m.check(
-        "stock_previous_close",
-        chart::stock_previous_close("AAPL", Some(true)),
-        |resp| {
-            let bar = first(resp.results.as_deref().unwrap_or_default(), "previous bar")?;
-            number(Some(bar.close), "close")
-        },
-    )
-    .await;
-
-    m.check(
         "stock_grouped_daily",
         chart::stock_grouped_daily(&to, Some(true)),
         |resp| {
@@ -286,17 +276,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
             let bar = first(bars, "grouped daily bar")?;
             text(bar.ticker.as_deref(), "ticker")?;
             number(Some(bar.close), "close")
-        },
-    )
-    .await;
-
-    m.check(
-        "stock_daily_open_close",
-        chart::stock_daily_open_close("AAPL", &to, Some(true)),
-        |resp| {
-            text(resp.symbol.as_deref(), "symbol")?;
-            number(resp.close, "close")?;
-            number(resp.open, "open")
         },
     )
     .await;
@@ -519,17 +498,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     m.check(
-        "ticker_types",
-        discovery::ticker_types(&[("limit", "2")]),
-        |page| {
-            let t = results(page, "ticker type")?;
-            text(t.code.as_deref(), "code")?;
-            text(t.description.as_deref(), "description")
-        },
-    )
-    .await;
-
-    m.check(
         "related_tickers",
         discovery::related_tickers("AAPL"),
         |page| {
@@ -729,8 +697,8 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
         filings::risk_factors(&[("ticker", "AAPL"), ("limit", "2")]),
         |page| {
             let r = results(page, "risk factor")?;
-            text(r.primary_category.as_deref(), "primary_category")?;
-            text(r.supporting_text.as_deref(), "supporting_text")
+            text(r.category.as_deref(), "category")?;
+            text(r.text.as_deref(), "text")
         },
     )
     .await;
@@ -775,33 +743,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     }
 
     // ---- FOREX -------------------------------------------------------------
-    m.check(
-        "forex_aggregates",
-        forex::aggregates::forex_aggregates(
-            "C:EURUSD",
-            1,
-            super::models::Timespan::Day,
-            &from,
-            &to,
-            None,
-        ),
-        |resp| {
-            let bar = first(resp.results.as_deref().unwrap_or_default(), "forex bar")?;
-            number(Some(bar.close), "close")
-        },
-    )
-    .await;
-
-    m.check(
-        "forex_previous_close",
-        forex::aggregates::forex_previous_close("C:EURUSD", Some(true)),
-        |resp| {
-            let bar = first(resp.results.as_deref().unwrap_or_default(), "forex bar")?;
-            number(Some(bar.close), "close")
-        },
-    )
-    .await;
-
     m.check_plan(
         "fetch_forex_quote_response",
         forex::quotes::fetch_forex_quote_response("EUR", "USD"),
@@ -823,42 +764,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     )
     .await;
 
-    m.check_plan(
-        "forex_snapshot",
-        forex::snapshots::forex_snapshot("C:EURUSD"),
-        |resp| {
-            let t = resp.ticker.as_ref().ok_or("ticker is null")?;
-            text(t.ticker.as_deref(), "ticker")
-        },
-    )
-    .await;
-
     // ---- CRYPTO ------------------------------------------------------------
-    m.check(
-        "crypto_aggregates",
-        crypto::aggregates::crypto_aggregates(
-            "X:BTCUSD",
-            1,
-            super::models::Timespan::Day,
-            &from,
-            &to,
-            None,
-        ),
-        |resp| {
-            let bar = first(resp.results.as_deref().unwrap_or_default(), "crypto bar")?;
-            number(Some(bar.close), "close")?;
-            number(Some(bar.volume), "volume")
-        },
-    )
-    .await;
-
-    m.check(
-        "crypto_daily_open_close",
-        crypto::aggregates::crypto_daily_open_close("BTC", "USD", &to),
-        |resp| number(resp.close, "close"),
-    )
-    .await;
-
     m.check_plan(
         "fetch_crypto_quote_response",
         crypto::snapshots::fetch_crypto_quote_response("BTC", "USD"),
@@ -869,31 +775,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     )
     .await;
 
-    m.check_plan(
-        "crypto_last_trade",
-        crypto::trades::crypto_last_trade("BTC", "USD"),
-        |resp| present(resp.last.as_ref(), "last"),
-    )
-    .await;
-
     // ---- INDICES -----------------------------------------------------------
-    m.check_plan(
-        "index_aggregates",
-        indices::aggregates::index_aggregates(
-            "I:SPX",
-            1,
-            super::models::Timespan::Day,
-            &from,
-            &to,
-            None,
-        ),
-        |resp| {
-            let bar = first(resp.results.as_deref().unwrap_or_default(), "index bar")?;
-            number(Some(bar.close), "close")
-        },
-    )
-    .await;
-
     m.check_plan(
         "index_snapshot",
         indices::snapshots::index_snapshot("I:SPX"),
@@ -985,30 +867,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     if let Some(ticker) = futures_ticker.as_deref() {
-        m.check(
-            "futures_aggregates",
-            futures::aggregates::futures_aggregates(ticker, "1session", &[("limit", "2")]),
-            |page| {
-                let bar = results(page, "futures bar")?;
-                text(bar.ticker.as_deref(), "ticker")?;
-                number(bar.close, "close")?;
-                text(bar.session_end_date.as_deref(), "session_end_date")?;
-                timestamp(bar.window_start, "window_start")
-            },
-        )
-        .await;
-
-        m.check_plan(
-            "futures_trades",
-            futures::trades::futures_trades(ticker, &[("limit", "2")]),
-            |page| {
-                let t = results(page, "futures trade")?;
-                number(t.price, "price")?;
-                timestamp(t.timestamp, "timestamp")
-            },
-        )
-        .await;
-
         m.check_plan(
             "futures_snapshot",
             futures::snapshots::futures_snapshot(ticker),
@@ -1048,38 +906,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     }
 
     // ---- OPTIONS -----------------------------------------------------------
-    let option_ticker = {
-        m.total += 1;
-        match options::reference::options_contracts(&[
-            ("underlying_ticker", "AAPL"),
-            ("expired", "false"),
-            ("limit", "1"),
-        ])
-        .await
-        {
-            Ok(page) => match page
-                .results
-                .unwrap_or_default()
-                .into_iter()
-                .find_map(|item| item.ticker)
-            {
-                Some(ticker) => {
-                    m.passed += 1;
-                    println!("ok: options_contracts");
-                    Some(ticker)
-                }
-                None => {
-                    m.fail("options_contracts", "ticker is null");
-                    None
-                }
-            },
-            Err(error) => {
-                m.fail("options_contracts", &error.to_string());
-                None
-            }
-        }
-    };
-
     m.check_plan(
         "options_chain_snapshot",
         options::snapshots::options_chain_snapshot("AAPL", &[("limit", "1")]),
@@ -1098,50 +924,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
         |chain| non_empty(&chain.expiration_dates(), "expiration dates"),
     )
     .await;
-
-    if let Some(ticker) = option_ticker.as_deref() {
-        m.check_plan(
-            "options_aggregates",
-            options::aggregates::options_aggregates(
-                ticker,
-                1,
-                super::models::Timespan::Day,
-                &from,
-                &to,
-                None,
-            ),
-            |resp| {
-                let bar = first(resp.results.as_deref().unwrap_or_default(), "option bar")?;
-                number(Some(bar.close), "close")
-            },
-        )
-        .await;
-
-        m.check_plan(
-            "options_last_trade",
-            options::trades::options_last_trade(ticker),
-            |resp| {
-                let last = resp.results.as_ref().ok_or("results is null")?;
-                number(last.price, "price")
-            },
-        )
-        .await;
-
-        m.check_plan(
-            "options_contract_snapshot",
-            options::snapshots::options_contract_snapshot("AAPL", ticker),
-            |resp| present(resp.results.as_ref(), "results"),
-        )
-        .await;
-    } else {
-        for name in [
-            "options_aggregates",
-            "options_last_trade",
-            "options_contract_snapshot",
-        ] {
-            m.skip(name, "no active AAPL contract returned");
-        }
-    }
 
     // ---- QUOTE -------------------------------------------------------------
     m.check_plan("stock_snapshot", quote::stock_snapshot("AAPL"), |resp| {
@@ -1177,28 +959,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     m.check_plan(
-        "stock_last_trade",
-        quote::trades::stock_last_trade("AAPL"),
-        |resp| {
-            let last = resp.results.as_ref().ok_or("results is null")?;
-            number(last.price, "price")?;
-            timestamp(last.sip_timestamp, "sip_timestamp")
-        },
-    )
-    .await;
-
-    m.check_plan(
-        "stock_last_quote",
-        quote::trades::stock_last_quote("AAPL"),
-        |resp| {
-            let last = resp.results.as_ref().ok_or("results is null")?;
-            number(last.bid_price, "bid_price")?;
-            number(last.ask_price, "ask_price")
-        },
-    )
-    .await;
-
-    m.check_plan(
         "fetch_unified_snapshot_response",
         quote::unified::fetch_unified_snapshot_response(&["AAPL", "X:BTCUSD"]),
         |rows| {
@@ -1206,14 +966,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
             text(rows[0].symbol.as_deref(), "symbol")?;
             number(rows[0].last_price, "last_price")
         },
-    )
-    .await;
-
-    // ---- ETF (partner data, unrouted but live) -----------------------------
-    m.check_plan(
-        "etf_constituents",
-        market::etf_constituents("SPY", &[("limit", "1")]),
-        |page| non_empty(page.results.as_deref().unwrap_or_default(), "constituents"),
     )
     .await;
 

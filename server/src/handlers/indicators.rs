@@ -39,7 +39,7 @@ pub(crate) async fn get_indicators(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (
         StatusCode::OK,
@@ -102,7 +102,7 @@ pub(crate) async fn get_batch_indicators(
     );
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_nested_connection(

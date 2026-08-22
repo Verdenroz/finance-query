@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use crate::cache::{self, Cache};
+use finance_query::Providers;
 
 use super::{ServiceError, ServiceResult};
 
@@ -56,6 +59,25 @@ pub async fn search(cache: &Cache, query: &str, limit: u32) -> ServiceResult {
             let matches = finance_query::crypto::search(&q, limit).await?;
             serde_json::to_value(&matches).map_err(|e| Box::new(e) as ServiceError)
         })
+        .await
+}
+
+/// Market-wide crypto news via `Capability::CRYPTO` (currently FMP only).
+pub async fn get_news(cache: &Cache, providers: &Arc<Providers>, limit: u32) -> ServiceResult {
+    let cache_key = Cache::key("crypto_news", &[&limit.to_string()]);
+    let providers = Arc::clone(providers);
+
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::NEWS,
+            cache::is_market_open(),
+            || async move {
+                // The id is unused: this call routes on Capability::CRYPTO alone.
+                let news = providers.crypto("").news(limit).await?;
+                serde_json::to_value(&news).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
         .await
 }
 

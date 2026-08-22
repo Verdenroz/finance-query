@@ -104,12 +104,13 @@ impl Filings {
             .await
     }
 
-    /// Insider transactions reported on this issuer's Forms 3/4/5, parsed from
-    /// the filed XML, via the FILINGS route (currently EDGAR only).
+    /// Insider transactions for this issuer via the FILINGS route (EDGAR
+    /// parses Forms 3/4/5 directly; Alpha Vantage and FMP are coarser
+    /// fallbacks with no accession number or form type).
     ///
-    /// `limit` caps how many *filings* are read, not how many transactions come
-    /// back — one Form 4 can report several lines. Each filing costs two extra
-    /// requests, so keep it modest. Not cached.
+    /// `limit` caps how many *filings* are read on EDGAR, not how many
+    /// transactions come back — one Form 4 can report several lines. Each
+    /// EDGAR filing costs two extra requests, so keep it modest. Not cached.
     pub async fn insider_trades(
         &self,
         limit: u32,
@@ -167,6 +168,48 @@ impl Filings {
                     p.as_filings()
                         .ok_or_else(|| p.not_supported(crate::providers::Operation::RiskFactors))?
                         .fetch_risk_factors(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Congressional (senate) stock-trade disclosures naming this symbol, via
+    /// the FILINGS route (currently FMP only). Not cached.
+    pub async fn congressional_trades(
+        &self,
+    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+        let symbol: String = self.symbol().to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::CongressionalTrades)
+                        })?
+                        .fetch_congressional_trades(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// SEC fails-to-deliver data for this symbol, via the FILINGS route
+    /// (currently FMP only). Not cached.
+    pub async fn fails_to_deliver(&self) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+        let symbol: String = self.symbol().to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::FailsToDeliver)
+                        })?
+                        .fetch_fails_to_deliver(&symbol)
                         .await
                 }
             })

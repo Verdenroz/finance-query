@@ -465,6 +465,20 @@ class Client:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    def get_company_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCompanyProfile:
+        """Get company profile"""
+        return self._transport.request(
+            "GET",
+            f"/v2/company-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCompanyProfile,
+        )
+
     def get_crypto_coin(
         self,
         id: str,
@@ -609,6 +623,36 @@ class Client:
             )
 
         return SyncPager(fetch, typing.Any)
+
+    def get_earnings_surprises(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEarningsSurpriseHistory:
+        """Get earnings-surprise history"""
+        return self._transport.request(
+            "GET",
+            f"/v2/earnings-surprises/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEarningsSurpriseHistory,
+        )
+
+    def get_earnings_transcript(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        quarter: models.Quarter | None = None,
+        year: int | None = None,
+    ) -> models.GqlEarningsTranscript:
+        """Get earnings call transcript"""
+        return self._transport.request(
+            "GET",
+            f"/v2/earnings-transcript/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "quarter": quarter, "year": year}),
+            into=models.GqlEarningsTranscript,
+        )
 
     def get_edgar_cik(
         self,
@@ -1778,6 +1822,20 @@ class AsyncClient:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    async def get_company_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCompanyProfile:
+        """Get company profile"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/company-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCompanyProfile,
+        )
+
     async def get_crypto_coin(
         self,
         id: str,
@@ -1922,6 +1980,36 @@ class AsyncClient:
             )
 
         return AsyncPager(fetch, typing.Any)
+
+    async def get_earnings_surprises(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEarningsSurpriseHistory:
+        """Get earnings-surprise history"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/earnings-surprises/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEarningsSurpriseHistory,
+        )
+
+    async def get_earnings_transcript(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        quarter: models.Quarter | None = None,
+        year: int | None = None,
+    ) -> models.GqlEarningsTranscript:
+        """Get earnings call transcript"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/earnings-transcript/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "quarter": quarter, "year": year}),
+            into=models.GqlEarningsTranscript,
+        )
 
     async def get_edgar_cik(
         self,

@@ -164,6 +164,20 @@ export interface GqlCommitmentsOfTraders {
   symbol: string;
 }
 
+/** Mirrors `finance_query::CompanyProfile`, which has no serde rename of its own — this deserializes snake_case keys while its GraphQL name stays camelCase. */
+export interface GqlCompanyProfile {
+  assetType?: string;
+  country?: string;
+  currency?: string;
+  description?: string;
+  exchange?: string;
+  industry?: string;
+  marketCapitalization?: number;
+  name?: string;
+  sector?: string;
+  symbol?: string;
+}
+
 /** Mirrors `finance_query::cftc::CotObservation` — one weekly report row, broken down by trader category. */
 export interface GqlCotObservation {
   managedMoneyLong?: number;
@@ -228,6 +242,27 @@ export interface GqlDonchianChannelsData {
   lower?: number;
   middle?: number;
   upper?: number;
+}
+
+export interface GqlEarningsSurprise {
+  actualEps?: number;
+  date?: string;
+  estimatedEps?: number;
+  surprise?: number;
+  surprisePercent?: number;
+  symbol?: string;
+}
+
+export interface GqlEarningsSurpriseHistory {
+  surprises: GqlEarningsSurprise[];
+}
+
+export interface GqlEarningsTranscript {
+  date?: string;
+  quarter?: string;
+  symbol?: string;
+  text: string;
+  year?: number;
 }
 
 /** Result of resolving a ticker symbol to its SEC CIK number. */

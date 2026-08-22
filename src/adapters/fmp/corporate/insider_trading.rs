@@ -1,8 +1,9 @@
-//! Insider trading, congressional trading, and CIK mapping endpoints.
+//! Insider trading, congressional trading, and fail-to-deliver endpoints.
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::models::filings::{CongressionalTrade, FailToDeliver, InsiderTrade};
 
 use crate::adapters::fmp::build_client;
 
@@ -39,37 +40,34 @@ pub struct InsiderTradeDTO {
     /// Securities owned after transaction.
     #[serde(rename = "securitiesOwned")]
     pub securities_owned: Option<f64>,
-    /// Relationship of the reporting person to the issuer (e.g. `"officer"`).
+    /// Reporting owner's relationship to the issuer (e.g. "officer", "director").
     #[serde(rename = "typeOfOwner")]
     pub type_of_owner: Option<String>,
     /// Link to SEC filing.
-    #[serde(rename = "url")]
     pub link: Option<String>,
 }
 
-/// CIK mapping entry.
+/// Fail-to-deliver record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub struct CikMappingDTO {
-    /// Reporting CIK.
-    #[serde(rename = "reportingCik")]
-    pub reporting_cik: Option<String>,
-    /// Reporting name.
-    #[serde(rename = "reportingName")]
-    pub reporting_name: Option<String>,
-    /// Company CIK.
-    #[serde(rename = "companyCik")]
-    pub company_cik: Option<String>,
-    /// Company name.
-    #[serde(rename = "companyName")]
-    pub company_name: Option<String>,
+pub struct FailToDeliverDTO {
+    /// Ticker symbol.
+    pub symbol: Option<String>,
+    /// Date (YYYY-MM-DD).
+    pub date: Option<String>,
+    /// Quantity of fails.
+    pub quantity: Option<f64>,
+    /// Price.
+    pub price: Option<f64>,
+    /// Security name.
+    pub name: Option<String>,
+    /// Description.
+    pub description: Option<String>,
 }
 
 /// Congressional/senate trading record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub struct CongressionalTradeDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -106,54 +104,38 @@ pub struct CongressionalTradeDTO {
 // ============================================================================
 
 /// Fetch insider trading transactions for a symbol.
-///
-/// * `page` - Zero-based page index; FMP paginates this endpoint by `limit`
-///   rows per page, so a caller wanting more than one page's worth of
-///   history steps `page` forward.
-pub async fn insider_trading(symbol: &str, limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
+pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
-    let page_str = page.to_string();
     client
         .get(
             "/stable/insider-trading/search",
-            &[
-                ("symbol", symbol),
-                ("page", &page_str),
-                ("limit", &limit_str),
-            ],
+            &[("symbol", symbol), ("limit", &limit_str)],
         )
         .await
 }
 
-/// Fetch the insider trading RSS feed.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn insider_trading_rss(limit: u32, page: u32) -> Result<Vec<InsiderTradeDTO>> {
+/// Fetch the insider trading RSS feed. FMP has not published a `/stable`
+/// replacement for this endpoint.
+#[allow(dead_code)] // unrouted: global feed has no per-symbol shape to route through FilingsProvider
+pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
-    let page_str = page.to_string();
     client
-        .get(
-            "/stable/insider-trading/latest",
-            &[("page", &page_str), ("limit", &limit_str)],
-        )
+        .get("/api/v4/insider-trading-rss-feed", &[("limit", &limit_str)])
         .await
 }
 
-/// Search CIK mappings by name.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
-pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
+/// Fetch fail-to-deliver data for a symbol. FMP has not published a
+/// `/stable` replacement for this endpoint.
+pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
     let client = build_client()?;
     client
-        .get(
-            "/stable/sec-filings-company-search/name",
-            &[("company", name)],
-        )
+        .get("/api/v4/fail_to_deliver", &[("symbol", symbol)])
         .await
 }
 
 /// Fetch congressional (senate) trading data for a symbol.
-#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTradeDTO>> {
     let client = build_client()?;
     client
@@ -161,9 +143,147 @@ pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTrad
         .await
 }
 
+/// FMP has no form type, accession number, or ownership flags, so those
+/// default; `transaction_code` is `transaction_type`'s letter prefix.
+fn to_insider_trade(dto: InsiderTradeDTO) -> InsiderTrade {
+    InsiderTrade {
+        symbol: dto.symbol,
+        insider_name: dto.reporting_name,
+        insider_cik: dto.reporting_cik,
+        officer_title: dto.type_of_owner,
+        transaction_code: dto
+            .transaction_type
+            .as_deref()
+            .and_then(|t| t.split('-').next())
+            .map(str::to_string),
+        url: dto.link,
+        transaction_date: dto.transaction_date,
+        shares: dto.securities_transacted,
+        price_per_share: dto.price,
+        shares_owned_after: dto.securities_owned,
+        ..Default::default()
+    }
+}
+
+/// Fetch canonical insider transactions for a symbol.
+pub async fn fetch_insider_trades_response(symbol: &str, limit: u32) -> Result<Vec<InsiderTrade>> {
+    Ok(insider_trading(symbol, limit)
+        .await?
+        .into_iter()
+        .map(to_insider_trade)
+        .collect())
+}
+
+fn to_congressional_trade(dto: CongressionalTradeDTO) -> CongressionalTrade {
+    CongressionalTrade {
+        symbol: dto.symbol,
+        first_name: dto.first_name,
+        last_name: dto.last_name,
+        office: dto.office,
+        district: dto.district,
+        trade_type: dto.trade_type,
+        amount: dto.amount,
+        asset_description: dto.asset_description,
+        transaction_date: dto.transaction_date,
+        disclosure_date: dto.disclosure_date,
+        link: dto.link,
+    }
+}
+
+/// Fetch canonical congressional trades for a symbol.
+pub async fn fetch_congressional_trades_response(symbol: &str) -> Result<Vec<CongressionalTrade>> {
+    Ok(congressional_trading(symbol)
+        .await?
+        .into_iter()
+        .map(to_congressional_trade)
+        .collect())
+}
+
+fn to_fail_to_deliver(dto: FailToDeliverDTO) -> FailToDeliver {
+    FailToDeliver {
+        symbol: dto.symbol,
+        date: dto.date,
+        quantity: dto.quantity,
+        price: dto.price,
+        name: dto.name,
+        description: dto.description,
+    }
+}
+
+/// Fetch canonical fails-to-deliver data for a symbol.
+pub async fn fetch_fails_to_deliver_response(symbol: &str) -> Result<Vec<FailToDeliver>> {
+    Ok(fail_to_deliver(symbol)
+        .await?
+        .into_iter()
+        .map(to_fail_to_deliver)
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn maps_insider_trade_fields() {
+        let dto: InsiderTradeDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "transactionDate": "2024-01-12",
+            "reportingCik": "0001234567",
+            "reportingName": "Cook Timothy D",
+            "transactionType": "S-Sale",
+            "securitiesTransacted": 50000.0,
+            "price": 185.50,
+            "securitiesOwned": 3200000.0,
+            "link": "https://sec.gov/example",
+            "typeOfOwner": "officer"
+        }))
+        .unwrap();
+
+        let out = to_insider_trade(dto);
+        assert_eq!(out.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(out.insider_name.as_deref(), Some("Cook Timothy D"));
+        assert_eq!(out.transaction_code.as_deref(), Some("S"));
+        assert_eq!(out.shares, Some(50000.0));
+        assert_eq!(out.shares_owned_after, Some(3200000.0));
+        assert_eq!(out.officer_title.as_deref(), Some("officer"));
+        assert_eq!(out.form_type, None);
+        assert!(!out.is_director);
+    }
+
+    #[test]
+    fn maps_congressional_trade_fields() {
+        let dto: CongressionalTradeDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "transactionDate": "2024-01-10",
+            "disclosureDate": "2024-01-20",
+            "firstName": "John",
+            "lastName": "Doe",
+            "office": "Senate",
+            "type": "Purchase",
+            "amount": "$1,001 - $15,000"
+        }))
+        .unwrap();
+
+        let out = to_congressional_trade(dto);
+        assert_eq!(out.last_name.as_deref(), Some("Doe"));
+        assert_eq!(out.trade_type.as_deref(), Some("Purchase"));
+        assert_eq!(out.amount.as_deref(), Some("$1,001 - $15,000"));
+    }
+
+    #[test]
+    fn maps_fail_to_deliver_fields() {
+        let dto: FailToDeliverDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "date": "2024-01-15",
+            "quantity": 1200.0,
+            "price": 185.50
+        }))
+        .unwrap();
+
+        let out = to_fail_to_deliver(dto);
+        assert_eq!(out.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(out.quantity, Some(1200.0));
+    }
 
     #[tokio::test]
     async fn test_insider_trading_mock() {
@@ -188,8 +308,7 @@ mod tests {
                         "securitiesTransacted": 50000.0,
                         "price": 185.50,
                         "securitiesOwned": 3200000.0,
-                        "typeOfOwner": "officer",
-                        "url": "https://www.sec.gov/Archives/edgar/data/320193/x.htm"
+                        "typeOfOwner": "officer"
                     }
                 ])
                 .to_string(),
@@ -205,22 +324,9 @@ mod tests {
             )
             .await
             .unwrap();
-
-        let row = &resp[0];
-        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(row.filing_date.as_deref(), Some("2024-01-15"));
-        assert_eq!(row.transaction_date.as_deref(), Some("2024-01-12"));
-        assert_eq!(row.reporting_cik.as_deref(), Some("0001234567"));
-        assert_eq!(row.reporting_name.as_deref(), Some("Cook Timothy D"));
-        assert_eq!(row.transaction_type.as_deref(), Some("S-Sale"));
-        assert_eq!(row.securities_transacted, Some(50_000.0));
-        assert_eq!(row.price, Some(185.50));
-        assert_eq!(row.securities_owned, Some(3_200_000.0));
-        assert_eq!(row.type_of_owner.as_deref(), Some("officer"));
-        assert_eq!(
-            row.link.as_deref(),
-            Some("https://www.sec.gov/Archives/edgar/data/320193/x.htm")
-        );
+        assert_eq!(resp.len(), 1);
+        assert_eq!(resp[0].reporting_name.as_deref(), Some("Cook Timothy D"));
+        assert!((resp[0].price.unwrap() - 185.50).abs() < 0.01);
     }
 
     #[tokio::test]

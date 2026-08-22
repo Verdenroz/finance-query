@@ -5,7 +5,9 @@ pub mod crypto;
 pub mod dividends;
 pub mod edgar;
 pub mod feeds;
+pub mod filings;
 pub mod financials;
+pub mod forex;
 pub mod fred;
 pub mod gql;
 pub mod helpers;
@@ -24,7 +26,7 @@ use finance_query::{
     StatementType, TimeRange,
 };
 use finance_query_server::graphql::FinanceSchema;
-use finance_query_server::params::{AnalysisType, HolderType};
+use finance_query_server::params::{AnalysisType, HolderType, Quarter};
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::tool::{ToolCallContext, ToolRouter},
@@ -211,6 +213,30 @@ pub struct FearAndGreedParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct CongressionalTradesParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FailsToDeliverParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct DividendsParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,KO,JNJ")
     pub symbols: String,
@@ -250,6 +276,30 @@ pub struct CryptoParams {
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
     /// Maximum coins per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct CryptoNewsParams {
+    /// Overall cap on articles fetched (default: 20)
+    pub count: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
+    /// Maximum articles per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ForexNewsParams {
+    /// Overall cap on articles fetched (default: 20)
+    pub count: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
+    /// Maximum articles per page; omitted = curated default (25)
     pub limit: Option<u32>,
     /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
     pub cursor: Option<String>,
@@ -365,6 +415,36 @@ pub struct AnalysisParams {
     #[schemars(with = "String")]
     pub analysis_type: AnalysisType,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct CompanyProfileParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct EarningsSurprisesParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct EarningsTranscriptParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for providers
+    /// with no "latest" shortcut (Alpha Vantage); Yahoo defaults to latest when omitted
+    #[schemars(with = "String")]
+    pub quarter: Option<Quarter>,
+    /// Fiscal year. See `quarter`
+    pub year: Option<i32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
 }
 
@@ -691,6 +771,34 @@ impl FinanceTools {
         market::get_fear_and_greed(&self.schema, p.0.fields).await
     }
 
+    #[tool(
+        description = "Get congressional (senate) trading disclosures for a symbol (currently FMP only, requires FMP_API_KEY)."
+    )]
+    async fn get_congressional_trades(
+        &self,
+        p: Parameters<CongressionalTradesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        filings::get_congressional_trades(
+            &self.schema,
+            p.0.symbol,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(
+        description = "Get fails-to-deliver records for a symbol (currently FMP only, requires FMP_API_KEY)."
+    )]
+    async fn get_fails_to_deliver(
+        &self,
+        p: Parameters<FailsToDeliverParams>,
+    ) -> Result<CallToolResult, McpError> {
+        filings::get_fails_to_deliver(&self.schema, p.0.symbol, p.0.fields, p.0.limit, p.0.cursor)
+            .await
+    }
+
     #[tool(description = "Get currently trending stock tickers for a region.")]
     async fn get_trending(
         &self,
@@ -754,6 +862,41 @@ impl FinanceTools {
         p: Parameters<AnalysisParams>,
     ) -> Result<CallToolResult, McpError> {
         analysis::get_analysis(&self.schema, p.0.symbol, p.0.analysis_type, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get a company's identity/classification profile (name, description, asset type, exchange, currency, country, sector, industry, market capitalization)."
+    )]
+    async fn get_company_profile(
+        &self,
+        p: Parameters<CompanyProfileParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_company_profile(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(description = "Get a stock's earnings-surprise history (actual vs. estimated EPS).")]
+    async fn get_earnings_surprises(
+        &self,
+        p: Parameters<EarningsSurprisesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_earnings_surprises(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get an earnings call transcript for a symbol. Provide quarter and year for a specific call, or omit both for the latest (Yahoo only)."
+    )]
+    async fn get_earnings_transcript(
+        &self,
+        p: Parameters<EarningsTranscriptParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_earnings_transcript(
+            &self.schema,
+            p.0.symbol,
+            p.0.quarter,
+            p.0.year,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -905,6 +1048,22 @@ impl FinanceTools {
             p.0.cursor,
         )
         .await
+    }
+
+    #[tool(description = "Get market-wide crypto news (currently FMP only, requires FMP_API_KEY).")]
+    async fn get_crypto_news(
+        &self,
+        p: Parameters<CryptoNewsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        crypto::get_crypto_news(&self.schema, p.0.count, p.0.fields, p.0.limit, p.0.cursor).await
+    }
+
+    #[tool(description = "Get market-wide forex news (currently FMP only, requires FMP_API_KEY).")]
+    async fn get_forex_news(
+        &self,
+        p: Parameters<ForexNewsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        forex::get_forex_news(&self.schema, p.0.count, p.0.fields, p.0.limit, p.0.cursor).await
     }
 }
 

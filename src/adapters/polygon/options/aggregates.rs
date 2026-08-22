@@ -1,4 +1,4 @@
-//! Options aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
+//! Options aggregate bar endpoints: previous close, daily open/close.
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
@@ -6,64 +6,11 @@ use crate::error::Result;
 use super::super::build_client;
 use super::super::models::*;
 
-/// Fetch aggregate bars (OHLCV) for an options contract over a date range.
-///
-/// # Arguments
-///
-/// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
-/// * `multiplier` - Size of the timespan multiplier (e.g., `1`, `5`, `15`)
-/// * `timespan` - Timespan unit (e.g., `Timespan::Day`)
-/// * `from` - Start date as `"YYYY-MM-DD"` or millisecond timestamp string
-/// * `to` - End date as `"YYYY-MM-DD"` or millisecond timestamp string
-/// * `params` - Optional parameters (adjusted, sort, limit)
-pub async fn options_aggregates(
-    ticker: &str,
-    multiplier: u32,
-    timespan: Timespan,
-    from: &str,
-    to: &str,
-    params: Option<AggregateParams>,
-) -> Result<AggregateResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
-        ticker,
-        multiplier,
-        timespan.as_str(),
-        from,
-        to
-    );
-
-    let mut query_params: Vec<(&str, String)> = Vec::new();
-    if let Some(ref p) = params {
-        if let Some(adjusted) = p.adjusted {
-            query_params.push(("adjusted", adjusted.to_string()));
-        }
-        if let Some(sort) = p.sort {
-            query_params.push(("sort", sort.as_str().to_string()));
-        }
-        if let Some(limit) = p.limit {
-            query_params.push(("limit", limit.to_string()));
-        }
-    }
-
-    let query_refs: Vec<(&str, &str)> =
-        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
-
-    client
-        .get_as(
-            &path,
-            &query_refs,
-            "options_aggregates",
-            "options aggregate response",
-        )
-        .await
-}
-
 /// Fetch the previous day's OHLCV bar for an options contract.
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: no capability route for a standalone previous-close lookup yet
 pub async fn options_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
@@ -89,6 +36,7 @@ pub async fn options_previous_close(
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: no capability route for a standalone daily-open-close lookup yet
 pub async fn options_daily_open_close(
     ticker: &str,
     date: &str,
@@ -117,55 +65,6 @@ pub async fn options_daily_open_close(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_options_aggregates_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock(
-                "GET",
-                "/v2/aggs/ticker/O:AAPL250117C00150000/range/1/day/2024-01-01/2024-01-31",
-            )
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                serde_json::json!({
-                    "ticker": "O:AAPL250117C00150000",
-                    "status": "OK",
-                    "adjusted": true,
-                    "queryCount": 1,
-                    "resultsCount": 2,
-                    "request_id": "abc123",
-                    "results": [
-                        { "o": 5.10, "h": 5.50, "l": 4.90, "c": 5.30, "v": 1200.0, "vw": 5.20, "t": 1704067200000_i64, "n": 450 },
-                        { "o": 5.35, "h": 5.60, "l": 5.10, "c": 5.45, "v": 800.0, "vw": 5.35, "t": 1704153600000_i64, "n": 320 }
-                    ]
-                })
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get_raw(
-                "/v2/aggs/ticker/O:AAPL250117C00150000/range/1/day/2024-01-01/2024-01-31",
-                &[],
-            )
-            .await
-            .unwrap();
-
-        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.ticker.as_deref(), Some("O:AAPL250117C00150000"));
-        let results = resp.results.unwrap();
-        assert_eq!(results.len(), 2);
-        assert!((results[0].open - 5.10).abs() < 0.01);
-        assert!((results[0].close - 5.30).abs() < 0.01);
-        assert_eq!(results[0].timestamp, 1704067200000);
-    }
 
     #[tokio::test]
     async fn test_options_previous_close_mock() {

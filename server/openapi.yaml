@@ -492,6 +492,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/company-profile/{symbol}":
+    get:
+      operationId: getCompanyProfile
+      summary: Get company profile
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlCompanyProfile"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/crypto/coins:
     get:
       operationId: getCryptoCoins
@@ -972,6 +1023,121 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlDividends"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/earnings-surprises/{symbol}":
+    get:
+      operationId: getEarningsSurprises
+      summary: Get earnings-surprise history
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlEarningsSurpriseHistory"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/earnings-transcript/{symbol}":
+    get:
+      operationId: getEarningsTranscript
+      summary: Get earnings call transcript
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: quarter
+          in: query
+          required: false
+          schema:
+            description: "Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for\nproviders with no \"latest\" shortcut (Alpha Vantage); Yahoo defaults\nto latest when omitted."
+            $ref: "#/components/schemas/Quarter"
+        - name: year
+          in: query
+          required: false
+          schema:
+            description: "Fiscal year. See `quarter`."
+            type: integer
+            format: int32
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlEarningsTranscript"
         "400":
           description: Bad request
           content:
@@ -4234,6 +4400,20 @@ components:
           description: "Fiscal year. If not provided with quarter, returns latest."
           type: integer
           format: int32
+    EarningsTranscriptV2Query:
+      description: "Query parameters for `GET /v2/earnings-transcript/{symbol}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        quarter:
+          description: "Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for\nproviders with no \"latest\" shortcut (Alpha Vantage); Yahoo defaults\nto latest when omitted."
+          $ref: "#/components/schemas/Quarter"
+        year:
+          description: "Fiscal year. See `quarter`."
+          type: integer
+          format: int32
     EarningsTranscriptsQuery:
       description: "Query parameters for `GET /v2/transcripts/{symbol}/all`."
       type: object
@@ -4711,6 +4891,31 @@ components:
         - marketAndExchangeName
         - cftcContractMarketCode
         - observations
+    GqlCompanyProfile:
+      description: "Mirrors `finance_query::CompanyProfile`, which has no serde rename of its\nown — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
+      type: object
+      properties:
+        assetType:
+          type: string
+        country:
+          type: string
+        currency:
+          type: string
+        description:
+          type: string
+        exchange:
+          type: string
+        industry:
+          type: string
+        marketCapitalization:
+          type: number
+          format: double
+        name:
+          type: string
+        sector:
+          type: string
+        symbol:
+          type: string
     GqlCotObservation:
       description: "Mirrors `finance_query::cftc::CotObservation` — one weekly report row,\nbroken down by trader category."
       type: object
@@ -4882,6 +5087,50 @@ components:
           format: int64
       required:
         - isEstimate
+    GqlEarningsSurprise:
+      type: object
+      properties:
+        actualEps:
+          type: number
+          format: double
+        date:
+          type: string
+        estimatedEps:
+          type: number
+          format: double
+        surprise:
+          type: number
+          format: double
+        surprisePercent:
+          type: number
+          format: double
+        symbol:
+          type: string
+    GqlEarningsSurpriseHistory:
+      type: object
+      properties:
+        surprises:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlEarningsSurprise"
+      required:
+        - surprises
+    GqlEarningsTranscript:
+      type: object
+      properties:
+        date:
+          type: string
+        quarter:
+          type: string
+        symbol:
+          type: string
+        text:
+          type: string
+        year:
+          type: integer
+          format: int32
+      required:
+        - text
     GqlEconomicReleaseEvent:
       description: "Economic data release (requires the `fred` feature)."
       type: object

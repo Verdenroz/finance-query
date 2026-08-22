@@ -364,6 +364,20 @@ pub struct CryptoGlobalQuery {
     pub fields: Option<String>,
 }
 
+/// Query parameters for `GET /v2/filings/{symbol}/congressional-trades` and
+/// `GET /v2/filings/{symbol}/fails-to-deliver`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilingsQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+    /// Max entries per page; omitted (with cursor also omitted) = every
+    /// fetched entry as a bare array, unchanged from pre-pagination behavior
+    pub limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    pub cursor: Option<String>,
+}
+
 /// Query parameters for `GET /v2/crypto/search`.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -784,6 +798,27 @@ pub struct NewsQuery {
     pub cursor: Option<String>,
 }
 
+/// Query parameters for `GET /v2/crypto/news` and `GET /v2/forex/news`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketNewsQuery {
+    /// Maximum number of articles to fetch (default: 20)
+    #[serde(default = "default_market_news_limit")]
+    pub limit: u32,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+    /// Max articles per page; omitted (with pageCursor also omitted) = every
+    /// fetched article (up to `limit`) as a bare array, unchanged from
+    /// pre-pagination behavior
+    pub page_limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    pub page_cursor: Option<String>,
+}
+
+fn default_market_news_limit() -> u32 {
+    20
+}
+
 // -- options ---------------------------------------------------------------
 
 /// Query parameters for `GET /v2/options/{symbol}`.
@@ -1082,6 +1117,20 @@ pub struct EarningsTranscriptQuery {
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
     /// falls back to the Accept-Language header
     pub lang: Option<String>,
+}
+
+/// Query parameters for `GET /v2/earnings-transcript/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EarningsTranscriptV2Query {
+    /// Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for
+    /// providers with no "latest" shortcut (Alpha Vantage); Yahoo defaults
+    /// to latest when omitted.
+    pub quarter: Option<Quarter>,
+    /// Fiscal year. See `quarter`.
+    pub year: Option<i32>,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
 }
 
 /// Query parameters for `GET /v2/transcripts/{symbol}/all`.

@@ -52,7 +52,7 @@ pub(crate) async fn get_gdelt_news(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_field(data, "gdeltNews"), paginated);
@@ -90,7 +90,7 @@ pub(crate) async fn get_commitments_of_traders(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_nested_connection(

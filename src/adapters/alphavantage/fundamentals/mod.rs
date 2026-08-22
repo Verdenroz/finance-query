@@ -9,7 +9,6 @@ use super::models::*;
 pub mod etf;
 
 /// Fetch company overview and fundamentals.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
     let client = build_client()?;
     let json = client.get("OVERVIEW", &[("symbol", symbol)]).await?;
@@ -78,6 +77,25 @@ pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
         analyst_rating_hold: u32_val(obj, "AnalystRatingHold"),
         analyst_rating_sell: u32_val(obj, "AnalystRatingSell"),
         analyst_rating_strong_sell: u32_val(obj, "AnalystRatingStrongSell"),
+    })
+}
+
+/// Fetch a canonical [`CompanyProfile`] for a symbol.
+pub(crate) async fn fetch_company_profile_response(
+    symbol: &str,
+) -> Result<crate::models::fundamentals::CompanyProfile> {
+    let dto = company_overview(symbol).await?;
+    Ok(crate::models::fundamentals::CompanyProfile {
+        symbol: Some(dto.symbol),
+        name: dto.name,
+        description: dto.description,
+        asset_type: dto.asset_type,
+        exchange: dto.exchange,
+        currency: dto.currency,
+        country: dto.country,
+        sector: dto.sector,
+        industry: dto.industry,
+        market_capitalization: dto.market_capitalization,
     })
 }
 
@@ -190,7 +208,6 @@ async fn fetch_financial_statement(symbol: &str, function: &str) -> Result<Finan
 }
 
 /// Fetch earnings history (annual and quarterly EPS data).
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn earnings(symbol: &str) -> Result<EarningsHistoryDTO> {
     let client = build_client()?;
     let json = client.get("EARNINGS", &[("symbol", symbol)]).await?;
@@ -230,6 +247,25 @@ pub async fn earnings(symbol: &str) -> Result<EarningsHistoryDTO> {
         annual_earnings: parse_earnings(&json, "annualEarnings"),
         quarterly_earnings: parse_earnings(&json, "quarterlyEarnings"),
     })
+}
+
+/// Fetch canonical quarterly earnings-surprise history for a symbol.
+pub(crate) async fn fetch_earnings_surprises_response(
+    symbol: &str,
+) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    let history = earnings(symbol).await?;
+    Ok(history
+        .quarterly_earnings
+        .into_iter()
+        .map(|e| crate::models::fundamentals::EarningsSurprise {
+            symbol: Some(history.symbol.clone()),
+            date: e.reported_date.or(e.fiscal_date_ending),
+            actual_eps: e.reported_eps,
+            estimated_eps: e.estimated_eps,
+            surprise: e.surprise,
+            surprise_percent: e.surprise_percentage,
+        })
+        .collect())
 }
 
 /// Fetch historical dividend events.

@@ -1,8 +1,9 @@
-//! Analyst estimates, recommendations, earnings surprises, grades, and transcripts.
+//! Analyst estimates, recommendations, earnings surprises, and grade history.
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::models::fundamentals::{EarningsSurprise, GradingAction};
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::Period;
@@ -82,7 +83,6 @@ pub struct AnalystRecommendationDTO {
 /// Earnings surprise entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct EarningsSurpriseDTO {
     /// Date.
     pub date: Option<String>,
@@ -99,7 +99,6 @@ pub struct EarningsSurpriseDTO {
 /// Stock grade entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct StockGradeDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -114,38 +113,6 @@ pub struct StockGradeDTO {
     /// New grade.
     #[serde(rename = "newGrade")]
     pub new_grade: Option<String>,
-}
-
-/// Earnings call transcript entry.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
-pub struct EarningsTranscriptDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Quarter.
-    pub quarter: Option<i32>,
-    /// Year.
-    pub year: Option<i32>,
-    /// Date.
-    pub date: Option<String>,
-    /// Transcript content.
-    pub content: Option<String>,
-}
-
-/// Earnings transcript list entry (available transcripts).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
-pub struct EarningsTranscriptRefDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Quarter.
-    pub quarter: Option<i32>,
-    /// Year.
-    pub year: Option<i32>,
-    /// Date.
-    pub date: Option<String>,
 }
 
 // ============================================================================
@@ -185,14 +152,12 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 }
 
 /// Fetch earnings surprises for a symbol.
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_surprises(symbol: &str) -> Result<Vec<EarningsSurpriseDTO>> {
     let client = build_client()?;
     client.get("/stable/earnings", &[("symbol", symbol)]).await
 }
 
 /// Fetch stock grade history for a symbol.
-#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
@@ -204,70 +169,65 @@ pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>>
         .await
 }
 
-/// Fetch an earnings call transcript.
-///
-/// * `quarter` - Quarter number (1-4)
-/// * `year` - Year (e.g., 2024)
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
-pub async fn earnings_transcript(
-    symbol: &str,
-    quarter: u32,
-    year: u32,
-) -> Result<Vec<EarningsTranscriptDTO>> {
-    let client = build_client()?;
-    let q = quarter.to_string();
-    let y = year.to_string();
-    client
-        .get(
-            "/stable/earning-call-transcript",
-            &[("symbol", symbol), ("quarter", &q), ("year", &y)],
-        )
-        .await
+// ============================================================================
+// Canonical conversions
+// ============================================================================
+
+/// Convert an earnings-surprise record into the canonical [`EarningsSurprise`],
+/// deriving `surprise`/`surprise_percent` since FMP doesn't report them directly.
+fn to_earnings_surprise(dto: EarningsSurpriseDTO) -> EarningsSurprise {
+    let surprise = match (dto.actual_earning_result, dto.estimated_earning) {
+        (Some(actual), Some(estimated)) => Some(actual - estimated),
+        _ => None,
+    };
+    let surprise_percent = match (surprise, dto.estimated_earning) {
+        (Some(s), Some(estimated)) if estimated != 0.0 => Some(s / estimated.abs() * 100.0),
+        _ => None,
+    };
+    EarningsSurprise {
+        symbol: dto.symbol,
+        date: dto.date,
+        actual_eps: dto.actual_earning_result,
+        estimated_eps: dto.estimated_earning,
+        surprise,
+        surprise_percent,
+    }
 }
 
-/// Fetch a list of available earnings transcripts for a symbol.
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
-pub async fn earnings_transcript_list(symbol: &str) -> Result<Vec<EarningsTranscriptRefDTO>> {
-    let client = build_client()?;
-    client
-        .get(
-            "/stable/earning-call-transcript-dates",
-            &[("symbol", symbol)],
-        )
-        .await
+/// Fetch canonical earnings-surprise history for a symbol.
+pub async fn fetch_earnings_surprises_response(symbol: &str) -> Result<Vec<EarningsSurprise>> {
+    Ok(earnings_surprises(symbol)
+        .await?
+        .into_iter()
+        .map(to_earnings_surprise)
+        .collect())
+}
+
+fn to_grading_action(dto: StockGradeDTO) -> GradingAction {
+    GradingAction {
+        symbol: dto.symbol,
+        date: dto.date,
+        grading_company: dto.grading_company,
+        previous_grade: dto.previous_grade,
+        new_grade: dto.new_grade,
+    }
+}
+
+/// Fetch canonical grade-action history for a symbol.
+pub async fn fetch_grading_history_response(
+    symbol: &str,
+    limit: u32,
+) -> Result<Vec<GradingAction>> {
+    Ok(stock_grade(symbol, limit)
+        .await?
+        .into_iter()
+        .map(to_grading_action)
+        .collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn stable_transcript_route_uses_symbol_year_and_quarter() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/stable/earning-call-transcript")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
-                mockito::Matcher::UrlEncoded("year".into(), "2024".into()),
-                mockito::Matcher::UrlEncoded("quarter".into(), "2".into()),
-            ]))
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(r#"[{"symbol":"AAPL","quarter":2,"year":2024,"content":"Call"}]"#)
-            .create_async()
-            .await;
-        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let rows: Vec<EarningsTranscriptDTO> = client
-            .get(
-                "/stable/earning-call-transcript",
-                &[("symbol", "AAPL"), ("quarter", "2"), ("year", "2024")],
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(rows[0].symbol.as_deref(), Some("AAPL"));
-    }
 
     #[tokio::test]
     async fn test_analyst_estimates_mock() {
@@ -276,26 +236,23 @@ mod tests {
             .mock("GET", "/stable/analyst-estimates")
             .match_query(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
                 mockito::Matcher::UrlEncoded("period".into(), "quarter".into()),
                 mockito::Matcher::UrlEncoded("limit".into(), "4".into()),
             ]))
             .with_status(200)
             .with_body(
-                r#"[{
-                    "symbol": "AAPL",
-                    "date": "2024-03-31",
-                    "revenueLow": 85000000000.0,
-                    "revenueHigh": 95000000000.0,
-                    "revenueAvg": 90000000000.0,
-                    "ebitdaLow": 28000000000.0,
-                    "ebitdaHigh": 33000000000.0,
-                    "ebitdaAvg": 30500000000.0,
-                    "epsAvg": 1.50,
-                    "epsHigh": 1.62,
-                    "epsLow": 1.41,
-                    "numAnalystsRevenue": 30,
-                    "numAnalystsEps": 28
-                }]"#,
+                serde_json::json!([
+                    {
+                        "symbol": "AAPL",
+                        "date": "2024-03-31",
+                        "revenueAvg": 90000000000.0,
+                        "epsAvg": 1.50,
+                        "numAnalystsRevenue": 30,
+                        "numAnalystsEps": 28
+                    }
+                ])
+                .to_string(),
             )
             .create_async()
             .await;
@@ -304,25 +261,13 @@ mod tests {
         let resp: Vec<AnalystEstimateDTO> = client
             .get(
                 "/stable/analyst-estimates",
-                &[("period", "quarter"), ("limit", "4")],
+                &[("symbol", "AAPL"), ("period", "quarter"), ("limit", "4")],
             )
             .await
             .unwrap();
-
-        let row = &resp[0];
-        assert_eq!(row.symbol.as_deref(), Some("AAPL"));
-        assert_eq!(row.date.as_deref(), Some("2024-03-31"));
-        assert_eq!(row.estimated_revenue_low, Some(85_000_000_000.0));
-        assert_eq!(row.estimated_revenue_high, Some(95_000_000_000.0));
-        assert_eq!(row.estimated_revenue_avg, Some(90_000_000_000.0));
-        assert_eq!(row.estimated_ebitda_low, Some(28_000_000_000.0));
-        assert_eq!(row.estimated_ebitda_high, Some(33_000_000_000.0));
-        assert_eq!(row.estimated_ebitda_avg, Some(30_500_000_000.0));
-        assert_eq!(row.estimated_eps_avg, Some(1.50));
-        assert_eq!(row.estimated_eps_high, Some(1.62));
-        assert_eq!(row.estimated_eps_low, Some(1.41));
-        assert_eq!(row.number_analyst_estimated_revenue, Some(30));
-        assert_eq!(row.number_analysts_estimated_eps, Some(28));
+        assert_eq!(resp.len(), 1);
+        assert_eq!(resp[0].symbol.as_deref(), Some("AAPL"));
+        assert!((resp[0].estimated_eps_avg.unwrap() - 1.50).abs() < 0.01);
     }
 
     #[tokio::test]
@@ -330,10 +275,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/stable/earnings")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "AAPL".into()),
+            ]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -350,8 +295,59 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let resp: Vec<EarningsSurpriseDTO> = client.get("/stable/earnings", &[]).await.unwrap();
+        let resp: Vec<EarningsSurpriseDTO> = client
+            .get("/stable/earnings", &[("symbol", "AAPL")])
+            .await
+            .unwrap();
         assert_eq!(resp.len(), 1);
         assert!((resp[0].actual_earning_result.unwrap() - 2.18).abs() < 0.01);
+    }
+
+    #[test]
+    fn maps_earnings_surprise_and_derives_surprise_fields() {
+        let dto: EarningsSurpriseDTO = serde_json::from_value(serde_json::json!({
+            "date": "2024-01-25",
+            "symbol": "AAPL",
+            "actualEarningResult": 2.18,
+            "estimatedEarning": 2.10
+        }))
+        .unwrap();
+
+        let out = to_earnings_surprise(dto);
+        assert_eq!(out.actual_eps, Some(2.18));
+        assert_eq!(out.estimated_eps, Some(2.10));
+        assert!((out.surprise.unwrap() - 0.08).abs() < 1e-9);
+        assert!((out.surprise_percent.unwrap() - 3.8095238095).abs() < 1e-6);
+    }
+
+    #[test]
+    fn earnings_surprise_missing_estimate_yields_no_derived_fields() {
+        let dto: EarningsSurpriseDTO = serde_json::from_value(serde_json::json!({
+            "date": "2024-01-25",
+            "symbol": "AAPL",
+            "actualEarningResult": 2.18
+        }))
+        .unwrap();
+
+        let out = to_earnings_surprise(dto);
+        assert_eq!(out.surprise, None);
+        assert_eq!(out.surprise_percent, None);
+    }
+
+    #[test]
+    fn maps_stock_grade_to_grading_action() {
+        let dto: StockGradeDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "date": "2024-01-15",
+            "gradingCompany": "Morgan Stanley",
+            "previousGrade": "Equal-Weight",
+            "newGrade": "Overweight"
+        }))
+        .unwrap();
+
+        let out = to_grading_action(dto);
+        assert_eq!(out.grading_company.as_deref(), Some("Morgan Stanley"));
+        assert_eq!(out.previous_grade.as_deref(), Some("Equal-Weight"));
+        assert_eq!(out.new_grade.as_deref(), Some("Overweight"));
     }
 }

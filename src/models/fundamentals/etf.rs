@@ -1,8 +1,9 @@
 //! ETF profile and holdings models.
 //!
 //! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
-//! route; Alpha Vantage is currently the only provider, and the only wired
-//! source of ETF holdings at all.
+//! route. Alpha Vantage and FMP both implement it; coverage is ragged
+//! (Alpha Vantage serves fuller profile-level fields, FMP additionally serves
+//! sector/country breakdowns) so gaps default rather than widening per-provider.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +29,10 @@ pub struct EtfProfile {
     pub inception_date: Option<String>,
     /// Portfolio holdings, heaviest first.
     pub holdings: Vec<EtfHolding>,
+    /// Portfolio weight by sector.
+    pub sector_weightings: Vec<EtfSectorWeighting>,
+    /// Portfolio weight by country.
+    pub country_weightings: Vec<EtfCountryWeighting>,
 }
 
 /// One position inside an ETF's portfolio.
@@ -38,6 +43,26 @@ pub struct EtfHolding {
     pub symbol: Option<String>,
     /// Security description.
     pub description: Option<String>,
+    /// Portfolio weight, as a fraction of net assets.
+    pub weight: Option<f64>,
+}
+
+/// One sector's weight inside an ETF's portfolio.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct EtfSectorWeighting {
+    /// Sector name.
+    pub sector: Option<String>,
+    /// Portfolio weight, as a fraction of net assets.
+    pub weight: Option<f64>,
+}
+
+/// One country's weight inside an ETF's portfolio.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct EtfCountryWeighting {
+    /// Country name.
+    pub country: Option<String>,
     /// Portfolio weight, as a fraction of net assets.
     pub weight: Option<f64>,
 }

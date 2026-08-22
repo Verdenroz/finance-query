@@ -14,6 +14,7 @@ mod root_metadata;
 mod ticker_analysis;
 mod ticker_core;
 mod ticker_events;
+mod ticker_filings;
 mod ticker_holders;
 
 use async_graphql::{ErrorExtensions, MergedObject};
@@ -25,6 +26,7 @@ use root_metadata::RootMetadataQuery;
 use ticker_analysis::TickerAnalysisQuery;
 use ticker_core::TickerCoreQuery;
 use ticker_events::TickerEventsQuery;
+use ticker_filings::TickerFilingsQuery;
 use ticker_holders::TickerHoldersQuery;
 
 use super::types::{batch::GqlBatchError, options::GqlOptions};
@@ -116,6 +118,7 @@ pub struct GqlTicker(
     TickerEventsQuery,
     TickerHoldersQuery,
     TickerAnalysisQuery,
+    TickerFilingsQuery,
 );
 
 impl GqlTicker {
@@ -130,7 +133,10 @@ impl GqlTicker {
             TickerHoldersQuery {
                 symbol: symbol.clone(),
             },
-            TickerAnalysisQuery { symbol },
+            TickerAnalysisQuery {
+                symbol: symbol.clone(),
+            },
+            TickerFilingsQuery { symbol },
         )
     }
 }

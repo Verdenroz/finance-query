@@ -62,7 +62,7 @@ pub(crate) async fn get_transcript(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (
         StatusCode::OK,
@@ -107,7 +107,7 @@ pub(crate) async fn get_transcripts(
     vars.insert(Name::new("symbol"), symbol.clone().into());
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (
         StatusCode::OK,

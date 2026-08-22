@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use crate::cache::{self, Cache};
-use finance_query::Ticker;
+use finance_query::{Providers, Ticker};
 
 use super::{ServiceError, ServiceResult};
 
@@ -120,5 +122,87 @@ pub async fn get_batch_recommendations(
             );
             serde_json::to_value(&batch_response).map_err(|e| Box::new(e) as ServiceError)
         })
+        .await
+}
+
+pub async fn get_company_profile(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "company-profile"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.company_profile().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_earnings_surprises(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "earnings-surprises"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let surprises = ticker.earnings_surprises().await?;
+                serde_json::to_value(serde_json::json!({ "surprises": surprises }))
+                    .map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_earnings_transcript(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+    quarter: Option<&str>,
+    year: Option<i32>,
+) -> ServiceResult {
+    let quarter_key = quarter.unwrap_or("latest").to_string();
+    let year_key = year
+        .map(|y| y.to_string())
+        .unwrap_or_else(|| "latest".to_string());
+    let cache_key = Cache::key(
+        "analysis",
+        &[
+            &symbol.to_uppercase(),
+            "earnings-transcript",
+            &quarter_key,
+            &year_key,
+        ],
+    );
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    let quarter = quarter.map(str::to_string);
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.earnings_transcript(quarter.as_deref(), year).await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
         .await
 }

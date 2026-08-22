@@ -42,7 +42,7 @@ pub(crate) async fn get_hours(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "marketHours"))).into_response()
 }
@@ -64,7 +64,7 @@ pub(crate) async fn get_quote_type(
 
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "quoteType"))).into_response()
 }
@@ -83,7 +83,7 @@ pub(crate) async fn get_currencies(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "currencies"))).into_response()
 }
@@ -102,7 +102,7 @@ pub(crate) async fn get_exchanges(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "exchanges"))).into_response()
 }

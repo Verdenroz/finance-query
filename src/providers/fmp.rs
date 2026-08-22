@@ -2,8 +2,8 @@
 
 use super::{
     CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider,
-    DiscoveryProvider, ForexProvider, FundamentalsProvider, IndicesProvider, MarketProvider,
-    Operation, Provider, ProviderAdapter, ProviderCore, QuoteProvider,
+    DiscoveryProvider, FilingsProvider, ForexProvider, FundamentalsProvider, IndicesProvider,
+    MarketProvider, Operation, Provider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::error::Result;
 
@@ -146,6 +146,29 @@ impl FundamentalsProvider for FmpProvider {
     ) -> Result<crate::models::fundamentals::ShareFloat> {
         crate::adapters::fmp::fundamentals::float::fetch_share_float_response(symbol).await
     }
+
+    async fn fetch_etf_profile(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::EtfProfile> {
+        crate::adapters::fmp::fundamentals::fund_holdings::fetch_etf_profile_response(symbol).await
+    }
+
+    async fn fetch_earnings_surprises(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+        crate::adapters::fmp::fundamentals::estimates::fetch_earnings_surprises_response(symbol)
+            .await
+    }
+
+    async fn fetch_grading_history(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+        crate::adapters::fmp::fundamentals::estimates::fetch_grading_history_response(symbol, 50)
+            .await
+    }
 }
 
 #[async_trait::async_trait]
@@ -193,6 +216,52 @@ impl CorporateProvider for FmpProvider {
     }
 }
 
+/// `fetch_filings` is the trait's required primary operation, but FMP
+/// publishes no raw SEC filing surface — only insider, congressional, and
+/// fails-to-deliver data — so it reports `NotSupported` there and dispatch
+/// falls through to EDGAR.
+#[async_trait::async_trait]
+impl FilingsProvider for FmpProvider {
+    async fn fetch_filings(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::filings::ProviderFilings> {
+        Err(self.not_supported(Operation::Filings))
+    }
+
+    async fn fetch_insider_trades(
+        &self,
+        symbol: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+        crate::adapters::fmp::corporate::insider_trading::fetch_insider_trades_response(
+            symbol, limit,
+        )
+        .await
+    }
+
+    async fn fetch_congressional_trades(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+        crate::adapters::fmp::corporate::insider_trading::fetch_congressional_trades_response(
+            symbol,
+        )
+        .await
+    }
+
+    async fn fetch_fails_to_deliver(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+        crate::adapters::fmp::corporate::insider_trading::fetch_fails_to_deliver_response(symbol)
+            .await
+    }
+}
+
+/// `fetch_listing_status(active: true)` covers only ETF and mutual-fund
+/// listings, not the full equity universe the trait contract describes — FMP
+/// has no keyless all-active-stocks endpoint in this adapter.
 #[async_trait::async_trait]
 impl DiscoveryProvider for FmpProvider {
     async fn fetch_symbol_search(
@@ -208,6 +277,18 @@ impl DiscoveryProvider for FmpProvider {
         filters: &crate::models::discovery::reference::ScreenerFilters,
     ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
         crate::adapters::fmp::discovery::screener::fetch_screener_response(filters).await
+    }
+
+    async fn fetch_listing_status(
+        &self,
+        active: bool,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        if active {
+            crate::adapters::fmp::fundamentals::etf_mutual_funds::fetch_active_listing_status_response()
+                .await
+        } else {
+            crate::adapters::fmp::quote::fetch_delisted_listing_status_response().await
+        }
     }
 }
 
@@ -270,6 +351,13 @@ impl ForexProvider for FmpProvider {
     ) -> Result<crate::models::forex::ForexQuote> {
         crate::adapters::fmp::forex::fetch_canonical_forex_quote(from, to).await
     }
+
+    async fn fetch_forex_news(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        crate::adapters::fmp::corporate::news::fetch_forex_news_response(limit).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -315,6 +403,13 @@ impl CryptoProvider for FmpProvider {
     ) -> Result<crate::models::crypto::CryptoQuote> {
         crate::adapters::fmp::crypto::fetch_canonical_crypto_quote(id, vs_currency).await
     }
+
+    async fn fetch_crypto_news(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        crate::adapters::fmp::corporate::news::fetch_crypto_news_response(limit).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -359,6 +454,9 @@ impl ProviderAdapter for FmpProvider {
         Some(self)
     }
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
+        Some(self)
+    }
+    fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         Some(self)
     }
 }

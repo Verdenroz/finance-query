@@ -77,6 +77,7 @@ Requires Node 18+.
 - `getCapitalGains` — `GET /v2/capital-gains/{symbol}`: Get capital gains distribution history
 - `getChart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `getCommitmentsOfTraders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
+- `getCompanyProfile` — `GET /v2/company-profile/{symbol}`: Get company profile
 - `getCryptoCoin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `getCryptoCoins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `getCryptoGlobal` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
@@ -84,6 +85,8 @@ Requires Node 18+.
 - `getCryptoTrending` — `GET /v2/crypto/trending`: Coins trending on CoinGecko over the last 24h
 - `getCurrencies` — `GET /v2/currencies`: Get available currencies
 - `getDividends` — `GET /v2/dividends/{symbol}`: Get dividend history and analytics
+- `getEarningsSurprises` — `GET /v2/earnings-surprises/{symbol}`: Get earnings-surprise history
+- `getEarningsTranscript` — `GET /v2/earnings-transcript/{symbol}`: Get earnings call transcript
 - `getEdgarCik` — `GET /v2/edgar/cik/{symbol}`: Resolve ticker to CIK
 - `getEdgarFacts` — `GET /v2/edgar/facts/{symbol}`: Get XBRL financial data
 - `getEdgarSearch` — `GET /v2/edgar/search`: Search SEC filings

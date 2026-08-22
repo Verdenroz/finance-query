@@ -2,7 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::percent::strip_percent;
 use crate::error::Result;
+use crate::models::fundamentals::{
+    EtfCountryWeighting, EtfHolding, EtfProfile, EtfSectorWeighting,
+};
 
 use crate::adapters::fmp::build_client;
 
@@ -79,9 +83,99 @@ pub async fn etf_holdings(symbol: &str) -> Result<Vec<EtfHoldingDTO>> {
         .await
 }
 
+// ============================================================================
+// Canonical conversions
+// ============================================================================
+
+/// Convert a holding entry into a canonical [`EtfHolding`]. FMP reports
+/// weight as a percentage (e.g. `12.5`); the canonical field is a fraction.
+fn to_etf_holding(dto: EtfHoldingDTO) -> EtfHolding {
+    EtfHolding {
+        symbol: dto.asset.clone(),
+        description: dto.asset,
+        weight: dto.weight_percentage.map(|w| w / 100.0),
+    }
+}
+
+fn to_sector_weighting(dto: EtfSectorWeightingDTO) -> EtfSectorWeighting {
+    EtfSectorWeighting {
+        sector: dto.sector,
+        weight: dto.weight_percentage.map(|w| w / 100.0),
+    }
+}
+
+fn to_country_weighting(dto: EtfCountryWeightingDTO) -> EtfCountryWeighting {
+    EtfCountryWeighting {
+        country: dto.country,
+        weight: dto
+            .weight_percentage
+            .as_deref()
+            .and_then(strip_percent)
+            .map(|w| w / 100.0),
+    }
+}
+
+/// Fetch the canonical ETF profile for a symbol. FMP has no dedicated
+/// ETF-profile endpoint, so `name` comes from the plain quote and the
+/// remaining profile-level fields (`net_assets`, `net_expense_ratio`,
+/// `portfolio_turnover`, `dividend_yield`, `inception_date`) stay `None`.
+pub async fn fetch_etf_profile_response(symbol: &str) -> Result<EtfProfile> {
+    let (quotes, holdings, sectors, countries) = tokio::try_join!(
+        crate::adapters::fmp::quote::quote(symbol),
+        etf_holdings(symbol),
+        etf_sector_weightings(symbol),
+        etf_country_weightings(symbol)
+    )?;
+    let name = quotes.into_iter().next().and_then(|q| q.name);
+    Ok(EtfProfile {
+        symbol: Some(symbol.to_string()),
+        name,
+        holdings: holdings.into_iter().map(to_etf_holding).collect(),
+        sector_weightings: sectors.into_iter().map(to_sector_weighting).collect(),
+        country_weightings: countries.into_iter().map(to_country_weighting).collect(),
+        ..Default::default()
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn maps_etf_holding_weight_percent_to_fraction() {
+        let dto: EtfHoldingDTO = serde_json::from_value(serde_json::json!({
+            "asset": "AAPL",
+            "sharesNumber": 170000000.0,
+            "weightPercentage": 7.2,
+            "marketValue": 31450000000.0
+        }))
+        .unwrap();
+
+        let out = to_etf_holding(dto);
+        assert_eq!(out.symbol.as_deref(), Some("AAPL"));
+        assert!((out.weight.unwrap() - 0.072).abs() < 1e-9);
+    }
+
+    #[test]
+    fn maps_sector_and_country_weightings() {
+        let sector: EtfSectorWeightingDTO = serde_json::from_value(serde_json::json!({
+            "sector": "Technology",
+            "weightPercentage": 29.50
+        }))
+        .unwrap();
+        let out = to_sector_weighting(sector);
+        assert_eq!(out.sector.as_deref(), Some("Technology"));
+        assert!((out.weight.unwrap() - 0.295).abs() < 1e-9);
+
+        let country: EtfCountryWeightingDTO = serde_json::from_value(serde_json::json!({
+            "country": "Japan",
+            "weightPercentage": "15.80%"
+        }))
+        .unwrap();
+        let out = to_country_weighting(country);
+        assert_eq!(out.country.as_deref(), Some("Japan"));
+        assert!((out.weight.unwrap() - 0.158).abs() < 1e-9);
+    }
 
     #[tokio::test]
     async fn test_etf_sector_weightings_mock() {

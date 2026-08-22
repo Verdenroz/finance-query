@@ -70,7 +70,7 @@ pub(crate) async fn get_indices(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "indices"))).into_response()
 }
@@ -110,7 +110,7 @@ pub(crate) async fn get_market_summary(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "marketSummary"))).into_response()
 }
@@ -138,7 +138,7 @@ pub(crate) async fn get_trending(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "trending"))).into_response()
 }
@@ -157,7 +157,7 @@ pub(crate) async fn get_fear_and_greed(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "fearAndGreed"))).into_response()
 }

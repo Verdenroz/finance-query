@@ -159,6 +159,14 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
         Err(self.not_supported(Operation::ShareFloat))
     }
 
+    /// Fetch the company's identity/classification profile.
+    async fn fetch_company_profile(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+        Err(self.not_supported(Operation::CompanyProfile))
+    }
+
     /// Fetch the aggregated analyst price-target consensus.
     async fn fetch_price_target_consensus(
         &self,
@@ -206,6 +214,23 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     ) -> Result<crate::models::fundamentals::EtfProfile> {
         Err(self.not_supported(Operation::EtfProfile))
     }
+
+    /// Fetch earnings-surprise history, newest first.
+    async fn fetch_earnings_surprises(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+        Err(self.not_supported(Operation::EarningsSurprises))
+    }
+
+    /// Fetch the raw per-analyst grade-action history behind
+    /// [`fetch_rating_consensus`](Self::fetch_rating_consensus)'s rollup.
+    async fn fetch_grading_history(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+        Err(self.not_supported(Operation::GradingHistory))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol
@@ -232,6 +257,18 @@ pub(crate) trait CorporateProvider: ProviderCore {
         _limit: u32,
     ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
         Err(self.not_supported(Operation::PressReleases))
+    }
+
+    /// Fetch an earnings call transcript, provider-neutral shape. `quarter`
+    /// and `year` narrow to a specific call; a provider with no "latest"
+    /// shortcut requires both.
+    async fn fetch_earnings_transcript(
+        &self,
+        _symbol: &str,
+        _quarter: Option<&str>,
+        _year: Option<i32>,
+    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+        Err(self.not_supported(Operation::EarningsTranscript))
     }
 
     /// Fetch reported executive compensation, most recent fiscal year first.
@@ -312,6 +349,22 @@ pub(crate) trait FilingsProvider: ProviderCore {
         _symbol: &str,
     ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
         Err(self.not_supported(Operation::InstitutionalHoldings))
+    }
+
+    /// Fetch congressional (senate) stock-trade disclosures for a symbol.
+    async fn fetch_congressional_trades(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+        Err(self.not_supported(Operation::CongressionalTrades))
+    }
+
+    /// Fetch SEC fails-to-deliver data for a symbol.
+    async fn fetch_fails_to_deliver(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+        Err(self.not_supported(Operation::FailsToDeliver))
     }
 }
 
@@ -475,6 +528,14 @@ pub(crate) trait CryptoProvider: ProviderCore {
     async fn fetch_crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
         Err(self.not_supported(Operation::CryptoGlobal))
     }
+
+    /// Fetch market-wide crypto news, newest first.
+    async fn fetch_crypto_news(
+        &self,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        Err(self.not_supported(Operation::CryptoNews))
+    }
 }
 
 /// [`Capability::ECONOMIC`] — macro-economic data series.
@@ -542,6 +603,14 @@ pub(crate) trait ForexProvider: ProviderCore {
         from: &str,
         to: &str,
     ) -> Result<crate::models::forex::ForexQuote>;
+
+    /// Fetch market-wide forex news, newest first.
+    async fn fetch_forex_news(
+        &self,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        Err(self.not_supported(Operation::ForexNews))
+    }
 }
 
 /// [`Capability::INDICES`] — stock market index quotes.

@@ -122,19 +122,6 @@ pub struct OptionsSnapshotDTO {
     pub underlying_asset: Option<OptionsUnderlyingAssetDTO>,
 }
 
-/// Response wrapper for a single options contract snapshot.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
-pub struct OptionsContractSnapshotResponseDTO {
-    /// Request ID.
-    pub request_id: Option<String>,
-    /// Response status.
-    pub status: Option<String>,
-    /// The snapshot result.
-    pub results: Option<OptionsSnapshotDTO>,
-}
-
 /// Fetch the options chain snapshot for an underlying ticker.
 ///
 /// Returns a paginated list of options contract snapshots.
@@ -248,31 +235,6 @@ pub async fn fetch_options_response(symbol: &str, date: Option<i64>) -> Result<O
     ))
 }
 
-/// Fetch a snapshot for a single options contract.
-///
-/// * `underlying` - Underlying stock ticker (e.g., `"AAPL"`)
-/// * `contract` - Options contract ticker (e.g., `"O:AAPL250117C00150000"`)
-#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
-pub async fn options_contract_snapshot(
-    underlying: &str,
-    contract: &str,
-) -> Result<OptionsContractSnapshotResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v3/snapshot/options/{}/{}",
-        encode_path_segment(underlying),
-        encode_path_segment(contract)
-    );
-    client
-        .get_as(
-            &path,
-            &[],
-            "options_contract_snapshot",
-            "options contract snapshot response",
-        )
-        .await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,64 +336,5 @@ mod tests {
         assert!((details.strike_price.unwrap() - 150.0).abs() < 0.01);
 
         assert_eq!(results[0].open_interest, Some(25000));
-    }
-
-    #[tokio::test]
-    async fn test_options_contract_snapshot_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/v3/snapshot/options/AAPL/O:AAPL250117C00150000")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apiKey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                serde_json::json!({
-                    "request_id": "abc123",
-                    "status": "OK",
-                    "results": {
-                        "break_even_price": 155.30,
-                        "day": { "o": 5.10, "h": 5.50, "l": 4.90, "c": 5.30, "v": 1200.0 },
-                        "details": {
-                            "contract_type": "call",
-                            "expiration_date": "2025-01-17",
-                            "strike_price": 150.0,
-                            "ticker": "O:AAPL250117C00150000"
-                        },
-                        "greeks": {
-                            "delta": 0.65,
-                            "gamma": 0.03,
-                            "theta": -0.05,
-                            "vega": 0.25
-                        },
-                        "implied_volatility": 0.32,
-                        "open_interest": 25000,
-                        "underlying_asset": {
-                            "price": 150.00,
-                            "ticker": "AAPL"
-                        }
-                    }
-                })
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get_raw("/v3/snapshot/options/AAPL/O:AAPL250117C00150000", &[])
-            .await
-            .unwrap();
-
-        let resp: OptionsContractSnapshotResponseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.status.as_deref(), Some("OK"));
-        let snap = resp.results.unwrap();
-        assert!((snap.break_even_price.unwrap() - 155.30).abs() < 0.01);
-        assert_eq!(snap.open_interest, Some(25000));
-
-        let greeks = snap.greeks.unwrap();
-        assert!((greeks.vega.unwrap() - 0.25).abs() < 0.01);
     }
 }

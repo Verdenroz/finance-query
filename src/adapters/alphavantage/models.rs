@@ -19,18 +19,6 @@ where
     }
 }
 
-/// Deserialize a string to `f64`, defaulting to `0.0` on failure.
-#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
-pub(crate) fn deserialize_f64_from_str<'de, D>(
-    deserializer: D,
-) -> std::result::Result<f64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    Ok(s.parse::<f64>().unwrap_or(0.0))
-}
-
 // ============================================================================
 // Interval and SeriesType enums for Alpha Vantage API parameters
 // ============================================================================
@@ -395,7 +383,6 @@ pub struct TickerSentimentDTO {
 /// Earnings call transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsCallTranscriptDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -442,7 +429,6 @@ pub struct TopMoversDTO {
 /// Company overview / profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct CompanyOverviewDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -527,7 +513,6 @@ pub struct CompanyOverviewDTO {
 /// ETF profile and holdings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfProfileDTO {
     /// ETF symbol
     pub symbol: String,
@@ -552,7 +537,6 @@ pub struct EtfProfileDTO {
 /// A single ETF holding.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfHoldingDTO {
     /// Symbol of the held security
     pub symbol: Option<String>,
@@ -682,7 +666,6 @@ pub struct IpoCalendarEntryDTO {
 /// Listing status entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct ListingEntryDTO {
     /// Ticker symbol
     pub symbol: String,

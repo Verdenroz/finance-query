@@ -56,7 +56,7 @@ pub(crate) async fn get_sector(
     }
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "sector"))).into_response()
 }
@@ -94,7 +94,7 @@ pub(crate) async fn get_industry(
     }
     let data = match execute_gql_rest(&schema, &query, vars).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "industry"))).into_response()
 }

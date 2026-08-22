@@ -103,6 +103,20 @@ fn route_chart_get_chart() {}
 )]
 fn route_chart_get_batch_charts() {}
 
+/// Get company profile
+///
+/// Implements `handlers::analysis::get_company_profile`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCompanyProfile",
+    method = "GET",
+    path = "/v2/company-profile/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlCompanyProfile"
+)]
+fn route_analysis_get_company_profile() {}
+
 /// Top coins by market cap
 ///
 /// Implements `handlers::crypto::get_crypto_coins`.
@@ -214,6 +228,34 @@ fn route_events_get_batch_dividends() {}
     response = "GqlDividends"
 )]
 fn route_events_get_dividends() {}
+
+/// Get earnings-surprise history
+///
+/// Implements `handlers::analysis::get_earnings_surprises`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getEarningsSurprises",
+    method = "GET",
+    path = "/v2/earnings-surprises/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlEarningsSurpriseHistory"
+)]
+fn route_analysis_get_earnings_surprises() {}
+
+/// Get earnings call transcript
+///
+/// Implements `handlers::analysis::get_earnings_transcript`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getEarningsTranscript",
+    method = "GET",
+    path = "/v2/earnings-transcript/{symbol}",
+    params = "EarningsTranscriptV2Query",
+    response = "GqlEarningsTranscript"
+)]
+fn route_analysis_get_earnings_transcript() {}
 
 /// Resolve ticker to CIK
 ///

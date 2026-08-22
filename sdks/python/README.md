@@ -73,6 +73,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_capital_gains` — `GET /v2/capital-gains/{symbol}`: Get capital gains distribution history
 - `get_chart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `get_commitments_of_traders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
+- `get_company_profile` — `GET /v2/company-profile/{symbol}`: Get company profile
 - `get_crypto_coin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `get_crypto_coins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `get_crypto_global` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics
@@ -80,6 +81,8 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_crypto_trending` — `GET /v2/crypto/trending`: Coins trending on CoinGecko over the last 24h
 - `get_currencies` — `GET /v2/currencies`: Get available currencies
 - `get_dividends` — `GET /v2/dividends/{symbol}`: Get dividend history and analytics
+- `get_earnings_surprises` — `GET /v2/earnings-surprises/{symbol}`: Get earnings-surprise history
+- `get_earnings_transcript` — `GET /v2/earnings-transcript/{symbol}`: Get earnings call transcript
 - `get_edgar_cik` — `GET /v2/edgar/cik/{symbol}`: Resolve ticker to CIK
 - `get_edgar_facts` — `GET /v2/edgar/facts/{symbol}`: Get XBRL financial data
 - `get_edgar_search` — `GET /v2/edgar/search`: Search SEC filings

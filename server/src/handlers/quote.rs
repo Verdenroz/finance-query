@@ -64,7 +64,7 @@ pub(crate) async fn get_quote(
 
     let data = match execute_gql_rest(&schema, &query, variables).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     (StatusCode::OK, Json(unwrap_ticker_field(data, "quote"))).into_response()
@@ -135,7 +135,7 @@ pub(crate) async fn get_quotes(
 
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let paginated = params.limit.is_some() || params.cursor.is_some();

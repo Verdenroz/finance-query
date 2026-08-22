@@ -73,6 +73,20 @@ impl FundamentalsProvider for AlphaVantageProvider {
     ) -> Result<crate::models::fundamentals::EtfProfile> {
         av::fundamentals::etf::fetch_etf_profile_response(symbol).await
     }
+
+    async fn fetch_company_profile(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+        av::fundamentals::fetch_company_profile_response(symbol).await
+    }
+
+    async fn fetch_earnings_surprises(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+        av::fundamentals::fetch_earnings_surprises_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -112,6 +126,15 @@ impl CorporateProvider for AlphaVantageProvider {
         symbol: &str,
     ) -> Result<crate::models::chart::events::ChartEvents> {
         av::fetch_events_response(symbol).await
+    }
+
+    async fn fetch_earnings_transcript(
+        &self,
+        symbol: &str,
+        quarter: Option<&str>,
+        year: Option<i32>,
+    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+        av::corporate::fetch_earnings_transcript_response(symbol, quarter, year).await
     }
 }
 
