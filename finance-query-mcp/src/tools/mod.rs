@@ -789,7 +789,7 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get fails-to-deliver records for a symbol (currently FMP only, requires FMP_API_KEY)."
+        description = "Get fails-to-deliver records for a symbol. Uses FMP when FMP_API_KEY is set, keyless EDGAR otherwise."
     )]
     async fn get_fails_to_deliver(
         &self,

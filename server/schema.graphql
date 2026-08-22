@@ -3091,8 +3091,8 @@ type GqlTicker {
 		after: String
 	): GqlCongressionalTradeConnection!
 	"""
-	Fails-to-deliver records for this symbol (currently FMP only,
-	requires `FMP_API_KEY`).
+	Fails-to-deliver records for this symbol. Routes through FMP when
+	`FMP_API_KEY` is set, EDGAR otherwise (keyless).
 	"""
 	failsToDeliver(
 		"""

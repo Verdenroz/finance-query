@@ -1,7 +1,8 @@
-//! Per-symbol FMP-routed filings/disclosure fields: congressional trading
-//! and fails-to-deliver. Distinct from Yahoo's `insiderTransactions`/
-//! `secFilings` (`TickerHoldersQuery`/`TickerCoreQuery`) and SEC EDGAR
-//! (`TickerAnalysisQuery`).
+//! Per-symbol filings/disclosure fields routed via `Capability::FILINGS`:
+//! congressional trading (FMP only) and fails-to-deliver (FMP, falling back
+//! to keyless EDGAR). Distinct from Yahoo's `insiderTransactions`/
+//! `secFilings` (`TickerHoldersQuery`/`TickerCoreQuery`) and SEC EDGAR's own
+//! submissions/facts fields (`TickerAnalysisQuery`).
 
 use async_graphql::{Context, Object, Result};
 
@@ -38,8 +39,8 @@ impl TickerFilingsQuery {
         pagination::paginate(&entries, first, after).await
     }
 
-    /// Fails-to-deliver records for this symbol (currently FMP only,
-    /// requires `FMP_API_KEY`).
+    /// Fails-to-deliver records for this symbol. Routes through FMP when
+    /// `FMP_API_KEY` is set, EDGAR otherwise (keyless).
     async fn fails_to_deliver(
         &self,
         ctx: &Context<'_>,

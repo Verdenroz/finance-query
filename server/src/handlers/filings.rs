@@ -57,8 +57,8 @@ pub(crate) async fn get_congressional_trades(
 
 /// GET /v2/filings/{symbol}/fails-to-deliver
 ///
-/// Fails-to-deliver records for a symbol. Currently FMP only — requires
-/// `FMP_API_KEY`.
+/// Fails-to-deliver records for a symbol. Routes through FMP when
+/// `FMP_API_KEY` is set, EDGAR otherwise (keyless).
 pub(crate) async fn get_fails_to_deliver(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Path(symbol): Path<String>,
