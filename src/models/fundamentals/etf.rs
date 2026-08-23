@@ -1,9 +1,11 @@
 //! ETF profile and holdings models.
 //!
 //! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
-//! route. Alpha Vantage and FMP both implement it; coverage is ragged
+//! route. Alpha Vantage, FMP, and Yahoo all implement it; coverage is ragged
 //! (Alpha Vantage serves fuller profile-level fields, FMP additionally serves
-//! sector/country breakdowns) so gaps default rather than widening per-provider.
+//! sector/country breakdowns, Yahoo serves fee/holdings/sector data but no
+//! country breakdown or inception date) so gaps default rather than
+//! widening per-provider.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,7 +1,7 @@
 //! Raw per-analyst grade-action history.
 //!
 //! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
-//! route; FMP is currently the only provider. Distinct from the aggregated
+//! route; FMP and Yahoo both implement it. Distinct from the aggregated
 //! [`RatingConsensus`](super::RatingConsensus) rollup — this is the
 //! individual upgrade/downgrade events behind that rollup.
 

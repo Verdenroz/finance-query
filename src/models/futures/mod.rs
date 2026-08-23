@@ -1,7 +1,7 @@
 //! Futures market data models.
 //!
 //! Canonical public types for futures contracts and quotes,
-//! shared across Polygon and other futures data providers.
+//! shared across Yahoo, Polygon, and other futures data providers.
 
 use serde::{Deserialize, Serialize};
 

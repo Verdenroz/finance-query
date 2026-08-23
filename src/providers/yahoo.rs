@@ -5,8 +5,8 @@
 
 use super::{
     CalendarProvider, Capability, ChartProvider, CommoditiesProvider, CorporateProvider,
-    DiscoveryProvider, FundamentalsProvider, IndicesProvider, MarketProvider, OptionsProvider,
-    ProviderAdapter, ProviderCore, QuoteProvider,
+    DiscoveryProvider, FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider,
+    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
@@ -26,7 +26,8 @@ pub(crate) const CAPS: Capability = Capability::QUOTE
     .union(Capability::INDICES)
     .union(Capability::COMMODITIES)
     .union(Capability::DISCOVERY)
-    .union(Capability::CALENDAR);
+    .union(Capability::CALENDAR)
+    .union(Capability::FUTURES);
 
 pub(crate) struct YahooProvider {
     client: Arc<YahooClient>,
@@ -269,6 +270,50 @@ impl FundamentalsProvider for YahooProvider {
             resp.financial_data,
         ))
     }
+
+    /// Derived from `upgradeDowngradeHistory`, the same module
+    /// `Ticker::grading_history()` surfaces.
+    async fn fetch_grading_history(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(upgrade_downgrade_history_to_grading_actions(
+            symbol,
+            resp.upgrade_downgrade_history,
+        ))
+    }
+
+    /// Derived from `earningsHistory`.
+    async fn fetch_earnings_surprises(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(earnings_history_to_surprises(symbol, resp.earnings_history))
+    }
+
+    /// Assembled from `fundProfile`, `summaryDetail`, and `topHoldings` —
+    /// modules already fetched on every quote call. Coverage is ragged
+    /// against FMP/Alpha Vantage's own partial `EtfProfile` sources:
+    /// `inception_date` stays unset since none of Yahoo's fund modules
+    /// carry it.
+    async fn fetch_etf_profile(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::EtfProfile> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(fund_modules_to_etf_profile(
+            symbol,
+            resp.price,
+            resp.summary_detail,
+            resp.fund_profile,
+            resp.top_holdings,
+        ))
+    }
 }
 
 fn recommendation_trend_to_rating_consensus(
@@ -340,6 +385,179 @@ fn financial_data_to_price_target_consensus(
             .as_ref()
             .and_then(|d| d.target_median_price.as_ref())
             .and_then(|v| v.raw),
+    }
+}
+
+fn upgrade_downgrade_history_to_grading_actions(
+    symbol: &str,
+    history: Option<crate::models::quote::UpgradeDowngradeHistory>,
+) -> Vec<crate::models::fundamentals::GradingAction> {
+    history
+        .map(|h| h.history)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|g| crate::models::fundamentals::GradingAction {
+            symbol: Some(symbol.to_string()),
+            date: g.epoch_grade_date.and_then(epoch_to_date),
+            grading_company: g.firm,
+            previous_grade: g.from_grade,
+            new_grade: g.to_grade,
+        })
+        .collect()
+}
+
+fn earnings_history_to_surprises(
+    symbol: &str,
+    history: Option<crate::models::quote::EarningsHistory>,
+) -> Vec<crate::models::fundamentals::EarningsSurprise> {
+    history
+        .map(|h| h.history)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|e| crate::models::fundamentals::EarningsSurprise {
+            symbol: Some(symbol.to_string()),
+            date: e.quarter.and_then(|v| v.raw).and_then(epoch_to_date),
+            actual_eps: e.eps_actual.and_then(|v| v.raw),
+            estimated_eps: e.eps_estimate.and_then(|v| v.raw),
+            surprise: e.eps_difference.and_then(|v| v.raw),
+            surprise_percent: e.surprise_percent.and_then(|v| v.raw),
+        })
+        .collect()
+}
+
+fn fund_modules_to_etf_profile(
+    symbol: &str,
+    price: Option<crate::models::quote::price::Price>,
+    summary_detail: Option<crate::models::quote::SummaryDetail>,
+    fund_profile: Option<crate::models::quote::FundProfile>,
+    top_holdings: Option<crate::models::quote::TopHoldings>,
+) -> crate::models::fundamentals::EtfProfile {
+    let (asset_type, fees) = match fund_profile {
+        Some(p) => (p.legal_type, p.fees_expenses_investment),
+        None => (None, None),
+    };
+    let (holdings, sector_weightings) = match top_holdings {
+        Some(t) => (t.holdings.unwrap_or_default(), t.sector_weightings),
+        None => (Vec::new(), None),
+    };
+
+    crate::models::fundamentals::EtfProfile {
+        symbol: Some(symbol.to_string()),
+        name: price
+            .as_ref()
+            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        asset_type,
+        // Yahoo reports total net assets in millions; the canonical field is
+        // an absolute value (confirmed against Alpha Vantage's own mapping).
+        net_assets: fees
+            .as_ref()
+            .and_then(|f| f.total_net_assets.as_ref())
+            .and_then(|v| v.raw)
+            .map(|millions| millions * 1_000_000.0),
+        net_expense_ratio: fees
+            .as_ref()
+            .and_then(|f| f.annual_report_expense_ratio.as_ref())
+            .and_then(|v| v.raw),
+        portfolio_turnover: fees
+            .as_ref()
+            .and_then(|f| f.annual_holdings_turnover.as_ref())
+            .and_then(|v| v.raw),
+        dividend_yield: summary_detail
+            .and_then(|s| s.dividend_yield)
+            .and_then(|v| v.raw),
+        inception_date: None,
+        holdings: holdings
+            .into_iter()
+            .map(|h| crate::models::fundamentals::EtfHolding {
+                symbol: h.symbol,
+                description: h.holding_name,
+                weight: h.holding_percent.and_then(|v| v.raw),
+            })
+            .collect(),
+        sector_weightings: sector_weightings
+            .map(sector_weighting_rows)
+            .unwrap_or_default(),
+        country_weightings: Vec::new(),
+    }
+}
+
+fn sector_weighting_rows(
+    sw: crate::models::corporate::top_holdings::SectorWeighting,
+) -> Vec<crate::models::fundamentals::EtfSectorWeighting> {
+    use crate::constants::sectors::Sector;
+    [
+        (Sector::RealEstate, sw.realestate),
+        (Sector::ConsumerCyclical, sw.consumer_cyclical),
+        (Sector::BasicMaterials, sw.basic_materials),
+        (Sector::ConsumerDefensive, sw.consumer_defensive),
+        (Sector::Technology, sw.technology),
+        (Sector::CommunicationServices, sw.communication_services),
+        (Sector::FinancialServices, sw.financial_services),
+        (Sector::Utilities, sw.utilities),
+        (Sector::Industrials, sw.industrials),
+        (Sector::Energy, sw.energy),
+        (Sector::Healthcare, sw.healthcare),
+    ]
+    .into_iter()
+    .filter_map(|(sector, weight)| {
+        weight
+            .and_then(|v| v.raw)
+            .map(|w| crate::models::fundamentals::EtfSectorWeighting {
+                sector: Some(sector.display_name().to_string()),
+                weight: Some(w),
+            })
+    })
+    .collect()
+}
+
+#[async_trait::async_trait]
+impl FuturesProvider for YahooProvider {
+    /// Derived from the generic quote endpoint, the same resolution trick
+    /// used for indices and commodities. `expiration_date` and `underlying`
+    /// stay unset: Yahoo's quote modules carry no contract metadata for
+    /// futures instruments.
+    async fn fetch_futures_quote(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::futures::FuturesQuote> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(price_and_summary_to_futures_quote(
+            symbol,
+            resp.price,
+            resp.summary_detail,
+        ))
+    }
+}
+
+fn price_and_summary_to_futures_quote(
+    symbol: &str,
+    price: Option<crate::models::quote::price::Price>,
+    summary_detail: Option<crate::models::quote::SummaryDetail>,
+) -> crate::models::futures::FuturesQuote {
+    crate::models::futures::FuturesQuote {
+        symbol: symbol.to_string(),
+        name: price
+            .as_ref()
+            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        underlying: None,
+        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
+        expiration_date: None,
+        price: price.as_ref().and_then(|p| p.current_price()),
+        change: price.as_ref().and_then(|p| p.day_change()),
+        change_percent: price.as_ref().and_then(|p| p.day_change_percent()),
+        // summaryDetail's openInterest is loosely typed (serde_json::Value);
+        // every other numeric field on this module uses the {raw, fmt} shape,
+        // so assume the same here rather than retyping it without a live check.
+        open_interest: summary_detail
+            .and_then(|s| s.open_interest)
+            .and_then(|v| v.get("raw").and_then(|r| r.as_u64())),
+        volume: price
+            .as_ref()
+            .and_then(|p| p.regular_market_volume.as_ref())
+            .and_then(|v| v.raw)
+            .map(|v| v as u64),
+        timestamp: price.and_then(|p| p.regular_market_time),
     }
 }
 
@@ -747,6 +965,9 @@ impl ProviderAdapter for YahooProvider {
     fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         Some(self)
     }
+    fn as_futures(&self) -> Option<&dyn FuturesProvider> {
+        Some(self)
+    }
 }
 
 #[cfg(test)]
@@ -1006,5 +1227,142 @@ mod tests {
         assert_eq!(consensus.target_low, Some(180.0));
         assert_eq!(consensus.target_consensus, Some(215.0));
         assert_eq!(consensus.target_median, Some(210.0));
+    }
+
+    #[test]
+    fn upgrade_downgrade_history_maps_to_grading_actions() {
+        let history: crate::models::quote::UpgradeDowngradeHistory =
+            serde_json::from_value(serde_json::json!({
+                "history": [{
+                    "epochGradeDate": 1_700_000_000,
+                    "firm": "Morgan Stanley",
+                    "fromGrade": "Hold",
+                    "toGrade": "Buy",
+                    "action": "up"
+                }]
+            }))
+            .unwrap();
+        let actions = upgrade_downgrade_history_to_grading_actions("AAPL", Some(history));
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].symbol.as_deref(), Some("AAPL"));
+        assert_eq!(actions[0].date.as_deref(), Some("2023-11-14"));
+        assert_eq!(
+            actions[0].grading_company.as_deref(),
+            Some("Morgan Stanley")
+        );
+        assert_eq!(actions[0].previous_grade.as_deref(), Some("Hold"));
+        assert_eq!(actions[0].new_grade.as_deref(), Some("Buy"));
+    }
+
+    #[test]
+    fn earnings_history_maps_to_surprises() {
+        let history: crate::models::quote::EarningsHistory =
+            serde_json::from_value(serde_json::json!({
+                "history": [{
+                    "quarter": {"raw": 1_700_000_000, "fmt": "3Q2023"},
+                    "epsActual": {"raw": 1.5, "fmt": "1.50"},
+                    "epsEstimate": {"raw": 1.4, "fmt": "1.40"},
+                    "epsDifference": {"raw": 0.1, "fmt": "0.10"},
+                    "surprisePercent": {"raw": 7.1, "fmt": "7.10%"}
+                }]
+            }))
+            .unwrap();
+        let surprises = earnings_history_to_surprises("AAPL", Some(history));
+        assert_eq!(surprises.len(), 1);
+        assert_eq!(surprises[0].symbol.as_deref(), Some("AAPL"));
+        assert_eq!(surprises[0].date.as_deref(), Some("2023-11-14"));
+        assert_eq!(surprises[0].actual_eps, Some(1.5));
+        assert_eq!(surprises[0].estimated_eps, Some(1.4));
+        assert_eq!(surprises[0].surprise, Some(0.1));
+        assert_eq!(surprises[0].surprise_percent, Some(7.1));
+    }
+
+    #[test]
+    fn fund_modules_map_to_etf_profile() {
+        let price = fixture_price();
+        let summary_detail: crate::models::quote::SummaryDetail =
+            serde_json::from_value(serde_json::json!({
+                "dividendYield": {"raw": 0.0058, "fmt": "0.58%"}
+            }))
+            .unwrap();
+        let fund_profile: crate::models::quote::FundProfile =
+            serde_json::from_value(serde_json::json!({
+                "legalType": "Exchange Traded Fund",
+                "feesExpensesInvestment": {
+                    "annualReportExpenseRatio": {"raw": 0.002, "fmt": "0.20%"},
+                    "annualHoldingsTurnover": {"raw": 0.07, "fmt": "7.00%"},
+                    "totalNetAssets": {"raw": 300_000.0, "fmt": "300,000"}
+                }
+            }))
+            .unwrap();
+        let top_holdings: crate::models::quote::TopHoldings =
+            serde_json::from_value(serde_json::json!({
+                "holdings": [{
+                    "symbol": "MSFT",
+                    "holdingName": "Microsoft Corp",
+                    "holdingPercent": {"raw": 0.081, "fmt": "8.10%"}
+                }],
+                "sectorWeightings": [
+                    {"technology": {"raw": 0.45, "fmt": "45.00%"}},
+                    {"healthcare": {"raw": 0.12, "fmt": "12.00%"}}
+                ]
+            }))
+            .unwrap();
+        let profile = fund_modules_to_etf_profile(
+            "QQQ",
+            Some(price),
+            Some(summary_detail),
+            Some(fund_profile),
+            Some(top_holdings),
+        );
+        assert_eq!(profile.symbol.as_deref(), Some("QQQ"));
+        assert_eq!(profile.name.as_deref(), Some("S&P 500"));
+        assert_eq!(profile.asset_type.as_deref(), Some("Exchange Traded Fund"));
+        assert_eq!(profile.net_assets, Some(300_000_000_000.0));
+        assert_eq!(profile.net_expense_ratio, Some(0.002));
+        assert_eq!(profile.portfolio_turnover, Some(0.07));
+        assert_eq!(profile.dividend_yield, Some(0.0058));
+        assert_eq!(profile.inception_date, None);
+        assert_eq!(profile.holdings.len(), 1);
+        assert_eq!(profile.holdings[0].symbol.as_deref(), Some("MSFT"));
+        assert_eq!(profile.holdings[0].weight, Some(0.081));
+        assert_eq!(profile.sector_weightings.len(), 2);
+        assert!(
+            profile
+                .sector_weightings
+                .iter()
+                .any(|s| s.sector.as_deref() == Some("Technology") && s.weight == Some(0.45))
+        );
+    }
+
+    #[test]
+    fn price_and_summary_map_to_futures_quote() {
+        let price: crate::models::quote::price::Price = serde_json::from_value(serde_json::json!({
+            "shortName": "E-mini S&P 500 Dec 26",
+            "exchangeName": "CME",
+            "regularMarketPrice": {"raw": 5678.9, "fmt": "5,678.90"},
+            "regularMarketChange": {"raw": 12.3, "fmt": "12.30"},
+            "regularMarketChangePercent": {"raw": 0.22, "fmt": "0.22%"},
+            "regularMarketVolume": {"raw": 150_000, "fmt": "150,000"},
+            "regularMarketTime": 1_700_000_000
+        }))
+        .unwrap();
+        let summary_detail: crate::models::quote::SummaryDetail =
+            serde_json::from_value(serde_json::json!({
+                "openInterest": {"raw": 42_000, "fmt": "42,000"}
+            }))
+            .unwrap();
+        let quote = price_and_summary_to_futures_quote("ESZ26", Some(price), Some(summary_detail));
+        assert_eq!(quote.symbol, "ESZ26");
+        assert_eq!(quote.name.as_deref(), Some("E-mini S&P 500 Dec 26"));
+        assert_eq!(quote.exchange.as_deref(), Some("CME"));
+        assert_eq!(quote.underlying, None);
+        assert_eq!(quote.expiration_date, None);
+        assert_eq!(quote.price, Some(5678.9));
+        assert_eq!(quote.change, Some(12.3));
+        assert_eq!(quote.change_percent, Some(0.22));
+        assert_eq!(quote.open_interest, Some(42_000));
+        assert_eq!(quote.volume, Some(150_000));
+        assert_eq!(quote.timestamp, Some(1_700_000_000));
     }
 }

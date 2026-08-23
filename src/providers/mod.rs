@@ -1380,7 +1380,8 @@ mod tests {
             .union(Capability::INDICES)
             .union(Capability::COMMODITIES)
             .union(Capability::DISCOVERY)
-            .union(Capability::CALENDAR);
+            .union(Capability::CALENDAR)
+            .union(Capability::FUTURES);
         assert_eq!(yahoo::CAPS, expected);
     }
 

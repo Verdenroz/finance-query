@@ -336,7 +336,6 @@ pub use domains::{EconomicCatalog, EconomicIndicator};
 pub use domains::Commodity;
 pub use domains::Discovery;
 pub use domains::Filings;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use domains::FuturesContract;
 pub use domains::Index;
 #[cfg(feature = "polygon")]
@@ -470,7 +469,6 @@ pub use models::economic::{
     feature = "polygon"
 ))]
 pub use models::forex::ForexQuote;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]
 pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};

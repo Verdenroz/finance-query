@@ -142,7 +142,6 @@ impl Providers {
     }
 
     /// Create a [`FuturesContract`](crate::FuturesContract) handle backed by this provider set.
-    #[cfg(any(feature = "polygon", feature = "cftc"))]
     pub fn futures(&self, symbol: impl Into<String>) -> crate::domains::FuturesContract {
         crate::domains::FuturesContract::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }

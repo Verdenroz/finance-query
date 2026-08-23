@@ -632,7 +632,6 @@ pub(crate) trait IndicesProvider: ProviderCore {
 }
 
 /// [`Capability::FUTURES`] — futures contract quotes.
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 #[async_trait::async_trait]
 pub(crate) trait FuturesProvider: ProviderCore {
     async fn fetch_futures_quote(
@@ -759,7 +758,6 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_indices(&self) -> Option<&dyn IndicesProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "cftc"))]
     fn as_futures(&self) -> Option<&dyn FuturesProvider> {
         None
     }
@@ -835,7 +833,6 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_indices().is_some() {
             caps = caps | Capability::INDICES;
         }
-        #[cfg(any(feature = "polygon", feature = "cftc"))]
         if self.as_futures().is_some() {
             caps = caps | Capability::FUTURES;
         }

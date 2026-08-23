@@ -569,7 +569,6 @@ pub(crate) mod filings;
     feature = "polygon"
 ))]
 pub(crate) mod forex;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub(crate) mod futures;
 pub(crate) mod indices;
 pub(crate) mod market;
@@ -609,7 +608,6 @@ pub use filings::Filings;
     feature = "polygon"
 ))]
 pub use forex::ForexPair;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use futures::FuturesContract;
 pub use indices::Index;
 pub use market::Market;
