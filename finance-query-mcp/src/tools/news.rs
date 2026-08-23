@@ -3,9 +3,11 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    DEFAULT_MCP_PAGE_SIZE, GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
-    build_connection_selection, build_type_spec_selection, escape_gql_string, execute_query,
-    parse_fields, unwrap_field, unwrap_ticker_field, wrap_connection,
+    DEFAULT_MCP_PAGE_SIZE, GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS,
+    GQL_PRESS_RELEASE_DEFAULT_FIELDS, GQL_PRESS_RELEASE_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
+    build_connection_selection, build_selection_or_default, build_type_spec_selection,
+    escape_gql_string, execute_query, parse_fields, unwrap_field, unwrap_ticker_field,
+    wrap_connection,
 };
 
 /// Build the `, lang: "xx"` argument fragment, or an empty string when the
@@ -74,6 +76,32 @@ pub async fn get_news(
     let text = serde_json::to_string(&result).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         text,
+    )]))
+}
+
+pub async fn get_press_releases(
+    schema: &FinanceSchema,
+    symbol: String,
+    limit: Option<u32>,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_PRESS_RELEASE_VALID_FIELDS,
+        GQL_PRESS_RELEASE_DEFAULT_FIELDS,
+    );
+
+    let query = format!(
+        "query GetPressReleases($symbol: String!) {{ ticker(symbol: $symbol) {{ pressReleases(limit: {}) {selection} }} }}",
+        limit.unwrap_or(10)
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "pressReleases");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
     )]))
 }
 

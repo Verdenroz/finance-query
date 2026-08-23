@@ -1,4 +1,5 @@
-//! GraphQL types for market-level data (trending, fear & greed, market summary).
+//! GraphQL types for market-level data (trending, fear & greed, market
+//! summary, provider-routed sector/industry performance).
 
 use super::formatted::GqlFormattedValue;
 use async_graphql::{Json, SimpleObject};
@@ -42,4 +43,28 @@ pub struct GqlMarketSummaryQuote {
     pub regular_market_previous_close: Option<Json<GqlFormattedValue>>,
     pub regular_market_time: Option<Json<GqlFormattedValue>>,
     pub spark: Option<Json<serde_json::Value>>,
+}
+
+/// A sector's aggregate performance, provider-routed via `Providers::market()`
+/// (`Capability::MARKET`). Distinct from `GqlSectorPerformance` in
+/// `types/sector.rs`, which is a nested field on Yahoo-only `finance::sector`.
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlMarketSectorPerformance {
+    pub sector: String,
+    pub exchange: Option<String>,
+    pub change_percent: Option<f64>,
+}
+
+/// A sector's aggregate price/earnings ratio, provider-routed via
+/// `Providers::market()`.
+#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(default)]
+pub struct GqlMarketSectorPe {
+    pub sector: String,
+    pub exchange: Option<String>,
+    pub pe: Option<f64>,
+    pub date: Option<String>,
 }

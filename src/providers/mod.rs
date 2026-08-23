@@ -1441,8 +1441,6 @@ mod tests {
         );
     }
 
-    /// FRED gained CALENDAR (economic releases) via an accessor override;
-    /// `Provider::capabilities()` must reflect that.
     #[cfg(feature = "fred")]
     #[test]
     fn fred_derives_calendar_capability() {

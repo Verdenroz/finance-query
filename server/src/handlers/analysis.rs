@@ -11,7 +11,10 @@ use finance_query_server::graphql::{
         GQL_EARNINGS_ESTIMATE_VALID_FIELDS, GQL_EARNINGS_HISTORY_COMPOSITE,
         GQL_EARNINGS_HISTORY_VALID_FIELDS, GQL_EARNINGS_SURPRISES_COMPOSITE,
         GQL_EARNINGS_SURPRISES_VALID_FIELDS, GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
+        GQL_ETF_COUNTRY_WEIGHTING_COMPOSITE, GQL_ETF_HOLDING_COMPOSITE,
+        GQL_ETF_PROFILE_VALID_FIELDS, GQL_ETF_SECTOR_WEIGHTING_COMPOSITE,
         GQL_GRADING_HISTORY_COMPOSITE, GQL_GRADING_HISTORY_VALID_FIELDS,
+        GQL_PRICE_TARGET_CONSENSUS_VALID_FIELDS, GQL_RATING_CONSENSUS_VALID_FIELDS,
         GQL_RECOMMENDATION_TREND_COMPOSITE, GQL_RECOMMENDATION_TREND_VALID_FIELDS,
         GQL_RECOMMENDATION_VALID_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS, gql_string_list_literal,
         unwrap_field, unwrap_ticker_field,
@@ -236,6 +239,105 @@ pub(crate) async fn get_earnings_surprises(
     (
         StatusCode::OK,
         Json(unwrap_ticker_field(data, "earningsSurprises")),
+    )
+        .into_response()
+}
+
+/// GET /v2/rating-consensus/{symbol}
+///
+/// Consensus rating rollup (analyst grade distribution + headline label).
+pub(crate) async fn get_rating_consensus(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let selection =
+        build_rest_selection(params.fields.as_deref(), GQL_RATING_CONSENSUS_VALID_FIELDS);
+    let query = format!(
+        "query GetRatingConsensus($symbol: String!) {{ ticker(symbol: $symbol) {{ ratingConsensus {selection} }} }}"
+    );
+    info!(
+        "Fetching rating consensus for {} (fields={:?})",
+        symbol, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "ratingConsensus")),
+    )
+        .into_response()
+}
+
+/// GET /v2/price-target-consensus/{symbol}
+///
+/// Consensus analyst price target.
+pub(crate) async fn get_price_target_consensus(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_selection(
+        params.fields.as_deref(),
+        GQL_PRICE_TARGET_CONSENSUS_VALID_FIELDS,
+    );
+    let query = format!(
+        "query GetPriceTargetConsensus($symbol: String!) {{ ticker(symbol: $symbol) {{ priceTargetConsensus {selection} }} }}"
+    );
+    info!(
+        "Fetching price target consensus for {} (fields={:?})",
+        symbol, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "priceTargetConsensus")),
+    )
+        .into_response()
+}
+
+/// GET /v2/etf-profile/{symbol}
+///
+/// ETF profile and holdings (only meaningful for ETF symbols).
+pub(crate) async fn get_etf_profile(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_composite_selection(
+        params.fields.as_deref(),
+        GQL_ETF_PROFILE_VALID_FIELDS,
+        &[
+            ("holdings", GQL_ETF_HOLDING_COMPOSITE),
+            ("sectorWeightings", GQL_ETF_SECTOR_WEIGHTING_COMPOSITE),
+            ("countryWeightings", GQL_ETF_COUNTRY_WEIGHTING_COMPOSITE),
+        ],
+    );
+    let query = format!(
+        "query GetEtfProfile($symbol: String!) {{ ticker(symbol: $symbol) {{ etfProfile {selection} }} }}"
+    );
+    info!(
+        "Fetching ETF profile for {} (fields={:?})",
+        symbol, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "etfProfile")),
     )
         .into_response()
 }

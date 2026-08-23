@@ -6,6 +6,7 @@
 pub mod analysis;
 pub mod calendar;
 pub mod chart;
+pub mod commodity_futures;
 pub mod crypto;
 pub mod edgar;
 pub mod events;
@@ -18,6 +19,7 @@ pub mod holders;
 pub mod indicators;
 pub mod keyless;
 pub mod market;
+pub mod market_calendar;
 pub mod metadata;
 pub mod news;
 pub mod options;

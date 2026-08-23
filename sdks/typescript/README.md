@@ -77,6 +77,7 @@ Requires Node 18+.
 - `getCapitalGains` — `GET /v2/capital-gains/{symbol}`: Get capital gains distribution history
 - `getChart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `getCommitmentsOfTraders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
+- `getCommodity` — `GET /v2/commodities/{symbol}`: Get a commodity's current quote
 - `getCompanyProfile` — `GET /v2/company-profile/{symbol}`: Get company profile
 - `getCongressionalTrades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
 - `getCryptoCoin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
@@ -93,32 +94,43 @@ Requires Node 18+.
 - `getEdgarFacts` — `GET /v2/edgar/facts/{symbol}`: Get XBRL financial data
 - `getEdgarSearch` — `GET /v2/edgar/search`: Search SEC filings
 - `getEdgarSubmissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
+- `getEtfProfile` — `GET /v2/etf-profile/{symbol}`: Get ETF profile and holdings
 - `getExchanges` — `GET /v2/exchanges`: Get supported exchanges
 - `getFailsToDeliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `getFearAndGreed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `getFeeds` — `GET /v2/feeds`: RSS/Atom news feeds
+- `getFilingSections` — `GET /v2/filings/{symbol}/sections`: Get sectioned text of one SEC filing
 - `getFinancials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
 - `getForexNews` — `GET /v2/forex/news`: Market-wide forex news
 - `getFredSeries` — `GET /v2/fred/series/{id}`: FRED time series
 - `getFredTreasuryYields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve
+- `getFutures` — `GET /v2/futures/{symbol}`: Get a futures contract's current quote
 - `getGdeltNews` — `GET /v2/gdelt/news/{symbol}`: Worldwide news mentioning a symbol (GDELT, keyless)
 - `getGeneralNews` — `GET /v2/news`: Get general market news
 - `getHolders` — `GET /v2/holders/{symbol}/{type}`: Get holder data
 - `getHours` — `GET /v2/hours`: Get market hours
+- `getIndexConstituents` — `GET /v2/index-constituents/{symbol}`: Get an index's current constituent list
 - `getIndicators` — `GET /v2/indicators/{symbol}`: Get technical indicators
 - `getIndices` — `GET /v2/indices`: Get world market indices
 - `getIndustry` — `GET /v2/industries/{industry}`: Get industry data
+- `getMarketCalendar` — `GET /v2/market-calendar`: Get a market-wide event calendar
 - `getMarketSummary` — `GET /v2/market-summary`: Get market summary
 - `getMetrics` — `GET /v2/metrics`: Prometheus metrics
 - `getNews` — `GET /v2/news/{symbol}`: Get news for a symbol
 - `getOptions` — `GET /v2/options/{symbol}`: Get options chain
+- `getPressReleases` — `GET /v2/press-releases/{symbol}`: Get a company's own press releases
+- `getPriceTargetConsensus` — `GET /v2/price-target-consensus/{symbol}`: Get consensus analyst price target
 - `getQuote` — `GET /v2/quote/{symbol}`: Get quote for a symbol
 - `getQuoteType` — `GET /v2/quote-type/{symbol}`: Get quote type
 - `getQuotes` — `GET /v2/quotes`: Get quotes for multiple symbols
+- `getRatingConsensus` — `GET /v2/rating-consensus/{symbol}`: Get consensus rating rollup
 - `getRecommendations` — `GET /v2/recommendations/{symbol}`: Get similar stock recommendations
 - `getRisk` — `GET /v2/risk/{symbol}`: Risk analytics
+- `getRiskFactors` — `GET /v2/filings/{symbol}/risk-factors`: Get risk factors extracted from SEC filings
 - `getScreeners` — `GET /v2/screeners/{screener}`: Get screener results
 - `getSector` — `GET /v2/sectors/{sector}`: Get sector data
+- `getSectorPe` — `GET /v2/sector-pe`: Get price/earnings ratios by sector
+- `getSectorPerformance` — `GET /v2/sector-performance`: Get aggregate performance for every sector
 - `getSpark` — `GET /v2/spark`: Get batch sparkline data
 - `getSplits` — `GET /v2/splits/{symbol}`: Get stock split history
 - `getTranscript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript

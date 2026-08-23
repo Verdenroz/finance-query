@@ -10,7 +10,9 @@ use async_graphql::{Context, Object, Result};
 use crate::AppState;
 use crate::graphql::error::{from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
-use crate::graphql::types::filings::{GqlCongressionalTrade, GqlFailToDeliver};
+use crate::graphql::types::filings::{
+    GqlCongressionalTrade, GqlFailToDeliver, GqlFilingSection, GqlFilingSectionForm, GqlRiskFactor,
+};
 
 pub(super) struct TickerFilingsQuery {
     pub(super) symbol: String,
@@ -61,5 +63,41 @@ impl TickerFilingsQuery {
         .map_err(to_gql_error)?;
         let entries: Vec<GqlFailToDeliver> = from_gql_json(json)?;
         pagination::paginate(&entries, first, after).await
+    }
+
+    /// Sectioned text of one filing by accession number. Routes through EDGAR
+    /// (best-effort HTML extraction) or Polygon when configured.
+    async fn filing_sections(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "SEC accession number, e.g. \"0000320193-24-000123\"")]
+        accession_number: String,
+        #[graphql(desc = "Which filing form to fetch sectioned text for")]
+        form: GqlFilingSectionForm,
+    ) -> Result<Vec<GqlFilingSection>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::filings::get_filing_sections(
+            &state.providers,
+            &self.symbol,
+            &accession_number,
+            form.into(),
+        )
+        .await
+        .map_err(to_gql_error)?;
+        from_gql_json(json)
+    }
+
+    /// Risk factors extracted from this symbol's SEC filings. Routes through
+    /// EDGAR (best-effort HTML extraction) or Polygon when configured.
+    async fn risk_factors(&self, ctx: &Context<'_>) -> Result<Vec<GqlRiskFactor>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::filings::get_risk_factors(
+            &state.cache,
+            &state.providers,
+            &self.symbol,
+        )
+        .await
+        .map_err(to_gql_error)?;
+        from_gql_json(json)
     }
 }

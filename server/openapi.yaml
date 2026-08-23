@@ -492,6 +492,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/commodities/{symbol}":
+    get:
+      operationId: getCommodity
+      summary: "Get a commodity's current quote"
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlCommodityQuote"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/company-profile/{symbol}":
     get:
       operationId: getCompanyProfile
@@ -1517,6 +1568,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/etf-profile/{symbol}":
+    get:
+      operationId: getEtfProfile
+      summary: Get ETF profile and holdings
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlEtfProfile"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/exchanges:
     get:
       operationId: getExchanges
@@ -1791,6 +1893,124 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/GqlFailToDeliver"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/filings/{symbol}/risk-factors":
+    get:
+      operationId: getRiskFactors
+      summary: Get risk factors extracted from SEC filings
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlRiskFactor"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/filings/{symbol}/sections":
+    get:
+      operationId: getFilingSections
+      summary: Get sectioned text of one SEC filing
+      parameters:
+        - name: accessionNumber
+          in: query
+          required: true
+          schema:
+            description: "SEC accession number, e.g. \"0000320193-24-000123\" (required)"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: form
+          in: query
+          required: true
+          schema:
+            description: Which filing form to fetch sectioned text for
+            $ref: "#/components/schemas/FilingSectionFormParam"
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlFilingSection"
         "400":
           description: Bad request
           content:
@@ -2164,6 +2384,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/futures/{symbol}":
+    get:
+      operationId: getFutures
+      summary: "Get a futures contract's current quote"
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlFuturesQuote"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/gdelt/news/{symbol}":
     get:
       operationId: getGdeltNews
@@ -2364,6 +2635,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlMarketHours"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/index-constituents/{symbol}":
+    get:
+      operationId: getIndexConstituents
+      summary: "Get an index's current constituent list"
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlIndexConstituent"
         "400":
           description: Bad request
           content:
@@ -2712,6 +3036,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlLookupResults"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v2/market-calendar:
+    get:
+      operationId: getMarketCalendar
+      summary: Get a market-wide event calendar
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            description: Start date (YYYY-MM-DD); ignored by market-holiday/market-status
+            type: string
+        - name: kind
+          in: query
+          required: true
+          schema:
+            description: Which market-wide calendar to fetch (required)
+            $ref: "#/components/schemas/MarketCalendarKindParam"
+        - name: to
+          in: query
+          required: false
+          schema:
+            description: End date (YYYY-MM-DD); ignored by market-holiday/market-status
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlMarketCalendarEntry"
         "400":
           description: Bad request
           content:
@@ -3186,6 +3576,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/press-releases/{symbol}":
+    get:
+      operationId: getPressReleases
+      summary: "Get a company's own press releases"
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Maximum number of releases to return (default: 10)"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlPressRelease"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/price-target-consensus/{symbol}":
+    get:
+      operationId: getPriceTargetConsensus
+      summary: Get consensus analyst price target
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlPriceTargetConsensus"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/quote-type/{symbol}":
     get:
       operationId: getQuoteType
@@ -3362,6 +3864,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlQuotesBatch"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/rating-consensus/{symbol}":
+    get:
+      operationId: getRatingConsensus
+      summary: Get consensus rating rollup
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlRatingConsensus"
         "400":
           description: Bad request
           content:
@@ -3792,6 +4345,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlSearchResults"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v2/sector-pe:
+    get:
+      operationId: getSectorPe
+      summary: Get price/earnings ratios by sector
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlMarketSectorPe"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v2/sector-performance:
+    get:
+      operationId: getSectorPerformance
+      summary: Get aggregate performance for every sector
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlMarketSectorPerformance"
         "400":
           description: Bad request
           content:
@@ -4506,6 +5155,13 @@ components:
           description: "Start date as Unix timestamp (seconds). When provided together with `end`,\noverrides `range` and uses absolute date boundaries."
           type: integer
           format: int64
+    CommodityQuery:
+      description: "Query parameters for `GET /v2/commodities/{symbol}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     CotQuery:
       description: "Query parameters for `GET /v2/cftc/cot/{symbol}`."
       type: object
@@ -4809,6 +5465,28 @@ components:
         sources:
           description: "Comma-separated source slugs (default: federal-reserve, sec, marketwatch, bloomberg)"
           type: string
+    FilingSectionFormParam:
+      description: "Filing form for `GET /v2/filings/{symbol}/sections`."
+      type: string
+      enum:
+        - ten-k
+        - eight-k
+    FilingSectionsQuery:
+      description: "Query parameters for `GET /v2/filings/{symbol}/sections`."
+      type: object
+      properties:
+        accessionNumber:
+          description: "SEC accession number, e.g. \"0000320193-24-000123\" (required)"
+          type: string
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        form:
+          description: Which filing form to fetch sectioned text for
+          $ref: "#/components/schemas/FilingSectionFormParam"
+      required:
+        - accessionNumber
+        - form
     FilingsQuery:
       description: "Query parameters for `GET /v2/filings/{symbol}/congressional-trades` and\n`GET /v2/filings/{symbol}/fails-to-deliver`."
       type: object
@@ -4874,6 +5552,13 @@ components:
       enum:
         - annual
         - quarterly
+    FuturesQuery:
+      description: "Query parameters for `GET /v2/futures/{symbol}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     GdeltNewsQuery:
       description: "Query parameters for `GET /v2/gdelt/news/{symbol}`."
       type: object
@@ -5180,6 +5865,30 @@ components:
         - marketAndExchangeName
         - cftcContractMarketCode
         - observations
+    GqlCommodityQuote:
+      description: "Mirrors `finance_query::CommodityQuote`."
+      type: object
+      properties:
+        change:
+          type: number
+          format: double
+        changePercent:
+          type: number
+          format: double
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+        symbol:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        unit:
+          type: string
+      required:
+        - symbol
     GqlCompanyProfile:
       description: "Mirrors `finance_query::CompanyProfile`, which has no serde rename of its\nown — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
       type: object
@@ -5585,6 +6294,75 @@ components:
         bullPower:
           type: number
           format: double
+    GqlEtfCountryWeighting:
+      description: "Mirrors `finance_query::EtfCountryWeighting`."
+      type: object
+      properties:
+        country:
+          type: string
+        weight:
+          type: number
+          format: double
+    GqlEtfHolding:
+      description: "Mirrors `finance_query::EtfHolding`."
+      type: object
+      properties:
+        description:
+          type: string
+        symbol:
+          type: string
+        weight:
+          type: number
+          format: double
+    GqlEtfProfile:
+      description: "Mirrors `finance_query::EtfProfile`."
+      type: object
+      properties:
+        assetType:
+          type: string
+        countryWeightings:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlEtfCountryWeighting"
+        dividendYield:
+          type: number
+          format: double
+        holdings:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlEtfHolding"
+        inceptionDate:
+          type: string
+        name:
+          type: string
+        netAssets:
+          type: number
+          format: double
+        netExpenseRatio:
+          type: number
+          format: double
+        portfolioTurnover:
+          type: number
+          format: double
+        sectorWeightings:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlEtfSectorWeighting"
+        symbol:
+          type: string
+      required:
+        - holdings
+        - sectorWeightings
+        - countryWeightings
+    GqlEtfSectorWeighting:
+      description: "Mirrors `finance_query::EtfSectorWeighting`."
+      type: object
+      properties:
+        sector:
+          type: string
+        weight:
+          type: number
+          format: double
     GqlEventKind:
       description: "The kind of financial event, with its event-specific payload."
       oneOf:
@@ -5775,6 +6553,14 @@ components:
         swingLow:
           type: number
           format: double
+    GqlFilingSection:
+      description: "Mirrors `finance_query::FilingSection`."
+      type: object
+      properties:
+        content:
+          type: string
+        section:
+          type: string
     GqlFinancialDataPoint:
       description: A single data point in a financial time series.
       type: object
@@ -5844,6 +6630,42 @@ components:
         - type: string
         - $ref: "#/components/schemas/GqlFormattedObject"
         - {}
+    GqlFuturesQuote:
+      description: "Mirrors `finance_query::FuturesQuote`."
+      type: object
+      properties:
+        change:
+          type: number
+          format: double
+        changePercent:
+          type: number
+          format: double
+        exchange:
+          type: string
+        expirationDate:
+          type: string
+        name:
+          type: string
+        openInterest:
+          type: integer
+          format: int64
+          minimum: 0
+        price:
+          type: number
+          format: double
+        symbol:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        underlying:
+          type: string
+        volume:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - symbol
     GqlGlobalCryptoStats:
       description: "Mirrors `finance_query::crypto::GlobalCryptoStats`."
       type: object
@@ -5932,6 +6754,28 @@ components:
         leadingSpanB:
           type: number
           format: double
+    GqlIndexConstituent:
+      description: "Mirrors `finance_query::IndexConstituent`."
+      type: object
+      properties:
+        cik:
+          type: string
+        dateFirstAdded:
+          type: string
+        founded:
+          type: string
+        headquarters:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        subSector:
+          type: string
+        symbol:
+          type: string
+      required:
+        - symbol
     GqlIndicatorsBatch:
       description: "Result of the batch `indicatorsBatch` root field: successfully computed\nindicators plus any per-symbol fetch errors."
       type: object
@@ -6334,6 +7178,141 @@ components:
       required:
         - id
         - observations
+    GqlMarketCalendarDetail:
+      oneOf:
+        - type: object
+          properties:
+            EARNINGS:
+              $ref: "#/components/schemas/GqlMarketEarningsDetail"
+          required:
+            - EARNINGS
+          additionalProperties: false
+        - type: object
+          properties:
+            IPO:
+              $ref: "#/components/schemas/GqlMarketIpoDetail"
+          required:
+            - IPO
+          additionalProperties: false
+        - type: object
+          properties:
+            DIVIDEND:
+              $ref: "#/components/schemas/GqlMarketDividendDetail"
+          required:
+            - DIVIDEND
+          additionalProperties: false
+        - type: object
+          properties:
+            SPLIT:
+              $ref: "#/components/schemas/GqlMarketSplitDetail"
+          required:
+            - SPLIT
+          additionalProperties: false
+        - type: object
+          properties:
+            MARKET_HOLIDAY:
+              $ref: "#/components/schemas/GqlMarketHolidayDetail"
+          required:
+            - MARKET_HOLIDAY
+          additionalProperties: false
+        - type: object
+          properties:
+            ECONOMIC:
+              $ref: "#/components/schemas/GqlMarketEconomicDetail"
+          required:
+            - ECONOMIC
+          additionalProperties: false
+        - type: object
+          properties:
+            UNKNOWN:
+              $ref: "#/components/schemas/GqlMarketUnknownDetail"
+          required:
+            - UNKNOWN
+          additionalProperties: false
+    GqlMarketCalendarEntry:
+      description: A single market-wide calendar entry.
+      type: object
+      properties:
+        date:
+          type: string
+        detail:
+          $ref: "#/components/schemas/GqlMarketCalendarDetail"
+        symbol:
+          type: string
+      required:
+        - detail
+    GqlMarketDividendDetail:
+      type: object
+      properties:
+        adjDividend:
+          type: number
+          format: double
+        declarationDate:
+          type: string
+        dividend:
+          type: number
+          format: double
+        paymentDate:
+          type: string
+        recordDate:
+          type: string
+    GqlMarketEarningsDetail:
+      type: object
+      properties:
+        eps:
+          type: number
+          format: double
+        epsEstimated:
+          type: number
+          format: double
+        fiscalDateEnding:
+          type: string
+        revenue:
+          type: number
+          format: double
+        revenueEstimated:
+          type: number
+          format: double
+        time:
+          type: string
+    GqlMarketEconomicDetail:
+      type: object
+      properties:
+        actual:
+          type: number
+          format: double
+        change:
+          type: number
+          format: double
+        changePercentage:
+          type: number
+          format: double
+        country:
+          type: string
+        estimate:
+          type: number
+          format: double
+        event:
+          type: string
+        impact:
+          type: string
+        previous:
+          type: number
+          format: double
+    GqlMarketHolidayDetail:
+      description: "Also used for `MarketStatus` entries — providers report exchange\nopen/closed status through this same shape (`status` carries \"open\"/\"closed\")."
+      type: object
+      properties:
+        close:
+          type: string
+        exchange:
+          type: string
+        name:
+          type: string
+        open:
+          type: string
+        status:
+          type: string
     GqlMarketHours:
       description: Market hours for one or more markets.
       type: object
@@ -6344,6 +7323,60 @@ components:
             $ref: "#/components/schemas/GqlMarketTime"
       required:
         - markets
+    GqlMarketIpoDetail:
+      type: object
+      properties:
+        actions:
+          type: string
+        company:
+          type: string
+        exchange:
+          type: string
+        marketCap:
+          type: number
+          format: double
+        priceRange:
+          type: string
+        shares:
+          type: number
+          format: double
+    GqlMarketSectorPe:
+      description: "A sector's aggregate price/earnings ratio, provider-routed via\n`Providers::market()`."
+      type: object
+      properties:
+        date:
+          type: string
+        exchange:
+          type: string
+        pe:
+          type: number
+          format: double
+        sector:
+          type: string
+      required:
+        - sector
+    GqlMarketSectorPerformance:
+      description: "A sector's aggregate performance, provider-routed via `Providers::market()`\n(`Capability::MARKET`). Distinct from `GqlSectorPerformance` in\n`types/sector.rs`, which is a nested field on Yahoo-only `finance::sector`."
+      type: object
+      properties:
+        changePercent:
+          type: number
+          format: double
+        exchange:
+          type: string
+        sector:
+          type: string
+      required:
+        - sector
+    GqlMarketSplitDetail:
+      type: object
+      properties:
+        denominator:
+          type: number
+          format: double
+        numerator:
+          type: number
+          format: double
     GqlMarketSummaryQuote:
       description: A market summary quote (major index / currency / commodity).
       type: object
@@ -6402,6 +7435,13 @@ components:
         - id
         - name
         - status
+    GqlMarketUnknownDetail:
+      description: "Fallback for `CalendarDetail` variants added to the library after this\nschema was written — `CalendarDetail` is `#[non_exhaustive]`, so this\nkeeps the conversion total instead of panicking on a future variant."
+      type: object
+      properties:
+        raw: {}
+      required:
+        - raw
     GqlNews:
       description: A scraped news article.
       type: object
@@ -6600,6 +7640,36 @@ components:
           type: number
           format: double
         s3:
+          type: number
+          format: double
+    GqlPressRelease:
+      description: "Mirrors `finance_query::PressRelease`."
+      type: object
+      properties:
+        date:
+          type: string
+        symbol:
+          type: string
+        text:
+          type: string
+        title:
+          type: string
+    GqlPriceTargetConsensus:
+      description: "Mirrors `finance_query::PriceTargetConsensus`."
+      type: object
+      properties:
+        symbol:
+          type: string
+        targetConsensus:
+          type: number
+          format: double
+        targetHigh:
+          type: number
+          format: double
+        targetLow:
+          type: number
+          format: double
+        targetMedian:
           type: number
           format: double
     GqlQuote:
@@ -6982,6 +8052,29 @@ components:
       required:
         - quotes
         - errors
+    GqlRatingConsensus:
+      description: "Mirrors `finance_query::RatingConsensus`."
+      type: object
+      properties:
+        buy:
+          type: integer
+          format: int64
+        consensus:
+          type: string
+        hold:
+          type: integer
+          format: int64
+        sell:
+          type: integer
+          format: int64
+        strongBuy:
+          type: integer
+          format: int64
+        strongSell:
+          type: integer
+          format: int64
+        symbol:
+          type: string
     GqlRecommendation:
       description: "Similar-stock recommendations for one symbol, mirroring\n`finance_query::Recommendation`, which has no serde rename of its own\n(plain snake_case JSON keys, e.g. `provider_id`) — `alias` keeps\ndeserialization accepting those keys while `rename_all` documents the\ncamelCase names GraphQL actually puts on the wire."
       type: object
@@ -7025,6 +8118,18 @@ components:
           type: integer
           format: int64
         reportHeadline:
+          type: string
+    GqlRiskFactor:
+      description: "Mirrors `finance_query::RiskFactor`."
+      type: object
+      properties:
+        category:
+          type: string
+        filingDate:
+          type: string
+        text:
+          type: string
+        title:
           type: string
     GqlRiskSummary:
       description: Risk/performance summary for a symbol.
@@ -8073,6 +9178,13 @@ components:
         region:
           description: "Region code (e.g., \"US\", \"JP\", \"GB\"). Defaults to US if not specified."
           $ref: "#/components/schemas/Region"
+    IndexConstituentsQuery:
+      description: "Query parameters for `GET /v2/index-constituents/{symbol}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     IndicatorsQuery:
       description: "Query parameters for `GET /v2/indicators/{symbol}`."
       type: object
@@ -8308,6 +9420,35 @@ components:
         - future
         - currency
         - cryptocurrency
+    MarketCalendarKindParam:
+      description: "Calendar kind for `GET /v2/market-calendar`."
+      type: string
+      enum:
+        - earnings
+        - ipo
+        - dividend
+        - split
+        - economic
+        - market-holiday
+        - market-status
+    MarketCalendarQuery:
+      description: "Query parameters for `GET /v2/market-calendar`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        from:
+          description: Start date (YYYY-MM-DD); ignored by market-holiday/market-status
+          type: string
+        kind:
+          description: Which market-wide calendar to fetch (required)
+          $ref: "#/components/schemas/MarketCalendarKindParam"
+        to:
+          description: End date (YYYY-MM-DD); ignored by market-holiday/market-status
+          type: string
+      required:
+        - kind
     MarketNewsQuery:
       description: "Query parameters for `GET /v2/crypto/news` and `GET /v2/forex/news`."
       type: object
@@ -9013,6 +10154,18 @@ components:
           type: string
       required:
         - message
+    PressReleasesQuery:
+      description: "Query parameters for `GET /v2/press-releases/{symbol}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        limit:
+          description: "Maximum number of releases to return (default: 10)"
+          type: integer
+          format: int32
+          minimum: 0
     Quarter:
       description: "Fiscal quarter for `GET /v2/transcripts/{symbol}`."
       type: string
@@ -9156,6 +10309,13 @@ components:
         - GB
         - US
         - VN
+    RiskFactorsQuery:
+      description: "Query parameters for `GET /v2/filings/{symbol}/risk-factors`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     RiskQuery:
       description: "Query parameters for `GET /v2/risk/{symbol}`."
       type: object
@@ -9269,6 +10429,20 @@ components:
         - basic-materials
         - real-estate
         - utilities
+    SectorPeQuery:
+      description: "Query parameters for `GET /v2/sector-pe`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+    SectorPerformanceQuery:
+      description: "Query parameters for `GET /v2/sector-performance`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     SectorQuery:
       description: "Query parameters for `GET /v2/sectors/{sector}` and `GET /v2/industries/{industry}`."
       type: object

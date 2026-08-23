@@ -251,6 +251,23 @@ class GqlCommitmentsOfTraders:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlCommodityQuote:
+    """Mirrors `finance_query::CommodityQuote`."""
+
+    symbol: str
+    change: float | None = None
+    change_percent: float | None = None
+    name: str | None = None
+    price: float | None = None
+    timestamp: int | None = None
+    unit: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "change_percent": "changePercent",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlCompanyProfile:
     """Mirrors `finance_query::CompanyProfile`, which has no serde rename of its
 own — this deserializes snake_case keys while its GraphQL name stays
@@ -536,6 +553,59 @@ class GqlElderRayData:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlEtfCountryWeighting:
+    """Mirrors `finance_query::EtfCountryWeighting`."""
+
+    country: str | None = None
+    weight: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEtfHolding:
+    """Mirrors `finance_query::EtfHolding`."""
+
+    description: str | None = None
+    symbol: str | None = None
+    weight: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEtfProfile:
+    """Mirrors `finance_query::EtfProfile`."""
+
+    country_weightings: list[GqlEtfCountryWeighting]
+    holdings: list[GqlEtfHolding]
+    sector_weightings: list[GqlEtfSectorWeighting]
+    asset_type: str | None = None
+    dividend_yield: float | None = None
+    inception_date: str | None = None
+    name: str | None = None
+    net_assets: float | None = None
+    net_expense_ratio: float | None = None
+    portfolio_turnover: float | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "asset_type": "assetType",
+        "country_weightings": "countryWeightings",
+        "dividend_yield": "dividendYield",
+        "inception_date": "inceptionDate",
+        "net_assets": "netAssets",
+        "net_expense_ratio": "netExpenseRatio",
+        "portfolio_turnover": "portfolioTurnover",
+        "sector_weightings": "sectorWeightings",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEtfSectorWeighting:
+    """Mirrors `finance_query::EtfSectorWeighting`."""
+
+    sector: str | None = None
+    weight: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlExchange:
     """A supported stock exchange with its symbol suffix and data provider."""
 
@@ -633,6 +703,14 @@ rename of its own (plain snake_case keys)."""
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlFilingSection:
+    """Mirrors `finance_query::FilingSection`."""
+
+    content: str | None = None
+    section: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlFinancialDataPoint:
     """A single data point in a financial time series."""
 
@@ -667,6 +745,29 @@ class GqlFormattedObject:
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "long_fmt": "longFmt",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlFuturesQuote:
+    """Mirrors `finance_query::FuturesQuote`."""
+
+    symbol: str
+    change: float | None = None
+    change_percent: float | None = None
+    exchange: str | None = None
+    expiration_date: str | None = None
+    name: str | None = None
+    open_interest: int | None = None
+    price: float | None = None
+    timestamp: int | None = None
+    underlying: str | None = None
+    volume: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "change_percent": "changePercent",
+        "expiration_date": "expirationDate",
+        "open_interest": "openInterest",
     }
 
 
@@ -738,6 +839,25 @@ class GqlIchimokuData:
         "lagging_span": "laggingSpan",
         "leading_span_a": "leadingSpanA",
         "leading_span_b": "leadingSpanB",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlIndexConstituent:
+    """Mirrors `finance_query::IndexConstituent`."""
+
+    symbol: str
+    cik: str | None = None
+    date_first_added: str | None = None
+    founded: str | None = None
+    headquarters: str | None = None
+    name: str | None = None
+    sector: str | None = None
+    sub_sector: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "date_first_added": "dateFirstAdded",
+        "sub_sector": "subSector",
     }
 
 
@@ -1012,10 +1132,45 @@ class GqlMacroSeries:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlMarketCalendarEntry:
+    """A single market-wide calendar entry."""
+
+    detail: GqlMarketCalendarDetail
+    date: str | None = None
+    symbol: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlMarketHours:
     """Market hours for one or more markets."""
 
     markets: list[GqlMarketTime]
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlMarketSectorPe:
+    """A sector's aggregate price/earnings ratio, provider-routed via
+`Providers::market()`."""
+
+    sector: str
+    date: str | None = None
+    exchange: str | None = None
+    pe: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlMarketSectorPerformance:
+    """A sector's aggregate performance, provider-routed via `Providers::market()`
+(`Capability::MARKET`). Distinct from `GqlSectorPerformance` in
+`types/sector.rs`, which is a nested field on Yahoo-only `finance::sector`."""
+
+    sector: str
+    change_percent: float | None = None
+    exchange: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "change_percent": "changePercent",
+    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1194,6 +1349,34 @@ class GqlPivotPointsData:
     s1: float | None = None
     s2: float | None = None
     s3: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlPressRelease:
+    """Mirrors `finance_query::PressRelease`."""
+
+    date: str | None = None
+    symbol: str | None = None
+    text: str | None = None
+    title: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlPriceTargetConsensus:
+    """Mirrors `finance_query::PriceTargetConsensus`."""
+
+    symbol: str | None = None
+    target_consensus: float | None = None
+    target_high: float | None = None
+    target_low: float | None = None
+    target_median: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "target_consensus": "targetConsensus",
+        "target_high": "targetHigh",
+        "target_low": "targetLow",
+        "target_median": "targetMedian",
+    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1572,6 +1755,24 @@ any per-symbol fetch errors."""
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlRatingConsensus:
+    """Mirrors `finance_query::RatingConsensus`."""
+
+    buy: int | None = None
+    consensus: str | None = None
+    hold: int | None = None
+    sell: int | None = None
+    strong_buy: int | None = None
+    strong_sell: int | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "strong_buy": "strongBuy",
+        "strong_sell": "strongSell",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlRecommendation:
     """Similar-stock recommendations for one symbol, mirroring
 `finance_query::Recommendation`, which has no serde rename of its own
@@ -1610,6 +1811,20 @@ class GqlResearchReport:
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "report_date": "reportDate",
         "report_headline": "reportHeadline",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlRiskFactor:
+    """Mirrors `finance_query::RiskFactor`."""
+
+    category: str | None = None
+    filing_date: str | None = None
+    text: str | None = None
+    title: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "filing_date": "filingDate",
     }
 
 
@@ -2545,11 +2760,15 @@ AnalysisResponse = typing.Any
 
 AnalysisType = typing.Literal["recommendations", "upgrades-downgrades", "earnings-estimate", "earnings-history"]
 
+FilingSectionFormParam = typing.Literal["ten-k", "eight-k"]
+
 Frequency = typing.Literal["annual", "quarterly"]
 
 GqlEventKind = dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any]
 
 GqlFormattedValue = int | float | str | GqlFormattedObject | typing.Any
+
+GqlMarketCalendarDetail = dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any]
 
 HolderType = typing.Literal["major", "institutional", "mutualfund", "insider-transactions", "insider-purchases", "insider-roster"]
 
@@ -2560,6 +2779,8 @@ Industry = typing.Literal["agricultural-inputs", "aluminum", "coal", "copper", "
 Interval = typing.Literal["1m", "2m", "5m", "15m", "30m", "1h", "90m", "1d", "5d", "1wk", "1mo", "3mo"]
 
 LookupType = typing.Literal["all", "equity", "mutualfund", "etf", "index", "future", "currency", "cryptocurrency"]
+
+MarketCalendarKindParam = typing.Literal["earnings", "ipo", "dividend", "split", "economic", "market-holiday", "market-status"]
 
 MetricsText = str
 

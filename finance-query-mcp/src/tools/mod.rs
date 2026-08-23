@@ -1,6 +1,7 @@
 pub mod analysis;
 pub mod calendar;
 pub mod chart;
+pub mod commodity_futures;
 pub mod crypto;
 pub mod dividends;
 pub mod edgar;
@@ -26,7 +27,9 @@ use finance_query::{
     StatementType, TimeRange,
 };
 use finance_query_server::graphql::FinanceSchema;
-use finance_query_server::params::{AnalysisType, HolderType, Quarter};
+use finance_query_server::params::{
+    AnalysisType, FilingSectionFormParam, HolderType, MarketCalendarKindParam, Quarter,
+};
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::tool::{ToolCallContext, ToolRouter},
@@ -92,6 +95,43 @@ pub struct CalendarParams {
     /// Forward time window: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
     #[schemars(with = "String")]
     pub range: Option<TimeRange>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct MarketCalendarParams {
+    /// Which market-wide calendar to fetch: earnings | ipo | dividend | split | economic | market-holiday | market-status
+    #[schemars(with = "String")]
+    pub kind: MarketCalendarKindParam,
+    /// Start date (YYYY-MM-DD); ignored by market-holiday/market-status
+    pub from: Option<String>,
+    /// End date (YYYY-MM-DD); ignored by market-holiday/market-status
+    pub to: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct CommodityParams {
+    /// Commodity symbol (e.g. "GCUSD" for gold, "CLUSD" for crude oil)
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FuturesParams {
+    /// Futures contract symbol (e.g. "ESM26" for E-mini S&P June 2026)
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct IndexConstituentsParams {
+    /// Index symbol (e.g. "^GSPC" for the S&P 500; Wikipedia-backed, S&P 500 only)
+    pub symbol: String,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
 }
@@ -237,6 +277,37 @@ pub struct FailsToDeliverParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct FilingSectionsParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// SEC accession number, e.g. "0000320193-24-000123"
+    pub accession_number: String,
+    /// Which filing form to fetch sectioned text for: ten-k | eight-k
+    #[schemars(with = "String")]
+    pub form: FilingSectionFormParam,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct RiskFactorsParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct PressReleasesParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Maximum number of releases to return (default: 10)
+    pub limit: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct DividendsParams {
     /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,KO,JNJ")
     pub symbols: String,
@@ -368,6 +439,18 @@ pub struct MarketHoursParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct SectorPerformanceParams {
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct SectorPeParams {
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct SectorParams {
     /// Sector slug: technology|financial-services|consumer-cyclical|communication-services|
     /// healthcare|industrials|consumer-defensive|energy|basic-materials|real-estate|utilities
@@ -429,6 +512,30 @@ pub struct CompanyProfileParams {
 #[derive(Deserialize, JsonSchema)]
 pub struct EarningsSurprisesParams {
     /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct RatingConsensusParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct PriceTargetConsensusParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct EtfProfileParams {
+    /// ETF ticker symbol
     pub symbol: String,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
@@ -643,6 +750,16 @@ impl FinanceTools {
     }
 
     #[tool(
+        description = "Get a market-wide event calendar over a date range: earnings, IPOs, dividends, splits, economic releases, market holidays, or live exchange open/closed status. Unlike get_calendar (per-symbol), this spans the whole market."
+    )]
+    async fn get_market_calendar(
+        &self,
+        p: Parameters<MarketCalendarParams>,
+    ) -> Result<CallToolResult, McpError> {
+        calendar::get_market_calendar(&self.schema, p.0.kind, p.0.from, p.0.to, p.0.fields).await
+    }
+
+    #[tool(
         description = "Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols."
     )]
     async fn get_spark(
@@ -799,6 +916,43 @@ impl FinanceTools {
             .await
     }
 
+    #[tool(
+        description = "Get sectioned text of one SEC filing by accession number (10-K or 8-K). Routes through EDGAR (best-effort HTML extraction) or Polygon when configured."
+    )]
+    async fn get_filing_sections(
+        &self,
+        p: Parameters<FilingSectionsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        filings::get_filing_sections(
+            &self.schema,
+            p.0.symbol,
+            p.0.accession_number,
+            p.0.form,
+            p.0.fields,
+        )
+        .await
+    }
+
+    #[tool(
+        description = "Get risk factors extracted from a symbol's SEC filings. Routes through EDGAR (best-effort HTML extraction) or Polygon when configured."
+    )]
+    async fn get_risk_factors(
+        &self,
+        p: Parameters<RiskFactorsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        filings::get_risk_factors(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get a company's own press releases, distinct from get_news (press coverage). Routes through EDGAR 8-K exhibits, falling back to FMP/Alpha Vantage when configured."
+    )]
+    async fn get_press_releases(
+        &self,
+        p: Parameters<PressReleasesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        news::get_press_releases(&self.schema, p.0.symbol, p.0.limit, p.0.fields).await
+    }
+
     #[tool(description = "Get currently trending stock tickers for a region.")]
     async fn get_trending(
         &self,
@@ -814,6 +968,33 @@ impl FinanceTools {
         market::get_indices(&self.schema, p.0.region, p.0.fields).await
     }
 
+    #[tool(
+        description = "Get a commodity's current quote (e.g. gold, silver, crude oil), provider-routed (Yahoo, keyless)."
+    )]
+    async fn get_commodity(
+        &self,
+        p: Parameters<CommodityParams>,
+    ) -> Result<CallToolResult, McpError> {
+        commodity_futures::get_commodity(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get a futures contract's current quote, provider-routed (Yahoo, keyless)."
+    )]
+    async fn get_futures(&self, p: Parameters<FuturesParams>) -> Result<CallToolResult, McpError> {
+        commodity_futures::get_futures(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only)."
+    )]
+    async fn get_index_constituents(
+        &self,
+        p: Parameters<IndexConstituentsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        commodity_futures::get_index_constituents(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
     #[tool(description = "Get current market hours and open/closed status for a region.")]
     async fn get_market_hours(
         &self,
@@ -827,6 +1008,26 @@ impl FinanceTools {
     )]
     async fn get_sector(&self, p: Parameters<SectorParams>) -> Result<CallToolResult, McpError> {
         market::get_sector(&self.schema, p.0.sector, p.0.lang, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get aggregate performance for every market sector, provider-routed (Yahoo screener fan-out, keyless). Distinct from get_sector (per-sector Yahoo-only shortcut)."
+    )]
+    async fn get_sector_performance(
+        &self,
+        p: Parameters<SectorPerformanceParams>,
+    ) -> Result<CallToolResult, McpError> {
+        market::get_sector_performance(&self.schema, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get price/earnings ratios by market sector, provider-routed (Yahoo screener fan-out, keyless)."
+    )]
+    async fn get_sector_pe(
+        &self,
+        p: Parameters<SectorPeParams>,
+    ) -> Result<CallToolResult, McpError> {
+        market::get_sector_pe(&self.schema, p.0.fields).await
     }
 
     #[tool(
@@ -880,6 +1081,34 @@ impl FinanceTools {
         p: Parameters<EarningsSurprisesParams>,
     ) -> Result<CallToolResult, McpError> {
         analysis::get_earnings_surprises(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get a stock's consensus analyst rating rollup (strong buy/buy/hold/sell/strong sell counts and a headline consensus label)."
+    )]
+    async fn get_rating_consensus(
+        &self,
+        p: Parameters<RatingConsensusParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_rating_consensus(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(description = "Get a stock's consensus analyst price target (high/low/mean/median).")]
+    async fn get_price_target_consensus(
+        &self,
+        p: Parameters<PriceTargetConsensusParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_price_target_consensus(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get an ETF's profile and holdings (net assets, expense ratio, sector/country weightings, top holdings)."
+    )]
+    async fn get_etf_profile(
+        &self,
+        p: Parameters<EtfProfileParams>,
+    ) -> Result<CallToolResult, McpError> {
+        analysis::get_etf_profile(&self.schema, p.0.symbol, p.0.fields).await
     }
 
     #[tool(

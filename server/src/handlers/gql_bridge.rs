@@ -82,6 +82,35 @@ pub(crate) fn build_rest_selection(fields: Option<&str>, valid_fields: &[&str]) 
     sel
 }
 
+/// Build a selection set that expands `union_field` into `union_selection`
+/// (a union type's inline-fragment set) when requested, prefixed by whichever
+/// `leading_scalars` were also requested. Falls back to a flat selection when
+/// `union_field` isn't requested.
+pub(crate) fn build_rest_union_selection(
+    fields: Option<&str>,
+    valid_fields: &[&str],
+    union_field: &str,
+    leading_scalars: &[&str],
+    union_selection: &str,
+) -> String {
+    let top_selection = build_rest_selection(fields, valid_fields);
+    if !top_selection.contains(union_field) {
+        return top_selection;
+    }
+    let mut sel = String::from("{ ");
+    for f in leading_scalars {
+        if top_selection.contains(f) {
+            sel.push_str(f);
+            sel.push(' ');
+        }
+    }
+    sel.push_str(union_field);
+    sel.push(' ');
+    sel.push_str(union_selection);
+    sel.push_str(" }");
+    sel
+}
+
 /// Execute a GraphQL query for a REST handler, mapping GraphQL errors back to
 /// the correct HTTP status code via the `status` extension `to_gql_error` sets
 /// (same taxonomy as `error_response`/`gql_errors_to_mcp`) instead of a blanket

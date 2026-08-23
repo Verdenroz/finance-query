@@ -14,26 +14,18 @@ use finance_query_server::graphql::{
 use finance_query_server::params::CalendarQuery;
 use tracing::info;
 
-use super::gql_bridge::{build_rest_selection, execute_gql_rest, range_to_gql};
+use super::gql_bridge::{build_rest_union_selection, execute_gql_rest, range_to_gql};
 
 /// Build the `calendar { ... }` selection set, expanding `event` with its
 /// full union inline-fragment selection (see `CALENDAR_EVENT_UNION_SELECTION`).
 fn build_rest_calendar_selection(fields: Option<&str>) -> String {
-    let top_selection = build_rest_selection(fields, GQL_CALENDAR_VALID_FIELDS);
-    if !top_selection.contains("event") {
-        return top_selection;
-    }
-    let mut sel = String::from("{ ");
-    for f in ["timestamp", "date", "symbol"] {
-        if top_selection.contains(f) {
-            sel.push_str(f);
-            sel.push(' ');
-        }
-    }
-    sel.push_str("event ");
-    sel.push_str(CALENDAR_EVENT_UNION_SELECTION);
-    sel.push_str(" }");
-    sel
+    build_rest_union_selection(
+        fields,
+        GQL_CALENDAR_VALID_FIELDS,
+        "event",
+        &["timestamp", "date", "symbol"],
+        CALENDAR_EVENT_UNION_SELECTION,
+    )
 }
 
 /// GET /v2/calendar?symbols=<csv>&range=<str>

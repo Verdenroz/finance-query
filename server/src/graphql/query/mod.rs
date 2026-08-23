@@ -8,6 +8,7 @@
 //! frame small regardless of how large the schema grows overall.
 
 mod root_batch;
+mod root_commodities;
 mod root_discovery;
 mod root_market;
 mod root_metadata;
@@ -15,11 +16,13 @@ mod ticker_analysis;
 mod ticker_core;
 mod ticker_events;
 mod ticker_filings;
+mod ticker_fundamentals_extra;
 mod ticker_holders;
 
 use async_graphql::{ErrorExtensions, MergedObject};
 
 use root_batch::RootBatchQuery;
+use root_commodities::RootCommodityQuery;
 use root_discovery::RootDiscoveryQuery;
 use root_market::RootMarketQuery;
 use root_metadata::RootMetadataQuery;
@@ -27,6 +30,7 @@ use ticker_analysis::TickerAnalysisQuery;
 use ticker_core::TickerCoreQuery;
 use ticker_events::TickerEventsQuery;
 use ticker_filings::TickerFilingsQuery;
+use ticker_fundamentals_extra::TickerFundamentalsExtraQuery;
 use ticker_holders::TickerHoldersQuery;
 
 use super::types::{batch::GqlBatchError, options::GqlOptions};
@@ -106,6 +110,7 @@ fn screener_error_to_gql(err: crate::services::screener::ScreenerError) -> async
 pub struct QueryRoot(
     RootBatchQuery,
     RootMarketQuery,
+    RootCommodityQuery,
     RootDiscoveryQuery,
     RootMetadataQuery,
 );
@@ -119,6 +124,7 @@ pub struct GqlTicker(
     TickerHoldersQuery,
     TickerAnalysisQuery,
     TickerFilingsQuery,
+    TickerFundamentalsExtraQuery,
 );
 
 impl GqlTicker {
@@ -136,7 +142,10 @@ impl GqlTicker {
             TickerAnalysisQuery {
                 symbol: symbol.clone(),
             },
-            TickerFilingsQuery { symbol },
+            TickerFilingsQuery {
+                symbol: symbol.clone(),
+            },
+            TickerFundamentalsExtraQuery { symbol },
         )
     }
 }

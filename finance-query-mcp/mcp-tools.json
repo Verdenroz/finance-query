@@ -166,6 +166,26 @@
       }
     },
     {
+      "name": "get_commodity",
+      "description": "Get a commodity's current quote (e.g. gold, silver, crude oil), provider-routed (Yahoo, keyless).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Commodity symbol (e.g. \"GCUSD\" for gold, \"CLUSD\" for crude oil)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_crypto",
       "description": "Get top cryptocurrency coins by market cap from CoinGecko (no API key required).",
       "inputSchema": {
@@ -360,6 +380,26 @@
       }
     },
     {
+      "name": "get_etf_profile",
+      "description": "Get an ETF's profile and holdings (net assets, expense ratio, sector/country weightings, top holdings).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "ETF ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_fear_and_greed",
       "description": "Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100).",
       "inputSchema": {
@@ -395,6 +435,46 @@
           "sources": {
             "description": "Comma-separated feed sources: federal-reserve|sec|marketwatch|cnbc|bloomberg|ft|nyt|\nguardian|investing|bea|ecb|cfpb|wsj|fortune|businesswire|coindesk|cointelegraph|\ntechcrunch|hackernews|oilprice|calculatedrisk|scmp|nikkei|boe|venturebeat|yc|\neconomist|financialpost|ftlex|ritholtz\n(default: marketwatch, bloomberg, wsj, fortune)",
             "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_filing_sections",
+      "description": "Get sectioned text of one SEC filing by accession number (10-K or 8-K). Routes through EDGAR (best-effort HTML extraction) or Polygon when configured.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accession_number": {
+            "description": "SEC accession number, e.g. \"0000320193-24-000123\"",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "form": {
+            "description": "Which filing form to fetch sectioned text for: ten-k | eight-k",
+            "$ref": "#/$defs/FilingSectionFormParam"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accession_number",
+          "form",
+          "symbol"
+        ],
+        "$defs": {
+          "FilingSectionFormParam": {
+            "description": "Filing form for `GET /v2/filings/{symbol}/sections`.",
+            "type": "string",
+            "enum": [
+              "ten-k",
+              "eight-k"
+            ]
           }
         }
       }
@@ -482,6 +562,26 @@
       }
     },
     {
+      "name": "get_futures",
+      "description": "Get a futures contract's current quote, provider-routed (Yahoo, keyless).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Futures contract symbol (e.g. \"ESM26\" for E-mini S&P June 2026)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_holders",
       "description": "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity.",
       "inputSchema": {
@@ -528,6 +628,26 @@
             ]
           }
         }
+      }
+    },
+    {
+      "name": "get_index_constituents",
+      "description": "Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Index symbol (e.g. \"^GSPC\" for the S&P 500; Wikipedia-backed, S&P 500 only)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -816,6 +936,49 @@
       }
     },
     {
+      "name": "get_market_calendar",
+      "description": "Get a market-wide event calendar over a date range: earnings, IPOs, dividends, splits, economic releases, market holidays, or live exchange open/closed status. Unlike get_calendar (per-symbol), this spans the whole market.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "from": {
+            "description": "Start date (YYYY-MM-DD); ignored by market-holiday/market-status",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Which market-wide calendar to fetch: earnings | ipo | dividend | split | economic | market-holiday | market-status",
+            "$ref": "#/$defs/MarketCalendarKindParam"
+          },
+          "to": {
+            "description": "End date (YYYY-MM-DD); ignored by market-holiday/market-status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "$defs": {
+          "MarketCalendarKindParam": {
+            "description": "Calendar kind for `GET /v2/market-calendar`.",
+            "type": "string",
+            "enum": [
+              "earnings",
+              "ipo",
+              "dividend",
+              "split",
+              "economic",
+              "market-holiday",
+              "market-status"
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "get_market_hours",
       "description": "Get current market hours and open/closed status for a region.",
       "inputSchema": {
@@ -1000,6 +1163,52 @@
       }
     },
     {
+      "name": "get_press_releases",
+      "description": "Get a company's own press releases, distinct from get_news (press coverage). Routes through EDGAR 8-K exhibits, falling back to FMP/Alpha Vantage when configured.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of releases to return (default: 10)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_price_target_consensus",
+      "description": "Get a stock's consensus analyst price target (high/low/mean/median).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_quote",
       "description": "Get current quote and company data (price, market cap, PE ratio, 52-week range, etc.) for one or more stock symbols (comma-separated). A single symbol returns one quote object; multiple symbols return a paginated batch of quotes plus per-symbol errors.",
       "inputSchema": {
@@ -1030,6 +1239,26 @@
         },
         "required": [
           "symbols"
+        ]
+      }
+    },
+    {
+      "name": "get_rating_consensus",
+      "description": "Get a stock's consensus analyst rating rollup (strong buy/buy/hold/sell/strong sell counts and a headline consensus label).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
         ]
       }
     },
@@ -1129,6 +1358,26 @@
       }
     },
     {
+      "name": "get_risk_factors",
+      "description": "Get risk factors extracted from a symbol's SEC filings. Routes through EDGAR (best-effort HTML extraction) or Polygon when configured.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_sector",
       "description": "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors.",
       "inputSchema": {
@@ -1167,6 +1416,32 @@
               "real-estate",
               "utilities"
             ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_sector_pe",
+      "description": "Get price/earnings ratios by market sector, provider-routed (Yahoo screener fan-out, keyless).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_sector_performance",
+      "description": "Get aggregate performance for every market sector, provider-routed (Yahoo screener fan-out, keyless). Distinct from get_sector (per-sector Yahoo-only shortcut).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
           }
         }
       }

@@ -7,6 +7,7 @@
 mod analysis;
 mod calendar;
 mod chart;
+mod commodity_futures;
 mod crypto;
 mod edgar;
 mod events;
@@ -64,7 +65,12 @@ pub(crate) fn api_routes() -> Router {
         .route("/chart/{symbol}", get(chart::get_chart))
         // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
         .route("/charts", get(chart::get_batch_charts))
-        // GET /v2/company-profile/{symbol} (currently Alpha Vantage only)
+        // GET /v2/commodities/{symbol}
+        .route(
+            "/commodities/{symbol}",
+            get(commodity_futures::get_commodity),
+        )
+        // GET /v2/company-profile/{symbol} (Yahoo, Alpha Vantage, or FMP)
         .route(
             "/company-profile/{symbol}",
             get(analysis::get_company_profile),
@@ -108,6 +114,8 @@ pub(crate) fn api_routes() -> Router {
             "/edgar/submissions/{symbol}",
             get(edgar::get_edgar_submissions),
         )
+        // GET /v2/etf-profile/{symbol}
+        .route("/etf-profile/{symbol}", get(analysis::get_etf_profile))
         // GET /v2/exchanges
         .route("/exchanges", get(metadata::get_exchanges))
         // GET /v2/fear-and-greed
@@ -127,6 +135,16 @@ pub(crate) fn api_routes() -> Router {
             "/filings/{symbol}/fails-to-deliver",
             get(filings::get_fails_to_deliver),
         )
+        // GET /v2/filings/{symbol}/risk-factors (EDGAR, falling back to Polygon)
+        .route(
+            "/filings/{symbol}/risk-factors",
+            get(filings::get_risk_factors),
+        )
+        // GET /v2/filings/{symbol}/sections?accessionNumber=<str>&form=<ten-k|eight-k>
+        .route(
+            "/filings/{symbol}/sections",
+            get(filings::get_filing_sections),
+        )
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route(
             "/financials/{symbol}/{statement}",
@@ -140,6 +158,8 @@ pub(crate) fn api_routes() -> Router {
         .route("/fred/series/{id}", get(fred::get_fred_series))
         // GET /v2/fred/treasury-yields?year=<u32>
         .route("/fred/treasury-yields", get(fred::get_fred_treasury_yields))
+        // GET /v2/futures/{symbol}
+        .route("/futures/{symbol}", get(commodity_futures::get_futures))
         // GET /v2/gdelt/news/{symbol}
         .route("/gdelt/news/{symbol}", get(keyless::get_gdelt_news))
         // GET /v2/health - version-prefixed health check
@@ -152,12 +172,19 @@ pub(crate) fn api_routes() -> Router {
         .route("/indicators/{symbol}", get(indicators::get_indicators))
         // GET /v2/indicators?symbols=<csv>&interval=<str>&range=<str>
         .route("/indicators", get(indicators::get_batch_indicators))
+        // GET /v2/index-constituents/{symbol}
+        .route(
+            "/index-constituents/{symbol}",
+            get(commodity_futures::get_index_constituents),
+        )
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(market::get_indices))
         // GET /v2/industries/{industry}
         .route("/industries/{industry}", get(sector::get_industry))
         // GET /v2/lookup?q=<string>&type=<string>&count=<u32>&logo=<bool>
         .route("/lookup", get(search::lookup))
+        // GET /v2/market-calendar?kind=<str>&from=<date>&to=<date>
+        .route("/market-calendar", get(market::get_market_calendar))
         // GET /v2/market-summary
         .route("/market-summary", get(market::get_market_summary))
         // GET /v2/news?count=<u32>
@@ -170,12 +197,24 @@ pub(crate) fn api_routes() -> Router {
         .route("/options", get(options::get_batch_options))
         // GET /v2/ping - version-prefixed ping
         .route("/ping", get(system::ping))
+        // GET /v2/press-releases/{symbol}?limit=<u32>
+        .route("/press-releases/{symbol}", get(news::get_press_releases))
+        // GET /v2/price-target-consensus/{symbol}
+        .route(
+            "/price-target-consensus/{symbol}",
+            get(analysis::get_price_target_consensus),
+        )
         // GET /v2/quote/{symbol}?logo=<bool>
         .route("/quote/{symbol}", get(quote::get_quote))
         // GET /v2/quote-type/{symbol}
         .route("/quote-type/{symbol}", get(metadata::get_quote_type))
         // GET /v2/quotes?symbols=<csv>&logo=<bool>
         .route("/quotes", get(quote::get_quotes))
+        // GET /v2/rating-consensus/{symbol}
+        .route(
+            "/rating-consensus/{symbol}",
+            get(analysis::get_rating_consensus),
+        )
         // GET /v2/recommendations/{symbol}?limit=<u32>
         .route(
             "/recommendations/{symbol}",
@@ -191,6 +230,10 @@ pub(crate) fn api_routes() -> Router {
         .route("/screeners/custom", post(screener::post_custom_screener))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search::search))
+        // GET /v2/sector-pe
+        .route("/sector-pe", get(market::get_sector_pe))
+        // GET /v2/sector-performance
+        .route("/sector-performance", get(market::get_sector_performance))
         // GET /v2/sectors/{sector}
         .route("/sectors/{sector}", get(sector::get_sector))
         // GET /v2/spark?symbols=<csv>&interval=<str>&range=<str>

@@ -67,6 +67,19 @@ fn route_mcp_get_chart() {}
 )]
 fn route_mcp_get_calendar() {}
 
+/// Get a market-wide event calendar over a date range: earnings, IPOs, dividends, splits, economic releases, market holidays, or live exchange open/closed status. Unlike get_calendar (per-symbol), this spans the whole market.
+///
+/// Implements `tools::FinanceTools::get_market_calendar`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_market_calendar",
+    method = "TOOL",
+    path = "get_market_calendar",
+    params = "MarketCalendarParams"
+)]
+fn route_mcp_get_market_calendar() {}
+
 /// Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols.
 ///
 /// Implements `tools::FinanceTools::get_spark`.
@@ -223,6 +236,45 @@ fn route_mcp_get_trending() {}
 )]
 fn route_mcp_get_indices() {}
 
+/// Get a commodity's current quote (e.g. gold, silver, crude oil), provider-routed (Yahoo, keyless).
+///
+/// Implements `tools::FinanceTools::get_commodity`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_commodity",
+    method = "TOOL",
+    path = "get_commodity",
+    params = "CommodityParams"
+)]
+fn route_mcp_get_commodity() {}
+
+/// Get a futures contract's current quote, provider-routed (Yahoo, keyless).
+///
+/// Implements `tools::FinanceTools::get_futures`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_futures",
+    method = "TOOL",
+    path = "get_futures",
+    params = "FuturesParams"
+)]
+fn route_mcp_get_futures() {}
+
+/// Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only).
+///
+/// Implements `tools::FinanceTools::get_index_constituents`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_index_constituents",
+    method = "TOOL",
+    path = "get_index_constituents",
+    params = "IndexConstituentsParams"
+)]
+fn route_mcp_get_index_constituents() {}
+
 /// Get current market hours and open/closed status for a region.
 ///
 /// Implements `tools::FinanceTools::get_market_hours`.
@@ -248,6 +300,32 @@ fn route_mcp_get_market_hours() {}
     params = "SectorParams"
 )]
 fn route_mcp_get_sector() {}
+
+/// Get aggregate performance for every market sector, provider-routed (Yahoo screener fan-out, keyless). Distinct from get_sector (per-sector Yahoo-only shortcut).
+///
+/// Implements `tools::FinanceTools::get_sector_performance`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_sector_performance",
+    method = "TOOL",
+    path = "get_sector_performance",
+    params = "SectorPerformanceParams"
+)]
+fn route_mcp_get_sector_performance() {}
+
+/// Get price/earnings ratios by market sector, provider-routed (Yahoo screener fan-out, keyless).
+///
+/// Implements `tools::FinanceTools::get_sector_pe`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_sector_pe",
+    method = "TOOL",
+    path = "get_sector_pe",
+    params = "SectorPeParams"
+)]
+fn route_mcp_get_sector_pe() {}
 
 /// Get comprehensive industry data (overview, performance, top companies) for a specific industry slug.
 ///
@@ -288,6 +366,45 @@ fn route_mcp_get_holders() {}
 )]
 fn route_mcp_get_analysis() {}
 
+/// Get a stock's consensus analyst rating rollup (strong buy/buy/hold/sell/strong sell counts and a headline consensus label).
+///
+/// Implements `tools::FinanceTools::get_rating_consensus`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_rating_consensus",
+    method = "TOOL",
+    path = "get_rating_consensus",
+    params = "RatingConsensusParams"
+)]
+fn route_mcp_get_rating_consensus() {}
+
+/// Get a stock's consensus analyst price target (high/low/mean/median).
+///
+/// Implements `tools::FinanceTools::get_price_target_consensus`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_price_target_consensus",
+    method = "TOOL",
+    path = "get_price_target_consensus",
+    params = "PriceTargetConsensusParams"
+)]
+fn route_mcp_get_price_target_consensus() {}
+
+/// Get an ETF's profile and holdings (net assets, expense ratio, sector/country weightings, top holdings).
+///
+/// Implements `tools::FinanceTools::get_etf_profile`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_etf_profile",
+    method = "TOOL",
+    path = "get_etf_profile",
+    params = "EtfProfileParams"
+)]
+fn route_mcp_get_etf_profile() {}
+
 /// Get dividend history for one or more dividend-paying stocks (comma-separated symbols). A single symbol returns paginated dividend history plus analytics (CAGR, average payment, payout count); multiple symbols return a batch of dividend histories plus per-symbol errors (no analytics for batch).
 ///
 /// Implements `tools::FinanceTools::get_dividends`.
@@ -313,6 +430,45 @@ fn route_mcp_get_dividends() {}
     params = "RiskParams"
 )]
 fn route_mcp_get_risk() {}
+
+/// Get sectioned text of one SEC filing by accession number (10-K or 8-K). Routes through EDGAR (best-effort HTML extraction) or Polygon when configured.
+///
+/// Implements `tools::FinanceTools::get_filing_sections`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_filing_sections",
+    method = "TOOL",
+    path = "get_filing_sections",
+    params = "FilingSectionsParams"
+)]
+fn route_mcp_get_filing_sections() {}
+
+/// Get risk factors extracted from a symbol's SEC filings. Routes through EDGAR (best-effort HTML extraction) or Polygon when configured.
+///
+/// Implements `tools::FinanceTools::get_risk_factors`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_risk_factors",
+    method = "TOOL",
+    path = "get_risk_factors",
+    params = "RiskFactorsParams"
+)]
+fn route_mcp_get_risk_factors() {}
+
+/// Get a company's own press releases, distinct from get_news (press coverage). Routes through EDGAR 8-K exhibits, falling back to FMP/Alpha Vantage when configured.
+///
+/// Implements `tools::FinanceTools::get_press_releases`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_press_releases",
+    method = "TOOL",
+    path = "get_press_releases",
+    params = "PressReleasesParams"
+)]
+fn route_mcp_get_press_releases() {}
 
 /// Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration.
 ///

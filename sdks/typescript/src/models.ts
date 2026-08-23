@@ -164,6 +164,17 @@ export interface GqlCommitmentsOfTraders {
   symbol: string;
 }
 
+/** Mirrors `finance_query::CommodityQuote`. */
+export interface GqlCommodityQuote {
+  change?: number;
+  changePercent?: number;
+  name?: string;
+  price?: number;
+  symbol: string;
+  timestamp?: number;
+  unit?: string;
+}
+
 /** Mirrors `finance_query::CompanyProfile`, which has no serde rename of its own — this deserializes snake_case keys while its GraphQL name stays camelCase. */
 export interface GqlCompanyProfile {
   assetType?: string;
@@ -334,6 +345,40 @@ export interface GqlElderRayData {
   bullPower?: number;
 }
 
+/** Mirrors `finance_query::EtfCountryWeighting`. */
+export interface GqlEtfCountryWeighting {
+  country?: string;
+  weight?: number;
+}
+
+/** Mirrors `finance_query::EtfHolding`. */
+export interface GqlEtfHolding {
+  description?: string;
+  symbol?: string;
+  weight?: number;
+}
+
+/** Mirrors `finance_query::EtfProfile`. */
+export interface GqlEtfProfile {
+  assetType?: string;
+  countryWeightings: GqlEtfCountryWeighting[];
+  dividendYield?: number;
+  holdings: GqlEtfHolding[];
+  inceptionDate?: string;
+  name?: string;
+  netAssets?: number;
+  netExpenseRatio?: number;
+  portfolioTurnover?: number;
+  sectorWeightings: GqlEtfSectorWeighting[];
+  symbol?: string;
+}
+
+/** Mirrors `finance_query::EtfSectorWeighting`. */
+export interface GqlEtfSectorWeighting {
+  sector?: string;
+  weight?: number;
+}
+
 /** A supported stock exchange with its symbol suffix and data provider. */
 export interface GqlExchange {
   country: string;
@@ -403,6 +448,12 @@ export interface GqlFibonacciLevels {
   swingLow?: number;
 }
 
+/** Mirrors `finance_query::FilingSection`. */
+export interface GqlFilingSection {
+  content?: string;
+  section?: string;
+}
+
 /** A single data point in a financial time series. */
 export interface GqlFinancialDataPoint {
   /** Date string (e.g., "2024-09-30"). */
@@ -433,6 +484,21 @@ export interface GqlFormattedObject {
   longFmt?: string;
   /** The underlying datum. May be `null` when upstream reports no value. */
   raw: unknown;
+}
+
+/** Mirrors `finance_query::FuturesQuote`. */
+export interface GqlFuturesQuote {
+  change?: number;
+  changePercent?: number;
+  exchange?: string;
+  expirationDate?: string;
+  name?: string;
+  openInterest?: number;
+  price?: number;
+  symbol: string;
+  timestamp?: number;
+  underlying?: string;
+  volume?: number;
 }
 
 /** Mirrors `finance_query::crypto::GlobalCryptoStats`. */
@@ -471,6 +537,18 @@ export interface GqlIchimokuData {
   laggingSpan?: number;
   leadingSpanA?: number;
   leadingSpanB?: number;
+}
+
+/** Mirrors `finance_query::IndexConstituent`. */
+export interface GqlIndexConstituent {
+  cik?: string;
+  dateFirstAdded?: string;
+  founded?: string;
+  headquarters?: string;
+  name?: string;
+  sector?: string;
+  subSector?: string;
+  symbol: string;
 }
 
 /** Result of the batch `indicatorsBatch` root field: successfully computed indicators plus any per-symbol fetch errors. */
@@ -646,9 +724,31 @@ export interface GqlMacroSeries {
   observations: Page_GqlMacroObservation;
 }
 
+/** A single market-wide calendar entry. */
+export interface GqlMarketCalendarEntry {
+  date?: string;
+  detail: GqlMarketCalendarDetail;
+  symbol?: string;
+}
+
 /** Market hours for one or more markets. */
 export interface GqlMarketHours {
   markets: GqlMarketTime[];
+}
+
+/** A sector's aggregate price/earnings ratio, provider-routed via `Providers::market()`. */
+export interface GqlMarketSectorPe {
+  date?: string;
+  exchange?: string;
+  pe?: number;
+  sector: string;
+}
+
+/** A sector's aggregate performance, provider-routed via `Providers::market()` (`Capability::MARKET`). Distinct from `GqlSectorPerformance` in `types/sector.rs`, which is a nested field on Yahoo-only `finance::sector`. */
+export interface GqlMarketSectorPerformance {
+  changePercent?: number;
+  exchange?: string;
+  sector: string;
 }
 
 /** A market summary quote (major index / currency / commodity). */
@@ -763,6 +863,23 @@ export interface GqlPivotPointsData {
   s1?: number;
   s2?: number;
   s3?: number;
+}
+
+/** Mirrors `finance_query::PressRelease`. */
+export interface GqlPressRelease {
+  date?: string;
+  symbol?: string;
+  text?: string;
+  title?: string;
+}
+
+/** Mirrors `finance_query::PriceTargetConsensus`. */
+export interface GqlPriceTargetConsensus {
+  symbol?: string;
+  targetConsensus?: number;
+  targetHigh?: number;
+  targetLow?: number;
+  targetMedian?: number;
 }
 
 /** Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`. */
@@ -965,6 +1082,17 @@ export interface GqlQuotesBatch {
   quotes: Page_GqlQuote;
 }
 
+/** Mirrors `finance_query::RatingConsensus`. */
+export interface GqlRatingConsensus {
+  buy?: number;
+  consensus?: string;
+  hold?: number;
+  sell?: number;
+  strongBuy?: number;
+  strongSell?: number;
+  symbol?: string;
+}
+
 /** Similar-stock recommendations for one symbol, mirroring `finance_query::Recommendation`, which has no serde rename of its own (plain snake_case JSON keys, e.g. `provider_id`) — `alias` keeps deserialization accepting those keys while `rename_all` documents the camelCase names GraphQL actually puts on the wire. */
 export interface GqlRecommendation {
   providerId?: string;
@@ -986,6 +1114,14 @@ export interface GqlResearchReport {
   provider?: string;
   reportDate?: number;
   reportHeadline?: string;
+}
+
+/** Mirrors `finance_query::RiskFactor`. */
+export interface GqlRiskFactor {
+  category?: string;
+  filingDate?: string;
+  text?: string;
+  title?: string;
 }
 
 /** Risk/performance summary for a symbol. */
@@ -1542,11 +1678,15 @@ export type AnalysisResponse = unknown;
 
 export type AnalysisType = "recommendations" | "upgrades-downgrades" | "earnings-estimate" | "earnings-history";
 
+export type FilingSectionFormParam = "ten-k" | "eight-k";
+
 export type Frequency = "annual" | "quarterly";
 
 export type GqlEventKind = Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown>;
 
 export type GqlFormattedValue = number | number | string | GqlFormattedObject | unknown;
+
+export type GqlMarketCalendarDetail = Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown>;
 
 export type HolderType = "major" | "institutional" | "mutualfund" | "insider-transactions" | "insider-purchases" | "insider-roster";
 
@@ -1557,6 +1697,8 @@ export type Industry = "agricultural-inputs" | "aluminum" | "coal" | "copper" | 
 export type Interval = "1m" | "2m" | "5m" | "15m" | "30m" | "1h" | "90m" | "1d" | "5d" | "1wk" | "1mo" | "3mo";
 
 export type LookupType = "all" | "equity" | "mutualfund" | "etf" | "index" | "future" | "currency" | "cryptocurrency";
+
+export type MarketCalendarKindParam = "earnings" | "ipo" | "dividend" | "split" | "economic" | "market-holiday" | "market-status";
 
 export type MetricsText = string;
 
