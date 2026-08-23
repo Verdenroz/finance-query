@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Polygon.io · finance-query</title>
+<title>CFTC (Commitments of Traders) · finance-query</title>
 <link rel="icon" href="../../../assets/logo.png">
 <link rel="stylesheet" href="../../../_soothfast/tokens.css">
 <link rel="stylesheet" href="../../../_soothfast/site.css">
@@ -118,7 +118,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
     
-      <li><a class="active" aria-current="page" href="../../../library/providers/polygon/">Polygon.io</a></li>
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
     
       <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
     
@@ -150,7 +150,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/gdelt/">GDELT (Global News)</a></li>
     
-      <li><a href="../../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
+      <li><a class="active" aria-current="page" href="../../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
     
       <li><a href="../../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
     
@@ -244,62 +244,67 @@ try { var t = localStorage.getItem("soothfast-theme");
 </nav>
 
 <main class="doc">
-<h1 id="polygon-io">Polygon.io<a class="anchor" href="#polygon-io" aria-label="Link to this section">#</a></h1>
-<div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
-<p><a href="https://docs.rs/finance-query/latest/finance_query/providers/enum.Provider.html#variant.Polygon">docs.rs/finance-query — Provider::Polygon</a></p>
-</div>
+<h1 id="cftc-commitments-of-traders">CFTC (Commitments of Traders)<a class="anchor" href="#cftc-commitments-of-traders" aria-label="Link to this section">#</a></h1>
 <div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;polygon&quot;] }</code></pre></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;cftc&quot;] }</code></pre></figure>
 </div>
-<p>Polygon.io provides real-time and historical market data for stocks, options, forex, crypto, indices, and futures. Free tier: 5 requests per second.</p>
+<p>Nothing in the library exposed futures positioning data before this adapter: <code>Capability::FUTURES</code> previously meant Polygon-only price quotes. The <a href="https://www.cftc.gov/">CFTC</a> publishes its weekly Commitments of Traders report itself, keylessly, through <code>publicreporting.cftc.gov</code>'s Socrata API. This adapter serves the disaggregated futures-only combined report, the one most commonly meant by "COT data" for physical commodities.</p>
+<h2 id="scope">Scope<a class="anchor" href="#scope" aria-label="Link to this section">#</a></h2>
+<p>Only physical-commodity futures are covered (agriculture, energy, metals) via a curated table of benchmark contracts, or any raw <code>cftc_contract_market_code</code> passed straight through. Financial futures (equity indices, rates, currencies) are reported separately by the CFTC in the Traders in Financial Futures report, which this adapter does not serve.</p>
+<p>The CFTC itself has no price-quote data at all, so <code>Provider::Cftc</code> only ever answers <code>FuturesContract::commitments_of_traders</code>, reporting <code>NotSupported</code> for a plain futures quote.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Set the API key via environment variable:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export POLYGON_API_KEY=&quot;your-polygon-api-key&quot;
-</code></pre></figure>
-<p>No manual init call needed — the provider reads the key during <code>TickerBuilder::build()</code>.</p>
-<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this section">#</a></h2>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::format::<span class="tok-ty">Raw</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Fetch</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=cftc</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">QUOTE</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
-        .<span class="tok-fn">fetch</span>(<span class="tok-ty">Fetch</span>::<span class="tok-ty">Sequential</span>)
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">FUTURES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Cftc</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> ticker = providers.<span class="tok-fn">ticker</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> quote = ticker.quote::&lt;<span class="tok-ty">Raw</span>&gt;().<span class="tok-kw">await</span>?;
-    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} quote received&quot;</span>, quote.symbol);
+
+    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">futures</span>(<span class="tok-str">&quot;GC=F&quot;</span>);
+    <span class="tok-kw">let</span> cot = gold.<span class="tok-fn">commitments_of_traders</span>().<span class="tok-kw">await</span>?;
+
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} ({})&quot;</span>, cot.market_and_exchange_name, cot.cftc_contract_market_code);
+    <span class="tok-kw">for</span> week <span class="tok-kw">in</span> cot.observations.<span class="tok-fn">iter</span>().<span class="tok-fn">rev</span>().<span class="tok-fn">take</span>(<span class="tok-num">4</span>) {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{}: open interest {:?}, managed money long/short {:?}/{:?}&quot;</span>,
+            week.report_date, week.open_interest, week.managed_money_long, week.managed_money_short
+        );
+    }
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="Link to this section">#</a></h2>
+<div class="adm adm-note"><p class="adm-title"><span class="adm-kind">note</span> · CFTC serves positioning only</p>
+<p><code>fetch_futures_quote</code> reports <code>NotSupported</code>, so a <code>FUTURES</code> route that includes CFTC should also include a quoting provider, as in the example above, for <code>quote()</code> to resolve.</p>
+</div>
+<h2 id="symbol-resolution">Symbol Resolution<a class="anchor" href="#symbol-resolution" aria-label="Link to this section">#</a></h2>
+<p><code>commitments_of_traders()</code> resolves the handle's symbol to a CFTC <code>cftc_contract_market_code</code> through a small curated table of Yahoo-style continuous futures roots:</p>
 <div class="tablewrap"><table>
-<thead><tr><th>Data type</th><th>Support</th></tr></thead>
+<thead><tr><th>Symbol</th><th>Contract</th><th>CFTC code</th></tr></thead>
 <tbody>
-<tr><td>Quote</td><td>✓</td></tr>
-<tr><td>Chart</td><td>✓</td></tr>
-<tr><td>Fundamentals</td><td>✓</td></tr>
-<tr><td>Corporate</td><td>✓</td></tr>
-<tr><td>Options</td><td>✓</td></tr>
-<tr><td>Market</td><td>✓</td></tr>
-<tr><td>Discovery</td><td>✓</td></tr>
-<tr><td>Indices</td><td>✓</td></tr>
-<tr><td>Commodities</td><td>—</td></tr>
-<tr><td>Forex</td><td>✓</td></tr>
-<tr><td>Crypto</td><td>✓</td></tr>
-<tr><td>Futures</td><td>✓</td></tr>
-<tr><td>Technicals</td><td>✓</td></tr>
-<tr><td>Economic</td><td>✓</td></tr>
-<tr><td>Filings</td><td>✓</td></tr>
-<tr><td>Sentiment</td><td>✓</td></tr>
+<tr><td><code>GC=F</code></td><td>Gold</td><td><code>088691</code></td></tr>
+<tr><td><code>SI=F</code></td><td>Silver</td><td><code>084691</code></td></tr>
+<tr><td><code>PL=F</code></td><td>Platinum</td><td><code>076651</code></td></tr>
+<tr><td><code>HG=F</code></td><td>Copper</td><td><code>085692</code></td></tr>
+<tr><td><code>CL=F</code></td><td>WTI crude</td><td><code>067651</code></td></tr>
+<tr><td><code>NG=F</code></td><td>Henry Hub natural gas</td><td><code>03565B</code></td></tr>
+<tr><td><code>ZC=F</code></td><td>Corn</td><td><code>002602</code></td></tr>
+<tr><td><code>ZW=F</code></td><td>Wheat (SRW)</td><td><code>001602</code></td></tr>
+<tr><td><code>ZS=F</code></td><td>Soybeans</td><td><code>005602</code></td></tr>
 </tbody>
 </table></div>
-<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<p>Anything not in this table is treated as a literal CFTC contract code already: the passthrough form, e.g. <code>providers.futures(&quot;067651&quot;)</code> for NYMEX WTI directly, or any other code from CFTC's own market list.</p>
+<h2 id="what-the-numbers-mean">What the Numbers Mean<a class="anchor" href="#what-the-numbers-mean" aria-label="Link to this section">#</a></h2>
+<p>Each weekly <code>CotObservation</code> breaks total open interest down by trader category: commercial hedgers (producer/merchant), swap dealers, managed money (large speculators), other reportables, and the nonreportable residual below CFTC's reporting thresholds. A field the report doesn't carry for that week stays <code>None</code> rather than becoming <code>0</code>.</p>
+<p>Observations come back oldest-first, matching every other history-shaped model in the library, even though the Socrata API itself answers newest-first.</p>
+<p>A contract code with no rows returns <code>SymbolNotFound</code> rather than an empty series. CFTC's Socrata endpoint answers an unrecognised <code>cftc_contract_market_code</code> with zero rows, and there's no way to distinguish that from a valid but quiet code, so it's treated as not found.</p>
+<h2 id="rate-limits">Rate Limits<a class="anchor" href="#rate-limits" aria-label="Link to this section">#</a></h2>
+<p>Socrata's anonymous tier throttles by rolling-hour request count rather than per-second. The client paces at 5 requests/second to avoid looking like a burst.</p>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../../library/providers/">Multi-Provider Architecture</a> — Provider configuration and strategies</li>
-<li><a href="../../../library/ticker/">Ticker API</a> — Single-symbol data access</li>
+<li><a href="../../../library/futures/">Futures</a>: the <code>FuturesContract</code> handle</li>
+<li><a href="../../../library/providers/">Providers Overview</a>: routing and fallback</li>
 </ul>
 
 <div class="doc-foot">
@@ -313,13 +318,17 @@ try { var t = localStorage.getItem("soothfast-theme");
   <span class="label">On this page</span>
   <ul class="toc-list" id="toc">
   
+    <li><a class="toc-l2" href="#scope">Scope</a></li>
+  
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
-    <li><a class="toc-l2" href="#usage">Usage</a></li>
+    <li><a class="toc-l2" href="#symbol-resolution">Symbol Resolution</a></li>
   
-    <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+    <li><a class="toc-l2" href="#what-the-numbers-mean">What the Numbers Mean</a></li>
   
-    <li><a class="toc-l2" href="#see-also">See Also</a></li>
+    <li><a class="toc-l2" href="#rate-limits">Rate Limits</a></li>
+  
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
   
   </ul>
 

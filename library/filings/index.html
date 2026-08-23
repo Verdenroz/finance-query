@@ -148,6 +148,14 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
     
+      <li><a href="../../library/providers/gdelt/">GDELT (Global News)</a></li>
+    
+      <li><a href="../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
+    
+      <li><a href="../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
+    
+      <li><a href="../../library/providers/senatetrades/">Senate PTR (Congressional Trades)</a></li>
+    
     </ul>
   </div>
 
@@ -244,7 +252,7 @@ try { var t = localStorage.getItem("soothfast-theme");
 <h2 id="getting-a-handle">Getting a Handle<a class="anchor" href="#getting-a-handle" aria-label="Link to this section">#</a></h2>
 <p>Create a <code>Filings</code> handle from a <a href="../../library/getting-started/"><code>Providers</code></a> instance and call <code>.get()</code> to fetch the filing data:</p>
 <figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Providers</span>, edgar};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-com">// EDGAR is keyless but SEC requires a contact email in the User-Agent.</span>&#10;    <span class="tok-com">// Initialise it once per process (or set the EDGAR_EMAIL env var).</span>&#10;    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;you@example.com&quot;</span>)?;&#10;&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> filings = providers.<span class="tok-fn">filings</span>(<span class="tok-str">&quot;AAPL&quot;</span>);&#10;    <span class="tok-kw">let</span> result = filings.<span class="tok-fn">get</span>().<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-kw">for</span> f <span class="tok-kw">in</span> result.filings.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {&#10;        <span class="tok-mac">println!</span>(&#10;            <span class="tok-str">&quot;{} {}: {}&quot;</span>,&#10;            f.filing_date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            f.filing_type.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            f.filing_url.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;-&quot;</span>)&#10;        );&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::filings::provider::ProviderFiling"><span class="ev-mark">⌖</span><span class="ev-item">ProviderFiling</span><span class="ev-detail">verified current</span></div></div></figure>
-<div class="claimline"><span class="chip chip-pass" data-soothfast-claim data-state="pass" title="finance_query::de_edgar_submissions.walltime.median_ns &lt; 2000000"><span class="chip-head"><span class="chip-mark">✓</span><span class="chip-item">de_edgar_submissions</span><span class="chip-sep">—</span><span class="chip-detail">median time 452.6 µs</span><span class="chip-limit">(limit &lt; 2.0 ms)</span></span><span class="chip-gauge"><svg class="chip-scale" viewBox="0 0 220 22" aria-hidden="true" focusable="false"><line x1="8" y1="11" x2="212" y2="11" class="chip-scale-rail"/><line x1="8" y1="7" x2="8" y2="15" class="chip-scale-cap"/><line x1="212" y1="7" x2="212" y2="15" class="chip-scale-cap"/><line x1="180.88" y1="3" x2="180.88" y2="19" class="chip-scale-limit"/><line x1="8" y1="11" x2="47.13" y2="11" class="chip-scale-fill" style="--fill-len:39.13"/><circle cx="47.13" cy="11" r="3.2" class="chip-scale-marker" style="--mx:47.13"/></svg><span class="chip-scale-axis"><span>0</span><span>limit 2.0 ms</span></span></span></span></div>
+<div class="claimline"><span class="chip chip-pass" data-soothfast-claim data-state="pass" title="finance_query::de_edgar_submissions.walltime.median_ns &lt; 2000000"><span class="chip-head"><span class="chip-mark">✓</span><span class="chip-item">de_edgar_submissions</span><span class="chip-sep">—</span><span class="chip-detail">median time 452.3 µs</span><span class="chip-limit">(limit &lt; 2.0 ms)</span></span><span class="chip-gauge"><svg class="chip-scale" viewBox="0 0 220 22" aria-hidden="true" focusable="false"><line x1="8" y1="11" x2="212" y2="11" class="chip-scale-rail"/><line x1="8" y1="7" x2="8" y2="15" class="chip-scale-cap"/><line x1="212" y1="7" x2="212" y2="15" class="chip-scale-cap"/><line x1="180.88" y1="3" x2="180.88" y2="19" class="chip-scale-limit"/><line x1="8" y1="11" x2="47.1" y2="11" class="chip-scale-fill" style="--fill-len:39.1"/><circle cx="47.1" cy="11" r="3.2" class="chip-scale-marker" style="--mx:47.1"/></svg><span class="chip-scale-axis"><span>0</span><span>limit 2.0 ms</span></span></span></span></div>
 <ul>
 <li>Parsing a company's full submissions index (<code>edgar::submissions</code> → <code>EdgarSubmissions</code>, roughly a thousand filings) takes **around a millisecond** or less.</li>
 </ul>
@@ -267,10 +275,47 @@ fetching, or set the <code>EDGAR_EMAIL</code> environment variable.</p>
 <tr><td><code>cik</code></td><td><code>Option&lt;String&gt;</code></td><td>SEC CIK number</td></tr>
 </tbody>
 </table></div>
+<h2 id="congressional-trades">Congressional Trades<a class="anchor" href="#congressional-trades" aria-label="Link to this section">#</a></h2>
+<p>Call <code>.congressional_trades()</code> to fetch legislator stock-trade disclosures naming this symbol, filed under the STOCK Act as Periodic Transaction Reports (PTRs):</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=housetrades,senatetrades</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()&#10;        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">FILINGS</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">CongressTrades</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Edgar</span>])&#10;        .<span class="tok-fn">build</span>()&#10;        .<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-kw">let</span> filings = providers.<span class="tok-fn">filings</span>(<span class="tok-str">&quot;AAPL&quot;</span>);&#10;    <span class="tok-kw">for</span> trade <span class="tok-kw">in</span> filings.<span class="tok-fn">congressional_trades</span>().<span class="tok-kw">await</span>? {&#10;        <span class="tok-mac">println!</span>(&#10;            <span class="tok-str">&quot;{} {}: {} {} on {}&quot;</span>,&#10;            trade.office.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            trade.last_name.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            trade.trade_type.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            trade.amount.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            trade.transaction_date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>)&#10;        );&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::filings::ownership::CongressionalTrade"><span class="ev-mark">⌖</span><span class="ev-item">CongressionalTrade</span><span class="ev-detail">verified current</span></div></div></figure>
+<p>Two keyless sources feed this: the <a href="../../library/providers/housetrades/">House Clerk</a> (<code>housetrades</code> feature) and the <a href="../../library/providers/senatetrades/">Senate eFD system</a> (<code>senatetrades</code> feature), merged by <code>Provider::CongressTrades</code> when both are compiled in. Each result row's <code>office</code> field says which chamber it came from, <code>&quot;House&quot;</code> or <code>&quot;Senate&quot;</code>. If the Senate source fails (a network error, or Akamai bot protection blocking the request; see the Senate PTR page for why that happens), the merge drops just those rows and returns House-only results rather than failing the whole call. Only both sources failing (or the single compiled source failing, when just one is enabled) surfaces an error.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>symbol</code></td><td><code>Option&lt;String&gt;</code></td><td>Ticker symbol traded</td></tr>
+<tr><td><code>first_name</code></td><td><code>Option&lt;String&gt;</code></td><td>Legislator's first name</td></tr>
+<tr><td><code>last_name</code></td><td><code>Option&lt;String&gt;</code></td><td>Legislator's last name</td></tr>
+<tr><td><code>office</code></td><td><code>Option&lt;String&gt;</code></td><td><code>&quot;House&quot;</code> or <code>&quot;Senate&quot;</code>, depending on which source the row came from</td></tr>
+<tr><td><code>district</code></td><td><code>Option&lt;String&gt;</code></td><td>District, for House members; always <code>None</code> for Senate rows</td></tr>
+<tr><td><code>trade_type</code></td><td><code>Option&lt;String&gt;</code></td><td>Transaction type (e.g. <code>&quot;Purchase&quot;</code>, <code>&quot;Sale&quot;</code>)</td></tr>
+<tr><td><code>amount</code></td><td><code>Option&lt;String&gt;</code></td><td>Reported transaction amount range (e.g. <code>&quot;$1,001 - $15,000&quot;</code>)</td></tr>
+<tr><td><code>asset_description</code></td><td><code>Option&lt;String&gt;</code></td><td>Description of the asset traded</td></tr>
+<tr><td><code>transaction_date</code></td><td><code>Option&lt;String&gt;</code></td><td>Date the transaction occurred (<code>YYYY-MM-DD</code>)</td></tr>
+<tr><td><code>disclosure_date</code></td><td><code>Option&lt;String&gt;</code></td><td>Date the transaction was publicly disclosed (<code>YYYY-MM-DD</code>)</td></tr>
+<tr><td><code>link</code></td><td><code>Option&lt;String&gt;</code></td><td>Link to the source disclosure filing</td></tr>
+</tbody>
+</table></div>
+<h2 id="fails-to-deliver">Fails to Deliver<a class="anchor" href="#fails-to-deliver" aria-label="Link to this section">#</a></h2>
+<p>Call <code>.fails_to_deliver()</code> for this symbol's SEC fails-to-deliver history, the settlement-date record of shares that a broker-dealer failed to deliver on time:</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=secftd</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Providers</span>, edgar};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    edgar::<span class="tok-fn">init</span>(<span class="tok-str">&quot;you@example.com&quot;</span>)?;&#10;&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> filings = providers.<span class="tok-fn">filings</span>(<span class="tok-str">&quot;AAPL&quot;</span>);&#10;&#10;    <span class="tok-kw">for</span> row <span class="tok-kw">in</span> filings.<span class="tok-fn">fails_to_deliver</span>().<span class="tok-kw">await</span>? {&#10;        <span class="tok-mac">println!</span>(&#10;            <span class="tok-str">&quot;{}: {:?} shares of {:?}&quot;</span>,&#10;            row.date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            row.quantity,&#10;            row.name&#10;        );&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::filings::ownership::FailToDeliver"><span class="ev-mark">⌖</span><span class="ev-item">FailToDeliver</span><span class="ev-detail">verified current</span></div></div></figure>
+<p>This is served by keyless EDGAR (<code>secftd</code> feature), which the default <code>FILINGS</code> route already puts ahead of Yahoo, so no explicit <code>.route()</code> call is required once <code>secftd</code> is compiled in. FMP also serves this operation for callers who route <code>Capability::FILINGS</code> to it instead.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>symbol</code></td><td><code>Option&lt;String&gt;</code></td><td>Ticker symbol</td></tr>
+<tr><td><code>date</code></td><td><code>Option&lt;String&gt;</code></td><td>Settlement date (<code>YYYY-MM-DD</code>)</td></tr>
+<tr><td><code>quantity</code></td><td><code>Option&lt;f64&gt;</code></td><td>Number of shares that failed to deliver</td></tr>
+<tr><td><code>price</code></td><td><code>Option&lt;f64&gt;</code></td><td>Closing price on the settlement date</td></tr>
+<tr><td><code>name</code></td><td><code>Option&lt;String&gt;</code></td><td>Security name</td></tr>
+<tr><td><code>description</code></td><td><code>Option&lt;String&gt;</code></td><td>Additional description, when reported</td></tr>
+</tbody>
+</table></div>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../library/providers/edgar/">EDGAR Provider Reference</a> — low-level EDGAR API (CIK resolution, submissions, XBRL company facts, full-text search)</li>
-<li><a href="../../library/getting-started/">Getting Started</a> — building a <code>Providers</code> instance</li>
+<li><a href="../../library/providers/edgar/">EDGAR Provider Reference</a>: low-level EDGAR API (CIK resolution, submissions, XBRL company facts, full-text search)</li>
+<li><a href="../../library/providers/housetrades/">House PTR</a>: House-side congressional trades source</li>
+<li><a href="../../library/providers/senatetrades/">Senate PTR</a>: Senate-side congressional trades source</li>
+<li><a href="../../library/getting-started/">Getting Started</a>: building a <code>Providers</code> instance</li>
 </ul>
 
 <div class="doc-foot">
@@ -285,6 +330,10 @@ fetching, or set the <code>EDGAR_EMAIL</code> environment variable.</p>
   <ul class="toc-list" id="toc">
   
     <li><a class="toc-l2" href="#getting-a-handle">Getting a Handle</a></li>
+  
+    <li><a class="toc-l2" href="#congressional-trades">Congressional Trades</a></li>
+  
+    <li><a class="toc-l2" href="#fails-to-deliver">Fails to Deliver</a></li>
   
     <li><a class="toc-l2" href="#see-also">See Also</a></li>
   

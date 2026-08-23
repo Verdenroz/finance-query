@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Polygon.io · finance-query</title>
+<title>House PTR (Congressional Trades) · finance-query</title>
 <link rel="icon" href="../../../assets/logo.png">
 <link rel="stylesheet" href="../../../_soothfast/tokens.css">
 <link rel="stylesheet" href="../../../_soothfast/site.css">
@@ -118,7 +118,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
     
-      <li><a class="active" aria-current="page" href="../../../library/providers/polygon/">Polygon.io</a></li>
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
     
       <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
     
@@ -152,7 +152,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
     
-      <li><a href="../../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
+      <li><a class="active" aria-current="page" href="../../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
     
       <li><a href="../../../library/providers/senatetrades/">Senate PTR (Congressional Trades)</a></li>
     
@@ -244,62 +244,71 @@ try { var t = localStorage.getItem("soothfast-theme");
 </nav>
 
 <main class="doc">
-<h1 id="polygon-io">Polygon.io<a class="anchor" href="#polygon-io" aria-label="Link to this section">#</a></h1>
-<div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
-<p><a href="https://docs.rs/finance-query/latest/finance_query/providers/enum.Provider.html#variant.Polygon">docs.rs/finance-query — Provider::Polygon</a></p>
-</div>
+<h1 id="house-ptr-congressional-trades">House PTR (Congressional Trades)<a class="anchor" href="#house-ptr-congressional-trades" aria-label="Link to this section">#</a></h1>
 <div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;polygon&quot;] }</code></pre></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;housetrades&quot;] }</code></pre></figure>
 </div>
-<p>Polygon.io provides real-time and historical market data for stocks, options, forex, crypto, indices, and futures. Free tier: 5 requests per second.</p>
+<p>The STOCK Act of 2012 requires members of Congress to disclose trades over $1,000 within 45 days via a Periodic Transaction Report (PTR). The House Clerk publishes these free of charge and without credentials at <code>disclosures-clerk.house.gov</code>. This adapter reads directly from that primary source: no third-party aggregator, no API key.</p>
+<p>Senate PTRs are a separate adapter, <a href="../../../library/providers/senatetrades/"><code>senatetrades</code></a>: <code>efdsearch.senate.gov</code> renders everything client-side behind Akamai bot protection, so it needs a real browser rather than a plain HTTP client. <code>Provider::CongressTrades</code> merges both when the corresponding features are compiled in; see <a href="../../../library/providers/">Providers Overview</a>.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Set the API key via environment variable:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export POLYGON_API_KEY=&quot;your-polygon-api-key&quot;
-</code></pre></figure>
-<p>No manual init call needed — the provider reads the key during <code>TickerBuilder::build()</code>.</p>
-<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this section">#</a></h2>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::format::<span class="tok-ty">Raw</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Fetch</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=housetrades</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">QUOTE</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
-        .<span class="tok-fn">fetch</span>(<span class="tok-ty">Fetch</span>::<span class="tok-ty">Sequential</span>)
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">FILINGS</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">CongressTrades</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Edgar</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> ticker = providers.<span class="tok-fn">ticker</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> quote = ticker.quote::&lt;<span class="tok-ty">Raw</span>&gt;().<span class="tok-kw">await</span>?;
-    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} quote received&quot;</span>, quote.symbol);
+
+    <span class="tok-kw">let</span> filings = providers.<span class="tok-fn">filings</span>(<span class="tok-str">&quot;AAPL&quot;</span>);
+    <span class="tok-kw">for</span> trade <span class="tok-kw">in</span> filings.<span class="tok-fn">congressional_trades</span>().<span class="tok-kw">await</span>? {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{} {}: {} {} on {}&quot;</span>,
+            trade.office.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.last_name.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.trade_type.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.amount.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.transaction_date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>)
+        );
+    }
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="Link to this section">#</a></h2>
+<p>With only <code>housetrades</code> compiled in, <code>Provider::CongressTrades</code> serves House rows exclusively, and every <code>CongressionalTrade.office</code> reads <code>&quot;House&quot;</code>. Enable <code>senatetrades</code> alongside it to merge in Senate rows too.</p>
+<h2 id="how-symbol-lookup-works">How Symbol Lookup Works<a class="anchor" href="#how-symbol-lookup-works" aria-label="Link to this section">#</a></h2>
+<p>There is no per-symbol or per-filing-type query endpoint on <code>disclosures-clerk.house.gov</code>; every individual disclosure is its own PDF. A symbol lookup works by:</p>
+<ol>
+<li>Downloading the current year's bulk index archive (<code>{year}FD.zip</code>), a tab-delimited list of every filing that year, and filtering to Periodic Transaction Reports (<code>FilingType == &quot;P&quot;</code>).</li>
+<li>Sorting by filing date (newest first) and taking the most recent 120 filings, topping up with the prior year's archive if the current year hasn't accumulated that many yet (early January).</li>
+<li>Fetching each filing's PDF, extracting its text (<code>pdf_extract</code>), and keeping only the transaction rows whose ticker matches the requested symbol.</li>
+</ol>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Bounded recency window, not a full historical search</p>
+<p>Only the most recent 120 PTR filings across all members of the House are scanned per request. This is a bounded-cost recency window, not an index over the full historical archive. A symbol traded only in an older filing beyond that window won't appear.</p>
+</div>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Scanned filings are silently skipped</p>
+<p>Only filings typed through fd.house.gov's e-filing system carry a text layer <code>pdf_extract</code> can read. Older or hand-signed PTRs are scanned images; those produce zero matching transactions rather than an error, since this adapter does not OCR them.</p>
+</div>
+<h2 id="what-the-fields-mean">What the Fields Mean<a class="anchor" href="#what-the-fields-mean" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
-<thead><tr><th>Data type</th><th>Support</th></tr></thead>
+<thead><tr><th><code>CongressionalTrade</code> field</th><th>Source</th></tr></thead>
 <tbody>
-<tr><td>Quote</td><td>✓</td></tr>
-<tr><td>Chart</td><td>✓</td></tr>
-<tr><td>Fundamentals</td><td>✓</td></tr>
-<tr><td>Corporate</td><td>✓</td></tr>
-<tr><td>Options</td><td>✓</td></tr>
-<tr><td>Market</td><td>✓</td></tr>
-<tr><td>Discovery</td><td>✓</td></tr>
-<tr><td>Indices</td><td>✓</td></tr>
-<tr><td>Commodities</td><td>—</td></tr>
-<tr><td>Forex</td><td>✓</td></tr>
-<tr><td>Crypto</td><td>✓</td></tr>
-<tr><td>Futures</td><td>✓</td></tr>
-<tr><td>Technicals</td><td>✓</td></tr>
-<tr><td>Economic</td><td>✓</td></tr>
-<tr><td>Filings</td><td>✓</td></tr>
-<tr><td>Sentiment</td><td>✓</td></tr>
+<tr><td><code>symbol</code></td><td>Ticker parsed from the PDF's asset description line</td></tr>
+<tr><td><code>first_name</code> / <code>last_name</code></td><td>From the yearly filing index</td></tr>
+<tr><td><code>office</code></td><td>Always <code>&quot;House&quot;</code> for this adapter</td></tr>
+<tr><td><code>district</code></td><td>State plus district (e.g. <code>&quot;AL-04&quot;</code>), from the filing index</td></tr>
+<tr><td><code>trade_type</code></td><td><code>&quot;Purchase&quot;</code>, <code>&quot;Sale&quot;</code>, or <code>&quot;Exchange&quot;</code>, decoded from the PTR's <code>P</code>/<code>S</code>/<code>E</code> code</td></tr>
+<tr><td><code>amount</code></td><td>Reported range as filed (e.g. <code>&quot;$1,001 - $15,000&quot;</code>), unparsed</td></tr>
+<tr><td><code>transaction_date</code> / <code>disclosure_date</code></td><td><code>YYYY-MM-DD</code></td></tr>
+<tr><td><code>link</code></td><td>Direct URL to the source PDF</td></tr>
 </tbody>
 </table></div>
-<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<h2 id="rate-limits">Rate Limits<a class="anchor" href="#rate-limits" aria-label="Link to this section">#</a></h2>
+<p>The House Clerk site publishes no documented rate limit. The client self-paces at 5 requests/second just to keep a symbol lookup's burst of PDF fetches polite.</p>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../../library/providers/">Multi-Provider Architecture</a> — Provider configuration and strategies</li>
-<li><a href="../../../library/ticker/">Ticker API</a> — Single-symbol data access</li>
+<li><a href="../../../library/providers/senatetrades/">Senate PTR</a>: the Senate-side counterpart</li>
+<li><a href="../../../library/filings/">Filings</a>: <code>Filings::congressional_trades()</code></li>
+<li><a href="../../../library/providers/">Providers Overview</a>: routing and fallback</li>
 </ul>
 
 <div class="doc-foot">
@@ -315,11 +324,13 @@ try { var t = localStorage.getItem("soothfast-theme");
   
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
-    <li><a class="toc-l2" href="#usage">Usage</a></li>
+    <li><a class="toc-l2" href="#how-symbol-lookup-works">How Symbol Lookup Works</a></li>
   
-    <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+    <li><a class="toc-l2" href="#what-the-fields-mean">What the Fields Mean</a></li>
   
-    <li><a class="toc-l2" href="#see-also">See Also</a></li>
+    <li><a class="toc-l2" href="#rate-limits">Rate Limits</a></li>
+  
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
   
   </ul>
 

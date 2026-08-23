@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Polygon.io · finance-query</title>
+<title>GDELT (Global News) · finance-query</title>
 <link rel="icon" href="../../../assets/logo.png">
 <link rel="stylesheet" href="../../../_soothfast/tokens.css">
 <link rel="stylesheet" href="../../../_soothfast/site.css">
@@ -118,7 +118,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
     
-      <li><a class="active" aria-current="page" href="../../../library/providers/polygon/">Polygon.io</a></li>
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
     
       <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
     
@@ -148,7 +148,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
     
-      <li><a href="../../../library/providers/gdelt/">GDELT (Global News)</a></li>
+      <li><a class="active" aria-current="page" href="../../../library/providers/gdelt/">GDELT (Global News)</a></li>
     
       <li><a href="../../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
     
@@ -244,62 +244,56 @@ try { var t = localStorage.getItem("soothfast-theme");
 </nav>
 
 <main class="doc">
-<h1 id="polygon-io">Polygon.io<a class="anchor" href="#polygon-io" aria-label="Link to this section">#</a></h1>
-<div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
-<p><a href="https://docs.rs/finance-query/latest/finance_query/providers/enum.Provider.html#variant.Polygon">docs.rs/finance-query — Provider::Polygon</a></p>
-</div>
+<h1 id="gdelt-global-news">GDELT (Global News)<a class="anchor" href="#gdelt-global-news" aria-label="Link to this section">#</a></h1>
 <div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;polygon&quot;] }</code></pre></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;gdelt&quot;] }</code></pre></figure>
 </div>
-<p>Polygon.io provides real-time and historical market data for stocks, options, forex, crypto, indices, and futures. Free tier: 5 requests per second.</p>
+<p>News previously came from Yahoo (a scraper, fragile to page changes) or Alpha Vantage (keyed, 25 req/day). <a href="https://www.gdeltproject.org/">GDELT</a>'s DOC 2.0 API indexes worldwide online news across 65 languages, updated roughly every 15 minutes, entirely keyless. That closes the gap for the news slice of <code>Capability::CORPORATE</code>.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Set the API key via environment variable:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export POLYGON_API_KEY=&quot;your-polygon-api-key&quot;
-</code></pre></figure>
-<p>No manual init call needed — the provider reads the key during <code>TickerBuilder::build()</code>.</p>
-<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this section">#</a></h2>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::format::<span class="tok-ty">Raw</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Fetch</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=gdelt</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">QUOTE</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
-        .<span class="tok-fn">fetch</span>(<span class="tok-ty">Fetch</span>::<span class="tok-ty">Sequential</span>)
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">CORPORATE</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Gdelt</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> ticker = providers.<span class="tok-fn">ticker</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> quote = ticker.quote::&lt;<span class="tok-ty">Raw</span>&gt;().<span class="tok-kw">await</span>?;
-    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} quote received&quot;</span>, quote.symbol);
+
+    <span class="tok-kw">let</span> ticker = providers.<span class="tok-fn">ticker</span>(<span class="tok-str">&quot;GOOGL&quot;</span>).<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">for</span> article <span class="tok-kw">in</span> ticker.<span class="tok-fn">news</span>().<span class="tok-kw">await</span>? {
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{}: {} ({})&quot;</span>, article.time, article.title, article.source);
+    }
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="Link to this section">#</a></h2>
+<div class="adm adm-note"><p class="adm-title"><span class="adm-kind">note</span> · GDELT serves news only</p>
+<p>GDELT has no concept of a corporate calendar (earnings/dividends/splits), so a <code>CORPORATE</code> route that includes GDELT should also include a provider that serves <code>fetch_events</code> if the calendar is needed.</p>
+</div>
+<h2 id="query-derivation">Query Derivation<a class="anchor" href="#query-derivation" aria-label="Link to this section">#</a></h2>
+<p>GDELT has no ticker vocabulary of its own, so <code>Ticker::news()</code> searches GDELT for the ticker symbol itself, quoted for an exact phrase match (e.g. <code>&quot;GOOGL&quot;</code>). This favors precision over recall: it surfaces articles that print the ticker verbatim, common in financial press (e.g. <code>&quot;(NASDAQ: GOOGL)&quot;</code>), rather than every article about the underlying company by name, which would require a separate symbol-to-company-name lookup this adapter doesn't perform.</p>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Short tickers are rejected</p>
+<p>GDELT rejects phrase queries under 5 characters, so symbols shorter than that (<code>AAPL</code>, <code>TSLA</code>, <code>AMD</code>, <code>F</code>, and so on) fail with <code>InvalidParameter</code> and dispatch falls through to the next <code>CORPORATE</code> provider. GDELT serves longer tickers and non-US symbols well in practice; route a keyed or scraped provider ahead of it if you need coverage for short US tickers.</p>
+</div>
+<h2 id="what-the-fields-mean">What the Fields Mean<a class="anchor" href="#what-the-fields-mean" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
-<thead><tr><th>Data type</th><th>Support</th></tr></thead>
+<thead><tr><th><code>News</code> field</th><th>Source</th></tr></thead>
 <tbody>
-<tr><td>Quote</td><td>✓</td></tr>
-<tr><td>Chart</td><td>✓</td></tr>
-<tr><td>Fundamentals</td><td>✓</td></tr>
-<tr><td>Corporate</td><td>✓</td></tr>
-<tr><td>Options</td><td>✓</td></tr>
-<tr><td>Market</td><td>✓</td></tr>
-<tr><td>Discovery</td><td>✓</td></tr>
-<tr><td>Indices</td><td>✓</td></tr>
-<tr><td>Commodities</td><td>—</td></tr>
-<tr><td>Forex</td><td>✓</td></tr>
-<tr><td>Crypto</td><td>✓</td></tr>
-<tr><td>Futures</td><td>✓</td></tr>
-<tr><td>Technicals</td><td>✓</td></tr>
-<tr><td>Economic</td><td>✓</td></tr>
-<tr><td>Filings</td><td>✓</td></tr>
-<tr><td>Sentiment</td><td>✓</td></tr>
+<tr><td><code>title</code></td><td>Article headline, or empty when GDELT omits it</td></tr>
+<tr><td><code>link</code></td><td>Article URL</td></tr>
+<tr><td><code>source</code></td><td>Publishing domain (e.g. <code>&quot;reuters.com&quot;</code>)</td></tr>
+<tr><td><code>img</code></td><td><code>socialimage</code>, or empty when GDELT has no thumbnail for the article</td></tr>
+<tr><td><code>time</code></td><td>Relative time (<code>&quot;3 hours ago&quot;</code>) computed from <code>seendate</code>, GDELT's own first-indexed timestamp</td></tr>
 </tbody>
 </table></div>
-<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<p>GDELT sometimes omits a field entirely, rather than sending an empty string, for older or thinly indexed sources, so everything but the URL degrades to an empty string rather than dropping the article.</p>
+<h2 id="history-depth">History Depth<a class="anchor" href="#history-depth" aria-label="Link to this section">#</a></h2>
+<p>Each request searches the last two weeks (GDELT's <code>timespan</code> parameter) and returns up to 50 articles. That's generous enough to cover a busy news day without paging; the DOC API caps at 250 records per call regardless.</p>
+<h2 id="rate-limits">Rate Limits<a class="anchor" href="#rate-limits" aria-label="Link to this section">#</a></h2>
+<p>GDELT documents no formal quota for the DOC API but asks callers to keep requests to roughly one every 5 seconds. The client paces itself to that rate rather than waiting to be throttled. A throttled response is still mapped to <code>RateLimited</code> when it does occur (GDELT states the retry interval in a plain-text body rather than a <code>Retry-After</code> header).</p>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../../library/providers/">Multi-Provider Architecture</a> — Provider configuration and strategies</li>
-<li><a href="../../../library/ticker/">Ticker API</a> — Single-symbol data access</li>
+<li><a href="../../../library/providers/alphavantage/">Alpha Vantage</a>: keyed news alternative with sentiment scoring</li>
+<li><a href="../../../library/providers/">Providers Overview</a>: routing and fallback</li>
 </ul>
 
 <div class="doc-foot">
@@ -315,11 +309,15 @@ try { var t = localStorage.getItem("soothfast-theme");
   
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
-    <li><a class="toc-l2" href="#usage">Usage</a></li>
+    <li><a class="toc-l2" href="#query-derivation">Query Derivation</a></li>
   
-    <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+    <li><a class="toc-l2" href="#what-the-fields-mean">What the Fields Mean</a></li>
   
-    <li><a class="toc-l2" href="#see-also">See Also</a></li>
+    <li><a class="toc-l2" href="#history-depth">History Depth</a></li>
+  
+    <li><a class="toc-l2" href="#rate-limits">Rate Limits</a></li>
+  
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
   
   </ul>
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Polygon.io · finance-query</title>
+<title>Senate PTR (Congressional Trades) · finance-query</title>
 <link rel="icon" href="../../../assets/logo.png">
 <link rel="stylesheet" href="../../../_soothfast/tokens.css">
 <link rel="stylesheet" href="../../../_soothfast/site.css">
@@ -118,7 +118,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
     
-      <li><a class="active" aria-current="page" href="../../../library/providers/polygon/">Polygon.io</a></li>
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
     
       <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
     
@@ -154,7 +154,7 @@ try { var t = localStorage.getItem("soothfast-theme");
     
       <li><a href="../../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
     
-      <li><a href="../../../library/providers/senatetrades/">Senate PTR (Congressional Trades)</a></li>
+      <li><a class="active" aria-current="page" href="../../../library/providers/senatetrades/">Senate PTR (Congressional Trades)</a></li>
     
     </ul>
   </div>
@@ -244,62 +244,72 @@ try { var t = localStorage.getItem("soothfast-theme");
 </nav>
 
 <main class="doc">
-<h1 id="polygon-io">Polygon.io<a class="anchor" href="#polygon-io" aria-label="Link to this section">#</a></h1>
-<div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
-<p><a href="https://docs.rs/finance-query/latest/finance_query/providers/enum.Provider.html#variant.Polygon">docs.rs/finance-query — Provider::Polygon</a></p>
-</div>
+<h1 id="senate-ptr-congressional-trades">Senate PTR (Congressional Trades)<a class="anchor" href="#senate-ptr-congressional-trades" aria-label="Link to this section">#</a></h1>
 <div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;polygon&quot;] }</code></pre></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;senatetrades&quot;] }</code></pre></figure>
 </div>
-<p>Polygon.io provides real-time and historical market data for stocks, options, forex, crypto, indices, and futures. Free tier: 5 requests per second.</p>
+<p>The STOCK Act of 2012 requires members of Congress to disclose trades over $1,000 within 45 days via a Periodic Transaction Report (PTR). The Senate publishes these free of charge at <code>efdsearch.senate.gov</code>, but unlike the House Clerk's static per-year archive, the disclaimer gate, search results, and each filing's transaction table all render client-side behind Akamai bot protection. So this adapter drives a real headless Chromium via <a href="https://docs.rs/chromiumoxide"><code>chromiumoxide</code></a> instead of a plain HTTP client, and needs a Chrome or Chromium binary available on the host running it.</p>
+<p>House PTRs are the counterpart adapter, <a href="../../../library/providers/housetrades/"><code>housetrades</code></a>. <code>Provider::CongressTrades</code> merges both when the corresponding features are compiled in; see <a href="../../../library/providers/">Providers Overview</a>.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Set the API key via environment variable:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export POLYGON_API_KEY=&quot;your-polygon-api-key&quot;
-</code></pre></figure>
-<p>No manual init call needed — the provider reads the key during <code>TickerBuilder::build()</code>.</p>
-<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this section">#</a></h2>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::format::<span class="tok-ty">Raw</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Fetch</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=senatetrades</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">QUOTE</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
-        .<span class="tok-fn">fetch</span>(<span class="tok-ty">Fetch</span>::<span class="tok-ty">Sequential</span>)
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">FILINGS</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">CongressTrades</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Edgar</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> ticker = providers.<span class="tok-fn">ticker</span>(<span class="tok-str">&quot;AAPL&quot;</span>).<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> quote = ticker.quote::&lt;<span class="tok-ty">Raw</span>&gt;().<span class="tok-kw">await</span>?;
-    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} quote received&quot;</span>, quote.symbol);
+
+    <span class="tok-kw">let</span> filings = providers.<span class="tok-fn">filings</span>(<span class="tok-str">&quot;AAPL&quot;</span>);
+    <span class="tok-kw">for</span> trade <span class="tok-kw">in</span> filings.<span class="tok-fn">congressional_trades</span>().<span class="tok-kw">await</span>? {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{} {}: {} {} on {}&quot;</span>,
+            trade.office.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.last_name.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.trade_type.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.amount.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            trade.transaction_date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>)
+        );
+    }
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="Link to this section">#</a></h2>
+<p>With only <code>senatetrades</code> compiled in, <code>Provider::CongressTrades</code> serves Senate rows exclusively, and every <code>CongressionalTrade.office</code> reads <code>&quot;Senate&quot;</code>. Enable <code>housetrades</code> alongside it to merge in House rows too.</p>
+<div class="adm adm-danger"><p class="adm-title"><span class="adm-kind">danger</span> · Akamai bot protection can block this source</p>
+<p><code>efdsearch.senate.gov</code> sits behind Akamai. The same launch flags that pass from a residential IP fail (HTTP 403, <code>errors.edgesuite.net</code>) from a VPN, cloud, or datacenter IP, and a separate, IP-independent rate block can also trigger under heavy request volume. This adapter can't bypass either condition, but it does recognize Akamai's error page and fail fast instead of exhausting the full element-detection timeout against it. When <code>Provider::CongressTrades</code> has both <code>housetrades</code> and <code>senatetrades</code> compiled in, a Senate failure just drops those rows from the merged result rather than failing the whole call; House data still comes back. Running with only <code>senatetrades</code> enabled, or on a blocked IP, means <code>congressional_trades()</code> can fail outright.</p>
+</div>
+<h2 id="how-symbol-lookup-works">How Symbol Lookup Works<a class="anchor" href="#how-symbol-lookup-works" aria-label="Link to this section">#</a></h2>
+<p><code>efdsearch.senate.gov</code> has no query API of its own; search results and each filing's transaction table render client-side. Like the House adapter, there's no per-symbol search either, only per-filer-type and per-date, so a symbol lookup works by:</p>
+<ol>
+<li>Launching a fresh headless Chromium instance, navigating to the search page, accepting the disclaimer, and filtering to Senator PTRs.</li>
+<li>Reading the most recent 100 filer and report-link rows out of the results table, sorted newest first.</li>
+<li>Opening each report page concurrently, reading its rendered transaction table, and keeping only the rows whose ticker matches the requested symbol.</li>
+</ol>
+<p>The browser session is not pooled: each call to <code>congressional_trades()</code> launches its own Chromium instance and closes it at the end of that call.</p>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Bounded recency window, not a full historical search</p>
+<p>Only the most recent 100 Senator PTR filings are scanned per request. This is a bounded-cost recency window, not an index over the full historical archive. A symbol traded only in an older filing beyond that window won't appear.</p>
+</div>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Paper filings are silently skipped</p>
+<p>Only filings submitted through the site's e-filing system render an HTML transaction table. Older ("paper") filings don't, and produce zero matching transactions rather than an error, since this adapter does not OCR them.</p>
+</div>
+<h2 id="what-the-fields-mean">What the Fields Mean<a class="anchor" href="#what-the-fields-mean" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
-<thead><tr><th>Data type</th><th>Support</th></tr></thead>
+<thead><tr><th><code>CongressionalTrade</code> field</th><th>Source</th></tr></thead>
 <tbody>
-<tr><td>Quote</td><td>✓</td></tr>
-<tr><td>Chart</td><td>✓</td></tr>
-<tr><td>Fundamentals</td><td>✓</td></tr>
-<tr><td>Corporate</td><td>✓</td></tr>
-<tr><td>Options</td><td>✓</td></tr>
-<tr><td>Market</td><td>✓</td></tr>
-<tr><td>Discovery</td><td>✓</td></tr>
-<tr><td>Indices</td><td>✓</td></tr>
-<tr><td>Commodities</td><td>—</td></tr>
-<tr><td>Forex</td><td>✓</td></tr>
-<tr><td>Crypto</td><td>✓</td></tr>
-<tr><td>Futures</td><td>✓</td></tr>
-<tr><td>Technicals</td><td>✓</td></tr>
-<tr><td>Economic</td><td>✓</td></tr>
-<tr><td>Filings</td><td>✓</td></tr>
-<tr><td>Sentiment</td><td>✓</td></tr>
+<tr><td><code>symbol</code></td><td>Ticker column of the report's transaction table</td></tr>
+<tr><td><code>first_name</code> / <code>last_name</code></td><td>From the search results table</td></tr>
+<tr><td><code>office</code></td><td>Always <code>&quot;Senate&quot;</code> for this adapter</td></tr>
+<tr><td><code>district</code></td><td>Always <code>None</code>; senators represent a whole state</td></tr>
+<tr><td><code>trade_type</code> / <code>amount</code> / <code>asset_description</code></td><td>Read directly from the report's transaction table</td></tr>
+<tr><td><code>transaction_date</code> / <code>disclosure_date</code></td><td><code>YYYY-MM-DD</code></td></tr>
+<tr><td><code>link</code></td><td>Direct URL to the source report page</td></tr>
 </tbody>
 </table></div>
-<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><a href="../../../library/providers/">Multi-Provider Architecture</a> — Provider configuration and strategies</li>
-<li><a href="../../../library/ticker/">Ticker API</a> — Single-symbol data access</li>
+<li><a href="../../../library/providers/housetrades/">House PTR</a>: the House-side counterpart</li>
+<li><a href="../../../library/filings/">Filings</a>: <code>Filings::congressional_trades()</code></li>
+<li><a href="../../../library/providers/">Providers Overview</a>: routing and fallback</li>
 </ul>
 
 <div class="doc-foot">
@@ -315,11 +325,11 @@ try { var t = localStorage.getItem("soothfast-theme");
   
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
-    <li><a class="toc-l2" href="#usage">Usage</a></li>
+    <li><a class="toc-l2" href="#how-symbol-lookup-works">How Symbol Lookup Works</a></li>
   
-    <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+    <li><a class="toc-l2" href="#what-the-fields-mean">What the Fields Mean</a></li>
   
-    <li><a class="toc-l2" href="#see-also">See Also</a></li>
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
   
   </ul>
 
