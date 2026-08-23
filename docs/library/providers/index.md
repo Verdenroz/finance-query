@@ -36,7 +36,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **DefiLlama** | `defi` | Keyless | *(keyless)* |
 | **GDELT DOC 2.0** | `gdelt` | Keyless (~1 req/5s) | *(keyless)* |
 | **CFTC** | `cftc` | Keyless | *(keyless)* |
-| **Congressional Trades (House/Senate)** | `housetrades`, `senatetrades` | Keyless | *(keyless)* |
+| **Congressional Trades (House/Senate)** | `housetrades` and/or `senatetrades` | Keyless | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 <!-- /soothfast:bind -->
@@ -325,4 +325,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Alpha Vantage | [Alpha Vantage](alphavantage.md) |
 | CoinGecko | [Crypto (CoinGecko)](coingecko.md) |
 | FRED | [FRED & Treasury](fred.md) |
+| World Bank | [World Bank Open Data](worldbank.md) |
+| US Treasury FiscalData | [US Treasury FiscalData](fiscaldata.md) |
+| BLS | [BLS (Bureau of Labor Statistics)](bls.md) |
+| Frankfurter | [Frankfurter (ECB reference rates)](frankfurter.md) |
+| Binance | [Binance (public market data)](binance.md) |
+| Kraken | [Kraken (public market data)](kraken.md) |
+| FINRA | [FINRA (short sale volume)](finra.md) |
+| OpenFIGI | [OpenFIGI (identifier mapping)](openfigi.md) |
+| DefiLlama | [DefiLlama (DeFi TVL)](defillama.md) |
+| GDELT DOC 2.0 | [GDELT (Global News)](gdelt.md) |
+| CFTC | [CFTC (Commitments of Traders)](cftc.md) |
+| House PTR | [House PTR (Congressional Trades)](housetrades.md) |
+| Senate PTR | [Senate PTR (Congressional Trades)](senatetrades.md) |
 | SEC EDGAR | [EDGAR SEC Filings](edgar.md) |

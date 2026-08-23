@@ -54,6 +54,10 @@ pages = [
   "library/providers/finra.md",
   "library/providers/openfigi.md",
   "library/providers/defillama.md",
+  "library/providers/gdelt.md",
+  "library/providers/cftc.md",
+  "library/providers/housetrades.md",
+  "library/providers/senatetrades.md",
 ]
 
 [[site.nav]]

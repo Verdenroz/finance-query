@@ -35,6 +35,8 @@
     "finance_query::models::economic::MacroSeries": "92381598f79241e0",
     "finance_query::models::economic::TreasuryYield": "bd0f8cfefaba110e",
     "finance_query::models::filings::company_facts::CompanyFacts": "f35d15bf0f9d0ba0",
+    "finance_query::models::filings::ownership::CongressionalTrade": "4b6471d7375a885e",
+    "finance_query::models::filings::ownership::FailToDeliver": "adb1907aa5c68838",
     "finance_query::models::filings::provider::ProviderFiling": "93fb2c217b319cdf",
     "finance_query::models::filings::provider::ProviderFilings": "0818196a3a5077ca",
     "finance_query::models::filings::submissions::EdgarSubmissions": "f6dbde02122fbf08",
