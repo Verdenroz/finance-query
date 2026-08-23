@@ -225,6 +225,122 @@ impl FundamentalsProvider for YahooProvider {
         stmt.provider_id = Some(super::Provider::Yahoo);
         Ok(stmt)
     }
+
+    /// Derived from `recommendationTrend`'s current-period ("0m") counts
+    /// rather than a dedicated endpoint. `consensus` (a headline label like
+    /// `"Buy"`) has no Yahoo equivalent and stays unset.
+    async fn fetch_rating_consensus(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(recommendation_trend_to_rating_consensus(
+            symbol,
+            resp.recommendation_trend,
+        ))
+    }
+
+    /// Assembled from `assetProfile` and `price` — Yahoo has no single
+    /// endpoint matching this shape's fields.
+    async fn fetch_company_profile(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(profile_and_price_to_company_profile(
+            symbol,
+            resp.asset_profile,
+            resp.price,
+        ))
+    }
+
+    /// Derived from `financialData`'s target-price fields rather than a
+    /// dedicated endpoint.
+    async fn fetch_price_target_consensus(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(financial_data_to_price_target_consensus(
+            symbol,
+            resp.financial_data,
+        ))
+    }
+}
+
+fn recommendation_trend_to_rating_consensus(
+    symbol: &str,
+    trend: Option<crate::models::corporate::RecommendationTrend>,
+) -> crate::models::fundamentals::RatingConsensus {
+    let period = trend.and_then(|t| {
+        t.trend
+            .into_iter()
+            .find(|p| p.period.as_deref() == Some("0m"))
+    });
+    crate::models::fundamentals::RatingConsensus {
+        symbol: Some(symbol.to_string()),
+        strong_buy: period.as_ref().and_then(|p| p.strong_buy).map(i64::from),
+        buy: period.as_ref().and_then(|p| p.buy).map(i64::from),
+        hold: period.as_ref().and_then(|p| p.hold).map(i64::from),
+        sell: period.as_ref().and_then(|p| p.sell).map(i64::from),
+        strong_sell: period.as_ref().and_then(|p| p.strong_sell).map(i64::from),
+        consensus: None,
+    }
+}
+
+fn profile_and_price_to_company_profile(
+    symbol: &str,
+    profile: Option<crate::models::corporate::AssetProfile>,
+    price: Option<crate::models::quote::price::Price>,
+) -> crate::models::fundamentals::CompanyProfile {
+    crate::models::fundamentals::CompanyProfile {
+        symbol: Some(symbol.to_string()),
+        name: price
+            .as_ref()
+            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        description: profile
+            .as_ref()
+            .and_then(|p| p.long_business_summary.clone()),
+        asset_type: price.as_ref().and_then(|p| p.quote_type.clone()),
+        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
+        currency: price.as_ref().and_then(|p| p.currency.clone()),
+        country: profile.as_ref().and_then(|p| p.country.clone()),
+        sector: profile.as_ref().and_then(|p| p.sector.clone()),
+        industry: profile.as_ref().and_then(|p| p.industry.clone()),
+        market_capitalization: price
+            .as_ref()
+            .and_then(|p| p.market_cap.as_ref())
+            .and_then(|v| v.raw)
+            .map(|v| v as f64),
+    }
+}
+
+fn financial_data_to_price_target_consensus(
+    symbol: &str,
+    data: Option<crate::models::quote::FinancialData>,
+) -> crate::models::fundamentals::PriceTargetConsensus {
+    crate::models::fundamentals::PriceTargetConsensus {
+        symbol: Some(symbol.to_string()),
+        target_high: data
+            .as_ref()
+            .and_then(|d| d.target_high_price.as_ref())
+            .and_then(|v| v.raw),
+        target_low: data
+            .as_ref()
+            .and_then(|d| d.target_low_price.as_ref())
+            .and_then(|v| v.raw),
+        target_consensus: data
+            .as_ref()
+            .and_then(|d| d.target_mean_price.as_ref())
+            .and_then(|v| v.raw),
+        target_median: data
+            .as_ref()
+            .and_then(|d| d.target_median_price.as_ref())
+            .and_then(|v| v.raw),
+    }
 }
 
 #[async_trait::async_trait]
@@ -819,5 +935,76 @@ mod tests {
         assert_eq!(performance.sector, "Technology");
         assert_eq!(performance.exchange, None);
         assert_eq!(performance.change_percent, Some(1.23));
+    }
+
+    #[test]
+    fn recommendation_trend_maps_current_period_to_rating_consensus() {
+        let trend: crate::models::corporate::RecommendationTrend =
+            serde_json::from_value(serde_json::json!({
+                "trend": [
+                    {"period": "0m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0},
+                    {"period": "-1m", "strongBuy": 4, "buy": 9, "hold": 4, "sell": 1, "strongSell": 0}
+                ]
+            }))
+            .unwrap();
+        let consensus = recommendation_trend_to_rating_consensus("AAPL", Some(trend));
+        assert_eq!(consensus.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(consensus.strong_buy, Some(5));
+        assert_eq!(consensus.buy, Some(10));
+        assert_eq!(consensus.hold, Some(3));
+        assert_eq!(consensus.sell, Some(1));
+        assert_eq!(consensus.strong_sell, Some(0));
+        assert_eq!(consensus.consensus, None);
+    }
+
+    #[test]
+    fn profile_and_price_map_to_company_profile() {
+        let profile: crate::models::corporate::AssetProfile =
+            serde_json::from_value(serde_json::json!({
+                "country": "United States",
+                "sector": "Technology",
+                "industry": "Consumer Electronics",
+                "longBusinessSummary": "Designs and sells consumer electronics."
+            }))
+            .unwrap();
+        let price: crate::models::quote::price::Price = serde_json::from_value(serde_json::json!({
+            "shortName": "Apple Inc.",
+            "quoteType": "EQUITY",
+            "exchangeName": "NMS",
+            "currency": "USD",
+            "marketCap": {"raw": 3_000_000_000_000_i64, "fmt": "3.00T"}
+        }))
+        .unwrap();
+        let company = profile_and_price_to_company_profile("AAPL", Some(profile), Some(price));
+        assert_eq!(company.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(company.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(
+            company.description.as_deref(),
+            Some("Designs and sells consumer electronics.")
+        );
+        assert_eq!(company.asset_type.as_deref(), Some("EQUITY"));
+        assert_eq!(company.exchange.as_deref(), Some("NMS"));
+        assert_eq!(company.currency.as_deref(), Some("USD"));
+        assert_eq!(company.country.as_deref(), Some("United States"));
+        assert_eq!(company.sector.as_deref(), Some("Technology"));
+        assert_eq!(company.industry.as_deref(), Some("Consumer Electronics"));
+        assert_eq!(company.market_capitalization, Some(3_000_000_000_000.0));
+    }
+
+    #[test]
+    fn financial_data_maps_to_price_target_consensus() {
+        let data: crate::models::quote::FinancialData = serde_json::from_value(serde_json::json!({
+            "targetHighPrice": {"raw": 250.0, "fmt": "250.00"},
+            "targetLowPrice": {"raw": 180.0, "fmt": "180.00"},
+            "targetMeanPrice": {"raw": 215.0, "fmt": "215.00"},
+            "targetMedianPrice": {"raw": 210.0, "fmt": "210.00"}
+        }))
+        .unwrap();
+        let consensus = financial_data_to_price_target_consensus("AAPL", Some(data));
+        assert_eq!(consensus.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(consensus.target_high, Some(250.0));
+        assert_eq!(consensus.target_low, Some(180.0));
+        assert_eq!(consensus.target_consensus, Some(215.0));
+        assert_eq!(consensus.target_median, Some(210.0));
     }
 }
