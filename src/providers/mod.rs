@@ -37,6 +37,8 @@ pub(crate) mod fred;
 pub(crate) mod gdelt;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
+#[cfg(feature = "nasdaq")]
+pub(crate) mod nasdaq;
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 pub(crate) mod types;
@@ -115,6 +117,10 @@ pub enum Provider {
     /// feature, keyless).
     #[cfg(feature = "cftc")]
     Cftc,
+    /// Nasdaq market-wide earnings/IPO/dividend/split calendars (requires
+    /// `nasdaq` feature, keyless).
+    #[cfg(feature = "nasdaq")]
+    Nasdaq,
     /// Combined House + Senate PTR stock-trade disclosures (requires the
     /// `housetrades` and/or `senatetrades` feature, keyless).
     #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
@@ -160,6 +166,8 @@ impl Provider {
             "gdelt" => Some(Self::Gdelt),
             #[cfg(feature = "cftc")]
             "cftc" => Some(Self::Cftc),
+            #[cfg(feature = "nasdaq")]
+            "nasdaq" => Some(Self::Nasdaq),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
@@ -201,6 +209,8 @@ impl Provider {
             Self::Gdelt => "gdelt",
             #[cfg(feature = "cftc")]
             Self::Cftc => "cftc",
+            #[cfg(feature = "nasdaq")]
+            Self::Nasdaq => "nasdaq",
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
@@ -243,6 +253,8 @@ impl Provider {
         v.push(Self::Gdelt);
         #[cfg(feature = "cftc")]
         v.push(Self::Cftc);
+        #[cfg(feature = "nasdaq")]
+        v.push(Self::Nasdaq);
         #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
         v.push(Self::CongressTrades);
         v.push(Self::Edgar);
@@ -289,6 +301,8 @@ impl Provider {
             Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
+            #[cfg(feature = "nasdaq")]
+            Self::Nasdaq => ProviderAdapter::capabilities(&nasdaq::NasdaqProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => {
                 ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
@@ -1262,6 +1276,8 @@ pub(crate) async fn build_providers(
             Provider::Gdelt => Arc::new(gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Provider::Cftc => Arc::new(cftc::CftcProvider),
+            #[cfg(feature = "nasdaq")]
+            Provider::Nasdaq => Arc::new(nasdaq::NasdaqProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),

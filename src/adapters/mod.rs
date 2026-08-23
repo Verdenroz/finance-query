@@ -113,6 +113,10 @@ pub(crate) mod gdelt;
 #[cfg(feature = "cftc")]
 pub(crate) mod cftc;
 
+/// Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless, requires `nasdaq` feature).
+#[cfg(feature = "nasdaq")]
+pub(crate) mod nasdaq;
+
 /// House of Representatives PTR stock-trade disclosures (keyless, requires `housetrades` feature).
 #[cfg(feature = "housetrades")]
 pub(crate) mod housetrades;
