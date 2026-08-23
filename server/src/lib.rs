@@ -35,48 +35,145 @@ pub struct AppState {
     pub providers: Arc<finance_query::Providers>,
 }
 
+/// Which keyed providers are configured, driving [`route_table`].
+struct ProviderFlags {
+    fmp: bool,
+    alphavantage: bool,
+    fred: bool,
+}
+
+/// The capability → provider fallback list for every routed capability.
+/// Keyless providers stay in the route unconditionally; keyed providers are
+/// added only when their flag is set, so a capability never depends solely
+/// on a key that isn't configured when a free alternative exists.
+fn route_table(
+    flags: ProviderFlags,
+) -> Vec<(finance_query::Capability, Vec<finance_query::Provider>)> {
+    use finance_query::{Capability, Provider};
+
+    let mut routes = Vec::new();
+
+    // Capabilities Yahoo already serves keyless: FMP/AV are additive alternates.
+    for cap in [
+        Capability::QUOTE,
+        Capability::CHART,
+        Capability::MARKET,
+        Capability::OPTIONS,
+    ] {
+        let mut route = vec![Provider::Yahoo];
+        if flags.fmp && cap != Capability::OPTIONS {
+            route.push(Provider::Fmp); // FMP has no OptionsProvider impl
+        }
+        if flags.alphavantage {
+            route.push(Provider::AlphaVantage);
+        }
+        routes.push((cap, route));
+    }
+
+    let mut corporate = vec![Provider::Yahoo];
+    if flags.fmp {
+        corporate.push(Provider::Fmp);
+    }
+    if flags.alphavantage {
+        corporate.push(Provider::AlphaVantage);
+    }
+    routes.push((Capability::CORPORATE, corporate));
+
+    let mut fundamentals = Vec::new();
+    if flags.fmp {
+        fundamentals.push(Provider::Fmp);
+    }
+    if flags.alphavantage {
+        fundamentals.push(Provider::AlphaVantage);
+    }
+    fundamentals.push(Provider::Yahoo);
+    routes.push((Capability::FUNDAMENTALS, fundamentals));
+
+    // No Yahoo route for these; FMP/AV are the only candidates.
+    for cap in [
+        Capability::DISCOVERY,
+        Capability::CALENDAR,
+        Capability::COMMODITIES,
+    ] {
+        let mut route = Vec::new();
+        if flags.fmp {
+            route.push(Provider::Fmp);
+        }
+        if flags.alphavantage {
+            route.push(Provider::AlphaVantage);
+        }
+        if !route.is_empty() {
+            routes.push((cap, route));
+        }
+    }
+    // INDICES has no AV route among integrated providers.
+    if flags.fmp {
+        routes.push((Capability::INDICES, vec![Provider::Fmp]));
+    }
+
+    let mut economic = Vec::new();
+    if flags.fred {
+        economic.push(Provider::Fred);
+    }
+    economic.push(Provider::WorldBank);
+    economic.push(Provider::FiscalData);
+    if flags.alphavantage {
+        economic.push(Provider::AlphaVantage);
+    }
+    routes.push((Capability::ECONOMIC, economic));
+
+    let mut crypto = Vec::new();
+    if flags.fmp {
+        crypto.push(Provider::Fmp);
+    }
+    crypto.push(Provider::CoinGecko);
+    crypto.push(Provider::Binance);
+    crypto.push(Provider::Kraken);
+    routes.push((Capability::CRYPTO, crypto));
+
+    let mut forex = Vec::new();
+    if flags.fmp {
+        forex.push(Provider::Fmp);
+    }
+    if flags.alphavantage {
+        forex.push(Provider::AlphaVantage);
+    }
+    forex.push(Provider::Frankfurter);
+    routes.push((Capability::FOREX, forex));
+
+    if flags.fmp {
+        routes.push((
+            Capability::FILINGS,
+            vec![Provider::Fmp, Provider::Edgar, Provider::Yahoo],
+        ));
+    }
+
+    routes
+}
+
 /// Build the multi-provider routing shared by `AppState`. Each keyed
 /// provider is only routed in when its API key env var is set; a field
 /// backed solely by an unconfigured provider falls through to
 /// `NotSupported`, surfaced as a `501` by `finance_error_to_gql`.
 pub async fn build_providers() -> Arc<finance_query::Providers> {
-    use finance_query::{Capability, Provider, Providers};
+    use finance_query::Providers;
 
     let log_routing = |name: &str, key: &str, enabled: bool| match enabled {
         true => tracing::info!("{name} routing enabled"),
         false => tracing::info!("{name} not configured (set {key} to enable)"),
     };
-    let has_alphavantage = std::env::var("ALPHAVANTAGE_API_KEY").is_ok();
-    let has_fmp = std::env::var("FMP_API_KEY").is_ok();
-    log_routing("Alpha Vantage", "ALPHAVANTAGE_API_KEY", has_alphavantage);
-    log_routing("FMP", "FMP_API_KEY", has_fmp);
+    let flags = ProviderFlags {
+        fmp: std::env::var("FMP_API_KEY").is_ok(),
+        alphavantage: std::env::var("ALPHAVANTAGE_API_KEY").is_ok(),
+        fred: std::env::var("FRED_API_KEY").is_ok(),
+    };
+    log_routing("Alpha Vantage", "ALPHAVANTAGE_API_KEY", flags.alphavantage);
+    log_routing("FMP", "FMP_API_KEY", flags.fmp);
+    log_routing("FRED", "FRED_API_KEY", flags.fred);
 
     let mut builder = Providers::builder();
-    if has_alphavantage {
-        builder = builder.route(
-            Capability::CORPORATE,
-            [Provider::Yahoo, Provider::AlphaVantage],
-        );
-    }
-
-    let mut fundamentals = Vec::new();
-    if has_fmp {
-        fundamentals.push(Provider::Fmp);
-    }
-    if has_alphavantage {
-        fundamentals.push(Provider::AlphaVantage);
-    }
-    if !fundamentals.is_empty() {
-        builder = builder.route(Capability::FUNDAMENTALS, fundamentals);
-    }
-
-    if has_fmp {
-        builder = builder.route(
-            Capability::FILINGS,
-            [Provider::Fmp, Provider::Edgar, Provider::Yahoo],
-        );
-        builder = builder.route(Capability::CRYPTO, [Provider::Fmp]);
-        builder = builder.route(Capability::FOREX, [Provider::Fmp]);
+    for (cap, route) in route_table(flags) {
+        builder = builder.route(cap, route);
     }
 
     match builder.build().await {
@@ -92,6 +189,87 @@ pub async fn build_providers() -> Arc<finance_query::Providers> {
                     .expect("Yahoo-only Providers build cannot fail"),
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod provider_routing_tests {
+    use super::*;
+    use finance_query::{Capability, Provider};
+
+    fn route(routes: &[(Capability, Vec<Provider>)], cap: Capability) -> Option<&[Provider]> {
+        routes
+            .iter()
+            .find(|(c, _)| *c == cap)
+            .map(|(_, r)| r.as_slice())
+    }
+
+    #[test]
+    fn no_keys_keeps_a_keyless_floor() {
+        let routes = route_table(ProviderFlags {
+            fmp: false,
+            alphavantage: false,
+            fred: false,
+        });
+        assert_eq!(
+            route(&routes, Capability::QUOTE),
+            Some(&[Provider::Yahoo][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::CRYPTO),
+            Some(&[Provider::CoinGecko, Provider::Binance, Provider::Kraken][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::FOREX),
+            Some(&[Provider::Frankfurter][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::ECONOMIC),
+            Some(&[Provider::WorldBank, Provider::FiscalData][..])
+        );
+        assert_eq!(route(&routes, Capability::DISCOVERY), None);
+        assert_eq!(route(&routes, Capability::INDICES), None);
+        assert_eq!(route(&routes, Capability::FILINGS), None);
+    }
+
+    #[test]
+    fn fmp_key_adds_fmp_everywhere_it_serves_but_not_options() {
+        let routes = route_table(ProviderFlags {
+            fmp: true,
+            alphavantage: false,
+            fred: false,
+        });
+        assert!(
+            route(&routes, Capability::QUOTE)
+                .unwrap()
+                .contains(&Provider::Fmp)
+        );
+        assert!(
+            !route(&routes, Capability::OPTIONS)
+                .unwrap()
+                .contains(&Provider::Fmp)
+        );
+        assert_eq!(
+            route(&routes, Capability::INDICES),
+            Some(&[Provider::Fmp][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::FILINGS),
+            Some(&[Provider::Fmp, Provider::Edgar, Provider::Yahoo][..])
+        );
+    }
+
+    #[test]
+    fn fundamentals_always_has_a_yahoo_floor() {
+        let routes = route_table(ProviderFlags {
+            fmp: true,
+            alphavantage: true,
+            fred: false,
+        });
+        assert_eq!(
+            route(&routes, Capability::FUNDAMENTALS).unwrap().last(),
+            Some(&Provider::Yahoo)
+        );
     }
 }
 
