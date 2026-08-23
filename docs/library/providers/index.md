@@ -37,7 +37,10 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **GDELT DOC 2.0** | `gdelt` | Keyless (~1 req/5s) | *(keyless)* |
 | **CFTC** | `cftc` | Keyless | *(keyless)* |
 | **Congressional Trades (House/Senate)** | `housetrades` and/or `senatetrades` | Keyless | *(keyless)* |
+| **Nasdaq** | `nasdaq` | Keyless (~2 req/s) | *(keyless)* |
+| **Wikipedia** | `wikipedia` | Keyless (~1 req/s) | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
+| **Local Market Calendar** | *(always available)* | Keyless, no network call | *(keyless)* |
 
 <!-- /soothfast:bind -->
 
@@ -338,4 +341,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | CFTC | [CFTC (Commitments of Traders)](cftc.md) |
 | House PTR | [House PTR (Congressional Trades)](housetrades.md) |
 | Senate PTR | [Senate PTR (Congressional Trades)](senatetrades.md) |
+| Nasdaq | [Nasdaq (Market Calendars)](nasdaq.md) |
+| Wikipedia | [Wikipedia (Index Constituents)](wikipedia.md) |
 | SEC EDGAR | [EDGAR SEC Filings](edgar.md) |
