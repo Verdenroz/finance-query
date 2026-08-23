@@ -29,3 +29,58 @@ fn doc_block_line_12() {
         Ok(())
     }
 }
+
+// line 70: compile-only (no_run)
+#[cfg(all(feature = "housetrades", feature = "senatetrades"))]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_70() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .route(Capability::FILINGS, [Provider::CongressTrades, Provider::Edgar])
+            .build()
+            .await?;
+
+        let filings = providers.filings("AAPL");
+        for trade in filings.congressional_trades().await? {
+            println!(
+                "{} {}: {} {} on {}",
+                trade.office.as_deref().unwrap_or("?"),
+                trade.last_name.as_deref().unwrap_or("?"),
+                trade.trade_type.as_deref().unwrap_or("?"),
+                trade.amount.as_deref().unwrap_or("?"),
+                trade.transaction_date.as_deref().unwrap_or("?")
+            );
+        }
+        Ok(())
+    }
+}
+
+// line 119: compile-only (no_run)
+#[cfg(feature = "secftd")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_119() {
+    use finance_query::{Providers, edgar};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        edgar::init("you@example.com")?;
+
+        let providers = Providers::builder().build().await?;
+        let filings = providers.filings("AAPL");
+
+        for row in filings.fails_to_deliver().await? {
+            println!(
+                "{}: {:?} shares of {:?}",
+                row.date.as_deref().unwrap_or("?"),
+                row.quantity,
+                row.name
+            );
+        }
+        Ok(())
+    }
+}
