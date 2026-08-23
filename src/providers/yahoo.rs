@@ -294,6 +294,57 @@ impl MarketProvider for YahooProvider {
             crate::adapters::yahoo::discovery::screeners::fetch(&self.client, screener, 25).await?;
         Ok(screener_quotes_to_movers(results))
     }
+
+    /// Fans out over Yahoo's per-sector overview pages, one request per
+    /// sector — there's no bulk sector-performance endpoint. A sector that
+    /// fails to fetch is dropped rather than failing the whole call.
+    async fn fetch_sector_performance(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+        use crate::constants::sectors::Sector;
+
+        const SECTORS: [Sector; 11] = [
+            Sector::Technology,
+            Sector::FinancialServices,
+            Sector::ConsumerCyclical,
+            Sector::CommunicationServices,
+            Sector::Healthcare,
+            Sector::Industrials,
+            Sector::ConsumerDefensive,
+            Sector::Energy,
+            Sector::BasicMaterials,
+            Sector::RealEstate,
+            Sector::Utilities,
+        ];
+
+        let fetches = SECTORS.iter().map(|&sector| async move {
+            match crate::adapters::yahoo::market::sectors::fetch(&self.client, sector).await {
+                Ok(data) => Some(sector_data_to_performance(data)),
+                Err(err) => {
+                    tracing::warn!("failed to fetch {sector:?} sector performance: {err}");
+                    None
+                }
+            }
+        });
+        Ok(futures::future::join_all(fetches)
+            .await
+            .into_iter()
+            .flatten()
+            .collect())
+    }
+}
+
+fn sector_data_to_performance(
+    data: crate::models::market::sectors::SectorData,
+) -> crate::models::market::performance::SectorPerformance {
+    crate::models::market::performance::SectorPerformance {
+        sector: data.name,
+        exchange: None,
+        change_percent: data
+            .performance
+            .and_then(|p| p.day_change_percent)
+            .and_then(|v| v.raw),
+    }
 }
 
 /// Map screener rows to canonical mover quotes.
@@ -746,5 +797,27 @@ mod tests {
         assert_eq!(status.as_deref(), Some("closed"));
         assert_eq!(open.as_deref(), Some("2026-08-03T00:00:00Z"));
         assert_eq!(close.as_deref(), Some("2026-08-03T06:30:00Z"));
+    }
+
+    #[test]
+    fn sector_data_maps_to_sector_performance() {
+        let data: crate::models::market::sectors::SectorData =
+            serde_json::from_value(serde_json::json!({
+                "name": "Technology",
+                "key": "technology",
+                "performance": {
+                    "dayChangePercent": {"raw": 1.23, "fmt": "1.23%"}
+                },
+                "topCompanies": [],
+                "topEtfs": [],
+                "topMutualFunds": [],
+                "industries": [],
+                "researchReports": []
+            }))
+            .unwrap();
+        let performance = sector_data_to_performance(data);
+        assert_eq!(performance.sector, "Technology");
+        assert_eq!(performance.exchange, None);
+        assert_eq!(performance.change_percent, Some(1.23));
     }
 }
