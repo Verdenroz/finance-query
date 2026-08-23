@@ -1397,6 +1397,14 @@ mod tests {
         );
     }
 
+    /// FRED gained CALENDAR (economic releases) via an accessor override;
+    /// `Provider::capabilities()` must reflect that.
+    #[cfg(feature = "fred")]
+    #[test]
+    fn fred_derives_calendar_capability() {
+        assert!(Provider::Fred.capabilities().contains(Capability::CALENDAR));
+    }
+
     #[cfg(feature = "alphavantage")]
     #[test]
     fn alphavantage_derives_market_capability() {

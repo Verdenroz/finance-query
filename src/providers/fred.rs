@@ -1,6 +1,6 @@
 //! FRED (Federal Reserve Economic Data) provider implementation.
 
-use super::{EconomicProvider, ProviderAdapter, ProviderCore};
+use super::{CalendarProvider, EconomicProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
 
 pub(crate) struct FredProvider;
@@ -50,6 +50,23 @@ impl EconomicProvider for FredProvider {
     }
 }
 
+/// FRED's release calendar covers `CalendarKind::Economic` only — it has no
+/// earnings, IPO, dividend, split, or holiday data.
+#[async_trait::async_trait]
+impl CalendarProvider for FredProvider {
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        if kind != crate::models::calendar::market::CalendarKind::Economic {
+            return Err(self.not_supported(kind.operation()));
+        }
+        crate::adapters::fred::fetch_market_calendar_response(from, to).await
+    }
+}
+
 #[async_trait::async_trait]
 impl ProviderAdapter for FredProvider {
     async fn initialize(&self) -> crate::error::Result<()> {
@@ -62,6 +79,10 @@ impl ProviderAdapter for FredProvider {
     }
 
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
+        Some(self)
+    }
+
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         Some(self)
     }
 }
