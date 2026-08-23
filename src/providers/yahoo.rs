@@ -4,8 +4,8 @@
 //! to keep this file focused on routing and lifecycle.
 
 use super::{
-    Capability, ChartProvider, CorporateProvider, FundamentalsProvider, MarketProvider,
-    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+    Capability, ChartProvider, CommoditiesProvider, CorporateProvider, FundamentalsProvider,
+    IndicesProvider, MarketProvider, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
@@ -21,7 +21,9 @@ pub(crate) const CAPS: Capability = Capability::QUOTE
     .union(Capability::FUNDAMENTALS)
     .union(Capability::CORPORATE)
     .union(Capability::OPTIONS)
-    .union(Capability::MARKET);
+    .union(Capability::MARKET)
+    .union(Capability::INDICES)
+    .union(Capability::COMMODITIES);
 
 pub(crate) struct YahooProvider {
     client: Arc<YahooClient>,
@@ -312,6 +314,65 @@ fn screener_quotes_to_movers(
 }
 
 #[async_trait::async_trait]
+impl IndicesProvider for YahooProvider {
+    /// Derived from the generic quote endpoint rather than a dedicated index
+    /// endpoint: Yahoo resolves index symbols (`^GSPC`) the same way it
+    /// resolves equities, so the default keyless route serves index quotes.
+    async fn fetch_indices_quote(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::indices::IndexQuote> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(price_to_index_quote(symbol, resp.price.as_ref()))
+    }
+}
+
+fn price_to_index_quote(
+    symbol: &str,
+    price: Option<&crate::models::quote::price::Price>,
+) -> crate::models::indices::IndexQuote {
+    crate::models::indices::IndexQuote {
+        symbol: symbol.to_string(),
+        name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        price: price.and_then(|p| p.current_price()),
+        change: price.and_then(|p| p.day_change()),
+        change_percent: price.and_then(|p| p.day_change_percent()),
+        timestamp: price.and_then(|p| p.regular_market_time),
+    }
+}
+
+#[async_trait::async_trait]
+impl CommoditiesProvider for YahooProvider {
+    /// Derived from the generic quote endpoint: Yahoo resolves commodity
+    /// futures symbols (`GC=F`) the same way it resolves equities. `unit`
+    /// stays unset, matching FMP's own commodity mapping.
+    async fn fetch_commodities_quote(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::commodities::CommodityQuote> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        Ok(price_to_commodity_quote(symbol, resp.price.as_ref()))
+    }
+}
+
+fn price_to_commodity_quote(
+    symbol: &str,
+    price: Option<&crate::models::quote::price::Price>,
+) -> crate::models::commodities::CommodityQuote {
+    crate::models::commodities::CommodityQuote {
+        symbol: symbol.to_string(),
+        name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        unit: None,
+        price: price.and_then(|p| p.current_price()),
+        change: price.and_then(|p| p.day_change()),
+        change_percent: price.and_then(|p| p.day_change_percent()),
+        timestamp: price.and_then(|p| p.regular_market_time),
+    }
+}
+
+#[async_trait::async_trait]
 impl OptionsProvider for YahooProvider {
     async fn fetch_options(
         &self,
@@ -340,6 +401,12 @@ impl ProviderAdapter for YahooProvider {
         Some(self)
     }
     fn as_market(&self) -> Option<&dyn MarketProvider> {
+        Some(self)
+    }
+    fn as_indices(&self) -> Option<&dyn IndicesProvider> {
+        Some(self)
+    }
+    fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
         Some(self)
     }
 }
@@ -372,5 +439,38 @@ mod tests {
         assert_eq!(movers[0].price, Some(1234.5));
         assert_eq!(movers[0].change, Some(56.7));
         assert_eq!(movers[0].change_percent, Some(4.81));
+    }
+
+    fn fixture_price() -> crate::models::quote::price::Price {
+        serde_json::from_value(serde_json::json!({
+            "shortName": "S&P 500",
+            "regularMarketPrice": {"raw": 5678.9, "fmt": "5,678.90"},
+            "regularMarketChange": {"raw": 12.3, "fmt": "12.30"},
+            "regularMarketChangePercent": {"raw": 0.22, "fmt": "0.22%"},
+            "regularMarketTime": 1_700_000_000
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn price_maps_to_index_quote() {
+        let quote = price_to_index_quote("^GSPC", Some(&fixture_price()));
+        assert_eq!(quote.symbol, "^GSPC");
+        assert_eq!(quote.name.as_deref(), Some("S&P 500"));
+        assert_eq!(quote.price, Some(5678.9));
+        assert_eq!(quote.change, Some(12.3));
+        assert_eq!(quote.change_percent, Some(0.22));
+        assert_eq!(quote.timestamp, Some(1_700_000_000));
+    }
+
+    #[test]
+    fn price_maps_to_commodity_quote() {
+        let quote = price_to_commodity_quote("GC=F", Some(&fixture_price()));
+        assert_eq!(quote.symbol, "GC=F");
+        assert_eq!(quote.name.as_deref(), Some("S&P 500"));
+        assert_eq!(quote.unit, None);
+        assert_eq!(quote.price, Some(5678.9));
+        assert_eq!(quote.change, Some(12.3));
+        assert_eq!(quote.change_percent, Some(0.22));
     }
 }

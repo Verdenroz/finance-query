@@ -33,8 +33,7 @@ pub mod quote;
 pub mod sentiment;
 
 // Provider-specific (gated on the provider feature that supplies them)
-/// Commodities market data (gold, silver, oil, etc.) — FMP / Alpha Vantage.
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+/// Commodities market data (gold, silver, oil, etc.) — Yahoo / FMP / Alpha Vantage.
 pub mod commodities;
 /// Cryptocurrency market data — CoinGecko, Alpha Vantage, FMP, Polygon.
 #[cfg(any(
@@ -68,6 +67,5 @@ pub mod forex;
 /// Futures market data models — Polygon / CFTC.
 #[cfg(any(feature = "polygon", feature = "cftc"))]
 pub mod futures;
-/// Stock market index data models — Polygon / FMP.
-#[cfg(any(feature = "polygon", feature = "fmp"))]
+/// Stock market index data models — Yahoo / Polygon / FMP.
 pub mod indices;

@@ -614,7 +614,6 @@ pub(crate) trait ForexProvider: ProviderCore {
 }
 
 /// [`Capability::INDICES`] — stock market index quotes.
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 #[async_trait::async_trait]
 pub(crate) trait IndicesProvider: ProviderCore {
     async fn fetch_indices_quote(&self, symbol: &str)
@@ -658,7 +657,6 @@ pub(crate) trait FuturesProvider: ProviderCore {
 }
 
 /// [`Capability::COMMODITIES`] — commodity price quotes.
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 #[async_trait::async_trait]
 pub(crate) trait CommoditiesProvider: ProviderCore {
     async fn fetch_commodities_quote(
@@ -768,7 +766,6 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
     fn as_indices(&self) -> Option<&dyn IndicesProvider> {
         None
     }
@@ -776,7 +773,6 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_futures(&self) -> Option<&dyn FuturesProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "alphavantage"))]
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
         None
     }
@@ -851,7 +847,6 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_forex().is_some() {
             caps = caps | Capability::FOREX;
         }
-        #[cfg(any(feature = "polygon", feature = "fmp"))]
         if self.as_indices().is_some() {
             caps = caps | Capability::INDICES;
         }
@@ -859,7 +854,6 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_futures().is_some() {
             caps = caps | Capability::FUTURES;
         }
-        #[cfg(any(feature = "fmp", feature = "alphavantage"))]
         if self.as_commodities().is_some() {
             caps = caps | Capability::COMMODITIES;
         }

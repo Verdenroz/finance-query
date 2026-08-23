@@ -331,7 +331,6 @@ pub use domains::ForexPair;
 pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use domains::Commodity;
 #[cfg(any(
     feature = "fmp",
@@ -343,7 +342,6 @@ pub use domains::Discovery;
 pub use domains::Filings;
 #[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use domains::FuturesContract;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
 #[cfg(feature = "polygon")]
 pub use domains::Snapshot;
@@ -454,7 +452,6 @@ pub use models::{
 #[cfg(feature = "sentiment")]
 pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentiment};
 // Multi-provider capability response types (feature-gated)
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use models::commodities::CommodityQuote;
 #[cfg(any(
     feature = "alphavantage",
@@ -488,7 +485,6 @@ pub use models::forex::ForexQuote;
 pub use models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]
 pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 #[cfg(feature = "polygon")]
 pub use models::quote::snapshot::{AssetClass, MarketSnapshot};

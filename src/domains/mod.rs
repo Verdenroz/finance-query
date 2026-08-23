@@ -538,7 +538,6 @@ macro_rules! impl_chartable_analytics {
 
 // ── Modules ─────────────────────────────────────────────────────────
 
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub(crate) mod commodities;
 #[cfg(any(
     feature = "alphavantage",
@@ -576,7 +575,6 @@ pub(crate) mod filings;
 pub(crate) mod forex;
 #[cfg(any(feature = "polygon", feature = "cftc"))]
 pub(crate) mod futures;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
 pub(crate) mod market;
 #[cfg(feature = "polygon")]
@@ -584,7 +582,6 @@ pub(crate) mod snapshot;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use commodities::Commodity;
 #[cfg(any(
     feature = "alphavantage",
@@ -622,7 +619,6 @@ pub use filings::Filings;
 pub use forex::ForexPair;
 #[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use futures::FuturesContract;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use indices::Index;
 pub use market::Market;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]

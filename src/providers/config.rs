@@ -135,7 +135,6 @@ impl Providers {
     }
 
     /// Create an [`Index`](crate::Index) handle backed by this provider set.
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
     pub fn index(&self, symbol: impl Into<String>) -> crate::domains::Index {
         crate::domains::Index::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
@@ -147,7 +146,6 @@ impl Providers {
     }
 
     /// Create a [`Commodity`](crate::Commodity) handle backed by this provider set.
-    #[cfg(any(feature = "fmp", feature = "alphavantage"))]
     pub fn commodity(&self, symbol: impl Into<String>) -> crate::domains::Commodity {
         crate::domains::Commodity::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
