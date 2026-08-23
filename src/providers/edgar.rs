@@ -58,6 +58,25 @@ impl FilingsProvider for EdgarProvider {
         crate::adapters::edgar::filings::fails_to_deliver::fetch_fails_to_deliver_response(symbol)
             .await
     }
+
+    async fn fetch_filing_sections(
+        &self,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        crate::adapters::edgar::filings::sections::fetch_filing_sections_response(
+            accession_number,
+            form,
+        )
+        .await
+    }
+
+    async fn fetch_risk_factors(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        crate::adapters::edgar::filings::sections::fetch_risk_factors_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]
