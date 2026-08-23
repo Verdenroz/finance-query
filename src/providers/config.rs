@@ -155,12 +155,6 @@ impl Providers {
     /// Routes symbol search, reference data, and screening through
     /// [`Capability::DISCOVERY`](crate::Capability::DISCOVERY). Distinct from
     /// [`crate::finance::search`], which is a Yahoo-only shortcut.
-    #[cfg(any(
-        feature = "fmp",
-        feature = "polygon",
-        feature = "alphavantage",
-        feature = "crypto"
-    ))]
     pub fn discovery(&self) -> crate::domains::Discovery {
         crate::domains::Discovery::with_providers(Arc::clone(&self.set))
     }

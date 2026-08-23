@@ -4,8 +4,9 @@
 //! to keep this file focused on routing and lifecycle.
 
 use super::{
-    Capability, ChartProvider, CommoditiesProvider, CorporateProvider, FundamentalsProvider,
-    IndicesProvider, MarketProvider, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+    Capability, ChartProvider, CommoditiesProvider, CorporateProvider, DiscoveryProvider,
+    FundamentalsProvider, IndicesProvider, MarketProvider, OptionsProvider, ProviderAdapter,
+    ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
@@ -23,7 +24,8 @@ pub(crate) const CAPS: Capability = Capability::QUOTE
     .union(Capability::OPTIONS)
     .union(Capability::MARKET)
     .union(Capability::INDICES)
-    .union(Capability::COMMODITIES);
+    .union(Capability::COMMODITIES)
+    .union(Capability::DISCOVERY);
 
 pub(crate) struct YahooProvider {
     client: Arc<YahooClient>,
@@ -373,6 +375,130 @@ fn price_to_commodity_quote(
 }
 
 #[async_trait::async_trait]
+impl DiscoveryProvider for YahooProvider {
+    /// Derived from Yahoo's fuzzy quote search rather than a dedicated
+    /// discovery endpoint — the same call `finance::search` makes, mapped
+    /// onto the provider-neutral `SymbolMatch` shape.
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        let options =
+            crate::adapters::yahoo::discovery::search::SearchOptions::new().quotes_count(limit);
+        let results = self.client.search(query, &options).await?;
+        Ok(search_quotes_to_symbol_matches(results.quotes))
+    }
+
+    /// Derived from Yahoo's custom equity screener. Sector, industry, beta,
+    /// country, and actively-trading status stay unset: Yahoo's screener
+    /// response carries none of them as a result column.
+    async fn fetch_screener(
+        &self,
+        filters: &crate::models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        use crate::models::discovery::screeners::{
+            EquityField, EquityScreenerQuery, ScreenerFieldExt,
+        };
+
+        let mut query = EquityScreenerQuery::new();
+        query = add_range_condition(
+            query,
+            EquityField::IntradayMarketCap,
+            filters.market_cap_min,
+            filters.market_cap_max,
+        );
+        query = add_range_condition(
+            query,
+            EquityField::IntradayPrice,
+            filters.price_min,
+            filters.price_max,
+        );
+        query = add_range_condition(query, EquityField::Beta, filters.beta_min, filters.beta_max);
+        if let Some(min) = filters.volume_min {
+            query = add_range_condition(query, EquityField::DayVolume, Some(min), None);
+        }
+        if let Some(sector) = &filters.sector {
+            query = query.add_condition(EquityField::Sector.eq_str(sector.clone()));
+        }
+        if let Some(industry) = &filters.industry {
+            query = query.add_condition(EquityField::Industry.eq_str(industry.clone()));
+        }
+        if let Some(exchange) = &filters.exchange {
+            query = query.add_condition(EquityField::Exchange.eq_str(exchange.clone()));
+        }
+        if let Some(limit) = filters.limit {
+            query = query.size(limit);
+        }
+
+        let results =
+            crate::adapters::yahoo::discovery::screeners::fetch_custom(&self.client, query).await?;
+        Ok(screener_quotes_to_screener_matches(results.quotes))
+    }
+}
+
+fn add_range_condition<F: crate::models::discovery::screeners::ScreenerField>(
+    query: crate::models::discovery::screeners::ScreenerQuery<F>,
+    field: F,
+    min: Option<f64>,
+    max: Option<f64>,
+) -> crate::models::discovery::screeners::ScreenerQuery<F> {
+    use crate::models::discovery::screeners::ScreenerFieldExt;
+
+    match (min, max) {
+        (Some(min), Some(max)) => query.add_condition(field.between(min, max)),
+        (Some(min), None) => query.add_condition(field.gte(min)),
+        (None, Some(max)) => query.add_condition(field.lte(max)),
+        (None, None) => query,
+    }
+}
+
+fn search_quotes_to_symbol_matches(
+    quotes: crate::models::discovery::search::SearchQuotes,
+) -> Vec<crate::models::discovery::reference::SymbolMatch> {
+    quotes
+        .into_iter()
+        .map(|q| crate::models::discovery::reference::SymbolMatch {
+            symbol: q.symbol,
+            id: None,
+            name: q.short_name.or(q.long_name),
+            exchange: q.exchange,
+            asset_type: q.quote_type,
+            currency: None,
+            active: None,
+            market_cap_rank: None,
+            thumbnail: q.logo_url.clone(),
+            image: q.logo_url,
+        })
+        .collect()
+}
+
+fn screener_quotes_to_screener_matches(
+    quotes: Vec<crate::models::discovery::screeners::ScreenerQuote>,
+) -> Vec<crate::models::discovery::reference::ScreenerMatch> {
+    quotes
+        .into_iter()
+        .map(|q| crate::models::discovery::reference::ScreenerMatch {
+            symbol: q.symbol,
+            name: Some(q.short_name).filter(|s| !s.is_empty()).or(q.long_name),
+            price: q.regular_market_price.raw,
+            market_cap: q.market_cap.and_then(|v| v.raw).map(|v| v as f64),
+            sector: None,
+            industry: None,
+            beta: None,
+            volume: q
+                .regular_market_volume
+                .and_then(|v| v.raw)
+                .map(|v| v as f64),
+            exchange: Some(q.exchange),
+            country: None,
+            is_etf: Some(q.quote_type == "ETF"),
+            is_actively_trading: None,
+        })
+        .collect()
+}
+
+#[async_trait::async_trait]
 impl OptionsProvider for YahooProvider {
     async fn fetch_options(
         &self,
@@ -407,6 +533,9 @@ impl ProviderAdapter for YahooProvider {
         Some(self)
     }
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
+        Some(self)
+    }
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         Some(self)
     }
 }
@@ -472,5 +601,77 @@ mod tests {
         assert_eq!(quote.price, Some(5678.9));
         assert_eq!(quote.change, Some(12.3));
         assert_eq!(quote.change_percent, Some(0.22));
+    }
+
+    #[test]
+    fn search_quotes_map_to_symbol_matches() {
+        let quotes: crate::models::discovery::search::SearchQuotes =
+            serde_json::from_value(serde_json::json!([{
+                "symbol": "AAPL",
+                "shortName": "Apple Inc.",
+                "quoteType": "EQUITY",
+                "exchange": "NMS",
+                "logoUrl": "https://logo.example/aapl.png"
+            }]))
+            .unwrap();
+        let matches = search_quotes_to_symbol_matches(quotes);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].symbol, "AAPL");
+        assert_eq!(matches[0].name.as_deref(), Some("Apple Inc."));
+        assert_eq!(matches[0].exchange.as_deref(), Some("NMS"));
+        assert_eq!(matches[0].asset_type.as_deref(), Some("EQUITY"));
+        assert_eq!(
+            matches[0].thumbnail.as_deref(),
+            Some("https://logo.example/aapl.png")
+        );
+    }
+
+    #[test]
+    fn screener_quotes_map_to_screener_matches() {
+        let quotes: Vec<crate::models::discovery::screeners::ScreenerQuote> =
+            serde_json::from_value(serde_json::json!([{
+                "symbol": "NVDA",
+                "shortName": "NVIDIA Corporation",
+                "quoteType": "EQUITY",
+                "exchange": "NMS",
+                "regularMarketPrice": {"raw": 1234.5, "fmt": "1,234.50"},
+                "regularMarketChange": {"raw": 56.7, "fmt": "56.70"},
+                "regularMarketChangePercent": {"raw": 4.81, "fmt": "4.81%"},
+                "marketCap": {"raw": 3_000_000_000_000_i64, "fmt": "3.00T"},
+                "regularMarketVolume": {"raw": 45_000_000, "fmt": "45M"}
+            }]))
+            .unwrap();
+        let matches = screener_quotes_to_screener_matches(quotes);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].symbol, "NVDA");
+        assert_eq!(matches[0].name.as_deref(), Some("NVIDIA Corporation"));
+        assert_eq!(matches[0].price, Some(1234.5));
+        assert_eq!(matches[0].market_cap, Some(3_000_000_000_000.0));
+        assert_eq!(matches[0].volume, Some(45_000_000.0));
+        assert_eq!(matches[0].exchange.as_deref(), Some("NMS"));
+        assert_eq!(matches[0].is_etf, Some(false));
+    }
+
+    #[test]
+    fn range_condition_picks_between_gte_or_lte() {
+        use crate::models::discovery::screeners::{EquityField, EquityScreenerQuery};
+
+        let both = add_range_condition(
+            EquityScreenerQuery::new(),
+            EquityField::PeRatio,
+            Some(10.0),
+            Some(25.0),
+        );
+        let min_only = add_range_condition(
+            EquityScreenerQuery::new(),
+            EquityField::PeRatio,
+            Some(10.0),
+            None,
+        );
+        let neither =
+            add_range_condition(EquityScreenerQuery::new(), EquityField::PeRatio, None, None);
+        assert_eq!(both.query.operands.len(), 1);
+        assert_eq!(min_only.query.operands.len(), 1);
+        assert_eq!(neither.query.operands.len(), 0);
     }
 }

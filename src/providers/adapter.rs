@@ -372,12 +372,6 @@ pub(crate) trait FilingsProvider: ProviderCore {
 
 /// [`Capability::DISCOVERY`] — symbol search, reference data, exchanges,
 /// screeners.
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 #[async_trait::async_trait]
 pub(crate) trait DiscoveryProvider: ProviderCore {
     /// Search the provider's symbol universe by free-text query.
@@ -718,12 +712,6 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         None
     }
-    #[cfg(any(
-        feature = "fmp",
-        feature = "polygon",
-        feature = "alphavantage",
-        feature = "crypto"
-    ))]
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         None
     }
@@ -802,12 +790,6 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_market().is_some() {
             caps = caps | Capability::MARKET;
         }
-        #[cfg(any(
-            feature = "fmp",
-            feature = "polygon",
-            feature = "alphavantage",
-            feature = "crypto"
-        ))]
         if self.as_discovery().is_some() {
             caps = caps | Capability::DISCOVERY;
         }

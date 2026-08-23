@@ -8,12 +8,6 @@ pub mod figi;
 /// Type-filtered symbol lookup.
 pub mod lookup;
 /// Provider-routed symbol reference data (search, details, exchanges, screener).
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub mod reference;
 /// Predefined and custom screeners.
 pub mod screeners;

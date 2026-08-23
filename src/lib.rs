@@ -332,12 +332,6 @@ pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
 pub use domains::Commodity;
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub use domains::Discovery;
 pub use domains::Filings;
 #[cfg(any(feature = "polygon", feature = "cftc"))]
@@ -381,12 +375,6 @@ pub use tickers::BatchIndicatorsResponse;
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
