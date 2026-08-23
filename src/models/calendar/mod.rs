@@ -8,7 +8,6 @@
 //! [`Tickers::calendar`](crate::Tickers::calendar).
 
 /// Market-wide calendars routed through `Capability::CALENDAR`.
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub mod market;
 
 use chrono::{DateTime, Utc};

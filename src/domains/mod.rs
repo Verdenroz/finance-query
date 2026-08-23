@@ -609,7 +609,6 @@ pub use forex::ForexPair;
 pub use futures::FuturesContract;
 pub use indices::Index;
 pub use market::Market;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use market::MarketCalendar;
 #[cfg(feature = "polygon")]
 pub use snapshot::Snapshot;

@@ -418,7 +418,6 @@ pub(crate) trait DiscoveryProvider: ProviderCore {
 }
 
 /// [`Capability::CALENDAR`] — market-wide calendars.
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 #[async_trait::async_trait]
 pub(crate) trait CalendarProvider: ProviderCore {
     /// Fetch a market-wide calendar over `[from, to]` (`YYYY-MM-DD` dates).
@@ -715,7 +714,6 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
     fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         None
     }
@@ -793,7 +791,6 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_discovery().is_some() {
             caps = caps | Capability::DISCOVERY;
         }
-        #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
         if self.as_calendar().is_some() {
             caps = caps | Capability::CALENDAR;
         }

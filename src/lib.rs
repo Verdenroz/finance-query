@@ -341,10 +341,8 @@ pub use domains::Index;
 pub use domains::Snapshot;
 // `Market` is unconditional — its grouped-daily/crypto methods route through
 // CHART/CRYPTO, which have their own (broader) per-method gating rather than
-// requiring fmp/polygon/alphavantage. `MarketCalendar` still needs one of them
-// since `CalendarProvider` itself is gated to that set.
+// requiring fmp/polygon/alphavantage.
 pub use domains::Market;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::MarketCalendar;
 
 // Provider-specific financial data functions
@@ -373,7 +371,6 @@ pub use tickers::BatchIndicatorsResponse;
 // Error types and results
 // ============================================================================
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,

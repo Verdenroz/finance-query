@@ -163,7 +163,6 @@ impl Providers {
     ///
     /// Routes market-wide earnings/IPO/dividend/split/economic calendars
     /// through [`Capability::CALENDAR`](crate::Capability::CALENDAR).
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
     pub fn calendar(&self) -> crate::domains::MarketCalendar {
         crate::domains::MarketCalendar::with_providers(Arc::clone(&self.set))
     }

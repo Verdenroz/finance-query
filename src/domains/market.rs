@@ -6,13 +6,11 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
 use crate::models::chart::Candle;
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
 };
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::providers::Capability;
 use crate::providers::ProviderSet;
 
@@ -25,11 +23,9 @@ domain_handle! {
     ///
     /// Created via [`Providers::calendar`](crate::Providers::calendar).
     pub struct MarketCalendar
-    cfg: any(feature = "fmp", feature = "polygon", feature = "alphavantage"),
     caches: { cache: Vec<MarketCalendarEntry> }
 }
 
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 impl MarketCalendar {
     /// Fetch a calendar of `kind` over `[from, to]` (`YYYY-MM-DD` dates).
     ///

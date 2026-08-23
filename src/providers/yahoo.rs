@@ -4,9 +4,9 @@
 //! to keep this file focused on routing and lifecycle.
 
 use super::{
-    Capability, ChartProvider, CommoditiesProvider, CorporateProvider, DiscoveryProvider,
-    FundamentalsProvider, IndicesProvider, MarketProvider, OptionsProvider, ProviderAdapter,
-    ProviderCore, QuoteProvider,
+    CalendarProvider, Capability, ChartProvider, CommoditiesProvider, CorporateProvider,
+    DiscoveryProvider, FundamentalsProvider, IndicesProvider, MarketProvider, OptionsProvider,
+    ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
@@ -25,7 +25,8 @@ pub(crate) const CAPS: Capability = Capability::QUOTE
     .union(Capability::MARKET)
     .union(Capability::INDICES)
     .union(Capability::COMMODITIES)
-    .union(Capability::DISCOVERY);
+    .union(Capability::DISCOVERY)
+    .union(Capability::CALENDAR);
 
 pub(crate) struct YahooProvider {
     client: Arc<YahooClient>,
@@ -499,6 +500,44 @@ fn screener_quotes_to_screener_matches(
 }
 
 #[async_trait::async_trait]
+impl CalendarProvider for YahooProvider {
+    /// Yahoo serves live exchange open/closed status only. Other kinds fall
+    /// through to the next routed provider. `from`/`to` are ignored: this is
+    /// a snapshot, not a dated event.
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        _from: &str,
+        _to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
+            return Err(self.not_supported(kind.operation()));
+        }
+        let hours = crate::adapters::yahoo::market::hours::fetch(&self.client, None).await?;
+        Ok(market_times_to_calendar_entries(hours.markets))
+    }
+}
+
+fn market_times_to_calendar_entries(
+    markets: Vec<crate::models::market::hours::MarketTime>,
+) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
+    markets
+        .into_iter()
+        .map(|m| crate::models::calendar::market::MarketCalendarEntry {
+            symbol: None,
+            date: None,
+            detail: crate::models::calendar::market::CalendarDetail::MarketHoliday {
+                name: Some(m.name),
+                exchange: None,
+                status: Some(m.status),
+                open: m.open,
+                close: m.close,
+            },
+        })
+        .collect()
+}
+
+#[async_trait::async_trait]
 impl OptionsProvider for YahooProvider {
     async fn fetch_options(
         &self,
@@ -536,6 +575,9 @@ impl ProviderAdapter for YahooProvider {
         Some(self)
     }
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
+        Some(self)
+    }
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         Some(self)
     }
 }
@@ -673,5 +715,36 @@ mod tests {
         assert_eq!(both.query.operands.len(), 1);
         assert_eq!(min_only.query.operands.len(), 1);
         assert_eq!(neither.query.operands.len(), 0);
+    }
+
+    #[test]
+    fn market_times_map_to_calendar_entries() {
+        let markets = vec![
+            serde_json::from_value::<crate::models::market::hours::MarketTime>(serde_json::json!({
+                "id": "us",
+                "name": "U.S. markets",
+                "status": "closed",
+                "open": "2026-08-03T00:00:00Z",
+                "close": "2026-08-03T06:30:00Z"
+            }))
+            .unwrap(),
+        ];
+        let entries = market_times_to_calendar_entries(markets);
+        assert_eq!(entries.len(), 1);
+        let crate::models::calendar::market::CalendarDetail::MarketHoliday {
+            name,
+            exchange,
+            status,
+            open,
+            close,
+        } = &entries[0].detail
+        else {
+            unreachable!()
+        };
+        assert_eq!(name.as_deref(), Some("U.S. markets"));
+        assert_eq!(*exchange, None);
+        assert_eq!(status.as_deref(), Some("closed"));
+        assert_eq!(open.as_deref(), Some("2026-08-03T00:00:00Z"));
+        assert_eq!(close.as_deref(), Some("2026-08-03T06:30:00Z"));
     }
 }
