@@ -29,6 +29,21 @@ static TEN_K_ITEM: LazyLock<Regex> =
 static EIGHT_K_ITEM: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?mi)^[ \t]*item[ \t]+(\d{1,2}\.\d{2})\b").unwrap());
 
+/// Matches an exhibit filename ("ex99_1.htm", "a8-kex991...htm"). The
+/// directory listing's `type` field is a file-icon class, not the exhibit
+/// number, so exhibits are excluded by filename instead.
+static EXHIBIT_NAME: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)ex-?\d").unwrap());
+
+/// Matches SEC's auto-generated per-fact XBRL viewer pages ("R1.htm",
+/// "R23.htm") — these can be larger than the actual filed document.
+static XBRL_VIEWER_PAGE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^r\d+\.html?$").unwrap());
+
+/// Numeric HTML entities (e.g. `&#8212;`, `&#x2014;`) — filed HTML leans on
+/// these for curly quotes and dashes far more than the named entities below.
+static NUMERIC_ENTITY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)&#(x[0-9a-f]+|[0-9]+);").unwrap());
+
 /// Flatten filing HTML to plain text with block tags as line breaks for heading extraction.
 pub(super) fn html_to_text(html: &str) -> String {
     let no_script = SCRIPT_OR_STYLE.replace_all(html, "");
@@ -38,7 +53,8 @@ pub(super) fn html_to_text(html: &str) -> String {
 }
 
 fn decode_entities(text: &str) -> String {
-    text.replace("&nbsp;", " ")
+    let named = text
+        .replace("&nbsp;", " ")
         .replace("&rsquo;", "'")
         .replace("&lsquo;", "'")
         .replace("&rdquo;", "\"")
@@ -46,10 +62,23 @@ fn decode_entities(text: &str) -> String {
         .replace("&mdash;", "-")
         .replace("&ndash;", "-")
         .replace("&quot;", "\"")
-        .replace("&#39;", "'")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
-        .replace("&amp;", "&")
+        .replace("&amp;", "&");
+    NUMERIC_ENTITY
+        .replace_all(&named, |caps: &regex::Captures| {
+            let code = &caps[1];
+            let codepoint = code
+                .strip_prefix('x')
+                .or_else(|| code.strip_prefix('X'))
+                .and_then(|hex| u32::from_str_radix(hex, 16).ok())
+                .or_else(|| code.parse().ok());
+            codepoint
+                .and_then(char::from_u32)
+                .map(String::from)
+                .unwrap_or_else(|| caps[0].to_string())
+        })
+        .into_owned()
 }
 
 fn heading_matches(text: &str, heading: &Regex) -> Vec<(String, usize)> {
@@ -94,24 +123,18 @@ fn slice_sections(text: &str, heading: &Regex) -> Vec<FilingSection> {
         .collect()
 }
 
-fn primary_document_name(
-    index: &crate::models::filings::EdgarFilingIndex,
-    form_str: &str,
-) -> Option<String> {
-    let items = &index.directory.item;
-    items
+fn primary_document_name(index: &crate::models::filings::EdgarFilingIndex) -> Option<String> {
+    index
+        .directory
+        .item
         .iter()
-        .find(|i| i.item_type.eq_ignore_ascii_case(form_str))
-        .or_else(|| {
-            items
-                .iter()
-                .filter(|i| {
-                    let name = i.name.to_lowercase();
-                    (name.ends_with(".htm") || name.ends_with(".html"))
-                        && !i.item_type.to_uppercase().starts_with("EX-")
-                })
-                .max_by_key(|i| i.size)
+        .filter(|i| {
+            let name = i.name.to_lowercase();
+            (name.ends_with(".htm") || name.ends_with(".html"))
+                && !EXHIBIT_NAME.is_match(&name)
+                && !XBRL_VIEWER_PAGE.is_match(&name)
         })
+        .max_by_key(|i| i.size.unwrap_or(0))
         .map(|i| i.name.clone())
 }
 
@@ -126,12 +149,11 @@ pub async fn fetch_filing_sections_response(
         FilingSectionForm::TenK => "10-K",
         FilingSectionForm::EightK => "8-K",
     };
-    let filename = primary_document_name(&index, form_str).ok_or_else(|| {
-        FinanceError::ResponseStructureError {
+    let filename =
+        primary_document_name(&index).ok_or_else(|| FinanceError::ResponseStructureError {
             field: "directory.item".to_string(),
             context: format!("no primary {form_str} document found for {accession_number}"),
-        }
-    })?;
+        })?;
 
     let (cik, accession_no_dashes) = accession_parts(accession_number)?;
     let url =
@@ -192,7 +214,6 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
 /// Fetch risk factors from a symbol's most recent 10-K.
 pub async fn fetch_risk_factors_response(symbol: &str) -> Result<Vec<RiskFactor>> {
     let subs = submissions_for_symbol(symbol).await?;
-    let cik = subs.cik.unwrap_or_default();
     let filing = subs
         .filings
         .and_then(|f| f.recent)
@@ -205,8 +226,7 @@ pub async fn fetch_risk_factors_response(symbol: &str) -> Result<Vec<RiskFactor>
         return Ok(Vec::new());
     };
 
-    let accession_no_dashes = filing.accession_number.replace('-', "");
-    let cik = cik.trim_start_matches('0');
+    let (cik, accession_no_dashes) = accession_parts(&filing.accession_number)?;
     let url = format!(
         "https://www.sec.gov/Archives/edgar/data/{cik}/{accession_no_dashes}/{}",
         filing.primary_document
@@ -244,6 +264,42 @@ mod tests {
             decode_entities("Tom&#39;s &amp; Jerry&nbsp;Co."),
             "Tom's & Jerry Co."
         );
+    }
+
+    #[test]
+    fn primary_document_ignores_exhibits_and_xbrl_viewer_pages() {
+        use crate::models::filings::EdgarFilingIndex;
+        use crate::models::filings::filing_index::{
+            EdgarFilingIndexDirectory, EdgarFilingIndexItem,
+        };
+
+        let item = |name: &str, size: u64| EdgarFilingIndexItem {
+            name: name.to_string(),
+            item_type: "text.gif".to_string(),
+            size: Some(size),
+        };
+        let index = EdgarFilingIndex {
+            directory: EdgarFilingIndexDirectory {
+                item: vec![
+                    item("a8-kex991q3202606272026.htm", 173_484),
+                    item("aapl-20260730.htm", 38_350),
+                    item("R1.htm", 55_284),
+                ],
+            },
+        };
+        assert_eq!(
+            primary_document_name(&index),
+            Some("aapl-20260730.htm".to_string())
+        );
+    }
+
+    #[test]
+    fn numeric_entities_decode_decimal_and_hex() {
+        assert_eq!(
+            decode_entities("Tim Cook&#8217;s &#8220;record&#8221; quarter&#8212;strong"),
+            "Tim Cook\u{2019}s \u{201c}record\u{201d} quarter\u{2014}strong"
+        );
+        assert_eq!(decode_entities("&#x2014;"), "\u{2014}");
     }
 
     #[test]

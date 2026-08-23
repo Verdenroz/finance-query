@@ -27,9 +27,13 @@ pub fn company_facts(cik: u64) -> String {
 pub const FULL_TEXT_SEARCH: &str = "https://efts.sec.gov/LATEST/search-index";
 
 /// Build the filing index URL for a CIK and accession (no dashes).
+///
+/// Filing documents live under `www.sec.gov/Archives`, not `data.sec.gov`
+/// (which serves only the submissions/XBRL JSON APIs above) — `data.sec.gov`
+/// 404s on this path.
 pub fn filing_index(cik: &str, accession_no_dashes: &str) -> String {
     format!(
-        "https://data.sec.gov/Archives/edgar/data/{}/{}/index.json",
+        "https://www.sec.gov/Archives/edgar/data/{}/{}/index.json",
         cik, accession_no_dashes
     )
 }
@@ -59,6 +63,14 @@ mod tests {
         assert_eq!(
             submissions(1),
             "https://data.sec.gov/submissions/CIK0000000001.json"
+        );
+    }
+
+    #[test]
+    fn test_filing_index_uses_www_not_data_host() {
+        assert_eq!(
+            filing_index("320193", "000032019324000123"),
+            "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/index.json"
         );
     }
 }
