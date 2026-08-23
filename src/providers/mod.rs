@@ -37,6 +37,7 @@ pub(crate) mod fred;
 pub(crate) mod gdelt;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
+pub(crate) mod market_calendar;
 #[cfg(feature = "nasdaq")]
 pub(crate) mod nasdaq;
 #[cfg(feature = "polygon")]
@@ -133,6 +134,9 @@ pub enum Provider {
     CongressTrades,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
+    /// NYSE/NASDAQ market holidays, computed locally from federal-holiday
+    /// rules rather than fetched (always available, no network call).
+    LocalMarketCalendar,
 }
 
 impl Provider {
@@ -179,6 +183,7 @@ impl Provider {
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
+            "local_market_calendar" => Some(Self::LocalMarketCalendar),
             _ => None,
         }
     }
@@ -224,6 +229,7 @@ impl Provider {
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
+            Self::LocalMarketCalendar => "local_market_calendar",
         }
     }
 
@@ -270,6 +276,7 @@ impl Provider {
         #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
         v.push(Self::CongressTrades);
         v.push(Self::Edgar);
+        v.push(Self::LocalMarketCalendar);
         v
     }
 
@@ -322,6 +329,9 @@ impl Provider {
                 ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
             }
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
+            Self::LocalMarketCalendar => {
+                ProviderAdapter::capabilities(&market_calendar::LocalMarketCalendarProvider)
+            }
         }
     }
 }
@@ -1297,6 +1307,7 @@ pub(crate) async fn build_providers(
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
+            Provider::LocalMarketCalendar => Arc::new(market_calendar::LocalMarketCalendarProvider),
         };
         adapter.initialize().await?;
         providers.push(adapter);
@@ -1435,6 +1446,15 @@ mod tests {
     #[test]
     fn fred_derives_calendar_capability() {
         assert!(Provider::Fred.capabilities().contains(Capability::CALENDAR));
+    }
+
+    #[test]
+    fn local_market_calendar_derives_calendar_capability() {
+        assert!(
+            Provider::LocalMarketCalendar
+                .capabilities()
+                .contains(Capability::CALENDAR)
+        );
     }
 
     #[cfg(feature = "alphavantage")]
