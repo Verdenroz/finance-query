@@ -1,10 +1,4 @@
-//! Wikipedia provider implementation (keyless).
-//!
-//! Serves `IndexConstituents` for `MajorIndex::Sp500` only — see
-//! `adapters::wikipedia::indices` for why Nasdaq-100/Dow Jones and
-//! constituent-change history stay unrouted. `fetch_indices_quote` is the
-//! trait's required primary op but Wikipedia has no quote data, so it
-//! reports `NotSupported` and dispatch falls through to the next provider.
+//! Wikipedia provider (keyless) — S&P 500 index constituents only.
 
 use super::{IndicesProvider, Operation, ProviderAdapter, ProviderCore};
 use crate::error::Result;

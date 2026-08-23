@@ -1,12 +1,4 @@
-//! `[from, to]` range iteration and DTO → canonical mapping for Nasdaq's
-//! calendar endpoints.
-//!
-//! Nasdaq takes no date-range parameter: earnings/dividends/splits are
-//! queried one calendar day at a time, IPOs one calendar month at a time. A
-//! range request fans that out into one HTTP call per day/month, dropping
-//! individual failures (logged) rather than failing the whole range — the
-//! same fan-out-and-drop pattern `YahooProvider::fetch_sector_performance`
-//! uses for its per-sector requests.
+//! Nasdaq calendar endpoints — fan-out range iteration for day-at-a-time and month-at-a-time APIs.
 
 use chrono::{Datelike, NaiveDate};
 
@@ -187,7 +179,6 @@ fn date_in_range(date: &str, start: NaiveDate, end: NaiveDate) -> bool {
     NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok_and(|d| d >= start && d <= end)
 }
 
-/// Parse Nasdaq's `M/D/YYYY` dates (inconsistently zero-padded) to `YYYY-MM-DD`.
 fn parse_mdy(s: &str) -> Option<String> {
     let mut parts = s.trim().split('/');
     let month: u32 = parts.next()?.parse().ok()?;
@@ -196,9 +187,7 @@ fn parse_mdy(s: &str) -> Option<String> {
     NaiveDate::from_ymd_opt(year, month, day).map(|d| d.format("%Y-%m-%d").to_string())
 }
 
-/// Parse Nasdaq's `Mon/YYYY` fiscal-quarter label to the last calendar day
-/// of that month — the standard approximation for a quarter-end date when
-/// only month/year precision is published.
+/// Parse Nasdaq's `Mon/YYYY` fiscal-quarter label to the last calendar day.
 fn parse_month_year_to_last_day(s: &str) -> Option<String> {
     let (month_str, year_str) = s.trim().split_once('/')?;
     let year: i32 = year_str.parse().ok()?;
@@ -227,7 +216,6 @@ fn parse_month_year_to_last_day(s: &str) -> Option<String> {
         .map(|d| d.format("%Y-%m-%d").to_string())
 }
 
-/// Parse a `$1,234,567.89`-style Nasdaq number into its raw value.
 fn parse_currency(s: &str) -> Option<f64> {
     let cleaned: String = s
         .chars()
@@ -240,7 +228,6 @@ fn parse_currency(s: &str) -> Option<f64> {
     }
 }
 
-/// Parse Nasdaq's `"4 : 1"` / `"3:1"` split ratio into `(numerator, denominator)`.
 fn parse_ratio(s: &str) -> Option<(f64, f64)> {
     let (num, den) = s.split_once(':')?;
     Some((num.trim().parse().ok()?, den.trim().parse().ok()?))

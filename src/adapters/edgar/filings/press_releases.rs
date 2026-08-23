@@ -1,9 +1,4 @@
-//! Company-issued press releases sourced from 8-K exhibits.
-//!
-//! SEC convention attaches the actual press release to a Form 8-K as
-//! Exhibit 99.1/99.2 under Item 2.02 (earnings), 7.01 (Reg FD), or 8.01
-//! (other events) — the same primary-document machinery `sections`/
-//! `thirteen_f`/`insider` already use, applied to a fourth document type.
+//! Company-issued press releases from 8-K exhibits (Exhibit 99.1/99.2).
 
 use crate::adapters::edgar::filings::sections::html_to_text;
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
@@ -11,10 +6,7 @@ use crate::error::Result;
 use crate::models::corporate::press_release::PressRelease;
 use crate::models::filings::EdgarFiling;
 
-/// Fetch the symbol's most recent 8-K exhibits tagged `EX-99*`, newest
-/// first. `limit` caps how many 8-Ks are scanned, not just how many
-/// releases come back — a filing with no EX-99 exhibit yields nothing for
-/// that slot rather than being backfilled from an older one.
+/// Fetch the symbol's most recent 8-K exhibits tagged `EX-99*`, newest first.
 pub async fn fetch_press_releases_response(symbol: &str, limit: u32) -> Result<Vec<PressRelease>> {
     let subs = submissions_for_symbol(symbol).await?;
     let eight_ks: Vec<EdgarFiling> = subs
@@ -66,8 +58,6 @@ async fn fetch_one(symbol: &str, filing: EdgarFiling) -> Option<PressRelease> {
     })
 }
 
-/// The exhibit's first non-empty line, used as the release's title since
-/// EDGAR exhibits carry no structured title field.
 fn extract_title(text: &str) -> Option<String> {
     text.lines()
         .map(str::trim)

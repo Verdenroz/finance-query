@@ -1,8 +1,4 @@
-//! Nasdaq provider implementation (keyless).
-//!
-//! Serves `CalendarProvider` only — earnings, IPO, dividend, and split
-//! calendars. Economic releases and market holidays/status aren't Nasdaq
-//! calendar data and fall through to the next routed provider.
+//! Nasdaq provider (keyless) — earnings, IPO, dividend, split calendars.
 
 use super::{CalendarProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;

@@ -1,14 +1,4 @@
-//! Locally computed trailing-twelve-month metrics and ratios for
-//! [`YahooProvider`](super::yahoo::YahooProvider), reusing data already
-//! fetched via `fetch_financials`/`fetch_quote` rather than a new source.
-//!
-//! FMP's `KeyMetricsTtm`/`FinancialRatiosTtm` carry far more fields than can
-//! honestly be derived from a standard three-statement filing — fields
-//! needing FMP's own proprietary definitions (`graham_net_net`,
-//! `price_to_fair_value`), a tax/EBIT allocation this can't cleanly separate
-//! (`tax_burden`, `interest_burden`), or a forward-estimate dependency this
-//! shouldn't silently pull in (`forward_peg_ratio`) stay `None` rather than
-//! guess. Named subset only.
+//! Locally computed TTM metrics reusing cached financials + quote data.
 
 use std::collections::HashMap;
 

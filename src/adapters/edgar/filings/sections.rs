@@ -1,12 +1,5 @@
-//! Sectioned filing text and risk factors — a best-effort HTML parse over
-//! public 10-K/8-K documents. EDGAR serves filing metadata and full text
-//! search, not pre-sectioned text, so this reconstructs section boundaries
-//! from heading patterns in the flattened document body.
-//!
-//! Heading structure varies enough across filers (inline spans, table-based
-//! layouts, missing punctuation) that recall isn't guaranteed on every
-//! filing. This favors returning *something* real over erroring, and
-//! documents each fallback rather than silently producing a thin result.
+//! Sectioned filing text and risk factors from 10-K/8-K HTML documents.
+//! Heuristic heading detection; returns best-effort results on malformed filings.
 
 use std::sync::LazyLock;
 
@@ -16,10 +9,8 @@ use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symb
 use crate::error::{FinanceError, Result};
 use crate::models::filings::{FilingSection, FilingSectionForm, RiskFactor};
 
-/// Block-level tags whose boundaries become line breaks once stripped —
-/// inline tags (`span`, `b`, `font`, ...) are dropped without a break so
-/// words split across them (`<span>Item 1A.</span><span>Risk Factors</span>`)
-/// stay adjacent instead of landing on separate lines.
+/// Block-level tags become line breaks; inline tags are stripped without breaks
+/// to keep words split across them adjacent.
 static BLOCK_TAG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?is)</?(?:p|div|tr|li|br|table|h[1-6])(?:\s[^>]*)?/?>").unwrap()
 });
@@ -30,12 +21,7 @@ static SCRIPT_OR_STYLE: LazyLock<Regex> = LazyLock::new(|| {
 
 static ANY_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?is)<[^>]+>").unwrap());
 
-/// Matches a 10-K/10-Q item heading ("Item 1A", "ITEM 7A") at line start.
-/// Only the item label is required — real filings put the title in enough
-/// different shapes (inline spans, missing punctuation) that requiring it
-/// on the same line drops real headings. Leading whitespace is restricted
-/// to spaces/tabs (not `\s`) so the match can't anchor on a blank line
-/// above and swallow it into the heading's start offset.
+/// Matches 10-K/10-Q item headings at line start, handling varied title placement.
 static TEN_K_ITEM: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?mi)^[ \t]*item[ \t]+(\d{1,2}[a-c]?)\b").unwrap());
 
@@ -43,10 +29,7 @@ static TEN_K_ITEM: LazyLock<Regex> =
 static EIGHT_K_ITEM: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?mi)^[ \t]*item[ \t]+(\d{1,2}\.\d{2})\b").unwrap());
 
-/// Flatten filing HTML into line-oriented plain text: block tags become
-/// line breaks, inline tags are dropped, a handful of common entities are
-/// decoded. Not a general HTML-to-text converter — just enough structure
-/// for the heading regexes above to anchor on.
+/// Flatten filing HTML to plain text with block tags as line breaks for heading extraction.
 pub(super) fn html_to_text(html: &str) -> String {
     let no_script = SCRIPT_OR_STYLE.replace_all(html, "");
     let with_breaks = BLOCK_TAG.replace_all(&no_script, "\n");
@@ -69,8 +52,6 @@ fn decode_entities(text: &str) -> String {
         .replace("&amp;", "&")
 }
 
-/// One heading match: normalized item label and byte offset into the
-/// flattened text where the heading line starts.
 fn heading_matches(text: &str, heading: &Regex) -> Vec<(String, usize)> {
     heading
         .captures_iter(text)
@@ -81,10 +62,7 @@ fn heading_matches(text: &str, heading: &Regex) -> Vec<(String, usize)> {
         .collect()
 }
 
-/// Keep only the last occurrence of each item label — filings typically
-/// list every item again in a table of contents before the real section,
-/// and the real section (with substantial content before the next heading)
-/// is always the later occurrence.
+/// Keep only the last occurrence of each item label (real section after TOC).
 fn last_occurrence_per_label(matches: Vec<(String, usize)>) -> Vec<(String, usize)> {
     use std::collections::HashMap;
     let mut last: HashMap<String, usize> = HashMap::new();
@@ -137,8 +115,6 @@ fn primary_document_name(
         .map(|i| i.name.clone())
 }
 
-/// Fetch sectioned text for one filing by accession number, split by
-/// `Item` heading.
 pub async fn fetch_filing_sections_response(
     accession_number: &str,
     form: FilingSectionForm,
@@ -170,10 +146,7 @@ pub async fn fetch_filing_sections_response(
     Ok(slice_sections(&text, heading))
 }
 
-/// Split Item 1A's text into individual risk factors on short, unpunctuated
-/// heading-shaped lines. Filings that don't follow that convention (or
-/// where the heuristic finds nothing) come back as one factor holding the
-/// whole section rather than an empty result.
+/// Split text into risk factors on heading-shaped lines; fallback to one factor with full text.
 fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFactor> {
     fn looks_like_heading(line: &str) -> bool {
         let len = line.chars().count();
@@ -216,9 +189,7 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
     factors
 }
 
-/// Fetch risk factors from a symbol's most recent 10-K. Returns an empty
-/// list rather than an error when no 10-K is on file (foreign private
-/// issuers file 20-F instead, for example).
+/// Fetch risk factors from a symbol's most recent 10-K.
 pub async fn fetch_risk_factors_response(symbol: &str) -> Result<Vec<RiskFactor>> {
     let subs = submissions_for_symbol(symbol).await?;
     let cik = subs.cik.unwrap_or_default();

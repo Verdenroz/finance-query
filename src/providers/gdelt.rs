@@ -1,9 +1,4 @@
-//! GDELT DOC 2.0 provider implementation (keyless).
-//!
-//! Serves only the news half of `CORPORATE` — GDELT has no corporate
-//! calendar (earnings/dividends/splits), so `fetch_events` reports
-//! `NotSupported` and dispatch falls through to the next routed provider.
-//! Same shape for `CRYPTO`/`FOREX`: news only, quotes report `NotSupported`.
+//! GDELT DOC 2.0 provider (keyless) — news only for corporate, crypto, forex.
 
 use super::{
     CorporateProvider, CryptoProvider, ForexProvider, Operation, ProviderAdapter, ProviderCore,
@@ -42,8 +37,6 @@ impl CryptoProvider for GdeltProvider {
         Err(self.not_supported(Operation::CryptoQuote))
     }
 
-    /// Market-wide, not scoped to a specific coin — GDELT has no per-asset
-    /// crypto vocabulary.
     async fn fetch_crypto_news(
         &self,
         limit: u32,
@@ -62,8 +55,6 @@ impl ForexProvider for GdeltProvider {
         Err(self.not_supported(Operation::ForexQuote))
     }
 
-    /// Market-wide, not scoped to a specific pair — GDELT has no per-pair
-    /// forex vocabulary.
     async fn fetch_forex_news(
         &self,
         limit: u32,

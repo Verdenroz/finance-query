@@ -1,16 +1,8 @@
-//! Locally computed NYSE/NASDAQ market holidays — no network call, no
-//! external source. Federal-holiday observance rules are small and
-//! well-known enough to hand-verify, so this reimplements the general
-//! algorithm rather than depending on (or porting) a third-party calendar
-//! library.
-//!
-//! Full closures: New Year's Day, MLK Day, Washington's Birthday, Good
-//! Friday, Memorial Day, Juneteenth (from 2022), Independence Day, Labor
-//! Day, Thanksgiving, Christmas — each shifted Saturday→Friday or
-//! Sunday→Monday when it falls on a weekend. Early closes (1:00 PM ET): the
-//! day after Thanksgiving always; Christmas Eve and July 3rd when they fall
-//! on a weekday and the holiday they precede is observed on its actual date
-//! (not shifted).
+//! Locally computed NYSE/NASDAQ market holidays from federal-holiday rules.
+//! Full closures: New Year, MLK Day, Washington's Birthday, Good Friday,
+//! Memorial Day, Juneteenth, Independence Day, Labor Day, Thanksgiving,
+//! Christmas. Early closes (1:00 PM ET): day after Thanksgiving, Christmas Eve,
+//! July 3rd (when applicable).
 
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 
@@ -110,7 +102,6 @@ fn holiday_entry(
 
 type Holidays = Vec<(NaiveDate, &'static str)>;
 
-/// Full-closure and early-close holidays for one calendar year.
 fn year_calendar(year: i32) -> (Holidays, Holidays) {
     let mut full = vec![
         (observed(ymd(year, 1, 1)), "New Year's Day"),
@@ -166,8 +157,6 @@ fn is_weekday(date: NaiveDate) -> bool {
     !matches!(date.weekday(), Weekday::Sat | Weekday::Sun)
 }
 
-/// Shift a Saturday holiday to the preceding Friday and a Sunday holiday to
-/// the following Monday; any other weekday is unchanged.
 fn observed(date: NaiveDate) -> NaiveDate {
     match date.weekday() {
         Weekday::Sat => date - Duration::days(1),
@@ -176,8 +165,6 @@ fn observed(date: NaiveDate) -> NaiveDate {
     }
 }
 
-/// The `n`th occurrence of `weekday` in `month` (1-indexed, e.g. `n=3` for
-/// the third Monday).
 fn nth_weekday(year: i32, month: u32, weekday: Weekday, n: u32) -> NaiveDate {
     let first_of_month = ymd(year, month, 1);
     let offset = (7 + weekday.num_days_from_monday() as i64
@@ -186,7 +173,6 @@ fn nth_weekday(year: i32, month: u32, weekday: Weekday, n: u32) -> NaiveDate {
     first_of_month + Duration::days(offset + 7 * (n as i64 - 1))
 }
 
-/// The last occurrence of `weekday` in `month`.
 fn last_weekday(year: i32, month: u32, weekday: Weekday) -> NaiveDate {
     let first_of_next = if month == 12 {
         ymd(year + 1, 1, 1)

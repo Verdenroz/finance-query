@@ -41,12 +41,6 @@ impl FredClientBuilder {
         self
     }
 
-    /// Build using a shared `Arc<RateLimiter>` instead of creating a new one.
-    ///
-    /// Used by the module singleton to share a single rate-limiter across fresh
-    /// HTTP clients: the `reqwest::Client` is runtime-bound and must be rebuilt
-    /// per request, but the `RateLimiter` state must persist across calls so the
-    /// 2 req/sec FRED limit is respected.
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<FredClient> {
         let http = Client::builder()
             .timeout(self.timeout)

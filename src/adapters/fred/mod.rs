@@ -48,16 +48,8 @@ pub use models::ReleaseDate;
 /// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
 const FRED_RATE_PER_SEC: f64 = 2.0;
 
-// Stable configuration stored in the FRED process-global singleton.
-//
-// Only the API key, timeout, and rate-limiter are stored — NOT the
-// `reqwest::Client`. `reqwest::Client` internally spawns hyper connection-pool
-// tasks on whichever tokio runtime first uses them; when that runtime is
-// dropped (e.g. at the end of a `#[tokio::test]`), those tasks die and
-// subsequent calls from a different runtime receive `DispatchGone`. A fresh
-// `reqwest::Client` is built per `series()` call via
-// `FredClientBuilder::build_with_limiter`, reusing this shared limiter so
-// the 2 req/sec FRED rate limit is respected across all calls.
+// Only the API key, timeout, and rate-limiter are stored — NOT the reqwest::Client
+// (runtime-bound; must be rebuilt per call but share the limiter for rate limits).
 provider_singleton_state!(
     name = FredSingleton,
     static_name = FRED_SINGLETON,
@@ -103,10 +95,6 @@ pub async fn series(series_id: &str) -> Result<MacroSeries> {
     build_client()?.series(series_id).await
 }
 
-/// Build a FRED client from the initialized singleton.
-///
-/// A fresh `reqwest::Client` per call is deliberate (see the singleton note
-/// above); the rate limiter is shared so the 2 req/sec ceiling still holds.
 pub(crate) fn build_client() -> Result<client::FredClient> {
     let s = FRED_SINGLETON
         .get()
@@ -119,10 +107,6 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
         .build_with_limiter(Arc::clone(&s.limiter))
 }
 
-/// Fetch only the most recent observation of a FRED series.
-///
-/// Used by the economic stream's poll loop, where downloading a series'
-/// full observation history to read one value is pure waste.
 pub(crate) async fn latest_observation(
     series_id: &str,
 ) -> Result<Option<crate::models::economic::MacroObservation>> {
