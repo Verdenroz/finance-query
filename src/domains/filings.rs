@@ -174,8 +174,9 @@ impl Filings {
             .await
     }
 
-    /// Congressional (senate) stock-trade disclosures naming this symbol, via
-    /// the FILINGS route (currently FMP only). Not cached.
+    /// Congressional (House and Senate) stock-trade disclosures naming this
+    /// symbol, via the FILINGS route (FMP, falling back to keyless House and
+    /// Senate PTR disclosures). Not cached.
     pub async fn congressional_trades(
         &self,
     ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {

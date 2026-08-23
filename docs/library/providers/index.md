@@ -36,7 +36,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **DefiLlama** | `defi` | Keyless | *(keyless)* |
 | **GDELT DOC 2.0** | `gdelt` | Keyless (~1 req/5s) | *(keyless)* |
 | **CFTC** | `cftc` | Keyless | *(keyless)* |
-| **House PTR** | `housetrades` | Keyless | *(keyless)* |
+| **Congressional Trades (House/Senate)** | `housetrades`, `senatetrades` | Keyless | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 <!-- /soothfast:bind -->

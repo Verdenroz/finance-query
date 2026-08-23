@@ -29,6 +29,7 @@
 //! | `gdelt` | [GDELT DOC 2.0](https://www.gdeltproject.org/) | Keyless (~1 req/5s) | 1 | Worldwide online news search across 65 languages, updated every 15 minutes |
 //! | `cftc` | [CFTC Public Reporting](https://publicreporting.cftc.gov/) | Keyless | 1 | Weekly Commitments of Traders futures positioning (disaggregated futures-only report) |
 //! | `housetrades` | [House Clerk Financial Disclosure](https://disclosures-clerk.house.gov/FinancialDisclosure) | Keyless | 1 | House of Representatives Periodic Transaction Report (PTR) stock-trade disclosures |
+//! | `senatetrades` | [Senate eFD](https://efdsearch.senate.gov/) | Keyless (headless-Chromium) | 1 | Senate Periodic Transaction Report (PTR) stock-trade disclosures |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -115,6 +116,10 @@ pub(crate) mod cftc;
 /// House of Representatives PTR stock-trade disclosures (keyless, requires `housetrades` feature).
 #[cfg(feature = "housetrades")]
 pub(crate) mod housetrades;
+
+/// Senate PTR stock-trade disclosures (keyless, browser-driven, requires `senatetrades` feature).
+#[cfg(feature = "senatetrades")]
+pub(crate) mod senatetrades;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

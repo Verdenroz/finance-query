@@ -146,7 +146,7 @@ fn route_table(
         filings.push(Provider::Fmp);
     }
     filings.push(Provider::Edgar);
-    filings.push(Provider::HouseTrades);
+    filings.push(Provider::CongressTrades);
     filings.push(Provider::Yahoo);
     routes.push((Capability::FILINGS, filings));
 
@@ -233,7 +233,7 @@ mod provider_routing_tests {
         assert_eq!(route(&routes, Capability::INDICES), None);
         assert_eq!(
             route(&routes, Capability::FILINGS),
-            Some(&[Provider::Edgar, Provider::HouseTrades, Provider::Yahoo][..])
+            Some(&[Provider::Edgar, Provider::CongressTrades, Provider::Yahoo][..])
         );
     }
 
@@ -264,7 +264,7 @@ mod provider_routing_tests {
                 &[
                     Provider::Fmp,
                     Provider::Edgar,
-                    Provider::HouseTrades,
+                    Provider::CongressTrades,
                     Provider::Yahoo
                 ][..]
             )

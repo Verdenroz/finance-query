@@ -116,8 +116,8 @@ pub(crate) fn api_routes() -> Router {
         .route("/feeds", get(feeds::get_feeds))
         // GET /v2/feeds/stream - WebSocket continuous RSS/Atom feed entries
         .route("/feeds/stream", get(feeds_stream::ws_feeds_stream_handler))
-        // GET /v2/filings/{symbol}/congressional-trades (FMP, falling back to
-        // keyless House disclosures)
+        // GET /v2/filings/{symbol}/congressional-trades (FMP, falling back
+        // to keyless House/Senate PTR disclosures)
         .route(
             "/filings/{symbol}/congressional-trades",
             get(filings::get_congressional_trades),
