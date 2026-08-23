@@ -292,7 +292,8 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
             "twoHundredDayAverageChangePercent",
         ),
         average_analyst_rating: extract_string(&mut record, "averageAnalystRating"),
-        trailing_pe: extract_formatted::<f64>(&mut record, "peratio.lasttwelvemonths")
+        trailing_pe: extract_formatted::<f64>(&mut record, "peRatioLtm")
+            .or_else(|| extract_formatted(&mut record, "peratio.lasttwelvemonths"))
             .or_else(|| extract_formatted(&mut record, "trailingPE")),
         forward_pe: extract_formatted(&mut record, "forwardPE"),
         price_to_book: extract_formatted(&mut record, "priceToBook"),
@@ -330,4 +331,21 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
         currency: extract_string(&mut record, "quotesCurrency")
             .or_else(|| extract_string(&mut record, "currency")),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_screener_trailing_pe_maps_from_the_response_field_name() {
+        // The custom screener response uses `peRatioLtm`, not the requested
+        // field's own wire name (`peratio.lasttwelvemonths`).
+        let record = serde_json::json!({
+            "ticker": "NVDA",
+            "peRatioLtm": {"raw": 32.888133, "fmt": "32.89"},
+        });
+        let quote = map_custom_record_to_quote(record).unwrap();
+        assert_eq!(quote.trailing_pe.and_then(|v| v.raw), Some(32.888133));
+    }
 }

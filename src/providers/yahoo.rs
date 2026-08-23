@@ -657,21 +657,7 @@ impl MarketProvider for YahooProvider {
     ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
         use crate::constants::sectors::Sector;
 
-        const SECTORS: [Sector; 11] = [
-            Sector::Technology,
-            Sector::FinancialServices,
-            Sector::ConsumerCyclical,
-            Sector::CommunicationServices,
-            Sector::Healthcare,
-            Sector::Industrials,
-            Sector::ConsumerDefensive,
-            Sector::Energy,
-            Sector::BasicMaterials,
-            Sector::RealEstate,
-            Sector::Utilities,
-        ];
-
-        let fetches = SECTORS.iter().map(|&sector| async move {
+        let fetches = Sector::all().iter().map(|&sector| async move {
             match crate::adapters::yahoo::market::sectors::fetch(&self.client, sector).await {
                 Ok(data) => Some(sector_data_to_performance(data)),
                 Err(err) => {
@@ -700,24 +686,15 @@ impl MarketProvider for YahooProvider {
             EquityField, EquityScreenerQuery, ScreenerFieldExt,
         };
 
-        const SECTORS: [Sector; 11] = [
-            Sector::Technology,
-            Sector::FinancialServices,
-            Sector::ConsumerCyclical,
-            Sector::CommunicationServices,
-            Sector::Healthcare,
-            Sector::Industrials,
-            Sector::ConsumerDefensive,
-            Sector::Energy,
-            Sector::BasicMaterials,
-            Sector::RealEstate,
-            Sector::Utilities,
-        ];
         const SAMPLE_SIZE: u32 = 50;
 
-        let fetches = SECTORS.iter().map(|&sector| async move {
+        let fetches = Sector::all().iter().map(|&sector| async move {
+            // Unfiltered, market-cap-sorted results skew toward foreign ADR/CDI
+            // listings of the same mega-caps (e.g. "AAPL.BA"), which don't carry
+            // trailingPE and would starve the median of real samples.
             let query = EquityScreenerQuery::new()
                 .add_condition(EquityField::Sector.eq_str(sector))
+                .add_condition(EquityField::Region.eq_str("us"))
                 .size(SAMPLE_SIZE);
             match crate::adapters::yahoo::discovery::screeners::fetch_custom(&self.client, query)
                 .await
@@ -1072,6 +1049,17 @@ impl ProviderAdapter for YahooProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn test_live_sector_pe() {
+        let provider = YahooProvider::new(&crate::adapters::yahoo::client::ClientConfig::default())
+            .await
+            .unwrap();
+        let pes = provider.fetch_sector_pe().await.unwrap();
+        assert!(!pes.is_empty());
+        assert!(pes.iter().any(|p| p.pe.is_some_and(|pe| pe > 0.0)));
+    }
 
     #[test]
     fn screener_rows_map_to_mover_quotes() {
