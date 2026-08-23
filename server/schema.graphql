@@ -3078,8 +3078,8 @@ type GqlTicker {
 	): [GqlTranscriptWithMeta!]!
 	"""
 	Congressional trading disclosures for this symbol (FMP when
-	`FMP_API_KEY` is set, falling back to keyless House disclosures —
-	Senate is unrouted).
+	`FMP_API_KEY` is set, falling back to keyless House/Senate PTR
+	disclosures otherwise).
 	"""
 	congressionalTrades(
 		"""
