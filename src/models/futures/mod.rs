@@ -11,7 +11,7 @@ pub mod cot;
 
 /// A futures contract quote.
 ///
-/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the futures symbol (e.g., `"GC=F"`).
+/// Obtain via [`Providers::futures`](crate::Providers::futures)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FuturesQuote {
