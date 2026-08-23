@@ -13,6 +13,9 @@ pub(crate) mod coins;
 #[cfg(any(feature = "binance", feature = "kraken"))]
 pub(crate) mod crypto_chart;
 
+/// `YYYY-MM-DD` date-range parsing shared by calendar-style adapters.
+pub(crate) mod date_range;
+
 /// Error hygiene shared by the adapters that carry an API key.
 #[cfg(any(
     feature = "alphavantage",

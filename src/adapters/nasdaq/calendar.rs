@@ -3,6 +3,7 @@
 use chrono::{Datelike, NaiveDate};
 
 use super::models::{NasdaqDividendRow, NasdaqEarningsRow, NasdaqIpoRow, NasdaqSplitRow};
+use crate::adapters::common::date_range::parse_date_range;
 use crate::error::{FinanceError, Result};
 use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
@@ -46,7 +47,7 @@ pub(crate) async fn fetch_market_calendar_response(
 }
 
 async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
-    let (start, end) = parse_range(from, to)?;
+    let (start, end) = parse_date_range(from, to)?;
     let months = months_between(start, end, MAX_MONTHS_PER_RANGE)?;
 
     let fetches = months.into_iter().map(|month| async move {
@@ -91,7 +92,7 @@ where
     F: Fn(String) -> Fut,
     Fut: std::future::Future<Output = Result<Vec<MarketCalendarEntry>>>,
 {
-    let (start, end) = parse_range(from, to)?;
+    let (start, end) = parse_date_range(from, to)?;
     if (end - start).num_days() + 1 > max_days {
         return Err(FinanceError::InvalidParameter {
             param: "to".to_string(),
@@ -125,27 +126,6 @@ where
         .into_iter()
         .flatten()
         .collect())
-}
-
-fn parse_range(from: &str, to: &str) -> Result<(NaiveDate, NaiveDate)> {
-    let start = NaiveDate::parse_from_str(from, "%Y-%m-%d").map_err(|_| {
-        FinanceError::InvalidParameter {
-            param: "from".to_string(),
-            reason: format!("expected YYYY-MM-DD, got {from:?}"),
-        }
-    })?;
-    let end =
-        NaiveDate::parse_from_str(to, "%Y-%m-%d").map_err(|_| FinanceError::InvalidParameter {
-            param: "to".to_string(),
-            reason: format!("expected YYYY-MM-DD, got {to:?}"),
-        })?;
-    if start > end {
-        return Err(FinanceError::InvalidParameter {
-            param: "to".to_string(),
-            reason: "must not be before `from`".to_string(),
-        });
-    }
-    Ok((start, end))
 }
 
 fn months_between(start: NaiveDate, end: NaiveDate, max_months: i64) -> Result<Vec<String>> {
@@ -365,7 +345,7 @@ mod tests {
 
     #[test]
     fn to_before_from_is_rejected() {
-        let err = parse_range("2026-08-25", "2026-08-01").unwrap_err();
+        let err = parse_date_range("2026-08-25", "2026-08-01").unwrap_err();
         assert!(matches!(err, FinanceError::InvalidParameter { .. }));
     }
 

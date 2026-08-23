@@ -4,9 +4,10 @@
 //! Christmas. Early closes (1:00 PM ET): day after Thanksgiving, Christmas Eve,
 //! July 3rd (when applicable).
 
-use chrono::{Datelike, Duration, NaiveDate, Weekday};
+use chrono::{Datelike, Duration, NaiveDate, Utc, Weekday};
 
 use super::{CalendarProvider, ProviderAdapter, ProviderCore};
+use crate::adapters::common::date_range::parse_date_range;
 use crate::error::Result;
 use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
@@ -29,24 +30,14 @@ impl CalendarProvider for LocalMarketCalendarProvider {
         if kind != CalendarKind::MarketHoliday {
             return Err(self.not_supported(kind.operation()));
         }
-        let start = NaiveDate::parse_from_str(from, "%Y-%m-%d").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "from".to_string(),
-                reason: format!("expected YYYY-MM-DD, got {from:?}"),
-            }
-        })?;
-        let end = NaiveDate::parse_from_str(to, "%Y-%m-%d").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "to".to_string(),
-                reason: format!("expected YYYY-MM-DD, got {to:?}"),
-            }
-        })?;
-        if start > end {
-            return Err(crate::error::FinanceError::InvalidParameter {
-                param: "to".to_string(),
-                reason: "must not be before `from`".to_string(),
-            });
+        if from.is_empty() || to.is_empty() {
+            let today = Utc::now().date_naive();
+            return Ok(holidays_in_range(
+                today,
+                today.with_year(today.year() + 1).unwrap_or(today),
+            ));
         }
+        let (start, end) = parse_date_range(from, to)?;
         Ok(holidays_in_range(start, end))
     }
 }
@@ -277,6 +268,18 @@ mod tests {
                 assert_eq!(status.as_deref(), Some("closed"));
             }
             other => panic!("expected MarketHoliday detail, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn empty_from_or_to_default_to_upcoming_holidays_instead_of_erroring() {
+        let provider = LocalMarketCalendarProvider;
+        for (from, to) in [("", ""), ("2026-01-01", ""), ("", "2026-01-31")] {
+            let entries = provider
+                .fetch_market_calendar(CalendarKind::MarketHoliday, from, to)
+                .await
+                .unwrap();
+            assert!(!entries.is_empty());
         }
     }
 
