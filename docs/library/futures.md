@@ -3,34 +3,43 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — domains::FuturesContract](https://docs.rs/finance-query/latest/finance_query/struct.FuturesContract.html)
 
-The `FuturesContract` handle provides quote, chart, and history data for futures contracts. It is backed by Polygon.io and requires the `polygon` feature flag plus a `POLYGON_API_KEY` environment variable.
-
-!!! info "Feature flag required"
-    Add `features = ["polygon"]` to your `Cargo.toml` dependency and set the `POLYGON_API_KEY` environment variable before calling `build()`.
-
-    ```toml
-    [dependencies]
-    finance-query = { version = "2", features = ["polygon"] }
-    ```
+The `FuturesContract` handle provides quote, chart, and history data for futures contracts. Quotes are served by Yahoo Finance (keyless — no feature flag, no API key) on the default route, the same way Yahoo resolves equity quotes. Polygon.io remains available as an alternate quote source, and CFTC serves Commitments of Traders positioning data (see [Commitments of Traders](#commitments-of-traders) below).
 
 ## Getting a Handle
 
-Obtain a `FuturesContract` by routing `Capability::FUTURES` to `Provider::Polygon` and calling `providers.futures(symbol)`:
+`Providers::builder().build()` with no `.route()` call already serves futures quotes — Yahoo is the default for every capability. Yahoo resolves futures symbols the same way it resolves equities (e.g. `"ES=F"` for the E-mini S&P 500):
 
-```rust no_run feature=polygon
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+```rust no_run
+use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::FUTURES, [Provider::Polygon])
-        .build()
-        .await?;
-    let contract = providers.futures("ES");
+    let providers = Providers::builder().build().await?;
+    let contract = providers.futures("ES=F");
     let quote = contract.quote().await?;
     let chart = contract.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let history = contract.history(TimeRange::OneMonth).await?;
     println!("{}: {:?} ({} candles)", quote.symbol, quote.price, chart.candles.len() + history.candles.len());
+    Ok(())
+}
+```
+
+### Alternative: Polygon
+
+Route `Capability::FUTURES` to `Provider::Polygon` for an alternate quote source, or as a fallback behind Yahoo. Polygon uses its own contract-ticker format (e.g. `"ES"` rather than `"ES=F"`) and set `POLYGON_API_KEY` in your environment before calling `build()`:
+
+```rust no_run feature=polygon
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::FUTURES, [Provider::Polygon, Provider::Yahoo])
+        .build()
+        .await?;
+    let contract = providers.futures("ES");
+    let quote = contract.quote().await?;
+    println!("{}: {:?}", quote.symbol, quote.price);
     Ok(())
 }
 ```
@@ -62,11 +71,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
-```rust capture-output feature=polygon covers=finance_query::models::futures::FuturesQuote
+```rust capture-output covers=finance_query::models::futures::FuturesQuote
 use finance_query::FuturesQuote;
 
 // `FuturesQuote` is #[non_exhaustive] outside the crate, so construct via
-// serde. With live data: `providers.futures("ES").quote().await?`.
+// serde. With live data: `providers.futures("ES=F").quote().await?`.
 let quote: FuturesQuote = serde_json::from_value(serde_json::json!({
     "symbol": "ESM26",
     "name": "E-mini S&P 500 Jun 2026",
@@ -122,17 +131,14 @@ open_interest = Some(1850000)
 the `indicators` feature) and `risk(interval, range)` (requires the `risk`
 feature) compute directly from this handle's own chart data:
 
-```rust no_run feature=risk,polygon
+```rust no_run feature=risk
 use finance_query::indicators::Indicator;
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::FUTURES, [Provider::Polygon])
-        .build()
-        .await?;
-    let contract = providers.futures("ES");
+    let providers = Providers::builder().build().await?;
+    let contract = providers.futures("ES=F");
 
     let summary = contract
         .indicators(Interval::OneDay, TimeRange::ThreeMonths)
@@ -155,6 +161,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 `risk` takes no benchmark parameter — `beta` is always `None`, since futures
 contracts have no natural benchmark to compare against.
 
+## Commitments of Traders
+
+`commitments_of_traders()` (`cftc` feature) fetches weekly CFTC positioning data for this contract — see the [CFTC provider page](providers/cftc.md) for symbol resolution, field meanings, and a full example. It's a separate operation from `quote()`: CFTC has no price data at all, so route `FUTURES` to `[Provider::Cftc, Provider::Yahoo]` (or `Provider::Polygon`) to get both quotes and positioning from one handle.
+
 ## Provider Reference
 
-- [Polygon.io](providers/polygon.md) — the only provider that currently supports `Capability::FUTURES`.
+- [Yahoo Finance](getting-started.md) — default keyless quote source, no feature flag required.
+- [Polygon.io](providers/polygon.md) — alternate quote source (`polygon` feature).
+- [CFTC](providers/cftc.md) — Commitments of Traders positioning only, not quotes (`cftc` feature).

@@ -2,20 +2,16 @@
 // source: docs/library/commodities.md
 #![allow(unused)]
 
-// line 25: compile-only (no_run)
-#[cfg(feature = "fmp")]
+// line 12: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_25() {
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_12() {
+    use finance_query::{Interval, Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::COMMODITIES, [Provider::Fmp])
-            .build()
-            .await?;
-        let gold = providers.commodity("GCUSD");
+        let providers = Providers::builder().build().await?;
+        let gold = providers.commodity("GC=F");
         let quote = gold.quote().await?;
         let chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
         let history = gold.history(TimeRange::OneMonth).await?;
@@ -24,20 +20,39 @@ fn doc_block_line_25() {
     }
 }
 
-// line 49: compile-only (no_run)
+// line 44: compile-only (no_run)
 #[cfg(feature = "fmp")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_49() {
+fn doc_block_line_44() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let providers = Providers::builder()
-            .route(Capability::COMMODITIES, [Provider::Fmp])
+            .route(Capability::COMMODITIES, [Provider::Fmp, Provider::Yahoo])
             .build()
             .await?;
         let gold = providers.commodity("GCUSD");
+        let quote = gold.quote().await?;
+        println!("Symbol: {}", quote.symbol);
+        if let Some(price) = quote.price {
+            println!("Price: {:.2}", price);
+        }
+        Ok(())
+    }
+}
+
+// line 71: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_71() {
+    use finance_query::Providers;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let gold = providers.commodity("GC=F");
         let quote = gold.quote().await?;
 
         println!("Symbol: {}", quote.symbol);
@@ -54,20 +69,16 @@ fn doc_block_line_49() {
     }
 }
 
-// line 79: compile-only (no_run)
-#[cfg(feature = "fmp")]
+// line 98: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_79() {
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_98() {
+    use finance_query::{Interval, Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::COMMODITIES, [Provider::Fmp])
-            .build()
-            .await?;
-        let crude = providers.commodity("CLUSD");
+        let providers = Providers::builder().build().await?;
+        let crude = providers.commodity("CL=F");
         let chart = crude.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
         println!("Symbol: {}", chart.symbol);
@@ -80,20 +91,16 @@ fn doc_block_line_79() {
     }
 }
 
-// line 106: compile-only (no_run)
-#[cfg(feature = "fmp")]
+// line 122: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_106() {
-    use finance_query::{Capability, Provider, Providers, TimeRange};
+fn doc_block_line_122() {
+    use finance_query::{Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::COMMODITIES, [Provider::Fmp])
-            .build()
-            .await?;
-        let silver = providers.commodity("SIUSD");
+        let providers = Providers::builder().build().await?;
+        let silver = providers.commodity("SI=F");
         let history = silver.history(TimeRange::SixMonths).await?;
 
         println!("Symbol: {}", history.symbol);
@@ -102,21 +109,18 @@ fn doc_block_line_106() {
     }
 }
 
-// line 129: compile-only (no_run)
-#[cfg(all(feature = "risk", feature = "fmp"))]
+// line 142: compile-only (no_run)
+#[cfg(feature = "risk")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_129() {
+fn doc_block_line_142() {
     use finance_query::indicators::Indicator;
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+    use finance_query::{Interval, Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::COMMODITIES, [Provider::Fmp])
-            .build()
-            .await?;
-        let gold = providers.commodity("GCUSD");
+        let providers = Providers::builder().build().await?;
+        let gold = providers.commodity("GC=F");
 
         let summary = gold.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
         if let Some(rsi) = summary.rsi_14 {
