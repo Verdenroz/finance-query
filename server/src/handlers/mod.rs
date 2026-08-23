@@ -121,7 +121,7 @@ pub(crate) fn api_routes() -> Router {
             "/filings/{symbol}/congressional-trades",
             get(filings::get_congressional_trades),
         )
-        // GET /v2/filings/{symbol}/fails-to-deliver (currently FMP only)
+        // GET /v2/filings/{symbol}/fails-to-deliver
         .route(
             "/filings/{symbol}/fails-to-deliver",
             get(filings::get_fails_to_deliver),

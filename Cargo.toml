@@ -120,6 +120,7 @@ full = [
     "defi",
     "gdelt",
     "cftc",
+    "secftd",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -153,6 +154,8 @@ defi = []
 gdelt = []
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
 cftc = []
+# Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
+secftd = ["dep:zip"]
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -204,6 +207,7 @@ features = [
     "defi",
     "gdelt",
     "cftc",
+    "secftd",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

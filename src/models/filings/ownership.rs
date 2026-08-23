@@ -6,8 +6,8 @@
 //! come straight from the filed XML — Forms 3/4/5 for insider activity and
 //! 13F-HR information tables for institutional positions. EDGAR is the only
 //! source for [`InstitutionalHolding`]; [`InsiderTrade`] also has Alpha
-//! Vantage and FMP fallbacks. Congressional trades and fails-to-deliver are
-//! FMP-only for now.
+//! Vantage and FMP fallbacks. Congressional trades is FMP-only for now;
+//! fails-to-deliver also has a keyless EDGAR fallback (feature `secftd`).
 
 use serde::{Deserialize, Serialize};
 

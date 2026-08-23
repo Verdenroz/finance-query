@@ -141,12 +141,13 @@ fn route_table(
     forex.push(Provider::Frankfurter);
     routes.push((Capability::FOREX, forex));
 
+    let mut filings = Vec::new();
     if flags.fmp {
-        routes.push((
-            Capability::FILINGS,
-            vec![Provider::Fmp, Provider::Edgar, Provider::Yahoo],
-        ));
+        filings.push(Provider::Fmp);
     }
+    filings.push(Provider::Edgar);
+    filings.push(Provider::Yahoo);
+    routes.push((Capability::FILINGS, filings));
 
     routes
 }
@@ -229,7 +230,10 @@ mod provider_routing_tests {
         );
         assert_eq!(route(&routes, Capability::DISCOVERY), None);
         assert_eq!(route(&routes, Capability::INDICES), None);
-        assert_eq!(route(&routes, Capability::FILINGS), None);
+        assert_eq!(
+            route(&routes, Capability::FILINGS),
+            Some(&[Provider::Edgar, Provider::Yahoo][..])
+        );
     }
 
     #[test]

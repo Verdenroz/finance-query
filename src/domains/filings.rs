@@ -197,7 +197,7 @@ impl Filings {
     }
 
     /// SEC fails-to-deliver data for this symbol, via the FILINGS route
-    /// (currently FMP only). Not cached.
+    /// (FMP, or keyless EDGAR when FMP isn't routed). Not cached.
     pub async fn fails_to_deliver(&self) -> Result<Vec<crate::models::filings::FailToDeliver>> {
         let symbol: String = self.symbol().to_string();
         self.providers
