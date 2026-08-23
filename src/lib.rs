@@ -309,6 +309,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -317,6 +318,7 @@ pub use domains::CryptoCoin;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use domains::ForexPair;
@@ -444,6 +446,7 @@ pub use models::commodities::CommodityQuote;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -463,6 +466,7 @@ pub use models::economic::{
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use models::forex::ForexQuote;

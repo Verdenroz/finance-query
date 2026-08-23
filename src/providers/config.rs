@@ -92,6 +92,7 @@ impl Providers {
         feature = "crypto",
         feature = "defi",
         feature = "fmp",
+        feature = "gdelt",
         feature = "kraken",
         feature = "polygon"
     ))]
@@ -104,6 +105,7 @@ impl Providers {
         feature = "alphavantage",
         feature = "fmp",
         feature = "frankfurter",
+        feature = "gdelt",
         feature = "polygon"
     ))]
     pub fn forex(

@@ -42,6 +42,7 @@ pub mod commodities;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -61,6 +62,7 @@ pub mod economic;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub mod forex;

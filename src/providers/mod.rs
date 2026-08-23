@@ -1406,6 +1406,14 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gdelt")]
+    #[test]
+    fn gdelt_derives_crypto_and_forex_capability() {
+        let caps = Provider::Gdelt.capabilities();
+        assert!(caps.contains(Capability::CRYPTO));
+        assert!(caps.contains(Capability::FOREX));
+    }
+
     #[test]
     fn capability_bits_are_distinct_single_bits() {
         for (i, (a, name_a)) in Capability::ALL.iter().enumerate() {

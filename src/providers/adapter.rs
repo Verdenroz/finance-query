@@ -481,6 +481,7 @@ pub(crate) trait MarketProvider: ProviderCore {
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -587,6 +588,7 @@ pub(crate) trait EconomicProvider: ProviderCore {
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 #[async_trait::async_trait]
@@ -726,6 +728,7 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "crypto",
         feature = "defi",
         feature = "fmp",
+        feature = "gdelt",
         feature = "kraken",
         feature = "polygon"
     ))]
@@ -747,6 +750,7 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "alphavantage",
         feature = "fmp",
         feature = "frankfurter",
+        feature = "gdelt",
         feature = "polygon"
     ))]
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
@@ -800,6 +804,7 @@ pub trait ProviderAdapter: ProviderCore {
             feature = "crypto",
             feature = "defi",
             feature = "fmp",
+            feature = "gdelt",
             feature = "kraken",
             feature = "polygon"
         ))]
@@ -821,6 +826,7 @@ pub trait ProviderAdapter: ProviderCore {
             feature = "alphavantage",
             feature = "fmp",
             feature = "frankfurter",
+            feature = "gdelt",
             feature = "polygon"
         ))]
         if self.as_forex().is_some() {

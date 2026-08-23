@@ -545,6 +545,7 @@ pub(crate) mod commodities;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -564,6 +565,7 @@ pub(crate) mod filings;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub(crate) mod forex;
@@ -583,6 +585,7 @@ pub use commodities::Commodity;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -602,6 +605,7 @@ pub use filings::Filings;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use forex::ForexPair;

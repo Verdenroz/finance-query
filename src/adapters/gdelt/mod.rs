@@ -25,6 +25,8 @@
 
 pub(crate) mod client;
 pub(crate) mod corporate;
+pub(crate) mod crypto;
+pub(crate) mod forex;
 pub(crate) mod models;
 
 use std::time::Duration;
@@ -47,6 +49,8 @@ fn client() -> Result<GdeltClient> {
 }
 
 pub use corporate::fetch_news_response;
+pub use crypto::fetch_crypto_news_response;
+pub use forex::fetch_forex_news_response;
 
 #[cfg(test)]
 mod tests {

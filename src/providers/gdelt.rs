@@ -3,8 +3,11 @@
 //! Serves only the news half of `CORPORATE` — GDELT has no corporate
 //! calendar (earnings/dividends/splits), so `fetch_events` reports
 //! `NotSupported` and dispatch falls through to the next routed provider.
+//! Same shape for `CRYPTO`/`FOREX`: news only, quotes report `NotSupported`.
 
-use super::{CorporateProvider, Operation, ProviderAdapter, ProviderCore};
+use super::{
+    CorporateProvider, CryptoProvider, ForexProvider, Operation, ProviderAdapter, ProviderCore,
+};
 use crate::error::Result;
 
 pub(crate) struct GdeltProvider;
@@ -30,8 +33,54 @@ impl CorporateProvider for GdeltProvider {
 }
 
 #[async_trait::async_trait]
+impl CryptoProvider for GdeltProvider {
+    async fn fetch_crypto_quote(
+        &self,
+        _id: &str,
+        _vs_currency: &str,
+    ) -> Result<crate::models::crypto::CryptoQuote> {
+        Err(self.not_supported(Operation::CryptoQuote))
+    }
+
+    /// Market-wide, not scoped to a specific coin — GDELT has no per-asset
+    /// crypto vocabulary.
+    async fn fetch_crypto_news(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        crate::adapters::gdelt::fetch_crypto_news_response(limit).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ForexProvider for GdeltProvider {
+    async fn fetch_forex_quote(
+        &self,
+        _from: &str,
+        _to: &str,
+    ) -> Result<crate::models::forex::ForexQuote> {
+        Err(self.not_supported(Operation::ForexQuote))
+    }
+
+    /// Market-wide, not scoped to a specific pair — GDELT has no per-pair
+    /// forex vocabulary.
+    async fn fetch_forex_news(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::news::News>> {
+        crate::adapters::gdelt::fetch_forex_news_response(limit).await
+    }
+}
+
+#[async_trait::async_trait]
 impl ProviderAdapter for GdeltProvider {
     fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
+        Some(self)
+    }
+    fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
+        Some(self)
+    }
+    fn as_forex(&self) -> Option<&dyn ForexProvider> {
         Some(self)
     }
 }
