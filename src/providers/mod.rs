@@ -48,6 +48,7 @@ pub(crate) mod wikipedia;
 #[cfg(feature = "worldbank")]
 pub(crate) mod worldbank;
 pub(crate) mod yahoo;
+mod yahoo_ttm;
 
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::error::{FinanceError, Result};

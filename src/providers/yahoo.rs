@@ -314,6 +314,26 @@ impl FundamentalsProvider for YahooProvider {
             resp.top_holdings,
         ))
     }
+
+    /// Computed locally from `fetch_financials`/`fetch_quote` — see
+    /// `super::yahoo_ttm` for which fields are honestly derivable from a
+    /// standard three-statement filing and which stay unset.
+    async fn fetch_key_metrics_ttm(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+        super::yahoo_ttm::fetch_key_metrics_ttm(&self.client, symbol).await
+    }
+
+    /// Computed locally from `fetch_financials`/`fetch_quote` — see
+    /// `super::yahoo_ttm` for which fields are honestly derivable from a
+    /// standard three-statement filing and which stay unset.
+    async fn fetch_ratios_ttm(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+        super::yahoo_ttm::fetch_ratios_ttm(&self.client, symbol).await
+    }
 }
 
 fn recommendation_trend_to_rating_consensus(
