@@ -93,6 +93,9 @@ ct2rs = { version = "0.9.19", optional = true, default-features = false, feature
 # Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
 zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
 
+# Optional: text extraction from born-digital House PTR PDFs
+pdf-extract = { version = "0.12", optional = true }
+
 [features]
 default = []
 # Every feature except `translation-offline`, which compiles CTranslate2 from
@@ -121,6 +124,7 @@ full = [
     "gdelt",
     "cftc",
     "secftd",
+    "housetrades",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -156,6 +160,8 @@ gdelt = []
 cftc = []
 # Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
 secftd = ["dep:zip"]
+# Enable House of Representatives Periodic Transaction Report disclosures (keyless)
+housetrades = ["dep:zip", "dep:pdf-extract"]
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -208,6 +214,7 @@ features = [
     "gdelt",
     "cftc",
     "secftd",
+    "housetrades",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

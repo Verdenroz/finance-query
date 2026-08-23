@@ -1,6 +1,6 @@
-//! GraphQL types for FMP-routed congressional trading and fails-to-deliver
-//! disclosures, distinct from Yahoo's `insiderTransactions`/`secFilings`
-//! and SEC EDGAR.
+//! GraphQL types for congressional trading (FMP, falling back to keyless
+//! House disclosures) and fails-to-deliver disclosures, distinct from
+//! Yahoo's `insiderTransactions`/`secFilings` and SEC EDGAR.
 
 use async_graphql::SimpleObject;
 use serde::Deserialize;

@@ -16,6 +16,10 @@ ignore = [
     # optional `translation-offline` feature; no fixed upstream release exists.
     # Revisit when tokenizers migrates off paste.
     "RUSTSEC-2024-0436",
+    # `ttf-parser` is unmaintained (not vulnerable). Pulled in via
+    # lopdf -> pdf-extract for the `housetrades` feature's PTR PDF text
+    # extraction; no safe upgrade exists upstream.
+    "RUSTSEC-2026-0192",
 ]
 
 [bans]

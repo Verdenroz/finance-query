@@ -5,8 +5,8 @@ use finance_query::Providers;
 
 use super::{ServiceError, ServiceResult};
 
-/// Congressional (senate) trading disclosures for a symbol, via
-/// `Capability::FILINGS` (currently FMP only).
+/// Congressional trading disclosures for a symbol, via `Capability::FILINGS`
+/// (FMP, falling back to keyless House disclosures — Senate is unrouted).
 pub async fn get_congressional_trades(
     cache: &Cache,
     providers: &Arc<Providers>,
