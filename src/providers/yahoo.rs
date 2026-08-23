@@ -686,6 +686,85 @@ impl MarketProvider for YahooProvider {
             .flatten()
             .collect())
     }
+
+    /// Fans out over the 11 GICS sectors' equity screeners — there's no
+    /// bulk sector-P/E endpoint — aggregating each sector's constituent
+    /// trailing P/E by median (more outlier-robust than a mean against
+    /// mega-cap or negative-earnings names). Industry P/E stays unrouted:
+    /// the same fan-out over ~160 industry slugs is too costly for one
+    /// call, and thin industries wouldn't have enough sampled P/Es for a
+    /// meaningful aggregate.
+    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+        use crate::constants::sectors::Sector;
+        use crate::models::discovery::screeners::{
+            EquityField, EquityScreenerQuery, ScreenerFieldExt,
+        };
+
+        const SECTORS: [Sector; 11] = [
+            Sector::Technology,
+            Sector::FinancialServices,
+            Sector::ConsumerCyclical,
+            Sector::CommunicationServices,
+            Sector::Healthcare,
+            Sector::Industrials,
+            Sector::ConsumerDefensive,
+            Sector::Energy,
+            Sector::BasicMaterials,
+            Sector::RealEstate,
+            Sector::Utilities,
+        ];
+        const SAMPLE_SIZE: u32 = 50;
+
+        let fetches = SECTORS.iter().map(|&sector| async move {
+            let query = EquityScreenerQuery::new()
+                .add_condition(EquityField::Sector.eq_str(sector))
+                .size(SAMPLE_SIZE);
+            match crate::adapters::yahoo::discovery::screeners::fetch_custom(&self.client, query)
+                .await
+            {
+                Ok(results) => median_trailing_pe(&results.quotes).map(|pe| {
+                    crate::models::market::performance::SectorPe {
+                        sector: sector.display_name().to_string(),
+                        exchange: None,
+                        pe: Some(pe),
+                        date: None,
+                    }
+                }),
+                Err(err) => {
+                    tracing::warn!("failed to fetch {sector:?} sector P/E: {err}");
+                    None
+                }
+            }
+        });
+        Ok(futures::future::join_all(fetches)
+            .await
+            .into_iter()
+            .flatten()
+            .collect())
+    }
+}
+
+/// Median trailing P/E across screener rows, excluding non-positive or
+/// non-finite values (negative-earnings companies aren't meaningfully
+/// "priced" via P/E, so including them would skew the aggregate).
+fn median_trailing_pe(
+    quotes: &[crate::models::discovery::screeners::ScreenerQuote],
+) -> Option<f64> {
+    let mut values: Vec<f64> = quotes
+        .iter()
+        .filter_map(|q| q.trailing_pe.as_ref().and_then(|v| v.raw))
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .collect();
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_by(|a, b| a.total_cmp(b));
+    let mid = values.len() / 2;
+    Some(if values.len().is_multiple_of(2) {
+        (values[mid - 1] + values[mid]) / 2.0
+    } else {
+        values[mid]
+    })
 }
 
 fn sector_data_to_performance(
@@ -1176,6 +1255,48 @@ mod tests {
         assert_eq!(performance.sector, "Technology");
         assert_eq!(performance.exchange, None);
         assert_eq!(performance.change_percent, Some(1.23));
+    }
+
+    fn quote_with_pe(pe: Option<f64>) -> crate::models::discovery::screeners::ScreenerQuote {
+        serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "quoteType": "EQUITY",
+            "exchange": "NMS",
+            "regularMarketPrice": {"raw": 200.0, "fmt": "200.00"},
+            "regularMarketChange": {"raw": 1.0, "fmt": "1.00"},
+            "regularMarketChangePercent": {"raw": 0.5, "fmt": "0.50%"},
+            "trailingPE": pe.map(|v| serde_json::json!({"raw": v, "fmt": v.to_string()})),
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn median_trailing_pe_of_an_odd_sample_is_the_middle_value() {
+        let quotes = [10.0, 20.0, 30.0].map(|pe| quote_with_pe(Some(pe)));
+        assert_eq!(median_trailing_pe(&quotes), Some(20.0));
+    }
+
+    #[test]
+    fn median_trailing_pe_of_an_even_sample_averages_the_middle_two() {
+        let quotes = [10.0, 20.0, 30.0, 40.0].map(|pe| quote_with_pe(Some(pe)));
+        assert_eq!(median_trailing_pe(&quotes), Some(25.0));
+    }
+
+    #[test]
+    fn median_trailing_pe_excludes_negative_and_missing_values() {
+        let quotes = [
+            quote_with_pe(Some(15.0)),
+            quote_with_pe(Some(-5.0)),
+            quote_with_pe(None),
+            quote_with_pe(Some(25.0)),
+        ];
+        assert_eq!(median_trailing_pe(&quotes), Some(20.0));
+    }
+
+    #[test]
+    fn median_trailing_pe_of_no_valid_samples_is_none() {
+        let quotes = [quote_with_pe(Some(-5.0)), quote_with_pe(None)];
+        assert_eq!(median_trailing_pe(&quotes), None);
     }
 
     #[test]
