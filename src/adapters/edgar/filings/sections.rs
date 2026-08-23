@@ -47,7 +47,7 @@ static EIGHT_K_ITEM: LazyLock<Regex> =
 /// line breaks, inline tags are dropped, a handful of common entities are
 /// decoded. Not a general HTML-to-text converter — just enough structure
 /// for the heading regexes above to anchor on.
-fn html_to_text(html: &str) -> String {
+pub(super) fn html_to_text(html: &str) -> String {
     let no_script = SCRIPT_OR_STYLE.replace_all(html, "");
     let with_breaks = BLOCK_TAG.replace_all(&no_script, "\n");
     let flat = ANY_TAG.replace_all(&with_breaks, "");
