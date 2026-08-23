@@ -42,6 +42,8 @@ pub(crate) mod nasdaq;
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 pub(crate) mod types;
+#[cfg(feature = "wikipedia")]
+pub(crate) mod wikipedia;
 #[cfg(feature = "worldbank")]
 pub(crate) mod worldbank;
 pub(crate) mod yahoo;
@@ -121,6 +123,10 @@ pub enum Provider {
     /// `nasdaq` feature, keyless).
     #[cfg(feature = "nasdaq")]
     Nasdaq,
+    /// Wikipedia S&P 500 index-constituent table (requires `wikipedia`
+    /// feature, keyless).
+    #[cfg(feature = "wikipedia")]
+    Wikipedia,
     /// Combined House + Senate PTR stock-trade disclosures (requires the
     /// `housetrades` and/or `senatetrades` feature, keyless).
     #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
@@ -168,6 +174,8 @@ impl Provider {
             "cftc" => Some(Self::Cftc),
             #[cfg(feature = "nasdaq")]
             "nasdaq" => Some(Self::Nasdaq),
+            #[cfg(feature = "wikipedia")]
+            "wikipedia" => Some(Self::Wikipedia),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
@@ -211,6 +219,8 @@ impl Provider {
             Self::Cftc => "cftc",
             #[cfg(feature = "nasdaq")]
             Self::Nasdaq => "nasdaq",
+            #[cfg(feature = "wikipedia")]
+            Self::Wikipedia => "wikipedia",
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
@@ -255,6 +265,8 @@ impl Provider {
         v.push(Self::Cftc);
         #[cfg(feature = "nasdaq")]
         v.push(Self::Nasdaq);
+        #[cfg(feature = "wikipedia")]
+        v.push(Self::Wikipedia);
         #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
         v.push(Self::CongressTrades);
         v.push(Self::Edgar);
@@ -303,6 +315,8 @@ impl Provider {
             Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
             #[cfg(feature = "nasdaq")]
             Self::Nasdaq => ProviderAdapter::capabilities(&nasdaq::NasdaqProvider),
+            #[cfg(feature = "wikipedia")]
+            Self::Wikipedia => ProviderAdapter::capabilities(&wikipedia::WikipediaProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => {
                 ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
@@ -1278,6 +1292,8 @@ pub(crate) async fn build_providers(
             Provider::Cftc => Arc::new(cftc::CftcProvider),
             #[cfg(feature = "nasdaq")]
             Provider::Nasdaq => Arc::new(nasdaq::NasdaqProvider),
+            #[cfg(feature = "wikipedia")]
+            Provider::Wikipedia => Arc::new(wikipedia::WikipediaProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),

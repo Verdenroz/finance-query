@@ -1,0 +1,42 @@
+//! Wikipedia provider implementation (keyless).
+//!
+//! Serves `IndexConstituents` for `MajorIndex::Sp500` only — see
+//! `adapters::wikipedia::indices` for why Nasdaq-100/Dow Jones and
+//! constituent-change history stay unrouted. `fetch_indices_quote` is the
+//! trait's required primary op but Wikipedia has no quote data, so it
+//! reports `NotSupported` and dispatch falls through to the next provider.
+
+use super::{IndicesProvider, Operation, ProviderAdapter, ProviderCore};
+use crate::error::Result;
+
+pub(crate) struct WikipediaProvider;
+
+impl ProviderCore for WikipediaProvider {
+    fn id(&self) -> super::Provider {
+        super::Provider::Wikipedia
+    }
+}
+
+#[async_trait::async_trait]
+impl IndicesProvider for WikipediaProvider {
+    async fn fetch_indices_quote(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::indices::IndexQuote> {
+        Err(self.not_supported(Operation::IndicesQuote))
+    }
+
+    async fn fetch_index_constituents(
+        &self,
+        index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        crate::adapters::wikipedia::fetch_index_constituents_response(index).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for WikipediaProvider {
+    fn as_indices(&self) -> Option<&dyn IndicesProvider> {
+        Some(self)
+    }
+}
