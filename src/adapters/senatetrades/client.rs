@@ -6,9 +6,17 @@
 //! pass it. The block is also IP-reputation-based: the same flags pass from
 //! a residential IP and fail (403, `errors.edgesuite.net`) from a VPN or
 //! cloud/VPS IP. Repeated requests in a short window can also trigger a
-//! separate, IP-independent rate block. This adapter can't detect or work
-//! around either — a blocked or rate-limited caller sees every fetch fail,
-//! which [`crate::providers::congresstrades`] treats as zero rows from this
+//! separate, IP-independent rate block. This adapter can't bypass either
+//! kind of block, but it does recognize Akamai's "Access Denied" error page
+//! and fail immediately instead of polling out the full element-detection
+//! timeout.
+//!
+//! The disclaimer checkbox on `/search/home/` isn't always shown: some
+//! sessions land straight on the search page, so the search flow treats it
+//! as optional rather than erroring when it's absent.
+//!
+//! A blocked or rate-limited caller still sees every fetch fail, which
+//! [`crate::providers::congresstrades`] treats as zero rows from this
 //! source, not a hard failure.
 
 use std::time::Duration;
@@ -27,6 +35,20 @@ const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KH
 
 const ELEMENT_POLL_INTERVAL: Duration = Duration::from_millis(200);
 const ELEMENT_POLL_ATTEMPTS: usize = 75;
+
+/// Akamai's block page renders in 1-2s, same as the real page, so checking
+/// past this window would just add latency without catching anything the
+/// earlier attempts didn't.
+const BLOCK_CHECK_ATTEMPTS: usize = 5;
+const AKAMAI_BLOCK_MARKERS: [&str; 2] = ["edgesuite.net", "Access Denied"];
+
+async fn akamai_block_reason(page: &Page) -> Option<&'static str> {
+    let content = page.content().await.ok()?;
+    AKAMAI_BLOCK_MARKERS
+        .iter()
+        .any(|marker| content.contains(marker))
+        .then_some("blocked by Akamai (IP reputation or rate limit)")
+}
 
 fn browser_error(e: impl std::fmt::Display) -> FinanceError {
     FinanceError::ApiError(format!("Senate eFD: {e}"))
@@ -75,12 +97,30 @@ impl SenateTradesClient {
     }
 }
 
+/// Poll briefly for an element that may legitimately not exist, e.g. the
+/// disclaimer checkbox when the site skips straight to the search page for
+/// this session. Returns `None` rather than erroring if it never appears.
+pub(super) async fn find_element_if_present(page: &Page, selector: &str) -> Option<Element> {
+    for _ in 0..BLOCK_CHECK_ATTEMPTS {
+        if let Ok(element) = page.find_element(selector).await {
+            return Some(element);
+        }
+        tokio::time::sleep(ELEMENT_POLL_INTERVAL).await;
+    }
+    None
+}
+
 /// Poll for one element until it exists, since the results and report tables
 /// render asynchronously after the page load completes.
 pub(super) async fn wait_for_element(page: &Page, selector: &str) -> Result<Element> {
-    for _ in 0..ELEMENT_POLL_ATTEMPTS {
+    for attempt in 0..ELEMENT_POLL_ATTEMPTS {
         if let Ok(element) = page.find_element(selector).await {
             return Ok(element);
+        }
+        if attempt < BLOCK_CHECK_ATTEMPTS
+            && let Some(reason) = akamai_block_reason(page).await
+        {
+            return Err(browser_error(reason));
         }
         tokio::time::sleep(ELEMENT_POLL_INTERVAL).await;
     }
@@ -90,11 +130,16 @@ pub(super) async fn wait_for_element(page: &Page, selector: &str) -> Result<Elem
 /// Poll for at least one matching element, for tables whose rows arrive via
 /// an AJAX call after the initial (empty) render.
 pub(super) async fn wait_for_elements(page: &Page, selector: &str) -> Result<Vec<Element>> {
-    for _ in 0..ELEMENT_POLL_ATTEMPTS {
+    for attempt in 0..ELEMENT_POLL_ATTEMPTS {
         if let Ok(elements) = page.find_elements(selector).await
             && !elements.is_empty()
         {
             return Ok(elements);
+        }
+        if attempt < BLOCK_CHECK_ATTEMPTS
+            && let Some(reason) = akamai_block_reason(page).await
+        {
+            return Err(browser_error(reason));
         }
         tokio::time::sleep(ELEMENT_POLL_INTERVAL).await;
     }

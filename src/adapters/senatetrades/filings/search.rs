@@ -6,7 +6,9 @@ use chrono::NaiveDate;
 
 use crate::error::Result;
 
-use super::super::client::{SENATE_BASE, SenateTradesClient, wait_for_element, wait_for_elements};
+use super::super::client::{
+    SENATE_BASE, SenateTradesClient, find_element_if_present, wait_for_element, wait_for_elements,
+};
 use super::super::models::SenateFilingEntry;
 
 /// Rows per DataTable page once bumped up via its own JS API — the default
@@ -29,11 +31,9 @@ pub(super) async fn search_recent_ptrs(
         .new_page(&format!("{SENATE_BASE}/search/home/"))
         .await?;
 
-    wait_for_element(&page, "#agree_statement")
-        .await?
-        .click()
-        .await
-        .ok();
+    if let Some(checkbox) = find_element_if_present(&page, "#agree_statement").await {
+        checkbox.click().await.ok();
+    }
 
     wait_for_element(&page, "#filerTypeLabelSenator")
         .await?
