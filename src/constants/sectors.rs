@@ -74,6 +74,25 @@ impl Sector {
         }
     }
 
+    /// SPDR Select Sector ETF tracking this GICS sector, used to derive
+    /// sector performance history from ETF price action when no provider
+    /// serves it directly.
+    pub fn spdr_etf(&self) -> &'static str {
+        match self {
+            Sector::Technology => "XLK",
+            Sector::FinancialServices => "XLF",
+            Sector::ConsumerCyclical => "XLY",
+            Sector::CommunicationServices => "XLC",
+            Sector::Healthcare => "XLV",
+            Sector::Industrials => "XLI",
+            Sector::ConsumerDefensive => "XLP",
+            Sector::Energy => "XLE",
+            Sector::BasicMaterials => "XLB",
+            Sector::RealEstate => "XLRE",
+            Sector::Utilities => "XLU",
+        }
+    }
+
     /// List all valid sector types for error messages
     pub fn valid_types() -> &'static str {
         "technology, financial-services, consumer-cyclical, communication-services, \
