@@ -89,6 +89,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_the_full_listing_from_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let out = fetch_listing_status_response(true).await.unwrap();
         assert!(out.len() > 5000);
         let aapl = out.iter().find(|s| s.symbol == "AAPL").unwrap();
