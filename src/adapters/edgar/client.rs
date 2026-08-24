@@ -9,11 +9,27 @@ use crate::models::filings::{
     CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions,
 };
 use crate::rate_limiter::RateLimiter;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
+
+/// One row of SEC's ticker reference file.
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct CompanyTickerEntry {
+    #[serde(rename = "cik_str")]
+    pub cik: u64,
+    pub ticker: String,
+    pub title: String,
+}
+
+/// SEC's ticker-exchange file: `{"fields": [...], "data": [[cik, name, ticker, exchange], ...]}`.
+#[derive(Debug, Deserialize)]
+struct CompanyTickersExchangeResponse {
+    data: Vec<(u64, String, String, Option<String>)>,
+}
 
 /// Builder for constructing an [`EdgarClient`].
 ///
@@ -239,6 +255,32 @@ impl EdgarClient {
         info!("Loaded {} ticker-to-CIK mappings from SEC EDGAR", map.len());
         *cache = Some(map);
         Ok(())
+    }
+
+    // ========================================================================
+    // Ticker Reference Data
+    // ========================================================================
+
+    /// Fetch SEC's full ticker-to-company reference list.
+    ///
+    /// This is the same file [`resolve_cik`](Self::resolve_cik) caches from,
+    /// fetched fresh here since this is a rare bulk-listing call rather than
+    /// the per-symbol hot path.
+    pub async fn company_tickers(&self) -> Result<Vec<CompanyTickerEntry>> {
+        let response = self.get(urls::COMPANY_TICKERS).await?;
+        let json: HashMap<String, CompanyTickerEntry> = response.json().await?;
+        Ok(json.into_values().collect())
+    }
+
+    /// Fetch SEC's ticker-to-listing-exchange reference list.
+    pub async fn company_tickers_exchange(&self) -> Result<HashMap<String, String>> {
+        let response = self.get(urls::COMPANY_TICKERS_EXCHANGE).await?;
+        let body: CompanyTickersExchangeResponse = response.json().await?;
+        Ok(body
+            .data
+            .into_iter()
+            .filter_map(|(_, _, ticker, exchange)| exchange.map(|e| (ticker, e)))
+            .collect())
     }
 
     // ========================================================================

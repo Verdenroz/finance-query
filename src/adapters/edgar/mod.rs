@@ -36,6 +36,7 @@
 //! ```
 
 mod client;
+pub(crate) mod discovery; // DISCOVERY
 mod endpoints;
 pub(crate) mod filings; // FILINGS
 
