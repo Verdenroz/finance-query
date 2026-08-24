@@ -37,6 +37,7 @@ pub(crate) mod fred;
 pub(crate) mod gdelt;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
+pub(crate) mod local_exchanges;
 pub(crate) mod market_calendar;
 #[cfg(feature = "nasdaq")]
 pub(crate) mod nasdaq;
@@ -138,6 +139,9 @@ pub enum Provider {
     /// NYSE/NASDAQ market holidays, computed locally from federal-holiday
     /// rules rather than fetched (always available, no network call).
     LocalMarketCalendar,
+    /// A static table of major global exchanges (always available, no
+    /// network call).
+    LocalExchange,
 }
 
 impl Provider {
@@ -185,6 +189,7 @@ impl Provider {
             "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
             "local_market_calendar" => Some(Self::LocalMarketCalendar),
+            "local_exchange" => Some(Self::LocalExchange),
             _ => None,
         }
     }
@@ -231,6 +236,7 @@ impl Provider {
             Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
             Self::LocalMarketCalendar => "local_market_calendar",
+            Self::LocalExchange => "local_exchange",
         }
     }
 
@@ -278,6 +284,7 @@ impl Provider {
         v.push(Self::CongressTrades);
         v.push(Self::Edgar);
         v.push(Self::LocalMarketCalendar);
+        v.push(Self::LocalExchange);
         v
     }
 
@@ -332,6 +339,9 @@ impl Provider {
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
             Self::LocalMarketCalendar => {
                 ProviderAdapter::capabilities(&market_calendar::LocalMarketCalendarProvider)
+            }
+            Self::LocalExchange => {
+                ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
             }
         }
     }
@@ -1309,6 +1319,7 @@ pub(crate) async fn build_providers(
             Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
             Provider::LocalMarketCalendar => Arc::new(market_calendar::LocalMarketCalendarProvider),
+            Provider::LocalExchange => Arc::new(local_exchanges::LocalExchangeProvider),
         };
         adapter.initialize().await?;
         providers.push(adapter);
@@ -1453,6 +1464,15 @@ mod tests {
             Provider::LocalMarketCalendar
                 .capabilities()
                 .contains(Capability::CALENDAR)
+        );
+    }
+
+    #[test]
+    fn local_exchange_derives_discovery_capability() {
+        assert!(
+            Provider::LocalExchange
+                .capabilities()
+                .contains(Capability::DISCOVERY)
         );
     }
 
