@@ -1,9 +1,11 @@
 //! Corporate governance models: executive compensation and employee headcount.
 //!
 //! Served through the [`Capability::CORPORATE`](crate::Capability::CORPORATE)
-//! route; FMP is currently the only provider. Both are derived from the
-//! company's own SEC filings (DEF 14A proxy statements and 10-K cover pages
-//! respectively), so figures are annual and lag the filing date.
+//! route. Both are derived from the company's own SEC filings (DEF 14A proxy
+//! statements and 10-K/10-Q cover pages respectively), so figures are annual
+//! and lag the filing date. EDGAR serves employee counts filed under the
+//! voluntary `dei:EntityNumberOfEmployees` tag, which most filers don't use;
+//! FMP remains the more complete source.
 
 use serde::{Deserialize, Serialize};
 
