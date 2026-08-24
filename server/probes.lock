@@ -148,6 +148,35 @@
         "[].timestamp"
       ]
     },
+    "capital-gains-batch": {
+      "fields": {}
+    },
+    "cftc-cot": {
+      "fields": {
+        "cftcContractMarketCode": "always",
+        "marketAndExchangeName": "always",
+        "observations": "always",
+        "observations[]": "always",
+        "observations[].managedMoneyLong": "always",
+        "observations[].managedMoneyShort": "always",
+        "observations[].managedMoneySpread": "always",
+        "observations[].nonreportableLong": "always",
+        "observations[].nonreportableShort": "always",
+        "observations[].openInterest": "always",
+        "observations[].otherReportableLong": "always",
+        "observations[].otherReportableShort": "always",
+        "observations[].otherReportableSpread": "always",
+        "observations[].producerMerchantLong": "always",
+        "observations[].producerMerchantShort": "always",
+        "observations[].reportDate": "always",
+        "observations[].swapDealerLong": "always",
+        "observations[].swapDealerShort": "always",
+        "observations[].swapDealerSpread": "always",
+        "observations[].totalReportableLong": "always",
+        "observations[].totalReportableShort": "always",
+        "symbol": "always"
+      }
+    },
     "chart-daily": {
       "fields": {
         "candles": "always",
@@ -261,6 +290,47 @@
         "charts[].symbol": "always"
       }
     },
+    "commodities": {
+      "fields": {
+        "change": "always",
+        "changePercent": "always",
+        "name": "always",
+        "price": "always",
+        "symbol": "always",
+        "timestamp": "always"
+      },
+      "uncovered": [
+        "unit"
+      ]
+    },
+    "company-profile": {
+      "fields": {
+        "assetType": "always",
+        "country": "always",
+        "currency": "always",
+        "description": "always",
+        "exchange": "always",
+        "industry": "always",
+        "marketCapitalization": "always",
+        "name": "always",
+        "sector": "always",
+        "symbol": "always"
+      }
+    },
+    "crypto-coin": {
+      "fields": {
+        "circulatingSupply": "always",
+        "currentPrice": "always",
+        "id": "always",
+        "image": "always",
+        "marketCap": "always",
+        "marketCapRank": "always",
+        "name": "always",
+        "priceChangePercentage24H": "always",
+        "symbol": "always",
+        "totalVolume": "always"
+      }
+    },
     "crypto-coins": {
       "fields": {
         "[]": "always",
@@ -274,6 +344,41 @@
         "[].priceChangePercentage24H": "always",
         "[].symbol": "always",
         "[].totalVolume": "always"
+      }
+    },
+    "crypto-global": {
+      "fields": {
+        "activeCryptocurrencies": "always",
+        "btcDominance": "always",
+        "ethDominance": "always",
+        "marketCapChangePercentage24HUsd": "always",
+        "markets": "always",
+        "totalMarketCapUsd": "always",
+        "totalVolumeUsd": "always"
+      }
+    },
+    "crypto-search": {
+      "fields": {
+        "[]": "always",
+        "[].active": "always",
+        "[].assetType": "always",
+        "[].id": "always",
+        "[].image": "always",
+        "[].marketCapRank": "always",
+        "[].name": "always",
+        "[].symbol": "always",
+        "[].thumbnail": "always"
+      }
+    },
+    "crypto-trending": {
+      "fields": {
+        "[]": "always",
+        "[].id": "always",
+        "[].marketCapRank": "always",
+        "[].name": "always",
+        "[].priceBtc": "always",
+        "[].score": "always",
+        "[].symbol": "always"
       }
     },
     "currencies": {
@@ -304,6 +409,63 @@
         "dividends[].timestamp": "always"
       }
     },
+    "dividends-batch": {
+      "fields": {
+        "dividends": "always",
+        "dividends[]": "always",
+        "dividends[].dividends": "always",
+        "dividends[].dividends[]": "always",
+        "dividends[].dividends[].amount": "always",
+        "dividends[].dividends[].timestamp": "always",
+        "dividends[].symbol": "always"
+      }
+    },
+    "earnings-surprises": {
+      "fields": {
+        "surprises": "always",
+        "surprises[]": "always",
+        "surprises[].actualEps": "always",
+        "surprises[].date": "always",
+        "surprises[].estimatedEps": "always",
+        "surprises[].surprise": "always",
+        "surprises[].surprisePercent": "always",
+        "surprises[].symbol": "always"
+      }
+    },
+    "earnings-transcript": {
+      "fields": {
+        "quarter": "always",
+        "symbol": "always",
+        "text": "always",
+        "year": "always"
+      },
+      "uncovered": [
+        "date"
+      ]
+    },
+    "edgar-cik": {
+      "fields": {
+        "cik": "always",
+        "symbol": "always"
+      }
+    },
+    "edgar-facts": {
+      "fields": {
+        "[]": "always",
+        "[].concept": "always",
+        "[].dataPoints": "always",
+        "[].dataPoints[]": "always",
+        "[].dataPoints[].end": "always",
+        "[].dataPoints[].form": "always",
+        "[].dataPoints[].fp": "always",
+        "[].dataPoints[].fy": "always",
+        "[].dataPoints[].val": "always",
+        "[].description": "always",
+        "[].label": "always",
+        "[].taxonomy": "always",
+        "[].unit": "always"
+      }
+    },
     "edgar-search": {
       "fields": {
         "hits": "always",
@@ -322,6 +484,60 @@
         "pageInfo.startCursor": "always",
         "totalHits": "always"
       }
+    },
+    "edgar-submissions": {
+      "fields": {
+        "category": "always",
+        "cik": "always",
+        "ein": "always",
+        "entityType": "always",
+        "exchanges": "always",
+        "exchanges[]": "always",
+        "filings": "always",
+        "filings[]": "always",
+        "filings[].accessionNumber": "always",
+        "filings[].filingDate": "always",
+        "filings[].form": "always",
+        "filings[].primaryDocDescription": "always",
+        "filings[].primaryDocument": "always",
+        "filings[].reportDate": "always",
+        "filings[].size": "always",
+        "fiscalYearEnd": "always",
+        "insiderTransactionForIssuerExists": "always",
+        "insiderTransactionForOwnerExists": "always",
+        "name": "always",
+        "sic": "always",
+        "sicDescription": "always",
+        "stateOfIncorporation": "always",
+        "tickers": "always",
+        "tickers[]": "always"
+      }
+    },
+    "etf-profile": {
+      "fields": {
+        "assetType": "always",
+        "holdings": "always",
+        "holdings[]": "always",
+        "holdings[].description": "always",
+        "holdings[].symbol": "always",
+        "holdings[].weight": "always",
+        "name": "always",
+        "netAssets": "always",
+        "netExpenseRatio": "always",
+        "portfolioTurnover": "always",
+        "sectorWeightings": "always",
+        "sectorWeightings[]": "always",
+        "sectorWeightings[].sector": "always",
+        "sectorWeightings[].weight": "always",
+        "symbol": "always"
+      },
+      "uncovered": [
+        "countryWeightings",
+        "countryWeightings[].country",
+        "countryWeightings[].weight",
+        "dividendYield",
+        "inceptionDate"
+      ]
     },
     "exchanges": {
       "fields": {
@@ -350,6 +566,50 @@
         "[].url": "always"
       }
     },
+    "filing-risk-factors": {
+      "fields": {
+        "[]": "always",
+        "[].filingDate": "always",
+        "[].text": "always",
+        "[].title": "always"
+      },
+      "uncovered": [
+        "[].category"
+      ]
+    },
+    "filing-sections": {
+      "fields": {
+        "[]": "always",
+        "[].content": "always",
+        "[].section": "always"
+      }
+    },
+    "filings-congressional-trades": {
+      "fields": {
+        "[]": "always",
+        "[].amount": "always",
+        "[].assetDescription": "always",
+        "[].disclosureDate": "always",
+        "[].district": "always",
+        "[].firstName": "always",
+        "[].lastName": "always",
+        "[].link": "always",
+        "[].office": "always",
+        "[].symbol": "always",
+        "[].tradeType": "always",
+        "[].transactionDate": "always"
+      }
+    },
+    "filings-fails-to-deliver": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].name": "always",
+        "[].price": "always",
+        "[].quantity": "always",
+        "[].symbol": "always"
+      }
+    },
     "financials-balance": {
       "fields": {
         "[]": "always",
@@ -358,6 +618,20 @@
         "[].values[]": "always",
         "[].values[].date": "always",
         "[].values[].value": "always"
+      }
+    },
+    "financials-batch": {
+      "fields": {
+        "financials": "always",
+        "financials[]": "always",
+        "financials[].statement": "always",
+        "financials[].statement[]": "always",
+        "financials[].statement[].metric": "always",
+        "financials[].statement[].values": "always",
+        "financials[].statement[].values[]": "always",
+        "financials[].statement[].values[].date": "always",
+        "financials[].statement[].values[].value": "always",
+        "financials[].symbol": "always"
       }
     },
     "financials-cashflow": {
@@ -380,6 +654,25 @@
         "[].values[].value": "always"
       }
     },
+    "forex-news": {
+      "fields": {
+        "[]": "always",
+        "[].img": "always",
+        "[].link": "always",
+        "[].source": "always",
+        "[].time": "always",
+        "[].title": "always"
+      }
+    },
+    "fred-series": {
+      "fields": {
+        "id": "always",
+        "observations": "always",
+        "observations[]": "always",
+        "observations[].date": "always",
+        "observations[].value": "always"
+      }
+    },
     "fred-treasury": {
       "fields": {
         "[]": "always",
@@ -397,6 +690,33 @@
         "[].y5": "always",
         "[].y6M": "always",
         "[].y7": "always"
+      }
+    },
+    "futures": {
+      "fields": {
+        "change": "always",
+        "changePercent": "always",
+        "exchange": "always",
+        "name": "always",
+        "openInterest": "always",
+        "price": "always",
+        "symbol": "always",
+        "timestamp": "always",
+        "volume": "always"
+      },
+      "uncovered": [
+        "expirationDate",
+        "underlying"
+      ]
+    },
+    "gdelt-news": {
+      "fields": {
+        "[]": "always",
+        "[].img": "always",
+        "[].link": "always",
+        "[].source": "always",
+        "[].time": "always",
+        "[].title": "always"
       }
     },
     "holders-insider-purchases": {
@@ -572,6 +892,19 @@
         "markets[].timezoneShort": "always"
       }
     },
+    "index-constituents": {
+      "fields": {
+        "[]": "always",
+        "[].cik": "always",
+        "[].dateFirstAdded": "always",
+        "[].founded": "always",
+        "[].headquarters": "always",
+        "[].name": "always",
+        "[].sector": "always",
+        "[].subSector": "always",
+        "[].symbol": "always"
+      }
+    },
     "indicators": {
       "fields": {
         "accumulationDistribution": "always",
@@ -691,6 +1024,93 @@
         "zigzagLastPivot.index": "always",
         "zigzagLastPivot.isHigh": "always",
         "zigzagLastPivot.price": "always"
+      }
+    },
+    "indicators-batch": {
+      "fields": {
+        "indicators": "always",
+        "indicators[]": "always",
+        "indicators[].indicators": "always",
+        "indicators[].indicators.accumulationDistribution": "always",
+        "indicators[].indicators.alma9": "always",
+        "indicators[].indicators.atr14": "always",
+        "indicators[].indicators.balanceOfPower": "always",
+        "indicators[].indicators.bollingerBands": "always",
+        "indicators[].indicators.bollingerBands.lower": "always",
+        "indicators[].indicators.bollingerBands.middle": "always",
+        "indicators[].indicators.bollingerBands.upper": "always",
+        "indicators[].indicators.bullBearPower": "always",
+        "indicators[].indicators.bullBearPower.bearPower": "always",
+        "indicators[].indicators.bullBearPower.bullPower": "always",
+        "indicators[].indicators.cci20": "always",
+        "indicators[].indicators.chaikinOscillator": "always",
+        "indicators[].indicators.choppinessIndex14": "always",
+        "indicators[].indicators.cmf20": "always",
+        "indicators[].indicators.cmo14": "always",
+        "indicators[].indicators.donchianChannels": "always",
+        "indicators[].indicators.donchianChannels.lower": "always",
+        "indicators[].indicators.donchianChannels.middle": "always",
+        "indicators[].indicators.donchianChannels.upper": "always",
+        "indicators[].indicators.elderRayIndex": "always",
+        "indicators[].indicators.elderRayIndex.bearPower": "always",
+        "indicators[].indicators.elderRayIndex.bullPower": "always",
+        "indicators[].indicators.ema10": "always",
+        "indicators[].indicators.ema20": "always",
+        "indicators[].indicators.fibonacciPivotPoints": "always",
+        "indicators[].indicators.fibonacciPivotPoints.pivot": "always",
+        "indicators[].indicators.fibonacciPivotPoints.r1": "always",
+        "indicators[].indicators.fibonacciPivotPoints.r2": "always",
+        "indicators[].indicators.fibonacciPivotPoints.r3": "always",
+        "indicators[].indicators.fibonacciPivotPoints.s1": "always",
+        "indicators[].indicators.fibonacciPivotPoints.s2": "always",
+        "indicators[].indicators.fibonacciPivotPoints.s3": "always",
+        "indicators[].indicators.heikinAshi": "always",
+        "indicators[].indicators.heikinAshi.adjClose": "always",
+        "indicators[].indicators.heikinAshi.close": "always",
+        "indicators[].indicators.heikinAshi.high": "always",
+        "indicators[].indicators.heikinAshi.low": "always",
+        "indicators[].indicators.heikinAshi.open": "always",
+        "indicators[].indicators.heikinAshi.timestamp": "always",
+        "indicators[].indicators.heikinAshi.volume": "always",
+        "indicators[].indicators.hma20": "always",
+        "indicators[].indicators.keltnerChannels": "always",
+        "indicators[].indicators.keltnerChannels.lower": "always",
+        "indicators[].indicators.keltnerChannels.middle": "always",
+        "indicators[].indicators.keltnerChannels.upper": "always",
+        "indicators[].indicators.mcginleyDynamic20": "always",
+        "indicators[].indicators.mfi14": "always",
+        "indicators[].indicators.momentum10": "always",
+        "indicators[].indicators.obv": "always",
+        "indicators[].indicators.parabolicSar": "always",
+        "indicators[].indicators.pivotPoints": "always",
+        "indicators[].indicators.pivotPoints.pivot": "always",
+        "indicators[].indicators.pivotPoints.r1": "always",
+        "indicators[].indicators.pivotPoints.r2": "always",
+        "indicators[].indicators.pivotPoints.r3": "always",
+        "indicators[].indicators.pivotPoints.s1": "always",
+        "indicators[].indicators.pivotPoints.s2": "always",
+        "indicators[].indicators.pivotPoints.s3": "always",
+        "indicators[].indicators.roc12": "always",
+        "indicators[].indicators.rsi14": "always",
+        "indicators[].indicators.sma10": "always",
+        "indicators[].indicators.sma20": "always",
+        "indicators[].indicators.stochastic": "always",
+        "indicators[].indicators.stochastic.d": "always",
+        "indicators[].indicators.stochastic.k": "always",
+        "indicators[].indicators.supertrend": "always",
+        "indicators[].indicators.supertrend.trend": "always",
+        "indicators[].indicators.supertrend.value": "always",
+        "indicators[].indicators.trueRange": "always",
+        "indicators[].indicators.vwap": "always",
+        "indicators[].indicators.vwma20": "always",
+        "indicators[].indicators.williamsR14": "always",
+        "indicators[].indicators.wma10": "always",
+        "indicators[].indicators.wma20": "always",
+        "indicators[].indicators.zigzagLastPivot": "always",
+        "indicators[].indicators.zigzagLastPivot.index": "always",
+        "indicators[].indicators.zigzagLastPivot.isHigh": "always",
+        "indicators[].indicators.zigzagLastPivot.price": "always",
+        "indicators[].symbol": "always"
       }
     },
     "indices": {
@@ -960,6 +1380,18 @@
         "quotes[].typeDisp"
       ]
     },
+    "market-calendar": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].detail": "always",
+        "[].detail.__typename": "always",
+        "[].detail.close": "always",
+        "[].detail.exchange": "always",
+        "[].detail.name": "always",
+        "[].detail.status": "always"
+      }
+    },
     "market-summary": {
       "fields": {
         "[]": "always",
@@ -1047,6 +1479,70 @@
         "puts[].volume": "always",
         "strikes": "always",
         "strikes[]": "always"
+      }
+    },
+    "options-batch": {
+      "fields": {
+        "options": "always",
+        "options[]": "always",
+        "options[].options": "always",
+        "options[].options.calls": "always",
+        "options[].options.calls[]": "always",
+        "options[].options.calls[].ask": "always",
+        "options[].options.calls[].bid": "always",
+        "options[].options.calls[].change": "always",
+        "options[].options.calls[].contractSize": "always",
+        "options[].options.calls[].contractSymbol": "always",
+        "options[].options.calls[].currency": "always",
+        "options[].options.calls[].expiration": "always",
+        "options[].options.calls[].impliedVolatility": "always",
+        "options[].options.calls[].inTheMoney": "always",
+        "options[].options.calls[].lastPrice": "always",
+        "options[].options.calls[].lastTradeDate": "always",
+        "options[].options.calls[].openInterest": "always",
+        "options[].options.calls[].percentChange": "always",
+        "options[].options.calls[].strike": "always",
+        "options[].options.calls[].volume": "always",
+        "options[].options.expirationDates": "always",
+        "options[].options.expirationDates[]": "always",
+        "options[].options.puts": "always",
+        "options[].options.puts[]": "always",
+        "options[].options.puts[].ask": "always",
+        "options[].options.puts[].bid": "always",
+        "options[].options.puts[].change": "always",
+        "options[].options.puts[].contractSize": "always",
+        "options[].options.puts[].contractSymbol": "always",
+        "options[].options.puts[].currency": "always",
+        "options[].options.puts[].expiration": "always",
+        "options[].options.puts[].impliedVolatility": "always",
+        "options[].options.puts[].inTheMoney": "always",
+        "options[].options.puts[].lastPrice": "always",
+        "options[].options.puts[].lastTradeDate": "always",
+        "options[].options.puts[].openInterest": "always",
+        "options[].options.puts[].percentChange": "always",
+        "options[].options.puts[].strike": "always",
+        "options[].options.puts[].volume": "always",
+        "options[].options.strikes": "always",
+        "options[].options.strikes[]": "always",
+        "options[].symbol": "always"
+      }
+    },
+    "press-releases": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].symbol": "always",
+        "[].text": "always",
+        "[].title": "always"
+      }
+    },
+    "price-target-consensus": {
+      "fields": {
+        "symbol": "always",
+        "targetConsensus": "always",
+        "targetHigh": "always",
+        "targetLow": "always",
+        "targetMedian": "always"
       }
     },
     "quote": {
@@ -1490,6 +1986,19 @@
         "quotes[].symbol": "always"
       }
     },
+    "rating-consensus": {
+      "fields": {
+        "buy": "always",
+        "hold": "always",
+        "sell": "always",
+        "strongBuy": "always",
+        "strongSell": "always",
+        "symbol": "always"
+      },
+      "uncovered": [
+        "consensus"
+      ]
+    },
     "recommendations": {
       "fields": {
         "providerId": "always",
@@ -1498,6 +2007,18 @@
         "recommendations[].score": "always",
         "recommendations[].symbol": "always",
         "symbol": "always"
+      }
+    },
+    "recommendations-batch": {
+      "fields": {
+        "recommendations": "always",
+        "recommendations[]": "always",
+        "recommendations[].providerId": "always",
+        "recommendations[].recommendations": "always",
+        "recommendations[].recommendations[]": "always",
+        "recommendations[].recommendations[].score": "always",
+        "recommendations[].recommendations[].symbol": "always",
+        "recommendations[].symbol": "always"
       }
     },
     "risk": {
@@ -1693,6 +2214,27 @@
         "topMutualFunds[].ytdReturn": "always"
       }
     },
+    "sector-pe": {
+      "fields": {
+        "[]": "always",
+        "[].pe": "always",
+        "[].sector": "always"
+      },
+      "uncovered": [
+        "[].date",
+        "[].exchange"
+      ]
+    },
+    "sector-performance": {
+      "fields": {
+        "[]": "always",
+        "[].changePercent": "always",
+        "[].sector": "always"
+      },
+      "uncovered": [
+        "[].exchange"
+      ]
+    },
     "spark": {
       "fields": {
         "sparks": "always",
@@ -1743,6 +2285,19 @@
         "[].timestamp": "always"
       }
     },
+    "splits-batch": {
+      "fields": {
+        "splits": "always",
+        "splits[]": "always",
+        "splits[].splits": "always",
+        "splits[].splits[]": "always",
+        "splits[].splits[].denominator": "always",
+        "splits[].splits[].numerator": "always",
+        "splits[].splits[].ratio": "always",
+        "splits[].splits[].timestamp": "always",
+        "splits[].symbol": "always"
+      }
+    },
     "transcripts": {
       "fields": {
         "transcriptContent": "always",
@@ -1771,6 +2326,43 @@
         "transcriptMetadata.transcriptId": "always",
         "transcriptMetadata.transcriptType": "always",
         "transcriptMetadata.updated": "always"
+      }
+    },
+    "transcripts-all": {
+      "fields": {
+        "[]": "always",
+        "[].eventId": "always",
+        "[].quarter": "always",
+        "[].title": "always",
+        "[].transcript": "always",
+        "[].transcript.transcriptContent": "always",
+        "[].transcript.transcriptContent.companyId": "always",
+        "[].transcript.transcriptContent.eventId": "always",
+        "[].transcript.transcriptContent.speakerMapping": "always",
+        "[].transcript.transcriptContent.speakerMapping[]": "always",
+        "[].transcript.transcriptContent.speakerMapping[].speaker": "always",
+        "[].transcript.transcriptContent.speakerMapping[].speakerData": "always",
+        "[].transcript.transcriptContent.speakerMapping[].speakerData.company": "always",
+        "[].transcript.transcriptContent.speakerMapping[].speakerData.name": "always",
+        "[].transcript.transcriptContent.speakerMapping[].speakerData.role": "always",
+        "[].transcript.transcriptContent.transcript": "always",
+        "[].transcript.transcriptContent.transcript.numberOfSpeakers": "always",
+        "[].transcript.transcriptContent.transcript.text": "always",
+        "[].transcript.transcriptContent.version": "always",
+        "[].transcript.transcriptMetadata": "always",
+        "[].transcript.transcriptMetadata.date": "always",
+        "[].transcript.transcriptMetadata.eventId": "always",
+        "[].transcript.transcriptMetadata.eventType": "always",
+        "[].transcript.transcriptMetadata.fiscalPeriod": "always",
+        "[].transcript.transcriptMetadata.fiscalYear": "always",
+        "[].transcript.transcriptMetadata.isLatest": "always",
+        "[].transcript.transcriptMetadata.s3Url": "always",
+        "[].transcript.transcriptMetadata.title": "always",
+        "[].transcript.transcriptMetadata.transcriptId": "always",
+        "[].transcript.transcriptMetadata.transcriptType": "always",
+        "[].transcript.transcriptMetadata.updated": "always",
+        "[].url": "always",
+        "[].year": "always"
       }
     },
     "trending": {

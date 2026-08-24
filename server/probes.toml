@@ -246,3 +246,191 @@ path = "/v2/industries/software-infrastructure"
 [[probe]]
 name = "edgar-search"
 path = "/v2/edgar/search?q=Apple"
+
+[[probe]]
+name = "commodities"
+path = "/v2/commodities/GC=F"
+assert = ["symbol == \"GC=F\"", "price > 0"]
+
+[[probe]]
+name = "futures"
+path = "/v2/futures/ES=F"
+assert = ["symbol == \"ES=F\"", "price > 0"]
+
+[[probe]]
+name = "index-constituents"
+path = "/v2/index-constituents/%5EGSPC"
+assert = ["[].symbol exists", "[].sector exists"]
+
+[[probe]]
+name = "market-calendar"
+shape = false
+path = "/v2/market-calendar?kind=market-holiday"
+assert = ["[].date exists", "[].detail exists"]
+
+[[probe]]
+name = "sector-pe"
+path = "/v2/sector-pe"
+assert = ["[].sector exists", "[].pe exists"]
+
+[[probe]]
+name = "sector-performance"
+path = "/v2/sector-performance"
+assert = ["[].sector exists", "[].changePercent exists"]
+
+[[probe]]
+name = "press-releases"
+path = "/v2/press-releases/AAPL"
+assert = ["[].title exists"]
+
+[[probe]]
+name = "filing-risk-factors"
+path = "/v2/filings/AAPL/risk-factors"
+assert = ["#len >= 1", "[].filingDate exists"]
+
+[[probe]]
+name = "filing-sections"
+path = "/v2/filings/AAPL/sections?accessionNumber=0000320193-24-000123&form=ten-k"
+assert = ["[].section exists"]
+
+[[probe]]
+name = "etf-profile"
+path = "/v2/etf-profile/SPY"
+assert = ["symbol == \"SPY\""]
+
+[[probe]]
+name = "price-target-consensus"
+path = "/v2/price-target-consensus/AAPL"
+assert = ["symbol == \"AAPL\""]
+
+[[probe]]
+name = "rating-consensus"
+path = "/v2/rating-consensus/AAPL"
+assert = ["symbol == \"AAPL\""]
+
+[[probe]]
+name = "company-profile"
+path = "/v2/company-profile/AAPL"
+assert = ["symbol == \"AAPL\""]
+
+[[probe]]
+name = "earnings-surprises"
+shape = false
+path = "/v2/earnings-surprises/AAPL"
+
+[[probe]]
+name = "earnings-transcript"
+path = "/v2/earnings-transcript/AAPL"
+assert = ["symbol == \"AAPL\""]
+
+[[probe]]
+name = "edgar-cik"
+path = "/v2/edgar/cik/AAPL"
+assert = ["cik exists"]
+
+[[probe]]
+name = "edgar-facts"
+shape = false
+path = "/v2/edgar/facts/AAPL"
+
+[[probe]]
+name = "edgar-submissions"
+shape = false
+path = "/v2/edgar/submissions/AAPL"
+assert = ["filings#len >= 1"]
+
+[[probe]]
+name = "filings-congressional-trades"
+shape = false
+path = "/v2/filings/AAPL/congressional-trades"
+
+[[probe]]
+name = "filings-fails-to-deliver"
+shape = false
+path = "/v2/filings/AAPL/fails-to-deliver"
+
+[[probe]]
+name = "cftc-cot"
+shape = false
+path = "/v2/cftc/cot/GC=F"
+
+[[probe]]
+name = "gdelt-news"
+shape = false
+path = "/v2/gdelt/news/GOOGL"
+
+[[probe]]
+name = "crypto-news"
+shape = false
+path = "/v2/crypto/news"
+
+[[probe]]
+name = "forex-news"
+shape = false
+path = "/v2/forex/news"
+
+[[probe]]
+name = "fred-series"
+shape = false
+path = "/v2/fred/series/FEDFUNDS"
+
+[[probe]]
+name = "crypto-coin"
+path = "/v2/crypto/coins/bitcoin"
+assert = ["currentPrice > 0"]
+
+[[probe]]
+name = "crypto-global"
+path = "/v2/crypto/global"
+assert = ["totalMarketCapUsd > 0"]
+
+[[probe]]
+name = "crypto-search"
+shape = false
+path = "/v2/crypto/search?query=bitcoin"
+assert = ["[].id exists"]
+
+[[probe]]
+name = "crypto-trending"
+shape = false
+path = "/v2/crypto/trending"
+
+[[probe]]
+name = "dividends-batch"
+shape = false
+path = "/v2/dividends?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "splits-batch"
+shape = false
+path = "/v2/splits?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "capital-gains-batch"
+shape = false
+path = "/v2/capital-gains?symbols=VFIAX"
+
+[[probe]]
+name = "financials-batch"
+shape = false
+path = "/v2/financials?symbols=AAPL,MSFT&statement=income"
+
+[[probe]]
+name = "indicators-batch"
+shape = false
+path = "/v2/indicators?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "options-batch"
+shape = false
+path = "/v2/options?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "recommendations-batch"
+shape = false
+path = "/v2/recommendations?symbols=AAPL,MSFT"
+
+[[probe]]
+name = "transcripts-all"
+shape = false
+path = "/v2/transcripts/AAPL/all"
