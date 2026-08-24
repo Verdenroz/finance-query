@@ -5429,9 +5429,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8aaa95296f49839018b95d18e4301540849ccd75e1cd0d27d7fc9c002a3b3bef"
+checksum = "cdf659fa97b1f26a15145d95dc1c7db177720c69ce5b655896281b00357493e2"
 dependencies = [
  "soothfast-macros",
  "soothfast-measure",
