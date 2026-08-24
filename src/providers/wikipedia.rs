@@ -26,6 +26,13 @@ impl IndicesProvider for WikipediaProvider {
     ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
         crate::adapters::wikipedia::fetch_index_constituents_response(index).await
     }
+
+    async fn fetch_index_constituent_changes(
+        &self,
+        index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        crate::adapters::wikipedia::fetch_index_constituent_changes_response(index).await
+    }
 }
 
 #[async_trait::async_trait]
