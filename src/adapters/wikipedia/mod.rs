@@ -2,11 +2,12 @@
 //!
 //! Requires the **`wikipedia`** feature flag.
 //!
-//! Table-scrapes "List of S&P 500 companies", the only tracked index article
-//! that still carries an inline constituents table (see `indices` for why
-//! Nasdaq-100/Dow Jones stay unrouted). Reuses the crate's dependency-free
-//! HTML element matcher (`crate::scrapers::html`), the same one
-//! `scrapers::yahoo_exchanges` already scrapes a table with.
+//! Table-scrapes "List of S&P 500 companies" for current constituents and
+//! "Historical components of the S&P 500" for constituent-change history —
+//! the only tracked index with inline tables for either (see `indices` for
+//! why Nasdaq-100/Dow Jones stay unrouted). Reuses the crate's
+//! dependency-free HTML element matcher (`crate::scrapers::html`), the same
+//! one `scrapers::yahoo_exchanges` already scrapes a table with.
 
 pub(crate) mod client;
 pub(crate) mod indices;
@@ -30,4 +31,6 @@ fn client() -> Result<WikipediaClient> {
     WikipediaClient::new(DEFAULT_TIMEOUT, shared_limiter(), client::WIKIPEDIA_BASE)
 }
 
-pub(crate) use indices::fetch_index_constituents_response;
+pub(crate) use indices::{
+    fetch_index_constituent_changes_response, fetch_index_constituents_response,
+};
