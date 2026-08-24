@@ -96,7 +96,9 @@ impl Discovery {
     /// `active = false` asks for delisted securities instead. This is an
     /// unfiltered dump — expect thousands of rows in one response — so prefer
     /// [`search`](Self::search) when you have a query. Cached per `active`.
-    /// Currently Alpha Vantage only.
+    /// EDGAR serves `active = true` keylessly from SEC's bulk ticker files
+    /// (no exchange-listing history, so `active = false` isn't supported
+    /// there); Alpha Vantage and FMP serve both.
     pub async fn listing_status(&self, active: bool) -> Result<Vec<SymbolMatch>> {
         let providers = Arc::clone(&self.providers);
         self.cache

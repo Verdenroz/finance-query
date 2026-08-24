@@ -6,6 +6,11 @@
 /// All ticker-to-CIK mappings (JSON, ~2MB).
 pub const COMPANY_TICKERS: &str = "https://www.sec.gov/files/company_tickers.json";
 
+/// Ticker-to-listing-exchange mappings (JSON, ~1MB). Covers active listings
+/// only — SEC keeps no delisted-securities file.
+pub const COMPANY_TICKERS_EXCHANGE: &str =
+    "https://www.sec.gov/files/company_tickers_exchange.json";
+
 /// Build the submissions URL for a CIK (filing history + company metadata).
 ///
 /// CIK is zero-padded to 10 digits as required by the EDGAR API.

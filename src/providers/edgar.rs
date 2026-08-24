@@ -4,7 +4,9 @@
 //! Always available — no API key required (needs `EDGAR_EMAIL` env var
 //! or an `edgar::init()` call before use).
 
-use super::{CorporateProvider, FilingsProvider, Operation, ProviderAdapter, ProviderCore};
+use super::{
+    CorporateProvider, DiscoveryProvider, FilingsProvider, Operation, ProviderAdapter, ProviderCore,
+};
 use crate::error::Result;
 use crate::models::filings::ProviderFilings;
 
@@ -112,6 +114,25 @@ impl CorporateProvider for EdgarProvider {
     }
 }
 
+/// EDGAR has no free-text symbol search — only the bulk ticker listing.
+#[async_trait::async_trait]
+impl DiscoveryProvider for EdgarProvider {
+    async fn fetch_symbol_search(
+        &self,
+        _query: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        Err(self.not_supported(Operation::SymbolSearch))
+    }
+
+    async fn fetch_listing_status(
+        &self,
+        active: bool,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        crate::adapters::edgar::discovery::fetch_listing_status_response(active).await
+    }
+}
+
 #[async_trait::async_trait]
 impl ProviderAdapter for EdgarProvider {
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
@@ -119,6 +140,10 @@ impl ProviderAdapter for EdgarProvider {
     }
 
     fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
+        Some(self)
+    }
+
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         Some(self)
     }
 }
