@@ -22,6 +22,11 @@ concurrency:
   group: soothfast-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+# docs-binds/spec-server/spec-mcp/proto-check default to nightly and set
+# SOOTHFAST_BENCH_TOOLCHAIN=nightly so cargo bench --no-run (route listing)
+# and cargo +nightly rustdoc share one compile instead of one per toolchain.
+# gate/baseline stay on stable — they measure performance, and the compiler
+# affects the numbers being gated on.
 jobs:
   changes:
     name: Detect Soothfast Changes
@@ -180,6 +185,8 @@ jobs:
     # result-based so the changes job's skip on push events does not
     # cascade past baseline's always() and starve the master cache warm
     if: always() && needs.baseline.result == 'success'
+    env:
+      SOOTHFAST_BENCH_TOOLCHAIN: nightly
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -223,6 +230,8 @@ jobs:
     needs: changes
     if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
+    env:
+      SOOTHFAST_BENCH_TOOLCHAIN: nightly
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -272,6 +281,8 @@ jobs:
     needs: changes
     if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
+    env:
+      SOOTHFAST_BENCH_TOOLCHAIN: nightly
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -307,6 +318,8 @@ jobs:
     needs: changes
     if: always() && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
     runs-on: ubuntu-latest
+    env:
+      SOOTHFAST_BENCH_TOOLCHAIN: nightly
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
