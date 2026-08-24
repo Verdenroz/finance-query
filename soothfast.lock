@@ -50,7 +50,7 @@
     "finance_query::models::sentiment::response::FearAndGreed": "9ff1c525f8b3de3d",
     "finance_query::providers::Capability": "2f58b918177f54e7",
     "finance_query::providers::Fetch": "716d0ecf6acde694",
-    "finance_query::providers::Provider": "b65bd092e2218214",
+    "finance_query::providers::Provider": "0695391e93fc2b1a",
     "finance_query::risk::RiskSummary": "ce95c5249016cb91",
     "finance_query::risk::beta::beta": "0dfd56b8cbadb56d",
     "finance_query::risk::ratios::sharpe_ratio": "25ed949fa65a8abe",
