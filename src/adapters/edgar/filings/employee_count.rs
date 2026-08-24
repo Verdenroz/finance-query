@@ -137,6 +137,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_hii_employee_count_from_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let out = fetch_employee_count_response("HII").await.unwrap();
         assert!(!out.is_empty());
         assert!(out[0].employee_count.unwrap() > 0);
