@@ -3,7 +3,7 @@
 use crate::error::Result;
 use crate::models::corporate::news::News;
 
-const QUERY: &str = "forex OR \"foreign exchange\" OR currency";
+const QUERY: &str = "(forex OR \"foreign exchange\" OR currency)";
 
 const TIMESPAN: &str = "2w";
 

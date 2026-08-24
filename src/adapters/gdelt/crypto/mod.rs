@@ -3,7 +3,7 @@
 use crate::error::Result;
 use crate::models::corporate::news::News;
 
-const QUERY: &str = "bitcoin OR ethereum OR cryptocurrency";
+const QUERY: &str = "(bitcoin OR ethereum OR cryptocurrency)";
 
 const TIMESPAN: &str = "2w";
 
