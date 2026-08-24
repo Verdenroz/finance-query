@@ -888,6 +888,12 @@ macro_rules! ref_bench {
             run_ref_strategy(input, $entry, always_true());
         }
     };
+    ($fn_name:ident, $covers:literal, $entry:expr, tolerance = $tolerance:literal) => {
+        #[bench(group = "backtesting_refs", setup = backtest_inputs, covers = $covers, tolerance = $tolerance)]
+        fn $fn_name(input: &(BacktestConfig, Vec<Candle>)) {
+            run_ref_strategy(input, $entry, always_true());
+        }
+    };
 }
 
 ref_bench!(
@@ -1072,10 +1078,12 @@ ref_bench!(
     "finance_query::backtesting::refs::stochastic_rsi",
     ref_stochastic_rsi(14, 14, 3, 3).k().above(0.0)
 );
+// Small enough that a codegen change alone crosses +5% with source unchanged.
 ref_bench!(
     ref_bench_supertrend,
     "finance_query::backtesting::refs::supertrend",
-    ref_supertrend(10, 3.0).value().above(0.0)
+    ref_supertrend(10, 3.0).value().above(0.0),
+    tolerance = "15%"
 );
 ref_bench!(
     ref_bench_tema,

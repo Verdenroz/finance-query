@@ -673,6 +673,17 @@ impl MarketProvider for YahooProvider {
             .collect())
     }
 
+    async fn fetch_sector_performance_history(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+        crate::adapters::yahoo::market::sector_history::fetch_sector_performance_history(
+            &self.client,
+            limit,
+        )
+        .await
+    }
+
     /// Fans out over the 11 GICS sectors' equity screeners — there's no
     /// bulk sector-P/E endpoint — aggregating each sector's constituent
     /// trailing P/E by median (more outlier-robust than a mean against
