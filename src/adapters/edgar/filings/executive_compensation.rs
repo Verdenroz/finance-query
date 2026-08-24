@@ -42,9 +42,8 @@ enum Column {
 }
 
 fn classify_header(text: &str) -> Column {
-    // Line-wrapped headers can pick up runs of whitespace from stacked
-    // block-boundary replacements (e.g. "Stock  Awards"), which would
-    // otherwise break a multi-word match like "stock award".
+    // Stacked block-boundary replacements can leave runs of whitespace
+    // (e.g. "Stock  Awards"), which would break a multi-word match.
     let t = text
         .to_lowercase()
         .split_whitespace()
@@ -213,9 +212,8 @@ pub async fn fetch_executive_compensation_response(
         });
     };
 
-    // The archive path uses the registrant's own CIK, not the accession
-    // number's filer-agent CIK prefix — proxy statements are commonly filed
-    // through a third-party agent whose CIK differs from the company's own.
+    // Uses the registrant's own CIK, not the accession number's filer-agent
+    // prefix — proxy statements are often filed through a third-party agent.
     let accession_no_dashes = filing.accession_number.replace('-', "");
     let url = format!(
         "https://www.sec.gov/Archives/edgar/data/{}/{accession_no_dashes}/{}",
