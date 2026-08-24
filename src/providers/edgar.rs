@@ -103,6 +103,13 @@ impl CorporateProvider for EdgarProvider {
         )
         .await
     }
+
+    async fn fetch_employee_count(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+        crate::adapters::edgar::filings::employee_count::fetch_employee_count_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]
