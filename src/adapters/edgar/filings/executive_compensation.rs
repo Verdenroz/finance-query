@@ -391,6 +391,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_apple_compensation_from_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let rows = fetch_executive_compensation_response("AAPL").await.unwrap();
         assert!(
             rows.len() >= 3,
@@ -429,6 +430,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_huntington_ingalls_compensation_from_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let rows = fetch_executive_compensation_response("HII").await.unwrap();
         assert!(!rows.is_empty());
 
@@ -451,6 +453,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_microsoft_compensation_from_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let rows = fetch_executive_compensation_response("MSFT").await.unwrap();
         assert!(!rows.is_empty());
 
