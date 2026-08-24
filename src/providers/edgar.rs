@@ -112,6 +112,16 @@ impl CorporateProvider for EdgarProvider {
     ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
         crate::adapters::edgar::filings::employee_count::fetch_employee_count_response(symbol).await
     }
+
+    async fn fetch_executive_compensation(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+        crate::adapters::edgar::filings::executive_compensation::fetch_executive_compensation_response(
+            symbol,
+        )
+        .await
+    }
 }
 
 /// EDGAR has no free-text symbol search — only the bulk ticker listing.
