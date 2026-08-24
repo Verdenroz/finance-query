@@ -383,6 +383,44 @@ fn profile_and_price_to_company_profile(
     }
 }
 
+fn profile_and_price_to_symbol_details(
+    symbol: &str,
+    profile: Option<crate::models::corporate::AssetProfile>,
+    price: Option<crate::models::quote::price::Price>,
+    key_stats: Option<crate::models::quote::DefaultKeyStatistics>,
+) -> crate::models::discovery::reference::SymbolDetails {
+    crate::models::discovery::reference::SymbolDetails {
+        symbol: symbol.to_string(),
+        name: price
+            .as_ref()
+            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+        description: profile
+            .as_ref()
+            .and_then(|p| p.long_business_summary.clone()),
+        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
+        asset_type: price.as_ref().and_then(|p| p.quote_type.clone()),
+        cik: None,
+        sic_code: None,
+        sic_description: None,
+        homepage_url: profile.as_ref().and_then(|p| p.website.clone()),
+        employees: profile
+            .as_ref()
+            .and_then(|p| p.full_time_employees)
+            .map(|v| v as u64),
+        market_cap: price
+            .as_ref()
+            .and_then(|p| p.market_cap.as_ref())
+            .and_then(|v| v.raw)
+            .map(|v| v as f64),
+        list_date: None,
+        shares_outstanding: key_stats
+            .as_ref()
+            .and_then(|k| k.shares_outstanding.as_ref())
+            .and_then(|v| v.raw)
+            .map(|v| v as f64),
+    }
+}
+
 fn financial_data_to_price_target_consensus(
     symbol: &str,
     data: Option<crate::models::quote::FinancialData>,
@@ -863,6 +901,39 @@ impl DiscoveryProvider for YahooProvider {
         Ok(search_quotes_to_symbol_matches(results.quotes))
     }
 
+    /// Composes Yahoo's own profile/price/key-statistics modules with EDGAR
+    /// submissions for `cik`/`sic_code`/`sic_description` — a best-effort
+    /// lookup, dropped rather than failing the whole call if the symbol
+    /// isn't in EDGAR's CIK map. `list_date` has no keyless source anywhere
+    /// (Yahoo carries no listing date, EDGAR submissions don't either) and
+    /// stays permanently unset on this path.
+    async fn fetch_symbol_details(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        let mut details = profile_and_price_to_symbol_details(
+            symbol,
+            resp.asset_profile,
+            resp.price,
+            resp.default_key_statistics,
+        );
+
+        match crate::adapters::edgar::submissions_for_symbol(symbol).await {
+            Ok(subs) => {
+                details.cik = subs.cik;
+                details.sic_code = subs.sic;
+                details.sic_description = subs.sic_description;
+            }
+            Err(err) => {
+                tracing::debug!("no EDGAR submissions for {symbol}: {err}");
+            }
+        }
+
+        Ok(details)
+    }
+
     /// Derived from Yahoo's custom equity screener. Sector, industry, beta,
     /// country, and actively-trading status stay unset: Yahoo's screener
     /// response carries none of them as a result column.
@@ -1070,6 +1141,69 @@ mod tests {
         let pes = provider.fetch_sector_pe().await.unwrap();
         assert!(!pes.is_empty());
         assert!(pes.iter().any(|p| p.pe.is_some_and(|pe| pe > 0.0)));
+    }
+
+    fn fixture_asset_profile() -> crate::models::corporate::AssetProfile {
+        serde_json::from_value(serde_json::json!({
+            "website": "https://www.apple.com",
+            "fullTimeEmployees": 164_000,
+            "longBusinessSummary": "Apple Inc. designs, manufactures, and markets smartphones."
+        }))
+        .unwrap()
+    }
+
+    fn fixture_details_price() -> crate::models::quote::price::Price {
+        serde_json::from_value(serde_json::json!({
+            "shortName": "Apple Inc.",
+            "exchangeName": "NMS",
+            "quoteType": "EQUITY",
+            "marketCap": {"raw": 3_500_000_000_000i64, "fmt": "3.5T"}
+        }))
+        .unwrap()
+    }
+
+    fn fixture_key_stats() -> crate::models::quote::DefaultKeyStatistics {
+        serde_json::from_value(serde_json::json!({
+            "sharesOutstanding": {"raw": 15_000_000_000i64, "fmt": "15B"}
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn symbol_details_maps_yahoo_fields_and_leaves_edgar_fields_unset() {
+        let details = profile_and_price_to_symbol_details(
+            "AAPL",
+            Some(fixture_asset_profile()),
+            Some(fixture_details_price()),
+            Some(fixture_key_stats()),
+        );
+        assert_eq!(details.symbol, "AAPL");
+        assert_eq!(details.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(details.exchange.as_deref(), Some("NMS"));
+        assert_eq!(details.asset_type.as_deref(), Some("EQUITY"));
+        assert_eq!(
+            details.homepage_url.as_deref(),
+            Some("https://www.apple.com")
+        );
+        assert_eq!(details.employees, Some(164_000));
+        assert_eq!(details.market_cap, Some(3_500_000_000_000.0));
+        assert_eq!(details.shares_outstanding, Some(15_000_000_000.0));
+        assert_eq!(details.cik, None);
+        assert_eq!(details.sic_code, None);
+        assert_eq!(details.list_date, None);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn fetches_symbol_details_composed_with_live_edgar() {
+        let provider = YahooProvider::new(&crate::adapters::yahoo::client::ClientConfig::default())
+            .await
+            .unwrap();
+        let details = provider.fetch_symbol_details("AAPL").await.unwrap();
+        assert_eq!(details.name.as_deref(), Some("Apple Inc."));
+        assert_eq!(details.cik.as_deref(), Some("0000320193"));
+        assert!(details.sic_description.is_some());
+        assert!(details.list_date.is_none());
     }
 
     #[test]
