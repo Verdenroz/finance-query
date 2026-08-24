@@ -99,6 +99,9 @@ pub trait ChartProvider: ProviderCore {
     /// Fetch grouped daily OHLCV bars for every stock ticker on `date`
     /// (`YYYY-MM-DD`) in a single request — market-wide rather than
     /// symbol-scoped. Returns `(symbol, candle)` pairs.
+    ///
+    /// NOTE: no keyless provider in this crate publishes a market-wide bulk
+    /// EOD file for stocks; this stays a Polygon-only capability.
     async fn fetch_grouped_daily(
         &self,
         _date: &str,
@@ -108,6 +111,11 @@ pub trait ChartProvider: ProviderCore {
 
     /// Fetch grouped daily OHLCV bars for every crypto ticker on `date`
     /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    ///
+    /// NOTE: Binance's 24hr ticker endpoint covers every symbol in one call
+    /// but only as a rolling now-minus-24h window, not an arbitrary
+    /// historical `date` — the wrong shape for this operation, so it stays
+    /// Polygon-only.
     async fn fetch_crypto_grouped_daily(
         &self,
         _date: &str,
@@ -117,6 +125,11 @@ pub trait ChartProvider: ProviderCore {
 
     /// Fetch grouped daily OHLCV bars for every forex ticker on `date`
     /// (`YYYY-MM-DD`) in a single request. Returns `(symbol, candle)` pairs.
+    ///
+    /// NOTE: Frankfurter serves every ECB reference rate for a historical
+    /// `date` in one call, but only a single daily fixing rate, not OHLCV
+    /// candles — the wrong shape for this operation, so it stays
+    /// Polygon-only.
     async fn fetch_forex_grouped_daily(
         &self,
         _date: &str,
@@ -176,6 +189,10 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     }
 
     /// Fetch price-target publication activity over trailing windows.
+    ///
+    /// NOTE: analyst price targets aren't SEC-filed data — no keyless
+    /// provider in this crate publishes trailing-window target-publication
+    /// counts, so this stays FMP-only.
     async fn fetch_price_target_summary(
         &self,
         _symbol: &str,
@@ -550,6 +567,11 @@ pub(crate) trait EconomicProvider: ProviderCore {
 
     /// Fetch a series as it stood on `date` (`YYYY-MM-DD`) rather than as
     /// currently revised — the point-in-time view backtests need.
+    ///
+    /// NOTE: this vintage/realtime-window concept is unique to FRED/ALFRED
+    /// among the providers integrated here — WorldBank, FiscalData, and BLS
+    /// all serve only the latest value per period, with no revision
+    /// history. Stays FRED-only.
     async fn fetch_economic_series_as_of(
         &self,
         _series_id: &str,
@@ -559,6 +581,11 @@ pub(crate) trait EconomicProvider: ProviderCore {
     }
 
     /// Search the provider's series catalog by free text.
+    ///
+    /// NOTE: WorldBank and BLS treat series ids as opaque, live-validated
+    /// strings with no local catalog; FiscalData carries only 7 curated
+    /// series. None is a meaningful substitute for FRED's live full-text
+    /// search over its ~800k series, so this stays FRED-only.
     async fn fetch_economic_search(
         &self,
         _query: &str,
@@ -568,6 +595,9 @@ pub(crate) trait EconomicProvider: ProviderCore {
     }
 
     /// List the child categories of `parent_id` in the series category tree.
+    ///
+    /// NOTE: none of WorldBank/FiscalData/BLS models a category/topic tree
+    /// in this crate. Stays FRED-only.
     async fn fetch_economic_categories(
         &self,
         _parent_id: i64,
@@ -576,6 +606,9 @@ pub(crate) trait EconomicProvider: ProviderCore {
     }
 
     /// List the provider's scheduled data releases.
+    ///
+    /// NOTE: no keyless provider integrated here models a scheduled-release
+    /// entity. Stays FRED-only.
     async fn fetch_economic_releases(
         &self,
     ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
