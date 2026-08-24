@@ -22,7 +22,7 @@ impl DiscoveryProvider for LocalExchangeProvider {
     }
 
     async fn fetch_exchanges(&self) -> Result<Vec<ExchangeInfo>> {
-        Ok(EXCHANGES.iter().map(|e| e.to_exchange_info()).collect())
+        Ok(EXCHANGES.iter().map(to_exchange_info).collect())
     }
 }
 
@@ -33,195 +33,140 @@ impl ProviderAdapter for LocalExchangeProvider {
     }
 }
 
-struct StaticExchange {
-    name: &'static str,
-    mic: &'static str,
-    operating_mic: &'static str,
-    asset_class: &'static str,
-    locale: &'static str,
-    exchange_type: &'static str,
-    url: &'static str,
-}
+/// `(name, mic, operating_mic, locale, url)`. `asset_class` is always
+/// `"stocks"` and `exchange_type` is always `"exchange"` except OTC Markets
+/// (`"TRF"`), so both stay out of the table rather than repeating per row.
+const EXCHANGES: &[(&str, &str, &str, &str, &str)] = &[
+    (
+        "New York Stock Exchange",
+        "XNYS",
+        "XNYS",
+        "us",
+        "https://www.nyse.com",
+    ),
+    ("Nasdaq", "XNAS", "XNAS", "us", "https://www.nasdaq.com"),
+    (
+        "NYSE Arca",
+        "ARCX",
+        "XNYS",
+        "us",
+        "https://www.nyse.com/markets/nyse-arca",
+    ),
+    (
+        "Cboe BZX Exchange",
+        "BATS",
+        "XCBO",
+        "us",
+        "https://www.cboe.com",
+    ),
+    ("IEX", "IEXG", "IEXG", "us", "https://iextrading.com"),
+    (
+        "OTC Markets",
+        "OTCM",
+        "OTCM",
+        "us",
+        "https://www.otcmarkets.com",
+    ),
+    (
+        "Toronto Stock Exchange",
+        "XTSE",
+        "XTSE",
+        "ca",
+        "https://www.tsx.com",
+    ),
+    (
+        "TSX Venture Exchange",
+        "XTSX",
+        "XTSE",
+        "ca",
+        "https://www.tsx.com/tsxv",
+    ),
+    (
+        "London Stock Exchange",
+        "XLON",
+        "XLON",
+        "gb",
+        "https://www.londonstockexchange.com",
+    ),
+    (
+        "Euronext Paris",
+        "XPAR",
+        "XPAR",
+        "fr",
+        "https://www.euronext.com",
+    ),
+    (
+        "Deutsche Börse Xetra",
+        "XETR",
+        "XETR",
+        "de",
+        "https://www.xetra.com",
+    ),
+    (
+        "SIX Swiss Exchange",
+        "XSWX",
+        "XSWX",
+        "ch",
+        "https://www.six-group.com",
+    ),
+    (
+        "Tokyo Stock Exchange",
+        "XTKS",
+        "XTKS",
+        "jp",
+        "https://www.jpx.co.jp",
+    ),
+    (
+        "Hong Kong Exchange",
+        "XHKG",
+        "XHKG",
+        "hk",
+        "https://www.hkex.com.hk",
+    ),
+    (
+        "Shanghai Stock Exchange",
+        "XSHG",
+        "XSHG",
+        "cn",
+        "http://english.sse.com.cn",
+    ),
+    (
+        "Shenzhen Stock Exchange",
+        "XSHE",
+        "XSHE",
+        "cn",
+        "http://www.szse.cn",
+    ),
+    (
+        "Australian Securities Exchange",
+        "XASX",
+        "XASX",
+        "au",
+        "https://www.asx.com.au",
+    ),
+    (
+        "National Stock Exchange of India",
+        "XNSE",
+        "XNSE",
+        "in",
+        "https://www.nseindia.com",
+    ),
+];
 
-impl StaticExchange {
-    fn to_exchange_info(&self) -> ExchangeInfo {
-        ExchangeInfo {
-            id: None,
-            name: Some(self.name.to_string()),
-            mic: Some(self.mic.to_string()),
-            operating_mic: Some(self.operating_mic.to_string()),
-            asset_class: Some(self.asset_class.to_string()),
-            locale: Some(self.locale.to_string()),
-            exchange_type: Some(self.exchange_type.to_string()),
-            url: Some(self.url.to_string()),
-        }
+fn to_exchange_info(
+    &(name, mic, operating_mic, locale, url): &(&str, &str, &str, &str, &str),
+) -> ExchangeInfo {
+    ExchangeInfo {
+        id: None,
+        name: Some(name.to_string()),
+        mic: Some(mic.to_string()),
+        operating_mic: Some(operating_mic.to_string()),
+        asset_class: Some("stocks".to_string()),
+        locale: Some(locale.to_string()),
+        exchange_type: Some(if mic == "OTCM" { "TRF" } else { "exchange" }.to_string()),
+        url: Some(url.to_string()),
     }
 }
-
-const EXCHANGES: &[StaticExchange] = &[
-    StaticExchange {
-        name: "New York Stock Exchange",
-        mic: "XNYS",
-        operating_mic: "XNYS",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "exchange",
-        url: "https://www.nyse.com",
-    },
-    StaticExchange {
-        name: "Nasdaq",
-        mic: "XNAS",
-        operating_mic: "XNAS",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "exchange",
-        url: "https://www.nasdaq.com",
-    },
-    StaticExchange {
-        name: "NYSE Arca",
-        mic: "ARCX",
-        operating_mic: "XNYS",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "exchange",
-        url: "https://www.nyse.com/markets/nyse-arca",
-    },
-    StaticExchange {
-        name: "Cboe BZX Exchange",
-        mic: "BATS",
-        operating_mic: "XCBO",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "exchange",
-        url: "https://www.cboe.com",
-    },
-    StaticExchange {
-        name: "IEX",
-        mic: "IEXG",
-        operating_mic: "IEXG",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "exchange",
-        url: "https://iextrading.com",
-    },
-    StaticExchange {
-        name: "OTC Markets",
-        mic: "OTCM",
-        operating_mic: "OTCM",
-        asset_class: "stocks",
-        locale: "us",
-        exchange_type: "TRF",
-        url: "https://www.otcmarkets.com",
-    },
-    StaticExchange {
-        name: "Toronto Stock Exchange",
-        mic: "XTSE",
-        operating_mic: "XTSE",
-        asset_class: "stocks",
-        locale: "ca",
-        exchange_type: "exchange",
-        url: "https://www.tsx.com",
-    },
-    StaticExchange {
-        name: "TSX Venture Exchange",
-        mic: "XTSX",
-        operating_mic: "XTSE",
-        asset_class: "stocks",
-        locale: "ca",
-        exchange_type: "exchange",
-        url: "https://www.tsx.com/tsxv",
-    },
-    StaticExchange {
-        name: "London Stock Exchange",
-        mic: "XLON",
-        operating_mic: "XLON",
-        asset_class: "stocks",
-        locale: "gb",
-        exchange_type: "exchange",
-        url: "https://www.londonstockexchange.com",
-    },
-    StaticExchange {
-        name: "Euronext Paris",
-        mic: "XPAR",
-        operating_mic: "XPAR",
-        asset_class: "stocks",
-        locale: "fr",
-        exchange_type: "exchange",
-        url: "https://www.euronext.com",
-    },
-    StaticExchange {
-        name: "Deutsche Börse Xetra",
-        mic: "XETR",
-        operating_mic: "XETR",
-        asset_class: "stocks",
-        locale: "de",
-        exchange_type: "exchange",
-        url: "https://www.xetra.com",
-    },
-    StaticExchange {
-        name: "SIX Swiss Exchange",
-        mic: "XSWX",
-        operating_mic: "XSWX",
-        asset_class: "stocks",
-        locale: "ch",
-        exchange_type: "exchange",
-        url: "https://www.six-group.com",
-    },
-    StaticExchange {
-        name: "Tokyo Stock Exchange",
-        mic: "XTKS",
-        operating_mic: "XTKS",
-        asset_class: "stocks",
-        locale: "jp",
-        exchange_type: "exchange",
-        url: "https://www.jpx.co.jp",
-    },
-    StaticExchange {
-        name: "Hong Kong Exchange",
-        mic: "XHKG",
-        operating_mic: "XHKG",
-        asset_class: "stocks",
-        locale: "hk",
-        exchange_type: "exchange",
-        url: "https://www.hkex.com.hk",
-    },
-    StaticExchange {
-        name: "Shanghai Stock Exchange",
-        mic: "XSHG",
-        operating_mic: "XSHG",
-        asset_class: "stocks",
-        locale: "cn",
-        exchange_type: "exchange",
-        url: "http://english.sse.com.cn",
-    },
-    StaticExchange {
-        name: "Shenzhen Stock Exchange",
-        mic: "XSHE",
-        operating_mic: "XSHE",
-        asset_class: "stocks",
-        locale: "cn",
-        exchange_type: "exchange",
-        url: "http://www.szse.cn",
-    },
-    StaticExchange {
-        name: "Australian Securities Exchange",
-        mic: "XASX",
-        operating_mic: "XASX",
-        asset_class: "stocks",
-        locale: "au",
-        exchange_type: "exchange",
-        url: "https://www.asx.com.au",
-    },
-    StaticExchange {
-        name: "National Stock Exchange of India",
-        mic: "XNSE",
-        operating_mic: "XNSE",
-        asset_class: "stocks",
-        locale: "in",
-        exchange_type: "exchange",
-        url: "https://www.nseindia.com",
-    },
-];
 
 #[cfg(test)]
 mod tests {
@@ -246,6 +191,22 @@ mod tests {
             .find(|e| e.name.as_deref() == Some("Nasdaq"))
             .unwrap();
         assert_eq!(nasdaq.mic.as_deref(), Some("XNAS"));
+    }
+
+    #[tokio::test]
+    async fn otc_markets_is_the_only_trf_exchange_type() {
+        let out = LocalExchangeProvider.fetch_exchanges().await.unwrap();
+        let otc = out
+            .iter()
+            .find(|e| e.name.as_deref() == Some("OTC Markets"))
+            .unwrap();
+        assert_eq!(otc.exchange_type.as_deref(), Some("TRF"));
+        assert_eq!(
+            out.iter()
+                .filter(|e| e.exchange_type.as_deref() == Some("exchange"))
+                .count(),
+            EXCHANGES.len() - 1
+        );
     }
 
     #[tokio::test]
