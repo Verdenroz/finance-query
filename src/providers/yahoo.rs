@@ -389,16 +389,15 @@ fn profile_and_price_to_symbol_details(
     price: Option<crate::models::quote::price::Price>,
     key_stats: Option<crate::models::quote::DefaultKeyStatistics>,
 ) -> crate::models::discovery::reference::SymbolDetails {
+    let company_profile =
+        profile_and_price_to_company_profile(symbol, profile.clone(), price.clone());
     crate::models::discovery::reference::SymbolDetails {
         symbol: symbol.to_string(),
-        name: price
-            .as_ref()
-            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        description: profile
-            .as_ref()
-            .and_then(|p| p.long_business_summary.clone()),
-        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
-        asset_type: price.as_ref().and_then(|p| p.quote_type.clone()),
+        name: company_profile.name,
+        description: company_profile.description,
+        exchange: company_profile.exchange,
+        asset_type: company_profile.asset_type,
+        market_cap: company_profile.market_capitalization,
         cik: None,
         sic_code: None,
         sic_description: None,
@@ -407,11 +406,6 @@ fn profile_and_price_to_symbol_details(
             .as_ref()
             .and_then(|p| p.full_time_employees)
             .map(|v| v as u64),
-        market_cap: price
-            .as_ref()
-            .and_then(|p| p.market_cap.as_ref())
-            .and_then(|v| v.raw)
-            .map(|v| v as f64),
         list_date: None,
         shares_outstanding: key_stats
             .as_ref()
