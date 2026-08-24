@@ -1190,6 +1190,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn fetches_symbol_details_composed_with_live_edgar() {
+        let _ = crate::adapters::edgar::init("test@example.com");
         let provider = YahooProvider::new(&crate::adapters::yahoo::client::ClientConfig::default())
             .await
             .unwrap();
