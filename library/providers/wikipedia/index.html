@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wikipedia (Index Constituents) · finance-query</title>
+<link rel="icon" href="../../../assets/logo.png">
+<link rel="stylesheet" href="../../../_soothfast/tokens.css">
+<link rel="stylesheet" href="../../../_soothfast/site.css">
+<link rel="stylesheet" href="../../../_soothfast/theme-vars.css">
+<script>
+// Apply the stored theme before first paint to avoid a flash.
+try { var t = localStorage.getItem("soothfast-theme");
+      if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body data-base="../../../">
+<header class="topbar">
+  <div class="topbar-in">
+    <button class="nav-toggle" id="navtoggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidenav" type="button">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <a class="brand" href="../../../">
+      <span class="brand-mark"><img src="../../../assets/logo.png" alt=""></span>
+      <span class="brand-name">finance-query</span>
+      <span class="brand-ver">v2.8.0</span>
+    </a>
+    
+    <button class="search-toggle" id="searchtoggle" aria-label="Search docs" aria-expanded="false" aria-controls="search" type="button">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="search" id="search">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="searchbox" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchresults" hidden></div>
+    </div>
+    
+    
+    <a class="repo-link" href="https://github.com/Verdenroz/finance-query" aria-label="Repository">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 .6a7.4 7.4 0 0 0-2.34 14.43c.37.07.5-.16.5-.36v-1.26c-2.06.45-2.5-.99-2.5-.99-.33-.85-.82-1.08-.82-1.08-.67-.46.05-.45.05-.45.74.05 1.13.77 1.13.77.66 1.13 1.73.8 2.15.61.07-.48.26-.8.47-.99-1.64-.19-3.37-.82-3.37-3.66 0-.8.29-1.47.76-1.98-.08-.19-.33-.94.07-1.96 0 0 .62-.2 2.03.76a7.06 7.06 0 0 1 3.7 0c1.4-.96 2.02-.76 2.02-.76.4 1.02.15 1.77.07 1.96.47.51.76 1.17.76 1.98 0 2.85-1.73 3.47-3.38 3.65.27.23.5.68.5 1.37v2.03c0 .2.13.43.51.36A7.4 7.4 0 0 0 8 .6Z"/>
+      </svg>
+    </a>
+    
+    <button class="theme-toggle" id="themetoggle" aria-label="Toggle color theme" type="button">
+      <svg class="ic-sun" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="ic-moon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.5 9.5A6 6 0 0 1 6.5 2.5 6 6 0 1 0 13.5 9.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="ruler" aria-hidden="true"></div>
+</header>
+
+<div class="shell">
+<div class="nav-backdrop" id="navbackdrop" hidden></div>
+<nav class="sidenav" id="sidenav" aria-label="Documentation">
+
+  <div class="nav-group">
+    <span class="label">Home</span>
+    <ul>
+    
+      <li><a href="../../../">Overview</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Library</span>
+    <ul>
+    
+      <li><a href="../../../library/getting-started/">Getting Started</a></li>
+    
+      <li><a href="../../../library/ticker/">Ticker API Reference</a></li>
+    
+      <li><a href="../../../library/tickers/">Tickers API Reference</a></li>
+    
+      <li><a href="../../../library/streaming/">Real-time Streaming</a></li>
+    
+      <li><a href="../../../library/finance/">Finance Module</a></li>
+    
+      <li><a href="../../../library/screeners/">Screeners</a></li>
+    
+      <li><a href="../../../library/risk/">Risk Analytics</a></li>
+    
+      <li><a href="../../../library/translation/">Translations</a></li>
+    
+      <li><a href="../../../library/feeds/">RSS / Atom Feeds</a></li>
+    
+      <li><a href="../../../library/dataframe/">DataFrame Support</a></li>
+    
+      <li><a href="../../../library/configuration/">Configuration</a></li>
+    
+      <li><a href="../../../library/error-handling/">Error Handling</a></li>
+    
+      <li><a href="../../../library/indicators/">Indicators</a></li>
+    
+      <li><a href="../../../library/backtesting/">Backtesting</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Providers</span>
+    <ul>
+    
+      <li><a href="../../../library/providers/">Multi-Provider Architecture</a></li>
+    
+      <li><a href="../../../library/providers/polygon/">Polygon.io</a></li>
+    
+      <li><a href="../../../library/providers/fmp/">Financial Modeling Prep (FMP)</a></li>
+    
+      <li><a href="../../../library/providers/alphavantage/">Alpha Vantage</a></li>
+    
+      <li><a href="../../../library/providers/coingecko/">Crypto (CoinGecko)</a></li>
+    
+      <li><a href="../../../library/providers/edgar/">EDGAR API Reference</a></li>
+    
+      <li><a href="../../../library/providers/fred/">FRED &amp; Treasury Yields</a></li>
+    
+      <li><a href="../../../library/providers/worldbank/">World Bank Open Data</a></li>
+    
+      <li><a href="../../../library/providers/fiscaldata/">US Treasury FiscalData</a></li>
+    
+      <li><a href="../../../library/providers/bls/">BLS (Bureau of Labor Statistics)</a></li>
+    
+      <li><a href="../../../library/providers/frankfurter/">Frankfurter (ECB reference rates)</a></li>
+    
+      <li><a href="../../../library/providers/binance/">Binance (public market data)</a></li>
+    
+      <li><a href="../../../library/providers/kraken/">Kraken (public market data)</a></li>
+    
+      <li><a href="../../../library/providers/finra/">FINRA (short sale volume)</a></li>
+    
+      <li><a href="../../../library/providers/openfigi/">OpenFIGI (identifier mapping)</a></li>
+    
+      <li><a href="../../../library/providers/defillama/">DefiLlama (DeFi TVL)</a></li>
+    
+      <li><a href="../../../library/providers/gdelt/">GDELT (Global News)</a></li>
+    
+      <li><a href="../../../library/providers/cftc/">CFTC (Commitments of Traders)</a></li>
+    
+      <li><a href="../../../library/providers/housetrades/">House PTR (Congressional Trades)</a></li>
+    
+      <li><a href="../../../library/providers/senatetrades/">Senate PTR (Congressional Trades)</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Domains</span>
+    <ul>
+    
+      <li><a href="../../../library/crypto/">Crypto</a></li>
+    
+      <li><a href="../../../library/forex/">Forex</a></li>
+    
+      <li><a href="../../../library/futures/">Futures</a></li>
+    
+      <li><a href="../../../library/indices/">Indices</a></li>
+    
+      <li><a href="../../../library/commodities/">Commodities</a></li>
+    
+      <li><a href="../../../library/economic/">Economic Indicators</a></li>
+    
+      <li><a href="../../../library/filings/">Filings API Reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">CLI</span>
+    <ul>
+    
+      <li><a href="../../../cli/installation/">Installation &amp; Quick Start</a></li>
+    
+      <li><a href="../../../cli/commands/">Command Reference</a></li>
+    
+      <li><a href="../../../cli/examples/">Usage Examples</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Server</span>
+    <ul>
+    
+      <li><a href="../../../server/api/openapi/">REST API</a></li>
+    
+      <li><a href="../../../server/api/asyncapi/">WebSocket API</a></li>
+    
+      <li><a href="../../../server/graphql-api-reference/">GraphQL API Reference</a></li>
+    
+      <li><a href="../../../server/api/mcp-tools/">MCP tools</a></li>
+    
+      <li><a href="../../../server/finance-query-server/">Reconciliation status</a></li>
+    
+      <li><a href="../../../server/finance-query-mcp/">MCP reconciliation status</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">API reference</span>
+    <ul>
+    
+      <li><a href="../../../reference/finance-query/">finance-query API reference</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Performance</span>
+    <ul>
+    
+      <li><a href="../../../perf/summary/">Performance summary</a></li>
+    
+      <li><a href="../../../coverage/">Coverage</a></li>
+    
+    </ul>
+  </div>
+
+  <div class="nav-group">
+    <span class="label">Development</span>
+    <ul>
+    
+      <li><a href="../../../development/contributing/">Contributing</a></li>
+    
+    </ul>
+  </div>
+
+</nav>
+
+<main class="doc">
+<h1 id="wikipedia-index-constituents">Wikipedia (Index Constituents)<a class="anchor" href="#wikipedia-index-constituents" aria-label="Link to this section">#</a></h1>
+<div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;wikipedia&quot;] }</code></pre></figure>
+</div>
+<p><code>Capability::INDICES</code>' <code>IndexConstituents</code> operation previously needed a keyed provider (FMP or Polygon). This adapter table-scrapes <a href="https://en.wikipedia.org/wiki/List_of_S%26P_500_companies">"List of S&amp;P 500 companies"</a>, keylessly, for the S&amp;P 500's member list.</p>
+<h2 id="scope">Scope<a class="anchor" href="#scope" aria-label="Link to this section">#</a></h2>
+<p>Only <code>MajorIndex::Sp500</code> is served. The Nasdaq-100 and Dow Jones Wikipedia articles list their components only inside a navbox template at the bottom of the page (ticker links grouped by sector, no headquarters/CIK/founding-year columns) — a meaningfully thinner shape not worth a bespoke parser for. Both return <code>NotSupported</code> on this provider; route to <a href="../../../library/providers/fmp/">FMP</a> for those two instead.</p>
+<p>Wikipedia carries no constituent-<em>changes</em> history table for any index in this set either, so <code>IndexConstituentChanges</code> is unrouted here regardless of index — FMP is the only source for that operation.</p>
+<p><code>fetch_indices_quote</code> also reports <code>NotSupported</code>: Wikipedia has no price data at all, so an <code>INDICES</code> route that includes it should also include a quoting provider (Yahoo, the default, already covers this).</p>
+<h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=wikipedia</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Wikipedia</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);
+    <span class="tok-kw">for</span> member <span class="tok-kw">in</span> spx.<span class="tok-fn">constituents</span>().<span class="tok-kw">await</span>?.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{}: {} ({})&quot;</span>,
+            member.symbol,
+            member.name.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),
+            member.sector.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>)
+        );
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h2 id="what-the-fields-mean">What the Fields Mean<a class="anchor" href="#what-the-fields-mean" aria-label="Link to this section">#</a></h2>
+<p><code>IndexConstituent</code>'s eight columns come straight off the Wikipedia table's eight columns, in order — symbol, company name, GICS sector, GICS sub-industry, headquarters location, date added, CIK, and founding year. See <a href="../../../library/indices/#indexconstituent-fields">Indices</a> for the full field table.</p>
+<h2 id="rate-limits">Rate Limits<a class="anchor" href="#rate-limits" aria-label="Link to this section">#</a></h2>
+<p>Wikipedia documents no formal quota for article fetches. These are static, rarely-changing pages, so the client self-paces conservatively at 1 request/second regardless.</p>
+<h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="../../../library/indices/">Indices</a>: the <code>Index</code> handle, <code>.constituents()</code>, and the full field reference</li>
+<li><a href="../../../library/providers/fmp/">FMP Provider</a>: keyed alternative covering all three major indices plus constituent-change history</li>
+<li><a href="../../../library/providers/">Providers Overview</a>: routing and fallback</li>
+</ul>
+
+<div class="doc-foot">
+  <span>built with <b>cargo soothfast docs build</b></span>
+  <a href="https://github.com/Verdenroz/finance-query">source</a>
+</div>
+
+</main>
+<aside class="rail" aria-label="Page tools">
+
+  <span class="label">On this page</span>
+  <ul class="toc-list" id="toc">
+  
+    <li><a class="toc-l2" href="#scope">Scope</a></li>
+  
+    <li><a class="toc-l2" href="#setup">Setup</a></li>
+  
+    <li><a class="toc-l2" href="#what-the-fields-mean">What the Fields Mean</a></li>
+  
+    <li><a class="toc-l2" href="#rate-limits">Rate Limits</a></li>
+  
+    <li><a class="toc-l2" href="#next-steps">Next Steps</a></li>
+  
+  </ul>
+
+</aside>
+
+</div>
+<script src="../../../_soothfast/site.js" defer></script>
+</body>
+</html>

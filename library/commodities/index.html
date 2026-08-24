@@ -248,26 +248,15 @@ try { var t = localStorage.getItem("soothfast-theme");
 <div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
 <p><a href="https://docs.rs/finance-query/latest/finance_query/struct.Commodity.html">docs.rs/finance-query — Commodity</a></p>
 </div>
-<div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;fmp&quot;] }</code></pre></figure>
-</div>
-<p>The <code>Commodity</code> handle lets you fetch price quotes, OHLCV charts, and historical
-data for commodity symbols (gold, oil, natural gas, etc.) using FMP as the
-backend provider.</p>
+<p>The <code>Commodity</code> handle lets you fetch price quotes, OHLCV charts, and historical data for commodity symbols (gold, oil, natural gas, etc.). Commodity quotes are served by Yahoo Finance (keyless — no feature flag, no API key) on the default route, the same way Yahoo resolves equity quotes. FMP and Alpha Vantage remain available as alternate quote providers.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Set the FMP API key via environment variable:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export FMP_API_KEY=&quot;your-fmp-api-key&quot;
-</code></pre></figure>
-<p>Route the <code>COMMODITIES</code> capability to <code>Provider::Fmp</code> when building <code>Providers</code>:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<p><code>Providers::builder().build()</code> with no <code>.route()</code> call already serves commodity quotes — Yahoo is the default for every capability. Yahoo resolves commodity futures symbols the same way it resolves equities (e.g. <code>&quot;GC=F&quot;</code> for gold):</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GCUSD&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GC=F&quot;</span>);
     <span class="tok-kw">let</span> quote = gold.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;
     <span class="tok-kw">let</span> chart = gold.<span class="tok-fn">chart</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;
     <span class="tok-kw">let</span> history = gold.<span class="tok-fn">history</span>(<span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;
@@ -275,44 +264,51 @@ backend provider.</p>
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h2 id="methods">Methods<a class="anchor" href="#methods" aria-label="Link to this section">#</a></h2>
-<h3 id="quote"><code>quote()</code><a class="anchor" href="#quote" aria-label="Link to this section">#</a></h3>
-<p>Fetches the current price quote for the commodity:</p>
+<h2 id="yahoo-commodity-symbols">Yahoo Commodity Symbols<a class="anchor" href="#yahoo-commodity-symbols" aria-label="Link to this section">#</a></h2>
+<p>Yahoo commodity futures use a root plus <code>=F</code> suffix:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Symbol</th><th>Commodity</th></tr></thead>
+<tbody>
+<tr><td><code>GC=F</code></td><td>Gold</td></tr>
+<tr><td><code>SI=F</code></td><td>Silver</td></tr>
+<tr><td><code>CL=F</code></td><td>Crude Oil WTI</td></tr>
+<tr><td><code>NG=F</code></td><td>Natural Gas</td></tr>
+<tr><td><code>HG=F</code></td><td>Copper</td></tr>
+<tr><td><code>PL=F</code></td><td>Platinum</td></tr>
+</tbody>
+</table></div>
+<h2 id="alternative-fmp-or-alpha-vantage">Alternative: FMP or Alpha Vantage<a class="anchor" href="#alternative-fmp-or-alpha-vantage" aria-label="Link to this section">#</a></h2>
+<p>Route <code>Capability::COMMODITIES</code> to <code>Provider::Fmp</code> or <code>Provider::AlphaVantage</code> for an alternate quote source, or as a fallback behind Yahoo:</p>
 <figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
     <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GCUSD&quot;</span>);
     <span class="tok-kw">let</span> quote = gold.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;
-
     <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Symbol: {}&quot;</span>, quote.symbol);
-    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(name) = &amp;quote.name {
-        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Name: {}&quot;</span>, name);
-    }
     <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(price) = quote.price {
         <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Price: {:.2}&quot;</span>, price);
-    }
-    <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(change), <span class="tok-ty">Some</span>(pct)) = (quote.change, quote.change_percent) {
-        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Change: {:+.2} ({:+.2}%)&quot;</span>, change, pct);
     }
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
+<p>Set <code>FMP_API_KEY</code> (or <code>ALPHAVANTAGE_API_KEY</code>) in your environment before calling <code>build()</code>. FMP's own commodity symbols don't use the <code>=F</code> suffix (e.g. <code>GCUSD</code> for gold, <code>CLUSD</code> for crude oil), and Alpha Vantage takes its function name directly as the symbol (e.g. <code>&quot;WTI&quot;</code>, <code>&quot;NATURAL_GAS&quot;</code>, <code>&quot;COPPER&quot;</code> — no precious-metals functions) — the symbol format is provider-specific, so switch it along with the route.</p>
+<h2 id="methods">Methods<a class="anchor" href="#methods" aria-label="Link to this section">#</a></h2>
+<h3 id="quote"><code>quote()</code><a class="anchor" href="#quote" aria-label="Link to this section">#</a></h3>
+<p>Fetches the current price quote for the commodity:</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::<span class="tok-ty">Providers</span>;&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GC=F&quot;</span>);&#10;    <span class="tok-kw">let</span> quote = gold.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;&#10;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Symbol: {}&quot;</span>, quote.symbol);&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(name) = &amp;quote.name {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Name: {}&quot;</span>, name);&#10;    }&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(price) = quote.price {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Price: {:.2}&quot;</span>, price);&#10;    }&#10;    <span class="tok-kw">if</span> <span class="tok-kw">let</span> (<span class="tok-ty">Some</span>(change), <span class="tok-ty">Some</span>(pct)) = (quote.change, quote.change_percent) {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Change: {:+.2} ({:+.2}%)&quot;</span>, change, pct);&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre></figure>
 <h3 id="chart-interval-range"><code>chart(interval, range)</code><a class="anchor" href="#chart-interval-range" aria-label="Link to this section">#</a></h3>
 <p>Fetches OHLCV candles at a specific interval over a given time range:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> crude = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;CLUSD&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> crude = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;CL=F&quot;</span>);
     <span class="tok-kw">let</span> chart = crude.<span class="tok-fn">chart</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">ThreeMonths</span>).<span class="tok-kw">await</span>?;
 
     <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Symbol: {}&quot;</span>, chart.symbol);
@@ -327,15 +323,12 @@ backend provider.</p>
 <h3 id="history-range"><code>history(range)</code><a class="anchor" href="#history-range" aria-label="Link to this section">#</a></h3>
 <p>Fetches candles over a range using the default interval for that range
 (determined by [<code>TimeRange::default_interval</code>]):</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> silver = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;SIUSD&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> silver = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;SI=F&quot;</span>);
     <span class="tok-kw">let</span> history = silver.<span class="tok-fn">history</span>(<span class="tok-ty">TimeRange</span>::<span class="tok-ty">SixMonths</span>).<span class="tok-kw">await</span>?;
 
     <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Symbol: {}&quot;</span>, history.symbol);
@@ -346,16 +339,13 @@ backend provider.</p>
 <h3 id="indicators-interval-range-indicator-kind-interval-range-risk-interval-range"><code>indicators(interval, range)</code> / <code>indicator(kind, interval, range)</code> / <code>risk(interval, range)</code><a class="anchor" href="#indicators-interval-range-indicator-kind-interval-range-risk-interval-range" aria-label="Link to this section">#</a></h3>
 <p>Computes technical indicators or a risk summary from the commodity's own
 chart data (requires the <code>indicators</code>/<code>risk</code> features respectively):</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=risk,fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::indicators::<span class="tok-ty">Indicator</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=risk</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::indicators::<span class="tok-ty">Indicator</span>;
+<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">COMMODITIES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GCUSD&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> gold = providers.<span class="tok-fn">commodity</span>(<span class="tok-str">&quot;GC=F&quot;</span>);
 
     <span class="tok-kw">let</span> summary = gold.<span class="tok-fn">indicators</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">ThreeMonths</span>).<span class="tok-kw">await</span>?;
     <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(rsi) = summary.rsi_14 {
@@ -378,7 +368,7 @@ commodities have no natural benchmark to compare against.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>symbol</code></td><td><code>String</code></td><td>Commodity symbol (e.g., <code>&quot;GCUSD&quot;</code> for gold)</td></tr>
+<tr><td><code>symbol</code></td><td><code>String</code></td><td>Commodity symbol (e.g., <code>&quot;GC=F&quot;</code> for gold)</td></tr>
 <tr><td><code>name</code></td><td><code>Option&lt;String&gt;</code></td><td>Human-readable name (e.g., <code>&quot;Gold&quot;</code>)</td></tr>
 <tr><td><code>unit</code></td><td><code>Option&lt;String&gt;</code></td><td>Unit of measurement (e.g., <code>&quot;troy ounce&quot;</code>)</td></tr>
 <tr><td><code>price</code></td><td><code>Option&lt;f64&gt;</code></td><td>Current price</td></tr>
@@ -389,23 +379,25 @@ commodities have no natural benchmark to compare against.</p>
 </table></div>
 <p>This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:</p>
-<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::<span class="tok-ty">CommodityQuote</span>;&#10;&#10;<span class="tok-com">// `CommodityQuote` is #[non_exhaustive] outside the crate, so construct via</span>&#10;<span class="tok-com">// serde. With live data: `commodity.quote().await?`.</span>&#10;<span class="tok-kw">let</span> quote: <span class="tok-ty">CommodityQuote</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;    <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;GCUSD&quot;</span>,&#10;    <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Gold&quot;</span>,&#10;    <span class="tok-str">&quot;unit&quot;</span>: <span class="tok-str">&quot;troy ounce&quot;</span>,&#10;    <span class="tok-str">&quot;price&quot;</span>: <span class="tok-num">2387.50</span>,&#10;    <span class="tok-str">&quot;change&quot;</span>: <span class="tok-num">12.30</span>,&#10;    <span class="tok-str">&quot;change_percent&quot;</span>: <span class="tok-num">0.52</span>,&#10;    <span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_718_000_000_i64</span>,&#10;}))&#10;.<span class="tok-fn">unwrap</span>();&#10;&#10;<span class="tok-kw">fn</span> <span class="tok-fn">verify_commodity_quote_fields</span>(q: <span class="tok-ty">CommodityQuote</span>) {&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">String</span> = q.symbol;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">String</span>&gt; = q.name;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">String</span>&gt; = q.unit;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.price;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.change;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.change_percent;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">i64</span>&gt; = q.timestamp;&#10;}&#10;<span class="tok-fn">verify_commodity_quote_fields</span>(quote.<span class="tok-fn">clone</span>());&#10;&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;symbol = {}&quot;</span>, quote.symbol);&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;name = {:?}&quot;</span>, quote.name);&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;price = {:?}&quot;</span>, quote.price);&#10;</code></pre><details class="run-out"><summary class="run-out-head"><span class="run-out-label"><svg class="run-out-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>recorded output</span><span class="run-out-src">cargo soothfast docs capture</span></summary><pre>symbol = GCUSD&#10;name = Some(&quot;Gold&quot;)&#10;price = Some(2387.5)</pre></details><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::commodities::CommodityQuote"><span class="ev-mark">⌖</span><span class="ev-item">CommodityQuote</span><span class="ev-detail">verified current</span></div></div></figure>
-<h2 id="common-fmp-commodity-symbols">Common FMP Commodity Symbols<a class="anchor" href="#common-fmp-commodity-symbols" aria-label="Link to this section">#</a></h2>
+<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::<span class="tok-ty">CommodityQuote</span>;&#10;&#10;<span class="tok-com">// `CommodityQuote` is #[non_exhaustive] outside the crate, so construct via</span>&#10;<span class="tok-com">// serde. With live data: `commodity.quote().await?`.</span>&#10;<span class="tok-kw">let</span> quote: <span class="tok-ty">CommodityQuote</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;    <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;GC=F&quot;</span>,&#10;    <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Gold&quot;</span>,&#10;    <span class="tok-str">&quot;unit&quot;</span>: <span class="tok-str">&quot;troy ounce&quot;</span>,&#10;    <span class="tok-str">&quot;price&quot;</span>: <span class="tok-num">2387.50</span>,&#10;    <span class="tok-str">&quot;change&quot;</span>: <span class="tok-num">12.30</span>,&#10;    <span class="tok-str">&quot;change_percent&quot;</span>: <span class="tok-num">0.52</span>,&#10;    <span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_718_000_000_i64</span>,&#10;}))&#10;.<span class="tok-fn">unwrap</span>();&#10;&#10;<span class="tok-kw">fn</span> <span class="tok-fn">verify_commodity_quote_fields</span>(q: <span class="tok-ty">CommodityQuote</span>) {&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">String</span> = q.symbol;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">String</span>&gt; = q.name;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">String</span>&gt; = q.unit;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.price;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.change;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">f64</span>&gt; = q.change_percent;&#10;    <span class="tok-kw">let</span> _: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">i64</span>&gt; = q.timestamp;&#10;}&#10;<span class="tok-fn">verify_commodity_quote_fields</span>(quote.<span class="tok-fn">clone</span>());&#10;&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;symbol = {}&quot;</span>, quote.symbol);&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;name = {:?}&quot;</span>, quote.name);&#10;<span class="tok-mac">println!</span>(<span class="tok-str">&quot;price = {:?}&quot;</span>, quote.price);&#10;</code></pre><details class="run-out"><summary class="run-out-head"><span class="run-out-label"><svg class="run-out-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>recorded output</span><span class="run-out-src">cargo soothfast docs capture</span></summary><pre>symbol = GC=F&#10;name = Some(&quot;Gold&quot;)&#10;price = Some(2387.5)</pre></details><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::commodities::CommodityQuote"><span class="ev-mark">⌖</span><span class="ev-item">CommodityQuote</span><span class="ev-detail">verified current</span></div></div></figure>
+<h2 id="common-commodity-symbols">Common Commodity Symbols<a class="anchor" href="#common-commodity-symbols" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
-<thead><tr><th>Symbol</th><th>Commodity</th></tr></thead>
+<thead><tr><th>Yahoo (<code>=F</code>)</th><th>FMP</th><th>Alpha Vantage</th><th>Commodity</th></tr></thead>
 <tbody>
-<tr><td><code>GCUSD</code></td><td>Gold</td></tr>
-<tr><td><code>SIUSD</code></td><td>Silver</td></tr>
-<tr><td><code>CLUSD</code></td><td>Crude Oil WTI</td></tr>
-<tr><td><code>NGUSD</code></td><td>Natural Gas</td></tr>
-<tr><td><code>HGUSD</code></td><td>Copper</td></tr>
-<tr><td><code>PLUSD</code></td><td>Platinum</td></tr>
+<tr><td><code>GC=F</code></td><td><code>GCUSD</code></td><td>—</td><td>Gold</td></tr>
+<tr><td><code>SI=F</code></td><td><code>SIUSD</code></td><td>—</td><td>Silver</td></tr>
+<tr><td><code>CL=F</code></td><td><code>CLUSD</code></td><td><code>WTI</code> (or <code>BRENT</code>)</td><td>Crude Oil</td></tr>
+<tr><td><code>NG=F</code></td><td><code>NGUSD</code></td><td><code>NATURAL_GAS</code></td><td>Natural Gas</td></tr>
+<tr><td><code>HG=F</code></td><td><code>HGUSD</code></td><td><code>COPPER</code></td><td>Copper</td></tr>
+<tr><td><code>PL=F</code></td><td><code>PLUSD</code></td><td>—</td><td>Platinum</td></tr>
 </tbody>
 </table></div>
+<p>Alpha Vantage has no precious-metals (gold/silver/platinum) commodity functions; route those to Yahoo or FMP instead.</p>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><a href="../../library/providers/">Provider Configuration</a> — Routing capabilities to providers</li>
 <li><a href="../../library/providers/fmp/">FMP Provider</a> — FMP setup and capabilities</li>
+<li><a href="../../library/providers/alphavantage/">Alpha Vantage Provider</a> — Alpha Vantage setup and capabilities</li>
 <li><a href="../../library/ticker/">Chart &amp; History</a> — <code>Chart</code> and <code>Candle</code> type reference</li>
 </ul>
 
@@ -422,6 +414,10 @@ cannot drift from the type:</p>
   
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
+    <li><a class="toc-l2" href="#yahoo-commodity-symbols">Yahoo Commodity Symbols</a></li>
+  
+    <li><a class="toc-l2" href="#alternative-fmp-or-alpha-vantage">Alternative: FMP or Alpha Vantage</a></li>
+  
     <li><a class="toc-l2" href="#methods">Methods</a></li>
   
     <li><a class="toc-l3" href="#quote">quote()</a></li>
@@ -434,7 +430,7 @@ cannot drift from the type:</p>
   
     <li><a class="toc-l2" href="#commodityquote-fields">CommodityQuote Fields</a></li>
   
-    <li><a class="toc-l2" href="#common-fmp-commodity-symbols">Common FMP Commodity Symbols</a></li>
+    <li><a class="toc-l2" href="#common-commodity-symbols">Common Commodity Symbols</a></li>
   
     <li><a class="toc-l2" href="#see-also">See Also</a></li>
   

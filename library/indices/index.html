@@ -248,21 +248,15 @@ try { var t = localStorage.getItem("soothfast-theme");
 <div class="adm adm-abstract"><p class="adm-title"><span class="adm-kind">abstract</span> · Cargo Docs</p>
 <p><a href="https://docs.rs/finance-query/latest/finance_query/struct.Index.html">docs.rs/finance-query — Index</a></p>
 </div>
-<div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · Feature flag required</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">toml</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-ty">finance-query </span>= { version = &quot;...&quot;, features = [&quot;polygon&quot;] }</code></pre></figure>
-</div>
-<p>The <code>Index</code> handle provides access to stock market index data (quotes, charts, and history) via Polygon.io. Indices are keyed by provider-specific symbol strings — for Polygon, this is the <code>I:&lt;NAME&gt;</code> format (e.g., <code>&quot;I:SPX&quot;</code> for the S&amp;P 500).</p>
+<p>The <code>Index</code> handle provides access to stock market index data (quotes, charts, constituents) for major indices like the S&amp;P 500, Nasdaq-100, and Dow Jones. Index quotes are served by Yahoo Finance (keyless — no feature flag, no API key) on the default route. Polygon and FMP remain available as alternate quote providers, and FMP/Wikipedia serve constituent data.</p>
 <h2 id="setup">Setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
-<p>Route the <code>INDICES</code> capability to Polygon in your <code>Providers</code> builder, then create an <code>Index</code> handle with <code>providers.index(symbol)</code>:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<p><code>Providers::builder().build()</code> with no <code>.route()</code> call already serves index quotes — Yahoo is the default for every capability. Yahoo resolves index symbols the same way it resolves equities (the caret-prefixed form, e.g. <code>&quot;^GSPC&quot;</code> for the S&amp;P 500):</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);
     <span class="tok-kw">let</span> quote = spx.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;
     <span class="tok-kw">let</span> chart = spx.<span class="tok-fn">chart</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;
     <span class="tok-kw">let</span> history = spx.<span class="tok-fn">history</span>(<span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;
@@ -270,11 +264,36 @@ try { var t = localStorage.getItem("soothfast-theme");
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<p>Set <code>POLYGON_API_KEY</code> in your environment before calling <code>build()</code>:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>export POLYGON_API_KEY=&quot;your-polygon-key&quot;
+<h2 id="yahoo-index-symbols">Yahoo Index Symbols<a class="anchor" href="#yahoo-index-symbols" aria-label="Link to this section">#</a></h2>
+<p>Yahoo uses the caret-prefixed ticker form:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Symbol</th><th>Index</th></tr></thead>
+<tbody>
+<tr><td><code>^GSPC</code></td><td>S&amp;P 500</td></tr>
+<tr><td><code>^NDX</code></td><td>NASDAQ-100</td></tr>
+<tr><td><code>^DJI</code></td><td>Dow Jones Industrial Average</td></tr>
+<tr><td><code>^RUT</code></td><td>Russell 2000</td></tr>
+<tr><td><code>^VIX</code></td><td>CBOE Volatility Index</td></tr>
+</tbody>
+</table></div>
+<h2 id="alternative-polygon-or-fmp">Alternative: Polygon or FMP<a class="anchor" href="#alternative-polygon-or-fmp" aria-label="Link to this section">#</a></h2>
+<p>Route <code>Capability::INDICES</code> to <code>Provider::Polygon</code> or <code>Provider::Fmp</code> for an alternate quote source, or as a fallback behind Yahoo:</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-ty">Provider</span>::<span class="tok-ty">Yahoo</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);
+    <span class="tok-kw">let</span> quote = spx.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;S&amp;P 500: {:?}&quot;</span>, quote.price);
+    <span class="tok-ty">Ok</span>(())
+}
 </code></pre></figure>
-<h2 id="index-symbols-polygon">Index Symbols (Polygon)<a class="anchor" href="#index-symbols-polygon" aria-label="Link to this section">#</a></h2>
-<p>Polygon indices use an <code>I:&lt;TICKER&gt;</code> prefix:</p>
+<p>Set <code>POLYGON_API_KEY</code> in your environment before calling <code>build()</code>.</p>
+<p>Polygon indices use an <code>I:&lt;TICKER&gt;</code> prefix instead of Yahoo's caret form:</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Symbol</th><th>Index</th></tr></thead>
 <tbody>
@@ -285,42 +304,68 @@ try { var t = localStorage.getItem("soothfast-theme");
 <tr><td><code>I:VIX</code></td><td>CBOE Volatility Index</td></tr>
 </tbody>
 </table></div>
+<div class="adm adm-note"><p class="adm-title"><span class="adm-kind">note</span> · `chart`/`history` route through `Capability::CHART`, not `INDICES`</p>
+<p><code>quote()</code> follows the <code>INDICES</code> route, but <code>chart()</code>/<code>history()</code> always
+dispatch through <code>Capability::CHART</code> (Yahoo by default). If you route
+<code>INDICES</code> to Polygon for its <code>I:SPX</code>-style quotes, either keep using a
+Yahoo-style symbol (<code>^GSPC</code>) for <code>chart()</code>/<code>history()</code>, or also route
+<code>CHART</code> to Polygon if you want candles in the same symbol space.</p>
+</div>
 <h2 id="methods">Methods<a class="anchor" href="#methods" aria-label="Link to this section">#</a></h2>
 <h3 id="quote"><code>quote()</code><a class="anchor" href="#quote" aria-label="Link to this section">#</a></h3>
 <p>Fetch the current snapshot for the index.</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()&#10;        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])&#10;        .<span class="tok-fn">build</span>()&#10;        .<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);&#10;    <span class="tok-kw">let</span> quote = spx.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;S&amp;P 500: {:?}&quot;</span>, quote.price);&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::indices::IndexQuote"><span class="ev-mark">⌖</span><span class="ev-item">IndexQuote</span><span class="ev-detail">verified current</span></div></div></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::<span class="tok-ty">Providers</span>;&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);&#10;    <span class="tok-kw">let</span> quote = spx.<span class="tok-fn">quote</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;S&amp;P 500: {:?}&quot;</span>, quote.price);&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::indices::IndexQuote"><span class="ev-mark">⌖</span><span class="ev-item">IndexQuote</span><span class="ev-detail">verified current</span></div></div></figure>
 <h3 id="chart-interval-range"><code>chart(interval, range)</code><a class="anchor" href="#chart-interval-range" aria-label="Link to this section">#</a></h3>
 <p>Fetch OHLCV candles for a specific <code>Interval</code> and <code>TimeRange</code>.</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()&#10;        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])&#10;        .<span class="tok-fn">build</span>()&#10;        .<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);&#10;    <span class="tok-kw">let</span> chart = spx.<span class="tok-fn">chart</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Candles: {}&quot;</span>, chart.candles.<span class="tok-fn">len</span>());&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::chart::data::Chart"><span class="ev-mark">⌖</span><span class="ev-item">Chart</span><span class="ev-detail">verified current</span></div></div></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);&#10;    <span class="tok-kw">let</span> chart = spx.<span class="tok-fn">chart</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Candles: {}&quot;</span>, chart.candles.<span class="tok-fn">len</span>());&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::chart::data::Chart"><span class="ev-mark">⌖</span><span class="ev-item">Chart</span><span class="ev-detail">verified current</span></div></div></figure>
 <h3 id="history-range"><code>history(range)</code><a class="anchor" href="#history-range" aria-label="Link to this section">#</a></h3>
 <p>Shorthand for <code>chart</code> using the default interval for the given <code>TimeRange</code>.</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
-    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
-        .<span class="tok-fn">build</span>()
-        .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);
     <span class="tok-kw">let</span> history = spx.<span class="tok-fn">history</span>(<span class="tok-ty">TimeRange</span>::<span class="tok-ty">OneMonth</span>).<span class="tok-kw">await</span>?;
     <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Candles: {}&quot;</span>, history.candles.<span class="tok-fn">len</span>());
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
-<h3 id="indicators-interval-range-indicator-kind-interval-range-risk-interval-range"><code>indicators(interval, range)</code> / <code>indicator(kind, interval, range)</code> / <code>risk(interval, range)</code><a class="anchor" href="#indicators-interval-range-indicator-kind-interval-range-risk-interval-range" aria-label="Link to this section">#</a></h3>
-<p>Compute technical indicators or a risk summary from this index's own chart
-data (requires the <code>indicators</code>/<code>risk</code> features respectively).</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=risk,polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::indicators::<span class="tok-ty">Indicator</span>;
-<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+<h3 id="constituents"><code>constituents()</code><a class="anchor" href="#constituents" aria-label="Link to this section">#</a></h3>
+<p>Fetch the current member list of a major index (S&amp;P 500, Nasdaq-100, or Dow Jones — derived from the handle's symbol via <code>MajorIndex::from_symbol</code>). Two providers serve this:</p>
+<ul>
+<li><strong>Wikipedia</strong> (<code>wikipedia</code> feature, keyless) — S&amp;P 500 only. The Nasdaq-100 and Dow Jones Wikipedia articles list constituents only inside a navbox template rather than a proper table, a thinner shape not worth a bespoke parser for, so those two stay <code>NotSupported</code> on this provider.</li>
+<li><strong>FMP</strong> (<code>fmp</code> feature, keyed) — all three major indices, plus <a href="#constituent_changes"><code>constituent_changes()</code></a> history that Wikipedia doesn't serve at all.</li>
+</ul>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=wikipedia</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()&#10;        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Wikipedia</span>])&#10;        .<span class="tok-fn">build</span>()&#10;        .<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);&#10;    <span class="tok-kw">for</span> member <span class="tok-kw">in</span> spx.<span class="tok-fn">constituents</span>().<span class="tok-kw">await</span>?.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {&#10;        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{}: {}&quot;</span>, member.symbol, member.name.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>));&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::indices::IndexConstituent"><span class="ev-mark">⌖</span><span class="ev-item">IndexConstituent</span><span class="ev-detail">verified current</span></div></div></figure>
+<p>For Nasdaq-100 or Dow Jones constituents, route to FMP instead:</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
 
 <span class="tok-mac">#[tokio::main]</span>
 <span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
     <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
-        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
         .<span class="tok-fn">build</span>()
         .<span class="tok-kw">await</span>?;
-    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;I:SPX&quot;</span>);
+    <span class="tok-kw">let</span> ndx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^NDX&quot;</span>);
+    <span class="tok-kw">let</span> members = ndx.<span class="tok-fn">constituents</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;Nasdaq-100 constituents: {}&quot;</span>, members.<span class="tok-fn">len</span>());
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="constituent-changes"><code>constituent_changes()</code><a class="anchor" href="#constituent-changes" aria-label="Link to this section">#</a></h3>
+<p>Fetch historical additions/removals for a major index. FMP only (<code>fmp</code> feature) — Wikipedia carries no constituent-change history table for any index in this set.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};&#10;&#10;<span class="tok-mac">#[tokio::main]</span>&#10;<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {&#10;    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()&#10;        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">INDICES</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])&#10;        .<span class="tok-fn">build</span>()&#10;        .<span class="tok-kw">await</span>?;&#10;    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);&#10;    <span class="tok-kw">for</span> change <span class="tok-kw">in</span> spx.<span class="tok-fn">constituent_changes</span>().<span class="tok-kw">await</span>?.<span class="tok-fn">iter</span>().<span class="tok-fn">take</span>(<span class="tok-num">5</span>) {&#10;        <span class="tok-mac">println!</span>(&#10;            <span class="tok-str">&quot;{}: +{} -{}&quot;</span>,&#10;            change.date.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;?&quot;</span>),&#10;            change.added_security.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;-&quot;</span>),&#10;            change.removed_ticker.<span class="tok-fn">as_deref</span>().<span class="tok-fn">unwrap_or</span>(<span class="tok-str">&quot;-&quot;</span>)&#10;        );&#10;    }&#10;    <span class="tok-ty">Ok</span>(())&#10;}&#10;</code></pre><div class="ev-ledger"><div class="ev-ledger-head">checked claims</div><div class="ev-row ev-row-bind" data-soothfast-bind title="finance_query::models::indices::IndexConstituentChange"><span class="ev-mark">⌖</span><span class="ev-item">IndexConstituentChange</span><span class="ev-detail">verified current</span></div></div></figure>
+<h3 id="indicators-interval-range-indicator-kind-interval-range-risk-interval-range"><code>indicators(interval, range)</code> / <code>indicator(kind, interval, range)</code> / <code>risk(interval, range)</code><a class="anchor" href="#indicators-interval-range-indicator-kind-interval-range-risk-interval-range" aria-label="Link to this section">#</a></h3>
+<p>Compute technical indicators or a risk summary from this index's own chart
+data (requires the <code>indicators</code>/<code>risk</code> features respectively).</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=risk</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::indicators::<span class="tok-ty">Indicator</span>;
+<span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Interval</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TimeRange</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>().<span class="tok-fn">build</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> spx = providers.<span class="tok-fn">index</span>(<span class="tok-str">&quot;^GSPC&quot;</span>);
     <span class="tok-kw">let</span> summary = spx.<span class="tok-fn">indicators</span>(<span class="tok-ty">Interval</span>::<span class="tok-ty">OneDay</span>, <span class="tok-ty">TimeRange</span>::<span class="tok-ty">ThreeMonths</span>).<span class="tok-kw">await</span>?;
     <span class="tok-kw">if</span> <span class="tok-kw">let</span> <span class="tok-ty">Some</span>(rsi) = summary.rsi_14 {
         <span class="tok-mac">println!</span>(<span class="tok-str">&quot;RSI(14): {:.2}&quot;</span>, rsi);
@@ -342,7 +387,7 @@ have no natural benchmark to compare against.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>symbol</code></td><td><code>String</code></td><td>Index ticker symbol (e.g., <code>&quot;I:SPX&quot;</code>)</td></tr>
+<tr><td><code>symbol</code></td><td><code>String</code></td><td>Index ticker symbol (e.g., <code>&quot;^GSPC&quot;</code>)</td></tr>
 <tr><td><code>name</code></td><td><code>Option&lt;String&gt;</code></td><td>Human-readable index name (e.g., <code>&quot;S&amp;P 500&quot;</code>)</td></tr>
 <tr><td><code>price</code></td><td><code>Option&lt;f64&gt;</code></td><td>Current index value</td></tr>
 <tr><td><code>change</code></td><td><code>Option&lt;f64&gt;</code></td><td>Absolute price change</td></tr>
@@ -361,8 +406,41 @@ have no natural benchmark to compare against.</p>
 </tbody>
 </table></div>
 <p>Both tables are backed by a compiled field-verification test:</p>
-<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Chart</span>, <span class="tok-ty">IndexQuote</span>};&#10;&#10;<span class="tok-com">// `IndexQuote` and `Chart` are #[non_exhaustive] with no public constructor</span>&#10;<span class="tok-com">// outside the crate, but both derive `Deserialize` — build real instances via serde.</span>&#10;<span class="tok-kw">fn</span> <span class="tok-fn">main</span>() {&#10;    <span class="tok-kw">let</span> quote: <span class="tok-ty">IndexQuote</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;        <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;I:SPX&quot;</span>,&#10;        <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;S&amp;P 500&quot;</span>,&#10;        <span class="tok-str">&quot;price&quot;</span>: <span class="tok-num">5123.45</span>,&#10;        <span class="tok-str">&quot;change&quot;</span>: <span class="tok-num">12.34</span>,&#10;        <span class="tok-str">&quot;change_percent&quot;</span>: <span class="tok-num">0.24</span>,&#10;        <span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_700_000_000_i64</span>&#10;    }))&#10;    .<span class="tok-fn">unwrap</span>();&#10;&#10;    <span class="tok-kw">let</span> chart: <span class="tok-ty">Chart</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;        <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;I:SPX&quot;</span>,&#10;        <span class="tok-str">&quot;meta&quot;</span>: { <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;I:SPX&quot;</span> },&#10;        <span class="tok-str">&quot;candles&quot;</span>: [&#10;            {<span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_700_000_000_i64</span>, <span class="tok-str">&quot;open&quot;</span>: <span class="tok-num">5100.0</span>, <span class="tok-str">&quot;high&quot;</span>: <span class="tok-num">5150.0</span>, <span class="tok-str">&quot;low&quot;</span>: <span class="tok-num">5080.0</span>, <span class="tok-str">&quot;close&quot;</span>: <span class="tok-num">5123.45</span>, <span class="tok-str">&quot;volume&quot;</span>: <span class="tok-num">2_400_000_000_i64</span>}&#10;        ]&#10;    }))&#10;    .<span class="tok-fn">unwrap</span>();&#10;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;quote: {} = {:?}&quot;</span>, quote.symbol, quote.price);&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;candles: {}&quot;</span>, chart.candles.<span class="tok-fn">len</span>());&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;close: {:.2}&quot;</span>, chart.candles[<span class="tok-num">0</span>].close);&#10;}&#10;</code></pre><details class="run-out"><summary class="run-out-head"><span class="run-out-label"><svg class="run-out-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>recorded output</span><span class="run-out-src">cargo soothfast docs capture</span></summary><pre>quote: I:SPX = Some(5123.45)&#10;candles: 1&#10;close: 5123.45</pre></details></figure>
+<figure class="code runpanel"><figcaption class="code-bar"><span class="code-lang">rust · runnable</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Chart</span>, <span class="tok-ty">IndexQuote</span>};&#10;&#10;<span class="tok-com">// `IndexQuote` and `Chart` are #[non_exhaustive] with no public constructor</span>&#10;<span class="tok-com">// outside the crate, but both derive `Deserialize` — build real instances via serde.</span>&#10;<span class="tok-kw">fn</span> <span class="tok-fn">main</span>() {&#10;    <span class="tok-kw">let</span> quote: <span class="tok-ty">IndexQuote</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;        <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;^GSPC&quot;</span>,&#10;        <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;S&amp;P 500&quot;</span>,&#10;        <span class="tok-str">&quot;price&quot;</span>: <span class="tok-num">5123.45</span>,&#10;        <span class="tok-str">&quot;change&quot;</span>: <span class="tok-num">12.34</span>,&#10;        <span class="tok-str">&quot;change_percent&quot;</span>: <span class="tok-num">0.24</span>,&#10;        <span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_700_000_000_i64</span>&#10;    }))&#10;    .<span class="tok-fn">unwrap</span>();&#10;&#10;    <span class="tok-kw">let</span> chart: <span class="tok-ty">Chart</span> = serde_json::<span class="tok-fn">from_value</span>(serde_json::<span class="tok-mac">json!</span>({&#10;        <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;^GSPC&quot;</span>,&#10;        <span class="tok-str">&quot;meta&quot;</span>: { <span class="tok-str">&quot;symbol&quot;</span>: <span class="tok-str">&quot;^GSPC&quot;</span> },&#10;        <span class="tok-str">&quot;candles&quot;</span>: [&#10;            {<span class="tok-str">&quot;timestamp&quot;</span>: <span class="tok-num">1_700_000_000_i64</span>, <span class="tok-str">&quot;open&quot;</span>: <span class="tok-num">5100.0</span>, <span class="tok-str">&quot;high&quot;</span>: <span class="tok-num">5150.0</span>, <span class="tok-str">&quot;low&quot;</span>: <span class="tok-num">5080.0</span>, <span class="tok-str">&quot;close&quot;</span>: <span class="tok-num">5123.45</span>, <span class="tok-str">&quot;volume&quot;</span>: <span class="tok-num">2_400_000_000_i64</span>}&#10;        ]&#10;    }))&#10;    .<span class="tok-fn">unwrap</span>();&#10;&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;quote: {} = {:?}&quot;</span>, quote.symbol, quote.price);&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;candles: {}&quot;</span>, chart.candles.<span class="tok-fn">len</span>());&#10;    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;close: {:.2}&quot;</span>, chart.candles[<span class="tok-num">0</span>].close);&#10;}&#10;</code></pre><details class="run-out"><summary class="run-out-head"><span class="run-out-label"><svg class="run-out-chevron" width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2.5 L11 8 L5 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>recorded output</span><span class="run-out-src">cargo soothfast docs capture</span></summary><pre>quote: ^GSPC = Some(5123.45)&#10;candles: 1&#10;close: 5123.45</pre></details></figure>
+<h2 id="indexconstituent-fields"><code>IndexConstituent</code> Fields<a class="anchor" href="#indexconstituent-fields" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>symbol</code></td><td><code>String</code></td><td>Ticker symbol of the constituent company</td></tr>
+<tr><td><code>name</code></td><td><code>Option&lt;String&gt;</code></td><td>Company name</td></tr>
+<tr><td><code>sector</code></td><td><code>Option&lt;String&gt;</code></td><td>Sector classification</td></tr>
+<tr><td><code>sub_sector</code></td><td><code>Option&lt;String&gt;</code></td><td>Sub-sector classification</td></tr>
+<tr><td><code>headquarters</code></td><td><code>Option&lt;String&gt;</code></td><td>Headquarters location</td></tr>
+<tr><td><code>date_first_added</code></td><td><code>Option&lt;String&gt;</code></td><td>Date first added to the index (<code>YYYY-MM-DD</code>)</td></tr>
+<tr><td><code>cik</code></td><td><code>Option&lt;String&gt;</code></td><td>SEC CIK number</td></tr>
+<tr><td><code>founded</code></td><td><code>Option&lt;String&gt;</code></td><td>Year the company was founded</td></tr>
+</tbody>
+</table></div>
+<h2 id="indexconstituentchange-fields"><code>IndexConstituentChange</code> Fields<a class="anchor" href="#indexconstituentchange-fields" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>date</code></td><td><code>Option&lt;String&gt;</code></td><td>Date of the change (<code>YYYY-MM-DD</code>)</td></tr>
+<tr><td><code>symbol</code></td><td><code>Option&lt;String&gt;</code></td><td>Ticker symbol the change concerns</td></tr>
+<tr><td><code>added_security</code></td><td><code>Option&lt;String&gt;</code></td><td>Security that was added</td></tr>
+<tr><td><code>removed_ticker</code></td><td><code>Option&lt;String&gt;</code></td><td>Ticker that was removed</td></tr>
+<tr><td><code>removed_security</code></td><td><code>Option&lt;String&gt;</code></td><td>Security that was removed</td></tr>
+<tr><td><code>reason</code></td><td><code>Option&lt;String&gt;</code></td><td>Reason for the change</td></tr>
+</tbody>
+</table></div>
 <p>See <a href="../../library/configuration/"><code>Interval</code></a> and <a href="../../library/configuration/"><code>TimeRange</code></a> for available values.</p>
+<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="../../library/providers/">Provider Configuration</a> — Routing capabilities to providers</li>
+<li><a href="../../library/providers/wikipedia/">Wikipedia Provider</a> — keyless S&amp;P 500 constituents</li>
+<li><a href="../../library/providers/fmp/">FMP Provider</a> — constituents for all three major indices, plus constituent-change history</li>
+<li><a href="../../library/providers/polygon/">Polygon.io Provider</a> — alternate index quote source</li>
+</ul>
 
 <div class="doc-foot">
   <span>built with <b>cargo soothfast docs build</b></span>
@@ -377,7 +455,9 @@ have no natural benchmark to compare against.</p>
   
     <li><a class="toc-l2" href="#setup">Setup</a></li>
   
-    <li><a class="toc-l2" href="#index-symbols-polygon">Index Symbols (Polygon)</a></li>
+    <li><a class="toc-l2" href="#yahoo-index-symbols">Yahoo Index Symbols</a></li>
+  
+    <li><a class="toc-l2" href="#alternative-polygon-or-fmp">Alternative: Polygon or FMP</a></li>
   
     <li><a class="toc-l2" href="#methods">Methods</a></li>
   
@@ -387,11 +467,21 @@ have no natural benchmark to compare against.</p>
   
     <li><a class="toc-l3" href="#history-range">history(range)</a></li>
   
+    <li><a class="toc-l3" href="#constituents">constituents()</a></li>
+  
+    <li><a class="toc-l3" href="#constituent-changes">constituent_changes()</a></li>
+  
     <li><a class="toc-l3" href="#indicators-interval-range-indicator-kind-interval-range-risk-interval-range">indicators(interval, range) / indicator(kind, interval, range) / risk(interval, range)</a></li>
   
     <li><a class="toc-l2" href="#indexquote-fields">IndexQuote Fields</a></li>
   
     <li><a class="toc-l2" href="#chart-fields">Chart Fields</a></li>
+  
+    <li><a class="toc-l2" href="#indexconstituent-fields">IndexConstituent Fields</a></li>
+  
+    <li><a class="toc-l2" href="#indexconstituentchange-fields">IndexConstituentChange Fields</a></li>
+  
+    <li><a class="toc-l2" href="#see-also">See Also</a></li>
   
   </ul>
 
