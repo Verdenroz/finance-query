@@ -2,20 +2,16 @@
 // source: docs/library/futures.md
 #![allow(unused)]
 
-// line 20: compile-only (no_run)
-#[cfg(feature = "polygon")]
+// line 12: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_20() {
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_12() {
+    use finance_query::{Interval, Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::FUTURES, [Provider::Polygon])
-            .build()
-            .await?;
-        let contract = providers.futures("ES");
+        let providers = Providers::builder().build().await?;
+        let contract = providers.futures("ES=F");
         let quote = contract.quote().await?;
         let chart = contract.chart(Interval::OneDay, TimeRange::OneMonth).await?;
         let history = contract.history(TimeRange::OneMonth).await?;
@@ -24,21 +20,38 @@ fn doc_block_line_20() {
     }
 }
 
-// line 125: compile-only (no_run)
-#[cfg(all(feature = "risk", feature = "polygon"))]
+// line 31: compile-only (no_run)
+#[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_125() {
-    use finance_query::indicators::Indicator;
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_31() {
+    use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let providers = Providers::builder()
-            .route(Capability::FUTURES, [Provider::Polygon])
+            .route(Capability::FUTURES, [Provider::Polygon, Provider::Yahoo])
             .build()
             .await?;
         let contract = providers.futures("ES");
+        let quote = contract.quote().await?;
+        println!("{}: {:?}", quote.symbol, quote.price);
+        Ok(())
+    }
+}
+
+// line 134: compile-only (no_run)
+#[cfg(feature = "risk")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_134() {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Interval, Providers, TimeRange};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let contract = providers.futures("ES=F");
 
         let summary = contract
             .indicators(Interval::OneDay, TimeRange::ThreeMonths)

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A stock market index quote (e.g., S&P 500, NASDAQ, Dow Jones).
 ///
-/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the index symbol (e.g., `"^GSPC"`).
+/// Obtain via [`Providers::index`](crate::Providers::index)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct IndexQuote {

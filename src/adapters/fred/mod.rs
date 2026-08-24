@@ -48,16 +48,8 @@ pub use models::ReleaseDate;
 /// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
 const FRED_RATE_PER_SEC: f64 = 2.0;
 
-// Stable configuration stored in the FRED process-global singleton.
-//
-// Only the API key, timeout, and rate-limiter are stored — NOT the
-// `reqwest::Client`. `reqwest::Client` internally spawns hyper connection-pool
-// tasks on whichever tokio runtime first uses them; when that runtime is
-// dropped (e.g. at the end of a `#[tokio::test]`), those tasks die and
-// subsequent calls from a different runtime receive `DispatchGone`. A fresh
-// `reqwest::Client` is built per `series()` call via
-// `FredClientBuilder::build_with_limiter`, reusing this shared limiter so
-// the 2 req/sec FRED rate limit is respected across all calls.
+// Only the API key, timeout, and rate-limiter are stored — NOT the reqwest::Client
+// (runtime-bound; must be rebuilt per call but share the limiter for rate limits).
 provider_singleton_state!(
     name = FredSingleton,
     static_name = FRED_SINGLETON,
@@ -103,10 +95,6 @@ pub async fn series(series_id: &str) -> Result<MacroSeries> {
     build_client()?.series(series_id).await
 }
 
-/// Build a FRED client from the initialized singleton.
-///
-/// A fresh `reqwest::Client` per call is deliberate (see the singleton note
-/// above); the rate limiter is shared so the 2 req/sec ceiling still holds.
 pub(crate) fn build_client() -> Result<client::FredClient> {
     let s = FRED_SINGLETON
         .get()
@@ -119,10 +107,6 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
         .build_with_limiter(Arc::clone(&s.limiter))
 }
 
-/// Fetch only the most recent observation of a FRED series.
-///
-/// Used by the economic stream's poll loop, where downloading a series'
-/// full observation history to read one value is pure waste.
 pub(crate) async fn latest_observation(
     series_id: &str,
 ) -> Result<Option<crate::models::economic::MacroObservation>> {
@@ -147,7 +131,13 @@ pub(crate) async fn latest_observation(
 /// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
 pub async fn release_dates() -> Result<Vec<ReleaseDate>> {
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    build_client()?.release_dates(&today).await
+    build_client()?.release_dates(&today, "9999-12-31").await
+}
+
+/// Fetch scheduled economic-data release dates over `[from, to]`
+/// (`YYYY-MM-DD` dates).
+pub(crate) async fn release_dates_between(from: &str, to: &str) -> Result<Vec<ReleaseDate>> {
+    build_client()?.release_dates(from, to).await
 }
 
 /// Fetch US Treasury yield curve data for the given year.
@@ -190,6 +180,44 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
             })
             .collect(),
     }
+}
+
+/// Fetch scheduled economic-data releases over `[from, to]` and map them to
+/// provider-neutral calendar entries.
+pub async fn fetch_market_calendar_response(
+    from: &str,
+    to: &str,
+) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+    Ok(release_dates_to_calendar_entries(
+        release_dates_between(from, to).await?,
+    ))
+}
+
+/// Map FRED release dates to the canonical `Economic` calendar detail.
+/// FRED's release calendar reports when a release happens, not its value, so
+/// every field besides `event`/`country` stays `None`.
+fn release_dates_to_calendar_entries(
+    dates: Vec<ReleaseDate>,
+) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
+    use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+
+    dates
+        .into_iter()
+        .map(|rd| MarketCalendarEntry {
+            symbol: None,
+            date: Some(rd.date),
+            detail: CalendarDetail::Economic {
+                event: Some(rd.release_name),
+                country: Some("US".to_string()),
+                actual: None,
+                previous: None,
+                estimate: None,
+                change: None,
+                change_percentage: None,
+                impact: None,
+            },
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -306,6 +334,59 @@ mod tests {
 
         let err = test_client(&server.url()).series("GDP").await.unwrap_err();
         assert!(matches!(err, FinanceError::ResponseStructureError { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_release_dates_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/releases/dates")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("realtime_start".into(), "2026-01-01".into()),
+                mockito::Matcher::UrlEncoded("realtime_end".into(), "2026-01-31".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "release_dates": [
+                        {"release_id": 10, "release_name": "Consumer Price Index", "date": "2026-01-14"}
+                    ]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let dates = test_client(&server.url())
+            .release_dates("2026-01-01", "2026-01-31")
+            .await
+            .unwrap();
+        assert_eq!(dates.len(), 1);
+        assert_eq!(dates[0].release_name, "Consumer Price Index");
+        assert_eq!(dates[0].date, "2026-01-14");
+    }
+
+    #[test]
+    fn release_dates_map_to_economic_calendar_entries() {
+        let dates = vec![ReleaseDate {
+            release_id: 10,
+            release_name: "Consumer Price Index".to_string(),
+            date: "2026-01-14".to_string(),
+        }];
+        let entries = release_dates_to_calendar_entries(dates);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].symbol, None);
+        assert_eq!(entries[0].date.as_deref(), Some("2026-01-14"));
+        match &entries[0].detail {
+            crate::models::calendar::market::CalendarDetail::Economic {
+                event, country, ..
+            } => {
+                assert_eq!(event.as_deref(), Some("Consumer Price Index"));
+                assert_eq!(country.as_deref(), Some("US"));
+            }
+            other => panic!("expected Economic detail, got {other:?}"),
+        }
     }
 
     #[test]

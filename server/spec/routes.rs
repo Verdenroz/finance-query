@@ -103,6 +103,20 @@ fn route_chart_get_chart() {}
 )]
 fn route_chart_get_batch_charts() {}
 
+/// Get a commodity's current quote
+///
+/// Implements `handlers::commodity_futures::get_commodity`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getCommodity",
+    method = "GET",
+    path = "/v2/commodities/{symbol}",
+    params = "CommodityQuery",
+    response = "GqlCommodityQuote"
+)]
+fn route_commodity_futures_get_commodity() {}
+
 /// Get company profile
 ///
 /// Implements `handlers::analysis::get_company_profile`.
@@ -341,6 +355,20 @@ fn route_edgar_get_edgar_search() {}
 )]
 fn route_edgar_get_edgar_submissions() {}
 
+/// Get ETF profile and holdings
+///
+/// Implements `handlers::analysis::get_etf_profile`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getEtfProfile",
+    method = "GET",
+    path = "/v2/etf-profile/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlEtfProfile"
+)]
+fn route_analysis_get_etf_profile() {}
+
 /// Get supported exchanges
 ///
 /// Implements `handlers::metadata::get_exchanges`.
@@ -396,6 +424,20 @@ fn route_market_get_fear_and_greed() {}
     response = "[GqlFeedEntry]"
 )]
 fn route_feeds_get_feeds() {}
+
+/// Get sectioned text of one SEC filing
+///
+/// Implements `handlers::filings::get_filing_sections`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getFilingSections",
+    method = "GET",
+    path = "/v2/filings/{symbol}/sections",
+    params = "FilingSectionsQuery",
+    response = "[GqlFilingSection]"
+)]
+fn route_filings_get_filing_sections() {}
 
 /// Get batch financial statements
 ///
@@ -468,6 +510,20 @@ fn route_fred_get_fred_series() {}
 )]
 fn route_fred_get_fred_treasury_yields() {}
 
+/// Get a futures contract's current quote
+///
+/// Implements `handlers::commodity_futures::get_futures`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getFutures",
+    method = "GET",
+    path = "/v2/futures/{symbol}",
+    params = "FuturesQuery",
+    response = "GqlFuturesQuote"
+)]
+fn route_commodity_futures_get_futures() {}
+
 /// Worldwide news mentioning a symbol (GDELT, keyless)
 ///
 /// Implements `handlers::keyless::get_gdelt_news`.
@@ -523,6 +579,20 @@ fn route_holders_get_holders() {}
     response = "GqlMarketHours"
 )]
 fn route_metadata_get_hours() {}
+
+/// Get an index's current constituent list
+///
+/// Implements `handlers::commodity_futures::get_index_constituents`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getIndexConstituents",
+    method = "GET",
+    path = "/v2/index-constituents/{symbol}",
+    params = "IndexConstituentsQuery",
+    response = "[GqlIndexConstituent]"
+)]
+fn route_commodity_futures_get_index_constituents() {}
 
 /// Get batch technical indicators
 ///
@@ -594,6 +664,20 @@ fn route_sector_get_industry() {}
     response = "GqlLookupResults"
 )]
 fn route_search_lookup() {}
+
+/// Get a market-wide event calendar
+///
+/// Implements `handlers::market::get_market_calendar`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getMarketCalendar",
+    method = "GET",
+    path = "/v2/market-calendar",
+    params = "MarketCalendarQuery",
+    response = "[GqlMarketCalendarEntry]"
+)]
+fn route_market_get_market_calendar() {}
 
 /// Get market summary
 ///
@@ -678,6 +762,34 @@ fn route_options_get_batch_options() {}
 )]
 fn route_options_get_options() {}
 
+/// Get a company's own press releases
+///
+/// Implements `handlers::news::get_press_releases`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getPressReleases",
+    method = "GET",
+    path = "/v2/press-releases/{symbol}",
+    params = "PressReleasesQuery",
+    response = "[GqlPressRelease]"
+)]
+fn route_news_get_press_releases() {}
+
+/// Get consensus analyst price target
+///
+/// Implements `handlers::analysis::get_price_target_consensus`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getPriceTargetConsensus",
+    method = "GET",
+    path = "/v2/price-target-consensus/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlPriceTargetConsensus"
+)]
+fn route_analysis_get_price_target_consensus() {}
+
 /// Ping endpoint
 ///
 /// Implements `handlers::system::ping`.
@@ -733,6 +845,20 @@ fn route_quote_get_quote() {}
 )]
 fn route_quote_get_quotes() {}
 
+/// Get consensus rating rollup
+///
+/// Implements `handlers::analysis::get_rating_consensus`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getRatingConsensus",
+    method = "GET",
+    path = "/v2/rating-consensus/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlRatingConsensus"
+)]
+fn route_analysis_get_rating_consensus() {}
+
 /// Get batch stock recommendations
 ///
 /// Implements `handlers::analysis::get_batch_recommendations`.
@@ -774,6 +900,20 @@ fn route_analysis_get_recommendations() {}
     response = "GqlRiskSummary"
 )]
 fn route_risk_get_risk() {}
+
+/// Get risk factors extracted from SEC filings
+///
+/// Implements `handlers::filings::get_risk_factors`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getRiskFactors",
+    method = "GET",
+    path = "/v2/filings/{symbol}/risk-factors",
+    params = "RiskFactorsQuery",
+    response = "[GqlRiskFactor]"
+)]
+fn route_filings_get_risk_factors() {}
 
 /// Custom screener query
 ///
@@ -832,6 +972,34 @@ fn route_search_search() {}
     response = "GqlSectorData"
 )]
 fn route_sector_get_sector() {}
+
+/// Get price/earnings ratios by sector
+///
+/// Implements `handlers::market::get_sector_pe`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getSectorPe",
+    method = "GET",
+    path = "/v2/sector-pe",
+    params = "SectorPeQuery",
+    response = "[GqlMarketSectorPe]"
+)]
+fn route_market_get_sector_pe() {}
+
+/// Get aggregate performance for every sector
+///
+/// Implements `handlers::market::get_sector_performance`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getSectorPerformance",
+    method = "GET",
+    path = "/v2/sector-performance",
+    params = "SectorPerformanceQuery",
+    response = "[GqlMarketSectorPerformance]"
+)]
+fn route_market_get_sector_performance() {}
 
 /// Get batch sparkline data
 ///
@@ -1196,6 +1364,66 @@ fn route_gql_root_market_feeds() {}
     path = "indices"
 )]
 fn route_gql_root_market_indices() {}
+
+/// Implements `graphql::query::root_market::commodity` (field `commodity`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "commodity",
+    method = "QUERY",
+    path = "commodity"
+)]
+fn route_gql_root_market_commodity() {}
+
+/// Implements `graphql::query::root_market::futures` (field `futures`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "futures",
+    method = "QUERY",
+    path = "futures"
+)]
+fn route_gql_root_market_futures() {}
+
+/// Implements `graphql::query::root_market::index_constituents` (field `indexConstituents`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "indexConstituents",
+    method = "QUERY",
+    path = "indexConstituents"
+)]
+fn route_gql_root_market_index_constituents() {}
+
+/// Implements `graphql::query::root_market::market_calendar` (field `marketCalendar`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "marketCalendar",
+    method = "QUERY",
+    path = "marketCalendar"
+)]
+fn route_gql_root_market_market_calendar() {}
+
+/// Implements `graphql::query::root_market::sector_performance` (field `sectorPerformance`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "sectorPerformance",
+    method = "QUERY",
+    path = "sectorPerformance"
+)]
+fn route_gql_root_market_sector_performance() {}
+
+/// Implements `graphql::query::root_market::sector_pe` (field `sectorPe`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "sectorPe",
+    method = "QUERY",
+    path = "sectorPe"
+)]
+fn route_gql_root_market_sector_pe() {}
 
 /// Implements `graphql::query::root_market::sector` (field `sector`).
 #[allow(dead_code)]

@@ -8,9 +8,12 @@ use crate::tools::gql::{
     GQL_COMPANY_PROFILE_VALID_FIELDS, GQL_EARNINGS_SURPRISES_COMPOSITE,
     GQL_EARNINGS_SURPRISES_DEFAULT_FIELDS, GQL_EARNINGS_SURPRISES_VALID_FIELDS,
     GQL_EARNINGS_TRANSCRIPT_DEFAULT_FIELDS, GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS,
-    HOLDER_TYPE_SPECS, build_paginated_composite_selection, build_selection_or_default,
-    build_type_spec_selection, execute_query, parse_fields, unwrap_ticker_field,
-    wrap_nested_connection,
+    GQL_ETF_COUNTRY_WEIGHTING_COMPOSITE, GQL_ETF_HOLDING_COMPOSITE, GQL_ETF_PROFILE_DEFAULT_FIELDS,
+    GQL_ETF_PROFILE_VALID_FIELDS, GQL_ETF_SECTOR_WEIGHTING_COMPOSITE,
+    GQL_PRICE_TARGET_CONSENSUS_DEFAULT_FIELDS, GQL_PRICE_TARGET_CONSENSUS_VALID_FIELDS,
+    GQL_RATING_CONSENSUS_DEFAULT_FIELDS, GQL_RATING_CONSENSUS_VALID_FIELDS, HOLDER_TYPE_SPECS,
+    build_paginated_composite_selection, build_selection_or_default, build_type_spec_selection,
+    execute_query, parse_fields, unwrap_ticker_field, wrap_nested_connection,
 };
 
 fn holder_type_to_field(holder_type: HolderType) -> &'static str {
@@ -198,6 +201,83 @@ pub async fn get_earnings_surprises(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "earningsSurprises");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_rating_consensus(
+    schema: &FinanceSchema,
+    symbol: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_RATING_CONSENSUS_VALID_FIELDS,
+        GQL_RATING_CONSENSUS_DEFAULT_FIELDS,
+    );
+
+    let query = format!(
+        "query GetRatingConsensus($symbol: String!) {{ ticker(symbol: $symbol) {{ ratingConsensus {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "ratingConsensus");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_price_target_consensus(
+    schema: &FinanceSchema,
+    symbol: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_PRICE_TARGET_CONSENSUS_VALID_FIELDS,
+        GQL_PRICE_TARGET_CONSENSUS_DEFAULT_FIELDS,
+    );
+
+    let query = format!(
+        "query GetPriceTargetConsensus($symbol: String!) {{ ticker(symbol: $symbol) {{ priceTargetConsensus {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "priceTargetConsensus");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+pub async fn get_etf_profile(
+    schema: &FinanceSchema,
+    symbol: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_type_spec_selection(
+        field_list.as_deref(),
+        GQL_ETF_PROFILE_VALID_FIELDS,
+        GQL_ETF_PROFILE_DEFAULT_FIELDS,
+        &[
+            ("holdings", GQL_ETF_HOLDING_COMPOSITE),
+            ("sectorWeightings", GQL_ETF_SECTOR_WEIGHTING_COMPOSITE),
+            ("countryWeightings", GQL_ETF_COUNTRY_WEIGHTING_COMPOSITE),
+        ],
+    );
+
+    let query = format!(
+        "query GetEtfProfile($symbol: String!) {{ ticker(symbol: $symbol) {{ etfProfile {selection} }} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("symbol"), symbol.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_ticker_field(json, "etfProfile");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))

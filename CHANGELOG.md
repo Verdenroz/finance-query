@@ -355,22 +355,30 @@ ADDED    finance_query::AssetClass
 ADDED    finance_query::CalendarDetail
 ADDED    finance_query::CalendarKind
 ADDED    finance_query::CommitmentsOfTraders
+ADDED    finance_query::CompanyProfile
+ADDED    finance_query::CongressionalTrade
 ADDED    finance_query::CotObservation
 ADDED    finance_query::Discovery
+ADDED    finance_query::EarningsSurprise
+ADDED    finance_query::EarningsTranscript
 ADDED    finance_query::EconomicCatalog
 ADDED    finance_query::EconomicCategory
 ADDED    finance_query::EconomicRelease
 ADDED    finance_query::EconomicSeriesMatch
 ADDED    finance_query::EmployeeCount
+ADDED    finance_query::EtfCountryWeighting
 ADDED    finance_query::EtfHolding
 ADDED    finance_query::EtfProfile
+ADDED    finance_query::EtfSectorWeighting
 ADDED    finance_query::ExchangeInfo
 ADDED    finance_query::ExecutiveCompensation
+ADDED    finance_query::FailToDeliver
 ADDED    finance_query::FilingSearchFilters
 ADDED    finance_query::FilingSearchHit
 ADDED    finance_query::FilingSection
 ADDED    finance_query::FilingSectionForm
 ADDED    finance_query::FinancialRatiosTtm
+ADDED    finance_query::GradingAction
 ADDED    finance_query::IndexConstituent
 ADDED    finance_query::IndexConstituentChange
 ADDED    finance_query::IndustryPe
@@ -402,20 +410,158 @@ ADDED    finance_query::ShortVolume
 ADDED    finance_query::Snapshot
 ADDED    finance_query::SymbolDetails
 ADDED    finance_query::SymbolMatch
+ADDED    finance_query::adapters::alphavantage::init
+ADDED    finance_query::adapters::alphavantage::init_with_timeout
 ADDED    finance_query::adapters::cftc::futures::fetch_commitments_of_traders_response
 ADDED    finance_query::adapters::coingecko::discovery::fetch_symbol_search_response
 ADDED    finance_query::adapters::coingecko::fetch_crypto_global_response
 ADDED    finance_query::adapters::coingecko::fetch_crypto_trending_response
+ADDED    finance_query::adapters::fmp::init
+ADDED    finance_query::adapters::fmp::init_with_timeout
+ADDED    finance_query::adapters::fred::models::ReleaseDate
+ADDED    finance_query::adapters::fred::release_dates
 ADDED    finance_query::adapters::gdelt::corporate::fetch_news_response
+ADDED    finance_query::adapters::polygon::init
+ADDED    finance_query::adapters::polygon::init_with_timeout
 ADDED    finance_query::adapters::yahoo::client::ClientConfig
 ADDED    finance_query::adapters::yahoo::client::YahooClient
+ADDED    finance_query::alphavantage
+ADDED    finance_query::alphavantage::init
+ADDED    finance_query::alphavantage::init_with_timeout
 ADDED    finance_query::backtesting::PositionExtremes
 ADDED    finance_query::backtesting::position::Position::close
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuBaseRef
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuConfig
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuConversionRef
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuLaggingRef
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuLeadingARef
+ADDED    finance_query::backtesting::refs::ichimoku::IchimokuLeadingBRef
+ADDED    finance_query::backtesting::refs::ichimoku::ichimoku
+ADDED    finance_query::backtesting::refs::ichimoku::ichimoku_custom
+ADDED    finance_query::backtesting::refs::moving_averages::AlmaConfig
+ADDED    finance_query::backtesting::refs::moving_averages::AlmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::DemaRef
+ADDED    finance_query::backtesting::refs::moving_averages::EmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::HmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::McginleyDynamicRef
+ADDED    finance_query::backtesting::refs::moving_averages::SmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::TemaRef
+ADDED    finance_query::backtesting::refs::moving_averages::VwmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::WmaRef
+ADDED    finance_query::backtesting::refs::moving_averages::alma
+ADDED    finance_query::backtesting::refs::moving_averages::dema
+ADDED    finance_query::backtesting::refs::moving_averages::ema
+ADDED    finance_query::backtesting::refs::moving_averages::hma
+ADDED    finance_query::backtesting::refs::moving_averages::mcginley
+ADDED    finance_query::backtesting::refs::moving_averages::sma
+ADDED    finance_query::backtesting::refs::moving_averages::tema
+ADDED    finance_query::backtesting::refs::moving_averages::vwma
+ADDED    finance_query::backtesting::refs::moving_averages::wma
+ADDED    finance_query::backtesting::refs::oscillators::AwesomeOscillatorRef
+ADDED    finance_query::backtesting::refs::oscillators::BalanceOfPowerRef
+ADDED    finance_query::backtesting::refs::oscillators::CciRef
+ADDED    finance_query::backtesting::refs::oscillators::ChaikinOscillatorRef
+ADDED    finance_query::backtesting::refs::oscillators::CmoRef
+ADDED    finance_query::backtesting::refs::oscillators::CoppockCurveRef
+ADDED    finance_query::backtesting::refs::oscillators::MfiRef
+ADDED    finance_query::backtesting::refs::oscillators::MomentumRef
+ADDED    finance_query::backtesting::refs::oscillators::RocRef
+ADDED    finance_query::backtesting::refs::oscillators::RsiRef
+ADDED    finance_query::backtesting::refs::oscillators::StochasticConfig
+ADDED    finance_query::backtesting::refs::oscillators::StochasticDRef
+ADDED    finance_query::backtesting::refs::oscillators::StochasticKRef
+ADDED    finance_query::backtesting::refs::oscillators::StochasticRsiConfig
+ADDED    finance_query::backtesting::refs::oscillators::StochasticRsiConfig::d
+ADDED    finance_query::backtesting::refs::oscillators::StochasticRsiConfig::k
+ADDED    finance_query::backtesting::refs::oscillators::StochasticRsiDRef
+ADDED    finance_query::backtesting::refs::oscillators::StochasticRsiRef
+ADDED    finance_query::backtesting::refs::oscillators::WilliamsRRef
+ADDED    finance_query::backtesting::refs::oscillators::awesome_oscillator
+ADDED    finance_query::backtesting::refs::oscillators::balance_of_power
+ADDED    finance_query::backtesting::refs::oscillators::cci
+ADDED    finance_query::backtesting::refs::oscillators::chaikin_oscillator
+ADDED    finance_query::backtesting::refs::oscillators::cmo
+ADDED    finance_query::backtesting::refs::oscillators::coppock_curve
+ADDED    finance_query::backtesting::refs::oscillators::mfi
+ADDED    finance_query::backtesting::refs::oscillators::momentum
+ADDED    finance_query::backtesting::refs::oscillators::roc
+ADDED    finance_query::backtesting::refs::oscillators::rsi
+ADDED    finance_query::backtesting::refs::oscillators::stochastic
+ADDED    finance_query::backtesting::refs::oscillators::stochastic_rsi
+ADDED    finance_query::backtesting::refs::oscillators::williams_r
+ADDED    finance_query::backtesting::refs::power::BearPowerRef
+ADDED    finance_query::backtesting::refs::power::BullPowerRef
+ADDED    finance_query::backtesting::refs::power::ElderBearPowerRef
+ADDED    finance_query::backtesting::refs::power::ElderBullPowerRef
+ADDED    finance_query::backtesting::refs::power::bear_power
+ADDED    finance_query::backtesting::refs::power::bull_power
+ADDED    finance_query::backtesting::refs::power::elder_bear_power
+ADDED    finance_query::backtesting::refs::power::elder_bull_power
+ADDED    finance_query::backtesting::refs::trend::AdxRef
+ADDED    finance_query::backtesting::refs::trend::AroonConfig
+ADDED    finance_query::backtesting::refs::trend::AroonDownRef
+ADDED    finance_query::backtesting::refs::trend::AroonUpRef
+ADDED    finance_query::backtesting::refs::trend::ChoppinessIndexRef
+ADDED    finance_query::backtesting::refs::trend::MacdConfig
+ADDED    finance_query::backtesting::refs::trend::MacdHistogramRef
+ADDED    finance_query::backtesting::refs::trend::MacdLineRef
+ADDED    finance_query::backtesting::refs::trend::MacdSignalRef
+ADDED    finance_query::backtesting::refs::trend::ParabolicSarConfig
+ADDED    finance_query::backtesting::refs::trend::ParabolicSarRef
+ADDED    finance_query::backtesting::refs::trend::SupertrendConfig
+ADDED    finance_query::backtesting::refs::trend::SupertrendUptrendRef
+ADDED    finance_query::backtesting::refs::trend::SupertrendValueRef
+ADDED    finance_query::backtesting::refs::trend::adx
+ADDED    finance_query::backtesting::refs::trend::aroon
+ADDED    finance_query::backtesting::refs::trend::choppiness_index
+ADDED    finance_query::backtesting::refs::trend::macd
+ADDED    finance_query::backtesting::refs::trend::parabolic_sar
+ADDED    finance_query::backtesting::refs::trend::supertrend
+ADDED    finance_query::backtesting::refs::volatility::AtrRef
+ADDED    finance_query::backtesting::refs::volatility::BollingerConfig
+ADDED    finance_query::backtesting::refs::volatility::BollingerLowerRef
+ADDED    finance_query::backtesting::refs::volatility::BollingerMiddleRef
+ADDED    finance_query::backtesting::refs::volatility::BollingerUpperRef
+ADDED    finance_query::backtesting::refs::volatility::DonchianConfig
+ADDED    finance_query::backtesting::refs::volatility::DonchianLowerRef
+ADDED    finance_query::backtesting::refs::volatility::DonchianMiddleRef
+ADDED    finance_query::backtesting::refs::volatility::DonchianUpperRef
+ADDED    finance_query::backtesting::refs::volatility::KeltnerConfig
+ADDED    finance_query::backtesting::refs::volatility::KeltnerLowerRef
+ADDED    finance_query::backtesting::refs::volatility::KeltnerMiddleRef
+ADDED    finance_query::backtesting::refs::volatility::KeltnerUpperRef
+ADDED    finance_query::backtesting::refs::volatility::TrueRangeRef
+ADDED    finance_query::backtesting::refs::volatility::atr
+ADDED    finance_query::backtesting::refs::volatility::bollinger
+ADDED    finance_query::backtesting::refs::volatility::donchian
+ADDED    finance_query::backtesting::refs::volatility::keltner
+ADDED    finance_query::backtesting::refs::volatility::true_range
+ADDED    finance_query::backtesting::refs::volume::AccumulationDistributionRef
+ADDED    finance_query::backtesting::refs::volume::CmfRef
+ADDED    finance_query::backtesting::refs::volume::ObvRef
+ADDED    finance_query::backtesting::refs::volume::VwapRef
+ADDED    finance_query::backtesting::refs::volume::accumulation_distribution
+ADDED    finance_query::backtesting::refs::volume::cmf
+ADDED    finance_query::backtesting::refs::volume::obv
+ADDED    finance_query::backtesting::refs::volume::vwap
+ADDED    finance_query::backtesting::result::benchmark::BenchmarkMetrics
+ADDED    finance_query::backtesting::result::metrics::PerformanceMetrics
+ADDED    finance_query::backtesting::result::metrics::PerformanceMetrics::max_drawdown_percentage
 ADDED    finance_query::backtesting::strategy::PositionExtremes
 ADDED    finance_query::cftc
 ADDED    finance_query::cftc::CommitmentsOfTraders
 ADDED    finance_query::cftc::CotObservation
 ADDED    finance_query::cftc::commitments_of_traders
+ADDED    finance_query::constants::enums::frequency::Frequency
+ADDED    finance_query::constants::enums::interval::Interval
+ADDED    finance_query::constants::enums::interval::Interval::as_str
+ADDED    finance_query::constants::enums::region::Region
+ADDED    finance_query::constants::enums::region::Region::utc_offset_secs
+ADDED    finance_query::constants::enums::statement_type::StatementType
+ADDED    finance_query::constants::enums::time_range::TimeRange
+ADDED    finance_query::constants::enums::time_range::TimeRange::as_str
+ADDED    finance_query::constants::enums::time_range::TimeRange::default_interval
+ADDED    finance_query::constants::enums::value_format::ValueFormat
 ADDED    finance_query::constants::industries::Industry::as_slug
 ADDED    finance_query::crypto::GlobalCryptoStats
 ADDED    finance_query::crypto::SymbolMatch
@@ -454,6 +600,11 @@ ADDED    finance_query::domains::market::Market::grouped_daily
 ADDED    finance_query::domains::market::MarketCalendar
 ADDED    finance_query::domains::snapshot::Snapshot
 ADDED    finance_query::finance::fear_and_greed_crypto
+ADDED    finance_query::fmp
+ADDED    finance_query::fmp::init
+ADDED    finance_query::fmp::init_with_timeout
+ADDED    finance_query::fred::ReleaseDate
+ADDED    finance_query::fred::release_dates
 ADDED    finance_query::gdelt
 ADDED    finance_query::gdelt::News
 ADDED    finance_query::gdelt::news
@@ -477,6 +628,7 @@ ADDED    finance_query::models::calendar::market::CalendarDetail
 ADDED    finance_query::models::calendar::market::CalendarKind
 ADDED    finance_query::models::calendar::market::MarketCalendarEntry
 ADDED    finance_query::models::chart::data::Chart::pivot_points
+ADDED    finance_query::models::corporate::earnings_transcript::EarningsTranscript
 ADDED    finance_query::models::corporate::governance::EmployeeCount
 ADDED    finance_query::models::corporate::governance::ExecutiveCompensation
 ADDED    finance_query::models::corporate::press_release::PressRelease
@@ -500,16 +652,23 @@ ADDED    finance_query::models::economic::catalog::EconomicRelease
 ADDED    finance_query::models::economic::catalog::EconomicSeriesMatch
 ADDED    finance_query::models::filings::full_text::FilingSearchFilters
 ADDED    finance_query::models::filings::full_text::FilingSearchHit
+ADDED    finance_query::models::filings::ownership::CongressionalTrade
+ADDED    finance_query::models::filings::ownership::FailToDeliver
 ADDED    finance_query::models::filings::ownership::InsiderTrade
 ADDED    finance_query::models::filings::ownership::InstitutionalHolding
 ADDED    finance_query::models::filings::sections::FilingSection
 ADDED    finance_query::models::filings::sections::FilingSectionForm
 ADDED    finance_query::models::filings::sections::RiskFactor
+ADDED    finance_query::models::fundamentals::company_profile::CompanyProfile
 ADDED    finance_query::models::fundamentals::consensus::PriceTargetConsensus
 ADDED    finance_query::models::fundamentals::consensus::PriceTargetSummary
 ADDED    finance_query::models::fundamentals::consensus::RatingConsensus
+ADDED    finance_query::models::fundamentals::earnings_surprise::EarningsSurprise
+ADDED    finance_query::models::fundamentals::etf::EtfCountryWeighting
 ADDED    finance_query::models::fundamentals::etf::EtfHolding
 ADDED    finance_query::models::fundamentals::etf::EtfProfile
+ADDED    finance_query::models::fundamentals::etf::EtfSectorWeighting
+ADDED    finance_query::models::fundamentals::grading_history::GradingAction
 ADDED    finance_query::models::fundamentals::short_activity::ShareFloat
 ADDED    finance_query::models::fundamentals::short_activity::ShortInterest
 ADDED    finance_query::models::fundamentals::short_activity::ShortVolume
@@ -537,6 +696,9 @@ ADDED    finance_query::openfigi::resolve_cusip
 ADDED    finance_query::openfigi::resolve_isin
 ADDED    finance_query::openfigi::resolve_many
 ADDED    finance_query::openfigi::resolve_sedol
+ADDED    finance_query::polygon
+ADDED    finance_query::polygon::init
+ADDED    finance_query::polygon::init_with_timeout
 ADDED    finance_query::providers::Capability::name
 ADDED    finance_query::providers::Routes
 ADDED    finance_query::providers::config::Providers::calendar
@@ -626,15 +788,144 @@ ADDED    finance_query::streaming::trades::TradeStreamBuilder::max_reconnect_att
 ADDED    finance_query::streaming::trades::TradeTick
 ADDED    finance_query::ticker::core::Ticker::calendar
 ADDED    finance_query::ticker::core::Ticker::news
+ADDED    finance_query::ticker::core::Ticker::rating_consensus
 ADDED    finance_query::ticker::core::Ticker::recommendations
 ADDED    finance_query::ticker::core::TickerBuilder::cache
 ADDED    finance_query::ticker::core::TickerBuilder::no_cache
 ADDED    finance_query::tickers::core::Tickers::client_handle
+REMOVED  finance_query::backtesting::refs::computed::AccumulationDistributionRef
+REMOVED  finance_query::backtesting::refs::computed::AdxRef
+REMOVED  finance_query::backtesting::refs::computed::AlmaConfig
+REMOVED  finance_query::backtesting::refs::computed::AlmaRef
+REMOVED  finance_query::backtesting::refs::computed::AroonConfig
+REMOVED  finance_query::backtesting::refs::computed::AroonDownRef
+REMOVED  finance_query::backtesting::refs::computed::AroonUpRef
+REMOVED  finance_query::backtesting::refs::computed::AtrRef
+REMOVED  finance_query::backtesting::refs::computed::AwesomeOscillatorRef
+REMOVED  finance_query::backtesting::refs::computed::BalanceOfPowerRef
+REMOVED  finance_query::backtesting::refs::computed::BearPowerRef
+REMOVED  finance_query::backtesting::refs::computed::BollingerConfig
+REMOVED  finance_query::backtesting::refs::computed::BollingerLowerRef
+REMOVED  finance_query::backtesting::refs::computed::BollingerMiddleRef
+REMOVED  finance_query::backtesting::refs::computed::BollingerUpperRef
+REMOVED  finance_query::backtesting::refs::computed::BullPowerRef
+REMOVED  finance_query::backtesting::refs::computed::CciRef
+REMOVED  finance_query::backtesting::refs::computed::ChaikinOscillatorRef
+REMOVED  finance_query::backtesting::refs::computed::ChoppinessIndexRef
+REMOVED  finance_query::backtesting::refs::computed::CmfRef
+REMOVED  finance_query::backtesting::refs::computed::CmoRef
+REMOVED  finance_query::backtesting::refs::computed::CoppockCurveRef
+REMOVED  finance_query::backtesting::refs::computed::DemaRef
+REMOVED  finance_query::backtesting::refs::computed::DonchianConfig
+REMOVED  finance_query::backtesting::refs::computed::DonchianLowerRef
+REMOVED  finance_query::backtesting::refs::computed::DonchianMiddleRef
+REMOVED  finance_query::backtesting::refs::computed::DonchianUpperRef
+REMOVED  finance_query::backtesting::refs::computed::ElderBearPowerRef
+REMOVED  finance_query::backtesting::refs::computed::ElderBullPowerRef
+REMOVED  finance_query::backtesting::refs::computed::EmaRef
+REMOVED  finance_query::backtesting::refs::computed::HmaRef
+REMOVED  finance_query::backtesting::refs::computed::IchimokuBaseRef
+REMOVED  finance_query::backtesting::refs::computed::IchimokuConfig
+REMOVED  finance_query::backtesting::refs::computed::IchimokuConversionRef
+REMOVED  finance_query::backtesting::refs::computed::IchimokuLaggingRef
+REMOVED  finance_query::backtesting::refs::computed::IchimokuLeadingARef
+REMOVED  finance_query::backtesting::refs::computed::IchimokuLeadingBRef
+REMOVED  finance_query::backtesting::refs::computed::KeltnerConfig
+REMOVED  finance_query::backtesting::refs::computed::KeltnerLowerRef
+REMOVED  finance_query::backtesting::refs::computed::KeltnerMiddleRef
+REMOVED  finance_query::backtesting::refs::computed::KeltnerUpperRef
+REMOVED  finance_query::backtesting::refs::computed::MacdConfig
+REMOVED  finance_query::backtesting::refs::computed::MacdHistogramRef
+REMOVED  finance_query::backtesting::refs::computed::MacdLineRef
+REMOVED  finance_query::backtesting::refs::computed::MacdSignalRef
+REMOVED  finance_query::backtesting::refs::computed::McginleyDynamicRef
+REMOVED  finance_query::backtesting::refs::computed::MfiRef
+REMOVED  finance_query::backtesting::refs::computed::MomentumRef
+REMOVED  finance_query::backtesting::refs::computed::ObvRef
+REMOVED  finance_query::backtesting::refs::computed::ParabolicSarConfig
+REMOVED  finance_query::backtesting::refs::computed::ParabolicSarRef
+REMOVED  finance_query::backtesting::refs::computed::RocRef
+REMOVED  finance_query::backtesting::refs::computed::RsiRef
+REMOVED  finance_query::backtesting::refs::computed::SmaRef
+REMOVED  finance_query::backtesting::refs::computed::StochasticConfig
+REMOVED  finance_query::backtesting::refs::computed::StochasticDRef
+REMOVED  finance_query::backtesting::refs::computed::StochasticKRef
+REMOVED  finance_query::backtesting::refs::computed::StochasticRsiConfig
+REMOVED  finance_query::backtesting::refs::computed::StochasticRsiConfig::d
+REMOVED  finance_query::backtesting::refs::computed::StochasticRsiConfig::k
+REMOVED  finance_query::backtesting::refs::computed::StochasticRsiDRef
+REMOVED  finance_query::backtesting::refs::computed::StochasticRsiRef
+REMOVED  finance_query::backtesting::refs::computed::SupertrendConfig
+REMOVED  finance_query::backtesting::refs::computed::SupertrendUptrendRef
+REMOVED  finance_query::backtesting::refs::computed::SupertrendValueRef
+REMOVED  finance_query::backtesting::refs::computed::TemaRef
+REMOVED  finance_query::backtesting::refs::computed::TrueRangeRef
+REMOVED  finance_query::backtesting::refs::computed::VwapRef
+REMOVED  finance_query::backtesting::refs::computed::VwmaRef
+REMOVED  finance_query::backtesting::refs::computed::WilliamsRRef
+REMOVED  finance_query::backtesting::refs::computed::WmaRef
+REMOVED  finance_query::backtesting::refs::computed::accumulation_distribution
+REMOVED  finance_query::backtesting::refs::computed::adx
+REMOVED  finance_query::backtesting::refs::computed::alma
+REMOVED  finance_query::backtesting::refs::computed::aroon
+REMOVED  finance_query::backtesting::refs::computed::atr
+REMOVED  finance_query::backtesting::refs::computed::awesome_oscillator
+REMOVED  finance_query::backtesting::refs::computed::balance_of_power
+REMOVED  finance_query::backtesting::refs::computed::bear_power
+REMOVED  finance_query::backtesting::refs::computed::bollinger
+REMOVED  finance_query::backtesting::refs::computed::bull_power
+REMOVED  finance_query::backtesting::refs::computed::cci
+REMOVED  finance_query::backtesting::refs::computed::chaikin_oscillator
+REMOVED  finance_query::backtesting::refs::computed::choppiness_index
+REMOVED  finance_query::backtesting::refs::computed::cmf
+REMOVED  finance_query::backtesting::refs::computed::cmo
+REMOVED  finance_query::backtesting::refs::computed::coppock_curve
+REMOVED  finance_query::backtesting::refs::computed::dema
+REMOVED  finance_query::backtesting::refs::computed::donchian
+REMOVED  finance_query::backtesting::refs::computed::elder_bear_power
+REMOVED  finance_query::backtesting::refs::computed::elder_bull_power
+REMOVED  finance_query::backtesting::refs::computed::ema
+REMOVED  finance_query::backtesting::refs::computed::hma
+REMOVED  finance_query::backtesting::refs::computed::ichimoku
+REMOVED  finance_query::backtesting::refs::computed::ichimoku_custom
+REMOVED  finance_query::backtesting::refs::computed::keltner
+REMOVED  finance_query::backtesting::refs::computed::macd
+REMOVED  finance_query::backtesting::refs::computed::mcginley
+REMOVED  finance_query::backtesting::refs::computed::mfi
+REMOVED  finance_query::backtesting::refs::computed::momentum
+REMOVED  finance_query::backtesting::refs::computed::obv
+REMOVED  finance_query::backtesting::refs::computed::parabolic_sar
+REMOVED  finance_query::backtesting::refs::computed::roc
+REMOVED  finance_query::backtesting::refs::computed::rsi
+REMOVED  finance_query::backtesting::refs::computed::sma
+REMOVED  finance_query::backtesting::refs::computed::stochastic
+REMOVED  finance_query::backtesting::refs::computed::stochastic_rsi
+REMOVED  finance_query::backtesting::refs::computed::supertrend
+REMOVED  finance_query::backtesting::refs::computed::tema
+REMOVED  finance_query::backtesting::refs::computed::true_range
+REMOVED  finance_query::backtesting::refs::computed::vwap
+REMOVED  finance_query::backtesting::refs::computed::vwma
+REMOVED  finance_query::backtesting::refs::computed::williams_r
+REMOVED  finance_query::backtesting::refs::computed::wma
+REMOVED  finance_query::backtesting::result::BenchmarkMetrics
+REMOVED  finance_query::backtesting::result::PerformanceMetrics
+REMOVED  finance_query::backtesting::result::PerformanceMetrics::max_drawdown_percentage
+REMOVED  finance_query::constants::Frequency
+REMOVED  finance_query::constants::Interval
+REMOVED  finance_query::constants::Interval::as_str
+REMOVED  finance_query::constants::Region
+REMOVED  finance_query::constants::Region::utc_offset_secs
+REMOVED  finance_query::constants::StatementType
+REMOVED  finance_query::constants::TimeRange
+REMOVED  finance_query::constants::TimeRange::as_str
+REMOVED  finance_query::constants::TimeRange::default_interval
+REMOVED  finance_query::constants::ValueFormat
 REMOVED  finance_query::streaming::pricing::OptionTypeProto
 CHANGED  finance_query::CryptoCoin (body)
 CHANGED  finance_query::FinanceError (body)
 CHANGED  finance_query::Frequency (body)
 CHANGED  finance_query::FuturesContract (body)
+CHANGED  finance_query::FuturesQuote (body)
 CHANGED  finance_query::Indicator (body)
 CHANGED  finance_query::IndicatorResult (body)
 CHANGED  finance_query::IndicatorsSummary (body)
@@ -656,6 +947,8 @@ CHANGED  finance_query::Tickers (body)
 CHANGED  finance_query::TickersBuilder (body)
 CHANGED  finance_query::TimeRange (body)
 CHANGED  finance_query::ValueFormat (body)
+CHANGED  finance_query::adapters::fmp::corporate::insider_trading::InsiderTradeDTO (body)
+CHANGED  finance_query::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO (body)
 CHANGED  finance_query::adapters::fred::series (body)
 CHANGED  finance_query::backtesting::BenchmarkMetrics (body)
 CHANGED  finance_query::backtesting::Signal (body)
@@ -670,19 +963,11 @@ CHANGED  finance_query::backtesting::refs::htf::HtfCondition (body)
 CHANGED  finance_query::backtesting::refs::htf::htf (body)
 CHANGED  finance_query::backtesting::refs::htf::htf_region (body)
 CHANGED  finance_query::backtesting::refs::htf_region (body)
-CHANGED  finance_query::backtesting::result::BenchmarkMetrics (body)
 CHANGED  finance_query::backtesting::result::SignalRecord (body)
 CHANGED  finance_query::backtesting::signal::Signal (body)
 CHANGED  finance_query::backtesting::strategy::Strategy (body)
 CHANGED  finance_query::backtesting::strategy::StrategyContext (body)
 CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
-CHANGED  finance_query::constants::Frequency (body)
-CHANGED  finance_query::constants::Interval (body)
-CHANGED  finance_query::constants::Interval::as_str (body)
-CHANGED  finance_query::constants::Region (body)
-CHANGED  finance_query::constants::StatementType (body)
-CHANGED  finance_query::constants::TimeRange (body)
-CHANGED  finance_query::constants::ValueFormat (body)
 CHANGED  finance_query::constants::indices::Region (body)
 CHANGED  finance_query::constants::industries::Industry (body)
 CHANGED  finance_query::constants::screeners::Screener (body)
@@ -717,6 +1002,8 @@ CHANGED  finance_query::indicators::vwma (body)
 CHANGED  finance_query::indicators::vwma::vwma (body)
 CHANGED  finance_query::models::discovery::screeners::query::QuoteType (body)
 CHANGED  finance_query::models::discovery::screeners::query::SortType (body)
+CHANGED  finance_query::models::fundamentals::summary_detail::SummaryDetail (body)
+CHANGED  finance_query::models::futures::FuturesQuote (body)
 CHANGED  finance_query::providers::Operation (body)
 CHANGED  finance_query::providers::Operation::capability (body)
 CHANGED  finance_query::providers::Provider (body)
@@ -750,182 +1037,181 @@ CHANGED  finance_query::tickers::core::TickersBuilder (body)
 
 | item | instructions | median | p99 | allocs | polls |
 |---|---:|---:|---:|---:|---:|
-| `finance_query::bt_base_to_htf_index` | n/a | 27.40µs | 30.12µs | 1 | n/a |
-| `finance_query::bt_bayesian_search` | n/a | 2.97ms | 3.04ms | 2382 | n/a |
-| `finance_query::bt_grid_search` | n/a | 653.48µs | 822.34µs | 3012 | n/a |
-| `finance_query::bt_monte_carlo` | n/a | 180.65µs | 191.76µs | 6 | n/a |
-| `finance_query::bt_resample` | n/a | 116.35µs | 117.03µs | 11 | n/a |
-| `finance_query::bt_sma_crossover` | n/a | 968.51µs | 1.05ms | 2373 | n/a |
-| `finance_query::bt_strategy_builder` | n/a | 165.43µs | 178.91µs | 330 | n/a |
-| `finance_query::capability_name` | n/a | 3.8ns | 4.2ns | 0 | n/a |
-| `finance_query::cond_bench_always_false` | n/a | 23.86µs | 23.96µs | 6 | n/a |
-| `finance_query::cond_bench_always_true` | n/a | 424.52µs | 443.56µs | 4045 | n/a |
-| `finance_query::cond_bench_has_position` | n/a | 428.25µs | 447.16µs | 4045 | n/a |
-| `finance_query::cond_bench_held_for_bars` | n/a | 165.45µs | 170.11µs | 1041 | n/a |
-| `finance_query::cond_bench_in_loss` | n/a | 430.05µs | 435.44µs | 4045 | n/a |
-| `finance_query::cond_bench_in_profit` | n/a | 51.28µs | 55.85µs | 142 | n/a |
-| `finance_query::cond_bench_is_long` | n/a | 426.91µs | 478.06µs | 4045 | n/a |
-| `finance_query::cond_bench_is_short` | n/a | 35.88µs | 36.98µs | 13 | n/a |
-| `finance_query::cond_bench_no_position` | n/a | 35.89µs | 36.91µs | 13 | n/a |
-| `finance_query::cond_bench_stop_loss` | n/a | 44.72µs | 45.50µs | 24 | n/a |
-| `finance_query::cond_bench_take_profit` | n/a | 43.30µs | 44.72µs | 13 | n/a |
-| `finance_query::cond_bench_trailing_stop` | n/a | 51.32µs | 51.50µs | 92 | n/a |
-| `finance_query::cond_bench_trailing_take_profit` | n/a | 50.67µs | 52.87µs | 72 | n/a |
-| `finance_query::de_chart` | n/a | 9.96µs | 10.05µs | 13 | n/a |
-| `finance_query::de_crypto_coins` | n/a | 34.78µs | 35.32µs | 205 | n/a |
-| `finance_query::de_currencies` | n/a | 59.36µs | 59.58µs | 647 | n/a |
-| `finance_query::de_edgar_facts` | n/a | 1.47ms | 1.58ms | 11899 | n/a |
-| `finance_query::de_edgar_submissions` | n/a | 462.25µs | 474.08µs | 6784 | n/a |
-| `finance_query::de_fear_and_greed` | n/a | 121.3ns | 122.0ns | 0 | n/a |
-| `finance_query::de_fear_and_greed_crypto_history` | n/a | 1.43µs | 1.49µs | 3 | n/a |
-| `finance_query::de_financials` | n/a | 22.39µs | 22.67µs | 206 | n/a |
-| `finance_query::de_fred_series` | n/a | 112.01µs | 117.36µs | 873 | n/a |
-| `finance_query::de_hours` | n/a | 783.8ns | 886.6ns | 10 | n/a |
-| `finance_query::de_market_summary` | n/a | 32.43µs | 37.68µs | 228 | n/a |
-| `finance_query::de_news` | n/a | 4.36µs | 4.60µs | 53 | n/a |
-| `finance_query::de_options` | n/a | 1.09µs | 1.13µs | 6 | n/a |
-| `finance_query::de_quote` | n/a | 1.09ms | 1.17ms | 8235 | n/a |
-| `finance_query::de_screener` | n/a | 405.30µs | 410.44µs | 4498 | n/a |
-| `finance_query::de_search` | n/a | 5.31µs | 5.40µs | 55 | n/a |
-| `finance_query::de_treasury_yields` | n/a | 76.22µs | 79.46µs | 119 | n/a |
-| `finance_query::de_trending` | n/a | 1.47µs | 1.58µs | 24 | n/a |
-| `finance_query::dispatch_select` | n/a | 4.9ns | 5.1ns | 0 | n/a |
-| `finance_query::ind_accumulation_distribution` | n/a | 4.32µs | 4.37µs | 1 | n/a |
-| `finance_query::ind_alma` | n/a | 5.29µs | 5.52µs | 2 | n/a |
-| `finance_query::ind_aroon` | n/a | 12.09µs | 12.14µs | 9 | n/a |
-| `finance_query::ind_atr` | n/a | 11.03µs | 11.11µs | 2 | n/a |
-| `finance_query::ind_awesome_oscillator` | n/a | 9.48µs | 9.51µs | 4 | n/a |
-| `finance_query::ind_balance_of_power` | n/a | 2.22µs | 2.26µs | 2 | n/a |
-| `finance_query::ind_bull_bear_power` | n/a | 7.78µs | 7.85µs | 3 | n/a |
-| `finance_query::ind_cci` | n/a | 18.55µs | 18.70µs | 2 | n/a |
-| `finance_query::ind_chaikin_oscillator` | n/a | 17.85µs | 18.06µs | 4 | n/a |
-| `finance_query::ind_choppiness_index` | n/a | 20.91µs | 22.25µs | 8 | n/a |
-| `finance_query::ind_cmf` | n/a | 4.34µs | 4.82µs | 2 | n/a |
-| `finance_query::ind_cmo` | n/a | 5.66µs | 6.08µs | 2 | n/a |
-| `finance_query::ind_coppock_curve` | n/a | 8.86µs | 9.04µs | 3 | n/a |
-| `finance_query::ind_dema` | n/a | 13.22µs | 13.33µs | 3 | n/a |
-| `finance_query::ind_donchian_channels` | n/a | 11.36µs | 11.49µs | 9 | n/a |
-| `finance_query::ind_elder_ray` | n/a | 7.78µs | 7.86µs | 3 | n/a |
-| `finance_query::ind_fibonacci_pivot_points` | n/a | 2.82µs | 2.86µs | 1 | n/a |
-| `finance_query::ind_fibonacci_retracement` | n/a | 11.40µs | 12.25µs | 9 | n/a |
-| `finance_query::ind_heikin_ashi` | n/a | 16.38µs | 16.70µs | 9 | n/a |
-| `finance_query::ind_hma` | n/a | 15.43µs | 17.52µs | 5 | n/a |
-| `finance_query::ind_ichimoku` | n/a | 33.50µs | 34.26µs | 27 | n/a |
-| `finance_query::ind_keltner_channels` | n/a | 19.13µs | 20.48µs | 5 | n/a |
-| `finance_query::ind_last_value` | n/a | 3.5ns | 3.9ns | 0 | n/a |
-| `finance_query::ind_macd` | n/a | 22.23µs | 22.60µs | 7 | n/a |
-| `finance_query::ind_mcginley_dynamic` | n/a | 13.87µs | 14.31µs | 1 | n/a |
-| `finance_query::ind_mfi` | n/a | 6.96µs | 8.57µs | 3 | n/a |
-| `finance_query::ind_momentum` | n/a | 131.83µs | 139.78µs | 52 | n/a |
-| `finance_query::ind_momentum_single` | n/a | 588.9ns | 598.2ns | 1 | n/a |
-| `finance_query::ind_moving_averages` | n/a | 96.28µs | 100.43µs | 27 | n/a |
-| `finance_query::ind_parabolic_sar` | n/a | 2.37µs | 2.41µs | 1 | n/a |
-| `finance_query::ind_patterns` | n/a | 105.91µs | 113.52µs | 1 | n/a |
-| `finance_query::ind_pivot_points` | n/a | 3.24µs | 3.63µs | 1 | n/a |
-| `finance_query::ind_roc` | n/a | 1.81µs | 1.95µs | 1 | n/a |
-| `finance_query::ind_sma` | n/a | 428.16µs | 436.62µs | 1 | n/a |
-| `finance_query::ind_stochastic` | n/a | 16.53µs | 17.10µs | 11 | n/a |
-| `finance_query::ind_stochastic_rsi` | n/a | 27.67µs | 28.13µs | 12 | n/a |
-| `finance_query::ind_supertrend` | n/a | 14.77µs | 15.12µs | 4 | n/a |
-| `finance_query::ind_tema` | n/a | 19.57µs | 19.68µs | 4 | n/a |
-| `finance_query::ind_trend` | n/a | 91.88µs | 93.33µs | 48 | n/a |
-| `finance_query::ind_true_range` | n/a | 1.40µs | 1.61µs | 1 | n/a |
-| `finance_query::ind_volatility` | n/a | 71.47µs | 86.30µs | 28 | n/a |
-| `finance_query::ind_volume` | n/a | 44.57µs | 45.78µs | 14 | n/a |
-| `finance_query::ind_vwap` | n/a | 4.36µs | 4.42µs | 1 | n/a |
-| `finance_query::ind_vwma` | n/a | 3.28µs | 3.35µs | 1 | n/a |
-| `finance_query::ind_williams_r` | n/a | 10.84µs | 11.08µs | 7 | n/a |
-| `finance_query::ind_wma` | n/a | 5.21µs | 5.28µs | 7 | n/a |
-| `finance_query::ind_zigzag` | n/a | 1.66µs | 1.80µs | 4 | n/a |
-| `finance_query::ref_bench_accumulation_distribution` | n/a | 52.25µs | 52.52µs | 23 | n/a |
-| `finance_query::ref_bench_adx` | n/a | 523.56µs | 552.82µs | 4930 | n/a |
-| `finance_query::ref_bench_alma` | n/a | 559.04µs | 572.81µs | 5019 | n/a |
-| `finance_query::ref_bench_aroon` | n/a | 541.24µs | 550.39µs | 4950 | n/a |
-| `finance_query::ref_bench_atr` | n/a | 527.25µs | 538.09µs | 4996 | n/a |
-| `finance_query::ref_bench_awesome_oscillator` | n/a | 326.42µs | 342.93µs | 2636 | n/a |
-| `finance_query::ref_bench_balance_of_power` | n/a | 50.49µs | 51.53µs | 25 | n/a |
-| `finance_query::ref_bench_bear_power` | n/a | 142.64µs | 150.12µs | 806 | n/a |
-| `finance_query::ref_bench_bollinger` | n/a | 554.63µs | 572.83µs | 4968 | n/a |
-| `finance_query::ref_bench_bull_power` | n/a | 485.87µs | 501.75µs | 4238 | n/a |
-| `finance_query::ref_bench_candle_body` | n/a | 23.81µs | 34.75µs | 6 | n/a |
-| `finance_query::ref_bench_candle_range` | n/a | 493.40µs | 522.73µs | 5043 | n/a |
-| `finance_query::ref_bench_cci` | n/a | 312.93µs | 329.55µs | 2605 | n/a |
-| `finance_query::ref_bench_chaikin_oscillator` | n/a | 68.34µs | 69.01µs | 26 | n/a |
-| `finance_query::ref_bench_choppiness_index` | n/a | 544.10µs | 703.50µs | 5002 | n/a |
-| `finance_query::ref_bench_close` | n/a | 499.29µs | 516.05µs | 5043 | n/a |
-| `finance_query::ref_bench_cmf` | n/a | 51.52µs | 52.49µs | 25 | n/a |
-| `finance_query::ref_bench_cmo` | n/a | 299.29µs | 342.74µs | 2598 | n/a |
-| `finance_query::ref_bench_coppock_curve` | n/a | 316.33µs | 326.90µs | 2559 | n/a |
-| `finance_query::ref_bench_dema` | n/a | 516.78µs | 534.53µs | 4875 | n/a |
-| `finance_query::ref_bench_donchian` | n/a | 571.89µs | 588.05µs | 4976 | n/a |
-| `finance_query::ref_bench_elder_bear_power` | n/a | 143.16µs | 146.01µs | 806 | n/a |
-| `finance_query::ref_bench_elder_bull_power` | n/a | 487.73µs | 500.47µs | 4238 | n/a |
-| `finance_query::ref_bench_ema` | n/a | 517.17µs | 535.57µs | 4963 | n/a |
-| `finance_query::ref_bench_gap_pct` | n/a | 259.53µs | 304.17µs | 2489 | n/a |
-| `finance_query::ref_bench_high` | n/a | 490.60µs | 540.55µs | 5043 | n/a |
-| `finance_query::ref_bench_hma` | n/a | 525.83µs | 544.57µs | 4957 | n/a |
-| `finance_query::ref_bench_htf` | n/a | 598.97µs | 942.40µs | 7039 | n/a |
-| `finance_query::ref_bench_htf_region` | n/a | 598.69µs | 623.95µs | 7039 | n/a |
-| `finance_query::ref_bench_ichimoku` | n/a | 577.78µs | 587.53µs | 4836 | n/a |
-| `finance_query::ref_bench_ichimoku_custom` | n/a | 578.38µs | 614.08µs | 4836 | n/a |
-| `finance_query::ref_bench_is_bearish` | n/a | 23.81µs | 34.76µs | 6 | n/a |
-| `finance_query::ref_bench_is_bullish` | n/a | 23.76µs | 24.13µs | 6 | n/a |
-| `finance_query::ref_bench_keltner` | n/a | 566.97µs | 613.01µs | 4972 | n/a |
-| `finance_query::ref_bench_low` | n/a | 492.13µs | 507.01µs | 5043 | n/a |
-| `finance_query::ref_bench_macd` | n/a | 326.58µs | 337.55µs | 2541 | n/a |
-| `finance_query::ref_bench_mcginley` | n/a | 527.42µs | 537.40µs | 4963 | n/a |
-| `finance_query::ref_bench_median_price` | n/a | 494.53µs | 509.61µs | 5043 | n/a |
-| `finance_query::ref_bench_mfi` | n/a | 525.68µs | 543.82µs | 4998 | n/a |
-| `finance_query::ref_bench_momentum` | n/a | 294.01µs | 322.39µs | 2552 | n/a |
-| `finance_query::ref_bench_obv` | n/a | 62.98µs | 93.54µs | 30 | n/a |
-| `finance_query::ref_bench_open` | n/a | 492.77µs | 511.44µs | 5043 | n/a |
-| `finance_query::ref_bench_parabolic_sar` | n/a | 572.06µs | 603.40µs | 5056 | n/a |
-| `finance_query::ref_bench_price` | n/a | 498.72µs | 532.45µs | 5043 | n/a |
-| `finance_query::ref_bench_price_change_pct` | n/a | 272.29µs | 322.10µs | 2489 | n/a |
-| `finance_query::ref_bench_relative_volume` | n/a | 540.58µs | 568.55µs | 4949 | n/a |
-| `finance_query::ref_bench_roc` | n/a | 294.46µs | 301.26µs | 2587 | n/a |
-| `finance_query::ref_bench_rsi` | n/a | 523.25µs | 551.09µs | 4994 | n/a |
-| `finance_query::ref_bench_sma` | n/a | 518.22µs | 541.95µs | 4963 | n/a |
-| `finance_query::ref_bench_stochastic` | n/a | 573.39µs | 670.74µs | 4987 | n/a |
-| `finance_query::ref_bench_stochastic_rsi` | n/a | 572.43µs | 589.46µs | 4831 | n/a |
-| `finance_query::ref_bench_supertrend` | n/a | 567.70µs | 580.13µs | 5021 | n/a |
-| `finance_query::ref_bench_tema` | n/a | 519.63µs | 539.68µs | 4781 | n/a |
-| `finance_query::ref_bench_true_range` | n/a | 525.24µs | 543.90µs | 5059 | n/a |
-| `finance_query::ref_bench_typical_price` | n/a | 521.65µs | 535.19µs | 5043 | n/a |
-| `finance_query::ref_bench_volume` | n/a | 493.17µs | 501.44µs | 5043 | n/a |
-| `finance_query::ref_bench_vwap` | n/a | 524.91µs | 534.79µs | 5060 | n/a |
-| `finance_query::ref_bench_vwma` | n/a | 516.28µs | 526.29µs | 4964 | n/a |
-| `finance_query::ref_bench_williams_r` | n/a | 60.78µs | 70.72µs | 29 | n/a |
-| `finance_query::ref_bench_wma` | n/a | 517.63µs | 783.05µs | 4969 | n/a |
-| `finance_query::risk_beta` | n/a | 69.05µs | 70.80µs | 0 | n/a |
-| `finance_query::risk_calmar` | n/a | 15.5ns | 15.7ns | 0 | n/a |
-| `finance_query::risk_historical_cvar` | n/a | 312.56µs | 335.38µs | 2 | n/a |
-| `finance_query::risk_historical_var` | n/a | 2.81ms | 2.84ms | 2 | n/a |
-| `finance_query::risk_information_ratio` | n/a | 38.93µs | 39.36µs | 1 | n/a |
-| `finance_query::risk_kelly_criterion` | n/a | 3.85µs | 5.63µs | 16 | n/a |
-| `finance_query::risk_max_drawdown` | n/a | 9.06µs | 9.82µs | 1 | n/a |
-| `finance_query::risk_omega_ratio` | n/a | 34.54µs | 34.73µs | 0 | n/a |
-| `finance_query::risk_parametric_cvar` | n/a | 34.53µs | 34.85µs | 0 | n/a |
-| `finance_query::risk_parametric_var` | n/a | 34.59µs | 34.91µs | 0 | n/a |
-| `finance_query::risk_sharpe` | n/a | 34.55µs | 34.63µs | 0 | n/a |
-| `finance_query::risk_sortino` | n/a | 34.51µs | 34.65µs | 0 | n/a |
-| `finance_query::risk_tracking_error` | n/a | 38.94µs | 39.21µs | 1 | n/a |
-| `finance_query::risk_ulcer_index` | n/a | 202.92µs | 204.75µs | 2 | n/a |
-| `finance_query::risk_win_loss_stats` | n/a | 60.24µs | 62.03µs | 25 | n/a |
-| `finance_query::rss_parse` | n/a | 5.70µs | 5.82µs | 48 | n/a |
-| `finance_query::score_news` | n/a | 77.13µs | 91.77µs | 976 | n/a |
-| `finance_query::score_transcript` | n/a | 5.62ms | 5.72ms | 42100 | n/a |
-| `finance_query::ser_currencies` | n/a | 15.74µs | 16.22µs | 8 | n/a |
-| `finance_query::stream_deserialize` | n/a | 1.56µs | 1.61µs | 4 | n/a |
-| `finance_query::stream_serialize` | n/a | 993.1ns | 1.01µs | 4 | n/a |
-| `finance_query::ticker_chart_then_cached` | n/a | 1.37µs | 1.38µs | 20 | n/a |
-| `finance_query::ticker_quote_polls` | n/a | 7.78µs | 7.82µs | 3 | 1 |
-| `finance_query::ticker_quote_then_cached` | n/a | 11.38µs | 11.92µs | 4 | n/a |
-| `finance_query::tickers_batch_quote_then_cached` | n/a | 10.09µs | 10.20µs | 16 | n/a |
-| `finance_query::translate_dictionary` | n/a | 1.97µs | 1.98µs | 49 | n/a |
-| `finance_query::translation_set_backend` | n/a | 23.5ns | 24.7ns | 1 | n/a |
-| `finance_query::translation_translate` | n/a | 3.78µs | 4.09µs | 79 | n/a |
-| `finance_query::translation_translate_with` | n/a | 3.47µs | 3.52µs | 77 | n/a |
+| `finance_query::bt_base_to_htf_index` | 339736 | 35.52µs | 36.05µs | 1 | n/a |
+| `finance_query::bt_bayesian_search` | 25478857 | 3.40ms | 3.42ms | 2382 | n/a |
+| `finance_query::bt_grid_search` | 484885 | 846.27µs | 1.04ms | 3012 | n/a |
+| `finance_query::bt_monte_carlo` | 1085525 | 267.97µs | 305.58µs | 6 | n/a |
+| `finance_query::bt_resample` | 1503864 | 232.70µs | 247.42µs | 11 | n/a |
+| `finance_query::bt_sma_crossover` | 8986178 | 1.42ms | 1.71ms | 2373 | n/a |
+| `finance_query::bt_strategy_builder` | 779976 | 210.14µs | 355.44µs | 330 | n/a |
+| `finance_query::capability_name` | 35 | 4.0ns | 4.5ns | 0 | n/a |
+| `finance_query::cond_bench_always_false` | 232132 | 22.69µs | 24.19µs | 6 | n/a |
+| `finance_query::cond_bench_always_true` | 3388246 | 675.95µs | 713.61µs | 4045 | n/a |
+| `finance_query::cond_bench_has_position` | 3381003 | 677.13µs | 902.32µs | 4045 | n/a |
+| `finance_query::cond_bench_held_for_bars` | 1363476 | 233.62µs | 261.31µs | 1041 | n/a |
+| `finance_query::cond_bench_in_loss` | 3397590 | 671.95µs | 706.16µs | 4045 | n/a |
+| `finance_query::cond_bench_in_profit` | 502522 | 69.92µs | 77.93µs | 142 | n/a |
+| `finance_query::cond_bench_is_long` | 3361060 | 672.50µs | 933.57µs | 4045 | n/a |
+| `finance_query::cond_bench_is_short` | 376824 | 49.08µs | 50.62µs | 13 | n/a |
+| `finance_query::cond_bench_no_position` | 376824 | 49.07µs | 51.37µs | 13 | n/a |
+| `finance_query::cond_bench_stop_loss` | 426587 | 55.60µs | 58.78µs | 24 | n/a |
+| `finance_query::cond_bench_take_profit` | 415502 | 53.47µs | 56.76µs | 13 | n/a |
+| `finance_query::cond_bench_trailing_stop` | 539216 | 69.99µs | 79.82µs | 92 | n/a |
+| `finance_query::cond_bench_trailing_take_profit` | 544994 | 68.78µs | 78.51µs | 72 | n/a |
+| `finance_query::de_chart` | 113125 | 12.78µs | 13.43µs | 13 | n/a |
+| `finance_query::de_crypto_coins` | 351070 | 45.63µs | 48.12µs | 205 | n/a |
+| `finance_query::de_currencies` | 570970 | 85.77µs | 92.39µs | 647 | n/a |
+| `finance_query::de_edgar_facts` | 13639230 | 2.08ms | 2.83ms | 11899 | n/a |
+| `finance_query::de_edgar_submissions` | 5036137 | 734.34µs | 793.77µs | 6784 | n/a |
+| `finance_query::de_fear_and_greed` | 1495 | 175.7ns | 197.6ns | 0 | n/a |
+| `finance_query::de_fear_and_greed_crypto_history` | 16514 | 1.94µs | 2.06µs | 3 | n/a |
+| `finance_query::de_financials` | 220498 | 30.56µs | 37.14µs | 206 | n/a |
+| `finance_query::de_fred_series` | 1246313 | 154.32µs | 162.51µs | 873 | n/a |
+| `finance_query::de_hours` | 7188 | 906.1ns | 1.01µs | 10 | n/a |
+| `finance_query::de_market_summary` | 264233 | 41.50µs | 43.15µs | 228 | n/a |
+| `finance_query::de_news` | 39972 | 5.12µs | 5.71µs | 53 | n/a |
+| `finance_query::de_options` | 13489 | 1.58µs | 1.81µs | 6 | n/a |
+| `finance_query::de_quote` | 9387656 | 1.42ms | 1.66ms | 8235 | n/a |
+| `finance_query::de_screener` | 3797087 | 517.84µs | 550.11µs | 4498 | n/a |
+| `finance_query::de_search` | 50481 | 7.15µs | 7.26µs | 55 | n/a |
+| `finance_query::de_treasury_yields` | 834575 | 97.09µs | 99.71µs | 119 | n/a |
+| `finance_query::de_trending` | 16385 | 2.03µs | 2.05µs | 24 | n/a |
+| `finance_query::dispatch_select` | 76 | 5.0ns | 8.4ns | 0 | n/a |
+| `finance_query::ind_accumulation_distribution` | 32545 | 6.06µs | 6.07µs | 1 | n/a |
+| `finance_query::ind_alma` | 80922 | 6.33µs | 6.55µs | 2 | n/a |
+| `finance_query::ind_aroon` | 196925 | 14.09µs | 23.52µs | 9 | n/a |
+| `finance_query::ind_atr` | 58192 | 15.07µs | 17.63µs | 2 | n/a |
+| `finance_query::ind_awesome_oscillator` | 52065 | 13.11µs | 14.25µs | 4 | n/a |
+| `finance_query::ind_balance_of_power` | 24168 | 2.44µs | 2.68µs | 2 | n/a |
+| `finance_query::ind_bull_bear_power` | 29277 | 10.36µs | 10.96µs | 3 | n/a |
+| `finance_query::ind_cci` | 150957 | 21.20µs | 21.77µs | 2 | n/a |
+| `finance_query::ind_chaikin_oscillator` | 67546 | 24.90µs | 25.71µs | 4 | n/a |
+| `finance_query::ind_choppiness_index` | 269358 | 25.64µs | 28.90µs | 8 | n/a |
+| `finance_query::ind_cmf` | 52082 | 5.69µs | 5.92µs | 2 | n/a |
+| `finance_query::ind_cmo` | 62031 | 9.34µs | 11.17µs | 2 | n/a |
+| `finance_query::ind_coppock_curve` | 81867 | 11.17µs | 11.53µs | 3 | n/a |
+| `finance_query::ind_dema` | 40653 | 18.44µs | 18.68µs | 3 | n/a |
+| `finance_query::ind_donchian_channels` | 182549 | 13.10µs | 14.58µs | 9 | n/a |
+| `finance_query::ind_elder_ray` | 29281 | 10.36µs | 11.06µs | 3 | n/a |
+| `finance_query::ind_fibonacci_pivot_points` | 24478 | 3.02µs | 3.06µs | 1 | n/a |
+| `finance_query::ind_fibonacci_retracement` | 186959 | 13.27µs | 14.47µs | 9 | n/a |
+| `finance_query::ind_heikin_ashi` | 146126 | 20.50µs | 22.36µs | 9 | n/a |
+| `finance_query::ind_hma` | 106466 | 20.61µs | 24.80µs | 5 | n/a |
+| `finance_query::ind_ichimoku` | 544980 | 37.99µs | 40.29µs | 27 | n/a |
+| `finance_query::ind_keltner_channels` | 98158 | 25.97µs | 27.61µs | 5 | n/a |
+| `finance_query::ind_last_value` | 37 | 4.5ns | 4.7ns | 0 | n/a |
+| `finance_query::ind_macd` | 86414 | 29.88µs | 31.39µs | 7 | n/a |
+| `finance_query::ind_mcginley_dynamic` | 22567 | 19.00µs | 23.74µs | 1 | n/a |
+| `finance_query::ind_mfi` | 91502 | 8.35µs | 9.09µs | 3 | n/a |
+| `finance_query::ind_momentum` | 1202357 | 167.81µs | 230.21µs | 52 | n/a |
+| `finance_query::ind_momentum_single` | 7908 | 852.8ns | 953.3ns | 1 | n/a |
+| `finance_query::ind_moving_averages` | 476321 | 130.76µs | 156.89µs | 27 | n/a |
+| `finance_query::ind_parabolic_sar` | 27419 | 3.32µs | 3.60µs | 1 | n/a |
+| `finance_query::ind_patterns` | 1348439 | 124.01µs | 155.11µs | 1 | n/a |
+| `finance_query::ind_pivot_points` | 25981 | 3.46µs | 3.52µs | 1 | n/a |
+| `finance_query::ind_roc` | 22680 | 2.32µs | 2.46µs | 1 | n/a |
+| `finance_query::ind_sma` | 2400039 | 602.10µs | 606.44µs | 1 | n/a |
+| `finance_query::ind_stochastic` | 220084 | 20.08µs | 20.36µs | 11 | n/a |
+| `finance_query::ind_stochastic_rsi` | 287335 | 36.20µs | 36.91µs | 12 | n/a |
+| `finance_query::ind_supertrend` | 114499 | 19.82µs | 20.00µs | 4 | n/a |
+| `finance_query::ind_tema` | 57766 | 27.06µs | 28.05µs | 4 | n/a |
+| `finance_query::ind_trend` | 1054969 | 111.59µs | 160.73µs | 48 | n/a |
+| `finance_query::ind_true_range` | 17954 | 1.81µs | 1.93µs | 1 | n/a |
+| `finance_query::ind_volatility` | 667737 | 89.02µs | 89.46µs | 28 | n/a |
+| `finance_query::ind_volume` | 321403 | 59.67µs | 65.16µs | 14 | n/a |
+| `finance_query::ind_vwap` | 32544 | 6.08µs | 6.26µs | 1 | n/a |
+| `finance_query::ind_vwma` | 51381 | 4.31µs | 4.98µs | 1 | n/a |
+| `finance_query::ind_williams_r` | 181746 | 13.09µs | 15.41µs | 7 | n/a |
+| `finance_query::ind_wma` | 34556 | 6.84µs | 7.16µs | 7 | n/a |
+| `finance_query::ind_zigzag` | 23281 | 1.75µs | 1.94µs | 4 | n/a |
+| `finance_query::ref_bench_accumulation_distribution` | 549983 | 55.45µs | 59.12µs | 23 | n/a |
+| `finance_query::ref_bench_adx` | 4508521 | 769.93µs | 1.11ms | 4930 | n/a |
+| `finance_query::ref_bench_alma` | 4940792 | 812.98µs | 862.38µs | 5019 | n/a |
+| `finance_query::ref_bench_aroon` | 4643670 | 769.25µs | 999.06µs | 4950 | n/a |
+| `finance_query::ref_bench_atr` | 4507360 | 776.98µs | 914.61µs | 4996 | n/a |
+| `finance_query::ref_bench_awesome_oscillator` | 2705361 | 456.71µs | 618.18µs | 2636 | n/a |
+| `finance_query::ref_bench_balance_of_power` | 547335 | 51.90µs | 53.33µs | 25 | n/a |
+| `finance_query::ref_bench_bear_power` | 1279818 | 192.88µs | 207.63µs | 806 | n/a |
+| `finance_query::ref_bench_bollinger` | 4873102 | 808.21µs | 1.41ms | 4968 | n/a |
+| `finance_query::ref_bench_bull_power` | 4217780 | 707.81µs | 712.44µs | 4238 | n/a |
+| `finance_query::ref_bench_candle_body` | 236299 | 23.21µs | 24.01µs | 6 | n/a |
+| `finance_query::ref_bench_candle_range` | 4233148 | 744.27µs | 1.37ms | 5043 | n/a |
+| `finance_query::ref_bench_cci` | 2722645 | 443.66µs | 549.64µs | 2605 | n/a |
+| `finance_query::ref_bench_chaikin_oscillator` | 620064 | 76.94µs | 82.71µs | 26 | n/a |
+| `finance_query::ref_bench_choppiness_index` | 4763156 | 794.67µs | 836.19µs | 5002 | n/a |
+| `finance_query::ref_bench_close` | 4224016 | 747.22µs | 942.56µs | 5043 | n/a |
+| `finance_query::ref_bench_cmf` | 563720 | 54.54µs | 57.69µs | 25 | n/a |
+| `finance_query::ref_bench_cmo` | 2627383 | 429.40µs | 440.88µs | 2598 | n/a |
+| `finance_query::ref_bench_coppock_curve` | 2819187 | 447.62µs | 519.69µs | 2559 | n/a |
+| `finance_query::ref_bench_dema` | 4431865 | 771.53µs | 1.03ms | 4875 | n/a |
+| `finance_query::ref_bench_donchian` | 5008643 | 818.63µs | 1.05ms | 4976 | n/a |
+| `finance_query::ref_bench_elder_bear_power` | 1279329 | 193.69µs | 230.36µs | 806 | n/a |
+| `finance_query::ref_bench_elder_bull_power` | 4218155 | 727.06µs | 751.56µs | 4238 | n/a |
+| `finance_query::ref_bench_ema` | 4434467 | 770.05µs | 962.40µs | 4963 | n/a |
+| `finance_query::ref_bench_gap_pct` | 2232495 | 392.98µs | 475.81µs | 2489 | n/a |
+| `finance_query::ref_bench_high` | 4227704 | 745.60µs | 772.75µs | 5043 | n/a |
+| `finance_query::ref_bench_hma` | 4514762 | 775.93µs | 871.23µs | 4957 | n/a |
+| `finance_query::ref_bench_htf` | 5445791 | 900.11µs | 977.16µs | 7039 | n/a |
+| `finance_query::ref_bench_htf_region` | 5446022 | 897.69µs | 1.00ms | 7039 | n/a |
+| `finance_query::ref_bench_ichimoku` | 5252193 | 824.93µs | 1.50ms | 4836 | n/a |
+| `finance_query::ref_bench_ichimoku_custom` | 5252441 | 828.16µs | 1.20ms | 4836 | n/a |
+| `finance_query::ref_bench_is_bearish` | 237298 | 23.37µs | 26.19µs | 6 | n/a |
+| `finance_query::ref_bench_is_bullish` | 237298 | 23.11µs | 24.17µs | 6 | n/a |
+| `finance_query::ref_bench_keltner` | 4928493 | 831.96µs | 857.64µs | 4972 | n/a |
+| `finance_query::ref_bench_low` | 4228852 | 749.87µs | 853.77µs | 5043 | n/a |
+| `finance_query::ref_bench_macd` | 2809747 | 459.86µs | 462.29µs | 2541 | n/a |
+| `finance_query::ref_bench_mcginley` | 4479411 | 776.97µs | 801.77µs | 4963 | n/a |
+| `finance_query::ref_bench_median_price` | 4234710 | 739.37µs | 743.82µs | 5043 | n/a |
+| `finance_query::ref_bench_mfi` | 4547148 | 770.00µs | 1.04ms | 4998 | n/a |
+| `finance_query::ref_bench_momentum` | 2579011 | 419.86µs | 483.33µs | 2552 | n/a |
+| `finance_query::ref_bench_obv` | 609168 | 71.60µs | 75.98µs | 30 | n/a |
+| `finance_query::ref_bench_open` | 4225018 | 745.23µs | 795.01µs | 5043 | n/a |
+| `finance_query::ref_bench_parabolic_sar` | 4926035 | 820.16µs | 861.97µs | 5056 | n/a |
+| `finance_query::ref_bench_price` | 4224458 | 745.03µs | 758.52µs | 5043 | n/a |
+| `finance_query::ref_bench_price_change_pct` | 2395906 | 410.70µs | 499.54µs | 2489 | n/a |
+| `finance_query::ref_bench_relative_volume` | 4641582 | 801.95µs | 1.01ms | 4949 | n/a |
+| `finance_query::ref_bench_roc` | 2580677 | 422.02µs | 497.35µs | 2587 | n/a |
+| `finance_query::ref_bench_rsi` | 4491734 | 773.69µs | 1.09ms | 4994 | n/a |
+| `finance_query::ref_bench_sma` | 4438472 | 759.88µs | 923.91µs | 4963 | n/a |
+| `finance_query::ref_bench_stochastic` | 5065010 | 822.79µs | 1.16ms | 4987 | n/a |
+| `finance_query::ref_bench_stochastic_rsi` | 4984064 | 824.84µs | 1.11ms | 4831 | n/a |
+| `finance_query::ref_bench_supertrend` | 5007484 | 835.65µs | 868.70µs | 5021 | n/a |
+| `finance_query::ref_bench_tema` | 4374022 | 764.14µs | 861.70µs | 4781 | n/a |
+| `finance_query::ref_bench_true_range` | 4560987 | 781.70µs | 984.72µs | 5059 | n/a |
+| `finance_query::ref_bench_typical_price` | 4596215 | 788.06µs | 807.95µs | 5043 | n/a |
+| `finance_query::ref_bench_volume` | 4225455 | 743.63µs | 904.11µs | 5043 | n/a |
+| `finance_query::ref_bench_vwap` | 4539217 | 785.89µs | 851.82µs | 5060 | n/a |
+| `finance_query::ref_bench_vwma` | 4515422 | 765.72µs | 1.20ms | 4964 | n/a |
+| `finance_query::ref_bench_williams_r` | 720498 | 64.32µs | 68.08µs | 29 | n/a |
+| `finance_query::ref_bench_wma` | 4450451 | 766.36µs | 999.90µs | 4969 | n/a |
+| `finance_query::risk_beta` | 262236 | 98.20µs | 102.99µs | 0 | n/a |
+| `finance_query::risk_calmar` | 130 | 16.1ns | 17.3ns | 0 | n/a |
+| `finance_query::risk_historical_cvar` | 4033287 | 382.57µs | 392.08µs | 2 | n/a |
+| `finance_query::risk_historical_var` | 28442234 | 3.70ms | 3.92ms | 2 | n/a |
+| `finance_query::risk_information_ratio` | 145834 | 54.38µs | 56.34µs | 1 | n/a |
+| `finance_query::risk_kelly_criterion` | 32258 | 4.31µs | 5.21µs | 16 | n/a |
+| `finance_query::risk_max_drawdown` | 33328 | 12.66µs | 13.25µs | 1 | n/a |
+| `finance_query::risk_omega_ratio` | 139318 | 48.99µs | 49.65µs | 0 | n/a |
+| `finance_query::risk_parametric_cvar` | 100429 | 49.13µs | 51.09µs | 0 | n/a |
+| `finance_query::risk_parametric_var` | 100425 | 49.12µs | 49.36µs | 0 | n/a |
+| `finance_query::risk_sharpe` | 100419 | 49.14µs | 49.33µs | 0 | n/a |
+| `finance_query::risk_sortino` | 161857 | 49.09µs | 49.24µs | 0 | n/a |
+| `finance_query::risk_tracking_error` | 145878 | 54.45µs | 55.15µs | 1 | n/a |
+| `finance_query::risk_ulcer_index` | 619259 | 286.79µs | 298.67µs | 2 | n/a |
+| `finance_query::risk_win_loss_stats` | 421962 | 66.34µs | 73.78µs | 25 | n/a |
+| `finance_query::rss_parse` | 63521 | 6.62µs | 6.83µs | 48 | n/a |
+| `finance_query::score_news` | 856315 | 107.83µs | 120.37µs | 976 | n/a |
+| `finance_query::score_transcript` | 45391693 | 6.33ms | 6.85ms | 42100 | n/a |
+| `finance_query::ser_currencies` | 223279 | 21.48µs | 23.20µs | 8 | n/a |
+| `finance_query::stream_deserialize` | 15340 | 1.65µs | 1.83µs | 4 | n/a |
+| `finance_query::stream_serialize` | 12537 | 1.38µs | 1.48µs | 4 | n/a |
+| `finance_query::ticker_chart_then_cached` | 11186 | 2.31µs | 2.52µs | 20 | n/a |
+| `finance_query::ticker_quote_then_cached` | 35731 | 12.19µs | 12.38µs | 4 | n/a |
+| `finance_query::tickers_batch_quote_then_cached` | 42750 | 10.48µs | 11.63µs | 16 | n/a |
+| `finance_query::translate_dictionary` | 18121 | 3.63µs | 4.17µs | 49 | n/a |
+| `finance_query::translation_set_backend` | 202 | 76.1ns | 96.0ns | 1 | n/a |
+| `finance_query::translation_translate` | 27399 | 5.47µs | 6.07µs | 79 | n/a |
+| `finance_query::translation_translate_with` | 26948 | 5.39µs | 7.02µs | 77 | n/a |
 
 
 ## [2.8.0] - 2026-07-10

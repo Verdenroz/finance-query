@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A commodity price quote (e.g., gold, silver, crude oil).
 ///
-/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the commodity symbol (e.g., `"GC=F"` for gold).
+/// Obtain via [`Providers::commodity`](crate::Providers::commodity)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CommodityQuote {

@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use crate::cache::{self, Cache};
-use finance_query::{IndicesRegion, Region, Screener, Tickers, finance};
+use finance_query::{IndicesRegion, Providers, Region, Screener, Tickers, finance};
 use tracing::info;
 
 use super::{ServiceError, ServiceResult, lang_key};
@@ -165,6 +167,44 @@ pub async fn get_industry(cache: &Cache, industry: &str, lang: Option<&str>) -> 
             || async move {
                 let mut data = finance::industry(&industry).await?;
                 super::translate(&mut data, lang.as_deref()).await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+/// Aggregate performance for every sector, via `Capability::MARKET`
+/// (Yahoo screener fan-out, keyless).
+pub async fn get_sector_performance(cache: &Cache, providers: &Arc<Providers>) -> ServiceResult {
+    let cache_key = Cache::key("market-sector-performance", &[]);
+    let providers = Arc::clone(providers);
+
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SECTORS,
+            cache::is_market_open(),
+            || async move {
+                let data = providers.market().sector_performance().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+/// Price/earnings ratios by sector, via `Capability::MARKET` (Yahoo screener
+/// fan-out, keyless).
+pub async fn get_sector_pe(cache: &Cache, providers: &Arc<Providers>) -> ServiceResult {
+    let cache_key = Cache::key("market-sector-pe", &[]);
+    let providers = Arc::clone(providers);
+
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SECTORS,
+            cache::is_market_open(),
+            || async move {
+                let data = providers.market().sector_pe().await?;
                 serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
             },
         )

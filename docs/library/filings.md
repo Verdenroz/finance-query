@@ -112,6 +112,81 @@ Two keyless sources feed this: the [House Clerk](providers/housetrades.md) (`hou
 
 <!-- /soothfast:bind -->
 
+## Filing Sections
+
+Call `.sections(accession_number, form)` to fetch the sectioned text of one filing (10-K or 8-K), split into `FilingSection`s by item heading:
+
+```rust no_run covers=finance_query::models::filings::sections::FilingSection
+use finance_query::{FilingSectionForm, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder().build().await?;
+    let filings = providers.filings("AAPL");
+
+    let submissions = filings.get().await?;
+    let latest_10k = submissions
+        .filings
+        .iter()
+        .find(|f| f.filing_type.as_deref() == Some("10-K"))
+        .and_then(|f| f.accession_number.as_deref())
+        .unwrap_or_default();
+
+    for section in filings.sections(latest_10k, FilingSectionForm::TenK).await? {
+        println!(
+            "{}: {} chars",
+            section.section.as_deref().unwrap_or("?"),
+            section.content.as_deref().unwrap_or("").len()
+        );
+    }
+    Ok(())
+}
+```
+
+This is served by keyless EDGAR (best-effort heading detection over the filing's own HTML — see the module's [recall caveat](#recall-caveat) below) or Polygon, whichever the `FILINGS` route resolves to first; the default route already puts EDGAR ahead of nothing else, so no explicit `.route()` call is required.
+
+<!-- soothfast:bind finance_query::models::filings::sections::FilingSection -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `section` | `Option<String>` | Section key/name (e.g. `"risk_factors"`, `"mdna"`) |
+| `content` | `Option<String>` | Section text content |
+
+<!-- /soothfast:bind -->
+
+## Risk Factors
+
+Call `.risk_factors()` for this symbol's risk factors, extracted from its most recent 10-K:
+
+```rust no_run covers=finance_query::models::filings::sections::RiskFactor
+use finance_query::Providers;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder().build().await?;
+    let filings = providers.filings("AAPL");
+
+    for factor in filings.risk_factors().await?.iter().take(5) {
+        println!("{}", factor.title.as_deref().unwrap_or("?"));
+    }
+    Ok(())
+}
+```
+
+<!-- soothfast:bind finance_query::models::filings::sections::RiskFactor -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | `Option<String>` | Risk factor title |
+| `text` | `Option<String>` | Risk factor text |
+| `category` | `Option<String>` | Risk category |
+| `filing_date` | `Option<String>` | Date of the filing the factor was extracted from (`YYYY-MM-DD`) |
+
+<!-- /soothfast:bind -->
+
+!!! note "Recall caveat"
+    EDGAR's section and risk-factor extraction is heuristic: it detects `Item N` headings in the filing's raw HTML rather than using a structured index, so malformed or unusually formatted filings can yield partial or empty results. It returns best-effort output rather than erroring on those filings.
+
 ## Fails to Deliver
 
 Call `.fails_to_deliver()` for this symbol's SEC fails-to-deliver history, the settlement-date record of shares that a broker-dealer failed to deliver on time:

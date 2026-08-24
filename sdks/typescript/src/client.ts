@@ -341,6 +341,12 @@ export interface GetCommitmentsOfTradersOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getCommodity}. */
+export interface GetCommodityOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getCompanyProfile}. */
 export interface GetCompanyProfileOptions {
   /** Comma-separated list of fields to include in response */
@@ -511,6 +517,12 @@ export interface GetEdgarSubmissionsIterOptions extends GetEdgarSubmissionsOptio
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getEtfProfile}. */
+export interface GetEtfProfileOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getExchanges}. */
 export interface GetExchangesOptions {
   /** Comma-separated list of fields to include in response */
@@ -547,6 +559,16 @@ export interface GetFeedsOptions {
 export interface GetFeedsIterOptions extends GetFeedsOptions {
   /** Items requested per page. Defaults to 50. */
   limit?: number;
+}
+
+/** Query parameters for {@link Client.getFilingSections}. */
+export interface GetFilingSectionsOptions {
+  /** SEC accession number, e.g. "0000320193-24-000123" (required) */
+  accessionNumber: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Which filing form to fetch sectioned text for */
+  form: models.FilingSectionFormParam;
 }
 
 /** Query parameters for {@link Client.getFinancials}. */
@@ -597,6 +619,12 @@ export interface GetFredTreasuryYieldsIterOptions extends GetFredTreasuryYieldsO
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getFutures}. */
+export interface GetFuturesOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getGdeltNews}. */
 export interface GetGdeltNewsOptions {
   /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
@@ -643,6 +671,12 @@ export interface GetHoursOptions {
   region?: models.Region;
 }
 
+/** Query parameters for {@link Client.getIndexConstituents}. */
+export interface GetIndexConstituentsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getIndicators}. */
 export interface GetIndicatorsOptions {
   /** Comma-separated list of fields to include in response */
@@ -671,6 +705,18 @@ export interface GetIndustryOptions {
   format?: models.ValueFormat;
   /** Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); falls back to the Accept-Language header */
   lang?: string;
+}
+
+/** Query parameters for {@link Client.getMarketCalendar}. */
+export interface GetMarketCalendarOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Start date (YYYY-MM-DD); ignored by market-holiday/market-status */
+  from?: string;
+  /** Which market-wide calendar to fetch (required) */
+  kind: models.MarketCalendarKindParam;
+  /** End date (YYYY-MM-DD); ignored by market-holiday/market-status */
+  to?: string;
 }
 
 /** Query parameters for {@link Client.getMarketSummary}. */
@@ -715,6 +761,20 @@ export interface GetOptionsIterOptions extends GetOptionsOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getPressReleases}. */
+export interface GetPressReleasesOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Maximum number of releases to return (default: 10) */
+  limit?: number;
+}
+
+/** Query parameters for {@link Client.getPriceTargetConsensus}. */
+export interface GetPriceTargetConsensusOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getQuote}. */
 export interface GetQuoteOptions {
   /** Comma-separated list of fields to include in response */
@@ -753,6 +813,12 @@ export interface GetQuotesIterOptions extends GetQuotesOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getRatingConsensus}. */
+export interface GetRatingConsensusOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getRecommendations}. */
 export interface GetRecommendationsOptions {
   /** Comma-separated list of fields to include in response */
@@ -773,6 +839,12 @@ export interface GetRiskOptions {
   range?: models.TimeRange;
 }
 
+/** Query parameters for {@link Client.getRiskFactors}. */
+export interface GetRiskFactorsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getScreeners}. */
 export interface GetScreenersOptions {
   /** Number of results (default: 25, max: 250) */
@@ -791,6 +863,18 @@ export interface GetSectorOptions {
   format?: models.ValueFormat;
   /** Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); falls back to the Accept-Language header */
   lang?: string;
+}
+
+/** Query parameters for {@link Client.getSectorPe}. */
+export interface GetSectorPeOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
+/** Query parameters for {@link Client.getSectorPerformance}. */
+export interface GetSectorPerformanceOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
 }
 
 /** Query parameters for {@link Client.getSpark}. */
@@ -1064,6 +1148,13 @@ export class Client {
     });
   }
 
+  /** Get a commodity's current quote */
+  getCommodity(symbol: string, options: GetCommodityOptions = {}): Promise<models.GqlCommodityQuote> {
+    return this.transport.request<models.GqlCommodityQuote>("GET", `/v2/commodities/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get company profile */
   getCompanyProfile(symbol: string, options: GetCompanyProfileOptions = {}): Promise<models.GqlCompanyProfile> {
     return this.transport.request<models.GqlCompanyProfile>("GET", `/v2/company-profile/${pathSeg(symbol)}`, {
@@ -1232,6 +1323,13 @@ export class Client {
     );
   }
 
+  /** Get ETF profile and holdings */
+  getEtfProfile(symbol: string, options: GetEtfProfileOptions = {}): Promise<models.GqlEtfProfile> {
+    return this.transport.request<models.GqlEtfProfile>("GET", `/v2/etf-profile/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get supported exchanges */
   getExchanges(options: GetExchangesOptions = {}): Promise<models.GqlExchange[]> {
     return this.transport.request<models.GqlExchange[]>("GET", "/v2/exchanges", {
@@ -1272,6 +1370,13 @@ export class Client {
         query: queryOf({ ...rest, limit: pageLimit, cursor: cursor }),
       }),
     );
+  }
+
+  /** Get sectioned text of one SEC filing */
+  getFilingSections(symbol: string, options: GetFilingSectionsOptions): Promise<models.GqlFilingSection[]> {
+    return this.transport.request<models.GqlFilingSection[]>("GET", `/v2/filings/${pathSeg(symbol)}/sections`, {
+      query: queryOf(options),
+    });
   }
 
   /** Get financial statements */
@@ -1330,6 +1435,13 @@ export class Client {
     );
   }
 
+  /** Get a futures contract's current quote */
+  getFutures(symbol: string, options: GetFuturesOptions = {}): Promise<models.GqlFuturesQuote> {
+    return this.transport.request<models.GqlFuturesQuote>("GET", `/v2/futures/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Worldwide news mentioning a symbol (GDELT, keyless) */
   getGdeltNews(symbol: string, options: GetGdeltNewsOptions = {}): Promise<models.GqlNews[]> {
     return this.transport.request<models.GqlNews[]>("GET", `/v2/gdelt/news/${pathSeg(symbol)}`, {
@@ -1386,6 +1498,13 @@ export class Client {
     });
   }
 
+  /** Get an index's current constituent list */
+  getIndexConstituents(symbol: string, options: GetIndexConstituentsOptions = {}): Promise<models.GqlIndexConstituent[]> {
+    return this.transport.request<models.GqlIndexConstituent[]>("GET", `/v2/index-constituents/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get technical indicators */
   getIndicators(symbol: string, options: GetIndicatorsOptions = {}): Promise<models.GqlIndicatorsSummary> {
     return this.transport.request<models.GqlIndicatorsSummary>("GET", `/v2/indicators/${pathSeg(symbol)}`, {
@@ -1403,6 +1522,13 @@ export class Client {
   /** Get industry data */
   getIndustry(industry: models.Industry, options: GetIndustryOptions = {}): Promise<models.GqlIndustryData> {
     return this.transport.request<models.GqlIndustryData>("GET", `/v2/industries/${pathSeg(industry)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get a market-wide event calendar */
+  getMarketCalendar(options: GetMarketCalendarOptions): Promise<models.GqlMarketCalendarEntry[]> {
+    return this.transport.request<models.GqlMarketCalendarEntry[]>("GET", "/v2/market-calendar", {
       query: queryOf(options),
     });
   }
@@ -1461,6 +1587,20 @@ export class Client {
     );
   }
 
+  /** Get a company's own press releases */
+  getPressReleases(symbol: string, options: GetPressReleasesOptions = {}): Promise<models.GqlPressRelease[]> {
+    return this.transport.request<models.GqlPressRelease[]>("GET", `/v2/press-releases/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get consensus analyst price target */
+  getPriceTargetConsensus(symbol: string, options: GetPriceTargetConsensusOptions = {}): Promise<models.GqlPriceTargetConsensus> {
+    return this.transport.request<models.GqlPriceTargetConsensus>("GET", `/v2/price-target-consensus/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get quote for a symbol */
   getQuote(symbol: string, options: GetQuoteOptions = {}): Promise<models.GqlQuote> {
     return this.transport.request<models.GqlQuote>("GET", `/v2/quote/${pathSeg(symbol)}`, {
@@ -1496,6 +1636,13 @@ export class Client {
     );
   }
 
+  /** Get consensus rating rollup */
+  getRatingConsensus(symbol: string, options: GetRatingConsensusOptions = {}): Promise<models.GqlRatingConsensus> {
+    return this.transport.request<models.GqlRatingConsensus>("GET", `/v2/rating-consensus/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get similar stock recommendations */
   getRecommendations(symbol: string, options: GetRecommendationsOptions = {}): Promise<models.GqlRecommendation> {
     return this.transport.request<models.GqlRecommendation>("GET", `/v2/recommendations/${pathSeg(symbol)}`, {
@@ -1510,6 +1657,13 @@ export class Client {
     });
   }
 
+  /** Get risk factors extracted from SEC filings */
+  getRiskFactors(symbol: string, options: GetRiskFactorsOptions = {}): Promise<models.GqlRiskFactor[]> {
+    return this.transport.request<models.GqlRiskFactor[]>("GET", `/v2/filings/${pathSeg(symbol)}/risk-factors`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get screener results */
   getScreeners(screener: models.Screener, options: GetScreenersOptions = {}): Promise<models.GqlScreenerResults> {
     return this.transport.request<models.GqlScreenerResults>("GET", `/v2/screeners/${pathSeg(screener)}`, {
@@ -1520,6 +1674,20 @@ export class Client {
   /** Get sector data */
   getSector(sector: models.Sector, options: GetSectorOptions = {}): Promise<models.GqlSectorData> {
     return this.transport.request<models.GqlSectorData>("GET", `/v2/sectors/${pathSeg(sector)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get price/earnings ratios by sector */
+  getSectorPe(options: GetSectorPeOptions = {}): Promise<models.GqlMarketSectorPe[]> {
+    return this.transport.request<models.GqlMarketSectorPe[]>("GET", "/v2/sector-pe", {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get aggregate performance for every sector */
+  getSectorPerformance(options: GetSectorPerformanceOptions = {}): Promise<models.GqlMarketSectorPerformance[]> {
+    return this.transport.request<models.GqlMarketSectorPerformance[]>("GET", "/v2/sector-performance", {
       query: queryOf(options),
     });
   }

@@ -1,8 +1,7 @@
 //! Sectioned filing text and risk-factor models.
 //!
 //! Served through the [`Capability::FILINGS`](crate::Capability::FILINGS)
-//! route; Polygon is currently the only provider (EDGAR serves filing
-//! metadata, not sectioned text).
+//! route by EDGAR (best-effort HTML section extraction, keyless) or Polygon.
 
 use serde::{Deserialize, Serialize};
 

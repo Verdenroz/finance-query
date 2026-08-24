@@ -92,6 +92,7 @@ impl Providers {
         feature = "crypto",
         feature = "defi",
         feature = "fmp",
+        feature = "gdelt",
         feature = "kraken",
         feature = "polygon"
     ))]
@@ -104,6 +105,7 @@ impl Providers {
         feature = "alphavantage",
         feature = "fmp",
         feature = "frankfurter",
+        feature = "gdelt",
         feature = "polygon"
     ))]
     pub fn forex(
@@ -135,19 +137,16 @@ impl Providers {
     }
 
     /// Create an [`Index`](crate::Index) handle backed by this provider set.
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
     pub fn index(&self, symbol: impl Into<String>) -> crate::domains::Index {
         crate::domains::Index::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
 
     /// Create a [`FuturesContract`](crate::FuturesContract) handle backed by this provider set.
-    #[cfg(any(feature = "polygon", feature = "cftc"))]
     pub fn futures(&self, symbol: impl Into<String>) -> crate::domains::FuturesContract {
         crate::domains::FuturesContract::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
 
     /// Create a [`Commodity`](crate::Commodity) handle backed by this provider set.
-    #[cfg(any(feature = "fmp", feature = "alphavantage"))]
     pub fn commodity(&self, symbol: impl Into<String>) -> crate::domains::Commodity {
         crate::domains::Commodity::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
@@ -157,12 +156,6 @@ impl Providers {
     /// Routes symbol search, reference data, and screening through
     /// [`Capability::DISCOVERY`](crate::Capability::DISCOVERY). Distinct from
     /// [`crate::finance::search`], which is a Yahoo-only shortcut.
-    #[cfg(any(
-        feature = "fmp",
-        feature = "polygon",
-        feature = "alphavantage",
-        feature = "crypto"
-    ))]
     pub fn discovery(&self) -> crate::domains::Discovery {
         crate::domains::Discovery::with_providers(Arc::clone(&self.set))
     }
@@ -171,7 +164,6 @@ impl Providers {
     ///
     /// Routes market-wide earnings/IPO/dividend/split/economic calendars
     /// through [`Capability::CALENDAR`](crate::Capability::CALENDAR).
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
     pub fn calendar(&self) -> crate::domains::MarketCalendar {
         crate::domains::MarketCalendar::with_providers(Arc::clone(&self.set))
     }

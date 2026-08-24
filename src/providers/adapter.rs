@@ -372,12 +372,6 @@ pub(crate) trait FilingsProvider: ProviderCore {
 
 /// [`Capability::DISCOVERY`] — symbol search, reference data, exchanges,
 /// screeners.
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 #[async_trait::async_trait]
 pub(crate) trait DiscoveryProvider: ProviderCore {
     /// Search the provider's symbol universe by free-text query.
@@ -424,7 +418,6 @@ pub(crate) trait DiscoveryProvider: ProviderCore {
 }
 
 /// [`Capability::CALENDAR`] — market-wide calendars.
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 #[async_trait::async_trait]
 pub(crate) trait CalendarProvider: ProviderCore {
     /// Fetch a market-wide calendar over `[from, to]` (`YYYY-MM-DD` dates).
@@ -488,6 +481,7 @@ pub(crate) trait MarketProvider: ProviderCore {
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -594,6 +588,7 @@ pub(crate) trait EconomicProvider: ProviderCore {
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 #[async_trait::async_trait]
@@ -614,7 +609,6 @@ pub(crate) trait ForexProvider: ProviderCore {
 }
 
 /// [`Capability::INDICES`] — stock market index quotes.
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 #[async_trait::async_trait]
 pub(crate) trait IndicesProvider: ProviderCore {
     async fn fetch_indices_quote(&self, symbol: &str)
@@ -638,7 +632,6 @@ pub(crate) trait IndicesProvider: ProviderCore {
 }
 
 /// [`Capability::FUTURES`] — futures contract quotes.
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 #[async_trait::async_trait]
 pub(crate) trait FuturesProvider: ProviderCore {
     async fn fetch_futures_quote(
@@ -658,7 +651,6 @@ pub(crate) trait FuturesProvider: ProviderCore {
 }
 
 /// [`Capability::COMMODITIES`] — commodity price quotes.
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 #[async_trait::async_trait]
 pub(crate) trait CommoditiesProvider: ProviderCore {
     async fn fetch_commodities_quote(
@@ -720,16 +712,9 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         None
     }
-    #[cfg(any(
-        feature = "fmp",
-        feature = "polygon",
-        feature = "alphavantage",
-        feature = "crypto"
-    ))]
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
     fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         None
     }
@@ -742,6 +727,7 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "crypto",
         feature = "defi",
         feature = "fmp",
+        feature = "gdelt",
         feature = "kraken",
         feature = "polygon"
     ))]
@@ -763,20 +749,18 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "alphavantage",
         feature = "fmp",
         feature = "frankfurter",
+        feature = "gdelt",
         feature = "polygon"
     ))]
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
     fn as_indices(&self) -> Option<&dyn IndicesProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "cftc"))]
     fn as_futures(&self) -> Option<&dyn FuturesProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "alphavantage"))]
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
         None
     }
@@ -806,16 +790,9 @@ pub trait ProviderAdapter: ProviderCore {
         if self.as_market().is_some() {
             caps = caps | Capability::MARKET;
         }
-        #[cfg(any(
-            feature = "fmp",
-            feature = "polygon",
-            feature = "alphavantage",
-            feature = "crypto"
-        ))]
         if self.as_discovery().is_some() {
             caps = caps | Capability::DISCOVERY;
         }
-        #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
         if self.as_calendar().is_some() {
             caps = caps | Capability::CALENDAR;
         }
@@ -825,6 +802,7 @@ pub trait ProviderAdapter: ProviderCore {
             feature = "crypto",
             feature = "defi",
             feature = "fmp",
+            feature = "gdelt",
             feature = "kraken",
             feature = "polygon"
         ))]
@@ -846,20 +824,18 @@ pub trait ProviderAdapter: ProviderCore {
             feature = "alphavantage",
             feature = "fmp",
             feature = "frankfurter",
+            feature = "gdelt",
             feature = "polygon"
         ))]
         if self.as_forex().is_some() {
             caps = caps | Capability::FOREX;
         }
-        #[cfg(any(feature = "polygon", feature = "fmp"))]
         if self.as_indices().is_some() {
             caps = caps | Capability::INDICES;
         }
-        #[cfg(any(feature = "polygon", feature = "cftc"))]
         if self.as_futures().is_some() {
             caps = caps | Capability::FUTURES;
         }
-        #[cfg(any(feature = "fmp", feature = "alphavantage"))]
         if self.as_commodities().is_some() {
             caps = caps | Capability::COMMODITIES;
         }

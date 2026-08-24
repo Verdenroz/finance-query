@@ -37,12 +37,18 @@ pub(crate) mod fred;
 pub(crate) mod gdelt;
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
+pub(crate) mod market_calendar;
+#[cfg(feature = "nasdaq")]
+pub(crate) mod nasdaq;
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 pub(crate) mod types;
+#[cfg(feature = "wikipedia")]
+pub(crate) mod wikipedia;
 #[cfg(feature = "worldbank")]
 pub(crate) mod worldbank;
 pub(crate) mod yahoo;
+mod yahoo_ttm;
 
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::error::{FinanceError, Result};
@@ -115,12 +121,23 @@ pub enum Provider {
     /// feature, keyless).
     #[cfg(feature = "cftc")]
     Cftc,
+    /// Nasdaq market-wide earnings/IPO/dividend/split calendars (requires
+    /// `nasdaq` feature, keyless).
+    #[cfg(feature = "nasdaq")]
+    Nasdaq,
+    /// Wikipedia S&P 500 index-constituent table (requires `wikipedia`
+    /// feature, keyless).
+    #[cfg(feature = "wikipedia")]
+    Wikipedia,
     /// Combined House + Senate PTR stock-trade disclosures (requires the
     /// `housetrades` and/or `senatetrades` feature, keyless).
     #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
     CongressTrades,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
+    /// NYSE/NASDAQ market holidays, computed locally from federal-holiday
+    /// rules rather than fetched (always available, no network call).
+    LocalMarketCalendar,
 }
 
 impl Provider {
@@ -160,9 +177,14 @@ impl Provider {
             "gdelt" => Some(Self::Gdelt),
             #[cfg(feature = "cftc")]
             "cftc" => Some(Self::Cftc),
+            #[cfg(feature = "nasdaq")]
+            "nasdaq" => Some(Self::Nasdaq),
+            #[cfg(feature = "wikipedia")]
+            "wikipedia" => Some(Self::Wikipedia),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             "congresstrades" => Some(Self::CongressTrades),
             "edgar" => Some(Self::Edgar),
+            "local_market_calendar" => Some(Self::LocalMarketCalendar),
             _ => None,
         }
     }
@@ -201,9 +223,14 @@ impl Provider {
             Self::Gdelt => "gdelt",
             #[cfg(feature = "cftc")]
             Self::Cftc => "cftc",
+            #[cfg(feature = "nasdaq")]
+            Self::Nasdaq => "nasdaq",
+            #[cfg(feature = "wikipedia")]
+            Self::Wikipedia => "wikipedia",
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => "congresstrades",
             Self::Edgar => "edgar",
+            Self::LocalMarketCalendar => "local_market_calendar",
         }
     }
 
@@ -243,9 +270,14 @@ impl Provider {
         v.push(Self::Gdelt);
         #[cfg(feature = "cftc")]
         v.push(Self::Cftc);
+        #[cfg(feature = "nasdaq")]
+        v.push(Self::Nasdaq);
+        #[cfg(feature = "wikipedia")]
+        v.push(Self::Wikipedia);
         #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
         v.push(Self::CongressTrades);
         v.push(Self::Edgar);
+        v.push(Self::LocalMarketCalendar);
         v
     }
 
@@ -289,11 +321,18 @@ impl Provider {
             Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
+            #[cfg(feature = "nasdaq")]
+            Self::Nasdaq => ProviderAdapter::capabilities(&nasdaq::NasdaqProvider),
+            #[cfg(feature = "wikipedia")]
+            Self::Wikipedia => ProviderAdapter::capabilities(&wikipedia::WikipediaProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Self::CongressTrades => {
                 ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
             }
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
+            Self::LocalMarketCalendar => {
+                ProviderAdapter::capabilities(&market_calendar::LocalMarketCalendarProvider)
+            }
         }
     }
 }
@@ -1262,9 +1301,14 @@ pub(crate) async fn build_providers(
             Provider::Gdelt => Arc::new(gdelt::GdeltProvider),
             #[cfg(feature = "cftc")]
             Provider::Cftc => Arc::new(cftc::CftcProvider),
+            #[cfg(feature = "nasdaq")]
+            Provider::Nasdaq => Arc::new(nasdaq::NasdaqProvider),
+            #[cfg(feature = "wikipedia")]
+            Provider::Wikipedia => Arc::new(wikipedia::WikipediaProvider),
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
             Provider::CongressTrades => Arc::new(congresstrades::CongressTradesProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
+            Provider::LocalMarketCalendar => Arc::new(market_calendar::LocalMarketCalendarProvider),
         };
         adapter.initialize().await?;
         providers.push(adapter);
@@ -1376,7 +1420,12 @@ mod tests {
             .union(Capability::FUNDAMENTALS)
             .union(Capability::CORPORATE)
             .union(Capability::OPTIONS)
-            .union(Capability::MARKET);
+            .union(Capability::MARKET)
+            .union(Capability::INDICES)
+            .union(Capability::COMMODITIES)
+            .union(Capability::DISCOVERY)
+            .union(Capability::CALENDAR)
+            .union(Capability::FUTURES);
         assert_eq!(yahoo::CAPS, expected);
     }
 
@@ -1392,6 +1441,21 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "fred")]
+    #[test]
+    fn fred_derives_calendar_capability() {
+        assert!(Provider::Fred.capabilities().contains(Capability::CALENDAR));
+    }
+
+    #[test]
+    fn local_market_calendar_derives_calendar_capability() {
+        assert!(
+            Provider::LocalMarketCalendar
+                .capabilities()
+                .contains(Capability::CALENDAR)
+        );
+    }
+
     #[cfg(feature = "alphavantage")]
     #[test]
     fn alphavantage_derives_market_capability() {
@@ -1400,6 +1464,14 @@ mod tests {
                 .capabilities()
                 .contains(Capability::MARKET)
         );
+    }
+
+    #[cfg(feature = "gdelt")]
+    #[test]
+    fn gdelt_derives_crypto_and_forex_capability() {
+        let caps = Provider::Gdelt.capabilities();
+        assert!(caps.contains(Capability::CRYPTO));
+        assert!(caps.contains(Capability::FOREX));
     }
 
     #[test]

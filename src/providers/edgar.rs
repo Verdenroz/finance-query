@@ -4,7 +4,7 @@
 //! Always available — no API key required (needs `EDGAR_EMAIL` env var
 //! or an `edgar::init()` call before use).
 
-use super::{FilingsProvider, ProviderAdapter, ProviderCore};
+use super::{CorporateProvider, FilingsProvider, Operation, ProviderAdapter, ProviderCore};
 use crate::error::Result;
 use crate::models::filings::ProviderFilings;
 
@@ -58,11 +58,60 @@ impl FilingsProvider for EdgarProvider {
         crate::adapters::edgar::filings::fails_to_deliver::fetch_fails_to_deliver_response(symbol)
             .await
     }
+
+    async fn fetch_filing_sections(
+        &self,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        crate::adapters::edgar::filings::sections::fetch_filing_sections_response(
+            accession_number,
+            form,
+        )
+        .await
+    }
+
+    async fn fetch_risk_factors(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        crate::adapters::edgar::filings::sections::fetch_risk_factors_response(symbol).await
+    }
+}
+
+/// EDGAR has no general news feed — only 8-K exhibit press releases.
+#[async_trait::async_trait]
+impl CorporateProvider for EdgarProvider {
+    async fn fetch_news(&self, _symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+        Err(self.not_supported(Operation::News))
+    }
+
+    async fn fetch_events(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::chart::events::ChartEvents> {
+        Err(self.not_supported(Operation::Events))
+    }
+
+    async fn fetch_press_releases(
+        &self,
+        symbol: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+        crate::adapters::edgar::filings::press_releases::fetch_press_releases_response(
+            symbol, limit,
+        )
+        .await
+    }
 }
 
 #[async_trait::async_trait]
 impl ProviderAdapter for EdgarProvider {
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
+        Some(self)
+    }
+
+    fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
         Some(self)
     }
 }

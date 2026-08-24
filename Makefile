@@ -9,6 +9,9 @@ DOCKER := docker
 DOCKER_COMPOSE := docker compose
 PORT ?= 8000
 
+# Debug builds can overflow tokio's default worker stack
+export RUST_MIN_STACK ?= 33554432
+
 # Colors
 GREEN := $(shell printf '\033[0;32m')
 YELLOW := $(shell printf '\033[0;33m')

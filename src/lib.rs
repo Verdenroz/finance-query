@@ -309,6 +309,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -317,6 +318,7 @@ pub use domains::CryptoCoin;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use domains::ForexPair;
@@ -331,28 +333,17 @@ pub use domains::ForexPair;
 pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use domains::Commodity;
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub use domains::Discovery;
 pub use domains::Filings;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use domains::FuturesContract;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
 #[cfg(feature = "polygon")]
 pub use domains::Snapshot;
 // `Market` is unconditional — its grouped-daily/crypto methods route through
 // CHART/CRYPTO, which have their own (broader) per-method gating rather than
-// requiring fmp/polygon/alphavantage. `MarketCalendar` still needs one of them
-// since `CalendarProvider` itself is gated to that set.
+// requiring fmp/polygon/alphavantage.
 pub use domains::Market;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::MarketCalendar;
 
 // Provider-specific financial data functions
@@ -381,14 +372,7 @@ pub use tickers::BatchIndicatorsResponse;
 // Error types and results
 // ============================================================================
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
@@ -454,7 +438,6 @@ pub use models::{
 #[cfg(feature = "sentiment")]
 pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentiment};
 // Multi-provider capability response types (feature-gated)
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use models::commodities::CommodityQuote;
 #[cfg(any(
     feature = "alphavantage",
@@ -462,6 +445,7 @@ pub use models::commodities::CommodityQuote;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
@@ -481,14 +465,13 @@ pub use models::economic::{
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use models::forex::ForexQuote;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]
 pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 #[cfg(feature = "polygon")]
 pub use models::quote::snapshot::{AssetClass, MarketSnapshot};

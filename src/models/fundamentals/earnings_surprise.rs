@@ -1,7 +1,7 @@
 //! Earnings-surprise history.
 //!
 //! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
-//! route; FMP is currently the only provider.
+//! route; FMP and Yahoo both implement it.
 
 use serde::{Deserialize, Serialize};
 

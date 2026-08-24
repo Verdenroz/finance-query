@@ -77,6 +77,7 @@ fn route_table(
     if flags.alphavantage {
         corporate.push(Provider::AlphaVantage);
     }
+    corporate.push(Provider::Edgar); // press releases via 8-K exhibits
     routes.push((Capability::CORPORATE, corporate));
 
     let mut fundamentals = Vec::new();
@@ -89,27 +90,48 @@ fn route_table(
     fundamentals.push(Provider::Yahoo);
     routes.push((Capability::FUNDAMENTALS, fundamentals));
 
-    // No Yahoo route for these; FMP/AV are the only candidates.
-    for cap in [
-        Capability::DISCOVERY,
-        Capability::CALENDAR,
-        Capability::COMMODITIES,
-    ] {
-        let mut route = Vec::new();
-        if flags.fmp {
-            route.push(Provider::Fmp);
-        }
-        if flags.alphavantage {
-            route.push(Provider::AlphaVantage);
-        }
-        if !route.is_empty() {
-            routes.push((cap, route));
-        }
-    }
-    // INDICES has no AV route among integrated providers.
+    // FMP/AV are additive; DISCOVERY stays Yahoo-served through `finance::`
+    // shortcuts rather than this route (never provider-routed).
+    let mut discovery = Vec::new();
     if flags.fmp {
-        routes.push((Capability::INDICES, vec![Provider::Fmp]));
+        discovery.push(Provider::Fmp);
     }
+    if flags.alphavantage {
+        discovery.push(Provider::AlphaVantage);
+    }
+    if !discovery.is_empty() {
+        routes.push((Capability::DISCOVERY, discovery));
+    }
+
+    let mut calendar = vec![Provider::Yahoo, Provider::LocalMarketCalendar];
+    if flags.fmp {
+        calendar.push(Provider::Fmp);
+    }
+    if flags.alphavantage {
+        calendar.push(Provider::AlphaVantage);
+    }
+    calendar.push(Provider::Nasdaq);
+    if flags.fred {
+        calendar.push(Provider::Fred);
+    }
+    routes.push((Capability::CALENDAR, calendar));
+
+    let mut commodities = vec![Provider::Yahoo];
+    if flags.fmp {
+        commodities.push(Provider::Fmp);
+    }
+    if flags.alphavantage {
+        commodities.push(Provider::AlphaVantage);
+    }
+    routes.push((Capability::COMMODITIES, commodities));
+
+    let mut indices = vec![Provider::Yahoo, Provider::Wikipedia];
+    if flags.fmp {
+        indices.push(Provider::Fmp); // INDICES has no AV route among integrated providers.
+    }
+    routes.push((Capability::INDICES, indices));
+
+    routes.push((Capability::FUTURES, vec![Provider::Yahoo]));
 
     let mut economic = Vec::new();
     if flags.fred {
@@ -129,6 +151,7 @@ fn route_table(
     crypto.push(Provider::CoinGecko);
     crypto.push(Provider::Binance);
     crypto.push(Provider::Kraken);
+    crypto.push(Provider::Gdelt); // market-wide news only
     routes.push((Capability::CRYPTO, crypto));
 
     let mut forex = Vec::new();
@@ -139,6 +162,7 @@ fn route_table(
         forex.push(Provider::AlphaVantage);
     }
     forex.push(Provider::Frankfurter);
+    forex.push(Provider::Gdelt); // market-wide news only
     routes.push((Capability::FOREX, forex));
 
     let mut filings = Vec::new();
@@ -219,18 +243,46 @@ mod provider_routing_tests {
         );
         assert_eq!(
             route(&routes, Capability::CRYPTO),
-            Some(&[Provider::CoinGecko, Provider::Binance, Provider::Kraken][..])
+            Some(
+                &[
+                    Provider::CoinGecko,
+                    Provider::Binance,
+                    Provider::Kraken,
+                    Provider::Gdelt
+                ][..]
+            )
         );
         assert_eq!(
             route(&routes, Capability::FOREX),
-            Some(&[Provider::Frankfurter][..])
+            Some(&[Provider::Frankfurter, Provider::Gdelt][..])
         );
         assert_eq!(
             route(&routes, Capability::ECONOMIC),
             Some(&[Provider::WorldBank, Provider::FiscalData][..])
         );
         assert_eq!(route(&routes, Capability::DISCOVERY), None);
-        assert_eq!(route(&routes, Capability::INDICES), None);
+        assert_eq!(
+            route(&routes, Capability::INDICES),
+            Some(&[Provider::Yahoo, Provider::Wikipedia][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::COMMODITIES),
+            Some(&[Provider::Yahoo][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::FUTURES),
+            Some(&[Provider::Yahoo][..])
+        );
+        assert_eq!(
+            route(&routes, Capability::CALENDAR),
+            Some(
+                &[
+                    Provider::Yahoo,
+                    Provider::LocalMarketCalendar,
+                    Provider::Nasdaq
+                ][..]
+            )
+        );
         assert_eq!(
             route(&routes, Capability::FILINGS),
             Some(&[Provider::Edgar, Provider::CongressTrades, Provider::Yahoo][..])
@@ -256,7 +308,7 @@ mod provider_routing_tests {
         );
         assert_eq!(
             route(&routes, Capability::INDICES),
-            Some(&[Provider::Fmp][..])
+            Some(&[Provider::Yahoo, Provider::Wikipedia, Provider::Fmp][..])
         );
         assert_eq!(
             route(&routes, Capability::FILINGS),

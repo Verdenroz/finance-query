@@ -2,20 +2,16 @@
 // source: docs/library/indices.md
 #![allow(unused)]
 
-// line 17: compile-only (no_run)
-#[cfg(feature = "polygon")]
+// line 12: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_17() {
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_12() {
+    use finance_query::{Interval, Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::INDICES, [Provider::Polygon])
-            .build()
-            .await?;
-        let spx = providers.index("I:SPX");
+        let providers = Providers::builder().build().await?;
+        let spx = providers.index("^GSPC");
         let quote = spx.quote().await?;
         let chart = spx.chart(Interval::OneDay, TimeRange::OneMonth).await?;
         let history = spx.history(TimeRange::OneMonth).await?;
@@ -24,17 +20,17 @@ fn doc_block_line_17() {
     }
 }
 
-// line 59: compile-only (no_run)
+// line 43: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_59() {
+fn doc_block_line_43() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let providers = Providers::builder()
-            .route(Capability::INDICES, [Provider::Polygon])
+            .route(Capability::INDICES, [Provider::Polygon, Provider::Yahoo])
             .build()
             .await?;
         let spx = providers.index("I:SPX");
@@ -44,61 +40,133 @@ fn doc_block_line_59() {
     }
 }
 
-// line 79: compile-only (no_run)
-#[cfg(feature = "polygon")]
+// line 84: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_79() {
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_84() {
+    use finance_query::Providers;
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::INDICES, [Provider::Polygon])
-            .build()
-            .await?;
-        let spx = providers.index("I:SPX");
+        let providers = Providers::builder().build().await?;
+        let spx = providers.index("^GSPC");
+        let quote = spx.quote().await?;
+        println!("S&P 500: {:?}", quote.price);
+        Ok(())
+    }
+}
+
+// line 101: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_101() {
+    use finance_query::{Interval, Providers, TimeRange};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let spx = providers.index("^GSPC");
         let chart = spx.chart(Interval::OneDay, TimeRange::OneMonth).await?;
         println!("Candles: {}", chart.candles.len());
         Ok(())
     }
 }
 
-// line 99: compile-only (no_run)
-#[cfg(feature = "polygon")]
+// line 118: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_99() {
-    use finance_query::{Capability, Provider, Providers, TimeRange};
+fn doc_block_line_118() {
+    use finance_query::{Providers, TimeRange};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let providers = Providers::builder()
-            .route(Capability::INDICES, [Provider::Polygon])
-            .build()
-            .await?;
-        let spx = providers.index("I:SPX");
+        let providers = Providers::builder().build().await?;
+        let spx = providers.index("^GSPC");
         let history = spx.history(TimeRange::OneMonth).await?;
         println!("Candles: {}", history.candles.len());
         Ok(())
     }
 }
 
-// line 120: compile-only (no_run)
-#[cfg(all(feature = "risk", feature = "polygon"))]
+// line 138: compile-only (no_run)
+#[cfg(feature = "wikipedia")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_120() {
-    use finance_query::indicators::Indicator;
-    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+fn doc_block_line_138() {
+    use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let providers = Providers::builder()
-            .route(Capability::INDICES, [Provider::Polygon])
+            .route(Capability::INDICES, [Provider::Wikipedia])
             .build()
             .await?;
-        let spx = providers.index("I:SPX");
+        let spx = providers.index("^GSPC");
+        for member in spx.constituents().await?.iter().take(5) {
+            println!("{}: {}", member.symbol, member.name.as_deref().unwrap_or("?"));
+        }
+        Ok(())
+    }
+}
+
+// line 157: compile-only (no_run)
+#[cfg(feature = "fmp")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_157() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .route(Capability::INDICES, [Provider::Fmp])
+            .build()
+            .await?;
+        let ndx = providers.index("^NDX");
+        let members = ndx.constituents().await?;
+        println!("Nasdaq-100 constituents: {}", members.len());
+        Ok(())
+    }
+}
+
+// line 177: compile-only (no_run)
+#[cfg(feature = "fmp")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_177() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .route(Capability::INDICES, [Provider::Fmp])
+            .build()
+            .await?;
+        let spx = providers.index("^GSPC");
+        for change in spx.constituent_changes().await?.iter().take(5) {
+            println!(
+                "{}: +{} -{}",
+                change.date.as_deref().unwrap_or("?"),
+                change.added_security.as_deref().unwrap_or("-"),
+                change.removed_ticker.as_deref().unwrap_or("-")
+            );
+        }
+        Ok(())
+    }
+}
+
+// line 204: compile-only (no_run)
+#[cfg(feature = "risk")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_204() {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Interval, Providers, TimeRange};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let spx = providers.index("^GSPC");
         let summary = spx.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
         if let Some(rsi) = summary.rsi_14 {
             println!("RSI(14): {:.2}", rsi);

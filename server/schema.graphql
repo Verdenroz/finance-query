@@ -140,6 +140,19 @@ type GqlCalendarEvent {
 }
 
 """
+Which market-wide calendar to fetch.
+"""
+enum GqlCalendarKind {
+	EARNINGS
+	IPO
+	DIVIDEND
+	SPLIT
+	ECONOMIC
+	MARKET_HOLIDAY
+	MARKET_STATUS
+}
+
+"""
 A single OHLCV candle / price bar.
 """
 type GqlCandle {
@@ -353,6 +366,19 @@ type GqlCommitmentsOfTraders {
 		"""
 		after: String
 	): GqlCotObservationConnection!
+}
+
+"""
+Mirrors `finance_query::CommodityQuote`.
+"""
+type GqlCommodityQuote {
+	symbol: String!
+	name: String
+	unit: String
+	price: Float
+	change: Float
+	changePercent: Float
+	timestamp: Int
 }
 
 """
@@ -819,6 +845,48 @@ type GqlEpsTrend {
 }
 
 """
+Mirrors `finance_query::EtfCountryWeighting`.
+"""
+type GqlEtfCountryWeighting {
+	country: String
+	weight: Float
+}
+
+"""
+Mirrors `finance_query::EtfHolding`.
+"""
+type GqlEtfHolding {
+	symbol: String
+	description: String
+	weight: Float
+}
+
+"""
+Mirrors `finance_query::EtfProfile`.
+"""
+type GqlEtfProfile {
+	symbol: String
+	name: String
+	assetType: String
+	netAssets: Float
+	netExpenseRatio: Float
+	portfolioTurnover: Float
+	dividendYield: Float
+	inceptionDate: String
+	holdings: [GqlEtfHolding!]!
+	sectorWeightings: [GqlEtfSectorWeighting!]!
+	countryWeightings: [GqlEtfCountryWeighting!]!
+}
+
+"""
+Mirrors `finance_query::EtfSectorWeighting`.
+"""
+type GqlEtfSectorWeighting {
+	sector: String
+	weight: Float
+}
+
+"""
 The kind of financial event, with its event-specific payload.
 """
 union GqlEventKind = GqlEarningsEvent | GqlExDividendEvent | GqlDividendPaymentEvent | GqlOptionsExpirationEvent | GqlEconomicReleaseEvent | GqlUnknownEvent
@@ -1013,6 +1081,22 @@ type GqlFibonacciLevels {
 }
 
 """
+Mirrors `finance_query::FilingSection`.
+"""
+type GqlFilingSection {
+	section: String
+	content: String
+}
+
+"""
+Which filing form to fetch sectioned text for.
+"""
+enum GqlFilingSectionForm {
+	TEN_K
+	EIGHT_K
+}
+
+"""
 A single filter condition for `customScreener`. `field`/`operator` are
 validated against `EquityField`/`FundField` server-side (safe to splice
 into the upstream Yahoo query only after that match succeeds) — same
@@ -1132,6 +1216,23 @@ type GqlFundOwnership {
 }
 
 """
+Mirrors `finance_query::FuturesQuote`.
+"""
+type GqlFuturesQuote {
+	symbol: String!
+	name: String
+	underlying: String
+	exchange: String
+	expirationDate: String
+	price: Float
+	change: Float
+	changePercent: Float
+	openInterest: Int
+	volume: Int
+	timestamp: Int
+}
+
+"""
 Mirrors `finance_query::crypto::GlobalCryptoStats`.
 """
 type GqlGlobalCryptoStats {
@@ -1182,6 +1283,20 @@ type GqlIchimokuData {
 	leadingSpanA: Float
 	leadingSpanB: Float
 	laggingSpan: Float
+}
+
+"""
+Mirrors `finance_query::IndexConstituent`.
+"""
+type GqlIndexConstituent {
+	symbol: String!
+	name: String
+	sector: String
+	subSector: String
+	headquarters: String
+	dateFirstAdded: String
+	cik: String
+	founded: String
 }
 
 """
@@ -1641,11 +1756,98 @@ type GqlMajorHoldersBreakdown {
 	maxAge: Int
 }
 
+union GqlMarketCalendarDetail = GqlMarketEarningsDetail | GqlMarketIpoDetail | GqlMarketDividendDetail | GqlMarketSplitDetail | GqlMarketHolidayDetail | GqlMarketEconomicDetail | GqlMarketUnknownDetail
+
+"""
+A single market-wide calendar entry.
+"""
+type GqlMarketCalendarEntry {
+	symbol: String
+	date: String
+	detail: GqlMarketCalendarDetail!
+}
+
+type GqlMarketDividendDetail {
+	dividend: Float
+	adjDividend: Float
+	recordDate: String
+	paymentDate: String
+	declarationDate: String
+}
+
+type GqlMarketEarningsDetail {
+	eps: Float
+	epsEstimated: Float
+	revenue: Float
+	revenueEstimated: Float
+	fiscalDateEnding: String
+	time: String
+}
+
+type GqlMarketEconomicDetail {
+	event: String
+	country: String
+	actual: Float
+	previous: Float
+	estimate: Float
+	change: Float
+	changePercentage: Float
+	impact: String
+}
+
+"""
+Also used for `MarketStatus` entries — providers report exchange
+open/closed status through this same shape (`status` carries "open"/"closed").
+"""
+type GqlMarketHolidayDetail {
+	name: String
+	exchange: String
+	status: String
+	open: String
+	close: String
+}
+
 """
 Market hours for one or more markets.
 """
 type GqlMarketHours {
 	markets: [GqlMarketTime!]!
+}
+
+type GqlMarketIpoDetail {
+	company: String
+	exchange: String
+	actions: String
+	shares: Float
+	priceRange: String
+	marketCap: Float
+}
+
+"""
+A sector's aggregate price/earnings ratio, provider-routed via
+`Providers::market()`.
+"""
+type GqlMarketSectorPe {
+	sector: String!
+	exchange: String
+	pe: Float
+	date: String
+}
+
+"""
+A sector's aggregate performance, provider-routed via `Providers::market()`
+(`Capability::MARKET`). Distinct from `GqlSectorPerformance` in
+`types/sector.rs`, which is a nested field on Yahoo-only `finance::sector`.
+"""
+type GqlMarketSectorPerformance {
+	sector: String!
+	exchange: String
+	changePercent: Float
+}
+
+type GqlMarketSplitDetail {
+	numerator: Float
+	denominator: Float
 }
 
 """
@@ -1681,6 +1883,15 @@ type GqlMarketTime {
 	timezoneShort: String
 	gmtOffset: Int
 	dst: Boolean
+}
+
+"""
+Fallback for `CalendarDetail` variants added to the library after this
+schema was written — `CalendarDetail` is `#[non_exhaustive]`, so this
+keeps the conversion total instead of panicking on a future variant.
+"""
+type GqlMarketUnknownDetail {
+	raw: JSON!
 }
 
 type GqlNetSharePurchaseActivity {
@@ -1935,6 +2146,27 @@ type GqlPivotPointsData {
 	s1: Float
 	s2: Float
 	s3: Float
+}
+
+"""
+Mirrors `finance_query::PressRelease`.
+"""
+type GqlPressRelease {
+	symbol: String
+	date: String
+	title: String
+	text: String
+}
+
+"""
+Mirrors `finance_query::PriceTargetConsensus`.
+"""
+type GqlPriceTargetConsensus {
+	symbol: String
+	targetHigh: Float
+	targetLow: Float
+	targetConsensus: Float
+	targetMedian: Float
 }
 
 """
@@ -2228,6 +2460,19 @@ type GqlQuotesBatch {
 }
 
 """
+Mirrors `finance_query::RatingConsensus`.
+"""
+type GqlRatingConsensus {
+	symbol: String
+	strongBuy: Int
+	buy: Int
+	hold: Int
+	sell: Int
+	strongSell: Int
+	consensus: String
+}
+
+"""
 Similar-stock recommendations for one symbol, mirroring
 `finance_query::Recommendation`, which has no serde rename of its own
 (plain snake_case JSON keys, e.g. `provider_id`) — `alias` keeps
@@ -2322,6 +2567,16 @@ type GqlRevenueEstimate {
 	numberOfAnalysts: JSON
 	yearAgoRevenue: JSON
 	growth: JSON
+}
+
+"""
+Mirrors `finance_query::RiskFactor`.
+"""
+type GqlRiskFactor {
+	title: String
+	text: String
+	category: String
+	filingDate: String
 }
 
 """
@@ -2983,6 +3238,17 @@ type GqlTicker {
 		"""
 		after: String
 	): GqlNewsConnection!
+	"""
+	This company's own press releases, distinct from `news` (press
+	coverage). Routes through EDGAR 8-K exhibits, falling back to
+	FMP/Alpha Vantage when configured.
+	"""
+	pressReleases(
+		"""
+		Maximum number of releases to return
+		"""
+		limit: Int! = 10
+	): [GqlPressRelease!]!
 	options(date: Int): GqlOptions!
 	"""
 	Similar-stock recommendations for this symbol.
@@ -3105,6 +3371,37 @@ type GqlTicker {
 		"""
 		after: String
 	): GqlFailToDeliverConnection!
+	"""
+	Sectioned text of one filing by accession number. Routes through EDGAR
+	(best-effort HTML extraction) or Polygon when configured.
+	"""
+	filingSections(
+		"""
+		SEC accession number, e.g. "0000320193-24-000123"
+		"""
+		accessionNumber: String!,
+		"""
+		Which filing form to fetch sectioned text for
+		"""
+		form: GqlFilingSectionForm!
+	): [GqlFilingSection!]!
+	"""
+	Risk factors extracted from this symbol's SEC filings. Routes through
+	EDGAR (best-effort HTML extraction) or Polygon when configured.
+	"""
+	riskFactors: [GqlRiskFactor!]!
+	"""
+	Consensus rating rollup (analyst grade distribution + headline label).
+	"""
+	ratingConsensus: GqlRatingConsensus!
+	"""
+	Consensus analyst price target.
+	"""
+	priceTargetConsensus: GqlPriceTargetConsensus!
+	"""
+	ETF profile and holdings (only meaningful for ETF symbols).
+	"""
+	etfProfile: GqlEtfProfile!
 }
 
 enum GqlTimeRange {
@@ -3498,6 +3795,39 @@ type QueryRoot {
 		"""
 		lang: String
 	): GqlIndustryData!
+	"""
+	Market-wide event calendar (earnings/IPO/dividend/split/economic/
+	holiday/status) over `[from, to]` (`YYYY-MM-DD`). `from`/`to` are
+	ignored by `MARKET_HOLIDAY`/`MARKET_STATUS`, which return providers'
+	upcoming/live sets regardless.
+	"""
+	marketCalendar(kind: GqlCalendarKind!, from: String! = "", to: String! = ""): [GqlMarketCalendarEntry!]!
+	"""
+	A commodity's current quote (e.g. gold, silver, crude oil),
+	provider-routed via `Providers::commodity()` (Yahoo, keyless).
+	"""
+	commodity(symbol: String!): GqlCommodityQuote!
+	"""
+	A futures contract's current quote, provider-routed via
+	`Providers::futures()` (Yahoo, keyless).
+	"""
+	futures(symbol: String!): GqlFuturesQuote!
+	"""
+	An index's current constituent list, provider-routed via
+	`Providers::index()` (Wikipedia, S&P 500 only).
+	"""
+	indexConstituents(symbol: String!): [GqlIndexConstituent!]!
+	"""
+	Aggregate performance for every sector, provider-routed via
+	`Providers::market()` (Yahoo screener fan-out, keyless). Distinct from
+	`sector`, a per-sector Yahoo-only shortcut.
+	"""
+	sectorPerformance: [GqlMarketSectorPerformance!]!
+	"""
+	Price/earnings ratios by sector, provider-routed via
+	`Providers::market()` (Yahoo screener fan-out, keyless).
+	"""
+	sectorPe: [GqlMarketSectorPe!]!
 	"""
 	Search for quotes, news, and research reports matching a query string.
 	"""

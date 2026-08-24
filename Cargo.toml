@@ -126,6 +126,8 @@ full = [
     "defi",
     "gdelt",
     "cftc",
+    "nasdaq",
+    "wikipedia",
     "secftd",
     "housetrades",
     "senatetrades",
@@ -162,6 +164,10 @@ defi = []
 gdelt = []
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
 cftc = []
+# Enable Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless)
+nasdaq = []
+# Enable Wikipedia S&P 500 index-constituent table scraping (keyless)
+wikipedia = []
 # Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
 secftd = ["dep:zip"]
 # Enable House of Representatives Periodic Transaction Report disclosures (keyless)
@@ -219,6 +225,8 @@ features = [
     "defi",
     "gdelt",
     "cftc",
+    "nasdaq",
+    "wikipedia",
     "secftd",
     "housetrades",
     "senatetrades",

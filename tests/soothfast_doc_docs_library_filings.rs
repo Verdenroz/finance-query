@@ -60,10 +60,58 @@ fn doc_block_line_70() {
 }
 
 // line 119: compile-only (no_run)
-#[cfg(feature = "secftd")]
 #[rustfmt::skip]
 #[allow(dead_code)]
 fn doc_block_line_119() {
+    use finance_query::{FilingSectionForm, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let filings = providers.filings("AAPL");
+
+        let submissions = filings.get().await?;
+        let latest_10k = submissions
+            .filings
+            .iter()
+            .find(|f| f.filing_type.as_deref() == Some("10-K"))
+            .and_then(|f| f.accession_number.as_deref())
+            .unwrap_or_default();
+
+        for section in filings.sections(latest_10k, FilingSectionForm::TenK).await? {
+            println!(
+                "{}: {} chars",
+                section.section.as_deref().unwrap_or("?"),
+                section.content.as_deref().unwrap_or("").len()
+            );
+        }
+        Ok(())
+    }
+}
+
+// line 161: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_161() {
+    use finance_query::Providers;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder().build().await?;
+        let filings = providers.filings("AAPL");
+
+        for factor in filings.risk_factors().await?.iter().take(5) {
+            println!("{}", factor.title.as_deref().unwrap_or("?"));
+        }
+        Ok(())
+    }
+}
+
+// line 194: compile-only (no_run)
+#[cfg(feature = "secftd")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_194() {
     use finance_query::{Providers, edgar};
 
     #[tokio::main]

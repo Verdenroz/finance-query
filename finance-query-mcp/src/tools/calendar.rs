@@ -1,45 +1,26 @@
 use finance_query::TimeRange;
 use finance_query_server::graphql::FinanceSchema;
+use finance_query_server::params::MarketCalendarKindParam;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    CALENDAR_EVENT_UNION_SELECTION, GQL_CALENDAR_VALID_FIELDS, execute_query,
-    gql_string_list_literal, parse_fields, unwrap_field,
+    CALENDAR_EVENT_UNION_SELECTION, GQL_CALENDAR_VALID_FIELDS, GQL_MARKET_CALENDAR_VALID_FIELDS,
+    MARKET_CALENDAR_DETAIL_UNION_SELECTION, build_union_selection, escape_gql_string,
+    execute_query, gql_string_list_literal, parse_fields, unwrap_field,
 };
 use crate::tools::helpers::range_to_gql;
 
 /// Build the `calendar { ... }` selection set, expanding `event` with its
 /// full union inline-fragment selection.
 fn build_calendar_selection(fields: Option<&[String]>) -> String {
-    let chosen: Vec<&str> = match fields {
-        Some(fs) if !fs.is_empty() => fs
-            .iter()
-            .map(|f| f.trim())
-            .filter(|f| GQL_CALENDAR_VALID_FIELDS.contains(f))
-            .collect(),
-        _ => GQL_CALENDAR_VALID_FIELDS.to_vec(),
-    };
-    if !chosen.contains(&"event") {
-        let mut sel = String::from("{ ");
-        for f in &chosen {
-            sel.push_str(f);
-            sel.push(' ');
-        }
-        sel.push('}');
-        return sel;
-    }
-    let mut sel = String::from("{ ");
-    for f in ["timestamp", "date", "symbol"] {
-        if chosen.contains(&f) {
-            sel.push_str(f);
-            sel.push(' ');
-        }
-    }
-    sel.push_str("event ");
-    sel.push_str(CALENDAR_EVENT_UNION_SELECTION);
-    sel.push_str(" }");
-    sel
+    build_union_selection(
+        fields,
+        GQL_CALENDAR_VALID_FIELDS,
+        "event",
+        &["timestamp", "date", "symbol"],
+        CALENDAR_EVENT_UNION_SELECTION,
+    )
 }
 
 /// Aggregate upcoming financial events (earnings, dividends, options
@@ -61,6 +42,47 @@ pub async fn get_calendar(
         format!("query {{ calendar(symbols: [{syms_literal}], range: {gql_range}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "calendar");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+/// Build the `marketCalendar { ... }` selection set, expanding `detail` with
+/// its full union inline-fragment selection.
+fn build_market_calendar_selection(fields: Option<&[String]>) -> String {
+    build_union_selection(
+        fields,
+        GQL_MARKET_CALENDAR_VALID_FIELDS,
+        "detail",
+        &["symbol", "date"],
+        MARKET_CALENDAR_DETAIL_UNION_SELECTION,
+    )
+}
+
+/// Market-wide event calendar (earnings/IPO/dividend/split/economic/holiday/
+/// status) over `[from, to]` (`YYYY-MM-DD`). `from`/`to` are ignored by
+/// `market-holiday`/`market-status`, which return providers' upcoming/live
+/// sets regardless.
+pub async fn get_market_calendar(
+    schema: &FinanceSchema,
+    kind: MarketCalendarKindParam,
+    from: Option<String>,
+    to: Option<String>,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_market_calendar_selection(field_list.as_deref());
+    let gql_kind = kind.as_gql_str();
+    let from = from.unwrap_or_default();
+    let to = to.unwrap_or_default();
+
+    let query = format!(
+        "query {{ marketCalendar(kind: {gql_kind}, from: \"{}\", to: \"{}\") {selection} }}",
+        escape_gql_string(&from),
+        escape_gql_string(&to)
+    );
+    let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
+    let data = unwrap_field(json, "marketCalendar");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))

@@ -395,6 +395,69 @@ pub const CALENDAR_EVENT_UNION_SELECTION: &str = "{ \
     ... on GqlUnknownEvent { raw } \
 }";
 
+/// `marketCalendar` (`GqlMarketCalendarEntry`) — `detail` is a union
+/// (`GqlMarketCalendarDetail`), always expanded with inline fragments for
+/// all 6 variants, mirroring `GQL_CALENDAR_VALID_FIELDS` above.
+pub const GQL_MARKET_CALENDAR_VALID_FIELDS: &[&str] = &["symbol", "date", "detail"];
+
+/// Full inline-fragment selection for the `GqlMarketCalendarDetail` union —
+/// spliced in whenever `detail` is selected.
+pub const MARKET_CALENDAR_DETAIL_UNION_SELECTION: &str = "{ \
+    __typename \
+    ... on GqlMarketEarningsDetail { eps epsEstimated revenue revenueEstimated fiscalDateEnding time } \
+    ... on GqlMarketIpoDetail { company exchange actions shares priceRange marketCap } \
+    ... on GqlMarketDividendDetail { dividend adjDividend recordDate paymentDate declarationDate } \
+    ... on GqlMarketSplitDetail { numerator denominator } \
+    ... on GqlMarketHolidayDetail { name exchange status open close } \
+    ... on GqlMarketEconomicDetail { event country actual previous estimate change changePercentage impact } \
+    ... on GqlMarketUnknownDetail { raw } \
+}";
+
+/// `commodity` (`GqlCommodityQuote`) — flat, no composite fields.
+pub const GQL_COMMODITY_QUOTE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "unit",
+    "price",
+    "change",
+    "changePercent",
+    "timestamp",
+];
+
+/// `futures` (`GqlFuturesQuote`) — flat, no composite fields.
+pub const GQL_FUTURES_QUOTE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "underlying",
+    "exchange",
+    "expirationDate",
+    "price",
+    "change",
+    "changePercent",
+    "openInterest",
+    "volume",
+    "timestamp",
+];
+
+/// `indexConstituents` (`GqlIndexConstituent`) — flat, no composite fields.
+pub const GQL_INDEX_CONSTITUENT_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "sector",
+    "subSector",
+    "headquarters",
+    "dateFirstAdded",
+    "cik",
+    "founded",
+];
+
+/// `sectorPerformance` (`GqlMarketSectorPerformance`) — flat, no composite fields.
+pub const GQL_MARKET_SECTOR_PERFORMANCE_VALID_FIELDS: &[&str] =
+    &["sector", "exchange", "changePercent"];
+
+/// `sectorPe` (`GqlMarketSectorPe`) — flat, no composite fields.
+pub const GQL_MARKET_SECTOR_PE_VALID_FIELDS: &[&str] = &["sector", "exchange", "pe", "date"];
+
 // ── Market-wide (indices reuse GQL_QUOTE_VALID_FIELDS) ──────────────────────
 
 /// Valid fields for `GqlMarketSummaryQuote`.
@@ -669,6 +732,54 @@ pub const GQL_COMPANY_PROFILE_VALID_FIELDS: &[&str] = &[
 pub const GQL_EARNINGS_SURPRISES_VALID_FIELDS: &[&str] = &["surprises"];
 pub const GQL_EARNINGS_SURPRISES_COMPOSITE: &str =
     "{ symbol date actualEps estimatedEps surprise surprisePercent }";
+
+/// `ratingConsensus` (`GqlRatingConsensus`) — flat, no composite fields.
+pub const GQL_RATING_CONSENSUS_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "strongBuy",
+    "buy",
+    "hold",
+    "sell",
+    "strongSell",
+    "consensus",
+];
+
+/// `priceTargetConsensus` (`GqlPriceTargetConsensus`) — flat, no composite fields.
+pub const GQL_PRICE_TARGET_CONSENSUS_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "targetHigh",
+    "targetLow",
+    "targetConsensus",
+    "targetMedian",
+];
+
+/// `etfProfile` (`GqlEtfProfile`) — `holdings`/`sectorWeightings`/
+/// `countryWeightings` are composites.
+pub const GQL_ETF_PROFILE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "assetType",
+    "netAssets",
+    "netExpenseRatio",
+    "portfolioTurnover",
+    "dividendYield",
+    "inceptionDate",
+    "holdings",
+    "sectorWeightings",
+    "countryWeightings",
+];
+pub const GQL_ETF_HOLDING_COMPOSITE: &str = "{ symbol description weight }";
+pub const GQL_ETF_SECTOR_WEIGHTING_COMPOSITE: &str = "{ sector weight }";
+pub const GQL_ETF_COUNTRY_WEIGHTING_COMPOSITE: &str = "{ country weight }";
+
+/// `filingSections` (`[GqlFilingSection]`) — flat, no composite fields.
+pub const GQL_FILING_SECTION_VALID_FIELDS: &[&str] = &["section", "content"];
+
+/// `riskFactors` (`[GqlRiskFactor]`) — flat, no composite fields.
+pub const GQL_RISK_FACTOR_VALID_FIELDS: &[&str] = &["title", "text", "category", "filingDate"];
+
+/// `pressReleases` (`[GqlPressRelease]`) — flat, no composite fields.
+pub const GQL_PRESS_RELEASE_VALID_FIELDS: &[&str] = &["symbol", "date", "title", "text"];
 
 /// `earningsTranscript` (`GqlEarningsTranscript`) — flat, no composite fields.
 pub const GQL_EARNINGS_TRANSCRIPT_VALID_FIELDS: &[&str] =

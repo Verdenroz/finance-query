@@ -538,7 +538,6 @@ macro_rules! impl_chartable_analytics {
 
 // ── Modules ─────────────────────────────────────────────────────────
 
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub(crate) mod commodities;
 #[cfg(any(
     feature = "alphavantage",
@@ -546,16 +545,11 @@ pub(crate) mod commodities;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
 pub(crate) mod crypto;
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub(crate) mod discovery;
 #[cfg(any(
     feature = "alphavantage",
@@ -571,12 +565,11 @@ pub(crate) mod filings;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub(crate) mod forex;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub(crate) mod futures;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
 pub(crate) mod market;
 #[cfg(feature = "polygon")]
@@ -584,7 +577,6 @@ pub(crate) mod snapshot;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
-#[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use commodities::Commodity;
 #[cfg(any(
     feature = "alphavantage",
@@ -592,16 +584,11 @@ pub use commodities::Commodity;
     feature = "crypto",
     feature = "defi",
     feature = "fmp",
+    feature = "gdelt",
     feature = "kraken",
     feature = "polygon"
 ))]
 pub use crypto::CryptoCoin;
-#[cfg(any(
-    feature = "fmp",
-    feature = "polygon",
-    feature = "alphavantage",
-    feature = "crypto"
-))]
 pub use discovery::Discovery;
 #[cfg(any(
     feature = "alphavantage",
@@ -617,15 +604,13 @@ pub use filings::Filings;
     feature = "alphavantage",
     feature = "fmp",
     feature = "frankfurter",
+    feature = "gdelt",
     feature = "polygon"
 ))]
 pub use forex::ForexPair;
-#[cfg(any(feature = "polygon", feature = "cftc"))]
 pub use futures::FuturesContract;
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use indices::Index;
 pub use market::Market;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use market::MarketCalendar;
 #[cfg(feature = "polygon")]
 pub use snapshot::Snapshot;

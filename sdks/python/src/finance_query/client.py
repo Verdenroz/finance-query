@@ -465,6 +465,20 @@ class Client:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    def get_commodity(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCommodityQuote:
+        """Get a commodity's current quote"""
+        return self._transport.request(
+            "GET",
+            f"/v2/commodities/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCommodityQuote,
+        )
+
     def get_company_profile(
         self,
         symbol: str,
@@ -791,6 +805,20 @@ class Client:
 
         return SyncPager(fetch, typing.Any)
 
+    def get_etf_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEtfProfile:
+        """Get ETF profile and holdings"""
+        return self._transport.request(
+            "GET",
+            f"/v2/etf-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEtfProfile,
+        )
+
     def get_exchanges(
         self,
         *,
@@ -868,6 +896,22 @@ class Client:
             )
 
         return SyncPager(fetch, models.GqlFeedEntry)
+
+    def get_filing_sections(
+        self,
+        symbol: str,
+        *,
+        accession_number: str,
+        fields: str | None = None,
+        form: models.FilingSectionFormParam,
+    ) -> list[models.GqlFilingSection]:
+        """Get sectioned text of one SEC filing"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/sections",
+            query=query_of({"accessionNumber": accession_number, "fields": fields, "form": form}),
+            into=list[models.GqlFilingSection],
+        )
 
     def get_financials(
         self,
@@ -969,6 +1013,20 @@ class Client:
             )
 
         return SyncPager(fetch, models.GqlTreasuryYield)
+
+    def get_futures(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlFuturesQuote:
+        """Get a futures contract's current quote"""
+        return self._transport.request(
+            "GET",
+            f"/v2/futures/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlFuturesQuote,
+        )
 
     def get_gdelt_news(
         self,
@@ -1072,6 +1130,20 @@ class Client:
             into=models.GqlMarketHours,
         )
 
+    def get_index_constituents(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlIndexConstituent]:
+        """Get an index's current constituent list"""
+        return self._transport.request(
+            "GET",
+            f"/v2/index-constituents/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlIndexConstituent],
+        )
+
     def get_indicators(
         self,
         symbol: str,
@@ -1117,6 +1189,22 @@ class Client:
             f"/v2/industries/{path_seg(industry)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlIndustryData,
+        )
+
+    def get_market_calendar(
+        self,
+        *,
+        fields: str | None = None,
+        from_: str | None = None,
+        kind: models.MarketCalendarKindParam,
+        to: str | None = None,
+    ) -> list[models.GqlMarketCalendarEntry]:
+        """Get a market-wide event calendar"""
+        return self._transport.request(
+            "GET",
+            "/v2/market-calendar",
+            query=query_of({"fields": fields, "from": from_, "kind": kind, "to": to}),
+            into=list[models.GqlMarketCalendarEntry],
         )
 
     def get_market_summary(
@@ -1219,6 +1307,35 @@ class Client:
 
         return SyncPager(fetch, typing.Any)
 
+    def get_press_releases(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlPressRelease]:
+        """Get a company's own press releases"""
+        return self._transport.request(
+            "GET",
+            f"/v2/press-releases/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "limit": limit}),
+            into=list[models.GqlPressRelease],
+        )
+
+    def get_price_target_consensus(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlPriceTargetConsensus:
+        """Get consensus analyst price target"""
+        return self._transport.request(
+            "GET",
+            f"/v2/price-target-consensus/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlPriceTargetConsensus,
+        )
+
     def get_quote(
         self,
         symbol: str,
@@ -1290,6 +1407,20 @@ class Client:
 
         return SyncPager(fetch, typing.Any)
 
+    def get_rating_consensus(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlRatingConsensus:
+        """Get consensus rating rollup"""
+        return self._transport.request(
+            "GET",
+            f"/v2/rating-consensus/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlRatingConsensus,
+        )
+
     def get_recommendations(
         self,
         symbol: str,
@@ -1322,6 +1453,20 @@ class Client:
             into=models.GqlRiskSummary,
         )
 
+    def get_risk_factors(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlRiskFactor]:
+        """Get risk factors extracted from SEC filings"""
+        return self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/risk-factors",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlRiskFactor],
+        )
+
     def get_screeners(
         self,
         screener: models.Screener,
@@ -1352,6 +1497,32 @@ class Client:
             f"/v2/sectors/{path_seg(sector)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlSectorData,
+        )
+
+    def get_sector_pe(
+        self,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlMarketSectorPe]:
+        """Get price/earnings ratios by sector"""
+        return self._transport.request(
+            "GET",
+            "/v2/sector-pe",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlMarketSectorPe],
+        )
+
+    def get_sector_performance(
+        self,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlMarketSectorPerformance]:
+        """Get aggregate performance for every sector"""
+        return self._transport.request(
+            "GET",
+            "/v2/sector-performance",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlMarketSectorPerformance],
         )
 
     def get_spark(
@@ -1886,6 +2057,20 @@ class AsyncClient:
             into=models.GqlCommitmentsOfTraders,
         )
 
+    async def get_commodity(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlCommodityQuote:
+        """Get a commodity's current quote"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/commodities/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlCommodityQuote,
+        )
+
     async def get_company_profile(
         self,
         symbol: str,
@@ -2212,6 +2397,20 @@ class AsyncClient:
 
         return AsyncPager(fetch, typing.Any)
 
+    async def get_etf_profile(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlEtfProfile:
+        """Get ETF profile and holdings"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/etf-profile/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlEtfProfile,
+        )
+
     async def get_exchanges(
         self,
         *,
@@ -2289,6 +2488,22 @@ class AsyncClient:
             )
 
         return AsyncPager(fetch, models.GqlFeedEntry)
+
+    async def get_filing_sections(
+        self,
+        symbol: str,
+        *,
+        accession_number: str,
+        fields: str | None = None,
+        form: models.FilingSectionFormParam,
+    ) -> list[models.GqlFilingSection]:
+        """Get sectioned text of one SEC filing"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/sections",
+            query=query_of({"accessionNumber": accession_number, "fields": fields, "form": form}),
+            into=list[models.GqlFilingSection],
+        )
 
     async def get_financials(
         self,
@@ -2390,6 +2605,20 @@ class AsyncClient:
             )
 
         return AsyncPager(fetch, models.GqlTreasuryYield)
+
+    async def get_futures(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlFuturesQuote:
+        """Get a futures contract's current quote"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/futures/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlFuturesQuote,
+        )
 
     async def get_gdelt_news(
         self,
@@ -2493,6 +2722,20 @@ class AsyncClient:
             into=models.GqlMarketHours,
         )
 
+    async def get_index_constituents(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlIndexConstituent]:
+        """Get an index's current constituent list"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/index-constituents/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlIndexConstituent],
+        )
+
     async def get_indicators(
         self,
         symbol: str,
@@ -2538,6 +2781,22 @@ class AsyncClient:
             f"/v2/industries/{path_seg(industry)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlIndustryData,
+        )
+
+    async def get_market_calendar(
+        self,
+        *,
+        fields: str | None = None,
+        from_: str | None = None,
+        kind: models.MarketCalendarKindParam,
+        to: str | None = None,
+    ) -> list[models.GqlMarketCalendarEntry]:
+        """Get a market-wide event calendar"""
+        return await self._transport.request(
+            "GET",
+            "/v2/market-calendar",
+            query=query_of({"fields": fields, "from": from_, "kind": kind, "to": to}),
+            into=list[models.GqlMarketCalendarEntry],
         )
 
     async def get_market_summary(
@@ -2640,6 +2899,35 @@ class AsyncClient:
 
         return AsyncPager(fetch, typing.Any)
 
+    async def get_press_releases(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlPressRelease]:
+        """Get a company's own press releases"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/press-releases/{path_seg(symbol)}",
+            query=query_of({"fields": fields, "limit": limit}),
+            into=list[models.GqlPressRelease],
+        )
+
+    async def get_price_target_consensus(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlPriceTargetConsensus:
+        """Get consensus analyst price target"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/price-target-consensus/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlPriceTargetConsensus,
+        )
+
     async def get_quote(
         self,
         symbol: str,
@@ -2711,6 +2999,20 @@ class AsyncClient:
 
         return AsyncPager(fetch, typing.Any)
 
+    async def get_rating_consensus(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlRatingConsensus:
+        """Get consensus rating rollup"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/rating-consensus/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlRatingConsensus,
+        )
+
     async def get_recommendations(
         self,
         symbol: str,
@@ -2743,6 +3045,20 @@ class AsyncClient:
             into=models.GqlRiskSummary,
         )
 
+    async def get_risk_factors(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlRiskFactor]:
+        """Get risk factors extracted from SEC filings"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/filings/{path_seg(symbol)}/risk-factors",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlRiskFactor],
+        )
+
     async def get_screeners(
         self,
         screener: models.Screener,
@@ -2773,6 +3089,32 @@ class AsyncClient:
             f"/v2/sectors/{path_seg(sector)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlSectorData,
+        )
+
+    async def get_sector_pe(
+        self,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlMarketSectorPe]:
+        """Get price/earnings ratios by sector"""
+        return await self._transport.request(
+            "GET",
+            "/v2/sector-pe",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlMarketSectorPe],
+        )
+
+    async def get_sector_performance(
+        self,
+        *,
+        fields: str | None = None,
+    ) -> list[models.GqlMarketSectorPerformance]:
+        """Get aggregate performance for every sector"""
+        return await self._transport.request(
+            "GET",
+            "/v2/sector-performance",
+            query=query_of({"fields": fields}),
+            into=list[models.GqlMarketSectorPerformance],
         )
 
     async def get_spark(

@@ -6,6 +6,8 @@ use crate::error::ser_err;
 use crate::tools::gql::{
     GQL_FEAR_AND_GREED_DEFAULT_FIELDS, GQL_FEAR_AND_GREED_VALID_FIELDS,
     GQL_INDUSTRY_DEFAULT_FIELDS, GQL_INDUSTRY_VALID_FIELDS, GQL_MARKET_HOURS_VALID_FIELDS,
+    GQL_MARKET_SECTOR_PE_DEFAULT_FIELDS, GQL_MARKET_SECTOR_PE_VALID_FIELDS,
+    GQL_MARKET_SECTOR_PERFORMANCE_DEFAULT_FIELDS, GQL_MARKET_SECTOR_PERFORMANCE_VALID_FIELDS,
     GQL_MARKET_SUMMARY_DEFAULT_FIELDS, GQL_MARKET_SUMMARY_VALID_FIELDS, GQL_QUOTE_DEFAULT_FIELDS,
     GQL_QUOTE_VALID_FIELDS, GQL_SECTOR_DEFAULT_FIELDS, GQL_SECTOR_VALID_FIELDS,
     GQL_TRENDING_DEFAULT_FIELDS, GQL_TRENDING_VALID_FIELDS, INDUSTRY_COMPOSITE_FIELDS,
@@ -220,6 +222,47 @@ pub async fn get_industry(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "industry");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+/// Aggregate performance for every sector, provider-routed (Yahoo screener
+/// fan-out, keyless). Distinct from `get_sector` (per-sector Yahoo-only
+/// shortcut).
+pub async fn get_sector_performance(
+    schema: &FinanceSchema,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_MARKET_SECTOR_PERFORMANCE_VALID_FIELDS,
+        GQL_MARKET_SECTOR_PERFORMANCE_DEFAULT_FIELDS,
+    );
+    let query = format!("query {{ sectorPerformance {selection} }}");
+    let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
+    let data = unwrap_field(json, "sectorPerformance");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
+
+/// Price/earnings ratios by sector, provider-routed (Yahoo screener fan-out,
+/// keyless).
+pub async fn get_sector_pe(
+    schema: &FinanceSchema,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_MARKET_SECTOR_PE_VALID_FIELDS,
+        GQL_MARKET_SECTOR_PE_DEFAULT_FIELDS,
+    );
+    let query = format!("query {{ sectorPe {selection} }}");
+    let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
+    let data = unwrap_field(json, "sectorPe");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))

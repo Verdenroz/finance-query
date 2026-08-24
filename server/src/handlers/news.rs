@@ -7,16 +7,18 @@ use axum::{
 use finance_query_server::graphql::{
     self,
     fields::{
-        GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, escape_gql_string, unwrap_field,
-        unwrap_ticker_field,
+        GQL_NEWS_VALID_FIELDS, GQL_PRESS_RELEASE_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
+        escape_gql_string, unwrap_field, unwrap_ticker_field,
     },
     pagination::build_connection_selection,
 };
 use finance_query_server::lang;
-use finance_query_server::params::NewsQuery;
+use finance_query_server::params::{NewsQuery, PressReleasesQuery};
 use tracing::info;
 
-use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest, unwrap_connection};
+use super::gql_bridge::{
+    build_rest_composite_selection, build_rest_selection, execute_gql_rest, unwrap_connection,
+};
 
 fn connection_args(params: &NewsQuery) -> String {
     let mut args = Vec::new();
@@ -107,4 +109,37 @@ pub(crate) async fn get_news(
     let paginated = params.limit.is_some() || params.cursor.is_some();
     let result = unwrap_connection(unwrap_ticker_field(data, "news"), paginated);
     (StatusCode::OK, Json(result)).into_response()
+}
+
+/// GET /v2/press-releases/{symbol}
+///
+/// This company's own press releases, distinct from `/v2/news/{symbol}`
+/// (press coverage). Routes through EDGAR 8-K exhibits, falling back to
+/// FMP/Alpha Vantage when configured.
+pub(crate) async fn get_press_releases(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path(symbol): Path<String>,
+    Query(params): Query<PressReleasesQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_selection(params.fields.as_deref(), GQL_PRESS_RELEASE_VALID_FIELDS);
+    let query = format!(
+        "query GetPressReleases($symbol: String!) {{ ticker(symbol: $symbol) {{ pressReleases(limit: {}) {selection} }} }}",
+        params.limit
+    );
+    info!(
+        "Fetching press releases for {} (limit={}, fields={:?})",
+        symbol, params.limit, params.fields
+    );
+
+    let mut vars = Variables::default();
+    vars.insert(Name::new("symbol"), symbol.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_ticker_field(data, "pressReleases")),
+    )
+        .into_response()
 }

@@ -248,7 +248,7 @@ impl App {
                 {
                     url = doc_url;
                     resolved_doc = item.name.clone();
-                    resolved_size = item.size;
+                    resolved_size = item.size.unwrap_or(resolved_size);
                 } else if let Some(index_url) = build_filing_index_url(&accession) {
                     url = index_url;
                 }

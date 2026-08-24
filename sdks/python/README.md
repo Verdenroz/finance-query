@@ -73,6 +73,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_capital_gains` — `GET /v2/capital-gains/{symbol}`: Get capital gains distribution history
 - `get_chart` — `GET /v2/chart/{symbol}`: Get historical chart data
 - `get_commitments_of_traders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
+- `get_commodity` — `GET /v2/commodities/{symbol}`: Get a commodity's current quote
 - `get_company_profile` — `GET /v2/company-profile/{symbol}`: Get company profile
 - `get_congressional_trades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
 - `get_crypto_coin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
@@ -89,32 +90,43 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_edgar_facts` — `GET /v2/edgar/facts/{symbol}`: Get XBRL financial data
 - `get_edgar_search` — `GET /v2/edgar/search`: Search SEC filings
 - `get_edgar_submissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
+- `get_etf_profile` — `GET /v2/etf-profile/{symbol}`: Get ETF profile and holdings
 - `get_exchanges` — `GET /v2/exchanges`: Get supported exchanges
 - `get_fails_to_deliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `get_fear_and_greed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `get_feeds` — `GET /v2/feeds`: RSS/Atom news feeds
+- `get_filing_sections` — `GET /v2/filings/{symbol}/sections`: Get sectioned text of one SEC filing
 - `get_financials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
 - `get_forex_news` — `GET /v2/forex/news`: Market-wide forex news
 - `get_fred_series` — `GET /v2/fred/series/{id}`: FRED time series
 - `get_fred_treasury_yields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve
+- `get_futures` — `GET /v2/futures/{symbol}`: Get a futures contract's current quote
 - `get_gdelt_news` — `GET /v2/gdelt/news/{symbol}`: Worldwide news mentioning a symbol (GDELT, keyless)
 - `get_general_news` — `GET /v2/news`: Get general market news
 - `get_holders` — `GET /v2/holders/{symbol}/{type}`: Get holder data
 - `get_hours` — `GET /v2/hours`: Get market hours
+- `get_index_constituents` — `GET /v2/index-constituents/{symbol}`: Get an index's current constituent list
 - `get_indicators` — `GET /v2/indicators/{symbol}`: Get technical indicators
 - `get_indices` — `GET /v2/indices`: Get world market indices
 - `get_industry` — `GET /v2/industries/{industry}`: Get industry data
+- `get_market_calendar` — `GET /v2/market-calendar`: Get a market-wide event calendar
 - `get_market_summary` — `GET /v2/market-summary`: Get market summary
 - `get_metrics` — `GET /v2/metrics`: Prometheus metrics
 - `get_news` — `GET /v2/news/{symbol}`: Get news for a symbol
 - `get_options` — `GET /v2/options/{symbol}`: Get options chain
+- `get_press_releases` — `GET /v2/press-releases/{symbol}`: Get a company's own press releases
+- `get_price_target_consensus` — `GET /v2/price-target-consensus/{symbol}`: Get consensus analyst price target
 - `get_quote` — `GET /v2/quote/{symbol}`: Get quote for a symbol
 - `get_quote_type` — `GET /v2/quote-type/{symbol}`: Get quote type
 - `get_quotes` — `GET /v2/quotes`: Get quotes for multiple symbols
+- `get_rating_consensus` — `GET /v2/rating-consensus/{symbol}`: Get consensus rating rollup
 - `get_recommendations` — `GET /v2/recommendations/{symbol}`: Get similar stock recommendations
 - `get_risk` — `GET /v2/risk/{symbol}`: Risk analytics
+- `get_risk_factors` — `GET /v2/filings/{symbol}/risk-factors`: Get risk factors extracted from SEC filings
 - `get_screeners` — `GET /v2/screeners/{screener}`: Get screener results
 - `get_sector` — `GET /v2/sectors/{sector}`: Get sector data
+- `get_sector_pe` — `GET /v2/sector-pe`: Get price/earnings ratios by sector
+- `get_sector_performance` — `GET /v2/sector-performance`: Get aggregate performance for every sector
 - `get_spark` — `GET /v2/spark`: Get batch sparkline data
 - `get_splits` — `GET /v2/splits/{symbol}`: Get stock split history
 - `get_transcript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript

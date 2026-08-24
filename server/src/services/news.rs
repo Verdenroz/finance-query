@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use crate::cache::{self, Cache};
-use finance_query::{Ticker, finance};
+use finance_query::{Providers, Ticker, finance};
 use tracing::info;
 
 use super::{ServiceError, ServiceResult, lang_key};
@@ -54,6 +56,36 @@ pub async fn get_general_news(cache: &Cache, count: usize, lang: Option<&str>) -
         .await?;
 
     Ok(truncate_array(json, count))
+}
+
+/// A company's own press releases, via `Capability::CORPORATE` (EDGAR 8-K
+/// exhibits, falling back to FMP/Alpha Vantage when configured). Distinct
+/// from `get_news`, which returns press coverage.
+pub async fn get_press_releases(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+    limit: u32,
+) -> ServiceResult {
+    let cache_key = Cache::key(
+        "press-releases",
+        &[&symbol.to_uppercase(), &limit.to_string()],
+    );
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::NEWS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let releases = ticker.press_releases(limit).await?;
+                serde_json::to_value(&releases).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
 }
 
 /// Truncate a JSON array value to at most `count` elements.

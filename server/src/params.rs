@@ -61,6 +61,66 @@ impl AnalysisType {
     }
 }
 
+/// Calendar kind for `GET /v2/market-calendar`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum MarketCalendarKindParam {
+    Earnings,
+    Ipo,
+    Dividend,
+    Split,
+    Economic,
+    MarketHoliday,
+    MarketStatus,
+}
+
+impl From<MarketCalendarKindParam> for finance_query::CalendarKind {
+    fn from(v: MarketCalendarKindParam) -> Self {
+        match v {
+            MarketCalendarKindParam::Earnings => finance_query::CalendarKind::Earnings,
+            MarketCalendarKindParam::Ipo => finance_query::CalendarKind::Ipo,
+            MarketCalendarKindParam::Dividend => finance_query::CalendarKind::Dividend,
+            MarketCalendarKindParam::Split => finance_query::CalendarKind::Split,
+            MarketCalendarKindParam::Economic => finance_query::CalendarKind::Economic,
+            MarketCalendarKindParam::MarketHoliday => finance_query::CalendarKind::MarketHoliday,
+            MarketCalendarKindParam::MarketStatus => finance_query::CalendarKind::MarketStatus,
+        }
+    }
+}
+
+impl MarketCalendarKindParam {
+    /// The GraphQL enum literal this maps to (`GqlCalendarKind`'s default
+    /// SCREAMING_SNAKE_CASE rendering).
+    pub fn as_gql_str(&self) -> &'static str {
+        match self {
+            MarketCalendarKindParam::Earnings => "EARNINGS",
+            MarketCalendarKindParam::Ipo => "IPO",
+            MarketCalendarKindParam::Dividend => "DIVIDEND",
+            MarketCalendarKindParam::Split => "SPLIT",
+            MarketCalendarKindParam::Economic => "ECONOMIC",
+            MarketCalendarKindParam::MarketHoliday => "MARKET_HOLIDAY",
+            MarketCalendarKindParam::MarketStatus => "MARKET_STATUS",
+        }
+    }
+}
+
+/// Filing form for `GET /v2/filings/{symbol}/sections`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FilingSectionFormParam {
+    TenK,
+    EightK,
+}
+
+impl From<FilingSectionFormParam> for finance_query::FilingSectionForm {
+    fn from(v: FilingSectionFormParam) -> Self {
+        match v {
+            FilingSectionFormParam::TenK => finance_query::FilingSectionForm::TenK,
+            FilingSectionFormParam::EightK => finance_query::FilingSectionForm::EightK,
+        }
+    }
+}
+
 /// Holder type for `GET /v2/holders/{symbol}/{type}`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -376,6 +436,82 @@ pub struct FilingsQuery {
     pub limit: Option<u32>,
     /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
     pub cursor: Option<String>,
+}
+
+/// Query parameters for `GET /v2/commodities/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommodityQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/index-constituents/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexConstituentsQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/futures/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FuturesQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/sector-performance`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SectorPerformanceQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/sector-pe`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SectorPeQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/market-calendar`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketCalendarQuery {
+    /// Which market-wide calendar to fetch (required)
+    pub kind: MarketCalendarKindParam,
+    /// Start date (YYYY-MM-DD); ignored by market-holiday/market-status
+    #[serde(default)]
+    pub from: String,
+    /// End date (YYYY-MM-DD); ignored by market-holiday/market-status
+    #[serde(default)]
+    pub to: String,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/filings/{symbol}/sections`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilingSectionsQuery {
+    /// SEC accession number, e.g. "0000320193-24-000123" (required)
+    pub accession_number: String,
+    /// Which filing form to fetch sectioned text for
+    pub form: FilingSectionFormParam,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
+/// Query parameters for `GET /v2/filings/{symbol}/risk-factors`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RiskFactorsQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
 }
 
 /// Query parameters for `GET /v2/crypto/search`.
@@ -796,6 +932,17 @@ pub struct NewsQuery {
     pub limit: Option<u32>,
     /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
     pub cursor: Option<String>,
+}
+
+/// Query parameters for `GET /v2/press-releases/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PressReleasesQuery {
+    /// Maximum number of releases to return (default: 10)
+    #[serde(default = "default_news_count")]
+    pub limit: u32,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
 }
 
 /// Query parameters for `GET /v2/crypto/news` and `GET /v2/forex/news`.

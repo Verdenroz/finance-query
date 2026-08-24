@@ -146,8 +146,13 @@ pub(crate) async fn get_edgar_facts(
     } else {
         format!("({})", args.join(", "))
     };
+    let taxonomy_decl = if taxonomy_arg.is_empty() {
+        ""
+    } else {
+        ", $taxonomy: String"
+    };
     let query = format!(
-        "query GetEdgarFacts($symbol: String!, $taxonomy: String) {{ ticker(symbol: $symbol) {{ edgarFacts{args_str} {selection} }} }}"
+        "query GetEdgarFacts($symbol: String!{taxonomy_decl}) {{ ticker(symbol: $symbol) {{ edgarFacts{args_str} {selection} }} }}"
     );
     let mut vars = Variables::default();
     vars.insert(Name::new("symbol"), symbol.clone().into());

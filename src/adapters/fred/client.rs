@@ -41,12 +41,6 @@ impl FredClientBuilder {
         self
     }
 
-    /// Build using a shared `Arc<RateLimiter>` instead of creating a new one.
-    ///
-    /// Used by the module singleton to share a single rate-limiter across fresh
-    /// HTTP clients: the `reqwest::Client` is runtime-bound and must be rebuilt
-    /// per request, but the `RateLimiter` state must persist across calls so the
-    /// 2 req/sec FRED limit is respected.
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<FredClient> {
         let http = Client::builder()
             .timeout(self.timeout)
@@ -203,16 +197,16 @@ impl FredClient {
         })
     }
 
-    /// Fetch upcoming scheduled economic-data release dates.
-    pub async fn release_dates(&self, today: &str) -> Result<Vec<ReleaseDate>> {
+    /// Fetch scheduled economic-data release dates over `[from, to]`.
+    pub async fn release_dates(&self, from: &str, to: &str) -> Result<Vec<ReleaseDate>> {
         let json: serde_json::Value = self
             .get_json(
                 "releases/dates",
                 &[
                     ("include_release_dates_with_no_data", "true"),
                     ("sort_order", "asc"),
-                    ("realtime_start", today),
-                    ("realtime_end", "9999-12-31"),
+                    ("realtime_start", from),
+                    ("realtime_end", to),
                 ],
             )
             .await?;

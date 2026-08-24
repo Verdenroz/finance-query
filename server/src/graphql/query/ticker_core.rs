@@ -13,6 +13,7 @@ use crate::graphql::types::{
     financials::{GqlFinancialDataPoint, GqlFinancialLineItem},
     news::GqlNews,
     options::GqlOptions,
+    press_release::GqlPressRelease,
     quote::GqlQuote,
     recommendation::GqlRecommendation,
 };
@@ -111,6 +112,26 @@ impl TickerCoreQuery {
         .map_err(to_gql_error)?;
         let entries: Vec<GqlNews> = from_gql_json(json)?;
         pagination::paginate(&entries, first, after).await
+    }
+
+    /// This company's own press releases, distinct from `news` (press
+    /// coverage). Routes through EDGAR 8-K exhibits, falling back to
+    /// FMP/Alpha Vantage when configured.
+    async fn press_releases(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(default = 10, desc = "Maximum number of releases to return")] limit: u32,
+    ) -> Result<Vec<GqlPressRelease>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::news::get_press_releases(
+            &state.cache,
+            &state.providers,
+            &self.symbol,
+            limit,
+        )
+        .await
+        .map_err(to_gql_error)?;
+        from_gql_json(json)
     }
 
     async fn options(&self, ctx: &Context<'_>, date: Option<i64>) -> Result<GqlOptions> {

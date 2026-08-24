@@ -7,5 +7,7 @@
 pub mod fails_to_deliver;
 pub mod full_text;
 pub mod insider;
+pub mod press_releases;
+pub mod sections;
 pub mod thirteen_f;
 pub(crate) mod xml;

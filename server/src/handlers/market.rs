@@ -8,17 +8,20 @@ use finance_query::{IndicesRegion, ValueFormat};
 use finance_query_server::graphql::{
     self,
     fields::{
-        GQL_FEAR_AND_GREED_VALID_FIELDS, GQL_MARKET_SUMMARY_VALID_FIELDS, GQL_QUOTE_VALID_FIELDS,
-        GQL_TRENDING_VALID_FIELDS, escape_gql_string, unwrap_field,
+        GQL_FEAR_AND_GREED_VALID_FIELDS, GQL_MARKET_CALENDAR_VALID_FIELDS,
+        GQL_MARKET_SECTOR_PE_VALID_FIELDS, GQL_MARKET_SECTOR_PERFORMANCE_VALID_FIELDS,
+        GQL_MARKET_SUMMARY_VALID_FIELDS, GQL_QUOTE_VALID_FIELDS, GQL_TRENDING_VALID_FIELDS,
+        MARKET_CALENDAR_DETAIL_UNION_SELECTION, escape_gql_string, unwrap_field,
     },
 };
 use finance_query_server::lang;
 use finance_query_server::params::{
-    FearAndGreedQuery, IndicesQuery, MarketSummaryQuery, TrendingQuery,
+    FearAndGreedQuery, IndicesQuery, MarketCalendarQuery, MarketSummaryQuery, SectorPeQuery,
+    SectorPerformanceQuery, TrendingQuery,
 };
 use tracing::info;
 
-use super::gql_bridge::{build_rest_selection, execute_gql_rest};
+use super::gql_bridge::{build_rest_selection, build_rest_union_selection, execute_gql_rest};
 use super::support::parse_format;
 
 /// Map an `IndicesRegion` to a `GqlIndicesRegion` enum literal.
@@ -160,4 +163,89 @@ pub(crate) async fn get_fear_and_greed(
         Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "fearAndGreed"))).into_response()
+}
+
+/// Build the `marketCalendar { ... }` selection set, expanding `detail` with
+/// its full union inline-fragment selection.
+fn build_rest_market_calendar_selection(fields: Option<&str>) -> String {
+    build_rest_union_selection(
+        fields,
+        GQL_MARKET_CALENDAR_VALID_FIELDS,
+        "detail",
+        &["symbol", "date"],
+        MARKET_CALENDAR_DETAIL_UNION_SELECTION,
+    )
+}
+
+/// GET /v2/market-calendar?kind=<str>&from=<date>&to=<date>
+pub(crate) async fn get_market_calendar(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Query(params): Query<MarketCalendarQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_market_calendar_selection(params.fields.as_deref());
+    let gql_kind = params.kind.as_gql_str();
+    let query = format!(
+        "query {{ marketCalendar(kind: {gql_kind}, from: \"{}\", to: \"{}\") {selection} }}",
+        escape_gql_string(&params.from),
+        escape_gql_string(&params.to)
+    );
+
+    info!(
+        "Fetching market calendar (kind={:?}, from={}, to={})",
+        params.kind, params.from, params.to
+    );
+
+    let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (StatusCode::OK, Json(unwrap_field(data, "marketCalendar"))).into_response()
+}
+
+/// GET /v2/sector-performance
+///
+/// Aggregate performance for every sector, provider-routed via
+/// `Providers::market()` (Yahoo screener fan-out, keyless).
+pub(crate) async fn get_sector_performance(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Query(params): Query<SectorPerformanceQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_selection(
+        params.fields.as_deref(),
+        GQL_MARKET_SECTOR_PERFORMANCE_VALID_FIELDS,
+    );
+    let query = format!("query {{ sectorPerformance {selection} }}");
+
+    info!("Fetching sector performance (fields={:?})", params.fields);
+
+    let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (
+        StatusCode::OK,
+        Json(unwrap_field(data, "sectorPerformance")),
+    )
+        .into_response()
+}
+
+/// GET /v2/sector-pe
+///
+/// Price/earnings ratios by sector, provider-routed via `Providers::market()`
+/// (Yahoo screener fan-out, keyless).
+pub(crate) async fn get_sector_pe(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Query(params): Query<SectorPeQuery>,
+) -> impl IntoResponse {
+    let selection =
+        build_rest_selection(params.fields.as_deref(), GQL_MARKET_SECTOR_PE_VALID_FIELDS);
+    let query = format!("query {{ sectorPe {selection} }}");
+
+    info!("Fetching sector PE (fields={:?})", params.fields);
+
+    let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (StatusCode::OK, Json(unwrap_field(data, "sectorPe"))).into_response()
 }

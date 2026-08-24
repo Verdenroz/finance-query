@@ -3,35 +3,19 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — Commodity](https://docs.rs/finance-query/latest/finance_query/struct.Commodity.html)
 
-!!! info "Feature flag required"
-    ```toml
-    finance-query = { version = "...", features = ["fmp"] }
-    ```
-
-The `Commodity` handle lets you fetch price quotes, OHLCV charts, and historical
-data for commodity symbols (gold, oil, natural gas, etc.) using FMP as the
-backend provider.
+The `Commodity` handle lets you fetch price quotes, OHLCV charts, and historical data for commodity symbols (gold, oil, natural gas, etc.). Commodity quotes are served by Yahoo Finance (keyless — no feature flag, no API key) on the default route, the same way Yahoo resolves equity quotes. FMP and Alpha Vantage remain available as alternate quote providers.
 
 ## Setup
 
-Set the FMP API key via environment variable:
+`Providers::builder().build()` with no `.route()` call already serves commodity quotes — Yahoo is the default for every capability. Yahoo resolves commodity futures symbols the same way it resolves equities (e.g. `"GC=F"` for gold):
 
-```bash
-export FMP_API_KEY="your-fmp-api-key"
-```
-
-Route the `COMMODITIES` capability to `Provider::Fmp` when building `Providers`:
-
-```rust no_run feature=fmp
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+```rust no_run
+use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::COMMODITIES, [Provider::Fmp])
-        .build()
-        .await?;
-    let gold = providers.commodity("GCUSD");
+    let providers = Providers::builder().build().await?;
+    let gold = providers.commodity("GC=F");
     let quote = gold.quote().await?;
     let chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let history = gold.history(TimeRange::OneMonth).await?;
@@ -40,11 +24,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Methods
+## Yahoo Commodity Symbols
 
-### `quote()`
+Yahoo commodity futures use a root plus `=F` suffix:
 
-Fetches the current price quote for the commodity:
+| Symbol | Commodity |
+|--------|-----------|
+| `GC=F` | Gold |
+| `SI=F` | Silver |
+| `CL=F` | Crude Oil WTI |
+| `NG=F` | Natural Gas |
+| `HG=F` | Copper |
+| `PL=F` | Platinum |
+
+## Alternative: FMP or Alpha Vantage
+
+Route `Capability::COMMODITIES` to `Provider::Fmp` or `Provider::AlphaVantage` for an alternate quote source, or as a fallback behind Yahoo:
 
 ```rust no_run feature=fmp
 use finance_query::{Capability, Provider, Providers};
@@ -52,10 +47,34 @@ use finance_query::{Capability, Provider, Providers};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let providers = Providers::builder()
-        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .route(Capability::COMMODITIES, [Provider::Fmp, Provider::Yahoo])
         .build()
         .await?;
     let gold = providers.commodity("GCUSD");
+    let quote = gold.quote().await?;
+    println!("Symbol: {}", quote.symbol);
+    if let Some(price) = quote.price {
+        println!("Price: {:.2}", price);
+    }
+    Ok(())
+}
+```
+
+Set `FMP_API_KEY` (or `ALPHAVANTAGE_API_KEY`) in your environment before calling `build()`. FMP's own commodity symbols don't use the `=F` suffix (e.g. `GCUSD` for gold, `CLUSD` for crude oil), and Alpha Vantage takes its function name directly as the symbol (e.g. `"WTI"`, `"NATURAL_GAS"`, `"COPPER"` — no precious-metals functions) — the symbol format is provider-specific, so switch it along with the route.
+
+## Methods
+
+### `quote()`
+
+Fetches the current price quote for the commodity:
+
+```rust no_run covers=finance_query::models::commodities::CommodityQuote
+use finance_query::Providers;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder().build().await?;
+    let gold = providers.commodity("GC=F");
     let quote = gold.quote().await?;
 
     println!("Symbol: {}", quote.symbol);
@@ -76,16 +95,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Fetches OHLCV candles at a specific interval over a given time range:
 
-```rust no_run feature=fmp
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+```rust no_run
+use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::COMMODITIES, [Provider::Fmp])
-        .build()
-        .await?;
-    let crude = providers.commodity("CLUSD");
+    let providers = Providers::builder().build().await?;
+    let crude = providers.commodity("CL=F");
     let chart = crude.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
     println!("Symbol: {}", chart.symbol);
@@ -103,16 +119,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Fetches candles over a range using the default interval for that range
 (determined by [`TimeRange::default_interval`]):
 
-```rust no_run feature=fmp
-use finance_query::{Capability, Provider, Providers, TimeRange};
+```rust no_run
+use finance_query::{Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::COMMODITIES, [Provider::Fmp])
-        .build()
-        .await?;
-    let silver = providers.commodity("SIUSD");
+    let providers = Providers::builder().build().await?;
+    let silver = providers.commodity("SI=F");
     let history = silver.history(TimeRange::SixMonths).await?;
 
     println!("Symbol: {}", history.symbol);
@@ -126,17 +139,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Computes technical indicators or a risk summary from the commodity's own
 chart data (requires the `indicators`/`risk` features respectively):
 
-```rust no_run feature=risk,fmp
+```rust no_run feature=risk
 use finance_query::indicators::Indicator;
-use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let providers = Providers::builder()
-        .route(Capability::COMMODITIES, [Provider::Fmp])
-        .build()
-        .await?;
-    let gold = providers.commodity("GCUSD");
+    let providers = Providers::builder().build().await?;
+    let gold = providers.commodity("GC=F");
 
     let summary = gold.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
     if let Some(rsi) = summary.rsi_14 {
@@ -163,7 +173,7 @@ commodities have no natural benchmark to compare against.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `symbol` | `String` | Commodity symbol (e.g., `"GCUSD"` for gold) |
+| `symbol` | `String` | Commodity symbol (e.g., `"GC=F"` for gold) |
 | `name` | `Option<String>` | Human-readable name (e.g., `"Gold"`) |
 | `unit` | `Option<String>` | Unit of measurement (e.g., `"troy ounce"`) |
 | `price` | `Option<f64>` | Current price |
@@ -176,13 +186,13 @@ commodities have no natural benchmark to compare against.
 This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
-```rust capture-output feature=fmp covers=finance_query::models::commodities::CommodityQuote
+```rust capture-output covers=finance_query::models::commodities::CommodityQuote
 use finance_query::CommodityQuote;
 
 // `CommodityQuote` is #[non_exhaustive] outside the crate, so construct via
 // serde. With live data: `commodity.quote().await?`.
 let quote: CommodityQuote = serde_json::from_value(serde_json::json!({
-    "symbol": "GCUSD",
+    "symbol": "GC=F",
     "name": "Gold",
     "unit": "troy ounce",
     "price": 2387.50,
@@ -209,24 +219,27 @@ println!("price = {:?}", quote.price);
 ```
 
 ```text soothfast-output
-symbol = GCUSD
+symbol = GC=F
 name = Some("Gold")
 price = Some(2387.5)
 ```
 
-## Common FMP Commodity Symbols
+## Common Commodity Symbols
 
-| Symbol | Commodity |
-|--------|-----------|
-| `GCUSD` | Gold |
-| `SIUSD` | Silver |
-| `CLUSD` | Crude Oil WTI |
-| `NGUSD` | Natural Gas |
-| `HGUSD` | Copper |
-| `PLUSD` | Platinum |
+| Yahoo (`=F`) | FMP | Alpha Vantage | Commodity |
+|--------------|-----|----------------|-----------|
+| `GC=F` | `GCUSD` | — | Gold |
+| `SI=F` | `SIUSD` | — | Silver |
+| `CL=F` | `CLUSD` | `WTI` (or `BRENT`) | Crude Oil |
+| `NG=F` | `NGUSD` | `NATURAL_GAS` | Natural Gas |
+| `HG=F` | `HGUSD` | `COPPER` | Copper |
+| `PL=F` | `PLUSD` | — | Platinum |
+
+Alpha Vantage has no precious-metals (gold/silver/platinum) commodity functions; route those to Yahoo or FMP instead.
 
 ## See Also
 
 - [Provider Configuration](providers/index.md) — Routing capabilities to providers
 - [FMP Provider](providers/fmp.md) — FMP setup and capabilities
+- [Alpha Vantage Provider](providers/alphavantage.md) — Alpha Vantage setup and capabilities
 - [Chart & History](ticker.md) — `Chart` and `Candle` type reference
