@@ -241,7 +241,7 @@ jobs:
           toolchain: nightly
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec-server
+          shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
@@ -291,7 +291,7 @@ jobs:
           toolchain: nightly
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec-mcp
+          shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
@@ -328,8 +328,8 @@ jobs:
           toolchain: nightly
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: spec-mcp
-          # near-empty target; saving would poison the spec-mcp key
+          shared-key: spec
+          # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
