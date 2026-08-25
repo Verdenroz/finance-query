@@ -34,18 +34,16 @@ WORKDIR /build
 COPY Cargo.toml Cargo.lock* ./
 COPY server/Cargo.toml ./server/
 COPY finance-query-derive/Cargo.toml ./finance-query-derive/
-COPY finance-query-cli/Cargo.toml ./finance-query-cli/
 COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 
 # Create dummy sources to cache dependencies.
 # benches/ stubs are required because [[bench]] targets are declared in Cargo.toml;
 # Cargo validates their source paths during workspace resolution even when not building them.
-RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches && \
+RUN mkdir -p src server/src finance-query-derive/src finance-query-mcp/src benches && \
     echo "pub fn dummy() {}" > src/lib.rs && \
     echo "pub fn dummy() {}" > server/src/lib.rs && \
     echo "fn main() {}" > server/src/main.rs && \
     echo "" > finance-query-derive/src/lib.rs && \
-    echo "fn main() {}" > finance-query-cli/src/main.rs && \
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
     for b in ticker tickers translation soothfast dataframe; do \
         echo "fn main() {}" > benches/$b.rs; \
@@ -58,7 +56,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/build/target,sharing=locked \
     cargo build --profile ${CARGO_PROFILE} -p finance-query-server --features ${CARGO_FEATURES} && \
-    rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
+    rm -rf src server/src finance-query-derive/src finance-query-mcp/src benches
 
 # Copy actual source code
 COPY src ./src

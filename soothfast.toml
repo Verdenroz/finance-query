@@ -73,14 +73,6 @@ pages = [
 ]
 
 [[site.nav]]
-title = "CLI"
-pages = [
-  "cli/installation.md",
-  "cli/commands.md",
-  "cli/examples.md",
-]
-
-[[site.nav]]
 title = "Server"
 pages = [
   "REST API: server/api/openapi.md",

@@ -35,7 +35,6 @@ open "https://finance-query.com/graphql"
 ## What's in This Repository
 
 - **Library** (`finance-query`) - Core logic
-- **CLI** (`finance-query-cli`) - Command-line tool for market data, technical analysis, and backtesting
 - **Server** (`finance-query-server`) - HTTP REST API, WebSocket, and GraphQL server
 - **MCP Server** (`finance-query-mcp`) - 36 MCP tools for AI agents (Claude, Cursor, Windsurf, etc.)
 - **Derive Macros** (`finance-query-derive`) - Procedural macros for Polars DataFrame integration
@@ -128,18 +127,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### CLI
 
-Install `fq` (the command-line tool):
+`fq` (the command-line tool) lives in its own repository: [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli).
 
 ```bash
 # Linux/macOS
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/fq-cli/releases/latest/download/fq-cli-installer.sh | sh
 
 # Windows
-powershell -c "irm https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.ps1 | iex"
-
-# From source
-git clone https://github.com/Verdenroz/finance-query
-cargo install --path finance-query/finance-query-cli
+powershell -c "irm https://github.com/Verdenroz/fq-cli/releases/latest/download/fq-cli-installer.ps1 | iex"
 ```
 
 Quick examples:
@@ -154,7 +149,7 @@ fq dashboard                      # Market dashboard
 fq alerts add AAPL price-above:200  # Price alerts with notifications
 ```
 
-See [finance-query-cli/README.md](finance-query-cli/README.md) for full documentation.
+See [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli) for full documentation.
 
 ### Server
 
@@ -178,7 +173,7 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 
 **Package guides:**
 
-- [CLI](finance-query-cli/README.md) - Command-line tool with examples, installation, and features
+- [CLI](https://github.com/Verdenroz/fq-cli) - Command-line tool with examples, installation, and features
 - [Server](server/README.md) - REST API, WebSocket, and GraphQL server setup and endpoints
 - [MCP Server](finance-query-mcp/README.md) - AI agent integration (36 tools, hosted at `finance-query.com/mcp`)
 - [Derive Macros](finance-query-derive/README.md) - Procedural macros for Polars DataFrame support

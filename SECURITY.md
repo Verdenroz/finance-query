@@ -62,9 +62,9 @@ This is a small, volunteer-maintained project, so timelines are best-effort:
 In scope:
 
 - The `finance-query` library and its published crate.
-- The server (`server/`), CLI (`finance-query-cli/`), and MCP server
-  (`finance-query-mcp/`).
+- The server (`server/`) and MCP server (`finance-query-mcp/`).
 - The build/release supply chain (CI workflows, published Docker images).
+- The CLI is out of scope here — see [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli).
 
 Out of scope:
 
