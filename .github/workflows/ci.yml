@@ -243,9 +243,6 @@ jobs:
           done
 
   # Check compilation
-  # Per-crate release-profile check, no linking. Nothing downstream consumes
-  # a PR's binaries (docker/docker-mcp and deploy.yml all build from source
-  # independently), so PRs get compile-correctness without paying for LTO.
   build-check-server:
     name: Build Check (server)
     runs-on: ubuntu-latest
@@ -267,7 +264,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: check-server
+          shared-key: check
       - name: Check server (release profile)
         run: cargo check --release -p finance-query-server --verbose
 
@@ -292,14 +289,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          shared-key: check-mcp
-      # mcp path-deps on server for its in-process GraphQL schema, so this
-      # also compiles finance-query-server as a library dependency.
+          shared-key: check
+      # mcp path-deps on server for its in-process GraphQL schema.
       - name: Check mcp (release profile)
         run: cargo check --release -p finance-query-mcp --verbose
 
-  # Validates the lib's real published default-feature build; clippy and the
-  # test jobs all force `--features finance-query/full` and never cover this.
+  # Validates the lib's actual default-feature build (clippy/test force `full`).
   build-check-lib:
     name: Build Check (lib)
     runs-on: ubuntu-latest
@@ -325,8 +320,7 @@ jobs:
       - name: Check lib (default features)
         run: cargo check --release -p finance-query --verbose
 
-  # Build release binary
-  # Master only: fat LTO matches the shipped [profile.release] unmodified.
+  # Build release binary (master only)
   build-release:
     name: Build Release (binaries)
     runs-on: ubuntu-latest
@@ -371,9 +365,7 @@ jobs:
             target/release/fq-mcp
           if-no-files-found: error
 
-  # Required-status-check name preserved as "Build Release" (branch
-  # protection references this exact context) even though the real work now
-  # runs as parallel check jobs plus a master-only release build above.
+  # Required-status-check name preserved as "Build Release" for branch protection.
   build:
     name: Build Release
     runs-on: ubuntu-latest

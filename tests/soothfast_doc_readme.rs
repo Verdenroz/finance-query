@@ -2,10 +2,10 @@
 // source: README.md
 #![allow(unused)]
 
-// line 59
+// line 58
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_59() {
+fn doc_block_line_58() {
     use finance_query::Ticker;
     use finance_query::format::Both;
 
@@ -22,10 +22,10 @@ fn doc_block_line_59() {
     main();
 }
 
-// line 77
+// line 76
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_77() {
+fn doc_block_line_76() {
     use finance_query::{Tickers, Interval, TimeRange};
 
     #[tokio::main]
@@ -44,10 +44,10 @@ fn doc_block_line_77() {
     main();
 }
 
-// line 97
+// line 96
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_97() {
+fn doc_block_line_96() {
     use finance_query::edgar;
 
     #[tokio::main]
