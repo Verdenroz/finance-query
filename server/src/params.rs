@@ -462,6 +462,14 @@ pub struct FuturesQuery {
     pub fields: Option<String>,
 }
 
+/// Query parameters for `GET /v2/forex/{from}/{to}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForexQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}
+
 /// Query parameters for `GET /v2/sector-performance`.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

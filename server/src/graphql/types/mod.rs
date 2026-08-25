@@ -11,6 +11,7 @@ pub mod events;
 pub mod feeds;
 pub mod filings;
 pub mod financials;
+pub mod forex;
 pub mod formatted;
 pub mod fred;
 pub mod fundamentals_extra;

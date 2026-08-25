@@ -3,10 +3,37 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    DEFAULT_MCP_PAGE_SIZE, GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
-    build_connection_selection, build_type_spec_selection, escape_gql_string, execute_query,
-    parse_fields, unwrap_field, wrap_connection,
+    DEFAULT_MCP_PAGE_SIZE, GQL_FOREX_QUOTE_DEFAULT_FIELDS, GQL_FOREX_QUOTE_VALID_FIELDS,
+    GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
+    build_connection_selection, build_selection_or_default, build_type_spec_selection,
+    escape_gql_string, execute_query, parse_fields, unwrap_field, wrap_connection,
 };
+
+/// A currency pair's current exchange rate, provider-routed (`Capability::FOREX`).
+pub async fn get_forex(
+    schema: &FinanceSchema,
+    from: String,
+    to: String,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let field_list = parse_fields(fields);
+    let selection = build_selection_or_default(
+        field_list.as_deref(),
+        GQL_FOREX_QUOTE_VALID_FIELDS,
+        GQL_FOREX_QUOTE_DEFAULT_FIELDS,
+    );
+    let query = format!(
+        "query GetForex($from: String!, $to: String!) {{ forex(from: $from, to: $to) {selection} }}"
+    );
+    let mut variables = async_graphql::Variables::default();
+    variables.insert(async_graphql::Name::new("from"), from.into());
+    variables.insert(async_graphql::Name::new("to"), to.into());
+    let json = execute_query(schema, &query, variables).await?;
+    let data = unwrap_field(json, "forex");
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        serde_json::to_string(&data).map_err(ser_err)?,
+    )]))
+}
 
 /// Build the `forexNews(...)` connection args: the upstream-fetch `limit`,
 /// the page-size `first`, and an optional `after` cursor.

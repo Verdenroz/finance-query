@@ -11,6 +11,7 @@ use crate::graphql::types::{
     crypto::{GqlCoinQuote, GqlGlobalCryptoStats, GqlSymbolMatch, GqlTrendingCoin},
     edgar::{GqlEdgarCik, GqlEdgarSearchHit, GqlEdgarSearchResults},
     enums::GqlTimeRange,
+    forex::GqlForexQuote,
     fred::{GqlMacroSeries, GqlTreasuryYield},
     keyless::GqlCommitmentsOfTraders,
     metadata::{GqlCurrency, GqlExchange, GqlMarketHours, GqlQuoteTypeData},
@@ -158,6 +159,16 @@ impl RootMetadataQuery {
             .map_err(to_gql_error)?;
         let entries: Vec<GqlNews> = from_gql_json(json)?;
         pagination::paginate(&entries, first, after).await
+    }
+
+    /// A currency pair's current exchange rate, provider-routed via
+    /// `Providers::forex()`.
+    async fn forex(&self, ctx: &Context<'_>, from: String, to: String) -> Result<GqlForexQuote> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::forex::get_quote(&state.cache, &state.providers, &from, &to)
+            .await
+            .map_err(to_gql_error)?;
+        from_gql_json(json)
     }
 
     /// Market-wide forex news (currently FMP only, requires `FMP_API_KEY`).

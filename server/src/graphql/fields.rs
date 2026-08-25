@@ -424,6 +424,19 @@ pub const GQL_COMMODITY_QUOTE_VALID_FIELDS: &[&str] = &[
     "timestamp",
 ];
 
+/// `forex` (`GqlForexQuote`) — flat, no composite fields.
+pub const GQL_FOREX_QUOTE_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "baseCurrency",
+    "quoteCurrency",
+    "bid",
+    "ask",
+    "price",
+    "change",
+    "changePercent",
+    "timestamp",
+];
+
 /// `futures` (`GqlFuturesQuote`) — flat, no composite fields.
 pub const GQL_FUTURES_QUOTE_VALID_FIELDS: &[&str] = &[
     "symbol",

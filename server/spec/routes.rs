@@ -117,6 +117,20 @@ fn route_chart_get_batch_charts() {}
 )]
 fn route_commodity_futures_get_commodity() {}
 
+/// Get a currency pair's current exchange rate
+///
+/// Implements `handlers::forex::get_forex`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getForex",
+    method = "GET",
+    path = "/v2/forex/{from}/{to}",
+    params = "ForexQuery",
+    response = "GqlForexQuote"
+)]
+fn route_forex_get_forex() {}
+
 /// Get company profile
 ///
 /// Implements `handlers::analysis::get_company_profile`.
@@ -1384,6 +1398,16 @@ fn route_gql_root_market_commodity() {}
     path = "futures"
 )]
 fn route_gql_root_market_futures() {}
+
+/// Implements `graphql::query::root_metadata::forex` (field `forex`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "forex",
+    method = "QUERY",
+    path = "forex"
+)]
+fn route_gql_root_metadata_forex() {}
 
 /// Implements `graphql::query::root_market::index_constituents` (field `indexConstituents`).
 #[allow(dead_code)]

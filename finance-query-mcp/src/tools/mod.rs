@@ -129,6 +129,16 @@ pub struct FuturesParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct ForexParams {
+    /// Base currency code (e.g. "USD")
+    pub from: String,
+    /// Quote currency code (e.g. "EUR")
+    pub to: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct IndexConstituentsParams {
     /// Index symbol (e.g. "^GSPC" for the S&P 500; Wikipedia-backed, S&P 500 only)
     pub symbol: String,

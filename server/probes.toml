@@ -365,6 +365,11 @@ shape = false
 path = "/v2/crypto/news"
 
 [[probe]]
+name = "forex"
+path = "/v2/forex/USD/EUR"
+assert = ["symbol == \"USDEUR\"", "price > 0"]
+
+[[probe]]
 name = "forex-news"
 shape = false
 path = "/v2/forex/news"
