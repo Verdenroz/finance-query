@@ -52,13 +52,12 @@ It is designed to be used in three ways:
 
     ### Getting Started
 
-    Install the command-line tool:
+    The `fq` command-line tool lives in its own repository:
+    [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli).
 
     ```bash
-    cargo install finance-query-cli
+    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/fq-cli/releases/latest/download/fq-cli-installer.sh | sh
     ```
-
-    Or download pre-built binaries for [Linux, macOS, and Windows](cli/installation.md).
 
     ### Quick Start
 
@@ -73,9 +72,7 @@ It is designed to be used in three ways:
 
     ### Reference
 
-    *   [Installation & Quick Start](cli/installation.md)
-    *   [Commands Reference](cli/commands.md)
-    *   [Examples](cli/examples.md)
+    See [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli) for installation options, the full command reference, and examples.
 
 === "Server"
 

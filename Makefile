@@ -249,13 +249,3 @@ endif
 	@echo "  - server/CHANGELOG.md"
 	@echo "  - finance-query-mcp/CHANGELOG.md"
 	@echo "  - server/soothfast.toml (API spec versions, if the API changed)"
-
-bump-cli: ## Bump version for CLI only (usage: make bump-cli VERSION=x.y.z)
-ifndef VERSION
-	$(error VERSION is required. Usage: make bump-cli VERSION=x.y.z)
-endif
-	@echo "$(GREEN)Bumping CLI version to $(VERSION)...$(NC)"
-	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-cli/Cargo.toml
-	@echo "$(GREEN)✓ CLI version bumped to $(VERSION)$(NC)"
-	@echo "$(YELLOW)Updated files:$(NC)"
-	@echo "  - finance-query-cli/Cargo.toml"
