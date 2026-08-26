@@ -336,7 +336,10 @@ free: `margin_interest_rate` accrues on the debit cash balance and
 When equity falls below `maintenance_margin_pct` of gross exposure the engine
 liquidates the position at that bar's close and tags the exit `"Margin call"`.
 A stop-loss or take-profit on the same bar wins, since those fill intrabar and
-the maintenance check is measured on the close.
+the maintenance check is measured on the close. Shorts are checked at every
+leverage, `1.0` included: a short's exposure grows as price rises while its
+equity falls, so it can breach the floor without a margin loan. An unlevered
+long cannot, and is not checked.
 
 `max_leverage` above `1.0 / maintenance_margin_pct` is rejected: a full-size
 entry at that ratio is liquidated on the bar after it opens.
