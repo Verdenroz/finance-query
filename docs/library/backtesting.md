@@ -369,7 +369,9 @@ to net.
 `BacktestResult::max_leverage_used` reports what a run actually borrowed rather
 than what it was allowed to: the peak gross-exposure-to-equity ratio across the
 run, which is the ratio a margin call is measured against. A strategy configured
-for 3x that never exceeds 1.4x is paying for headroom it does not use.
+for 3x that never exceeds 1.4x is paying for headroom it does not use. Per-symbol
+results from a portfolio backtest measure the same ratio against portfolio
+equity, since their entries draw on the shared cash pool.
 
 ### Position Sizing Schemes
 

@@ -111,7 +111,9 @@ pub struct BacktestResult {
     ///
     /// `0.0` for a run that never held a position, `1.0` for one that never
     /// borrowed. Compare against `BacktestConfig::max_leverage` to see how much
-    /// of the allowance a strategy actually used.
+    /// of the allowance a strategy actually used. Per-symbol results from a
+    /// portfolio backtest measure the same ratio against portfolio equity, since
+    /// their entries draw on the shared cash pool.
     #[serde(default)]
     pub max_leverage_used: f64,
 }
