@@ -75,8 +75,9 @@ fn build_strategy(p: &RunBacktestParams) -> Result<Box<dyn Strategy>, McpError> 
 }
 
 /// Build the `BacktestConfig`. Every knob defaults to the library's own
-/// `BacktestConfig::default()` value, so an all-omitted param set behaves
-/// identically to calling the library directly with no config override.
+/// `BacktestConfig::default()` value, except `bars_per_year`, which follows the
+/// requested interval so annualized metrics and financing costs match the bar
+/// size rather than assuming daily bars.
 fn build_config(p: &RunBacktestParams, interval: Interval) -> Result<BacktestConfig, McpError> {
     let mut builder = BacktestConfig::builder()
         .bars_per_year(interval.bars_per_year())
