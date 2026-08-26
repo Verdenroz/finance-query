@@ -103,6 +103,7 @@ pub struct PerformanceMetrics {
 
     /// Total cost of borrowed capital across all trades: short borrow fees and
     /// margin interest. Already subtracted from each trade's P&L.
+    #[serde(default)]
     pub total_financing_cost: f64,
 
     /// Number of long trades
