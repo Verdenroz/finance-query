@@ -711,10 +711,10 @@ impl PortfolioEngine {
                 if sym_equity > state.sym_peak {
                     state.sym_peak = sym_equity;
                 }
-                if sym_equity > 0.0
+                if portfolio_equity > 0.0
                     && let Some(pos) = state.position.as_ref()
                 {
-                    let leverage = pos.quantity * close / sym_equity;
+                    let leverage = pos.quantity * close / portfolio_equity;
                     state.sym_max_leverage = state.sym_max_leverage.max(leverage);
                 }
                 let sym_drawdown = if state.sym_peak > 0.0 {
@@ -927,6 +927,9 @@ struct SymbolState<S: Strategy> {
     equity_curve: Vec<EquityPoint>,
     /// Running peak equity for per-symbol drawdown calculation.
     sym_peak: f64,
+    /// Peak gross exposure over portfolio equity, not over `sym_initial_capital`:
+    /// entries draw on the shared cash pool, which the static sleeve baseline
+    /// does not track.
     sym_max_leverage: f64,
     /// Expected per-symbol capital allocation (derived from portfolio config at setup time).
     ///
@@ -1190,6 +1193,51 @@ mod tests {
             } else {
                 Signal::hold()
             }
+        }
+    }
+
+    #[test]
+    fn test_sym_max_leverage_stays_unlevered_when_an_entry_draws_on_grown_cash() {
+        let winner = make_candles(&[100.0, 100.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]);
+        let flat = make_candles(&[100.0; 8]);
+        let data = vec![
+            SymbolData::new("WIN", winner),
+            SymbolData::new("FLAT", flat),
+        ];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .build()
+                .unwrap(),
+        )
+        .rebalance(RebalanceMode::AvailableCapital);
+
+        let result = PortfolioEngine::new(config)
+            .run(&data, |sym| {
+                if sym == "WIN" {
+                    TimedLongStrategy {
+                        entry_idx: 0,
+                        exit_idx: 3,
+                    }
+                } else {
+                    TimedLongStrategy {
+                        entry_idx: 4,
+                        exit_idx: 7,
+                    }
+                }
+            })
+            .unwrap();
+
+        assert!(result.final_equity > result.initial_capital);
+        for sym in result.symbols.values() {
+            assert!(
+                sym.max_leverage_used <= 1.0 + 1e-9,
+                "{} reported {:.3}x in an unlevered portfolio",
+                sym.symbol,
+                sym.max_leverage_used,
+            );
         }
     }
 
