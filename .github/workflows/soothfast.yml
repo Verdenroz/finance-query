@@ -292,9 +292,9 @@ jobs:
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Reconcile MCP tool routes against mcp-tools.json
-        run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes
+        run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Generated mcp-tools.json is fresh
-        run: cargo soothfast spec gen -p finance-query-mcp --target soothfast-routes --check
+        run: cargo soothfast spec gen -p finance-query-mcp --target soothfast-routes --check --features backtesting
       - name: Regenerate MCP route pages
         run: make docs-pages PAGES=mcp
       - name: Upload MCP route pages
