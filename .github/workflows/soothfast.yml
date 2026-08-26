@@ -94,7 +94,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       # Unique per commit with the prefix in restore-keys: an exact key is
       # never rewritten once saved, so later commits would all miss.
       - name: Restore measured reference runs
@@ -150,7 +150,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       # Same key as deploy.yml so master deploys seed PR restores;
       # identical benchmarked code measures identically
       - name: Restore measured baseline
@@ -197,7 +197,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -240,7 +240,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       - name: Generated openapi.yaml/asyncapi.yaml are fresh
@@ -290,7 +290,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes
       - name: Generated mcp-tools.json is fresh
@@ -328,7 +328,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Reconcile pricing.proto against PricingData
         run: |
           cargo soothfast spec check-proto -p finance-query --proto proto/pricing.proto \
@@ -352,7 +352,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@1b87d6d12cf78fcd1bc3d1141d6088b4ed772f29 # v0.1.17
+        uses: Verdenroz/soothfast@8ee6d6c4bd6b7d574cb743e0636face2a1fff581 # v0.1.18
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
