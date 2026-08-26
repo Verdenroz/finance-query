@@ -184,6 +184,48 @@ impl BayesianSearch {
         S: Strategy,
         F: Fn(&HashMap<String, ParamValue>) -> S,
     {
+        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
+        let (mut all_results, convergence_curve, n_evaluations) =
+            self.search(symbol, candles, config, metric, &factory)?;
+
+        sort_results_best_first(&mut all_results, metric);
+
+        if metric.score(&all_results[0].result).is_nan() {
+            return Err(BacktestError::invalid_param(
+                "metric",
+                "all parameter sets produced NaN for the target metric",
+            ));
+        }
+
+        let strategy_name = all_results[0].result.strategy_name.clone();
+        let best = all_results[0].clone();
+        let total_combinations = all_results.len();
+
+        Ok(OptimizationReport {
+            strategy_name,
+            total_combinations,
+            results: all_results,
+            best,
+            skipped_errors: 0,
+            convergence_curve,
+            n_evaluations,
+        })
+    }
+
+    /// Drive the surrogate search, returning every successful evaluation, the
+    /// running-best convergence curve, and the number of candidates tried.
+    pub(super) fn search<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        metric: OptimizeMetric,
+        factory: &F,
+    ) -> Result<(Vec<OptimizationResult>, Vec<f64>, usize)>
+    where
+        S: Strategy,
+        F: Fn(&HashMap<String, ParamValue>) -> S,
+    {
         if self.params.is_empty() {
             return Err(BacktestError::invalid_param(
                 "params",
@@ -195,7 +237,6 @@ impl BayesianSearch {
         validate_series_order(candles, &[])?;
 
         let d = self.params.len();
-        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
         let max_eval = self.max_evaluations.unwrap_or(DEFAULT_MAX_EVALUATIONS);
         let n_init = self
             .initial_points
@@ -223,7 +264,7 @@ impl BayesianSearch {
                 candles,
                 config,
                 &metric,
-                &factory,
+                factory,
                 &norm_point,
                 &self.params,
             ) {
@@ -266,7 +307,7 @@ impl BayesianSearch {
                 candles,
                 config,
                 &metric,
-                &factory,
+                factory,
                 &norm_point,
                 &self.params,
             ) {
@@ -291,28 +332,7 @@ impl BayesianSearch {
             ));
         }
 
-        sort_results_best_first(&mut all_results, metric);
-
-        if metric.score(&all_results[0].result).is_nan() {
-            return Err(BacktestError::invalid_param(
-                "metric",
-                "all parameter sets produced NaN for the target metric",
-            ));
-        }
-
-        let strategy_name = all_results[0].result.strategy_name.clone();
-        let best = all_results[0].clone();
-        let total_combinations = all_results.len();
-
-        Ok(OptimizationReport {
-            strategy_name,
-            total_combinations,
-            results: all_results,
-            best,
-            skipped_errors: 0,
-            convergence_curve,
-            n_evaluations,
-        })
+        Ok((all_results, convergence_curve, n_evaluations))
     }
 }
 

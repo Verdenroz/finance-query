@@ -12,9 +12,11 @@
 
 mod bayesian;
 mod grid;
+mod pareto;
 
 pub use bayesian::BayesianSearch;
 pub use grid::GridSearch;
+pub use pareto::{ParetoPoint, ParetoReport};
 
 use std::collections::HashMap;
 
@@ -231,6 +233,10 @@ pub enum OptimizeMetric {
     WinRate,
     /// Minimise maximum drawdown (negated internally — lower drawdown = higher score)
     MinDrawdown,
+    /// Maximise Omega ratio (probability-weighted gains over losses)
+    OmegaRatio,
+    /// Maximise expectancy (expected profit per trade)
+    Expectancy,
 }
 
 impl OptimizeMetric {
@@ -244,6 +250,8 @@ impl OptimizeMetric {
             OptimizeMetric::ProfitFactor => result.metrics.profit_factor,
             OptimizeMetric::WinRate => result.metrics.win_rate,
             OptimizeMetric::MinDrawdown => -result.metrics.max_drawdown_pct,
+            OptimizeMetric::OmegaRatio => result.metrics.omega_ratio,
+            OptimizeMetric::Expectancy => result.metrics.expectancy,
         }
     }
 }
