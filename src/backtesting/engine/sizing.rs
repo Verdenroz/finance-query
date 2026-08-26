@@ -26,7 +26,7 @@ fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
 
     let mut returns = vec![f64::NAN; n];
     for i in 1..n {
-        if closes[i - 1] > 0.0 {
+        if closes[i - 1] > 0.0 && closes[i] > 0.0 {
             returns[i] = closes[i] / closes[i - 1] - 1.0;
         }
     }
@@ -197,6 +197,17 @@ mod tests {
         let vol = rolling_volatility(&closes, 4);
         assert!(vol[..4].iter().all(|v| v.is_none()));
         assert!(vol[4].is_some());
+    }
+
+    #[test]
+    fn test_rolling_volatility_skips_a_window_ending_on_a_zero_close() {
+        let mut closes = vec![100.0; 10];
+        closes[5] = 0.0;
+        let vol = rolling_volatility(&closes, 3);
+
+        assert!(vol[5].is_none());
+        assert!(vol[7].is_none());
+        assert!(vol[9].is_some());
     }
 
     #[test]
