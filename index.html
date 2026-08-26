@@ -181,19 +181,6 @@ try { var t = localStorage.getItem("soothfast-theme");
   </div>
 
   <div class="nav-group">
-    <span class="label">CLI</span>
-    <ul>
-    
-      <li><a href="cli/installation/">Installation &amp; Quick Start</a></li>
-    
-      <li><a href="cli/commands/">Command Reference</a></li>
-    
-      <li><a href="cli/examples/">Usage Examples</a></li>
-    
-    </ul>
-  </div>
-
-  <div class="nav-group">
     <span class="label">Server</span>
     <ul>
     
@@ -291,10 +278,10 @@ try { var t = localStorage.getItem("soothfast-theme");
 </section>
 <section class="tab-panel">
 <h3 id="getting-started-1">Getting Started<a class="anchor" href="#getting-started-1" aria-label="Link to this section">#</a></h3>
-<p>Install the command-line tool:</p>
-<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>cargo install finance-query-cli
+<p>The <code>fq</code> command-line tool lives in its own repository:
+<a href="https://github.com/Verdenroz/fq-cli">Verdenroz/fq-cli</a>.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>curl --proto &#39;=https&#39; --tlsv1.2 -LsSf https://github.com/Verdenroz/fq-cli/releases/latest/download/fq-cli-installer.sh | sh
 </code></pre></figure>
-<p>Or download pre-built binaries for <a href="cli/installation/">Linux, macOS, and Windows</a>.</p>
 <h3 id="quick-start">Quick Start<a class="anchor" href="#quick-start" aria-label="Link to this section">#</a></h3>
 <figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>fq quote AAPL                              # Get a quote
 fq stream AAPL TSLA NVDA                   # Live prices
@@ -304,11 +291,7 @@ fq backtest AAPL --preset swing            # Backtest strategy
 fq dashboard                               # Interactive dashboard
 </code></pre></figure>
 <h3 id="reference-1">Reference<a class="anchor" href="#reference-1" aria-label="Link to this section">#</a></h3>
-<ul>
-<li>  <a href="cli/installation/">Installation &amp; Quick Start</a></li>
-<li>  <a href="cli/commands/">Commands Reference</a></li>
-<li>  <a href="cli/examples/">Examples</a></li>
-</ul>
+<p>See <a href="https://github.com/Verdenroz/fq-cli">Verdenroz/fq-cli</a> for installation options, the full command reference, and examples.</p>
 </section>
 <section class="tab-panel">
 <h3 id="getting-started-2">Getting Started<a class="anchor" href="#getting-started-2" aria-label="Link to this section">#</a></h3>
