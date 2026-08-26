@@ -365,9 +365,12 @@ for 3x that never exceeds 1.4x is paying for headroom it does not use.
 
 ### Position Sizing Schemes
 
-`position_size_pct` is the **risk budget**: every scheme sizes at or below it, so
-switching schemes can only reduce exposure, never exceed what you authorized. A
-scheme that cannot compute its input falls back to the budget itself.
+`position_size_pct` is the **risk budget** (`position_size_pct * max_leverage`
+when levered): every scheme sizes at or below it, so switching schemes can only
+reduce exposure, never exceed what you authorized. Leverage raises that ceiling
+rather than multiplying what a scheme asked for, so `risk_pct: 0.02` still risks
+2% of equity at the stop at 3x. A scheme that cannot compute its input falls back
+to the budget itself.
 
 | Scheme | Sizes by | Needs |
 |--------|----------|-------|

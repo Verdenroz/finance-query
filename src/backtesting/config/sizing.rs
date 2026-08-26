@@ -6,9 +6,10 @@ use super::BacktestConfig;
 
 /// How an entry's size is derived from available equity.
 ///
-/// Every scheme targets a fraction of equity clamped to
-/// [`BacktestConfig::position_size_pct`], and falls back to that fraction when
-/// its inputs are unavailable.
+/// Every scheme targets a fraction of equity clamped to the risk budget
+/// ([`BacktestConfig::position_size_pct`], raised by
+/// [`BacktestConfig::max_leverage`] when levered), and falls back to that budget
+/// when its inputs are unavailable.
 ///
 /// Scale-in signals carry an explicit fraction of their own and are not sized
 /// by the active scheme.
@@ -96,8 +97,10 @@ impl BacktestConfig {
 
     /// Calculate position size under the active [`PositionSizing`] scheme.
     ///
-    /// The scheme's fraction is clamped to [`position_size_pct`], then scaled by
-    /// [`max_leverage`]. `price` carries the same fully-adjusted requirement as
+    /// The scheme's own fraction is clamped to the risk budget
+    /// ([`position_size_pct`] times [`max_leverage`]), so leverage raises the
+    /// ceiling a scheme may reach rather than multiplying what it asked for.
+    /// `price` carries the same fully-adjusted requirement as
     /// [`calculate_position_size`].
     ///
     /// [`position_size_pct`]: Self::position_size_pct
@@ -114,8 +117,9 @@ impl BacktestConfig {
     }
 
     fn sizing_fraction(&self, price: f64, ctx: &SizingContext) -> f64 {
+        let budget = self.position_size_pct * self.max_leverage;
         let base = match self.position_sizing {
-            PositionSizing::FixedFraction => self.position_size_pct,
+            PositionSizing::FixedFraction => budget,
             PositionSizing::Atr {
                 risk_pct,
                 atr_multiple,
@@ -124,12 +128,12 @@ impl BacktestConfig {
                 Some(atr) if atr > 0.0 && atr_multiple > 0.0 && price > 0.0 => {
                     (risk_pct * price) / (atr_multiple * atr)
                 }
-                _ => self.position_size_pct,
+                _ => budget,
             },
             PositionSizing::VolatilityTarget { target_vol_pct, .. } => {
                 match ctx.recent_volatility {
                     Some(vol) if vol > 0.0 => target_vol_pct / vol,
-                    _ => self.position_size_pct,
+                    _ => budget,
                 }
             }
             PositionSizing::FractionalKelly { kelly_fraction, .. } => {
@@ -138,12 +142,12 @@ impl BacktestConfig {
                         let kelly = win_rate - (1.0 - win_rate) / payoff;
                         kelly_fraction * kelly
                     }
-                    _ => self.position_size_pct,
+                    _ => budget,
                 }
             }
         };
 
-        base.clamp(0.0, self.position_size_pct) * self.max_leverage
+        base.clamp(0.0, budget)
     }
 
     /// Bars of history the active [`PositionSizing`] scheme needs before it can
@@ -312,6 +316,56 @@ mod tests {
         };
         let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
         assert_eq!(size, 0.0);
+    }
+
+    #[test]
+    fn test_leverage_raises_the_budget_without_scaling_the_scheme() {
+        let config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .position_size_pct(1.0)
+            .max_leverage(3.0)
+            .position_sizing(PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            })
+            .build()
+            .unwrap();
+
+        let ctx = SizingContext {
+            atr: Some(2.0),
+            ..SizingContext::default()
+        };
+        // (0.02 * 100) / (2.0 * 2.0) = 0.5 of equity, leverage or not.
+        let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
+        assert!((size - 50.0).abs() < 1e-9);
+
+        let tight_stop = SizingContext {
+            atr: Some(0.1),
+            ..SizingContext::default()
+        };
+        // Asks for 10x equity, capped at the 3x budget.
+        let capped = config.calculate_position_size_with_context(10_000.0, 100.0, &tight_stop);
+        assert!((capped - 300.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_leverage_falls_back_to_the_full_budget() {
+        let config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .position_size_pct(0.5)
+            .max_leverage(2.0)
+            .position_sizing(PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 20,
+            })
+            .build()
+            .unwrap();
+
+        let size =
+            config.calculate_position_size_with_context(10_000.0, 100.0, &SizingContext::default());
+        assert!((size - config.calculate_position_size(10_000.0, 100.0)).abs() < 1e-12);
+        assert!((size - 100.0).abs() < 1e-9);
     }
 
     #[test]
