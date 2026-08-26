@@ -20,10 +20,11 @@ pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
     cash.max(0.0) * config.max_leverage
 }
 
-/// Capital a scale-in may add on top of an open position.
+/// Capital a scale-in may add on top of an open position: the unused portion
+/// of the exposure ceiling.
 ///
-/// Unlevered this is plain cash; levered it is the unused portion of the
-/// exposure ceiling.
+/// Measured against equity rather than cash at every leverage, including 1.0.
+/// A short credits its proceeds to cash, so cash overstates what is available.
 #[inline]
 pub(super) fn add_buying_power(
     cash: f64,
@@ -31,9 +32,6 @@ pub(super) fn add_buying_power(
     price: f64,
     config: &BacktestConfig,
 ) -> f64 {
-    if config.max_leverage <= 1.0 {
-        return cash;
-    }
     let equity = cash + position.current_value(price) + position.unreinvested_dividends;
     (equity * config.max_leverage - gross_exposure(Some(position), price)).max(0.0)
 }
@@ -342,6 +340,26 @@ mod tests {
         let pos = result.open_position.expect("short stays open");
         assert!((pos.quantity - 200.0).abs() < 1e-9);
         assert!(result.max_leverage_used <= 2.0 + 1e-9);
+    }
+
+    #[test]
+    fn test_short_scale_in_cannot_breach_the_default_ceiling() {
+        let candles = make_candles(&[100.0; 6]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortScaleIn)
+            .unwrap();
+
+        let pos = result.open_position.expect("short stays open");
+        assert!((pos.quantity - 100.0).abs() < 1e-9);
+        assert!(result.max_leverage_used <= 1.0 + 1e-9);
     }
 
     #[test]
