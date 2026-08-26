@@ -1797,6 +1797,21 @@
             "description": "Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)",
             "type": "string"
           },
+          "maintenance_margin_pct": {
+            "description": "Equity floor as a fraction of gross exposure, below which the position is liquidated (default: 0.25)",
+            "type": "number",
+            "format": "double"
+          },
+          "margin_interest_rate": {
+            "description": "Annual rate charged on a debit cash balance from leverage; prorated assuming daily bars (default: 0.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "max_leverage": {
+            "description": "Maximum gross exposure as a multiple of equity (default: 1.0, a cash account)",
+            "type": "number",
+            "format": "double"
+          },
           "multiplier": {
             "description": "SuperTrend ATR multiplier (supertrend_follow only, default: 3.0)",
             "type": "number",
@@ -1826,6 +1841,11 @@
           "range": {
             "description": "Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1y)",
             "type": "string"
+          },
+          "short_borrow_rate": {
+            "description": "Annual rate charged while a short position is open; prorated assuming daily bars (default: 0.0)",
+            "type": "number",
+            "format": "double"
           },
           "signal_period": {
             "description": "MACD signal-line period (macd_signal only, default: 9)",

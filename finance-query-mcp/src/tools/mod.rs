@@ -411,6 +411,14 @@ pub struct RunBacktestParams {
     pub stop_loss_pct: Option<f64>,
     /// Take-profit as a fraction of entry price; auto-exit if profit exceeds this
     pub take_profit_pct: Option<f64>,
+    /// Maximum gross exposure as a multiple of equity (default: 1.0, a cash account)
+    pub max_leverage: Option<f64>,
+    /// Equity floor as a fraction of gross exposure, below which the position is liquidated (default: 0.25)
+    pub maintenance_margin_pct: Option<f64>,
+    /// Annual rate charged while a short position is open; prorated assuming daily bars (default: 0.0)
+    pub short_borrow_rate: Option<f64>,
+    /// Annual rate charged on a debit cash balance from leverage; prorated assuming daily bars (default: 0.0)
+    pub margin_interest_rate: Option<f64>,
 
     // ── Pagination (equity curve and trade list paginate independently) ──
     /// Maximum equity-curve points per page; omitted = curated default (25)
@@ -1663,6 +1671,10 @@ mod param_tests {
         assert_eq!(p.equity_cursor, None);
         assert_eq!(p.trades_limit, None);
         assert_eq!(p.trades_cursor, None);
+        assert_eq!(p.max_leverage, None);
+        assert_eq!(p.maintenance_margin_pct, None);
+        assert_eq!(p.short_borrow_rate, None);
+        assert_eq!(p.margin_interest_rate, None);
     }
 
     #[cfg(feature = "backtesting")]
@@ -1671,7 +1683,9 @@ mod param_tests {
         let p: RunBacktestParams = serde_json::from_value(json!({
             "symbol": "AAPL", "strategy": "sma_crossover", "interval": "1d", "range": "1y",
             "fast_period": 10, "slow_period": 20, "position_size_pct": 0.5,
-            "equity_limit": 10, "equity_cursor": "5", "trades_limit": 5, "trades_cursor": "2"
+            "equity_limit": 10, "equity_cursor": "5", "trades_limit": 5, "trades_cursor": "2",
+            "max_leverage": 2.0, "maintenance_margin_pct": 0.3,
+            "short_borrow_rate": 0.05, "margin_interest_rate": 0.07
         }))
         .unwrap();
         assert_eq!(p.fast_period, Some(10));
@@ -1681,6 +1695,10 @@ mod param_tests {
         assert_eq!(p.equity_cursor, Some("5".to_string()));
         assert_eq!(p.trades_limit, Some(5));
         assert_eq!(p.trades_cursor, Some("2".to_string()));
+        assert_eq!(p.max_leverage, Some(2.0));
+        assert_eq!(p.maintenance_margin_pct, Some(0.3));
+        assert_eq!(p.short_borrow_rate, Some(0.05));
+        assert_eq!(p.margin_interest_rate, Some(0.07));
     }
 
     #[test]
