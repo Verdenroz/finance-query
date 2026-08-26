@@ -171,7 +171,7 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes --check
 	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes --check
 	@echo "$(GREEN)Checking generated mcp-tools.json freshness...$(NC)"
-	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --check
+	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --features backtesting --check
 	@echo "$(GREEN)Regenerating derived doc pages...$(NC)"
 	@$(MAKE) docs-pages
 	@echo "$(GREEN)Appending performance trend point...$(NC)"
