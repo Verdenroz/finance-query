@@ -63,6 +63,29 @@ impl Interval {
         }
     }
 
+    /// Bars of this interval in one trading year, for annualising returns and
+    /// prorating financing rates.
+    ///
+    /// Intraday counts assume a 6.5-hour US session over 252 trading days;
+    /// daily and coarser follow the calendar.
+    #[cfg(feature = "backtesting")]
+    pub const fn bars_per_year(self) -> f64 {
+        match self {
+            Interval::OneMinute => 98_280.0,
+            Interval::TwoMinutes => 49_140.0,
+            Interval::FiveMinutes => 19_656.0,
+            Interval::FifteenMinutes => 6_552.0,
+            Interval::ThirtyMinutes => 3_276.0,
+            Interval::OneHour => 1_638.0,
+            Interval::NinetyMinutes => 1_092.0,
+            Interval::OneDay => 252.0,
+            Interval::FiveDays => 50.4,
+            Interval::OneWeek => 52.0,
+            Interval::OneMonth => 12.0,
+            Interval::ThreeMonths => 4.0,
+        }
+    }
+
     /// Approximate span one candle of this interval covers, in seconds.
     ///
     /// Calendar approximations match [`TimeRange::approx_duration_secs`](super::TimeRange::approx_duration_secs): a

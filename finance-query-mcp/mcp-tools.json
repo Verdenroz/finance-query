@@ -1803,7 +1803,7 @@
             "format": "double"
           },
           "margin_interest_rate": {
-            "description": "Annual rate charged on a debit cash balance from leverage; prorated assuming daily bars (default: 0.0)",
+            "description": "Annual rate charged on a debit cash balance from leverage; prorated by the bar interval (default: 0.0)",
             "type": "number",
             "format": "double"
           },
@@ -1843,7 +1843,7 @@
             "type": "string"
           },
           "short_borrow_rate": {
-            "description": "Annual rate charged while a short position is open; prorated assuming daily bars (default: 0.0)",
+            "description": "Annual rate charged while a short position is open; prorated by the bar interval (default: 0.0)",
             "type": "number",
             "format": "double"
           },
