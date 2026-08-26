@@ -153,9 +153,8 @@ impl BacktestEngine {
                 }
             }
 
-            // Runs after the stops: a stop fills intrabar, while the maintenance
-            // check is measured on the close, so a bar that trips both filled the
-            // stop first.
+            // After the stops: a stop fills intrabar and the maintenance check
+            // reads the close, so a bar that trips both filled the stop first.
             if margin_enabled
                 && let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle)
             {

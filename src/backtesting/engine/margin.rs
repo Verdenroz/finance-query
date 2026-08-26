@@ -23,8 +23,8 @@ pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
 /// Capital a scale-in may add on top of an open position: the unused portion
 /// of the exposure ceiling.
 ///
-/// Measured against equity rather than cash at every leverage, including 1.0.
-/// A short credits its proceeds to cash, so cash overstates what is available.
+/// Measured against equity at every leverage, 1.0 included: a short credits its
+/// proceeds to cash, so cash overstates what is available.
 #[inline]
 pub(super) fn add_buying_power(
     cash: f64,
