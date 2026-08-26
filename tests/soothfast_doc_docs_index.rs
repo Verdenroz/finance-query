@@ -2,10 +2,10 @@
 // source: docs/index.md
 #![allow(unused)]
 
-// line 113
+// line 110
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_113() {
+fn doc_block_line_110() {
         use finance_query::{Ticker, Interval, TimeRange, format::Raw};
 
         #[tokio::main]
