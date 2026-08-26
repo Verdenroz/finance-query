@@ -113,6 +113,9 @@ impl BacktestEngine {
         }
     }
 
+    /// Sizing inputs as of `index`, which must be the last bar closed before
+    /// the fill: a market order filling at the open of bar `i + 1` sizes from
+    /// `i`, an intrabar limit or stop fill on bar `i` sizes from `i - 1`.
     pub(super) fn build_sizing_context(
         &self,
         index: usize,
@@ -146,7 +149,7 @@ mod tests {
     use super::*;
     use crate::backtesting::config::BacktestConfig;
     use crate::backtesting::engine::fixtures::{
-        EnterLongAt, make_alternating_candles, make_candles_with_range,
+        BuyStopAt, EnterLongAt, make_alternating_candles, make_candles_with_range,
     };
     use crate::backtesting::position::{PositionSide, Trade};
     use crate::backtesting::signal::Signal;
@@ -297,6 +300,53 @@ mod tests {
         let narrow = make_candles_with_range(&[100.0; 60], 0.002);
         let wide = make_candles_with_range(&[100.0; 60], 0.05);
         assert!(run_with(sizing, &wide, 20) < run_with(sizing, &narrow, 20));
+    }
+
+    #[test]
+    fn test_atr_sizing_ignores_the_bar_it_fills_on() {
+        let sizing = PositionSizing::Atr {
+            risk_pct: 0.02,
+            atr_period: 14,
+            atr_multiple: 2.0,
+        };
+        let narrow = make_candles_with_range(&[100.0; 60], 0.01);
+        let mut widened = narrow.clone();
+        widened[21].high = 130.0;
+        widened[21].low = 70.0;
+
+        assert_eq!(
+            run_with(sizing, &narrow, 20),
+            run_with(sizing, &widened, 20)
+        );
+    }
+
+    #[test]
+    fn test_atr_sizing_ignores_the_bar_a_stop_order_fills_on() {
+        let sizing = PositionSizing::Atr {
+            risk_pct: 0.02,
+            atr_period: 14,
+            atr_multiple: 2.0,
+        };
+        let narrow = make_candles_with_range(&[100.0; 60], 0.01);
+        let mut widened = narrow.clone();
+        widened[21].high = 130.0;
+        widened[21].low = 70.0;
+
+        let entry_quantity = |candles: &[Candle]| {
+            let config = BacktestConfig::builder()
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .position_sizing(sizing)
+                .build()
+                .unwrap();
+            BacktestEngine::new(config)
+                .run("TEST", candles, BuyStopAt(20, 95.0))
+                .unwrap()
+                .trades[0]
+                .entry_quantity
+        };
+
+        assert_eq!(entry_quantity(&narrow), entry_quantity(&widened));
     }
 
     #[test]

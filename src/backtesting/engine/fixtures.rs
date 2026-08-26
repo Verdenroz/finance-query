@@ -66,6 +66,27 @@ impl Strategy for EnterLongAt {
     }
 }
 
+#[derive(Clone)]
+pub(super) struct BuyStopAt(pub usize, pub f64);
+
+impl Strategy for BuyStopAt {
+    fn name(&self) -> &str {
+        "Buy Stop At"
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        vec![]
+    }
+
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        if ctx.index == self.0 && !ctx.has_position() {
+            Signal::buy_stop(ctx.timestamp(), ctx.close(), self.1)
+        } else {
+            Signal::hold()
+        }
+    }
+}
+
 pub(super) fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices
         .iter()
