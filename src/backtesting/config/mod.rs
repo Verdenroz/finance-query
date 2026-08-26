@@ -144,18 +144,22 @@ pub struct BacktestConfig {
     ///
     /// `1.0` (the default) is a cash account: an entry can commit at most the
     /// available equity. Above `1.0` the shortfall is a margin loan, charged at
-    /// [`margin_interest_rate`] and subject to [`maintenance_margin_pct`].
+    /// [`margin_interest_rate`] and subject to [`maintenance_margin_pct`]. A
+    /// short credits its proceeds to cash, so it pays [`short_borrow_rate`]
+    /// rather than margin interest at any leverage.
     ///
     /// [`margin_interest_rate`]: Self::margin_interest_rate
     /// [`maintenance_margin_pct`]: Self::maintenance_margin_pct
+    /// [`short_borrow_rate`]: Self::short_borrow_rate
     #[serde(default = "default_max_leverage")]
     pub max_leverage: f64,
 
     /// Equity floor as a fraction of gross exposure, below which the broker
     /// liquidates the position (0.0 - 1.0).
     ///
-    /// Only consulted when [`max_leverage`] exceeds `1.0`, since an unlevered
-    /// account cannot fall below it.
+    /// Consulted for any levered position, and for a short at any leverage: a
+    /// short's exposure grows as price rises while its equity falls, so it can
+    /// breach the floor without a margin loan. An unlevered long cannot.
     ///
     /// [`max_leverage`]: Self::max_leverage
     #[serde(default = "default_maintenance_margin_pct")]

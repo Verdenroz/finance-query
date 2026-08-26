@@ -84,10 +84,12 @@ impl BacktestEngine {
         cash: f64,
         candle: &Candle,
     ) -> Option<Signal> {
-        if self.config.max_leverage <= 1.0 {
+        let pos = position?;
+        // A short's exposure grows as price rises while its equity falls, so it
+        // can breach the requirement without ever having borrowed cash.
+        if self.config.max_leverage <= 1.0 && !pos.is_short() {
             return None;
         }
-        let pos = position?;
 
         let gross = gross_exposure(Some(pos), candle.close);
         if gross <= 0.0 {
@@ -204,6 +206,27 @@ mod tests {
             .slippage_pct(0.0)
             .allow_short(true)
             .max_leverage(3.0)
+            .maintenance_margin_pct(0.25)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortHold)
+            .unwrap();
+
+        assert_eq!(margin_calls(&result), 1);
+        assert_eq!(result.trades[0].exit_timestamp, 3);
+        assert!(result.open_position.is_none());
+    }
+
+    #[test]
+    fn test_margin_call_liquidates_an_unlevered_short_when_price_rises() {
+        let candles = make_candles(&[100.0, 100.0, 100.0, 180.0, 180.0]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
             .maintenance_margin_pct(0.25)
             .close_at_end(false)
             .build()

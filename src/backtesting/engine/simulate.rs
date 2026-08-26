@@ -54,7 +54,7 @@ impl BacktestEngine {
         // enough that the cross-module call to find that out is worth skipping.
         let financing_enabled =
             self.config.short_borrow_rate > 0.0 || self.config.margin_interest_rate > 0.0;
-        let margin_enabled = self.config.max_leverage > 1.0;
+        let margin_enabled = self.config.max_leverage > 1.0 || self.config.allow_short;
         // High-water mark for the trailing stop: tracks peak price (longs) or
         // trough price (shorts) since entry. Reset to None when no position is open.
         let mut hwm: Option<f64> = None;
