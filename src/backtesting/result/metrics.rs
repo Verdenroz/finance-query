@@ -101,8 +101,9 @@ pub struct PerformanceMetrics {
     /// Total commission paid
     pub total_commission: f64,
 
-    /// Total cost of borrowed capital across all trades: short borrow fees and
-    /// margin interest. Already subtracted from each trade's P&L.
+    /// Total cost of borrowed capital over the run: short borrow fees and
+    /// margin interest. Already subtracted from each trade's P&L, and includes
+    /// what a still-open position has accrued so far.
     #[serde(default)]
     pub total_financing_cost: f64,
 

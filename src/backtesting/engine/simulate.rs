@@ -500,7 +500,7 @@ impl BacktestEngine {
 
         // Calculate metrics
         let executed_signals = signals.iter().filter(|s| s.executed).count();
-        let metrics = PerformanceMetrics::calculate(
+        let mut metrics = PerformanceMetrics::calculate(
             &trades,
             &equity_curve,
             self.config.initial_capital,
@@ -509,6 +509,9 @@ impl BacktestEngine {
             self.config.risk_free_rate,
             self.config.bars_per_year,
         );
+        if let Some(ref pos) = position {
+            metrics.total_financing_cost += pos.financing_cost_accrued;
+        }
 
         let start_timestamp = candles.first().map(|c| c.timestamp).unwrap_or(0);
         let end_timestamp = candles.last().map(|c| c.timestamp).unwrap_or(0);

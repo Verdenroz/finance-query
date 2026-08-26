@@ -382,6 +382,32 @@ mod tests {
     }
 
     #[test]
+    fn test_financing_cost_counts_a_position_left_open() {
+        let candles = make_candles(&[100.0; 20]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .max_leverage(2.0)
+            .margin_interest_rate(0.10)
+            .bars_per_year(252.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+
+        let accrued = result
+            .open_position
+            .as_ref()
+            .expect("long stays open")
+            .financing_cost_accrued;
+        assert!(accrued > 0.0);
+        assert_eq!(result.metrics.total_financing_cost, accrued);
+    }
+
+    #[test]
     fn test_no_financing_cost_at_default_rates() {
         let candles = make_candles(&[100.0; 20]);
         let config = BacktestConfig::builder()
