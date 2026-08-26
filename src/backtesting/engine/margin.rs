@@ -218,6 +218,30 @@ mod tests {
     }
 
     #[test]
+    fn test_a_stop_that_fills_intrabar_outranks_the_margin_call() {
+        let mut candles = make_candles(&[100.0, 100.0, 100.0, 96.0]);
+        candles[3].low = 90.0;
+        candles[3].close = 85.0;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .stop_loss_pct(0.05)
+            .max_leverage(3.0)
+            .maintenance_margin_pct(0.25)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+
+        assert_eq!(margin_calls(&result), 0);
+        assert!((result.trades[0].exit_price - 95.0).abs() < 1e-9);
+    }
+
+    #[test]
     fn test_margin_call_fill_pays_exit_slippage() {
         let candles = make_candles(&[100.0, 100.0, 100.0, 85.0, 85.0]);
         let config = BacktestConfig::builder()
