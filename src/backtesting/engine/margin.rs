@@ -156,7 +156,6 @@ mod tests {
     fn test_add_buying_power_is_unused_exposure_when_levered() {
         let config = levered_config(2.0);
         let pos = long_position(50.0, 100.0);
-        // equity 10_000 at 2x allows 20_000 gross; 5_000 is already committed.
         assert_eq!(add_buying_power(5_000.0, &pos, 100.0, &config), 15_000.0);
     }
 
@@ -189,6 +188,28 @@ mod tests {
 
         assert_eq!(margin_calls(&result), 0);
         assert!(result.open_position.is_some());
+    }
+
+    #[test]
+    fn test_margin_call_liquidates_a_levered_short_when_price_rises() {
+        let candles = make_candles(&[100.0, 100.0, 100.0, 115.0, 115.0]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .max_leverage(3.0)
+            .maintenance_margin_pct(0.25)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortHold)
+            .unwrap();
+
+        assert_eq!(margin_calls(&result), 1);
+        assert_eq!(result.trades[0].exit_timestamp, 3);
+        assert!(result.open_position.is_none());
     }
 
     #[test]
