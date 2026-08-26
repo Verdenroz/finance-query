@@ -195,9 +195,7 @@ impl Position {
 
     /// Add a bar's cost of borrowed capital to this position.
     pub(crate) fn accrue_financing_cost(&mut self, fee: f64) {
-        if fee > 0.0 {
-            self.financing_cost_accrued += fee;
-        }
+        self.financing_cost_accrued += fee;
     }
 
     /// Calculate unrealized P&L at given price (before exit commission)

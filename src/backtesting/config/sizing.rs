@@ -6,10 +6,9 @@ use super::BacktestConfig;
 
 /// How an entry's size is derived from available equity.
 ///
-/// Every scheme emits a target exposure as a fraction of equity, bounded by
-/// [`BacktestConfig::position_size_pct`]. That field is the risk budget: a
-/// scheme reduces exposure within it and never exceeds it. When a scheme's
-/// inputs are unavailable it falls back to the budget itself.
+/// Every scheme targets a fraction of equity clamped to
+/// [`BacktestConfig::position_size_pct`], and falls back to that fraction when
+/// its inputs are unavailable.
 ///
 /// Scale-in signals carry an explicit fraction of their own and are not sized
 /// by the active scheme.
@@ -97,15 +96,12 @@ impl BacktestConfig {
 
     /// Calculate position size under the active [`PositionSizing`] scheme.
     ///
-    /// The scheme's fraction is clamped to [`position_size_pct`] and then scaled
-    /// by [`max_leverage`], so a scheme reduces exposure within the configured
-    /// risk budget and never exceeds it.
-    ///
-    /// [`max_leverage`]: Self::max_leverage
-    /// `price` carries the same fully-adjusted requirement as
+    /// The scheme's fraction is clamped to [`position_size_pct`], then scaled by
+    /// [`max_leverage`]. `price` carries the same fully-adjusted requirement as
     /// [`calculate_position_size`].
     ///
     /// [`position_size_pct`]: Self::position_size_pct
+    /// [`max_leverage`]: Self::max_leverage
     /// [`calculate_position_size`]: Self::calculate_position_size
     pub fn calculate_position_size_with_context(
         &self,
@@ -155,8 +151,8 @@ impl BacktestConfig {
     ///
     /// The engine folds this into the strategy's own warmup so an early entry
     /// cannot silently fall back to [`position_size_pct`].
-    /// [`PositionSizing::FractionalKelly`] returns `0`: its window counts closed
-    /// trades, which no number of bars guarantees.
+    /// [`PositionSizing::FractionalKelly`] returns `0` because its window counts
+    /// closed trades, which no number of bars guarantees.
     ///
     /// [`position_size_pct`]: Self::position_size_pct
     pub fn sizing_warmup(&self) -> usize {

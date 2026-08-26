@@ -1,5 +1,3 @@
-//! Per-bar inputs for the configured [`PositionSizing`] scheme.
-
 use crate::backtesting::config::{PositionSizing, SizingContext};
 use crate::backtesting::position::Trade;
 use crate::indicators;
@@ -7,9 +5,8 @@ use crate::models::chart::Candle;
 
 use super::BacktestEngine;
 
-/// Series the active sizing scheme reads, computed once per run.
-///
-/// Both fields stay `None` for schemes that need no bar history.
+/// Series the active sizing scheme reads, computed once per run. Both fields
+/// stay `None` for schemes that need no bar history.
 #[derive(Default)]
 pub(super) struct SizingSeries {
     atr: Option<Vec<Option<f64>>>,

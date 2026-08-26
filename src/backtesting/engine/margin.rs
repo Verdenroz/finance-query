@@ -1,8 +1,3 @@
-//! Margin accounting: exposure, buying power, financing, and liquidation.
-//!
-//! Every leverage-aware rule in the engine lives here. The rest of the engine
-//! reaches it through these hooks and never does leverage arithmetic of its own.
-
 use crate::backtesting::config::BacktestConfig;
 use crate::backtesting::position::Position;
 use crate::backtesting::signal::Signal;
@@ -25,8 +20,8 @@ pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
 
 /// Capital a scale-in may add on top of an open position.
 ///
-/// Unlevered this is plain cash, so a pyramid stays bounded by the account
-/// balance. Levered it is the unused half of the exposure ceiling.
+/// Unlevered this is plain cash; levered it is the unused portion of the
+/// exposure ceiling.
 pub(super) fn add_buying_power(
     cash: f64,
     position: &Position,
@@ -44,8 +39,8 @@ impl BacktestEngine {
     /// Charge one bar of borrowed-capital cost against cash and the position.
     ///
     /// Shorts pay to borrow the shares; a debit cash balance pays margin
-    /// interest. The fee is attributed to the open position so it leaves via
-    /// that trade's P&L rather than vanishing from cash unaccounted for.
+    /// interest. The fee is attributed to the position so it leaves via that
+    /// trade's P&L rather than vanishing from cash.
     pub(super) fn accrue_financing(
         &self,
         position: &mut Option<Position>,
@@ -78,7 +73,7 @@ impl BacktestEngine {
     /// requirement.
     ///
     /// Equity is recomputed here rather than taken from the bar's opening
-    /// snapshot so the check sees this bar's financing accrual and dividend
+    /// snapshot, so the check sees this bar's financing accrual and dividend
     /// credit.
     pub(super) fn check_margin_call(
         &self,
