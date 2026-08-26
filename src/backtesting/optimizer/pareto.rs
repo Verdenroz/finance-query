@@ -1,7 +1,8 @@
 //! Multi-objective parameter search over completed backtests.
 //!
-//! The Pareto layer sees only finished [`OptimizationResult`]s, so it ranks
-//! parameter sets without any influence over how they were simulated.
+//! [`GridSearch::run_pareto`] and [`BayesianSearch::run_pareto`] score finished
+//! evaluations against two or more objectives and return the non-dominated set
+//! as a [`ParetoReport`].
 
 use std::collections::HashMap;
 
@@ -49,10 +50,7 @@ pub struct ParetoReport {
 }
 
 /// True when `a` is at least as good as `b` everywhere and strictly better
-/// somewhere.
-///
-/// Mismatched lengths compare as non-dominating, which can only widen the
-/// front rather than silently drop a point from it.
+/// somewhere. Mismatched lengths never dominate.
 fn dominates(a: &[f64], b: &[f64]) -> bool {
     if a.len() != b.len() {
         return false;

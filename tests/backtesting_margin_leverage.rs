@@ -1,5 +1,5 @@
-//! Leverage must be paid for. These run through the public API only, so the
-//! guarantees they pin are the ones a caller actually gets.
+//! End-to-end leverage, financing, and margin-call behavior through the public
+//! API.
 
 #![cfg(feature = "backtesting")]
 

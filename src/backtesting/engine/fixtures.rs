@@ -114,6 +114,40 @@ pub(super) fn make_candle_ohlc(ts: i64, open: f64, high: f64, low: f64, close: f
     }
 }
 
+/// Flat-close candles whose intrabar range is `range_pct` of price, giving a
+/// controllable ATR without moving the close series.
+pub(super) fn make_candles_with_range(prices: &[f64], range_pct: f64) -> Vec<Candle> {
+    prices
+        .iter()
+        .enumerate()
+        .map(|(i, &p)| Candle {
+            timestamp: i as i64,
+            open: p,
+            high: p * (1.0 + range_pct),
+            low: p * (1.0 - range_pct),
+            close: p,
+            volume: 1000,
+            adj_close: Some(p),
+            provider_id: None,
+        })
+        .collect()
+}
+
+/// Candles whose closes alternate between `base` and `base * (1 + swing_pct)`,
+/// giving a controllable close-to-close return volatility.
+pub(super) fn make_alternating_candles(base: f64, swing_pct: f64, n: usize) -> Vec<Candle> {
+    let prices: Vec<f64> = (0..n)
+        .map(|i| {
+            if i.is_multiple_of(2) {
+                base
+            } else {
+                base * (1.0 + swing_pct)
+            }
+        })
+        .collect();
+    make_candles(&prices)
+}
+
 /// A strategy that opens a long on the first bar and holds forever.
 pub(super) struct EnterLongBar0;
 impl Strategy for EnterLongBar0 {
@@ -302,38 +336,4 @@ impl Strategy for BracketShortTrailingStopStrategy {
             Signal::hold()
         }
     }
-}
-
-/// Flat-close candles whose intrabar range is `range_pct` of price, giving a
-/// controllable ATR without moving the close series.
-pub(super) fn make_candles_with_range(prices: &[f64], range_pct: f64) -> Vec<Candle> {
-    prices
-        .iter()
-        .enumerate()
-        .map(|(i, &p)| Candle {
-            timestamp: i as i64,
-            open: p,
-            high: p * (1.0 + range_pct),
-            low: p * (1.0 - range_pct),
-            close: p,
-            volume: 1000,
-            adj_close: Some(p),
-            provider_id: None,
-        })
-        .collect()
-}
-
-/// Candles whose closes alternate around `base` by `swing_pct`, giving a
-/// controllable close-to-close return volatility.
-pub(super) fn make_alternating_candles(base: f64, swing_pct: f64, n: usize) -> Vec<Candle> {
-    let prices: Vec<f64> = (0..n)
-        .map(|i| {
-            if i.is_multiple_of(2) {
-                base
-            } else {
-                base * (1.0 + swing_pct)
-            }
-        })
-        .collect();
-    make_candles(&prices)
 }
