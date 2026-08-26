@@ -53,7 +53,7 @@ use finance_query::backtesting::refs::{
 use finance_query::backtesting::resample::{base_to_htf_index, resample};
 use finance_query::backtesting::{
     BacktestConfig, BacktestEngine, BayesianSearch, GridSearch, MonteCarloConfig, OptimizeMetric,
-    ParamRange, SmaCrossover, StrategyBuilder,
+    ParamRange, PositionSizing, SmaCrossover, StrategyBuilder,
 };
 use finance_query::crypto::CoinQuote;
 use finance_query::fred::{MacroSeries, TreasuryYield};
@@ -834,6 +834,112 @@ fn bt_bayesian_search(input: &(BacktestConfig, Vec<Candle>)) {
                     params["slow"].as_int() as usize,
                 )
             })
+            .unwrap(),
+    );
+}
+
+#[fixture]
+fn leveraged_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .max_leverage(2.0)
+        .maintenance_margin_pct(0.25)
+        .margin_interest_rate(0.05)
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[bench(
+    group = "backtesting",
+    setup = leveraged_backtest_inputs,
+    covers = "finance_query::backtesting::BacktestConfigBuilder::max_leverage"
+)]
+fn bt_leveraged_margin(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config.clone());
+    let strategy = SmaCrossover::new(10, 20);
+    keep(engine.run(keep("BENCH"), keep(candles), strategy)).unwrap();
+}
+
+#[fixture]
+fn atr_sizing_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .position_sizing(PositionSizing::Atr {
+            risk_pct: 0.02,
+            atr_period: 14,
+            atr_multiple: 2.0,
+        })
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[bench(
+    group = "backtesting",
+    setup = atr_sizing_backtest_inputs,
+    covers = "finance_query::backtesting::BacktestConfig::calculate_position_size_with_context"
+)]
+fn bt_atr_sizing(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config.clone());
+    let strategy = SmaCrossover::new(10, 20);
+    keep(engine.run(keep("BENCH"), keep(candles), strategy)).unwrap();
+}
+
+#[fixture]
+fn kelly_sizing_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .position_sizing(PositionSizing::FractionalKelly {
+            kelly_fraction: 0.5,
+            lookback_trades: 20,
+        })
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[bench(
+    group = "backtesting",
+    setup = kelly_sizing_backtest_inputs,
+    covers = "finance_query::backtesting::BacktestConfigBuilder::position_sizing"
+)]
+fn bt_fractional_kelly_sizing(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config.clone());
+    let strategy = SmaCrossover::new(10, 20);
+    keep(engine.run(keep("BENCH"), keep(candles), strategy)).unwrap();
+}
+
+#[bench(
+    group = "backtesting",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::GridSearch::run_pareto"
+)]
+fn bt_grid_pareto(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let search = GridSearch::new()
+        .param("fast", ParamRange::int_range(5, 25, 5))
+        .param("slow", ParamRange::int_range(20, 60, 10));
+    keep(
+        search
+            .run_pareto(
+                keep("BENCH"),
+                keep(candles),
+                config,
+                &[OptimizeMetric::SharpeRatio, OptimizeMetric::MinDrawdown],
+                |params| {
+                    SmaCrossover::new(
+                        params["fast"].as_int() as usize,
+                        params["slow"].as_int() as usize,
+                    )
+                },
+            )
             .unwrap(),
     );
 }
