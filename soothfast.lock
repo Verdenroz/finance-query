@@ -4,7 +4,7 @@
     "finance_query::Tickers": "02e3b3cf7e934806",
     "finance_query::adapters::yahoo::discovery::lookup::LookupType": "bd43904ed5eb7ca3",
     "finance_query::adapters::yahoo::discovery::search::SearchOptions": "3b5c45b79fa73ec0",
-    "finance_query::backtesting::config::BacktestConfig": "a749344759d82bfe",
+    "finance_query::backtesting::config::BacktestConfig": "2063c6a4e3dc61f6",
     "finance_query::backtesting::engine::BacktestEngine": "de98e01c8b31704b",
     "finance_query::backtesting::strategy::prebuilt::SmaCrossover": "c8c0c46bfbbefe96",
     "finance_query::constants::enums::interval::Interval": "d18a25746f10f1c2",

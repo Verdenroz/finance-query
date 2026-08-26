@@ -53,13 +53,13 @@
 
 ### `pub struct Capability(u32)`
 
-**Measured:** 76 instructions/iter, 5ns median, 0 allocs/iter
+**Measured:** 68 instructions/iter, 2ns median, 0 allocs/iter
 
 ### `pub struct CapitalGain`
 
 ### `pub struct Chart`
 
-**Measured:** 113125 instructions/iter, 12775ns median, 13 allocs/iter
+**Measured:** 111802 instructions/iter, 5914ns median, 13 allocs/iter
 
 ### `pub struct ChartMeta`
 
@@ -75,7 +75,7 @@
 
 ### `pub struct CompanyFacts`
 
-**Measured:** 13639230 instructions/iter, 2076683ns median, 11899 allocs/iter
+**Measured:** 13382233 instructions/iter, 926397ns median, 11899 allocs/iter
 
 ### `pub struct CompanyProfile`
 
@@ -93,7 +93,7 @@
 
 ### `pub struct Currency`
 
-**Measured:** 223279 instructions/iter, 21479ns median, 8 allocs/iter
+**Measured:** 222497 instructions/iter, 11370ns median, 8 allocs/iter
 
 ### `domain_handle!`
 
@@ -145,7 +145,7 @@
 
 ### `pub struct EdgarSubmissions`
 
-**Measured:** 5036137 instructions/iter, 734335ns median, 6784 allocs/iter
+**Measured:** 5040126 instructions/iter, 345362ns median, 6784 allocs/iter
 
 ### `pub struct ElderRayData`
 
@@ -185,7 +185,7 @@
 
 ### `pub struct FearAndGreed`
 
-**Measured:** 16514 instructions/iter, 1939ns median, 3 allocs/iter
+**Measured:** 16273 instructions/iter, 936ns median, 3 allocs/iter
 
 ### `pub enum FearGreedLabel`
 
@@ -207,7 +207,7 @@
 
 ### `pub struct FinancialStatement`
 
-**Measured:** 220498 instructions/iter, 30562ns median, 206 allocs/iter
+**Measured:** 220435 instructions/iter, 14003ns median, 206 allocs/iter
 
 ### `domain_handle!`
 
@@ -291,13 +291,13 @@
 
 ### `pub struct MarketHours`
 
-**Measured:** 7188 instructions/iter, 906ns median, 10 allocs/iter
+**Measured:** 7014 instructions/iter, 399ns median, 10 allocs/iter
 
 ### `pub struct MarketSnapshot`
 
 ### `pub struct MarketSummaryQuote`
 
-**Measured:** 264233 instructions/iter, 41499ns median, 228 allocs/iter
+**Measured:** 251346 instructions/iter, 17032ns median, 228 allocs/iter
 
 ### `pub struct MarketTime`
 
@@ -307,7 +307,7 @@
 
 ### `pub struct News`
 
-**Measured:** 39972 instructions/iter, 5125ns median, 53 allocs/iter
+**Measured:** 39748 instructions/iter, 2437ns median, 53 allocs/iter
 
 ### `pub enum Operation`
 
@@ -319,7 +319,7 @@
 
 ### `pub struct Options`
 
-**Measured:** 13489 instructions/iter, 1581ns median, 6 allocs/iter
+**Measured:** 13020 instructions/iter, 642ns median, 6 allocs/iter
 
 ### `pub struct OptionsQuote`
 
@@ -353,7 +353,7 @@
 
 ### `pub struct Quote<F: Format = Both>`
 
-**Measured:** 9387656 instructions/iter, 1417879ns median, 8235 allocs/iter
+**Measured:** 9148076 instructions/iter, 617301ns median, 8235 allocs/iter
 
 ### `pub enum QuoteType`
 
@@ -393,7 +393,7 @@
 
 ### `pub struct ScreenerResults`
 
-**Measured:** 3797087 instructions/iter, 517835ns median, 4498 allocs/iter
+**Measured:** 3664304 instructions/iter, 229216ns median, 4498 allocs/iter
 
 ### `pub struct SearchNews`
 
@@ -407,7 +407,7 @@
 
 ### `pub struct SearchResults`
 
-**Measured:** 50481 instructions/iter, 7152ns median, 55 allocs/iter
+**Measured:** 49334 instructions/iter, 3089ns median, 55 allocs/iter
 
 ### `pub enum Sector`
 
@@ -469,7 +469,7 @@
 
 ### `pub struct TrendingQuote`
 
-**Measured:** 16385 instructions/iter, 2031ns median, 24 allocs/iter
+**Measured:** 15830 instructions/iter, 970ns median, 24 allocs/iter
 
 ### `pub enum ValueFormat`
 
@@ -855,7 +855,7 @@ Search configuration options
 
 ### `pub fn analyze(text: &str) -> Sentiment`
 
-**Measured:** 856315 instructions/iter, 107825ns median, 976 allocs/iter
+**Measured:** 855910 instructions/iter, 46128ns median, 976 allocs/iter
 
 ### `pub fn atr(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -873,7 +873,7 @@ Search configuration options
 
 ### `pub struct BayesianSearch`
 
-**Measured:** 25478857 instructions/iter, 3403426ns median, 2382 allocs/iter
+**Measured:** 25141619 instructions/iter, 1501417ns median, 2382 allocs/iter
 
 ### `pub struct BenchmarkMetrics`
 
@@ -893,13 +893,13 @@ Search configuration options
 
 ### `pub struct GridSearch`
 
-**Measured:** 484885 instructions/iter, 846267ns median, 3012 allocs/iter
+**Measured:** 496393 instructions/iter, 521755ns median, 3012 allocs/iter
 
 ### `pub struct MacdSignal`
 
 ### `pub struct MonteCarloConfig`
 
-**Measured:** 1085525 instructions/iter, 267968ns median, 6 allocs/iter
+**Measured:** 1085952 instructions/iter, 376443ns median, 6 allocs/iter
 
 ### `pub enum MonteCarloMethod`
 
@@ -917,6 +917,10 @@ Search configuration options
 
 ### `pub enum ParamValue`
 
+### `pub struct ParetoPoint`
+
+### `pub struct ParetoReport`
+
 ### `pub struct PendingOrder`
 
 ### `pub struct PercentileStats`
@@ -928,6 +932,8 @@ Search configuration options
 ### `pub struct PositionExtremes`
 
 ### `pub enum PositionSide`
+
+### `pub enum PositionSizing`
 
 ### `pub type Result<T> = std::result::Result<T, BacktestError>`
 
@@ -943,13 +949,15 @@ Search configuration options
 
 ### `pub struct SignalStrength(f64)`
 
+### `pub struct SizingContext`
+
 ### `pub struct SmaCrossover`
 
 ### `pub trait Strategy: Send + Sync`
 
 ### `pub struct StrategyBuilder<E = (), X = ()>`
 
-**Measured:** 779976 instructions/iter, 210137ns median, 330 allocs/iter
+**Measured:** 776717 instructions/iter, 197802ns median, 330 allocs/iter
 
 ### `pub struct StrategyContext<'a>`
 
@@ -1078,13 +1086,13 @@ stretched arrays stored in `StrategyContext::indicators` under `htf_key`.
 
 Convenience function to create a condition that always returns false.
 
-**Measured:** 232132 instructions/iter, 22691ns median, 6 allocs/iter
+**Measured:** 228869 instructions/iter, 10846ns median, 6 allocs/iter
 
 ### `pub fn always_true() -> ConstantCondition`
 
 Convenience function to create a condition that always returns true.
 
-**Measured:** 3388246 instructions/iter, 675946ns median, 4045 allocs/iter
+**Measured:** 3352116 instructions/iter, 293411ns median, 4045 allocs/iter
 
 ### `pub struct Above<R: IndicatorRef>`
 
@@ -1203,39 +1211,39 @@ Condition: at least one condition must be true (OR logic).
 
 ### `pub fn has_position() -> HasPosition`
 
-**Measured:** 3381003 instructions/iter, 677133ns median, 4045 allocs/iter
+**Measured:** 3344922 instructions/iter, 291385ns median, 4045 allocs/iter
 
 ### `pub fn held_for_bars(min_bars: usize) -> HeldForBars`
 
-**Measured:** 1363476 instructions/iter, 233616ns median, 1041 allocs/iter
+**Measured:** 1351601 instructions/iter, 99969ns median, 1041 allocs/iter
 
 ### `pub fn in_loss() -> InLoss`
 
-**Measured:** 3397590 instructions/iter, 671950ns median, 4045 allocs/iter
+**Measured:** 3361295 instructions/iter, 296324ns median, 4045 allocs/iter
 
 ### `pub fn in_profit() -> InProfit`
 
-**Measured:** 502522 instructions/iter, 69923ns median, 142 allocs/iter
+**Measured:** 499644 instructions/iter, 32822ns median, 142 allocs/iter
 
 ### `pub fn is_long() -> IsLong`
 
-**Measured:** 3361060 instructions/iter, 672500ns median, 4045 allocs/iter
+**Measured:** 3324369 instructions/iter, 291657ns median, 4045 allocs/iter
 
 ### `pub fn is_short() -> IsShort`
 
-**Measured:** 376824 instructions/iter, 49084ns median, 13 allocs/iter
+**Measured:** 374330 instructions/iter, 22205ns median, 13 allocs/iter
 
 ### `pub fn no_position() -> NoPosition`
 
-**Measured:** 376824 instructions/iter, 49075ns median, 13 allocs/iter
+**Measured:** 374330 instructions/iter, 22505ns median, 13 allocs/iter
 
 ### `pub fn stop_loss(pct: f64) -> StopLoss`
 
-**Measured:** 426587 instructions/iter, 55599ns median, 24 allocs/iter
+**Measured:** 424355 instructions/iter, 26056ns median, 24 allocs/iter
 
 ### `pub fn take_profit(pct: f64) -> TakeProfit`
 
-**Measured:** 415502 instructions/iter, 53466ns median, 13 allocs/iter
+**Measured:** 413244 instructions/iter, 24317ns median, 13 allocs/iter
 
 ### `pub struct HasPosition`
 
@@ -1446,11 +1454,11 @@ let exit = trailing_take_profit(0.02);
 
 ### `pub fn trailing_stop(trail_pct: f64) -> TrailingStop`
 
-**Measured:** 539216 instructions/iter, 69989ns median, 92 allocs/iter
+**Measured:** 551701 instructions/iter, 32925ns median, 92 allocs/iter
 
 ### `pub fn trailing_take_profit(trail_pct: f64) -> TrailingTakeProfit`
 
-**Measured:** 544994 instructions/iter, 68781ns median, 72 allocs/iter
+**Measured:** 561974 instructions/iter, 35836ns median, 72 allocs/iter
 
 ### `pub struct BacktestConfig`
 
@@ -1474,9 +1482,34 @@ let config = BacktestConfig::builder()
     .unwrap();
 ```
 
+### `pub fn calculate_position_size(&self, available_capital: f64, price: f64) -> f64`
+
+Calculate position size based on available capital.
+
+`price` **must** be the fully-adjusted entry price (after slippage and
+spread) so that subsequent fill guards (`entry_value + costs > cash`)
+do not over-allocate capital.
+
+When [`commission_fn`](Self::commission_fn) is set the commission component cannot be
+analytically solved for, so only spread and transaction-tax fractions
+are deducted from the denominator; the fill-rejection guard catches any
+remaining over-allocation.
+
 ### `pub struct BacktestConfigBuilder`
 
 Builder for BacktestConfig
+
+### `pub fn margin_interest_rate(mut self, rate: f64) -> Self`
+
+Set the annual interest rate charged on a debit cash balance.
+
+### `pub fn max_leverage(mut self, leverage: f64) -> Self`
+
+Set the maximum gross exposure as a multiple of equity.
+
+Values above `1.0` open a margin loan for the shortfall. Pair with
+[`margin_interest_rate`](Self::margin_interest_rate); left at zero,
+leverage costs nothing and inflates every levered result.
 
 ### `pub struct CommissionFn(Arc<dyn Fn(f64, f64) -> f64 + Send + Sync>)`
 
@@ -1498,6 +1531,25 @@ let config = BacktestConfig::builder()
     .build()
     .unwrap();
 ```
+
+### `pub enum PositionSizing`
+
+How an entry's size is derived from available equity.
+
+Every scheme emits a target exposure as a fraction of equity, bounded by
+[`BacktestConfig::position_size_pct`]. That field is the risk budget: a
+scheme reduces exposure within it and never exceeds it. When a scheme's
+inputs are unavailable it falls back to the budget itself.
+
+Scale-in signals carry an explicit fraction of their own and are not sized
+by the active scheme.
+
+### `pub struct SizingContext`
+
+Market and trade-history inputs a [`PositionSizing`] scheme reads at entry.
+
+A `None` field means the engine had no value to supply, and the scheme falls
+back to [`BacktestConfig::position_size_pct`].
 
 ### `pub struct BacktestEngine`
 
@@ -1611,6 +1663,10 @@ Stepped integer range — compatible with both [`GridSearch`] and [`BayesianSear
 
 A single parameter value — either an integer period or a float multiplier.
 
+### `pub struct ParetoPoint`
+
+### `pub struct ParetoReport`
+
 ### `pub struct BayesianSearch`
 
 Sequential model-based (Bayesian) parameter optimiser.
@@ -1639,6 +1695,28 @@ a few thousand combinations or when float ranges without a step are needed.
 
 Results are **in-sample only**. Follow up with [`WalkForwardConfig`](super::super::walk_forward::WalkForwardConfig) or a
 held-out test window to obtain an unbiased out-of-sample estimate.
+
+### `pub fn run<S, F>( &self, symbol: &str, candles: &[Candle], config: &BacktestConfig, factory: F, ) -> Result<OptimizationReport> where S: Strategy + Send, F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,`
+
+Run the grid search.
+
+`symbol` is used only for labelling in the returned results.
+
+`factory` receives the current parameter map and returns a strategy
+instance. Combinations that exceed the strategy's warmup period are
+silently skipped.
+
+Returns an error when the grid is empty or all combinations were skipped.
+
+### `pub struct ParetoPoint`
+
+One non-dominated parameter set and its score on each objective.
+
+### `pub struct ParetoReport`
+
+The Pareto front of a multi-objective search.
+
+`total_evaluated == front.len() + dominated_count + non_finite_count`.
 
 ### `pub struct AllocationSnapshot`
 
@@ -1972,115 +2050,115 @@ let cond7 = sma(10).crosses_above_ref(sma(20));
 
 ### `pub fn accumulation_distribution() -> AccumulationDistributionRef`
 
-**Measured:** 549983 instructions/iter, 55445ns median, 23 allocs/iter
+**Measured:** 554480 instructions/iter, 25855ns median, 23 allocs/iter
 
 ### `pub fn adx(period: usize) -> AdxRef`
 
-**Measured:** 4508521 instructions/iter, 769926ns median, 4930 allocs/iter
+**Measured:** 4487802 instructions/iter, 348087ns median, 4930 allocs/iter
 
 ### `pub fn alma(period: usize, offset: f64, sigma: f64) -> AlmaRef`
 
-**Measured:** 4940792 instructions/iter, 812980ns median, 5019 allocs/iter
+**Measured:** 4943216 instructions/iter, 382990ns median, 5019 allocs/iter
 
 ### `pub fn aroon(period: usize) -> AroonConfig`
 
-**Measured:** 4643670 instructions/iter, 769250ns median, 4950 allocs/iter
+**Measured:** 4618326 instructions/iter, 339499ns median, 4950 allocs/iter
 
 ### `pub fn atr(period: usize) -> AtrRef`
 
-**Measured:** 4507360 instructions/iter, 776976ns median, 4996 allocs/iter
+**Measured:** 4486874 instructions/iter, 356615ns median, 4996 allocs/iter
 
 ### `pub fn awesome_oscillator(fast: usize, slow: usize) -> AwesomeOscillatorRef`
 
-**Measured:** 2705361 instructions/iter, 456708ns median, 2636 allocs/iter
+**Measured:** 2700518 instructions/iter, 209812ns median, 2636 allocs/iter
 
 ### `pub fn balance_of_power(period: Option<usize>) -> BalanceOfPowerRef`
 
-**Measured:** 547335 instructions/iter, 51903ns median, 25 allocs/iter
+**Measured:** 555881 instructions/iter, 24579ns median, 25 allocs/iter
 
 ### `pub fn bear_power(period: usize) -> BearPowerRef`
 
-**Measured:** 1279818 instructions/iter, 192876ns median, 806 allocs/iter
+**Measured:** 1275120 instructions/iter, 84591ns median, 806 allocs/iter
 
 ### `pub fn bollinger(period: usize, std_dev: f64) -> BollingerConfig`
 
-**Measured:** 4873102 instructions/iter, 808212ns median, 4968 allocs/iter
+**Measured:** 4842269 instructions/iter, 364003ns median, 4968 allocs/iter
 
 ### `pub fn bull_power(period: usize) -> BullPowerRef`
 
-**Measured:** 4217780 instructions/iter, 707812ns median, 4238 allocs/iter
+**Measured:** 4191894 instructions/iter, 322556ns median, 4238 allocs/iter
 
 ### `pub fn candle_body() -> CandleBody`
 
-**Measured:** 236299 instructions/iter, 23207ns median, 6 allocs/iter
+**Measured:** 233051 instructions/iter, 10722ns median, 6 allocs/iter
 
 ### `pub fn candle_range() -> CandleRange`
 
-**Measured:** 4233148 instructions/iter, 744275ns median, 5043 allocs/iter
+**Measured:** 4200709 instructions/iter, 336303ns median, 5043 allocs/iter
 
 ### `pub fn cci(period: usize) -> CciRef`
 
-**Measured:** 2722645 instructions/iter, 443658ns median, 2605 allocs/iter
+**Measured:** 2715502 instructions/iter, 210446ns median, 2605 allocs/iter
 
 ### `pub fn chaikin_oscillator() -> ChaikinOscillatorRef`
 
-**Measured:** 620064 instructions/iter, 76937ns median, 26 allocs/iter
+**Measured:** 628670 instructions/iter, 35749ns median, 26 allocs/iter
 
 ### `pub fn choppiness_index(period: usize) -> ChoppinessIndexRef`
 
-**Measured:** 4763156 instructions/iter, 794671ns median, 5002 allocs/iter
+**Measured:** 4748031 instructions/iter, 360406ns median, 5002 allocs/iter
 
 ### `pub fn close() -> ClosePrice`
 
-**Measured:** 4224016 instructions/iter, 747220ns median, 5043 allocs/iter
+**Measured:** 4191292 instructions/iter, 324018ns median, 5043 allocs/iter
 
 ### `pub fn cmf(period: usize) -> CmfRef`
 
-**Measured:** 563720 instructions/iter, 54541ns median, 25 allocs/iter
+**Measured:** 570837 instructions/iter, 25066ns median, 25 allocs/iter
 
 ### `pub fn cmo(period: usize) -> CmoRef`
 
-**Measured:** 2627383 instructions/iter, 429397ns median, 2598 allocs/iter
+**Measured:** 2617074 instructions/iter, 200103ns median, 2598 allocs/iter
 
 ### `pub fn coppock_curve(wma_period: usize, long_roc: usize, short_roc: usize) -> CoppockCurveRef`
 
-**Measured:** 2819187 instructions/iter, 447622ns median, 2559 allocs/iter
+**Measured:** 2799296 instructions/iter, 195904ns median, 2559 allocs/iter
 
 ### `pub fn dema(period: usize) -> DemaRef`
 
-**Measured:** 4431865 instructions/iter, 771530ns median, 4875 allocs/iter
+**Measured:** 4412257 instructions/iter, 345971ns median, 4875 allocs/iter
 
 ### `pub fn donchian(period: usize) -> DonchianConfig`
 
-**Measured:** 5008643 instructions/iter, 818635ns median, 4976 allocs/iter
+**Measured:** 4983155 instructions/iter, 372118ns median, 4976 allocs/iter
 
 ### `pub fn elder_bear_power(period: usize) -> ElderBearPowerRef`
 
-**Measured:** 1279329 instructions/iter, 193690ns median, 806 allocs/iter
+**Measured:** 1275405 instructions/iter, 85244ns median, 806 allocs/iter
 
 ### `pub fn elder_bull_power(period: usize) -> ElderBullPowerRef`
 
-**Measured:** 4218155 instructions/iter, 727064ns median, 4238 allocs/iter
+**Measured:** 4194479 instructions/iter, 317614ns median, 4238 allocs/iter
 
 ### `pub fn ema(period: usize) -> EmaRef`
 
-**Measured:** 4434467 instructions/iter, 770052ns median, 4963 allocs/iter
+**Measured:** 4412447 instructions/iter, 352255ns median, 4963 allocs/iter
 
 ### `pub fn gap_pct() -> GapPct`
 
-**Measured:** 2232495 instructions/iter, 392976ns median, 2489 allocs/iter
+**Measured:** 2207783 instructions/iter, 173445ns median, 2489 allocs/iter
 
 ### `pub fn high() -> HighPrice`
 
-**Measured:** 4227704 instructions/iter, 745603ns median, 5043 allocs/iter
+**Measured:** 4192334 instructions/iter, 333560ns median, 5043 allocs/iter
 
 ### `pub fn hma(period: usize) -> HmaRef`
 
-**Measured:** 4514762 instructions/iter, 775928ns median, 4957 allocs/iter
+**Measured:** 4491743 instructions/iter, 363315ns median, 4957 allocs/iter
 
 ### `pub fn htf<C: Condition>(interval: Interval, cond: C) -> HtfCondition<C>`
 
-**Measured:** 5445791 instructions/iter, 900107ns median, 7039 allocs/iter
+**Measured:** 5359457 instructions/iter, 399762ns median, 7039 allocs/iter
 
 ### `pub struct HtfCondition<C: Condition>`
 
@@ -2137,11 +2215,11 @@ let weekly_trend = htf_region(Interval::OneWeek, Region::Japan, price().above_re
 
 ### `pub fn htf_region<C: Condition>(interval: Interval, region: Region, cond: C) -> HtfCondition<C>`
 
-**Measured:** 5446022 instructions/iter, 897693ns median, 7039 allocs/iter
+**Measured:** 5359453 instructions/iter, 406974ns median, 7039 allocs/iter
 
 ### `pub fn ichimoku() -> IchimokuConfig`
 
-**Measured:** 5252193 instructions/iter, 824926ns median, 4836 allocs/iter
+**Measured:** 5227054 instructions/iter, 376519ns median, 4836 allocs/iter
 
 ### `pub struct IchimokuBaseRef`
 
@@ -2177,43 +2255,43 @@ Create an Ichimoku Cloud configuration with custom periods.
 
 ### `pub fn ichimoku_custom( conversion: usize, base: usize, lagging: usize, displacement: usize, ) -> IchimokuConfig`
 
-**Measured:** 5252441 instructions/iter, 828156ns median, 4836 allocs/iter
+**Measured:** 5221792 instructions/iter, 375426ns median, 4836 allocs/iter
 
 ### `pub fn is_bearish() -> IsBearish`
 
-**Measured:** 237298 instructions/iter, 23369ns median, 6 allocs/iter
+**Measured:** 234050 instructions/iter, 10642ns median, 6 allocs/iter
 
 ### `pub fn is_bullish() -> IsBullish`
 
-**Measured:** 237298 instructions/iter, 23107ns median, 6 allocs/iter
+**Measured:** 234050 instructions/iter, 10881ns median, 6 allocs/iter
 
 ### `pub fn keltner(period: usize, multiplier: f64, atr_period: usize) -> KeltnerConfig`
 
-**Measured:** 4928493 instructions/iter, 831962ns median, 4972 allocs/iter
+**Measured:** 4909264 instructions/iter, 366540ns median, 4972 allocs/iter
 
 ### `pub fn low() -> LowPrice`
 
-**Measured:** 4228852 instructions/iter, 749870ns median, 5043 allocs/iter
+**Measured:** 4194792 instructions/iter, 336588ns median, 5043 allocs/iter
 
 ### `pub fn macd(fast: usize, slow: usize, signal: usize) -> MacdConfig`
 
-**Measured:** 2809747 instructions/iter, 459857ns median, 2541 allocs/iter
+**Measured:** 2796903 instructions/iter, 215474ns median, 2541 allocs/iter
 
 ### `pub fn mcginley(period: usize) -> McginleyDynamicRef`
 
-**Measured:** 4479411 instructions/iter, 776970ns median, 4963 allocs/iter
+**Measured:** 4456759 instructions/iter, 337323ns median, 4963 allocs/iter
 
 ### `pub fn median_price() -> MedianPrice`
 
-**Measured:** 4234710 instructions/iter, 739374ns median, 5043 allocs/iter
+**Measured:** 4201479 instructions/iter, 337225ns median, 5043 allocs/iter
 
 ### `pub fn mfi(period: usize) -> MfiRef`
 
-**Measured:** 4547148 instructions/iter, 770004ns median, 4998 allocs/iter
+**Measured:** 4530514 instructions/iter, 385004ns median, 4998 allocs/iter
 
 ### `pub fn momentum(period: usize) -> MomentumRef`
 
-**Measured:** 2579011 instructions/iter, 419858ns median, 2552 allocs/iter
+**Measured:** 2571208 instructions/iter, 216753ns median, 2552 allocs/iter
 
 ### `pub struct AlmaConfig`
 
@@ -2302,11 +2380,11 @@ Create a Weighted Moving Average reference.
 
 ### `pub fn obv() -> ObvRef`
 
-**Measured:** 609168 instructions/iter, 71599ns median, 30 allocs/iter
+**Measured:** 616496 instructions/iter, 34782ns median, 30 allocs/iter
 
 ### `pub fn open() -> OpenPrice`
 
-**Measured:** 4225018 instructions/iter, 745234ns median, 5043 allocs/iter
+**Measured:** 4192548 instructions/iter, 357959ns median, 5043 allocs/iter
 
 ### `pub struct AwesomeOscillatorRef`
 
@@ -2469,7 +2547,7 @@ Create a Williams %R reference.
 
 ### `pub fn parabolic_sar(step: f64, max: f64) -> ParabolicSarRef`
 
-**Measured:** 4926035 instructions/iter, 820159ns median, 5056 allocs/iter
+**Measured:** 4900702 instructions/iter, 393002ns median, 5056 allocs/iter
 
 ### `pub struct BearPowerRef`
 
@@ -2505,7 +2583,7 @@ Create an Elder Ray Bull Power reference.
 
 ### `pub fn price() -> ClosePrice`
 
-**Measured:** 4224458 instructions/iter, 745034ns median, 5043 allocs/iter
+**Measured:** 4191689 instructions/iter, 358835ns median, 5043 allocs/iter
 
 ### `pub struct CandleBody`
 
@@ -2747,39 +2825,39 @@ Get a reference to the volume.
 
 ### `pub fn price_change_pct() -> PriceChangePct`
 
-**Measured:** 2395906 instructions/iter, 410698ns median, 2489 allocs/iter
+**Measured:** 2368702 instructions/iter, 198755ns median, 2489 allocs/iter
 
 ### `pub fn relative_volume(period: usize) -> RelativeVolume`
 
-**Measured:** 4641582 instructions/iter, 801946ns median, 4949 allocs/iter
+**Measured:** 4611293 instructions/iter, 371729ns median, 4949 allocs/iter
 
 ### `pub fn roc(period: usize) -> RocRef`
 
-**Measured:** 2580677 instructions/iter, 422016ns median, 2587 allocs/iter
+**Measured:** 2567305 instructions/iter, 198745ns median, 2587 allocs/iter
 
 ### `pub fn rsi(period: usize) -> RsiRef`
 
-**Measured:** 4491734 instructions/iter, 773690ns median, 4994 allocs/iter
+**Measured:** 4470839 instructions/iter, 351940ns median, 4994 allocs/iter
 
 ### `pub fn sma(period: usize) -> SmaRef`
 
-**Measured:** 4438472 instructions/iter, 759878ns median, 4963 allocs/iter
+**Measured:** 4416795 instructions/iter, 334602ns median, 4963 allocs/iter
 
 ### `pub fn stochastic(k_period: usize, k_slow: usize, d_period: usize) -> StochasticConfig`
 
-**Measured:** 5065010 instructions/iter, 822789ns median, 4987 allocs/iter
+**Measured:** 5040405 instructions/iter, 370607ns median, 4987 allocs/iter
 
 ### `pub fn stochastic_rsi( rsi_period: usize, stoch_period: usize, k_period: usize, d_period: usize, ) -> StochasticRsiConfig`
 
-**Measured:** 4984064 instructions/iter, 824837ns median, 4831 allocs/iter
+**Measured:** 4967176 instructions/iter, 387715ns median, 4831 allocs/iter
 
 ### `pub fn supertrend(period: usize, multiplier: f64) -> SupertrendConfig`
 
-**Measured:** 5007484 instructions/iter, 835650ns median, 5021 allocs/iter
+**Measured:** 4991359 instructions/iter, 407226ns median, 5021 allocs/iter
 
 ### `pub fn tema(period: usize) -> TemaRef`
 
-**Measured:** 4374022 instructions/iter, 764136ns median, 4781 allocs/iter
+**Measured:** 4354990 instructions/iter, 363895ns median, 4781 allocs/iter
 
 ### `pub struct AdxRef`
 
@@ -2883,11 +2961,11 @@ Create a SuperTrend configuration.
 
 ### `pub fn true_range() -> TrueRangeRef`
 
-**Measured:** 4560987 instructions/iter, 781704ns median, 5059 allocs/iter
+**Measured:** 4538406 instructions/iter, 357324ns median, 5059 allocs/iter
 
 ### `pub fn typical_price() -> TypicalPrice`
 
-**Measured:** 4596215 instructions/iter, 788059ns median, 5043 allocs/iter
+**Measured:** 4559930 instructions/iter, 363143ns median, 5043 allocs/iter
 
 ### `pub struct AtrRef`
 
@@ -2977,7 +3055,7 @@ Create a True Range reference.
 
 ### `pub fn volume() -> VolumeRef`
 
-**Measured:** 4225455 instructions/iter, 743627ns median, 5043 allocs/iter
+**Measured:** 4193281 instructions/iter, 353257ns median, 5043 allocs/iter
 
 ### `pub struct AccumulationDistributionRef`
 
@@ -3013,19 +3091,19 @@ Create a Volume Weighted Average Price reference.
 
 ### `pub fn vwap() -> VwapRef`
 
-**Measured:** 4539217 instructions/iter, 785890ns median, 5060 allocs/iter
+**Measured:** 4516914 instructions/iter, 353479ns median, 5060 allocs/iter
 
 ### `pub fn vwma(period: usize) -> VwmaRef`
 
-**Measured:** 4515422 instructions/iter, 765723ns median, 4964 allocs/iter
+**Measured:** 4495780 instructions/iter, 362748ns median, 4964 allocs/iter
 
 ### `pub fn williams_r(period: usize) -> WilliamsRRef`
 
-**Measured:** 720498 instructions/iter, 64324ns median, 29 allocs/iter
+**Measured:** 726573 instructions/iter, 30488ns median, 29 allocs/iter
 
 ### `pub fn wma(period: usize) -> WmaRef`
 
-**Measured:** 4450451 instructions/iter, 766364ns median, 4969 allocs/iter
+**Measured:** 4426383 instructions/iter, 371241ns median, 4969 allocs/iter
 
 ### `pub fn base_to_htf_index(base_candles: &[Candle], htf_candles: &[Candle]) -> Vec<Option<usize>>`
 
@@ -3047,7 +3125,7 @@ consistent.
 Returns `None` for bars where no HTF bar has completed yet (e.g. during
 the first HTF period).
 
-**Measured:** 339736 instructions/iter, 35521ns median, 1 allocs/iter
+**Measured:** 323344 instructions/iter, 13920ns median, 1 allocs/iter
 
 ### `pub fn resample(candles: &[Candle], interval: Interval, utc_offset_secs: i64) -> Vec<Candle>`
 
@@ -3065,7 +3143,7 @@ non-US exchanges.
   `utc_offset_secs`. Weekly bars start on the local Monday.
 - Sub-daily intervals use fixed-second buckets relative to local midnight.
 
-**Measured:** 1503864 instructions/iter, 232702ns median, 11 allocs/iter
+**Measured:** 1543662 instructions/iter, 213421ns median, 11 allocs/iter
 
 ### `pub struct BacktestResult`
 
@@ -3630,7 +3708,7 @@ deserializing (axum path extraction, JSON) takes the same spellings parsing does
 
 ### `pub struct CoinQuote`
 
-**Measured:** 351070 instructions/iter, 45632ns median, 205 allocs/iter
+**Measured:** 346673 instructions/iter, 20735ns median, 205 allocs/iter
 
 ### `pub struct GlobalCryptoStats`
 
@@ -3949,7 +4027,7 @@ Used internally by [`fetch`]/[`fetch_all`]; also useful for callers that
 fetch feed bytes through their own HTTP client/cache/proxy, and for
 offline parsing benchmarks/tests.
 
-**Measured:** 63521 instructions/iter, 6616ns median, 48 allocs/iter
+**Measured:** 61867 instructions/iter, 2887ns median, 48 allocs/iter
 
 ### `pub struct AnalystEstimate`
 
@@ -4463,13 +4541,13 @@ let trending = finance::trending(Some(Region::Canada)).await?;
 
 ### `pub struct MacroSeries`
 
-**Measured:** 1246313 instructions/iter, 154324ns median, 873 allocs/iter
+**Measured:** 1237905 instructions/iter, 72620ns median, 873 allocs/iter
 
 ### `pub struct ReleaseDate`
 
 ### `pub struct TreasuryYield`
 
-**Measured:** 834575 instructions/iter, 97086ns median, 119 allocs/iter
+**Measured:** 801262 instructions/iter, 42802ns median, 119 allocs/iter
 
 ### `pub fn init(api_key: impl Into<String>) -> Result<()>`
 
@@ -4582,7 +4660,7 @@ Result type for indicator calculations
 
 ### `pub fn accumulation_distribution( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 32545 instructions/iter, 6059ns median, 1 allocs/iter
+**Measured:** 28542 instructions/iter, 2723ns median, 1 allocs/iter
 
 ### `pub fn accumulation_distribution( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
@@ -4609,7 +4687,7 @@ let result = accumulation_distribution(&highs, &lows, &closes, &volumes).unwrap(
 
 ### `pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 1054969 instructions/iter, 111588ns median, 48 allocs/iter
+**Measured:** 1049032 instructions/iter, 49925ns median, 48 allocs/iter
 
 ### `pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -4638,7 +4716,7 @@ let result = adx(&highs, &lows, &closes, 14).unwrap();
 
 ### `pub fn alma(data: &[f64], period: usize, offset: f64, sigma: f64) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 80922 instructions/iter, 6329ns median, 2 allocs/iter
+**Measured:** 107704 instructions/iter, 3250ns median, 2 allocs/iter
 
 ### `pub fn alma(data: &[f64], period: usize, offset: f64, sigma: f64) -> Result<Vec<Option<f64>>>`
 
@@ -4665,7 +4743,7 @@ let result = alma(&prices, 3, 0.85, 6.0).unwrap();
 
 ### `pub fn aroon(highs: &[f64], lows: &[f64], period: usize) -> Result<AroonResult>`
 
-**Measured:** 196925 instructions/iter, 14092ns median, 9 allocs/iter
+**Measured:** 194012 instructions/iter, 6380ns median, 9 allocs/iter
 
 ### `pub struct AroonResult`
 
@@ -4696,7 +4774,7 @@ let result = aroon(&highs, &lows, 3).unwrap();
 
 ### `pub fn atr(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 58192 instructions/iter, 15065ns median, 2 allocs/iter
+**Measured:** 58305 instructions/iter, 6864ns median, 2 allocs/iter
 
 ### `pub fn atr(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -4735,7 +4813,7 @@ assert!(result[2].is_some()); // ATR available after period
 
 ### `pub fn awesome_oscillator( highs: &[f64], lows: &[f64], fast: usize, slow: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 52065 instructions/iter, 13109ns median, 4 allocs/iter
+**Measured:** 52262 instructions/iter, 5655ns median, 4 allocs/iter
 
 ### `pub fn awesome_oscillator( highs: &[f64], lows: &[f64], fast: usize, slow: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -4763,7 +4841,7 @@ let result = awesome_oscillator(&highs, &lows, 5, 34).unwrap();
 
 ### `pub fn balance_of_power( opens: &[f64], highs: &[f64], lows: &[f64], closes: &[f64], period: Option<usize>, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 24168 instructions/iter, 2436ns median, 2 allocs/iter
+**Measured:** 24204 instructions/iter, 1182ns median, 2 allocs/iter
 
 ### `pub fn balance_of_power( opens: &[f64], highs: &[f64], lows: &[f64], closes: &[f64], period: Option<usize>, ) -> Result<Vec<Option<f64>>>`
 
@@ -4830,11 +4908,11 @@ assert_eq!(result.lower.len(), prices.len());
 
 ### `pub fn bollinger_bands( data: &[f64], period: usize, std_dev_multiplier: f64, ) -> Result<BollingerBands>`
 
-**Measured:** 667737 instructions/iter, 89019ns median, 28 allocs/iter
+**Measured:** 670045 instructions/iter, 39694ns median, 28 allocs/iter
 
 ### `pub fn bull_bear_power( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<BullBearPowerResult>`
 
-**Measured:** 29277 instructions/iter, 10361ns median, 3 allocs/iter
+**Measured:** 29392 instructions/iter, 4601ns median, 3 allocs/iter
 
 ### `pub struct BullBearPowerResult`
 
@@ -4867,7 +4945,7 @@ let result = bull_bear_power(&highs, &lows, &closes, 13).unwrap();
 
 ### `pub fn cci(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 150957 instructions/iter, 21197ns median, 2 allocs/iter
+**Measured:** 150999 instructions/iter, 9365ns median, 2 allocs/iter
 
 ### `pub fn cci(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -4898,7 +4976,7 @@ let result = cci(&highs, &lows, &closes, 3).unwrap();
 
 ### `pub fn chaikin_oscillator( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 67546 instructions/iter, 24895ns median, 4 allocs/iter
+**Measured:** 67676 instructions/iter, 11125ns median, 4 allocs/iter
 
 ### `pub fn chaikin_oscillator( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
@@ -4927,7 +5005,7 @@ let result = chaikin_oscillator(&highs, &lows, &closes, &volumes).unwrap();
 
 ### `pub fn choppiness_index( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 269358 instructions/iter, 25637ns median, 8 allocs/iter
+**Measured:** 274328 instructions/iter, 11231ns median, 8 allocs/iter
 
 ### `pub fn choppiness_index( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -4958,7 +5036,7 @@ let result = choppiness_index(&highs, &lows, &closes, 14).unwrap();
 
 ### `pub fn cmf( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 52082 instructions/iter, 5689ns median, 2 allocs/iter
+**Measured:** 51225 instructions/iter, 2680ns median, 2 allocs/iter
 
 ### `pub fn cmf( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -4989,7 +5067,7 @@ let result = cmf(&highs, &lows, &closes, &volumes, 3).unwrap();
 
 ### `pub fn cmo(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 62031 instructions/iter, 9336ns median, 2 allocs/iter
+**Measured:** 61579 instructions/iter, 4214ns median, 2 allocs/iter
 
 ### `pub fn cmo(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5014,7 +5092,7 @@ let result = cmo(&prices, 3).unwrap();
 
 ### `pub fn coppock_curve( data: &[f64], long_roc: usize, short_roc: usize, wma_period: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 81867 instructions/iter, 11171ns median, 3 allocs/iter
+**Measured:** 73996 instructions/iter, 4938ns median, 3 allocs/iter
 
 ### `pub fn coppock_curve( data: &[f64], long_roc: usize, short_roc: usize, wma_period: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -5041,7 +5119,7 @@ let result = coppock_curve(&prices, 14, 11, 10).unwrap();
 
 ### `pub fn dema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 40653 instructions/iter, 18445ns median, 3 allocs/iter
+**Measured:** 40719 instructions/iter, 8018ns median, 3 allocs/iter
 
 ### `pub fn dema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5070,7 +5148,7 @@ let result = dema(&prices, 3).unwrap();
 
 ### `pub fn donchian_channels( highs: &[f64], lows: &[f64], period: usize, ) -> Result<DonchianChannelsResult>`
 
-**Measured:** 182549 instructions/iter, 13098ns median, 9 allocs/iter
+**Measured:** 180846 instructions/iter, 5880ns median, 9 allocs/iter
 
 ### `pub struct DonchianChannelsResult`
 
@@ -5102,7 +5180,7 @@ let result = donchian_channels(&highs, &lows, 3).unwrap();
 
 ### `pub fn elder_ray( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<ElderRayResult>`
 
-**Measured:** 29281 instructions/iter, 10358ns median, 3 allocs/iter
+**Measured:** 29396 instructions/iter, 4656ns median, 3 allocs/iter
 
 ### `pub fn elder_ray( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<ElderRayResult>`
 
@@ -5130,7 +5208,7 @@ let result = elder_ray(&highs, &lows, &closes, 13).unwrap();
 
 ### `pub fn ema(data: &[f64], period: usize) -> Vec<Option<f64>>`
 
-**Measured:** 476321 instructions/iter, 130763ns median, 27 allocs/iter
+**Measured:** 492372 instructions/iter, 56485ns median, 27 allocs/iter
 
 ### `pub fn ema(data: &[f64], period: usize) -> Vec<Option<f64>>`
 
@@ -5167,11 +5245,11 @@ assert!(result[2].is_some());
 
 ### `pub fn fibonacci_pivot_points( highs: &[f64], lows: &[f64], closes: &[f64], ) -> Result<Vec<Option<PivotPoints>>>`
 
-**Measured:** 24478 instructions/iter, 3019ns median, 1 allocs/iter
+**Measured:** 24468 instructions/iter, 1370ns median, 1 allocs/iter
 
 ### `pub fn fibonacci_retracement( highs: &[f64], lows: &[f64], period: usize, ) -> Result<Vec<Option<FibonacciLevels>>>`
 
-**Measured:** 186959 instructions/iter, 13271ns median, 9 allocs/iter
+**Measured:** 185035 instructions/iter, 6572ns median, 9 allocs/iter
 
 ### `pub struct FibonacciLevels`
 
@@ -5207,7 +5285,7 @@ assert!(result[2].is_some());
 
 ### `pub fn heikin_ashi(candles: &[Candle]) -> Result<Vec<Candle>>`
 
-**Measured:** 146126 instructions/iter, 20497ns median, 9 allocs/iter
+**Measured:** 137043 instructions/iter, 9176ns median, 9 allocs/iter
 
 ### `pub fn heikin_ashi(candles: &[Candle]) -> Result<Vec<Candle>>`
 
@@ -5232,7 +5310,7 @@ let ha_candles = chart.heikin_ashi()?;
 
 ### `pub fn hma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 106466 instructions/iter, 20611ns median, 5 allocs/iter
+**Measured:** 102965 instructions/iter, 9526ns median, 5 allocs/iter
 
 ### `pub fn hma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5261,7 +5339,7 @@ let result = hma(&prices, 4).unwrap();
 
 ### `pub fn ichimoku( highs: &[f64], lows: &[f64], closes: &[f64], conversion: usize, base: usize, lagging: usize, displacement: usize, ) -> Result<IchimokuResult>`
 
-**Measured:** 544980 instructions/iter, 37995ns median, 27 allocs/iter
+**Measured:** 540069 instructions/iter, 17199ns median, 27 allocs/iter
 
 ### `pub struct IchimokuResult`
 
@@ -5296,7 +5374,7 @@ let result = ichimoku(&highs, &lows, &closes, 9, 26, 26, 26).unwrap();
 
 ### `pub fn keltner_channels( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, atr_period: usize, multiplier: f64, ) -> Result<KeltnerChannelsResult>`
 
-**Measured:** 98158 instructions/iter, 25967ns median, 5 allocs/iter
+**Measured:** 99262 instructions/iter, 11770ns median, 5 allocs/iter
 
 ### `pub struct KeltnerChannelsResult`
 
@@ -5345,11 +5423,11 @@ let values = vec![None, None, Some(10.0), Some(20.0)];
 assert_eq!(last_value(&values), Some(20.0));
 ```
 
-**Measured:** 37 instructions/iter, 4ns median, 0 allocs/iter
+**Measured:** 26 instructions/iter, 1ns median, 0 allocs/iter
 
 ### `pub fn macd( data: &[f64], fast_period: usize, slow_period: usize, signal_period: usize, ) -> Result<MacdResult>`
 
-**Measured:** 86414 instructions/iter, 29880ns median, 7 allocs/iter
+**Measured:** 82355 instructions/iter, 13032ns median, 7 allocs/iter
 
 ### `pub struct MacdResult`
 
@@ -5390,7 +5468,7 @@ assert_eq!(result.histogram.len(), prices.len());
 
 ### `pub fn mcginley_dynamic(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 22567 instructions/iter, 18997ns median, 1 allocs/iter
+**Measured:** 21582 instructions/iter, 8111ns median, 1 allocs/iter
 
 ### `pub fn mcginley_dynamic(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5418,7 +5496,7 @@ let result = mcginley_dynamic(&prices, 3).unwrap();
 
 ### `pub fn mfi( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 91502 instructions/iter, 8352ns median, 3 allocs/iter
+**Measured:** 97045 instructions/iter, 3858ns median, 3 allocs/iter
 
 ### `pub fn mfi( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -5448,7 +5526,7 @@ let result = mfi(&highs, &lows, &closes, &volumes, 3).unwrap();
 
 ### `pub fn momentum(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 7908 instructions/iter, 853ns median, 1 allocs/iter
+**Measured:** 7891 instructions/iter, 393ns median, 1 allocs/iter
 
 ### `pub fn momentum(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5472,7 +5550,7 @@ let result = momentum(&prices, 2).unwrap();
 
 ### `pub fn obv(closes: &[f64], volumes: &[f64]) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 321403 instructions/iter, 59673ns median, 14 allocs/iter
+**Measured:** 321224 instructions/iter, 26793ns median, 14 allocs/iter
 
 ### `pub fn obv(closes: &[f64], volumes: &[f64]) -> Result<Vec<Option<f64>>>`
 
@@ -5504,7 +5582,7 @@ assert_eq!(result.len(), 5);
 
 ### `pub fn parabolic_sar( highs: &[f64], lows: &[f64], closes: &[f64], acceleration: f64, maximum: f64, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 27419 instructions/iter, 3320ns median, 1 allocs/iter
+**Measured:** 24869 instructions/iter, 1451ns median, 1 allocs/iter
 
 ### `pub fn parabolic_sar( highs: &[f64], lows: &[f64], closes: &[f64], acceleration: f64, maximum: f64, ) -> Result<Vec<Option<f64>>>`
 
@@ -5533,7 +5611,7 @@ let result = parabolic_sar(&highs, &lows, &closes, 0.02, 0.2).unwrap();
 
 ### `pub fn patterns(candles: &[Candle]) -> Vec<Option<CandlePattern>>`
 
-**Measured:** 1348439 instructions/iter, 124012ns median, 1 allocs/iter
+**Measured:** 1184526 instructions/iter, 56769ns median, 1 allocs/iter
 
 ### `pub enum CandlePattern`
 
@@ -5583,7 +5661,7 @@ println!("{} bullish patterns detected", bullish.len());
 
 ### `pub fn pivot_points( highs: &[f64], lows: &[f64], closes: &[f64], ) -> Result<Vec<Option<PivotPoints>>>`
 
-**Measured:** 25981 instructions/iter, 3456ns median, 1 allocs/iter
+**Measured:** 25971 instructions/iter, 1626ns median, 1 allocs/iter
 
 ### `pub struct PivotPoints`
 
@@ -5646,7 +5724,7 @@ assert!(result[1].is_some());
 
 ### `pub fn roc(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 22680 instructions/iter, 2318ns median, 1 allocs/iter
+**Measured:** 16746 instructions/iter, 1072ns median, 1 allocs/iter
 
 ### `pub fn roc(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5671,7 +5749,7 @@ let result = roc(&prices, 2).unwrap();
 
 ### `pub fn rsi(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 1202357 instructions/iter, 167808ns median, 52 allocs/iter
+**Measured:** 1181299 instructions/iter, 241021ns median, 52 allocs/iter
 
 ### `pub fn rsi(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5710,7 +5788,7 @@ assert!(result[14].is_some());
 
 ### `pub fn sma(data: &[f64], period: usize) -> Vec<Option<f64>>`
 
-**Measured:** 2400039 instructions/iter, 602100ns median, 1 allocs/iter
+**Measured:** 2300046 instructions/iter, 269506ns median, 1 allocs/iter
 
 ### `pub fn sma(data: &[f64], period: usize) -> Vec<Option<f64>>`
 
@@ -5749,7 +5827,7 @@ assert_eq!(result[2], Some(11.0));
 
 ### `pub fn stochastic( highs: &[f64], lows: &[f64], closes: &[f64], k_period: usize, k_slow: usize, d_period: usize, ) -> Result<StochasticResult>`
 
-**Measured:** 220084 instructions/iter, 20078ns median, 11 allocs/iter
+**Measured:** 218246 instructions/iter, 8777ns median, 11 allocs/iter
 
 ### `pub struct StochasticResult`
 
@@ -5786,7 +5864,7 @@ let result = stochastic(&highs, &lows, &closes, 3, 1, 2).unwrap();
 
 ### `pub fn stochastic_rsi( data: &[f64], rsi_period: usize, stoch_period: usize, k_period: usize, d_period: usize, ) -> Result<StochasticResult>`
 
-**Measured:** 287335 instructions/iter, 36203ns median, 12 allocs/iter
+**Measured:** 287475 instructions/iter, 16907ns median, 12 allocs/iter
 
 ### `pub fn stochastic_rsi( data: &[f64], rsi_period: usize, stoch_period: usize, k_period: usize, d_period: usize, ) -> Result<StochasticResult>`
 
@@ -5864,7 +5942,7 @@ SuperTrend indicator data
 
 ### `pub fn supertrend( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, multiplier: f64, ) -> Result<SuperTrendResult>`
 
-**Measured:** 114499 instructions/iter, 19816ns median, 4 allocs/iter
+**Measured:** 119544 instructions/iter, 9705ns median, 4 allocs/iter
 
 ### `pub struct SuperTrendResult`
 
@@ -5897,7 +5975,7 @@ let result = supertrend(&highs, &lows, &closes, 10, 3.0).unwrap();
 
 ### `pub fn tema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 57766 instructions/iter, 27065ns median, 4 allocs/iter
+**Measured:** 57842 instructions/iter, 12310ns median, 4 allocs/iter
 
 ### `pub fn tema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -5926,7 +6004,7 @@ let result = tema(&prices, 3).unwrap();
 
 ### `pub fn true_range(highs: &[f64], lows: &[f64], closes: &[f64]) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 17954 instructions/iter, 1808ns median, 1 allocs/iter
+**Measured:** 17960 instructions/iter, 818ns median, 1 allocs/iter
 
 ### `pub fn true_range(highs: &[f64], lows: &[f64], closes: &[f64]) -> Result<Vec<Option<f64>>>`
 
@@ -5953,7 +6031,7 @@ let result = true_range(&highs, &lows, &closes).unwrap();
 
 ### `pub fn vwap( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 32544 instructions/iter, 6083ns median, 1 allocs/iter
+**Measured:** 32541 instructions/iter, 2893ns median, 1 allocs/iter
 
 ### `pub fn vwap( highs: &[f64], lows: &[f64], closes: &[f64], volumes: &[f64], ) -> Result<Vec<Option<f64>>>`
 
@@ -5990,7 +6068,7 @@ assert_eq!(result.len(), 4);
 
 ### `pub fn vwma(data: &[f64], volumes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 51381 instructions/iter, 4312ns median, 1 allocs/iter
+**Measured:** 52358 instructions/iter, 1967ns median, 1 allocs/iter
 
 ### `pub fn vwma(data: &[f64], volumes: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -6020,7 +6098,7 @@ let result = vwma(&prices, &volumes, 2).unwrap();
 
 ### `pub fn williams_r( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 181746 instructions/iter, 13090ns median, 7 allocs/iter
+**Measured:** 179770 instructions/iter, 5674ns median, 7 allocs/iter
 
 ### `pub fn williams_r( highs: &[f64], lows: &[f64], closes: &[f64], period: usize, ) -> Result<Vec<Option<f64>>>`
 
@@ -6050,7 +6128,7 @@ let result = williams_r(&highs, &lows, &closes, 3).unwrap();
 
 ### `pub fn wma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
-**Measured:** 34556 instructions/iter, 6845ns median, 7 allocs/iter
+**Measured:** 32467 instructions/iter, 3005ns median, 7 allocs/iter
 
 ### `pub fn wma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>>`
 
@@ -6085,7 +6163,7 @@ assert!(result[2].is_some());
 
 ### `pub fn zigzag(highs: &[f64], lows: &[f64], deviation_pct: f64) -> Result<Vec<ZigZagPoint>>`
 
-**Measured:** 23281 instructions/iter, 1747ns median, 4 allocs/iter
+**Measured:** 20326 instructions/iter, 791ns median, 4 allocs/iter
 
 ### `pub struct ZigZagPoint`
 
@@ -8003,7 +8081,7 @@ Obtain via [`Ticker::risk`](crate::Ticker::risk).
 
 ### `pub fn beta(asset_returns: &[f64], benchmark_returns: &[f64]) -> Option<f64>`
 
-**Measured:** 262236 instructions/iter, 98204ns median, 0 allocs/iter
+**Measured:** 262228 instructions/iter, 46006ns median, 0 allocs/iter
 
 ### `pub fn beta(asset_returns: &[f64], benchmark_returns: &[f64]) -> Option<f64>`
 
@@ -8016,7 +8094,7 @@ Returns `None` on insufficient data or zero benchmark variance.
 
 ### `pub fn calmar_ratio(total_return: f64, years: f64, max_drawdown: f64) -> Option<f64>`
 
-**Measured:** 130 instructions/iter, 16ns median, 0 allocs/iter
+**Measured:** 131 instructions/iter, 7ns median, 0 allocs/iter
 
 ### `pub fn historical_cvar(returns: &[f64], confidence: f64) -> Option<f64>`
 
@@ -8060,35 +8138,35 @@ Returns `DrawdownResult` with `max_drawdown = 0.0` when `returns` is empty.
 
 ### `pub fn historical_cvar(returns: &[f64], confidence: f64) -> Option<f64>`
 
-**Measured:** 4033287 instructions/iter, 382570ns median, 2 allocs/iter
+**Measured:** 4033079 instructions/iter, 171761ns median, 2 allocs/iter
 
 ### `pub fn historical_var(returns: &[f64], confidence: f64) -> Option<f64>`
 
-**Measured:** 28442234 instructions/iter, 3703456ns median, 2 allocs/iter
+**Measured:** 28441755 instructions/iter, 1692986ns median, 2 allocs/iter
 
 ### `pub fn information_ratio( asset_returns: &[f64], benchmark_returns: &[f64], periods_per_year: f64, ) -> Option<f64>`
 
-**Measured:** 145834 instructions/iter, 54383ns median, 1 allocs/iter
+**Measured:** 145820 instructions/iter, 24201ns median, 1 allocs/iter
 
 ### `pub fn kelly_criterion(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64`
 
-**Measured:** 32258 instructions/iter, 4307ns median, 16 allocs/iter
+**Measured:** 31681 instructions/iter, 1854ns median, 16 allocs/iter
 
 ### `pub fn max_drawdown(returns: &[f64]) -> DrawdownResult`
 
-**Measured:** 33328 instructions/iter, 12662ns median, 1 allocs/iter
+**Measured:** 35314 instructions/iter, 5479ns median, 1 allocs/iter
 
 ### `pub fn omega_ratio(returns: &[f64]) -> f64`
 
-**Measured:** 139318 instructions/iter, 48989ns median, 0 allocs/iter
+**Measured:** 139308 instructions/iter, 21210ns median, 0 allocs/iter
 
 ### `pub fn parametric_cvar(returns: &[f64], confidence: f64) -> Option<f64>`
 
-**Measured:** 100429 instructions/iter, 49135ns median, 0 allocs/iter
+**Measured:** 100419 instructions/iter, 21577ns median, 0 allocs/iter
 
 ### `pub fn parametric_var(returns: &[f64], confidence: f64) -> Option<f64>`
 
-**Measured:** 100425 instructions/iter, 49125ns median, 0 allocs/iter
+**Measured:** 100415 instructions/iter, 21021ns median, 0 allocs/iter
 
 ### `pub fn calmar_ratio(total_return: f64, years: f64, max_drawdown: f64) -> Option<f64>`
 
@@ -8185,19 +8263,19 @@ series.
 
 ### `pub fn sharpe_ratio(returns: &[f64], risk_free_rate: f64, periods_per_year: f64) -> Option<f64>`
 
-**Measured:** 100419 instructions/iter, 49144ns median, 0 allocs/iter
+**Measured:** 100409 instructions/iter, 22289ns median, 0 allocs/iter
 
 ### `pub fn sortino_ratio(returns: &[f64], risk_free_rate: f64, periods_per_year: f64) -> Option<f64>`
 
-**Measured:** 161857 instructions/iter, 49092ns median, 0 allocs/iter
+**Measured:** 161846 instructions/iter, 22108ns median, 0 allocs/iter
 
 ### `pub fn tracking_error( asset_returns: &[f64], benchmark_returns: &[f64], periods_per_year: f64, ) -> Option<f64>`
 
-**Measured:** 145878 instructions/iter, 54448ns median, 1 allocs/iter
+**Measured:** 145817 instructions/iter, 24693ns median, 1 allocs/iter
 
 ### `pub fn ulcer_index(returns: &[f64]) -> f64`
 
-**Measured:** 619259 instructions/iter, 286786ns median, 2 allocs/iter
+**Measured:** 619227 instructions/iter, 125061ns median, 2 allocs/iter
 
 ### `pub fn historical_var(returns: &[f64], confidence: f64) -> Option<f64>`
 
@@ -8228,7 +8306,7 @@ Returns `None` when fewer than 2 observations are provided.
 
 ### `pub fn win_loss_stats(returns: &[f64]) -> (f64, f64, f64)`
 
-**Measured:** 421962 instructions/iter, 66341ns median, 25 allocs/iter
+**Measured:** 402669 instructions/iter, 38030ns median, 25 allocs/iter
 
 ### `pub enum AlertCondition`
 
@@ -8284,7 +8362,7 @@ Returns `None` when fewer than 2 observations are provided.
 
 ### `pub struct PriceUpdate`
 
-**Measured:** 12537 instructions/iter, 1384ns median, 4 allocs/iter
+**Measured:** 11795 instructions/iter, 595ns median, 4 allocs/iter
 
 ### `pub enum QuoteType`
 
@@ -8994,7 +9072,7 @@ Underscores are accepted as subtag separators for convenience.
 
 ### `pub fn set_backend(backend: Arc<dyn TranslationBackend>)`
 
-**Measured:** 202 instructions/iter, 76ns median, 1 allocs/iter
+**Measured:** 194 instructions/iter, 32ns median, 1 allocs/iter
 
 ### `pub trait Translatable`
 
@@ -9016,7 +9094,7 @@ English targets are a no-op. Returns an error for structurally invalid
 tags or when the machine-translation backend fails; fields not covered
 by the dictionary are left in English when no backend is available.
 
-**Measured:** 27399 instructions/iter, 5472ns median, 79 allocs/iter
+**Measured:** 26767 instructions/iter, 2269ns median, 79 allocs/iter
 
 ### `pub async fn translate_texts<S, I>(texts: I, lang: &Lang) -> Result<Vec<String>> where S: Into<String>, I: IntoIterator<Item = S>,`
 
@@ -9026,11 +9104,11 @@ Applies the dictionary, the process-wide memo cache, and the active
 machine-translation backend in that order. Texts without a dictionary
 hit are returned unchanged when no backend is available.
 
-**Measured:** 18121 instructions/iter, 3628ns median, 49 allocs/iter
+**Measured:** 16284 instructions/iter, 1420ns median, 49 allocs/iter
 
 ### `pub async fn translate_with<T: Translatable + ?Sized>(value: &mut T, lang: &Lang) -> Result<()>`
 
 Like [`translate`], with an already-parsed [`Lang`].
 
-**Measured:** 26948 instructions/iter, 5385ns median, 77 allocs/iter
+**Measured:** 25414 instructions/iter, 2290ns median, 77 allocs/iter
 

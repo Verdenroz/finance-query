@@ -255,7 +255,7 @@ Customize backtesting behavior with `BacktestConfig`:
 <!-- soothfast:bind finance_query::backtesting::config::BacktestConfig -->
 
 ```rust no_run feature=backtesting covers=finance_query::backtesting::config::BacktestConfig
-use finance_query::backtesting::{BacktestConfig, SmaCrossover};
+use finance_query::backtesting::{BacktestConfig, PositionSizing, SmaCrossover};
 use finance_query::{Interval, Ticker, TimeRange};
 
 #[tokio::main]
@@ -277,6 +277,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .risk_free_rate(0.04)           // 4% annual risk-free rate
         .reinvest_dividends(true)
         .close_at_end(true)             // close open positions at final bar
+        .max_leverage(2.0)              // up to 2x gross exposure
+        .maintenance_margin_pct(0.25)   // liquidate below 25% of exposure
+        .margin_interest_rate(0.06)     // 6% annual on the margin loan
+        .short_borrow_rate(0.03)        // 3% annual to borrow shares
+        .position_sizing(PositionSizing::FixedFraction)
         .build()?;
 
     let ticker = Ticker::new("AAPL").await?;
@@ -319,6 +324,75 @@ let config = BacktestConfig::builder()
     .build()
     .unwrap();
 ```
+
+### Margin and Leverage
+
+`max_leverage` raises the ceiling on gross exposure from the default `1.0` (a cash
+account) to a multiple of equity. The shortfall is a margin loan, and it is not
+free: `margin_interest_rate` accrues on the debit cash balance and
+`short_borrow_rate` accrues on the value of borrowed shares, both prorated by
+`bars_per_year`. Leave those at `0.0` and every leveraged result is flattered.
+
+When equity falls below `maintenance_margin_pct` of gross exposure the engine
+liquidates the position at that bar's close, ahead of any stop-loss or
+take-profit, and tags the exit `"Margin call"`.
+
+```rust feature=backtesting
+use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
+
+let config = BacktestConfig::builder()
+    .initial_capital(10_000.0)
+    .max_leverage(2.0)
+    .maintenance_margin_pct(0.25)
+    .margin_interest_rate(0.06)
+    .build()
+    .unwrap();
+
+let engine = BacktestEngine::new(config);
+let _ = engine.run("AAPL", &[], SmaCrossover::new(10, 20));
+```
+
+Each trade carries its share of the bill on `Trade::financing_cost`, already
+subtracted from `Trade::pnl`, and the run totals it as
+`PerformanceMetrics::total_financing_cost`. Doubling leverage doubles gross P&L
+but pays borrowing costs out of it, so a thin edge can turn negative on the way
+to net.
+
+### Position Sizing Schemes
+
+`position_size_pct` is the **risk budget**: every scheme sizes at or below it, so
+switching schemes can only reduce exposure, never exceed what you authorized. A
+scheme that cannot compute its input falls back to the budget itself.
+
+| Scheme | Sizes by | Needs |
+|--------|----------|-------|
+| `FixedFraction` (default) | `position_size_pct` of equity | nothing |
+| `Atr` | risk over an ATR-derived stop distance | `atr_period` bars |
+| `VolatilityTarget` | inverse of realized volatility | `lookback` bars |
+| `FractionalKelly` | a fraction of the Kelly bet from recent trades | closed trades |
+
+`Atr` and `VolatilityTarget` extend the run's warmup so an early entry cannot
+silently fall back to the budget. `FractionalKelly` measures closed trades rather
+than bars, so it cannot; it falls back until its window holds both a win and a
+loss. Partial closes from `Signal::scale_out` count once with their entry, not as
+separate observations.
+
+```rust feature=backtesting
+use finance_query::backtesting::{BacktestConfig, PositionSizing};
+
+let config = BacktestConfig::builder()
+    .position_size_pct(0.5)         // never commit more than 50% of equity
+    .position_sizing(PositionSizing::Atr {
+        risk_pct: 0.02,             // risk 2% of equity per trade
+        atr_period: 14,
+        atr_multiple: 2.0,          // stop sits 2 ATRs from entry
+    })
+    .build()
+    .unwrap();
+```
+
+Scale-in signals carry an explicit fraction of their own and are not resized by
+the active scheme, though they do draw on leveraged buying power.
 
 ## Offline Backtesting
 
@@ -419,6 +493,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Total Signals:    {}", result.metrics.total_signals);
     println!("Executed Signals: {}", result.metrics.executed_signals);
     println!("Total Commission: ${:.2}", result.metrics.total_commission);
+    println!("Financing Cost:   ${:.2}", result.metrics.total_financing_cost);
     println!("Dividend Income:  ${:.2}", result.metrics.total_dividend_income);
 
     // Advanced statistics
@@ -839,7 +914,44 @@ println!("Convergence: {:?}", report.convergence_curve);
 | `int_bounds(s, e)` | Integer bounds, step=1 (BayesianSearch) |
 | `float_bounds(s, e)` | Continuous float (BayesianSearch) |
 
-**`OptimizeMetric` variants:** `TotalReturn`, `SharpeRatio`, `SortinoRatio`, `CalmarRatio`, `ProfitFactor`, `WinRate`, `MinDrawdown`
+**`OptimizeMetric` variants:** `TotalReturn`, `SharpeRatio`, `SortinoRatio`, `CalmarRatio`, `ProfitFactor`, `WinRate`, `MinDrawdown`, `OmegaRatio`, `Expectancy`
+
+### Multi-Objective (Pareto) Search
+
+Optimizing one metric hides its cost in the others: the best Sharpe in a sweep may
+also carry the worst drawdown. `run_pareto` takes two or more objectives and
+returns every parameter set that no other set beats outright, leaving the
+trade-off to you rather than collapsing it into one number.
+
+Both optimizers expose it. Grid evaluates the full grid; Bayesian steers its
+search by the first objective and scores the finished runs against the rest.
+
+```rust feature=backtesting
+use finance_query::backtesting::{
+    BacktestConfig, GridSearch, OptimizeMetric, ParamRange, SmaCrossover,
+};
+
+let report = GridSearch::new()
+    .param("fast", ParamRange::int_range(5, 20, 5))
+    .param("slow", ParamRange::int_range(20, 60, 10))
+    .run_pareto(
+        "AAPL",
+        &[],
+        &BacktestConfig::default(),
+        &[OptimizeMetric::SharpeRatio, OptimizeMetric::MinDrawdown],
+        |params| {
+            SmaCrossover::new(
+                params["fast"].as_int() as usize,
+                params["slow"].as_int() as usize,
+            )
+        },
+    );
+```
+
+`ParetoReport` carries the `front` (sorted best-first on the first objective, each
+point holding its `params`, `result`, and per-objective `scores`) alongside three
+counts that partition every evaluation: `front.len()`, `dominated_count`, and
+`non_finite_count`.
 
 ## Walk-Forward Validation
 
@@ -1211,6 +1323,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     - **Overfitting** - Strategies that work perfectly on historical data often fail in live trading. Use simple rules and validate on multiple periods.
     - **Ignoring costs** - Commission and slippage significantly impact returns, especially for high-frequency strategies.
     - **Position sizing** - Default 100% capital allocation is aggressive. Consider using smaller position sizes.
+    - **Leverage** - Set `margin_interest_rate` and `short_borrow_rate` whenever `max_leverage` is above `1.0`. Free leverage makes any positive edge look twice as good, and a levered position can be liquidated by a margin call before the strategy's own stop fires.
     - **Survivor bias** - Backtesting on current index constituents ignores delisted/bankrupt companies.
     - **Data quality** - Yahoo Finance data may have gaps or inaccuracies. Validate important results.
 
