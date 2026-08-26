@@ -45,6 +45,27 @@ impl Strategy for EnterShortHold {
     }
 }
 
+#[derive(Clone)]
+pub(super) struct EnterLongAt(pub usize);
+
+impl Strategy for EnterLongAt {
+    fn name(&self) -> &str {
+        "Enter Long At"
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        vec![]
+    }
+
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        if ctx.index == self.0 && !ctx.has_position() {
+            Signal::long(ctx.timestamp(), ctx.close())
+        } else {
+            Signal::hold()
+        }
+    }
+}
+
 pub(super) fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices
         .iter()
@@ -281,4 +302,38 @@ impl Strategy for BracketShortTrailingStopStrategy {
             Signal::hold()
         }
     }
+}
+
+/// Flat-close candles whose intrabar range is `range_pct` of price, giving a
+/// controllable ATR without moving the close series.
+pub(super) fn make_candles_with_range(prices: &[f64], range_pct: f64) -> Vec<Candle> {
+    prices
+        .iter()
+        .enumerate()
+        .map(|(i, &p)| Candle {
+            timestamp: i as i64,
+            open: p,
+            high: p * (1.0 + range_pct),
+            low: p * (1.0 - range_pct),
+            close: p,
+            volume: 1000,
+            adj_close: Some(p),
+            provider_id: None,
+        })
+        .collect()
+}
+
+/// Candles whose closes alternate around `base` by `swing_pct`, giving a
+/// controllable close-to-close return volatility.
+pub(super) fn make_alternating_candles(base: f64, swing_pct: f64, n: usize) -> Vec<Candle> {
+    let prices: Vec<f64> = (0..n)
+        .map(|i| {
+            if i.is_multiple_of(2) {
+                base
+            } else {
+                base * (1.0 + swing_pct)
+            }
+        })
+        .collect();
+    make_candles(&prices)
 }

@@ -114,7 +114,7 @@ pub mod strategy;
 pub mod walk_forward;
 
 // Re-export main types
-pub use config::{BacktestConfig, BacktestConfigBuilder};
+pub use config::{BacktestConfig, BacktestConfigBuilder, PositionSizing, SizingContext};
 pub use engine::BacktestEngine;
 pub use error::{BacktestError, Result};
 pub use position::{Position, PositionSide, Trade};
