@@ -364,6 +364,14 @@ impl BacktestConfig {
             ));
         }
 
+        if self.max_leverage > 1.0 && self.max_leverage * self.maintenance_margin_pct >= 1.0 {
+            return Err(BacktestError::invalid_param(
+                "max_leverage",
+                "must be below 1.0 / maintenance_margin_pct, or a full-size entry \
+                 is liquidated on the bar after it opens",
+            ));
+        }
+
         if !(0.0..=1.0).contains(&self.short_borrow_rate) {
             return Err(BacktestError::invalid_param(
                 "short_borrow_rate",
@@ -459,6 +467,21 @@ mod tests {
         let config = BacktestConfig::default();
         assert_eq!(config.initial_capital, 10_000.0);
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_leverage_rejected_when_it_cannot_survive_its_own_entry() {
+        let levered = |leverage: f64, maintenance: f64| {
+            BacktestConfig::builder()
+                .max_leverage(leverage)
+                .maintenance_margin_pct(maintenance)
+                .build()
+        };
+
+        assert!(levered(5.0, 0.25).is_err());
+        assert!(levered(4.0, 0.25).is_err());
+        assert!(levered(3.0, 0.25).is_ok());
+        assert!(levered(1.0, 1.0).is_ok());
     }
 
     #[test]
