@@ -109,12 +109,14 @@ impl BacktestEngine {
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
 
-            if equity > 0.0
-                && let Some(pos) = position.as_ref()
-            {
+            if let Some(pos) = position.as_ref() {
+                // Recomputed after the dividend credit so the peak matches the
+                // ratio the margin call below measures.
+                let margin_equity =
+                    cash + pos.current_value(candle.close) + pos.unreinvested_dividends;
                 let exposure = pos.quantity * candle.close;
-                if exposure > max_leverage_used * equity {
-                    max_leverage_used = exposure / equity;
+                if margin_equity > 0.0 && exposure > max_leverage_used * margin_equity {
+                    max_leverage_used = exposure / margin_equity;
                 }
             }
 

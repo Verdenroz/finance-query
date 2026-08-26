@@ -345,6 +345,25 @@ mod tests {
     }
 
     #[test]
+    fn test_max_leverage_used_accounts_for_the_current_bar_dividend() {
+        let candles = make_candles(&[100.0; 6]);
+        let dividends = vec![Dividend {
+            timestamp: 1,
+            amount: 5.0,
+            provider_id: None,
+        }];
+        let engine = BacktestEngine::new(levered_config(2.0));
+
+        let without = engine.run("TEST", &candles, EnterLongHold).unwrap();
+        let with = engine
+            .run_with_dividends("TEST", &candles, EnterLongHold, &dividends)
+            .unwrap();
+
+        assert!((without.max_leverage_used - 2.0).abs() < 0.01);
+        assert!(with.max_leverage_used < without.max_leverage_used);
+    }
+
+    #[test]
     fn test_no_financing_cost_at_default_rates() {
         let candles = make_candles(&[100.0; 20]);
         let config = BacktestConfig::builder()
