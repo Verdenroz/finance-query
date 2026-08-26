@@ -51,9 +51,9 @@ fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
 /// contributes one observation rather than several. Returns `(None, None)`
 /// unless the window holds at least one win and one loss.
 ///
-/// Break-even trades are excluded from the win rate rather than counted in its
-/// denominator like [`PerformanceMetrics::win_rate`], so both Kelly inputs rest
-/// on the same set of trades.
+/// Break-even trades sit outside the win rate, unlike
+/// [`PerformanceMetrics::win_rate`], so both Kelly inputs rest on the same set
+/// of trades.
 ///
 /// [`PerformanceMetrics::win_rate`]: crate::backtesting::PerformanceMetrics::win_rate
 fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Option<f64>) {
