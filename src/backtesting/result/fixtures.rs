@@ -84,6 +84,7 @@ pub(super) fn make_result(trades: Vec<Trade>, equity_curve: Vec<EquityPoint>) ->
         open_position: None::<Position>,
         benchmark: None,
         diagnostics: vec![],
+        max_leverage_used: 0.0,
     }
 }
 

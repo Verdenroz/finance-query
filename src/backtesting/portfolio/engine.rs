@@ -135,6 +135,7 @@ impl PortfolioEngine {
                     realized_pnl: 0.0,
                     equity_curve: vec![],
                     sym_peak: sym_initial_capital,
+                    sym_max_leverage: 0.0,
                     sym_initial_capital,
                     strategy_name,
                 },
@@ -710,6 +711,12 @@ impl PortfolioEngine {
                 if sym_equity > state.sym_peak {
                     state.sym_peak = sym_equity;
                 }
+                if sym_equity > 0.0
+                    && let Some(pos) = state.position.as_ref()
+                {
+                    let leverage = pos.quantity * close / sym_equity;
+                    state.sym_max_leverage = state.sym_max_leverage.max(leverage);
+                }
                 let sym_drawdown = if state.sym_peak > 0.0 {
                     (state.sym_peak - sym_equity) / state.sym_peak
                 } else {
@@ -854,6 +861,7 @@ impl PortfolioEngine {
                     open_position: state.position,
                     benchmark: None,
                     diagnostics: vec![],
+                    max_leverage_used: state.sym_max_leverage,
                 };
 
                 (sym, result)
@@ -919,6 +927,7 @@ struct SymbolState<S: Strategy> {
     equity_curve: Vec<EquityPoint>,
     /// Running peak equity for per-symbol drawdown calculation.
     sym_peak: f64,
+    sym_max_leverage: f64,
     /// Expected per-symbol capital allocation (derived from portfolio config at setup time).
     ///
     /// Used as the baseline for per-symbol equity, total_return_pct, Sharpe, etc.

@@ -239,6 +239,7 @@ mod tests {
             open_position: None,
             benchmark: None,
             diagnostics: vec![],
+            max_leverage_used: 0.0,
         };
         result.metrics.sharpe_ratio = sharpe;
         result.metrics.max_drawdown_pct = max_drawdown_pct;

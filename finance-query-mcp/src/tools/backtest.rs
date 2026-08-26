@@ -138,6 +138,7 @@ fn build_response(result: &BacktestResult, p: &RunBacktestParams) -> serde_json:
         "endTimestamp": result.end_timestamp,
         "initialCapital": result.initial_capital,
         "finalEquity": result.final_equity,
+        "maxLeverageUsed": result.max_leverage_used,
         "metrics": result.metrics,
         "equityCurve": paginate(&result.equity_curve, p.equity_limit, p.equity_cursor.as_deref()),
         "trades": paginate(&result.trades, p.trades_limit, p.trades_cursor.as_deref()),

@@ -358,6 +358,11 @@ subtracted from `Trade::pnl`, and the run totals it as
 but pays borrowing costs out of it, so a thin edge can turn negative on the way
 to net.
 
+`BacktestResult::max_leverage_used` reports what a run actually borrowed rather
+than what it was allowed to: the peak gross-exposure-to-equity ratio across the
+run, which is the ratio a margin call is measured against. A strategy configured
+for 3x that never exceeds 1.4x is paying for headroom it does not use.
+
 ### Position Sizing Schemes
 
 `position_size_pct` is the **risk budget**: every scheme sizes at or below it, so
