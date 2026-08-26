@@ -8,6 +8,7 @@
 //! rather than reusing the GraphQL `Connection` plumbing in `tools::gql`,
 //! but follows the same `{items, pageInfo: {hasNextPage, endCursor}}` shape.
 
+use finance_query::Interval;
 use finance_query::Ticker;
 use finance_query::backtesting::{
     BacktestConfig, BacktestResult, BollingerMeanReversion, DonchianBreakout, MacdSignal,
@@ -76,8 +77,9 @@ fn build_strategy(p: &RunBacktestParams) -> Result<Box<dyn Strategy>, McpError> 
 /// Build the `BacktestConfig`. Every knob defaults to the library's own
 /// `BacktestConfig::default()` value, so an all-omitted param set behaves
 /// identically to calling the library directly with no config override.
-fn build_config(p: &RunBacktestParams) -> Result<BacktestConfig, McpError> {
+fn build_config(p: &RunBacktestParams, interval: Interval) -> Result<BacktestConfig, McpError> {
     let mut builder = BacktestConfig::builder()
+        .bars_per_year(interval.bars_per_year())
         .initial_capital(p.initial_capital.unwrap_or(10_000.0))
         .commission_pct(p.commission_pct.unwrap_or(0.001))
         .slippage_pct(p.slippage_pct.unwrap_or(0.001))
@@ -151,7 +153,7 @@ pub async fn run_backtest(p: RunBacktestParams) -> Result<CallToolResult, McpErr
     let interval = parse_interval(p.interval.as_deref().unwrap_or("1d"));
     let range = parse_range(p.range.as_deref().unwrap_or("1y"));
     let strategy = build_strategy(&p)?;
-    let config = build_config(&p)?;
+    let config = build_config(&p, interval)?;
 
     let ticker = Ticker::new(&p.symbol).await.map_err(lib_err)?;
     let result = ticker
@@ -236,7 +238,7 @@ mod tests {
     #[test]
     fn build_config_defaults_match_library_defaults() {
         let p = base_params("sma_crossover");
-        let config = build_config(&p).unwrap();
+        let config = build_config(&p, Interval::OneDay).unwrap();
         let default = BacktestConfig::default();
         assert_eq!(config.initial_capital, default.initial_capital);
         assert_eq!(config.commission_pct, default.commission_pct);
@@ -257,7 +259,7 @@ mod tests {
         p.position_size_pct = Some(0.5);
         p.allow_short = Some(true);
         p.stop_loss_pct = Some(0.05);
-        let config = build_config(&p).unwrap();
+        let config = build_config(&p, Interval::OneDay).unwrap();
         assert_eq!(config.position_size_pct, 0.5);
         assert!(config.allow_short);
         assert_eq!(config.stop_loss_pct, Some(0.05));
@@ -270,7 +272,7 @@ mod tests {
         p.maintenance_margin_pct = Some(0.3);
         p.short_borrow_rate = Some(0.05);
         p.margin_interest_rate = Some(0.07);
-        let config = build_config(&p).unwrap();
+        let config = build_config(&p, Interval::OneDay).unwrap();
         assert_eq!(config.max_leverage, 2.0);
         assert_eq!(config.maintenance_margin_pct, 0.3);
         assert_eq!(config.short_borrow_rate, 0.05);
@@ -278,10 +280,19 @@ mod tests {
     }
 
     #[test]
+    fn build_config_prorates_financing_by_the_bar_interval() {
+        let p = base_params("sma_crossover");
+        let daily = build_config(&p, Interval::OneDay).unwrap();
+        let hourly = build_config(&p, Interval::OneHour).unwrap();
+        assert_eq!(daily.bars_per_year, 252.0);
+        assert_eq!(hourly.bars_per_year, 1_638.0);
+    }
+
+    #[test]
     fn build_config_rejects_leverage_below_one() {
         let mut p = base_params("sma_crossover");
         p.max_leverage = Some(0.5);
-        assert!(build_config(&p).is_err());
+        assert!(build_config(&p, Interval::OneDay).is_err());
     }
 
     #[test]

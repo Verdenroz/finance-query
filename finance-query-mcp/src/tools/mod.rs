@@ -415,9 +415,9 @@ pub struct RunBacktestParams {
     pub max_leverage: Option<f64>,
     /// Equity floor as a fraction of gross exposure, below which the position is liquidated (default: 0.25)
     pub maintenance_margin_pct: Option<f64>,
-    /// Annual rate charged while a short position is open; prorated assuming daily bars (default: 0.0)
+    /// Annual rate charged while a short position is open; prorated by the bar interval (default: 0.0)
     pub short_borrow_rate: Option<f64>,
-    /// Annual rate charged on a debit cash balance from leverage; prorated assuming daily bars (default: 0.0)
+    /// Annual rate charged on a debit cash balance from leverage; prorated by the bar interval (default: 0.0)
     pub margin_interest_rate: Option<f64>,
 
     // ── Pagination (equity curve and trade list paginate independently) ──
