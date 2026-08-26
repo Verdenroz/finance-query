@@ -1,6 +1,6 @@
 name: Changelog
 
-# Regenerates once per merge to master, not on every PR push
+# Runs on merge to master, not on every PR push.
 
 on:
   push:
@@ -50,9 +50,8 @@ jobs:
         run: |
           command -v cargo-soothfast >/dev/null || FORCE=--force
           cargo binstall cargo-soothfast --locked --no-confirm ${FORCE:-}
-      # Without a bench on the reference side there are no deterministic
-      # metrics to diff, so the perf table falls back to a full snapshot and
-      # walltime jitter rewrites every row on every push.
+      # No bench on the reference side means no deterministic diff, so the
+      # perf table would fall back to a snapshot that jitters every push.
       - name: Check the previous tag has a bench to compare against
         id: prev
         run: |

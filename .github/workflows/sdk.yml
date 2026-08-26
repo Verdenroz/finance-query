@@ -1,7 +1,5 @@
 name: SDK
 
-# Generated client SDKs (sdks/)
-
 on:
   pull_request:
     paths:
@@ -24,8 +22,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # PRs touching sdks/ — the generated package must be importable and pass
-  # strict type checking on its own, no Rust toolchain involved.
+  # No Rust toolchain: the generated package must stand on its own.
   quality:
     name: Type-check generated SDK
     if: github.event_name == 'pull_request' && !endsWith(github.actor, '[bot]')
@@ -48,8 +45,6 @@ jobs:
           print(finance_query.__version__, len(finance_query.__all__), 'exports')"
           uv build sdks/python
 
-  # Pushes to master — regenerate the spec and SDKs from the code and
-  # bot-commit whatever changed, so nobody has to remember to.
   regenerate:
     name: Regenerate spec + SDKs
     if: github.event_name == 'push'

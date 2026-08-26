@@ -1,6 +1,5 @@
 name: Auto Milestone
 
-# pull_request_target (PR labeling) + issues (issue labeling)
 on: # zizmor: ignore[dangerous-triggers]
   issues:
     types: [labeled]
@@ -25,8 +24,6 @@ jobs:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            // Labels that mark an issue/PR as release-worthy work; only these
-            // trigger auto-milestoning.
             const TRIGGER_LABELS = new Set([
               "bug",
               "enhancement",
@@ -40,12 +37,11 @@ jobs:
               return;
             }
 
-            // `issues` and `pull_request_target` events put the item under
-            // `issue` / `pull_request` respectively — both accept the same
-            // `milestone` field via the issues API (a PR is an issue).
+            // A PR is an issue to the issues API, so both event payloads
+            // work through the same `issue`/`pull_request` milestone field.
             const item = context.payload.issue ?? context.payload.pull_request;
             if (!item || item.milestone) {
-              return; // already milestoned — never override a manual choice
+              return; // never override a manual choice
             }
 
             const { data: milestones } = await github.rest.issues.listMilestones({
@@ -54,11 +50,8 @@ jobs:
               state: "open",
             });
 
-            // Milestones are named by plain semver (e.g. "2.8.0"). The "next
-            // release" is the highest-versioned open one — a milestone for an
-            // already-shipped version may still be open if not manually
-            // closed, so picking the max (not just any open one) is what
-            // makes this correct.
+            // Pick the highest-versioned open milestone: an already-shipped
+            // one can still be open if nobody closed it.
             const semver = (title) => {
               const match = title.match(/^(\d+)\.(\d+)\.(\d+)$/);
               return match ? match.slice(1).map(Number) : null;

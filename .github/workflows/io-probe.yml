@@ -1,11 +1,7 @@
 name: Data-Quality Probe
 
-# Nightly live probe of every REST endpoint against real providers:
-# `cargo soothfast spec probe` launches the release server, fires the
-# requests in server/probes.toml, and gates field population against
-# server/probes.lock plus shape/assertion checks. Deliberately NOT part of
-# PR CI — live Yahoo data and rate limits make it too flaky to block
-# merges; regressions surface here as a filed issue instead.
+# Deliberately not part of PR CI: live provider data and rate limits are too
+# flaky to gate merges on, so regressions surface here as a filed issue.
 
 on:
   schedule:
