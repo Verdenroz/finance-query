@@ -50,6 +50,12 @@ fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
 /// Partial closes are skipped so one entry that scales out several times
 /// contributes one observation rather than several. Returns `(None, None)`
 /// unless the window holds at least one win and one loss.
+///
+/// Break-even trades are excluded from the win rate rather than counted in its
+/// denominator like [`PerformanceMetrics::win_rate`], so both Kelly inputs rest
+/// on the same set of trades.
+///
+/// [`PerformanceMetrics::win_rate`]: crate::backtesting::PerformanceMetrics::win_rate
 fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Option<f64>) {
     let closed: Vec<&Trade> = trades.iter().filter(|t| !t.is_partial).collect();
     let start = closed.len().saturating_sub(lookback.max(1));
@@ -72,7 +78,7 @@ fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Opt
         return (None, None);
     }
 
-    let win_rate = wins.len() as f64 / window.len() as f64;
+    let win_rate = wins.len() as f64 / (wins.len() + losses.len()) as f64;
     let avg_win = wins.iter().sum::<f64>() / wins.len() as f64;
     let avg_loss = losses.iter().sum::<f64>() / losses.len() as f64;
     if avg_loss <= 0.0 {
@@ -235,6 +241,19 @@ mod tests {
         ];
         let (win_rate, _) = trailing_kelly_inputs(&trades, 10);
         assert!((win_rate.unwrap() - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_trailing_kelly_inputs_ignore_break_even_trades() {
+        let trades = vec![
+            make_trade(10.0, 0.10, false),
+            make_trade(0.0, 0.0, false),
+            make_trade(0.0, 0.0, false),
+            make_trade(-5.0, -0.05, false),
+        ];
+        let (win_rate, payoff) = trailing_kelly_inputs(&trades, 10);
+        assert!((win_rate.unwrap() - 0.5).abs() < 1e-12);
+        assert!((payoff.unwrap() - 2.0).abs() < 1e-12);
     }
 
     #[test]
