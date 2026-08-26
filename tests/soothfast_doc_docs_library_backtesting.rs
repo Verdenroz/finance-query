@@ -302,11 +302,11 @@ fn doc_block_line_314() {
         .unwrap();
 }
 
-// line 340
+// line 344
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_340() {
+fn doc_block_line_344() {
     use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
 
     let config = BacktestConfig::builder()
@@ -321,11 +321,11 @@ fn doc_block_line_340() {
     let _ = engine.run("AAPL", &[], SmaCrossover::new(10, 20));
 }
 
-// line 388
+// line 393
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_388() {
+fn doc_block_line_393() {
     use finance_query::backtesting::{BacktestConfig, PositionSizing};
 
     let config = BacktestConfig::builder()
@@ -339,11 +339,11 @@ fn doc_block_line_388() {
         .unwrap();
 }
 
-// line 461: compile-only (no_run)
+// line 466: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_461() {
+fn doc_block_line_466() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -402,11 +402,11 @@ fn doc_block_line_461() {
     }
 }
 
-// line 524: compile-only (no_run)
+// line 529: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_524() {
+fn doc_block_line_529() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -422,11 +422,11 @@ fn doc_block_line_524() {
     }
 }
 
-// line 542: compile-only (no_run)
+// line 547: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_542() {
+fn doc_block_line_547() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -447,11 +447,11 @@ fn doc_block_line_542() {
     }
 }
 
-// line 567: compile-only (no_run)
+// line 572: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_567() {
+fn doc_block_line_572() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -467,11 +467,11 @@ fn doc_block_line_567() {
     }
 }
 
-// line 587: compile-only (no_run)
+// line 592: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_587() {
+fn doc_block_line_592() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -487,11 +487,11 @@ fn doc_block_line_587() {
     }
 }
 
-// line 607
+// line 612
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_607() {
+fn doc_block_line_612() {
     use finance_query::backtesting::Signal;
 
     let ts = 0i64;    // use actual candle timestamp in practice
@@ -514,11 +514,11 @@ fn doc_block_line_607() {
     let stop_exit    = Signal::sell_stop(ts, px, 145.0);
 }
 
-// line 634
+// line 639
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_634() {
+fn doc_block_line_639() {
     use finance_query::backtesting::Signal;
 
     let (ts, px) = (0i64, 150.0);
@@ -526,11 +526,11 @@ fn doc_block_line_634() {
         .expires_in_bars(5);  // cancel if not filled within 5 bars
 }
 
-// line 646
+// line 651
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_646() {
+fn doc_block_line_651() {
     use finance_query::backtesting::Signal;
 
     let (ts, px) = (0i64, 150.0);
@@ -540,11 +540,11 @@ fn doc_block_line_646() {
         .trailing_stop(0.02);  // 2% trailing stop for this trade
 }
 
-// line 660
+// line 665
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_660() {
+fn doc_block_line_665() {
     use finance_query::backtesting::Signal;
 
     let (ts, px) = (0i64, 150.0);
@@ -552,11 +552,11 @@ fn doc_block_line_660() {
     let reduce_position    = Signal::scale_out(0.50, ts, px);  // exit 50% of position
 }
 
-// line 672
+// line 677
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_672() {
+fn doc_block_line_677() {
     use finance_query::backtesting::Signal;
 
     let (ts, px) = (0i64, 150.0);
@@ -565,11 +565,11 @@ fn doc_block_line_672() {
         .tag("high-volume");
 }
 
-// line 685: compile-only (no_run)
+// line 690: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_685() {
+fn doc_block_line_690() {
     use finance_query::backtesting::{EnsembleStrategy, EnsembleMode, SmaCrossover, RsiReversal};
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -588,11 +588,11 @@ fn doc_block_line_685() {
     }
 }
 
-// line 717
+// line 722
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_717() {
+fn doc_block_line_722() {
     use finance_query::backtesting::StrategyBuilder;
     use finance_query::backtesting::refs::*;
     use finance_query::backtesting::condition::*;
@@ -609,11 +609,11 @@ fn doc_block_line_717() {
         .build();
 }
 
-// line 740: compile-only (no_run)
+// line 745: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_740() {
+fn doc_block_line_745() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -640,11 +640,11 @@ fn doc_block_line_740() {
     }
 }
 
-// line 771
+// line 776
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_771() {
+fn doc_block_line_776() {
     use finance_query::backtesting::{
         BacktestComparison, BacktestConfig, BacktestEngine, MacdSignal, OptimizeMetric,
         RsiReversal, SmaCrossover,
@@ -693,11 +693,11 @@ fn doc_block_line_771() {
     }
 }
 
-// line 826
+// line 831
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_826() {
+fn doc_block_line_831() {
     use finance_query::backtesting::{
         BacktestConfig, GridSearch, OptimizeMetric, ParamRange, SmaCrossover,
     };
@@ -740,11 +740,11 @@ fn doc_block_line_826() {
     println!("Evaluated {} combinations", report.n_evaluations);
 }
 
-// line 873
+// line 878
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_873() {
+fn doc_block_line_878() {
     use finance_query::backtesting::{
         BacktestConfig, BayesianSearch, OptimizeMetric, ParamRange, SmaCrossover,
     };
@@ -787,11 +787,11 @@ fn doc_block_line_873() {
     println!("Convergence: {:?}", report.convergence_curve);
 }
 
-// line 937
+// line 942
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_937() {
+fn doc_block_line_942() {
     use finance_query::backtesting::{
         BacktestConfig, GridSearch, OptimizeMetric, ParamRange, SmaCrossover,
     };
@@ -813,11 +813,11 @@ fn doc_block_line_937() {
         );
 }
 
-// line 968
+// line 973
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_968() {
+fn doc_block_line_973() {
     use finance_query::backtesting::{
         BacktestConfig, GridSearch, OptimizeMetric, ParamRange, SmaCrossover, WalkForwardConfig,
     };
@@ -875,11 +875,11 @@ fn doc_block_line_968() {
     }
 }
 
-// line 1030
+// line 1035
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_1030() {
+fn doc_block_line_1035() {
     use finance_query::backtesting::{
         BacktestConfig, BacktestEngine, MonteCarloConfig, MonteCarloMethod, SmaCrossover,
     };
@@ -917,11 +917,11 @@ fn doc_block_line_1030() {
     println!("Sharpe p50:   {:.2}", mc.sharpe_ratio.p50);
 }
 
-// line 1081
+// line 1088
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_1081() {
+fn doc_block_line_1088() {
     use finance_query::backtesting::portfolio::{
         PortfolioConfig, PortfolioEngine, RebalanceMode, SymbolData,
     };
@@ -970,11 +970,11 @@ fn doc_block_line_1081() {
     }
 }
 
-// line 1140: compile-only (no_run)
+// line 1147: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1140() {
+fn doc_block_line_1147() {
     use finance_query::backtesting::portfolio::{PortfolioConfig, RebalanceMode};
     use finance_query::backtesting::{BacktestConfig, SmaCrossover};
     use finance_query::{Interval, Tickers, TimeRange};
@@ -996,11 +996,11 @@ fn doc_block_line_1140() {
     }
 }
 
-// line 1228: compile-only (no_run)
+// line 1235: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1228() {
+fn doc_block_line_1235() {
     use finance_query::{Ticker, Interval, TimeRange};
     use finance_query::backtesting::{StrategyBuilder, BacktestConfig};
     use finance_query::backtesting::refs::*;
@@ -1058,11 +1058,11 @@ fn doc_block_line_1228() {
     }
 }
 
-// line 1295: compile-only (no_run)
+// line 1302: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1295() {
+fn doc_block_line_1302() {
         use finance_query::backtesting::{BacktestConfig, StrategyBuilder};
         use finance_query::backtesting::refs::*;
         use finance_query::backtesting::condition::*;

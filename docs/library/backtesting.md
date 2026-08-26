@@ -334,8 +334,12 @@ free: `margin_interest_rate` accrues on the debit cash balance and
 `bars_per_year`. Leave those at `0.0` and every leveraged result is flattered.
 
 When equity falls below `maintenance_margin_pct` of gross exposure the engine
-liquidates the position at that bar's close, ahead of any stop-loss or
-take-profit, and tags the exit `"Margin call"`.
+liquidates the position at that bar's close and tags the exit `"Margin call"`.
+A stop-loss or take-profit on the same bar wins, since those fill intrabar and
+the maintenance check is measured on the close.
+
+`max_leverage` above `1.0 / maintenance_margin_pct` is rejected: a full-size
+entry at that ratio is liquidated on the bar after it opens.
 
 ```rust feature=backtesting
 use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
@@ -354,7 +358,8 @@ let _ = engine.run("AAPL", &[], SmaCrossover::new(10, 20));
 
 Each trade carries its share of the bill on `Trade::financing_cost`, already
 subtracted from `Trade::pnl`, and the run totals it as
-`PerformanceMetrics::total_financing_cost`. Doubling leverage doubles gross P&L
+`PerformanceMetrics::total_financing_cost`, including what a position left open
+at the end has accrued. Doubling leverage doubles gross P&L
 but pays borrowing costs out of it, so a thin edge can turn negative on the way
 to net.
 
@@ -1076,7 +1081,9 @@ println!("Sharpe p50:   {:.2}", mc.sharpe_ratio.p50);
 
 ## Portfolio Backtesting
 
-Run the same strategy across multiple symbols with a shared capital pool. `PortfolioEngine` works on plain candle data, so this example runs as a real test:
+Run the same strategy across multiple symbols with a shared capital pool. `PortfolioEngine` works on plain candle data, so this example runs as a real test.
+
+It allocates from cash and never opens a margin loan, so a base config carrying `max_leverage`, `short_borrow_rate`, `margin_interest_rate`, or a non-default `position_sizing` is rejected rather than silently ignored. Run `BacktestEngine` per symbol for those.
 
 ```rust feature=backtesting
 use finance_query::backtesting::portfolio::{
@@ -1331,7 +1338,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     - **Overfitting** - Strategies that work perfectly on historical data often fail in live trading. Use simple rules and validate on multiple periods.
     - **Ignoring costs** - Commission and slippage significantly impact returns, especially for high-frequency strategies.
     - **Position sizing** - Default 100% capital allocation is aggressive. Consider using smaller position sizes.
-    - **Leverage** - Set `margin_interest_rate` and `short_borrow_rate` whenever `max_leverage` is above `1.0`. Free leverage makes any positive edge look twice as good, and a levered position can be liquidated by a margin call before the strategy's own stop fires.
+    - **Leverage** - Set `margin_interest_rate` and `short_borrow_rate` whenever `max_leverage` is above `1.0`. Free leverage makes any positive edge look twice as good, and a levered position can be liquidated by a margin call on a bar its own stop never reached.
     - **Survivor bias** - Backtesting on current index constituents ignores delisted/bankrupt companies.
     - **Data quality** - Yahoo Finance data may have gaps or inaccuracies. Validate important results.
 

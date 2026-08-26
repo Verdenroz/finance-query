@@ -111,42 +111,12 @@ impl BacktestEngine {
 
             if let Some(pos) = position.as_ref() {
                 // Recomputed after the dividend credit so the peak matches the
-                // ratio the margin call below measures.
+                // ratio the margin call measures.
                 let margin_equity =
                     cash + pos.current_value(candle.close) + pos.unreinvested_dividends;
                 let exposure = pos.quantity * candle.close;
                 if margin_equity > 0.0 && exposure > max_leverage_used * margin_equity {
                     max_leverage_used = exposure / margin_equity;
-                }
-            }
-
-            if margin_enabled
-                && let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle)
-            {
-                let fill_price = margin_signal.price;
-                let executed = self.close_position_at(
-                    &mut position,
-                    &mut cash,
-                    &mut trades,
-                    candle,
-                    fill_price,
-                    &margin_signal,
-                );
-
-                signals.push(SignalRecord {
-                    timestamp: candle.timestamp,
-                    price: fill_price,
-                    direction: SignalDirection::Exit,
-                    strength: 1.0,
-                    reason: margin_signal.reason.clone(),
-                    executed,
-                    tags: margin_signal.tags.clone(),
-                });
-
-                if executed {
-                    hwm = None;
-                    extremes = None;
-                    continue;
                 }
             }
 
@@ -180,6 +150,39 @@ impl BacktestEngine {
                     hwm = None; // Reset HWM when position is closed
                     extremes = None;
                     continue; // Skip strategy signal this bar
+                }
+            }
+
+            // Runs after the stops: a stop fills intrabar, while the maintenance
+            // check is measured on the close, so a bar that trips both filled the
+            // stop first.
+            if margin_enabled
+                && let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle)
+            {
+                let fill_price = margin_signal.price;
+                let executed = self.close_position_at(
+                    &mut position,
+                    &mut cash,
+                    &mut trades,
+                    candle,
+                    fill_price,
+                    &margin_signal,
+                );
+
+                signals.push(SignalRecord {
+                    timestamp: candle.timestamp,
+                    price: fill_price,
+                    direction: SignalDirection::Exit,
+                    strength: 1.0,
+                    reason: margin_signal.reason.clone(),
+                    executed,
+                    tags: margin_signal.tags.clone(),
+                });
+
+                if executed {
+                    hwm = None;
+                    extremes = None;
+                    continue;
                 }
             }
 
