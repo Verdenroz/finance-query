@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::backtesting::config::BacktestConfig;
+use crate::backtesting::config::{BacktestConfig, PositionSizing};
 use crate::backtesting::error::{BacktestError, Result};
 
 /// Controls how capital is divided among symbols when opening new positions.
@@ -125,6 +125,40 @@ impl PortfolioConfig {
             ));
         }
 
+        self.reject_unsupported_base()?;
+
+        Ok(())
+    }
+
+    /// Reject base settings the portfolio engine does not implement.
+    ///
+    /// It allocates from cash and never opens a margin loan, so accepting these
+    /// would return unlevered, financing-free results under a config that asked
+    /// for the opposite. Run per-symbol [`BacktestEngine`] for those.
+    ///
+    /// [`BacktestEngine`]: crate::backtesting::BacktestEngine
+    fn reject_unsupported_base(&self) -> Result<()> {
+        if self.base.max_leverage > 1.0 {
+            return Err(BacktestError::invalid_param(
+                "max_leverage",
+                "portfolio backtests are unlevered; run BacktestEngine per symbol",
+            ));
+        }
+
+        if self.base.short_borrow_rate > 0.0 || self.base.margin_interest_rate > 0.0 {
+            return Err(BacktestError::invalid_param(
+                "short_borrow_rate/margin_interest_rate",
+                "portfolio backtests do not accrue financing; run BacktestEngine per symbol",
+            ));
+        }
+
+        if !matches!(self.base.position_sizing, PositionSizing::FixedFraction) {
+            return Err(BacktestError::invalid_param(
+                "position_sizing",
+                "portfolio backtests size from the rebalance mode; only FixedFraction applies",
+            ));
+        }
+
         Ok(())
     }
 
@@ -173,6 +207,31 @@ mod tests {
     fn test_default_config_validates() {
         let config = PortfolioConfig::default();
         assert!(config.validate(1).is_ok());
+    }
+
+    #[test]
+    fn test_unsupported_base_settings_are_rejected() {
+        let with_base = |base: BacktestConfig| PortfolioConfig::new(base).validate(1);
+
+        let levered = BacktestConfig::builder().max_leverage(2.0).build().unwrap();
+        assert!(with_base(levered).is_err());
+
+        let financed = BacktestConfig::builder()
+            .short_borrow_rate(0.05)
+            .build()
+            .unwrap();
+        assert!(with_base(financed).is_err());
+
+        let sized = BacktestConfig::builder()
+            .position_sizing(PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 20,
+            })
+            .build()
+            .unwrap();
+        assert!(with_base(sized).is_err());
+
+        assert!(with_base(BacktestConfig::default()).is_ok());
     }
 
     #[test]
