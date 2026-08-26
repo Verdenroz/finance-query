@@ -16,6 +16,7 @@ pub(super) struct TradeStats {
     pub(super) largest_win: f64,
     pub(super) largest_loss: f64,
     pub(super) total_commission: f64,
+    pub(super) total_financing_cost: f64,
     pub(super) total_dividend_income: f64,
     pub(super) winning_returns: Vec<f64>,
     pub(super) losing_returns: Vec<f64>,
@@ -37,6 +38,7 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
         largest_win: 0.0,
         largest_loss: 0.0,
         total_commission: 0.0,
+        total_financing_cost: 0.0,
         total_dividend_income: 0.0,
         winning_returns: Vec::new(),
         losing_returns: Vec::new(),
@@ -63,6 +65,7 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
         stats.total_return_sum += t.return_pct;
         stats.total_duration += t.duration_secs();
         stats.total_commission += t.commission;
+        stats.total_financing_cost += t.financing_cost;
         stats.total_dividend_income += t.dividend_income;
         stats.all_returns.push(t.return_pct);
     }

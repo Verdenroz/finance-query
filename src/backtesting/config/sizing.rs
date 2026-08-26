@@ -88,13 +88,20 @@ impl BacktestConfig {
     ///
     /// [`commission_fn`]: Self::commission_fn
     pub fn calculate_position_size(&self, available_capital: f64, price: f64) -> f64 {
-        self.size_from_fraction(available_capital, price, self.position_size_pct)
+        self.size_from_fraction(
+            available_capital,
+            price,
+            self.position_size_pct * self.max_leverage,
+        )
     }
 
     /// Calculate position size under the active [`PositionSizing`] scheme.
     ///
-    /// The scheme's fraction is clamped to [`position_size_pct`], so a scheme
-    /// reduces exposure within the configured risk budget and never exceeds it.
+    /// The scheme's fraction is clamped to [`position_size_pct`] and then scaled
+    /// by [`max_leverage`], so a scheme reduces exposure within the configured
+    /// risk budget and never exceeds it.
+    ///
+    /// [`max_leverage`]: Self::max_leverage
     /// `price` carries the same fully-adjusted requirement as
     /// [`calculate_position_size`].
     ///
@@ -140,7 +147,7 @@ impl BacktestConfig {
             }
         };
 
-        base.clamp(0.0, self.position_size_pct)
+        base.clamp(0.0, self.position_size_pct) * self.max_leverage
     }
 
     /// Bars of history the active [`PositionSizing`] scheme needs before it can

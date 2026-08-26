@@ -274,6 +274,7 @@ mod tests {
             max_consecutive_wins: 0,
             max_consecutive_losses: 0,
             total_commission: 0.0,
+            total_financing_cost: 0.0,
             long_trades: 1,
             short_trades: 0,
             total_signals: 1,

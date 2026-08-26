@@ -110,6 +110,14 @@ pub struct Position {
     /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
     #[serde(default)]
     pub bracket_trailing_stop_pct: Option<f64>,
+
+    /// Cost of borrowed capital accrued so far while this position has been
+    /// open: short borrow fees, margin interest, or both.
+    ///
+    /// Already debited from cash as it accrued, so P&L subtracts it without a
+    /// second cash movement.
+    #[serde(default)]
+    pub financing_cost_accrued: f64,
 }
 
 impl Position {
@@ -162,6 +170,7 @@ impl Position {
             bracket_stop_loss_pct,
             bracket_take_profit_pct,
             bracket_trailing_stop_pct,
+            financing_cost_accrued: 0.0,
         }
     }
 
@@ -184,6 +193,13 @@ impl Position {
         }
     }
 
+    /// Add a bar's cost of borrowed capital to this position.
+    pub(crate) fn accrue_financing_cost(&mut self, fee: f64) {
+        if fee > 0.0 {
+            self.financing_cost_accrued += fee;
+        }
+    }
+
     /// Calculate unrealized P&L at given price (before exit commission)
     pub fn unrealized_pnl(&self, current_price: f64) -> f64 {
         let initial_value = self.entry_price * self.entry_quantity;
@@ -201,6 +217,7 @@ impl Position {
             }
         };
         gross_pnl - self.entry_commission - self.entry_transaction_tax + self.unreinvested_dividends
+            - self.financing_cost_accrued
     }
 
     /// Calculate unrealized return percentage
@@ -333,6 +350,7 @@ impl Position {
         let unreinvested = self.unreinvested_dividends * fraction;
         let entry_comm_slice = self.entry_commission * fraction;
         let entry_tax_slice = self.entry_transaction_tax * fraction;
+        let financing_slice = self.financing_cost_accrued * fraction;
 
         // Reduce the open position; keep entry_quantity in sync with quantity so
         // close_with_tax computes the correct cost basis for the remainder.
@@ -342,6 +360,7 @@ impl Position {
         self.unreinvested_dividends -= unreinvested;
         self.entry_commission -= entry_comm_slice;
         self.entry_transaction_tax -= entry_tax_slice;
+        self.financing_cost_accrued -= financing_slice;
 
         let gross_pnl = match self.side {
             PositionSide::Long => (exit_price - self.entry_price) * qty_closed,
@@ -350,7 +369,7 @@ impl Position {
         let partial_commission = entry_comm_slice + commission;
         let partial_tax = entry_tax_slice + exit_tax;
 
-        let pnl = gross_pnl - partial_commission - partial_tax + unreinvested;
+        let pnl = gross_pnl - partial_commission - partial_tax + unreinvested - financing_slice;
         let entry_value = self.entry_price * qty_closed;
         let return_pct = if entry_value > 0.0 {
             (pnl / entry_value) * 100.0
@@ -375,6 +394,7 @@ impl Position {
             return_pct,
             dividend_income: div_income,
             unreinvested_dividends: unreinvested,
+            financing_cost: financing_slice,
             entry_signal: self.entry_signal.clone(),
             exit_signal: signal,
             tags: self.entry_signal.tags.clone(),
@@ -422,8 +442,9 @@ impl Position {
             PositionSide::Long => exit_value - initial_value,
             PositionSide::Short => initial_value - exit_value,
         };
-        let pnl =
-            gross_pnl - total_commission - total_transaction_tax + self.unreinvested_dividends;
+        let pnl = gross_pnl - total_commission - total_transaction_tax
+            + self.unreinvested_dividends
+            - self.financing_cost_accrued;
 
         let entry_value = self.entry_price * self.entry_quantity;
         let return_pct = if entry_value > 0.0 {
@@ -446,6 +467,7 @@ impl Position {
             return_pct,
             dividend_income: self.dividend_income,
             unreinvested_dividends: self.unreinvested_dividends,
+            financing_cost: self.financing_cost_accrued,
             tags: self.entry_signal.tags.clone(),
             entry_signal: self.entry_signal,
             exit_signal,
@@ -506,6 +528,11 @@ pub struct Trade {
     /// Used internally for correct cash-accounting.
     #[serde(default)]
     pub unreinvested_dividends: f64,
+
+    /// Cost of borrowed capital over the life of the position, already
+    /// subtracted from [`pnl`](Self::pnl).
+    #[serde(default)]
+    pub financing_cost: f64,
 
     /// Signal that triggered entry
     pub entry_signal: Signal,

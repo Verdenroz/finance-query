@@ -4,6 +4,7 @@ use crate::backtesting::signal::{Signal, SignalDirection};
 use crate::models::chart::Candle;
 
 use super::BacktestEngine;
+use super::margin;
 
 // The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
 // lives in a sibling module and `[profile.bench]` builds without LTO.
@@ -99,8 +100,8 @@ impl BacktestEngine {
             commission
         };
 
-        if total_cost > *cash {
-            return false; // Not enough cash
+        if total_cost > margin::add_buying_power(*cash, pos, candle.open, &self.config) {
+            return false; // Not enough buying power
         }
 
         if is_long {
@@ -216,12 +217,18 @@ impl BacktestEngine {
         // Tax on buy orders only: long entries are buys
         let entry_tax = self.config.calculate_transaction_tax(entry_value, is_long);
 
+        let buying_power = margin::entry_buying_power(*cash, &self.config);
         if is_long {
-            if entry_value + commission + entry_tax > *cash {
-                return false; // Not enough capital including commission and tax
+            if entry_value + commission + entry_tax > buying_power {
+                return false; // Not enough buying power including commission and tax
             }
-        } else if commission > *cash {
-            return false; // Not enough cash to pay entry commission
+        } else {
+            if commission > *cash {
+                return false; // Not enough cash to pay entry commission
+            }
+            if entry_value > buying_power {
+                return false; // Notional exceeds leveraged buying power
+            }
         }
 
         let side = if is_long {
@@ -614,5 +621,36 @@ mod tests {
             result.final_equity,
             expected
         );
+    }
+
+    fn entry_quantity(allow_short: bool, max_leverage: f64) -> f64 {
+        let candles = make_candles(&[100.0; 10]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(allow_short)
+            .max_leverage(max_leverage)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let engine = BacktestEngine::new(config);
+        let result = if allow_short {
+            engine.run("TEST", &candles, EnterShortHold).unwrap()
+        } else {
+            engine.run("TEST", &candles, EnterLongHold).unwrap()
+        };
+        result.open_position.unwrap().quantity
+    }
+
+    #[test]
+    fn test_short_entry_unchanged_at_default_leverage() {
+        assert!((entry_quantity(true, 1.0) - 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_leverage_scales_entry_notional() {
+        assert!((entry_quantity(false, 2.0) - 2.0 * entry_quantity(false, 1.0)).abs() < 1e-9);
+        assert!((entry_quantity(true, 2.0) - 2.0 * entry_quantity(true, 1.0)).abs() < 1e-9);
     }
 }
