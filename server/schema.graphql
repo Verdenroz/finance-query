@@ -1154,6 +1154,21 @@ type GqlFinancialsBatch {
 	errors: [GqlBatchError!]!
 }
 
+"""
+Mirrors `finance_query::ForexQuote`.
+"""
+type GqlForexQuote {
+	symbol: String!
+	baseCurrency: String
+	quoteCurrency: String
+	bid: Float
+	ask: Float
+	price: Float
+	change: Float
+	changePercent: Float
+	timestamp: Int
+}
+
 enum GqlFrequency {
 	ANNUAL
 	QUARTERLY
@@ -3953,6 +3968,11 @@ type QueryRoot {
 		"""
 		after: String
 	): GqlNewsConnection!
+	"""
+	A currency pair's current exchange rate, provider-routed via
+	`Providers::forex()`.
+	"""
+	forex(from: String!, to: String!): GqlForexQuote!
 	"""
 	Market-wide forex news (currently FMP only, requires `FMP_API_KEY`).
 	"""

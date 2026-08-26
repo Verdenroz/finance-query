@@ -736,6 +736,27 @@ statements plus any per-symbol fetch errors."""
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlForexQuote:
+    """Mirrors `finance_query::ForexQuote`."""
+
+    symbol: str
+    ask: float | None = None
+    base_currency: str | None = None
+    bid: float | None = None
+    change: float | None = None
+    change_percent: float | None = None
+    price: float | None = None
+    quote_currency: str | None = None
+    timestamp: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "base_currency": "baseCurrency",
+        "change_percent": "changePercent",
+        "quote_currency": "quoteCurrency",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlFormattedObject:
     """The `{raw, fmt, longFmt}` wrapper as it reaches the wire under `format=both`."""
 
