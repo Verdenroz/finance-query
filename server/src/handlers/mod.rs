@@ -152,6 +152,8 @@ pub(crate) fn api_routes() -> Router {
         )
         // GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
         .route("/financials", get(financials::get_batch_financials))
+        // GET /v2/forex/{from}/{to}
+        .route("/forex/{from}/{to}", get(forex::get_forex))
         // GET /v2/forex/news?limit=<u32> (currently FMP only)
         .route("/forex/news", get(forex::get_forex_news))
         // GET /v2/fred/series/{id}

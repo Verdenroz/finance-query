@@ -930,6 +930,21 @@ class Client:
             into=list[models.GqlFinancialLineItem],
         )
 
+    def get_forex(
+        self,
+        from_: str,
+        to: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlForexQuote:
+        """Get a currency pair's current exchange rate"""
+        return self._transport.request(
+            "GET",
+            f"/v2/forex/{path_seg(from_)}/{path_seg(to)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlForexQuote,
+        )
+
     def get_forex_news(
         self,
         *,
@@ -2520,6 +2535,21 @@ class AsyncClient:
             f"/v2/financials/{path_seg(symbol)}/{path_seg(statement)}",
             query=query_of({"fields": fields, "frequency": frequency, "metrics": metrics}),
             into=list[models.GqlFinancialLineItem],
+        )
+
+    async def get_forex(
+        self,
+        from_: str,
+        to: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlForexQuote:
+        """Get a currency pair's current exchange rate"""
+        return await self._transport.request(
+            "GET",
+            f"/v2/forex/{path_seg(from_)}/{path_seg(to)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlForexQuote,
         )
 
     async def get_forex_news(

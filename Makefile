@@ -102,8 +102,8 @@ CAPTURE_CHECK_PATHS := docs/library/backtesting.md docs/library/commodities.md \
 # pass) since it documents the same crate rustdoc already extracted for the
 # reference/perf pages above — no need to pay for a third redundant pass.
 define REGEN_DOCS_ROUTES
-$(SOOTHFAST) docs routes -p finance-query-$(1) --target soothfast-routes --out docs/server
-$(SOOTHFAST) spec html -p finance-query-$(1) --target soothfast-routes --out docs/server/api
+$(SOOTHFAST) docs routes -p finance-query-$(1) --target soothfast-routes --out docs/server $(2)
+$(SOOTHFAST) spec html -p finance-query-$(1) --target soothfast-routes --out docs/server/api $(2)
 endef
 
 define REGEN_DOCS_PAGES_LIB
@@ -122,7 +122,7 @@ endef
 
 sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
 	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes
-	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes
+	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --features backtesting
 	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes
 
 # The reconciliation-status and spec-html pages are generated and gitignored,
@@ -136,7 +136,7 @@ ifneq ($(filter all server,$(PAGES)),)
 	$(call REGEN_DOCS_ROUTES,server)
 endif
 ifneq ($(filter all mcp,$(PAGES)),)
-	$(call REGEN_DOCS_ROUTES,mcp)
+	$(call REGEN_DOCS_ROUTES,mcp,--features backtesting)
 endif
 ifneq ($(filter all lib,$(PAGES)),)
 	$(REGEN_DOCS_PAGES_LIB)

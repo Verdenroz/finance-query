@@ -532,6 +532,31 @@
       }
     },
     {
+      "name": "get_forex",
+      "description": "A currency pair's current exchange rate, provider-routed (Capability::FOREX).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "from": {
+            "description": "Base currency code (e.g. \"USD\")",
+            "type": "string"
+          },
+          "to": {
+            "description": "Quote currency code (e.g. \"EUR\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      }
+    },
+    {
       "name": "get_fred_series",
       "description": "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var.",
       "inputSchema": {
@@ -1726,6 +1751,137 @@
             ]
           }
         }
+      }
+    },
+    {
+      "name": "run_backtest",
+      "description": "Run a backtest of a prebuilt trading strategy against a symbol's historical data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "allow_short": {
+            "description": "Allow short selling (default: false)",
+            "type": "boolean"
+          },
+          "commission_pct": {
+            "description": "Commission as a fraction of trade value (default: 0.001)",
+            "type": "number",
+            "format": "double"
+          },
+          "equity_cursor": {
+            "description": "Opaque continuation token for the equity curve from a previous response's `equityCurve.pageInfo.endCursor`",
+            "type": "string"
+          },
+          "equity_limit": {
+            "description": "Maximum equity-curve points per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "exit_at_middle": {
+            "description": "Exit at middle band/channel instead of the opposite band (bollinger_mean_reversion, donchian_breakout)",
+            "type": "boolean"
+          },
+          "fast_period": {
+            "description": "Fast SMA/EMA period (sma_crossover, macd_signal)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "initial_capital": {
+            "description": "Starting portfolio capital (default: 10000.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "interval": {
+            "description": "Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)",
+            "type": "string"
+          },
+          "multiplier": {
+            "description": "SuperTrend ATR multiplier (supertrend_follow only, default: 3.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "overbought": {
+            "description": "RSI overbought threshold (rsi_reversal only, default: 70.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "oversold": {
+            "description": "RSI oversold threshold (rsi_reversal only, default: 30.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "period": {
+            "description": "Generic lookback period (rsi_reversal, bollinger_mean_reversion, supertrend_follow, donchian_breakout)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "position_size_pct": {
+            "description": "Fraction of available capital used per trade (default: 1.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "range": {
+            "description": "Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1y)",
+            "type": "string"
+          },
+          "signal_period": {
+            "description": "MACD signal-line period (macd_signal only, default: 9)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "slippage_pct": {
+            "description": "Slippage as a fraction of price (default: 0.001)",
+            "type": "number",
+            "format": "double"
+          },
+          "slow_period": {
+            "description": "Slow SMA/EMA period (sma_crossover, macd_signal)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "std_dev": {
+            "description": "Bollinger Bands standard-deviation multiplier (bollinger_mean_reversion only, default: 2.0)",
+            "type": "number",
+            "format": "double"
+          },
+          "stop_loss_pct": {
+            "description": "Stop-loss as a fraction of entry price; auto-exit if loss exceeds this",
+            "type": "number",
+            "format": "double"
+          },
+          "strategy": {
+            "description": "Prebuilt strategy: sma_crossover | rsi_reversal | macd_signal | bollinger_mean_reversion | supertrend_follow | donchian_breakout",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol (e.g., \"AAPL\")",
+            "type": "string"
+          },
+          "take_profit_pct": {
+            "description": "Take-profit as a fraction of entry price; auto-exit if profit exceeds this",
+            "type": "number",
+            "format": "double"
+          },
+          "trades_cursor": {
+            "description": "Opaque continuation token for the trade list from a previous response's `trades.pageInfo.endCursor`",
+            "type": "string"
+          },
+          "trades_limit": {
+            "description": "Maximum trades per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "strategy",
+          "symbol"
+        ]
       }
     },
     {

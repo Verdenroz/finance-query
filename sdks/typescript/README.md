@@ -101,6 +101,7 @@ Requires Node 18+.
 - `getFeeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `getFilingSections` — `GET /v2/filings/{symbol}/sections`: Get sectioned text of one SEC filing
 - `getFinancials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
+- `getForex` — `GET /v2/forex/{from}/{to}`: Get a currency pair's current exchange rate
 - `getForexNews` — `GET /v2/forex/news`: Market-wide forex news
 - `getFredSeries` — `GET /v2/fred/series/{id}`: FRED time series
 - `getFredTreasuryYields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve

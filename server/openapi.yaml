@@ -2249,6 +2249,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/forex/{from}/{to}":
+    get:
+      operationId: getForex
+      summary: "Get a currency pair's current exchange rate"
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: from
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlForexQuote"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/fred/series/{id}":
     get:
       operationId: getFredSeries
@@ -5531,6 +5587,13 @@ components:
         metrics:
           description: "Comma-separated list of metric names to include in the statement (e.g. \"TotalRevenue,NetIncome\")"
           type: string
+    ForexQuery:
+      description: "Query parameters for `GET /v2/forex/{from}/{to}`."
+      type: object
+      properties:
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
     FredSeriesQuery:
       description: "Query parameters for `GET /v2/fred/series/{id}`."
       type: object
@@ -6605,6 +6668,36 @@ components:
       required:
         - financials
         - errors
+    GqlForexQuote:
+      description: "Mirrors `finance_query::ForexQuote`."
+      type: object
+      properties:
+        ask:
+          type: number
+          format: double
+        baseCurrency:
+          type: string
+        bid:
+          type: number
+          format: double
+        change:
+          type: number
+          format: double
+        changePercent:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        quoteCurrency:
+          type: string
+        symbol:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - symbol
     GqlFormattedObject:
       description: "The `{raw, fmt, longFmt}` wrapper as it reaches the wire under `format=both`."
       type: object

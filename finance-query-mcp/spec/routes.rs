@@ -262,6 +262,19 @@ fn route_mcp_get_commodity() {}
 )]
 fn route_mcp_get_futures() {}
 
+/// A currency pair's current exchange rate, provider-routed (Capability::FOREX).
+///
+/// Implements `tools::FinanceTools::get_forex`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_forex",
+    method = "TOOL",
+    path = "get_forex",
+    params = "ForexParams"
+)]
+fn route_mcp_get_forex() {}
+
 /// Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only).
 ///
 /// Implements `tools::FinanceTools::get_index_constituents`.
@@ -573,3 +586,17 @@ fn route_mcp_get_treasury_yields() {}
     params = "CryptoParams"
 )]
 fn route_mcp_get_crypto() {}
+
+/// Run a backtest of a prebuilt trading strategy against a symbol's historical data.
+///
+/// Implements `tools::FinanceTools::run_backtest`.
+#[cfg(feature = "backtesting")]
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "run_backtest",
+    method = "TOOL",
+    path = "run_backtest",
+    params = "RunBacktestParams"
+)]
+fn route_mcp_run_backtest() {}

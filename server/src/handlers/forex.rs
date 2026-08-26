@@ -1,20 +1,50 @@
-use async_graphql::Variables;
+use async_graphql::{Name, Variables};
 use axum::{
-    extract::{Extension, Query},
+    extract::{Extension, Path, Query},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
 use finance_query_server::graphql::{
     self,
-    fields::{GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, unwrap_field},
+    fields::{
+        GQL_FOREX_QUOTE_VALID_FIELDS, GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, unwrap_field,
+    },
     pagination::build_connection_selection,
 };
-use finance_query_server::params::MarketNewsQuery;
+use finance_query_server::params::{ForexQuery, MarketNewsQuery};
 use tracing::info;
 
 use super::gql_bridge::{
-    build_rest_composite_selection, connection_args, execute_gql_rest, unwrap_connection,
+    build_rest_composite_selection, build_rest_selection, connection_args, execute_gql_rest,
+    unwrap_connection,
 };
+
+/// GET /v2/forex/{from}/{to}
+///
+/// A currency pair's current exchange rate, provider-routed via
+/// `Providers::forex()`.
+pub(crate) async fn get_forex(
+    Extension(schema): Extension<graphql::FinanceSchema>,
+    Path((from, to)): Path<(String, String)>,
+    Query(params): Query<ForexQuery>,
+) -> impl IntoResponse {
+    let selection = build_rest_selection(params.fields.as_deref(), GQL_FOREX_QUOTE_VALID_FIELDS);
+    let query = format!(
+        "query GetForex($from: String!, $to: String!) {{ forex(from: $from, to: $to) {selection} }}"
+    );
+    info!(
+        "Fetching forex quote for {}/{} (fields={:?})",
+        from, to, params.fields
+    );
+    let mut vars = Variables::default();
+    vars.insert(Name::new("from"), from.clone().into());
+    vars.insert(Name::new("to"), to.clone().into());
+    let data = match execute_gql_rest(&schema, &query, vars).await {
+        Ok(d) => d,
+        Err(resp) => return *resp,
+    };
+    (StatusCode::OK, Json(unwrap_field(data, "forex"))).into_response()
+}
 
 /// GET /v2/forex/news
 ///

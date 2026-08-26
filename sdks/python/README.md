@@ -97,6 +97,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_feeds` — `GET /v2/feeds`: RSS/Atom news feeds
 - `get_filing_sections` — `GET /v2/filings/{symbol}/sections`: Get sectioned text of one SEC filing
 - `get_financials` — `GET /v2/financials/{symbol}/{statement}`: Get financial statements
+- `get_forex` — `GET /v2/forex/{from}/{to}`: Get a currency pair's current exchange rate
 - `get_forex_news` — `GET /v2/forex/news`: Market-wide forex news
 - `get_fred_series` — `GET /v2/fred/series/{id}`: FRED time series
 - `get_fred_treasury_yields` — `GET /v2/fred/treasury-yields`: US Treasury yield curve

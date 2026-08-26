@@ -1,5 +1,25 @@
 use finance_query::{Frequency, Interval, StatementType, TimeRange};
 
+/// Parse a raw interval string, falling back to `1d` for unknown input.
+pub fn parse_interval(s: &str) -> Interval {
+    s.parse().unwrap_or(Interval::OneDay)
+}
+
+/// Parse a raw range string, falling back to `1mo` for unknown input.
+pub fn parse_range(s: &str) -> TimeRange {
+    s.parse().unwrap_or(TimeRange::OneMonth)
+}
+
+pub fn parse_statement_type(s: &str) -> Option<StatementType> {
+    s.parse().ok()
+}
+
+/// Fallible on purpose: silently defaulting an unrecognized frequency to
+/// `Annual` would mask typos, so invalid input must be rejected by the caller.
+pub fn parse_frequency(s: &str) -> Option<Frequency> {
+    s.parse().ok()
+}
+
 pub fn statement_to_gql(statement: StatementType) -> &'static str {
     match statement {
         StatementType::Income => "INCOME",

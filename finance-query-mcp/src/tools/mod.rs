@@ -1,4 +1,6 @@
 pub mod analysis;
+#[cfg(feature = "backtesting")]
+pub mod backtest;
 pub mod calendar;
 pub mod chart;
 pub mod commodity_futures;
@@ -124,6 +126,16 @@ pub struct CommodityParams {
 pub struct FuturesParams {
     /// Futures contract symbol (e.g. "ESM26" for E-mini S&P June 2026)
     pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ForexParams {
+    /// Base currency code (e.g. "USD")
+    pub from: String,
+    /// Quote currency code (e.g. "EUR")
+    pub to: String,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
 }
@@ -350,6 +362,65 @@ pub struct CryptoParams {
     pub limit: Option<u32>,
     /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
     pub cursor: Option<String>,
+}
+
+#[cfg(feature = "backtesting")]
+#[derive(Deserialize, JsonSchema)]
+pub struct RunBacktestParams {
+    /// Stock ticker symbol (e.g., "AAPL")
+    pub symbol: String,
+    /// Prebuilt strategy: sma_crossover | rsi_reversal | macd_signal | bollinger_mean_reversion | supertrend_follow | donchian_breakout
+    pub strategy: String,
+    /// Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)
+    pub interval: Option<String>,
+    /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1y)
+    pub range: Option<String>,
+
+    // ── Strategy parameters (only fields relevant to `strategy` are used) ──
+    /// Fast SMA/EMA period (sma_crossover, macd_signal)
+    pub fast_period: Option<u32>,
+    /// Slow SMA/EMA period (sma_crossover, macd_signal)
+    pub slow_period: Option<u32>,
+    /// Generic lookback period (rsi_reversal, bollinger_mean_reversion, supertrend_follow, donchian_breakout)
+    pub period: Option<u32>,
+    /// MACD signal-line period (macd_signal only, default: 9)
+    pub signal_period: Option<u32>,
+    /// Bollinger Bands standard-deviation multiplier (bollinger_mean_reversion only, default: 2.0)
+    pub std_dev: Option<f64>,
+    /// SuperTrend ATR multiplier (supertrend_follow only, default: 3.0)
+    pub multiplier: Option<f64>,
+    /// RSI oversold threshold (rsi_reversal only, default: 30.0)
+    pub oversold: Option<f64>,
+    /// RSI overbought threshold (rsi_reversal only, default: 70.0)
+    pub overbought: Option<f64>,
+    /// Exit at middle band/channel instead of the opposite band (bollinger_mean_reversion, donchian_breakout)
+    pub exit_at_middle: Option<bool>,
+
+    // ── Backtest configuration (all optional; defaults match the library's) ──
+    /// Starting portfolio capital (default: 10000.0)
+    pub initial_capital: Option<f64>,
+    /// Commission as a fraction of trade value (default: 0.001)
+    pub commission_pct: Option<f64>,
+    /// Slippage as a fraction of price (default: 0.001)
+    pub slippage_pct: Option<f64>,
+    /// Fraction of available capital used per trade (default: 1.0)
+    pub position_size_pct: Option<f64>,
+    /// Allow short selling (default: false)
+    pub allow_short: Option<bool>,
+    /// Stop-loss as a fraction of entry price; auto-exit if loss exceeds this
+    pub stop_loss_pct: Option<f64>,
+    /// Take-profit as a fraction of entry price; auto-exit if profit exceeds this
+    pub take_profit_pct: Option<f64>,
+
+    // ── Pagination (equity curve and trade list paginate independently) ──
+    /// Maximum equity-curve points per page; omitted = curated default (25)
+    pub equity_limit: Option<u32>,
+    /// Opaque continuation token for the equity curve from a previous response's `equityCurve.pageInfo.endCursor`
+    pub equity_cursor: Option<String>,
+    /// Maximum trades per page; omitted = curated default (25)
+    pub trades_limit: Option<u32>,
+    /// Opaque continuation token for the trade list from a previous response's `trades.pageInfo.endCursor`
+    pub trades_cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -687,8 +758,19 @@ impl ServerHandler for FinanceTools {
 #[tool_router(router = tool_router)]
 impl FinanceTools {
     pub fn new(schema: FinanceSchema) -> Self {
+        #[allow(unused_mut)]
+        let mut tool_router = Self::tool_router();
+        // Each feature-gated tool group lives in its own `#[tool_router]`-annotated
+        // impl block (see below) with its own named router, merged in here —
+        // `#[tool_router]` naively scans every `#[tool]`-attributed method in its
+        // impl block at the token level, ignoring any `#[cfg]` on the method
+        // itself, so gating has to happen at the impl-block boundary instead.
+        #[cfg(feature = "backtesting")]
+        {
+            tool_router += Self::backtest_tool_router();
+        }
         Self {
-            tool_router: Self::tool_router(),
+            tool_router,
             schema,
         }
     }
@@ -1296,6 +1378,30 @@ impl FinanceTools {
     }
 }
 
+// Each feature-gated tool group below lives in its own `#[tool_router]`
+// impl block with a distinctly-named router (merged into `Self::new`'s
+// `tool_router` above). `#[tool_router]` scans every `#[tool]`-attributed
+// method in ITS OWN impl block at the raw-token level, before any `#[cfg]`
+// on that method is evaluated — so putting a `#[cfg(feature = ...)]`
+// method directly inside the main router-producing impl block above (as a
+// sibling to always-on tools) does NOT prevent it from being referenced by
+// the generated router when the feature is off; the whole impl block must
+// be the cfg boundary instead.
+
+#[cfg(feature = "backtesting")]
+#[tool_router(router = backtest_tool_router)]
+impl FinanceTools {
+    #[tool(
+        description = "Run a backtest of a prebuilt trading strategy (SMA/RSI/MACD/Bollinger/SuperTrend/Donchian) against a symbol's historical data. Returns summary performance metrics, a paginated equity curve, and a paginated trade list."
+    )]
+    async fn run_backtest(
+        &self,
+        p: Parameters<RunBacktestParams>,
+    ) -> Result<CallToolResult, McpError> {
+        backtest::run_backtest(p.0).await
+    }
+}
+
 // ── Param-struct deserialization ─────────────────────────────────────────────
 //
 // Every `#[tool]` param struct must (a) deserialize when only its required
@@ -1531,6 +1637,50 @@ mod param_tests {
         assert_eq!(p.fields, None);
         assert_eq!(p.limit, None);
         assert_eq!(p.cursor, None);
+    }
+
+    #[cfg(feature = "backtesting")]
+    #[test]
+    fn run_backtest_params_requires_symbol_and_strategy() {
+        let err = serde_json::from_value::<RunBacktestParams>(json!({"symbol": "AAPL"}));
+        assert!(err.is_err());
+    }
+
+    #[cfg(feature = "backtesting")]
+    #[test]
+    fn run_backtest_params_defaults_optionals_to_none() {
+        let p: RunBacktestParams = serde_json::from_value(json!({
+            "symbol": "AAPL", "strategy": "sma_crossover"
+        }))
+        .unwrap();
+        assert_eq!(p.symbol, "AAPL");
+        assert_eq!(p.strategy, "sma_crossover");
+        assert_eq!(p.interval, None);
+        assert_eq!(p.range, None);
+        assert_eq!(p.fast_period, None);
+        assert_eq!(p.position_size_pct, None);
+        assert_eq!(p.equity_limit, None);
+        assert_eq!(p.equity_cursor, None);
+        assert_eq!(p.trades_limit, None);
+        assert_eq!(p.trades_cursor, None);
+    }
+
+    #[cfg(feature = "backtesting")]
+    #[test]
+    fn run_backtest_params_preserves_all_fields() {
+        let p: RunBacktestParams = serde_json::from_value(json!({
+            "symbol": "AAPL", "strategy": "sma_crossover", "interval": "1d", "range": "1y",
+            "fast_period": 10, "slow_period": 20, "position_size_pct": 0.5,
+            "equity_limit": 10, "equity_cursor": "5", "trades_limit": 5, "trades_cursor": "2"
+        }))
+        .unwrap();
+        assert_eq!(p.fast_period, Some(10));
+        assert_eq!(p.slow_period, Some(20));
+        assert_eq!(p.position_size_pct, Some(0.5));
+        assert_eq!(p.equity_limit, Some(10));
+        assert_eq!(p.equity_cursor, Some("5".to_string()));
+        assert_eq!(p.trades_limit, Some(5));
+        assert_eq!(p.trades_cursor, Some("2".to_string()));
     }
 
     #[test]

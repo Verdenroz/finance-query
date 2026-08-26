@@ -581,6 +581,12 @@ export interface GetFinancialsOptions {
   metrics?: string;
 }
 
+/** Query parameters for {@link Client.getForex}. */
+export interface GetForexOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
 /** Query parameters for {@link Client.getForexNews}. */
 export interface GetForexNewsOptions {
   /** Comma-separated list of fields to include in response */
@@ -1382,6 +1388,13 @@ export class Client {
   /** Get financial statements */
   getFinancials(symbol: string, statement: models.StatementType, options: GetFinancialsOptions = {}): Promise<models.GqlFinancialLineItem[]> {
     return this.transport.request<models.GqlFinancialLineItem[]>("GET", `/v2/financials/${pathSeg(symbol)}/${pathSeg(statement)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Get a currency pair's current exchange rate */
+  getForex(from: string, to: string, options: GetForexOptions = {}): Promise<models.GqlForexQuote> {
+    return this.transport.request<models.GqlForexQuote>("GET", `/v2/forex/${pathSeg(from)}/${pathSeg(to)}`, {
       query: queryOf(options),
     });
   }

@@ -476,6 +476,19 @@ export interface GqlFinancialsBatch {
   financials: GqlSymbolFinancials[];
 }
 
+/** Mirrors `finance_query::ForexQuote`. */
+export interface GqlForexQuote {
+  ask?: number;
+  baseCurrency?: string;
+  bid?: number;
+  change?: number;
+  changePercent?: number;
+  price?: number;
+  quoteCurrency?: string;
+  symbol: string;
+  timestamp?: number;
+}
+
 /** The `{raw, fmt, longFmt}` wrapper as it reaches the wire under `format=both`. */
 export interface GqlFormattedObject {
   /** Human-readable rendering, e.g. `"182.50"` or `"3.50T"`. */
