@@ -110,6 +110,49 @@ impl GridSearch {
         S: Strategy + Send,
         F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,
     {
+        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
+        let (mut results, skipped_errors, total_combinations) =
+            self.evaluate_all(symbol, candles, config, factory)?;
+
+        sort_results_best_first(&mut results, metric);
+
+        if metric.score(&results[0].result).is_nan() {
+            return Err(BacktestError::invalid_param(
+                "metric",
+                "all parameter combinations produced NaN for the target metric",
+            ));
+        }
+
+        let strategy_name = results[0].result.strategy_name.clone();
+        let best = results[0].clone();
+        let n_evaluations = total_combinations;
+
+        Ok(OptimizationReport {
+            strategy_name,
+            total_combinations,
+            results,
+            best,
+            skipped_errors,
+            // GridSearch runs all combinations in parallel — no sequential ordering,
+            // so the convergence curve is meaningless and left empty.
+            convergence_curve: vec![],
+            n_evaluations,
+        })
+    }
+
+    /// Run every grid combination, returning the successful results, the count
+    /// skipped on unexpected errors, and the total combinations tried.
+    pub(super) fn evaluate_all<S, F>(
+        &self,
+        symbol: &str,
+        candles: &[Candle],
+        config: &BacktestConfig,
+        factory: F,
+    ) -> Result<(Vec<OptimizationResult>, usize, usize)>
+    where
+        S: Strategy + Send,
+        F: Fn(&HashMap<String, ParamValue>) -> S + Send + Sync,
+    {
         if self.params.is_empty() {
             return Err(BacktestError::invalid_param(
                 "params",
@@ -119,8 +162,6 @@ impl GridSearch {
 
         // Checked once here rather than inside every combination's backtest.
         validate_series_order(candles, &[])?;
-
-        let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
 
         let expanded: Vec<(&str, Vec<ParamValue>)> = self
             .params
@@ -147,7 +188,7 @@ impl GridSearch {
         }
 
         let skipped_errors = AtomicUsize::new(0);
-        let mut results: Vec<OptimizationResult> = combinations
+        let results: Vec<OptimizationResult> = combinations
             .into_par_iter()
             .filter_map(|params| {
                 let strategy = factory(&params);
@@ -175,30 +216,7 @@ impl GridSearch {
             ));
         }
 
-        sort_results_best_first(&mut results, metric);
-
-        if metric.score(&results[0].result).is_nan() {
-            return Err(BacktestError::invalid_param(
-                "metric",
-                "all parameter combinations produced NaN for the target metric",
-            ));
-        }
-
-        let strategy_name = results[0].result.strategy_name.clone();
-        let best = results[0].clone();
-        let n_evaluations = total_combinations;
-
-        Ok(OptimizationReport {
-            strategy_name,
-            total_combinations,
-            results,
-            best,
-            skipped_errors,
-            // GridSearch runs all combinations in parallel — no sequential ordering,
-            // so the convergence curve is meaningless and left empty.
-            convergence_curve: vec![],
-            n_evaluations,
-        })
+        Ok((results, skipped_errors, total_combinations))
     }
 }
 
