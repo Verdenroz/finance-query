@@ -189,6 +189,28 @@ impl Strategy for EnterScaleInExit {
     }
 }
 
+/// Strategy: enter short on bar 0, scale in on bar 1, hold.
+#[derive(Clone)]
+pub(super) struct EnterShortScaleIn;
+
+impl Strategy for EnterShortScaleIn {
+    fn name(&self) -> &str {
+        "EnterShortScaleIn"
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        vec![]
+    }
+
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        match ctx.index {
+            0 => Signal::short(ctx.timestamp(), ctx.close()),
+            1 if ctx.has_position() => Signal::scale_in(0.5, ctx.timestamp(), ctx.close()),
+            _ => Signal::hold(),
+        }
+    }
+}
+
 /// Strategy: enter long on bar 0, scale out 50% on bar 1, exit remainder on bar 2.
 #[derive(Clone)]
 pub(super) struct EnterScaleOutExit;
