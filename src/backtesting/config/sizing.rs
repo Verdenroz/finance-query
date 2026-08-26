@@ -1,6 +1,78 @@
 //! Position sizing: how much capital an entry commits.
 
+use serde::{Deserialize, Serialize};
+
 use super::BacktestConfig;
+
+/// How an entry's size is derived from available equity.
+///
+/// Every scheme emits a target exposure as a fraction of equity, bounded by
+/// [`BacktestConfig::position_size_pct`]. That field is the risk budget: a
+/// scheme reduces exposure within it and never exceeds it. When a scheme's
+/// inputs are unavailable it falls back to the budget itself.
+///
+/// Scale-in signals carry an explicit fraction of their own and are not sized
+/// by the active scheme.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub enum PositionSizing {
+    /// Commit [`BacktestConfig::position_size_pct`] of equity on every entry.
+    #[default]
+    FixedFraction,
+
+    /// Risk a fixed fraction of equity across an ATR-derived stop distance.
+    ///
+    /// Wider ranges produce smaller positions, holding currency risk per trade
+    /// roughly constant.
+    Atr {
+        /// Fraction of equity to risk if price moves `atr_multiple` ATRs against
+        /// the entry (0.0 - 1.0).
+        risk_pct: f64,
+        /// Lookback period for the ATR computation.
+        atr_period: usize,
+        /// Stop distance as a multiple of ATR.
+        atr_multiple: f64,
+    },
+
+    /// Scale exposure inversely to realized volatility.
+    VolatilityTarget {
+        /// Target per-bar volatility contribution as a fraction (`0.01` = 1%).
+        target_vol_pct: f64,
+        /// Trailing bars used to estimate realized volatility.
+        lookback: usize,
+    },
+
+    /// Size by a fraction of the Kelly-optimal bet implied by recent trades.
+    ///
+    /// A trade count is not a bar count, so unlike the other schemes this one
+    /// cannot extend the warmup period. Entries before the window holds both a
+    /// win and a loss fall back to the risk budget.
+    FractionalKelly {
+        /// Multiplier on the full Kelly fraction (`0.5` = half-Kelly).
+        kelly_fraction: f64,
+        /// Trailing fully-closed trades used to estimate win rate and payoff
+        /// ratio. Partial closes from `Signal::scale_out` are excluded, so one
+        /// entry contributes one observation.
+        lookback_trades: usize,
+    },
+}
+
+/// Market and trade-history inputs a [`PositionSizing`] scheme reads at entry.
+///
+/// A `None` field means the engine had no value to supply, and the scheme falls
+/// back to [`BacktestConfig::position_size_pct`].
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct SizingContext {
+    /// ATR at the entry bar.
+    pub atr: Option<f64>,
+    /// Realized per-bar return volatility over the scheme's lookback.
+    pub recent_volatility: Option<f64>,
+    /// Win rate over the trailing closed-trade window (0.0 - 1.0).
+    pub win_rate: Option<f64>,
+    /// Mean win divided by mean loss, both as absolute return fractions.
+    pub payoff_ratio: Option<f64>,
+}
 
 impl BacktestConfig {
     /// Calculate position size based on available capital.
@@ -16,7 +88,80 @@ impl BacktestConfig {
     ///
     /// [`commission_fn`]: Self::commission_fn
     pub fn calculate_position_size(&self, available_capital: f64, price: f64) -> f64 {
-        let capital_to_use = available_capital * self.position_size_pct;
+        self.size_from_fraction(available_capital, price, self.position_size_pct)
+    }
+
+    /// Calculate position size under the active [`PositionSizing`] scheme.
+    ///
+    /// The scheme's fraction is clamped to [`position_size_pct`], so a scheme
+    /// reduces exposure within the configured risk budget and never exceeds it.
+    /// `price` carries the same fully-adjusted requirement as
+    /// [`calculate_position_size`].
+    ///
+    /// [`position_size_pct`]: Self::position_size_pct
+    /// [`calculate_position_size`]: Self::calculate_position_size
+    pub fn calculate_position_size_with_context(
+        &self,
+        available_capital: f64,
+        price: f64,
+        ctx: &SizingContext,
+    ) -> f64 {
+        let fraction = self.sizing_fraction(price, ctx);
+        self.size_from_fraction(available_capital, price, fraction)
+    }
+
+    fn sizing_fraction(&self, price: f64, ctx: &SizingContext) -> f64 {
+        let base = match self.position_sizing {
+            PositionSizing::FixedFraction => self.position_size_pct,
+            PositionSizing::Atr {
+                risk_pct,
+                atr_multiple,
+                ..
+            } => match ctx.atr {
+                Some(atr) if atr > 0.0 && atr_multiple > 0.0 && price > 0.0 => {
+                    (risk_pct * price) / (atr_multiple * atr)
+                }
+                _ => self.position_size_pct,
+            },
+            PositionSizing::VolatilityTarget { target_vol_pct, .. } => {
+                match ctx.recent_volatility {
+                    Some(vol) if vol > 0.0 => target_vol_pct / vol,
+                    _ => self.position_size_pct,
+                }
+            }
+            PositionSizing::FractionalKelly { kelly_fraction, .. } => {
+                match (ctx.win_rate, ctx.payoff_ratio) {
+                    (Some(win_rate), Some(payoff)) if payoff > 0.0 => {
+                        let kelly = win_rate - (1.0 - win_rate) / payoff;
+                        kelly_fraction * kelly
+                    }
+                    _ => self.position_size_pct,
+                }
+            }
+        };
+
+        base.clamp(0.0, self.position_size_pct)
+    }
+
+    /// Bars of history the active [`PositionSizing`] scheme needs before it can
+    /// size an entry from real data.
+    ///
+    /// The engine folds this into the strategy's own warmup so an early entry
+    /// cannot silently fall back to [`position_size_pct`].
+    /// [`PositionSizing::FractionalKelly`] returns `0`: its window counts closed
+    /// trades, which no number of bars guarantees.
+    ///
+    /// [`position_size_pct`]: Self::position_size_pct
+    pub fn sizing_warmup(&self) -> usize {
+        match self.position_sizing {
+            PositionSizing::Atr { atr_period, .. } => atr_period + 1,
+            PositionSizing::VolatilityTarget { lookback, .. } => lookback + 1,
+            PositionSizing::FixedFraction | PositionSizing::FractionalKelly { .. } => 0,
+        }
+    }
+
+    fn size_from_fraction(&self, available_capital: f64, price: f64, fraction: f64) -> f64 {
+        let capital_to_use = available_capital * fraction;
 
         let adjusted_capital = if self.commission_fn.is_some() {
             // Can't analytically invert commission_fn; use spread + tax only.
@@ -39,6 +184,205 @@ impl BacktestConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn scheme(sizing: PositionSizing, position_size_pct: f64) -> BacktestConfig {
+        BacktestConfig::builder()
+            .commission_pct(0.0)
+            .position_size_pct(position_size_pct)
+            .position_sizing(sizing)
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_fixed_fraction_context_matches_plain_sizing() {
+        let config = scheme(PositionSizing::FixedFraction, 0.5);
+        let with_ctx =
+            config.calculate_position_size_with_context(10_000.0, 100.0, &SizingContext::default());
+        let plain = config.calculate_position_size(10_000.0, 100.0);
+        assert!((with_ctx - plain).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_atr_sizing_uses_risk_over_stop_distance() {
+        let config = scheme(
+            PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            },
+            1.0,
+        );
+        let ctx = SizingContext {
+            atr: Some(2.0),
+            ..SizingContext::default()
+        };
+        // (0.02 * 100) / (2.0 * 2.0) = 0.5 of equity
+        let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
+        assert!((size - 50.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_atr_sizing_falls_back_without_atr() {
+        let config = scheme(
+            PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            },
+            0.4,
+        );
+        let size =
+            config.calculate_position_size_with_context(10_000.0, 100.0, &SizingContext::default());
+        assert!((size - config.calculate_position_size(10_000.0, 100.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_volatility_target_scales_inversely_to_volatility() {
+        let config = scheme(
+            PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 20,
+            },
+            1.0,
+        );
+        let calm = SizingContext {
+            recent_volatility: Some(0.02),
+            ..SizingContext::default()
+        };
+        let wild = SizingContext {
+            recent_volatility: Some(0.04),
+            ..SizingContext::default()
+        };
+        let calm_size = config.calculate_position_size_with_context(10_000.0, 100.0, &calm);
+        let wild_size = config.calculate_position_size_with_context(10_000.0, 100.0, &wild);
+        assert!((calm_size - 50.0).abs() < 1e-9);
+        assert!((wild_size - 25.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_volatility_target_falls_back_without_data() {
+        let config = scheme(
+            PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 20,
+            },
+            0.3,
+        );
+        let size =
+            config.calculate_position_size_with_context(10_000.0, 100.0, &SizingContext::default());
+        assert!((size - config.calculate_position_size(10_000.0, 100.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_fractional_kelly_matches_formula() {
+        let config = scheme(
+            PositionSizing::FractionalKelly {
+                kelly_fraction: 0.5,
+                lookback_trades: 20,
+            },
+            1.0,
+        );
+        let ctx = SizingContext {
+            win_rate: Some(0.6),
+            payoff_ratio: Some(2.0),
+            ..SizingContext::default()
+        };
+        // kelly = 0.6 - 0.4 / 2.0 = 0.4; half-Kelly = 0.2
+        let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
+        assert!((size - 20.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_fractional_kelly_negative_edge_sizes_to_zero() {
+        let config = scheme(
+            PositionSizing::FractionalKelly {
+                kelly_fraction: 0.5,
+                lookback_trades: 20,
+            },
+            1.0,
+        );
+        let ctx = SizingContext {
+            win_rate: Some(0.3),
+            payoff_ratio: Some(1.0),
+            ..SizingContext::default()
+        };
+        let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
+        assert_eq!(size, 0.0);
+    }
+
+    #[test]
+    fn test_fractional_kelly_falls_back_without_history() {
+        let config = scheme(
+            PositionSizing::FractionalKelly {
+                kelly_fraction: 0.5,
+                lookback_trades: 20,
+            },
+            0.25,
+        );
+        let size =
+            config.calculate_position_size_with_context(10_000.0, 100.0, &SizingContext::default());
+        assert!((size - config.calculate_position_size(10_000.0, 100.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_scheme_cannot_exceed_the_risk_budget() {
+        let config = scheme(
+            PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            },
+            0.1,
+        );
+        // A tiny ATR asks for 20x equity; the budget caps it at 10%.
+        let ctx = SizingContext {
+            atr: Some(0.005),
+            ..SizingContext::default()
+        };
+        let size = config.calculate_position_size_with_context(10_000.0, 100.0, &ctx);
+        assert!((size - config.calculate_position_size(10_000.0, 100.0)).abs() < 1e-12);
+        assert!((size - 10.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_sizing_warmup_per_scheme() {
+        assert_eq!(BacktestConfig::default().sizing_warmup(), 0);
+        assert_eq!(
+            scheme(
+                PositionSizing::Atr {
+                    risk_pct: 0.02,
+                    atr_period: 14,
+                    atr_multiple: 2.0,
+                },
+                1.0,
+            )
+            .sizing_warmup(),
+            15
+        );
+        assert_eq!(
+            scheme(
+                PositionSizing::VolatilityTarget {
+                    target_vol_pct: 0.01,
+                    lookback: 20,
+                },
+                1.0,
+            )
+            .sizing_warmup(),
+            21
+        );
+        assert_eq!(
+            scheme(
+                PositionSizing::FractionalKelly {
+                    kelly_fraction: 0.5,
+                    lookback_trades: 20,
+                },
+                1.0,
+            )
+            .sizing_warmup(),
+            0
+        );
+    }
 
     #[test]
     fn test_position_sizing() {

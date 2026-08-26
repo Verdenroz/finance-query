@@ -1,3 +1,4 @@
+use crate::backtesting::config::SizingContext;
 use crate::backtesting::position::{Position, PositionSide, Trade};
 use crate::backtesting::signal::{Signal, SignalDirection};
 use crate::models::chart::Candle;
@@ -17,13 +18,14 @@ impl BacktestEngine {
         position: &mut Option<Position>,
         cash: &mut f64,
         trades: &mut Vec<Trade>,
+        sizing: &SizingContext,
     ) -> bool {
         match signal.direction {
             SignalDirection::Long => {
                 if position.is_some() {
                     return false; // Already have a position
                 }
-                self.open_position(position, cash, candle, signal, true)
+                self.open_position(position, cash, candle, signal, sizing)
             }
             SignalDirection::Short => {
                 if position.is_some() {
@@ -32,7 +34,7 @@ impl BacktestEngine {
                 if !self.config.allow_short {
                     return false; // Shorts not allowed
                 }
-                self.open_position(position, cash, candle, signal, false)
+                self.open_position(position, cash, candle, signal, sizing)
             }
             SignalDirection::Exit => {
                 if position.is_none() {
@@ -179,9 +181,9 @@ impl BacktestEngine {
         cash: &mut f64,
         candle: &Candle,
         signal: &Signal,
-        is_long: bool,
+        sizing: &SizingContext,
     ) -> bool {
-        self.open_position_at_price(position, cash, candle, signal, is_long, candle.open)
+        self.open_position_at_price(position, cash, candle, signal, candle.open, sizing)
     }
 
     /// Open a new position at an explicit fill price.
@@ -195,12 +197,15 @@ impl BacktestEngine {
         cash: &mut f64,
         candle: &Candle,
         signal: &Signal,
-        is_long: bool,
         fill_price_raw: f64,
+        sizing: &SizingContext,
     ) -> bool {
+        let is_long = matches!(signal.direction, SignalDirection::Long);
         let entry_price_slipped = self.config.apply_entry_slippage(fill_price_raw, is_long);
         let entry_price = self.config.apply_entry_spread(entry_price_slipped, is_long);
-        let quantity = self.config.calculate_position_size(*cash, entry_price);
+        let quantity = self
+            .config
+            .calculate_position_size_with_context(*cash, entry_price, sizing);
 
         if quantity <= 0.0 {
             return false; // Not enough capital

@@ -26,7 +26,7 @@ impl BacktestEngine {
         mut strategy: S,
         dividends: &[Dividend],
     ) -> Result<BacktestResult> {
-        let warmup = strategy.warmup_period();
+        let warmup = strategy.warmup_period().max(self.config.sizing_warmup());
         if candles.len() < warmup {
             return Err(BacktestError::insufficient_data(warmup, candles.len()));
         }
@@ -38,6 +38,8 @@ impl BacktestEngine {
         // Let the strategy cache direct pointers into the indicator map, eliminating
         // per-bar HashMap lookups in on_candle.
         strategy.setup(&indicators);
+
+        let sizing_series = self.compute_sizing_series(candles);
 
         // Initialize state
         let mut equity = self.config.initial_capital;
@@ -187,14 +189,14 @@ impl BacktestEngine {
                 }
 
                 if let Some(fill_price) = order.order_type.try_fill(candle) {
-                    let is_long = matches!(order.signal.direction, SignalDirection::Long);
+                    let sizing = self.build_sizing_context(i, &sizing_series, &trades);
                     let executed = self.open_position_at_price(
                         &mut position,
                         &mut cash,
                         candle,
                         &order.signal,
-                        is_long,
                         fill_price,
+                        &sizing,
                     );
                     if executed {
                         hwm = position.as_ref().map(|p| p.entry_price);
@@ -260,12 +262,14 @@ impl BacktestEngine {
             let executed = match &signal.order_type {
                 OrderType::Market => {
                     if let Some(fill_candle) = candles.get(i + 1) {
+                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
                         self.execute_signal(
                             &signal,
                             fill_candle,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false
@@ -297,12 +301,14 @@ impl BacktestEngine {
                 _ => {
                     // Non-market Exit / ScaleIn / ScaleOut — execute as market.
                     if let Some(fill_candle) = candles.get(i + 1) {
+                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
                         self.execute_signal(
                             &signal,
                             fill_candle,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false
@@ -343,12 +349,14 @@ impl BacktestEngine {
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
                     let follow_executed = if let Some(fill_candle) = candles.get(i + 1) {
+                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
                         self.execute_signal(
                             &follow,
                             fill_candle,
                             &mut position,
                             &mut cash,
                             &mut trades,
+                            &sizing,
                         )
                     } else {
                         false

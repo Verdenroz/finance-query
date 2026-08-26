@@ -1,6 +1,6 @@
 //! Builder for [`BacktestConfig`].
 
-use super::{BacktestConfig, CommissionFn};
+use super::{BacktestConfig, CommissionFn, PositionSizing};
 use crate::backtesting::error::Result;
 
 /// Builder for BacktestConfig
@@ -160,6 +160,16 @@ impl BacktestConfigBuilder {
         F: Fn(f64, f64) -> f64 + Send + Sync + 'static,
     {
         self.config.commission_fn = Some(CommissionFn::new(f));
+        self
+    }
+
+    /// Set the position sizing scheme.
+    ///
+    /// Schemes other than [`PositionSizing::FixedFraction`] size at or below
+    /// [`position_size_pct`](BacktestConfig::position_size_pct), which stays the
+    /// risk budget for the run.
+    pub fn position_sizing(mut self, sizing: PositionSizing) -> Self {
+        self.config.position_sizing = sizing;
         self
     }
 

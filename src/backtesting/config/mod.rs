@@ -10,6 +10,7 @@ use super::error::{BacktestError, Result};
 
 pub use builder::BacktestConfigBuilder;
 pub use costs::CommissionFn;
+pub use sizing::{PositionSizing, SizingContext};
 
 /// Configuration for backtest execution.
 ///
@@ -138,6 +139,16 @@ pub struct BacktestConfig {
     /// [`initial_capital`]: Self::initial_capital
     #[serde(skip)]
     pub commission_fn: Option<CommissionFn>,
+
+    /// Scheme used to size each entry.
+    ///
+    /// Defaults to [`PositionSizing::FixedFraction`], which commits
+    /// [`position_size_pct`] of equity. Every other scheme treats that field as
+    /// a ceiling and sizes at or below it.
+    ///
+    /// [`position_size_pct`]: Self::position_size_pct
+    #[serde(default)]
+    pub position_sizing: PositionSizing,
 }
 
 impl Default for BacktestConfig {
@@ -161,6 +172,7 @@ impl Default for BacktestConfig {
             spread_pct: 0.0,
             transaction_tax_pct: 0.0,
             commission_fn: None,
+            position_sizing: PositionSizing::default(),
         }
     }
 }

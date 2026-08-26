@@ -7,6 +7,7 @@ mod fixtures;
 mod indicators;
 mod positions;
 mod simulate;
+mod sizing;
 
 pub(crate) use exits::{update_position_extremes, update_trailing_hwm};
 pub(crate) use indicators::compute_for_candles;
