@@ -89,6 +89,18 @@ fn build_config(p: &RunBacktestParams) -> Result<BacktestConfig, McpError> {
     if let Some(pct) = p.take_profit_pct {
         builder = builder.take_profit_pct(pct);
     }
+    if let Some(leverage) = p.max_leverage {
+        builder = builder.max_leverage(leverage);
+    }
+    if let Some(pct) = p.maintenance_margin_pct {
+        builder = builder.maintenance_margin_pct(pct);
+    }
+    if let Some(rate) = p.short_borrow_rate {
+        builder = builder.short_borrow_rate(rate);
+    }
+    if let Some(rate) = p.margin_interest_rate {
+        builder = builder.margin_interest_rate(rate);
+    }
     builder.build().map_err(lib_err)
 }
 
@@ -182,6 +194,10 @@ mod tests {
             equity_cursor: None,
             trades_limit: None,
             trades_cursor: None,
+            max_leverage: None,
+            maintenance_margin_pct: None,
+            short_borrow_rate: None,
+            margin_interest_rate: None,
         }
     }
 
@@ -224,6 +240,13 @@ mod tests {
         assert_eq!(config.initial_capital, default.initial_capital);
         assert_eq!(config.commission_pct, default.commission_pct);
         assert_eq!(config.position_size_pct, default.position_size_pct);
+        assert_eq!(config.max_leverage, default.max_leverage);
+        assert_eq!(
+            config.maintenance_margin_pct,
+            default.maintenance_margin_pct
+        );
+        assert_eq!(config.short_borrow_rate, default.short_borrow_rate);
+        assert_eq!(config.margin_interest_rate, default.margin_interest_rate);
         assert!(config.stop_loss_pct.is_none());
     }
 
@@ -237,6 +260,27 @@ mod tests {
         assert_eq!(config.position_size_pct, 0.5);
         assert!(config.allow_short);
         assert_eq!(config.stop_loss_pct, Some(0.05));
+    }
+
+    #[test]
+    fn build_config_applies_margin_overrides() {
+        let mut p = base_params("sma_crossover");
+        p.max_leverage = Some(2.0);
+        p.maintenance_margin_pct = Some(0.3);
+        p.short_borrow_rate = Some(0.05);
+        p.margin_interest_rate = Some(0.07);
+        let config = build_config(&p).unwrap();
+        assert_eq!(config.max_leverage, 2.0);
+        assert_eq!(config.maintenance_margin_pct, 0.3);
+        assert_eq!(config.short_borrow_rate, 0.05);
+        assert_eq!(config.margin_interest_rate, 0.07);
+    }
+
+    #[test]
+    fn build_config_rejects_leverage_below_one() {
+        let mut p = base_params("sma_crossover");
+        p.max_leverage = Some(0.5);
+        assert!(build_config(&p).is_err());
     }
 
     #[test]
