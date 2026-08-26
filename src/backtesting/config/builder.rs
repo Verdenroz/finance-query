@@ -163,6 +163,37 @@ impl BacktestConfigBuilder {
         self
     }
 
+    /// Set the maximum gross exposure as a multiple of equity.
+    ///
+    /// Values above `1.0` open a margin loan for the shortfall. Pair with
+    /// [`margin_interest_rate`](Self::margin_interest_rate); left at zero,
+    /// leverage costs nothing and inflates every levered result.
+    pub fn max_leverage(mut self, leverage: f64) -> Self {
+        self.config.max_leverage = leverage;
+        self
+    }
+
+    /// Set the equity floor as a fraction of gross exposure (0.0 - 1.0).
+    ///
+    /// The engine liquidates the position when equity falls below it. Only
+    /// consulted when [`max_leverage`](Self::max_leverage) exceeds `1.0`.
+    pub fn maintenance_margin_pct(mut self, pct: f64) -> Self {
+        self.config.maintenance_margin_pct = pct;
+        self
+    }
+
+    /// Set the annual borrow rate charged while a short position is open.
+    pub fn short_borrow_rate(mut self, rate: f64) -> Self {
+        self.config.short_borrow_rate = rate;
+        self
+    }
+
+    /// Set the annual interest rate charged on a debit cash balance.
+    pub fn margin_interest_rate(mut self, rate: f64) -> Self {
+        self.config.margin_interest_rate = rate;
+        self
+    }
+
     /// Set the position sizing scheme.
     ///
     /// Schemes other than [`PositionSizing::FixedFraction`] size at or below

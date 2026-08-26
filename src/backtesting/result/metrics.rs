@@ -101,6 +101,10 @@ pub struct PerformanceMetrics {
     /// Total commission paid
     pub total_commission: f64,
 
+    /// Total cost of borrowed capital across all trades: short borrow fees and
+    /// margin interest. Already subtracted from each trade's P&L.
+    pub total_financing_cost: f64,
+
     /// Number of long trades
     pub long_trades: usize,
 
@@ -259,6 +263,7 @@ impl PerformanceMetrics {
             max_consecutive_losses: 0,
             calmar_ratio: 0.0,
             total_commission: 0.0,
+            total_financing_cost: 0.0,
             long_trades: 0,
             short_trades: 0,
             total_signals,
@@ -454,6 +459,7 @@ impl PerformanceMetrics {
             max_consecutive_losses,
             calmar_ratio,
             total_commission: stats.total_commission,
+            total_financing_cost: stats.total_financing_cost,
             long_trades: stats.long_trades,
             short_trades: stats.short_trades,
             total_signals,

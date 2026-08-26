@@ -5,6 +5,7 @@ mod exits;
 #[cfg(test)]
 mod fixtures;
 mod indicators;
+mod margin;
 mod positions;
 mod simulate;
 mod sizing;

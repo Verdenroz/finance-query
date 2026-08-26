@@ -140,6 +140,46 @@ pub struct BacktestConfig {
     #[serde(skip)]
     pub commission_fn: Option<CommissionFn>,
 
+    /// Maximum gross exposure as a multiple of equity.
+    ///
+    /// `1.0` (the default) is a cash account: an entry can commit at most the
+    /// available equity. Above `1.0` the shortfall is a margin loan, charged at
+    /// [`margin_interest_rate`] and subject to [`maintenance_margin_pct`].
+    ///
+    /// [`margin_interest_rate`]: Self::margin_interest_rate
+    /// [`maintenance_margin_pct`]: Self::maintenance_margin_pct
+    #[serde(default = "default_max_leverage")]
+    pub max_leverage: f64,
+
+    /// Equity floor as a fraction of gross exposure, below which the broker
+    /// liquidates the position (0.0 - 1.0).
+    ///
+    /// Only consulted when [`max_leverage`] exceeds `1.0`, since an unlevered
+    /// account cannot fall below it.
+    ///
+    /// [`max_leverage`]: Self::max_leverage
+    #[serde(default = "default_maintenance_margin_pct")]
+    pub maintenance_margin_pct: f64,
+
+    /// Annual rate charged on the value of borrowed shares while a short
+    /// position is open (0.0 - 1.0).
+    ///
+    /// Prorated per bar by [`bars_per_year`]. Defaults to `0.0`.
+    ///
+    /// [`bars_per_year`]: Self::bars_per_year
+    #[serde(default)]
+    pub short_borrow_rate: f64,
+
+    /// Annual rate charged on a debit cash balance (0.0 - 1.0).
+    ///
+    /// A leveraged long drives cash negative; that shortfall is the margin
+    /// loan. Prorated per bar by [`bars_per_year`]. Defaults to `0.0`, which
+    /// makes leverage free and will flatter any leveraged strategy.
+    ///
+    /// [`bars_per_year`]: Self::bars_per_year
+    #[serde(default)]
+    pub margin_interest_rate: f64,
+
     /// Scheme used to size each entry.
     ///
     /// Defaults to [`PositionSizing::FixedFraction`], which commits
@@ -149,6 +189,14 @@ pub struct BacktestConfig {
     /// [`position_size_pct`]: Self::position_size_pct
     #[serde(default)]
     pub position_sizing: PositionSizing,
+}
+
+fn default_max_leverage() -> f64 {
+    1.0
+}
+
+fn default_maintenance_margin_pct() -> f64 {
+    0.25
 }
 
 impl Default for BacktestConfig {
@@ -172,6 +220,10 @@ impl Default for BacktestConfig {
             spread_pct: 0.0,
             transaction_tax_pct: 0.0,
             commission_fn: None,
+            max_leverage: default_max_leverage(),
+            maintenance_margin_pct: default_maintenance_margin_pct(),
+            short_borrow_rate: 0.0,
+            margin_interest_rate: 0.0,
             position_sizing: PositionSizing::default(),
         }
     }
@@ -298,6 +350,34 @@ impl BacktestConfig {
             ));
         }
 
+        if !self.max_leverage.is_finite() || self.max_leverage < 1.0 {
+            return Err(BacktestError::invalid_param(
+                "max_leverage",
+                "must be finite and at least 1.0",
+            ));
+        }
+
+        if !(0.0..=1.0).contains(&self.maintenance_margin_pct) {
+            return Err(BacktestError::invalid_param(
+                "maintenance_margin_pct",
+                "must be between 0.0 and 1.0",
+            ));
+        }
+
+        if !(0.0..=1.0).contains(&self.short_borrow_rate) {
+            return Err(BacktestError::invalid_param(
+                "short_borrow_rate",
+                "must be between 0.0 and 1.0",
+            ));
+        }
+
+        if !(0.0..=1.0).contains(&self.margin_interest_rate) {
+            return Err(BacktestError::invalid_param(
+                "margin_interest_rate",
+                "must be between 0.0 and 1.0",
+            ));
+        }
+
         Ok(())
     }
 }
@@ -417,6 +497,76 @@ mod tests {
                 .build()
                 .is_err()
         );
+    }
+
+    #[test]
+    fn test_margin_defaults_are_a_cash_account() {
+        let config = BacktestConfig::default();
+        assert_eq!(config.max_leverage, 1.0);
+        assert_eq!(config.maintenance_margin_pct, 0.25);
+        assert_eq!(config.short_borrow_rate, 0.0);
+        assert_eq!(config.margin_interest_rate, 0.0);
+        assert_eq!(config.position_sizing, PositionSizing::FixedFraction);
+    }
+
+    #[test]
+    fn test_margin_field_validation() {
+        assert!(BacktestConfig::builder().max_leverage(0.5).build().is_err());
+        assert!(
+            BacktestConfig::builder()
+                .max_leverage(f64::NAN)
+                .build()
+                .is_err()
+        );
+        assert!(BacktestConfig::builder().max_leverage(3.0).build().is_ok());
+
+        assert!(
+            BacktestConfig::builder()
+                .maintenance_margin_pct(1.5)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .short_borrow_rate(-0.01)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .margin_interest_rate(1.5)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_config_without_margin_fields_deserializes_to_defaults() {
+        let json = serde_json::json!({
+            "initial_capital": 10_000.0,
+            "commission": 0.0,
+            "commission_pct": 0.001,
+            "slippage_pct": 0.001,
+            "position_size_pct": 1.0,
+            "max_positions": 1,
+            "allow_short": false,
+            "min_signal_strength": 0.0,
+            "stop_loss_pct": null,
+            "take_profit_pct": null,
+            "close_at_end": true,
+            "risk_free_rate": 0.0,
+            "trailing_stop_pct": null,
+            "reinvest_dividends": false,
+            "bars_per_year": 252.0,
+            "spread_pct": 0.0,
+            "transaction_tax_pct": 0.0,
+        });
+        let config: BacktestConfig = serde_json::from_value(json).unwrap();
+        assert_eq!(config.max_leverage, 1.0);
+        assert_eq!(config.maintenance_margin_pct, 0.25);
+        assert_eq!(config.short_borrow_rate, 0.0);
+        assert_eq!(config.margin_interest_rate, 0.0);
+        assert_eq!(config.position_sizing, PositionSizing::FixedFraction);
     }
 
     #[test]

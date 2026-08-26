@@ -163,6 +163,7 @@ mod tests {
             return_pct,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
+            financing_cost: 0.0,
             entry_signal: Signal::long(0, 100.0),
             exit_signal: Signal::exit(1, 100.0),
             tags: vec![],

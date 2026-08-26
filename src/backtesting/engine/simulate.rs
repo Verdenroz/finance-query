@@ -72,6 +72,8 @@ impl BacktestEngine {
         for i in 0..candles.len() {
             let candle = &candles[i];
 
+            self.accrue_financing(&mut position, &mut cash, candle);
+
             equity = Self::update_equity_and_curve(
                 position.as_ref(),
                 candle,
@@ -98,6 +100,34 @@ impl BacktestEngine {
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
+
+            if let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle) {
+                let fill_price = margin_signal.price;
+                let executed = self.close_position_at(
+                    &mut position,
+                    &mut cash,
+                    &mut trades,
+                    candle,
+                    fill_price,
+                    &margin_signal,
+                );
+
+                signals.push(SignalRecord {
+                    timestamp: candle.timestamp,
+                    price: fill_price,
+                    direction: SignalDirection::Exit,
+                    strength: 1.0,
+                    reason: margin_signal.reason.clone(),
+                    executed,
+                    tags: margin_signal.tags.clone(),
+                });
+
+                if executed {
+                    hwm = None;
+                    extremes = None;
+                    continue;
+                }
+            }
 
             // Check stop-loss / take-profit / trailing-stop on existing position.
             // The signal carries the intrabar fill price (stop/TP level with gap guard),
