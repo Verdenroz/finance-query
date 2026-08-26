@@ -628,6 +628,7 @@ mod tests {
             open_position: None,
             benchmark: None,
             diagnostics: vec![],
+            max_leverage_used: 0.0,
         }
     }
 

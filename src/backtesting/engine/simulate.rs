@@ -49,6 +49,12 @@ impl BacktestEngine {
         let mut equity_curve: Vec<EquityPoint> = Vec::with_capacity(candles.len());
         let mut signals: Vec<SignalRecord> = Vec::new();
         let mut peak_equity = equity;
+        let mut max_leverage_used = 0.0_f64;
+        // Both hooks are no-ops on a default config, and the bar loop is hot
+        // enough that the cross-module call to find that out is worth skipping.
+        let financing_enabled =
+            self.config.short_borrow_rate > 0.0 || self.config.margin_interest_rate > 0.0;
+        let margin_enabled = self.config.max_leverage > 1.0;
         // High-water mark for the trailing stop: tracks peak price (longs) or
         // trough price (shorts) since entry. Reset to None when no position is open.
         let mut hwm: Option<f64> = None;
@@ -72,7 +78,9 @@ impl BacktestEngine {
         for i in 0..candles.len() {
             let candle = &candles[i];
 
-            self.accrue_financing(&mut position, &mut cash, candle);
+            if financing_enabled {
+                self.accrue_financing(&mut position, &mut cash, candle);
+            }
 
             equity = Self::update_equity_and_curve(
                 position.as_ref(),
@@ -101,7 +109,18 @@ impl BacktestEngine {
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
 
-            if let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle) {
+            if equity > 0.0
+                && let Some(pos) = position.as_ref()
+            {
+                let exposure = pos.quantity * candle.close;
+                if exposure > max_leverage_used * equity {
+                    max_leverage_used = exposure / equity;
+                }
+            }
+
+            if margin_enabled
+                && let Some(margin_signal) = self.check_margin_call(position.as_ref(), cash, candle)
+            {
                 let fill_price = margin_signal.price;
                 let executed = self.close_position_at(
                     &mut position,
@@ -538,6 +557,7 @@ impl BacktestEngine {
             open_position: position,
             benchmark: None, // Populated by run_with_benchmark when a benchmark is supplied
             diagnostics,
+            max_leverage_used,
         })
     }
 

@@ -1536,10 +1536,9 @@ let config = BacktestConfig::builder()
 
 How an entry's size is derived from available equity.
 
-Every scheme emits a target exposure as a fraction of equity, bounded by
-[`BacktestConfig::position_size_pct`]. That field is the risk budget: a
-scheme reduces exposure within it and never exceeds it. When a scheme's
-inputs are unavailable it falls back to the budget itself.
+Every scheme targets a fraction of equity clamped to
+[`BacktestConfig::position_size_pct`], and falls back to that fraction when
+its inputs are unavailable.
 
 Scale-in signals carry an explicit fraction of their own and are not sized
 by the active scheme.

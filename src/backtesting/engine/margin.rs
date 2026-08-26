@@ -9,11 +9,13 @@ use super::BacktestEngine;
 ///
 /// [`Position::current_value`] is negative for shorts, but margin rules are
 /// written against the size of the borrowing, not its direction.
+#[inline]
 pub(super) fn gross_exposure(position: Option<&Position>, price: f64) -> f64 {
     position.map_or(0.0, |pos| pos.quantity * price)
 }
 
 /// Capital an entry may commit, including any margin loan.
+#[inline]
 pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
     cash.max(0.0) * config.max_leverage
 }
@@ -22,6 +24,7 @@ pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
 ///
 /// Unlevered this is plain cash; levered it is the unused portion of the
 /// exposure ceiling.
+#[inline]
 pub(super) fn add_buying_power(
     cash: f64,
     position: &Position,
@@ -41,6 +44,7 @@ impl BacktestEngine {
     /// Shorts pay to borrow the shares; a debit cash balance pays margin
     /// interest. The fee is attributed to the position so it leaves via that
     /// trade's P&L rather than vanishing from cash.
+    #[inline]
     pub(super) fn accrue_financing(
         &self,
         position: &mut Option<Position>,
@@ -75,6 +79,7 @@ impl BacktestEngine {
     /// Equity is recomputed here rather than taken from the bar's opening
     /// snapshot, so the check sees this bar's financing accrual and dividend
     /// credit.
+    #[inline]
     pub(super) fn check_margin_call(
         &self,
         position: Option<&Position>,
@@ -289,6 +294,30 @@ mod tests {
 
         assert!(result.metrics.total_financing_cost > 0.0);
         assert!(result.trades[0].pnl < 0.0);
+    }
+
+    #[test]
+    fn test_max_leverage_used_reports_the_exposure_actually_taken() {
+        let candles = make_candles(&[100.0; 20]);
+
+        let flat = BacktestEngine::new(levered_config(2.0))
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+        assert!((flat.max_leverage_used - 2.0).abs() < 0.01);
+
+        let half = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .position_size_pct(0.5)
+            .max_leverage(2.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let partial = BacktestEngine::new(half)
+            .run("TEST", &candles, EnterLongHold)
+            .unwrap();
+        assert!((partial.max_leverage_used - 1.0).abs() < 0.01);
     }
 
     #[test]

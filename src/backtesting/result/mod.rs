@@ -106,6 +106,14 @@ pub struct BacktestResult {
     /// hints when the engine detects likely misconfiguration.
     #[serde(default)]
     pub diagnostics: Vec<String>,
+
+    /// Highest gross exposure divided by equity reached on any bar.
+    ///
+    /// `0.0` for a run that never held a position, `1.0` for one that never
+    /// borrowed. Compare against `BacktestConfig::max_leverage` to see how much
+    /// of the allowance a strategy actually used.
+    #[serde(default)]
+    pub max_leverage_used: f64,
 }
 
 impl BacktestResult {
