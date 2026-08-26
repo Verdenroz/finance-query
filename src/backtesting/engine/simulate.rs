@@ -242,7 +242,8 @@ impl BacktestEngine {
                 }
 
                 if let Some(fill_price) = order.order_type.try_fill(candle) {
-                    let sizing = self.build_sizing_context(i, &sizing_series, &trades);
+                    let sizing =
+                        self.build_sizing_context(i.saturating_sub(1), &sizing_series, &trades);
                     let executed = self.open_position_at_price(
                         &mut position,
                         &mut cash,
@@ -315,7 +316,7 @@ impl BacktestEngine {
             let executed = match &signal.order_type {
                 OrderType::Market => {
                     if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
+                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
                         self.execute_signal(
                             &signal,
                             fill_candle,
@@ -354,7 +355,7 @@ impl BacktestEngine {
                 _ => {
                     // Non-market Exit / ScaleIn / ScaleOut — execute as market.
                     if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
+                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
                         self.execute_signal(
                             &signal,
                             fill_candle,
@@ -402,7 +403,7 @@ impl BacktestEngine {
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
                     let follow_executed = if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i + 1, &sizing_series, &trades);
+                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
                         self.execute_signal(
                             &follow,
                             fill_candle,
