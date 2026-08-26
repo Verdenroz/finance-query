@@ -79,8 +79,8 @@ jobs:
   deploy-docs:
     name: Deploy docs site to GitHub Pages
     runs-on: ubuntu-latest
-    # Parallel runs from rapid merges each branch trend.jsonl off their own
-    # checkout; the second trend PR then conflicts on master and hangs
+    # Rapid merges would each branch trend.jsonl off their own checkout,
+    # and the second trend PR would conflict on master and hang.
     concurrency:
       group: deploy-docs
     permissions: {} # all repo access comes from the minted App token below
@@ -118,24 +118,22 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          # A failing gate must not throw away the warm build state the
-          # retry (and the docs-regen steps) would otherwise reuse.
+          # A failing gate must not lose the warm state the retry would reuse.
           cache-on-failure: true
       - name: Install valgrind
-        # CI VMs often expose no PMU, in which case
-        # the auto backend gates on callgrind instruction counts instead.
+        # Fallback backend when the CI VM exposes no PMU.
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
-      # Pinned to the locked runner: soothfast-measure builds into the bench
-      # binary from Cargo.lock, so an unpinned CLI silently outruns it.
       - name: Install cargo-binstall
         uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
           tool: cargo-binstall
       - name: Install cargo-soothfast
+        # Pinned to Cargo.lock's version: an unpinned CLI can silently
+        # outrun the bench binary soothfast-measure builds against.
         # rust-cache can restore binstall's install record without the
-        # binary itself; --force reinstalls past the stale record.
+        # binary itself, so --force reinstalls past a stale record.
         run: |
           RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
           command -v cargo-soothfast >/dev/null || FORCE=--force
@@ -149,9 +147,8 @@ jobs:
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${APP_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
-      # soothfast.yml's paths filter and [bot] exclusion let no-code commits
-      # reach master, where gating them can only report noise. Also gates the
-      # trend append
+      # No-code commits still reach master (soothfast.yml's paths filter and
+      # [bot] exclusion don't apply here); gating them would only add noise.
       - name: Detect benchmarkable changes
         id: bench_changes
         run: |
@@ -162,8 +159,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Instruction counts are deterministic for identical benchmarked code,
-      # so a hit lets the measure step below skip via its [ ! -f ] guard.
+      # Identical benchmarked code measures identically, so a hit here lets
+      # the measure step below skip via its [ ! -f ] guard.
       - name: Restore measured baseline
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -181,8 +178,8 @@ jobs:
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
 
-      # Writes .soothfast/gate-status.json, which `report render` reads to
-      # color the gate badge. HEAD~1 is well-defined: master is linear.
+      # Writes gate-status.json, which `report render` colors the badge from.
+      # HEAD~1 is well-defined here since master is linear.
       - name: Gate against previous commit
         if: steps.bench_changes.outputs.changed == 'true'
         continue-on-error: true
@@ -233,8 +230,8 @@ jobs:
             echo '```'; } > docs/coverage.md
 
       - name: Regenerate captured doc output
-        # dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo
-        # Finance data (real prices/timestamps) so excluded here
+        # dataframe.md/finance.md/ticker.md/tickers.md excluded: they capture
+        # live Yahoo data (real prices/timestamps).
         run: |
           cargo soothfast docs capture -p finance-query --features full \
             docs/library/backtesting.md docs/library/commodities.md \
@@ -291,7 +288,6 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions: {}
-    # Only deploy on master branch pushes, not PRs
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
@@ -317,17 +313,14 @@ jobs:
                 && curl -f http://localhost/mcp/health
             }
 
-            # Pin the on-disk checkout to the exact commit being deployed —
-            # an out-of-band sync can otherwise leave docker-compose.prod.yml
-            # stale relative to the images this job just pushed.
+            # Pins the checkout to the deployed commit, so an out-of-band
+            # sync can't leave docker-compose.prod.yml stale.
             git fetch origin master
             git checkout --force ${{ github.sha }}
 
             # docker-compose.prod.yml is an overlay on docker-compose.yml
-            # Pull latest images
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 
-            # Deploy with zero-downtime
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
             # Verify deployment; roll back to the previous SHA's images on failure.
@@ -345,5 +338,4 @@ jobs:
               exit 1
             fi
 
-            # Cleanup old images
             docker image prune -f

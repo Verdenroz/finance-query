@@ -13,8 +13,6 @@ on:
 permissions: {}
 
 jobs:
-  # Dependency supply-chain checks: advisories, banned crates, license policy,
-  # and allowed sources (typosquat / dependency-confusion defense).
   cargo-deny:
     name: cargo-deny
     if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
@@ -32,7 +30,6 @@ jobs:
         with:
           command: check advisories bans licenses sources
 
-  # Static analysis of the GitHub Actions workflows themselves.
   zizmor:
     name: zizmor
     if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')

@@ -13,7 +13,6 @@ permissions:
   contents: read
 
 jobs:
-  # Run tests before publishing
   test:
     name: Pre-publish Tests
     runs-on: ubuntu-latest
@@ -29,7 +28,6 @@ jobs:
       - name: Run tests
         run: cargo test --all-features --verbose
 
-  # Publish to crates.io via OIDC trusted publishing (no long-lived token).
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest

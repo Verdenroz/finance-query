@@ -1,6 +1,6 @@
 name: SDK Publish
 
-# Publish the generated Python SDK to PyPI on release, in version lockstep with the crate
+# Version lockstep with the crate, not independently versioned.
 
 on:
   release:

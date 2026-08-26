@@ -20,8 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decide which downstream jobs this change set actually needs, so
-  # docs-only / single-crate PRs don't pay for work that can't have broken.
+  # Skips downstream jobs a docs-only / single-crate PR can't have broken.
   changes:
     name: Detect Changes
     if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]')
@@ -75,7 +74,6 @@ jobs:
               - 'Cargo.toml'
               - 'Cargo.lock'
 
-  # Check code formatting
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
@@ -94,7 +92,6 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-  # Run clippy linter
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -124,8 +121,8 @@ jobs:
           # check-only artifacts; sharing test-suite let this job's save
           # starve the test jobs, which then recompiled everything
           shared-key: clippy
-      # `full` = all features except translation-offline, which compiles
-      # CTranslate2 from source; the Docker jobs cover that build instead.
+      # `full` excludes translation-offline (native CTranslate2 build,
+      # covered by the Docker jobs instead).
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --features finance-query/full -- -D warnings
 
@@ -156,8 +153,8 @@ jobs:
       - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
         with:
           tool: nextest
-      # `full` = all features except translation-offline (heavy CTranslate2
-      # native build; compilation is covered by the Docker jobs).
+      # `full` excludes translation-offline (native CTranslate2 build,
+      # covered by the Docker jobs instead).
       - name: Run unit tests (full features)
         run: cargo nextest run --workspace --features finance-query/full
 
@@ -216,17 +213,14 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: test-suite
-      # `full` = all features except translation-offline (heavy CTranslate2
-      # native build; compilation is covered by the Docker jobs).
+      # `full` excludes translation-offline (native CTranslate2 build,
+      # covered by the Docker jobs instead).
       - name: Run doctests
         run: cargo test --workspace --doc --features finance-query/full
 
-  # Required-status-check name preserved as "Test Suite" (branch protection
-  # references this exact context) even though the real work now runs as
-  # three parallel jobs above. `always()` + explicit result-checking is
-  # required here — without it, a real sub-job failure would leave this
-  # aggregator skipped-by-cascade instead of failed, and GitHub treats a
-  # skipped required check as passing.
+  # Keeps the "Test Suite" required-status-check name stable across the
+  # 3-job split. `always()` matters: without it a sub-job failure cascades
+  # this to skipped, and GitHub treats a skipped required check as passing.
   test:
     name: Test Suite
     runs-on: ubuntu-latest
@@ -242,7 +236,6 @@ jobs:
             fi
           done
 
-  # Check compilation
   build-check-server:
     name: Build Check (server)
     runs-on: ubuntu-latest
@@ -320,7 +313,6 @@ jobs:
       - name: Check lib (default features)
         run: cargo check --release -p finance-query --verbose
 
-  # Build release binary (master only)
   build-release:
     name: Build Release (binaries)
     runs-on: ubuntu-latest
@@ -346,13 +338,12 @@ jobs:
         with:
           shared-key: build-fat
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      # cargo-auditable embeds the dependency manifest into each binary so the
-      # shipped artifacts can be scanned later with `cargo audit bin`.
+      # Embeds the dependency manifest so binaries can be scanned with
+      # `cargo audit bin` later.
       - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
         with:
           tool: cargo-auditable
-      # The root crate is a library; the shippable binaries live in the
-      # workspace members, so build the whole workspace.
+      # Root crate is a library; the shippable binaries are workspace members.
       - name: Build release binaries
         run: cargo auditable build --workspace --release --verbose
       - name: Upload binaries
@@ -386,7 +377,6 @@ jobs:
             exit 1
           fi
 
-  # Build and test Docker image
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -422,8 +412,8 @@ jobs:
           docker exec test-container curl -f http://localhost:8000/v2/health || true
           docker stop test-container
           docker rm test-container
-      # Trivy reads OS-package CVEs AND the cargo-auditable manifest embedded in
-      # the binary, so the shipped artifact is actually scanned (not just built).
+      # Trivy also reads the cargo-auditable manifest embedded in the binary,
+      # so the shipped artifact is scanned, not just the base image.
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -440,7 +430,6 @@ jobs:
           sarif_file: trivy-results.sarif
           category: trivy-server
 
-  # Build and test MCP Docker image
   docker-mcp:
     name: MCP Docker Build
     runs-on: ubuntu-latest
@@ -476,8 +465,8 @@ jobs:
           curl -f http://localhost:3000/health
           docker stop test-mcp
           docker rm test-mcp
-      # Trivy reads OS-package CVEs AND the cargo-auditable manifest embedded in
-      # the binary, so the shipped artifact is actually scanned (not just built).
+      # Trivy also reads the cargo-auditable manifest embedded in the binary,
+      # so the shipped artifact is scanned, not just the base image.
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -494,8 +483,7 @@ jobs:
           sarif_file: trivy-results.sarif
           category: trivy-mcp
 
-  # Fuzz testing — builds all targets on nightly and runs each for a short
-  # burst to catch panics on malformed JSON and edge-case arithmetic inputs.
+  # Nightly toolchain required for the fuzz targets.
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest

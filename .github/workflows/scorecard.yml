@@ -1,7 +1,6 @@
 name: Scorecard supply-chain security
 
 on:
-  # Re-evaluate when branch protection changes.
   branch_protection_rule:
   schedule:
     - cron: '20 7 * * 1'

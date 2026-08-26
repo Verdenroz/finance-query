@@ -1,13 +1,10 @@
 name: Prune Stale Caches
 
-# Runs once CI finishes on master (that run's cache generation is saved by
-# then) plus a weekly safety net for caches written by other master-only
-# workflows (soothfast/publish/deploy) not tied to CI's completion. The sweep
-# itself covers every ref, not just master — PR branches are where most of the
-# superseded generations pile up.
-# workflow_run only matches runs whose head_branch is literally "master",
-# which fork PR runs never have — no untrusted code is checked out either
-# way, this only calls the Actions cache API.
+# Runs after CI finishes on master, plus a weekly sweep for caches from
+# other master-only workflows. Covers every ref, not just master, since PR
+# branches accumulate most of the stale generations.
+# workflow_run only fires for master's own runs, so fork PRs can't trigger
+# this; it only calls the Actions cache API regardless.
 on: # zizmor: ignore[dangerous-triggers]
   workflow_run:
     workflows: [CI]
@@ -36,16 +33,12 @@ jobs:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            // Swatinem/rust-cache keys look like "v0-rust-<job>-<os>-<envhash>-<lockhash>".
-            // Both hashes move independently — a Cargo.lock change mints a new
-            // <lockhash>, and a workflow-level env or toolchain change mints a new
-            // <envhash>. Either way the previous generation becomes permanently
-            // unreachable (GitHub's restore-key fallback always prefers the newest
-            // match) but nothing deletes it, so the footprint only ever grows.
-            // Stripping BOTH hashes groups every generation of a job under one
-            // family, so env churn is pruned the same way lockfile churn is.
+            // rust-cache keys: "v0-rust-<job>-<os>-<envhash>-<lockhash>". Either
+            // hash changing orphans the previous generation (restore-key always
+            // prefers the newest match, nothing deletes the rest), so stripping
+            // both hashes groups every generation of a job under one family.
             // Docker's buildkit-blob-*/index-* caches are content-addressed per
-            // layer, not per generation, so they're deliberately excluded here.
+            // layer, not per generation, so they're excluded here.
             const RUST_CACHE = /^v0-rust-/;
             const PR_REF = /^refs\/pull\/(\d+)\/merge$/;
 
