@@ -378,6 +378,74 @@ impl BacktestConfig {
             ));
         }
 
+        self.validate_position_sizing()?;
+
+        Ok(())
+    }
+
+    fn validate_position_sizing(&self) -> Result<()> {
+        match self.position_sizing {
+            PositionSizing::FixedFraction => {}
+            PositionSizing::Atr {
+                risk_pct,
+                atr_period,
+                atr_multiple,
+            } => {
+                if !(0.0..=1.0).contains(&risk_pct) {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.risk_pct",
+                        "must be between 0.0 and 1.0",
+                    ));
+                }
+                if atr_period == 0 {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.atr_period",
+                        "must be at least 1",
+                    ));
+                }
+                if !atr_multiple.is_finite() || atr_multiple <= 0.0 {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.atr_multiple",
+                        "must be finite and positive",
+                    ));
+                }
+            }
+            PositionSizing::VolatilityTarget {
+                target_vol_pct,
+                lookback,
+            } => {
+                if !(0.0..=1.0).contains(&target_vol_pct) {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.target_vol_pct",
+                        "must be between 0.0 and 1.0",
+                    ));
+                }
+                if lookback < 2 {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.lookback",
+                        "must be at least 2",
+                    ));
+                }
+            }
+            PositionSizing::FractionalKelly {
+                kelly_fraction,
+                lookback_trades,
+            } => {
+                if !(0.0..=1.0).contains(&kelly_fraction) {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.kelly_fraction",
+                        "must be between 0.0 and 1.0",
+                    ));
+                }
+                if lookback_trades == 0 {
+                    return Err(BacktestError::invalid_param(
+                        "position_sizing.lookback_trades",
+                        "must be at least 1",
+                    ));
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -391,6 +459,65 @@ mod tests {
         let config = BacktestConfig::default();
         assert_eq!(config.initial_capital, 10_000.0);
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_position_sizing_validation_failures() {
+        let sizing = |s: PositionSizing| BacktestConfig::builder().position_sizing(s).build();
+
+        assert!(
+            sizing(PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 0,
+                atr_multiple: 2.0,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::Atr {
+                risk_pct: -0.01,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 0.0,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::VolatilityTarget {
+                target_vol_pct: 0.01,
+                lookback: 1,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::FractionalKelly {
+                kelly_fraction: 0.5,
+                lookback_trades: 0,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::FractionalKelly {
+                kelly_fraction: -0.5,
+                lookback_trades: 20,
+            })
+            .is_err()
+        );
+        assert!(
+            sizing(PositionSizing::Atr {
+                risk_pct: 0.02,
+                atr_period: 14,
+                atr_multiple: 2.0,
+            })
+            .is_ok()
+        );
     }
 
     #[test]
