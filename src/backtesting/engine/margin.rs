@@ -110,7 +110,9 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::engine::fixtures::{EnterLongHold, EnterShortHold, make_candles};
+    use crate::backtesting::engine::fixtures::{
+        EnterLongHold, EnterShortHold, EnterShortScaleIn, make_candles,
+    };
     use crate::backtesting::result::BacktestResult;
     use crate::models::chart::Dividend;
 
@@ -318,6 +320,28 @@ mod tests {
             .run("TEST", &candles, EnterLongHold)
             .unwrap();
         assert!((partial.max_leverage_used - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_short_scale_in_cannot_breach_the_leverage_ceiling() {
+        let candles = make_candles(&[100.0; 6]);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .max_leverage(2.0)
+            .maintenance_margin_pct(0.25)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, EnterShortScaleIn)
+            .unwrap();
+
+        let pos = result.open_position.expect("short stays open");
+        assert!((pos.quantity - 200.0).abs() < 1e-9);
+        assert!(result.max_leverage_used <= 2.0 + 1e-9);
     }
 
     #[test]
