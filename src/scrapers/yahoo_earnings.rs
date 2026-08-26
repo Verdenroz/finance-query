@@ -76,6 +76,7 @@ pub(crate) async fn scrape_earnings_calls(symbol: &str) -> Result<Vec<EarningsCa
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .http1_only()
         .build()?;
 
     let response = client.get(&url).send().await?;
