@@ -158,11 +158,14 @@ impl PortfolioEngine {
         for &timestamp in &master_timeline {
             // Collect present symbols for this bar (parallel mutable iteration
             // is not possible, so we collect keys then iterate)
-            let active_symbols: Vec<String> = states
+            let mut active_symbols: Vec<String> = states
                 .keys()
                 .filter(|sym| states[*sym].ts_index.contains_key(&timestamp))
                 .cloned()
                 .collect();
+            // HashMap iteration order is unspecified; sort so ScaleIn/ScaleOut
+            // cash contention resolves the same way on every run.
+            active_symbols.sort();
 
             // --- Step 1: Update position values, dividends, trailing stops ----
             let mut auto_exits: Vec<(String, Signal)> = Vec::new();
@@ -172,9 +175,6 @@ impl PortfolioEngine {
                 let candle_idx = state.ts_index[&timestamp];
                 let candle = &state.candles[candle_idx];
 
-                // Update HWM for trailing stop using the intrabar extreme so the
-                // trailing stop correctly reflects the best price reached during the bar.
-                update_trailing_hwm(state.position.as_ref(), &mut state.hwm, candle);
                 if state.track_extremes {
                     update_position_extremes(state.position.as_ref(), &mut state.extremes, candle);
                 }
@@ -199,13 +199,16 @@ impl PortfolioEngine {
                     state.div_idx += 1;
                 }
 
-                // Check SL/TP/trailing stop
+                // Check SL/TP/trailing stop against the hwm as of the prior bar,
+                // before this bar's own high/low is folded in below.
                 if let Some(ref pos) = state.position
                     && let Some(exit_signal) =
                         check_sl_tp(pos, candle, state.hwm, &self.config.base)
                 {
                     auto_exits.push((sym.clone(), exit_signal));
                 }
+
+                update_trailing_hwm(state.position.as_ref(), &mut state.hwm, candle);
             }
 
             // Process auto-exits (SL/TP/trailing) — execute on the current bar at the
@@ -282,6 +285,7 @@ impl PortfolioEngine {
 
                 // Compute portfolio equity with an immutable borrow (no conflict now)
                 let portfolio_equity = compute_portfolio_equity(cash, &states, timestamp);
+                let buying_power = compute_buying_power(cash, &states);
 
                 // Re-acquire the mutable borrow for strategy evaluation and signal dispatch
                 let state = states.get_mut(sym).unwrap();
@@ -293,6 +297,7 @@ impl PortfolioEngine {
                     equity: portfolio_equity,
                     indicators: &state.indicators,
                     extremes: state.position.as_ref().and(state.extremes.as_ref()),
+                    indicator_index: None,
                 };
 
                 let signal = state.strategy.on_candle(&ctx);
@@ -412,7 +417,7 @@ impl PortfolioEngine {
                                     } else {
                                         commission
                                     };
-                                    if add_qty <= 0.0 || total_cost > cash {
+                                    if add_qty <= 0.0 || total_cost > buying_power {
                                         return false;
                                     }
                                     if is_long {
@@ -583,9 +588,10 @@ impl PortfolioEngine {
                 }
 
                 let is_long = signal.direction == SignalDirection::Long;
+                let buying_power = compute_buying_power(cash, &states);
                 let target_capital =
                     self.config
-                        .allocation_target(&sym, cash, initial_capital, n_symbols);
+                        .allocation_target(&sym, buying_power, initial_capital, n_symbols);
 
                 if target_capital <= 0.0 {
                     continue;
@@ -614,7 +620,7 @@ impl PortfolioEngine {
                 //
                 // When commission_fn is set we cannot analytically invert it, so
                 // we omit the % commission term and rely on the fill-rejection
-                // guard (`entry_cost > cash`) to catch any over-allocation.
+                // guard (`entry_cost > buying_power`) to catch any over-allocation.
                 let (flat_reserve, pct_friction) = if self.config.base.commission_fn.is_some() {
                     (0.0, 0.0)
                 } else {
@@ -636,10 +642,10 @@ impl PortfolioEngine {
                 let entry_cost = entry_price * quantity + entry_comm + entry_tax;
 
                 if is_long {
-                    if entry_cost > cash {
+                    if entry_cost > buying_power {
                         continue;
                     }
-                } else if entry_comm > cash {
+                } else if entry_comm > buying_power {
                     continue;
                 }
 
@@ -941,6 +947,18 @@ struct SymbolState<S: Strategy> {
     strategy_name: String,
 }
 
+/// Cash available to size a new entry: raw cash minus the notional of open
+/// short positions, so a short's sale proceeds can't fund another symbol.
+fn compute_buying_power<S: Strategy>(cash: f64, states: &HashMap<String, SymbolState<S>>) -> f64 {
+    let short_reserve: f64 = states
+        .values()
+        .filter_map(|s| s.position.as_ref())
+        .filter(|pos| pos.is_short())
+        .map(|pos| pos.entry_price * pos.entry_quantity)
+        .sum();
+    cash - short_reserve
+}
+
 /// Compute total portfolio equity: cash + sum of all open position values.
 fn compute_portfolio_equity<S: Strategy>(
     cash: f64,
@@ -1073,7 +1091,8 @@ fn check_sl_tp(
         }
     }
 
-    // Trailing stop — `hwm` is already updated to the intrabar extreme before this call.
+    // Trailing stop — `hwm` reflects prior bars only, so a level this bar's own
+    // extreme would set can't fire on this same bar.
     if let Some(trail_pct) = config.trailing_stop_pct
         && let Some(extreme) = hwm
         && extreme > 0.0
@@ -1239,6 +1258,127 @@ mod tests {
                 sym.max_leverage_used,
             );
         }
+    }
+
+    #[derive(Clone)]
+    struct FirstBarDirectionalEntry {
+        direction: SignalDirection,
+    }
+
+    impl Strategy for FirstBarDirectionalEntry {
+        fn name(&self) -> &str {
+            "First Bar Directional Entry"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                match self.direction {
+                    SignalDirection::Short => Signal::short(ctx.timestamp(), ctx.close()),
+                    _ => Signal::long(ctx.timestamp(), ctx.close()),
+                }
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_proceeds_do_not_fund_a_same_bar_long_beyond_equity() {
+        let prices = vec![100.0, 100.0, 100.0];
+        let data = vec![
+            SymbolData::new("A", make_candles(&prices)),
+            SymbolData::new("B", make_candles(&prices)),
+        ];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .allow_short(true)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .build()
+                .unwrap(),
+        );
+
+        let result = PortfolioEngine::new(config)
+            .run(&data, |sym| FirstBarDirectionalEntry {
+                direction: if sym == "A" {
+                    SignalDirection::Short
+                } else {
+                    SignalDirection::Long
+                },
+            })
+            .unwrap();
+
+        for sym in result.symbols.values() {
+            assert!(
+                sym.max_leverage_used <= 1.0 + 1e-9,
+                "{} reported {:.3}x in an unlevered portfolio",
+                sym.symbol,
+                sym.max_leverage_used,
+            );
+        }
+    }
+
+    #[test]
+    fn test_trailing_stop_does_not_arm_and_fire_on_the_same_bar() {
+        let candles = vec![
+            Candle {
+                timestamp: 0,
+                open: 100.0,
+                high: 100.0,
+                low: 100.0,
+                close: 100.0,
+                volume: 1_000,
+                adj_close: Some(100.0),
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 86_400,
+                open: 100.0,
+                high: 100.0,
+                low: 100.0,
+                close: 100.0,
+                volume: 1_000,
+                adj_close: Some(100.0),
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 172_800,
+                open: 100.0,
+                high: 110.0,
+                low: 99.0,
+                close: 109.0,
+                volume: 1_000,
+                adj_close: Some(109.0),
+                provider_id: None,
+            },
+        ];
+        let data = vec![SymbolData::new("A", candles)];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .trailing_stop_pct(0.05)
+                .close_at_end(false)
+                .build()
+                .unwrap(),
+        );
+
+        let result = PortfolioEngine::new(config)
+            .run(&data, |_| FirstBarLongElseHold { enabled: true })
+            .unwrap();
+
+        assert!(
+            result.symbols["A"].trades.is_empty(),
+            "trailing stop should not fire on the bar that set its own high"
+        );
     }
 
     fn make_candles(prices: &[f64]) -> Vec<Candle> {
