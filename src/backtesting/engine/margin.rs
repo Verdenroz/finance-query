@@ -20,6 +20,26 @@ pub(super) fn entry_buying_power(cash: f64, config: &BacktestConfig) -> f64 {
     cash.max(0.0) * config.max_leverage
 }
 
+/// Whether an entry or scale-in tranche fits the buying-power ceiling.
+///
+/// A long commits its full value plus costs against the ceiling; a short
+/// commits its notional but pays only the commission from cash.
+#[inline]
+pub(super) fn fits_buying_power(
+    is_long: bool,
+    value: f64,
+    commission: f64,
+    tax: f64,
+    cash: f64,
+    buying_power: f64,
+) -> bool {
+    if is_long {
+        value + commission + tax <= buying_power
+    } else {
+        commission <= cash && value <= buying_power
+    }
+}
+
 /// Capital a scale-in may add on top of an open position: the unused portion
 /// of the exposure ceiling.
 ///

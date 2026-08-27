@@ -1,3 +1,4 @@
+use crate::backtesting::config::SizingContext;
 use crate::backtesting::error::{BacktestError, Result};
 use crate::backtesting::position::{Position, Trade};
 use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
@@ -673,7 +674,14 @@ impl BacktestEngine {
         match &signal.order_type {
             OrderType::Market => {
                 if let Some(fill_candle) = candles.get(i + 1) {
-                    let sizing = self.build_sizing_context(i, sizing_series, trades);
+                    // Only an entry reads the sizing context; exits and scale
+                    // signals get a default so the Kelly window isn't rebuilt.
+                    let sizing = match signal.direction {
+                        SignalDirection::Long | SignalDirection::Short => {
+                            self.build_sizing_context(i, sizing_series, trades)
+                        }
+                        _ => SizingContext::default(),
+                    };
                     self.execute_signal(signal, fill_candle, position, cash, trades, &sizing)
                 } else {
                     false
@@ -703,7 +711,7 @@ impl BacktestEngine {
             _ => {
                 // Non-market Exit / ScaleIn / ScaleOut — execute as market.
                 if let Some(fill_candle) = candles.get(i + 1) {
-                    let sizing = self.build_sizing_context(i, sizing_series, trades);
+                    let sizing = SizingContext::default();
                     self.execute_signal(signal, fill_candle, position, cash, trades, &sizing)
                 } else {
                     false

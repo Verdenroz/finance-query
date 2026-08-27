@@ -57,34 +57,35 @@ fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
 ///
 /// [`PerformanceMetrics::win_rate`]: crate::backtesting::PerformanceMetrics::win_rate
 fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Option<f64>) {
-    let closed: Vec<&Trade> = trades.iter().filter(|t| !t.is_partial).collect();
-    let start = closed.len().saturating_sub(lookback.max(1));
-    let window = &closed[start..];
-    if window.len() < 2 {
+    let mut seen = 0usize;
+    let mut wins = 0usize;
+    let mut losses = 0usize;
+    let mut win_sum = 0.0;
+    let mut loss_sum = 0.0;
+    for t in trades.iter().rev().filter(|t| !t.is_partial) {
+        if t.is_profitable() {
+            wins += 1;
+            win_sum += t.return_pct;
+        } else if t.is_loss() {
+            losses += 1;
+            loss_sum += t.return_pct.abs();
+        }
+        seen += 1;
+        if seen == lookback.max(1) {
+            break;
+        }
+    }
+    if seen < 2 || wins == 0 || losses == 0 {
         return (None, None);
     }
 
-    let wins: Vec<f64> = window
-        .iter()
-        .filter(|t| t.pnl > 0.0)
-        .map(|t| t.return_pct)
-        .collect();
-    let losses: Vec<f64> = window
-        .iter()
-        .filter(|t| t.pnl < 0.0)
-        .map(|t| t.return_pct.abs())
-        .collect();
-    if wins.is_empty() || losses.is_empty() {
-        return (None, None);
-    }
-
-    let win_rate = wins.len() as f64 / (wins.len() + losses.len()) as f64;
-    let avg_win = wins.iter().sum::<f64>() / wins.len() as f64;
-    let avg_loss = losses.iter().sum::<f64>() / losses.len() as f64;
+    let avg_win = win_sum / wins as f64;
+    let avg_loss = loss_sum / losses as f64;
     if avg_loss <= 0.0 {
         return (None, None);
     }
 
+    let win_rate = wins as f64 / (wins + losses) as f64;
     (Some(win_rate), Some(avg_win / avg_loss))
 }
 
