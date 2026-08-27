@@ -359,10 +359,8 @@ impl PerformanceMetrics {
             0.0
         };
 
-        // Omega Ratio is defined on the continuous return distribution —
-        // use the same bar-by-bar periodic returns as Sharpe/Sortino, not
-        // per-trade returns (which vary by holding period and are incomparable
-        // across strategies with different average trade durations).
+        // Omega uses the same bar-by-bar returns as Sharpe/Sortino; per-trade
+        // returns vary by holding period and are incomparable across strategies.
         let omega_ratio = calculate_omega_ratio(&returns);
         let recovery_factor = if max_drawdown_pct > 0.0 {
             total_return_pct / (max_drawdown_pct * 100.0)

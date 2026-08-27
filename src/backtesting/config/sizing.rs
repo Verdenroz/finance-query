@@ -175,10 +175,8 @@ impl BacktestConfig {
             // The fill-rejection guard will catch any over-allocation.
             capital_to_use / (1.0 + self.spread_pct + self.transaction_tax_pct)
         } else {
-            // Round-trip costs (fraction of trade value):
-            //   - Commission: 2 × commission_pct  (entry + exit)
-            //   - Spread:     spread_pct           (half each way)
-            //   - Tax:        transaction_tax_pct  (buy only — conservative for shorts)
+            // Round-trip friction as a fraction of trade value: entry + exit
+            // commission, full spread (half each way), tax on the buy only.
             let friction =
                 1.0 + 2.0 * self.commission_pct + self.spread_pct + self.transaction_tax_pct;
             capital_to_use / friction - 2.0 * self.commission

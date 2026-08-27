@@ -1141,6 +1141,38 @@ mod tests {
     }
 
     #[test]
+    fn expires_in_bars_zero_never_fills() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 97.0, 100.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BuyLimitAt {
+                    bar: 0,
+                    limit_price: 98.0,
+                    expires_in_bars: Some(0),
+                },
+            )
+            .unwrap();
+
+        assert!(result.open_position.is_none());
+        assert!(result.trades.is_empty());
+    }
+
+    #[test]
     fn a_limit_fill_on_the_final_bar_counts_toward_max_leverage_used() {
         let candles = vec![
             make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
