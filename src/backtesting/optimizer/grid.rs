@@ -334,6 +334,13 @@ mod tests {
     }
 
     #[test]
+    fn test_float_range_step_exceeding_span_keeps_start() {
+        let vals = ParamRange::float_range(0.1, 0.12, 0.1).expand();
+        assert_eq!(vals.len(), 1);
+        assert!((vals[0].as_float() - 0.1).abs() < 1e-12);
+    }
+
+    #[test]
     fn test_float_bounds_expand_returns_empty() {
         // float_bounds has step=0.0, which is intentionally invalid for GridSearch.
         let r = ParamRange::float_bounds(0.1, 0.9);
