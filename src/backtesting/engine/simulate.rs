@@ -478,8 +478,26 @@ impl BacktestEngine {
             self.config.risk_free_rate,
             self.config.bars_per_year,
         );
+        // A position left open reaches no trade, so its accrued costs, income,
+        // and span since its last logged exit are folded in here.
         if let Some(ref pos) = position {
             metrics.total_financing_cost += pos.financing_cost_accrued;
+            metrics.total_dividend_income += pos.dividend_income;
+            metrics.total_commission += pos.entry_commission;
+            if let (Some(first), Some(last)) = (candles.first(), candles.last())
+                && last.timestamp > first.timestamp
+            {
+                let counted_to = trades
+                    .iter()
+                    .filter(|t| t.entry_timestamp == pos.entry_timestamp)
+                    .map(|t| t.exit_timestamp)
+                    .max()
+                    .unwrap_or(pos.entry_timestamp);
+                let span = (last.timestamp - first.timestamp) as f64;
+                let open_span = (last.timestamp - counted_to).max(0) as f64;
+                metrics.time_in_market_pct =
+                    (metrics.time_in_market_pct + open_span / span).min(1.0);
+            }
         }
 
         let start_timestamp = candles.first().map(|c| c.timestamp).unwrap_or(0);
@@ -1246,6 +1264,40 @@ mod tests {
             (ex_date_point.equity - 10_500.0).abs() < 1e-6,
             "expected the ex-date bar's curve point to include the dividend, got {}",
             ex_date_point.equity
+        );
+    }
+
+    #[test]
+    fn open_position_metrics_include_dividends_and_span() {
+        use crate::models::chart::Dividend;
+
+        let candles = make_candles(&[100.0; 6]);
+        let dividends = vec![Dividend {
+            timestamp: candles[2].timestamp,
+            amount: 5.0,
+            provider_id: None,
+        }];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run_with_dividends("TEST", &candles, EnterLongHold, &dividends)
+            .unwrap();
+
+        assert!(result.trades.is_empty());
+        assert!((result.metrics.total_dividend_income - 500.0).abs() < 1e-6);
+        // Entered at bar 1's open, held through bar 5 of a 0..5 curve.
+        assert!(
+            (result.metrics.time_in_market_pct - 0.8).abs() < 1e-9,
+            "expected 0.8, got {}",
+            result.metrics.time_in_market_pct
         );
     }
 

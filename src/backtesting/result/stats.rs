@@ -311,16 +311,31 @@ pub(super) fn calculate_win_loss_durations(trades: &[Trade]) -> (f64, f64) {
 
 /// Calculate fraction of backtest time spent in a position.
 ///
-/// Uses the ratio of total trade duration to the total backtest duration
-/// derived from the equity curve timestamps. Partial (scale-out) trades share
-/// their entry timestamp with the position's final trade, so they are
-/// excluded to avoid double-counting the overlapping span.
+/// Uses the ratio of total position span to the total backtest duration
+/// derived from the equity curve timestamps. All of a position's trades
+/// (scale-out partials plus its final close) share its entry timestamp, so
+/// spans are measured per position, entry to latest exit, never per trade:
+/// summing trades would double-count the overlap, and a position that only
+/// ever scaled out leaves nothing but partial trades in the log.
 pub(super) fn calculate_time_in_market(trades: &[Trade], equity_curve: &[EquityPoint]) -> f64 {
-    let total_duration_secs: i64 = trades
-        .iter()
-        .filter(|t| !t.is_partial)
-        .map(|t| t.duration_secs())
-        .sum();
+    let mut total_duration_secs: i64 = 0;
+    let mut current: Option<(i64, i64)> = None;
+    for t in trades {
+        match &mut current {
+            Some((entry, max_exit)) if *entry == t.entry_timestamp => {
+                *max_exit = (*max_exit).max(t.exit_timestamp);
+            }
+            _ => {
+                if let Some((entry, max_exit)) = current {
+                    total_duration_secs += max_exit - entry;
+                }
+                current = Some((t.entry_timestamp, t.exit_timestamp));
+            }
+        }
+    }
+    if let Some((entry, max_exit)) = current {
+        total_duration_secs += max_exit - entry;
+    }
 
     let backtest_secs = match (equity_curve.first(), equity_curve.last()) {
         (Some(first), Some(last)) if last.timestamp > first.timestamp => {
@@ -724,6 +739,45 @@ mod tests {
         assert!(
             (fraction - 0.10).abs() < 1e-9,
             "expected 0.10, got {fraction}"
+        );
+    }
+
+    #[test]
+    fn calculate_time_in_market_counts_a_position_with_only_partial_trades() {
+        use crate::backtesting::position::PositionSide;
+        use crate::backtesting::signal::Signal;
+
+        let partial = Trade {
+            side: PositionSide::Long,
+            entry_timestamp: 0,
+            exit_timestamp: 20,
+            entry_price: 100.0,
+            exit_price: 105.0,
+            quantity: 5.0,
+            entry_quantity: 5.0,
+            commission: 0.0,
+            transaction_tax: 0.0,
+            pnl: 25.0,
+            return_pct: 5.0,
+            dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
+            financing_cost: 0.0,
+            tags: Vec::new(),
+            is_partial: true,
+            scale_sequence: 0,
+            entry_signal: Signal::long(0, 100.0),
+            exit_signal: Signal::exit(20, 105.0),
+        };
+
+        let equity = vec![
+            equity_point(0, 10000.0, 0.0),
+            equity_point(100, 10025.0, 0.0),
+        ];
+
+        let fraction = calculate_time_in_market(&[partial], &equity);
+        assert!(
+            (fraction - 0.20).abs() < 1e-9,
+            "expected 0.20, got {fraction}"
         );
     }
 }
