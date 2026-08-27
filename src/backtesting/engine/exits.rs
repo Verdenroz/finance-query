@@ -103,7 +103,8 @@ impl BacktestEngine {
         }
 
         // Trailing stop — checked after SL/TP so explicit levels take priority.
-        //    `hwm` is already updated to the intrabar extreme before this call.
+        //    `hwm` is the water mark through the prior bar; this bar's own
+        //    high/low can't arm and fire its own trail.
         if let Some(trail_pct) = trail_pct
             && let Some(extreme) = hwm
             && extreme > 0.0
@@ -732,5 +733,35 @@ mod tests {
             result.trades[0].pnl > 0.0,
             "short trailing stop should exit in profit (entry $100, exit near $88)"
         );
+    }
+
+    #[test]
+    fn trailing_stop_armed_by_same_bar_high_does_not_fire_on_same_bar_low() {
+        // hwm is 100 going into this bar. Its own high (110) would arm a 5%
+        // trail at 104.5, which its own low (99) would then breach — but the
+        // trail must not exist until the *next* bar's check.
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(2, 100.0, 110.0, 99.0, 109.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .trailing_stop_pct(0.05)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongHold).unwrap();
+
+        assert!(
+            result.trades.is_empty(),
+            "a bar's own high must not arm a trail that its own low then fires"
+        );
+        assert!(result.open_position.is_some());
     }
 }

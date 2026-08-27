@@ -7,6 +7,7 @@ use crate::models::chart::{Candle, Dividend};
 
 use super::BacktestEngine;
 use super::exits::{update_position_extremes, update_trailing_hwm};
+use super::sizing::SizingSeries;
 
 impl BacktestEngine {
     // ── Core simulation ───────────────────────────────────────────────────────
@@ -82,6 +83,11 @@ impl BacktestEngine {
                 self.accrue_financing(&mut position, &mut cash, candle);
             }
 
+            // Credited before the equity snapshot so the ex-date bar's curve
+            // point and ctx.equity match the post-dividend value the margin
+            // check below measures.
+            self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
+
             equity = Self::update_equity_and_curve(
                 position.as_ref(),
                 candle,
@@ -90,7 +96,6 @@ impl BacktestEngine {
                 &mut equity_curve,
             );
 
-            update_trailing_hwm(position.as_ref(), &mut hwm, candle);
             if track_extremes {
                 // Pending orders fill after this has run for their bar, so the
                 // bar a limit/stop entry opened on would never be folded in.
@@ -106,17 +111,10 @@ impl BacktestEngine {
                 update_position_extremes(position.as_ref(), &mut extremes, candle);
             }
 
-            // Credit dividend income for any dividends ex-dated on or before this bar.
-            self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
-
             if let Some(pos) = position.as_ref() {
-                // Recomputed after the dividend credit so the peak matches the
-                // ratio the margin call measures.
-                let margin_equity =
-                    cash + pos.current_value(candle.close) + pos.unreinvested_dividends;
                 let exposure = pos.quantity * candle.close;
-                if margin_equity > 0.0 && exposure > max_leverage_used * margin_equity {
-                    max_leverage_used = exposure / margin_equity;
+                if equity > 0.0 && exposure > max_leverage_used * equity {
+                    max_leverage_used = exposure / equity;
                 }
             }
 
@@ -147,6 +145,7 @@ impl BacktestEngine {
                 });
 
                 if executed {
+                    Self::resync_equity_point(&mut equity_curve, &mut peak_equity, cash);
                     hwm = None; // Reset HWM when position is closed
                     extremes = None;
                     continue; // Skip strategy signal this bar
@@ -179,11 +178,16 @@ impl BacktestEngine {
                 });
 
                 if executed {
+                    Self::resync_equity_point(&mut equity_curve, &mut peak_equity, cash);
                     hwm = None;
                     extremes = None;
                     continue;
                 }
             }
+
+            // Runs after check_sl_tp so the trail level it just used excludes
+            // this bar's own high/low.
+            update_trailing_hwm(position.as_ref(), &mut hwm, candle);
 
             // ── Pending limit / stop orders ───────────────────────────────
             // Check queued orders against the current bar before evaluating
@@ -195,9 +199,10 @@ impl BacktestEngine {
             // ordering-destroying `swap_remove` used previously.
             let mut filled_this_bar = false;
             pending_orders.retain_mut(|order| {
-                // Expire orders past their GTC lifetime.
+                // Expire orders past their GTC lifetime. Strict `>`: exp=n grants
+                // fill attempts on bars created_bar+1..=created_bar+n.
                 if let Some(exp) = order.expires_in_bars
-                    && i >= order.created_bar + exp
+                    && i > order.created_bar + exp
                 {
                     return false; // drop
                 }
@@ -253,7 +258,15 @@ impl BacktestEngine {
                         &sizing,
                     );
                     if executed {
-                        hwm = position.as_ref().map(|p| p.entry_price);
+                        // update_trailing_hwm already ran for this bar while the
+                        // position was still None, so seed the fold here too.
+                        hwm = position.as_ref().map(|p| {
+                            if p.is_long() {
+                                p.entry_price.max(candle.high)
+                            } else {
+                                p.entry_price.min(candle.low)
+                            }
+                        });
                         signals.push(SignalRecord {
                             timestamp: candle.timestamp,
                             price: fill_price,
@@ -284,6 +297,7 @@ impl BacktestEngine {
                 equity,
                 indicators: &indicators,
                 extremes: position.as_ref().and(extremes.as_ref()),
+                indicator_index: None,
             };
 
             // Get strategy signal
@@ -313,62 +327,16 @@ impl BacktestEngine {
             // and fill on a subsequent bar when the price level is reached.
             // Non-Market directions other than Long/Short (Exit, ScaleIn,
             // ScaleOut) are always treated as market orders.
-            let executed = match &signal.order_type {
-                OrderType::Market => {
-                    if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
-                        self.execute_signal(
-                            &signal,
-                            fill_candle,
-                            &mut position,
-                            &mut cash,
-                            &mut trades,
-                            &sizing,
-                        )
-                    } else {
-                        false
-                    }
-                }
-                _ if matches!(
-                    signal.direction,
-                    SignalDirection::Long | SignalDirection::Short
-                ) =>
-                {
-                    // Reject short orders immediately if shorts are disabled —
-                    // no point burning queue space for orders that can never fill.
-                    if matches!(signal.direction, SignalDirection::Short)
-                        && !self.config.allow_short
-                    {
-                        false
-                    } else {
-                        // Queue as a pending order; the signal record below will
-                        // show executed: false (order placed but not yet filled).
-                        pending_orders.push(PendingOrder {
-                            order_type: signal.order_type.clone(),
-                            expires_in_bars: signal.expires_in_bars,
-                            created_bar: i,
-                            signal: signal.clone(),
-                        });
-                        false
-                    }
-                }
-                _ => {
-                    // Non-market Exit / ScaleIn / ScaleOut — execute as market.
-                    if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
-                        self.execute_signal(
-                            &signal,
-                            fill_candle,
-                            &mut position,
-                            &mut cash,
-                            &mut trades,
-                            &sizing,
-                        )
-                    } else {
-                        false
-                    }
-                }
-            };
+            let executed = self.dispatch_entry_signal(
+                &signal,
+                i,
+                candles,
+                &mut position,
+                &mut cash,
+                &mut trades,
+                &sizing_series,
+                &mut pending_orders,
+            );
 
             if executed
                 && position.is_some()
@@ -399,22 +367,20 @@ impl BacktestEngine {
                     equity,
                     indicators: &indicators,
                     extremes: None,
+                    indicator_index: None,
                 };
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
-                    let follow_executed = if let Some(fill_candle) = candles.get(i + 1) {
-                        let sizing = self.build_sizing_context(i, &sizing_series, &trades);
-                        self.execute_signal(
-                            &follow,
-                            fill_candle,
-                            &mut position,
-                            &mut cash,
-                            &mut trades,
-                            &sizing,
-                        )
-                    } else {
-                        false
-                    };
+                    let follow_executed = self.dispatch_entry_signal(
+                        &follow,
+                        i,
+                        candles,
+                        &mut position,
+                        &mut cash,
+                        &mut trades,
+                        &sizing_series,
+                        &mut pending_orders,
+                    );
                     if follow_executed && position.is_some() {
                         hwm = position.as_ref().map(|p| p.entry_price);
                     }
@@ -601,6 +567,25 @@ impl BacktestEngine {
         equity
     }
 
+    /// Resync the bar's already-pushed equity point to realized cash after an
+    /// intrabar exit, so it isn't marked at a close price never traded through.
+    ///
+    /// The pre-exit snapshot may also have raised `peak_equity` to a value the
+    /// account never held, so the peak is re-derived from the corrected curve.
+    fn resync_equity_point(equity_curve: &mut [EquityPoint], peak_equity: &mut f64, cash: f64) {
+        if let Some(last) = equity_curve.last_mut() {
+            last.equity = cash;
+        }
+        *peak_equity = equity_curve.iter().map(|p| p.equity).fold(cash, f64::max);
+        if let Some(last) = equity_curve.last_mut() {
+            last.drawdown_pct = if *peak_equity > 0.0 {
+                (*peak_equity - cash) / *peak_equity
+            } else {
+                0.0
+            };
+        }
+    }
+
     /// Credit any dividends whose ex-date falls on or before the current candle.
     ///
     /// Advances `div_idx` forward so each dividend is credited exactly once.
@@ -622,6 +607,63 @@ impl BacktestEngine {
                 pos.credit_dividend(income, candle.close, self.config.reinvest_dividends);
             }
             *div_idx += 1;
+        }
+    }
+
+    /// Dispatch a signal's order type: `Market` (and non-Long/Short directions)
+    /// execute against the next bar's open; a Long/Short signal carrying a
+    /// limit/stop order type is queued as a [`PendingOrder`] instead.
+    #[allow(clippy::too_many_arguments)]
+    fn dispatch_entry_signal(
+        &self,
+        signal: &Signal,
+        i: usize,
+        candles: &[Candle],
+        position: &mut Option<Position>,
+        cash: &mut f64,
+        trades: &mut Vec<Trade>,
+        sizing_series: &SizingSeries,
+        pending_orders: &mut Vec<PendingOrder>,
+    ) -> bool {
+        match &signal.order_type {
+            OrderType::Market => {
+                if let Some(fill_candle) = candles.get(i + 1) {
+                    let sizing = self.build_sizing_context(i, sizing_series, trades);
+                    self.execute_signal(signal, fill_candle, position, cash, trades, &sizing)
+                } else {
+                    false
+                }
+            }
+            _ if matches!(
+                signal.direction,
+                SignalDirection::Long | SignalDirection::Short
+            ) =>
+            {
+                // Reject short orders immediately if shorts are disabled —
+                // no point burning queue space for orders that can never fill.
+                if matches!(signal.direction, SignalDirection::Short) && !self.config.allow_short {
+                    false
+                } else {
+                    // Queue as a pending order; the signal record below will
+                    // show executed: false (order placed but not yet filled).
+                    pending_orders.push(PendingOrder {
+                        order_type: signal.order_type.clone(),
+                        expires_in_bars: signal.expires_in_bars,
+                        created_bar: i,
+                        signal: signal.clone(),
+                    });
+                    false
+                }
+            }
+            _ => {
+                // Non-market Exit / ScaleIn / ScaleOut — execute as market.
+                if let Some(fill_candle) = candles.get(i + 1) {
+                    let sizing = self.build_sizing_context(i, sizing_series, trades);
+                    self.execute_signal(signal, fill_candle, position, cash, trades, &sizing)
+                } else {
+                    false
+                }
+            }
         }
     }
 }
@@ -984,6 +1026,275 @@ mod tests {
         assert!(
             format!("{bayes_err}").contains("candles"),
             "bayesian search should reject unsorted candles, got {bayes_err}"
+        );
+    }
+
+    #[test]
+    fn expires_in_bars_one_fills_on_its_only_eligible_bar() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 97.0, 100.0),
+            make_candle_ohlc(2, 100.0, 100.0, 100.0, 100.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BuyLimitAt {
+                    bar: 0,
+                    limit_price: 98.0,
+                    expires_in_bars: Some(1),
+                },
+            )
+            .unwrap();
+
+        let pos = result.open_position.expect("order should have filled");
+        assert!((pos.entry_price - 98.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn expires_in_bars_one_cancels_before_its_second_bar() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 99.0, 100.0),
+            make_candle_ohlc(2, 100.0, 100.0, 97.0, 100.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BuyLimitAt {
+                    bar: 0,
+                    limit_price: 98.0,
+                    expires_in_bars: Some(1),
+                },
+            )
+            .unwrap();
+
+        assert!(result.open_position.is_none());
+        assert!(result.trades.is_empty());
+    }
+
+    #[test]
+    fn config_trailing_stop_counts_a_limit_entrys_fill_bar_in_the_peak() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 99.0, 130.0, 94.0, 120.0),
+            make_candle_ohlc(2, 119.0, 121.0, 115.0, 116.0),
+            make_candle_ohlc(3, 115.0, 116.0, 110.0, 111.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .trailing_stop_pct(0.10)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BuyLimitAt {
+                    bar: 0,
+                    limit_price: 95.0,
+                    expires_in_bars: None,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        assert_eq!(result.trades[0].exit_timestamp, 2);
+        assert!((result.trades[0].exit_price - 117.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn intrabar_stop_exit_resyncs_the_bars_equity_point_to_realized_cash() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(2, 96.0, 96.0, 90.0, 85.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .stop_loss_pct(0.05)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongBar0).unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        assert!((result.trades[0].exit_price - 95.0).abs() < 1e-9);
+
+        let exit_point = result
+            .equity_curve
+            .iter()
+            .find(|p| p.timestamp == 2)
+            .expect("equity point for the exit bar");
+        assert!(
+            (exit_point.equity - 9_500.0).abs() < 1e-6,
+            "expected the exit bar's equity to reflect the realized stop fill, got {}",
+            exit_point.equity
+        );
+        assert!(
+            (exit_point.drawdown_pct - 0.05).abs() < 1e-6,
+            "expected drawdown capped at the stop's 5%, got {}",
+            exit_point.drawdown_pct
+        );
+    }
+
+    #[test]
+    fn intrabar_take_profit_exit_does_not_leave_a_phantom_peak() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(2, 105.0, 121.0, 104.0, 120.0),
+            make_candle_ohlc(3, 110.0, 110.0, 110.0, 110.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .take_profit_pct(0.10)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongBar0).unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        assert!((result.trades[0].exit_price - 110.0).abs() < 1e-9);
+
+        let exit_point = result
+            .equity_curve
+            .iter()
+            .find(|p| p.timestamp == 2)
+            .expect("equity point for the exit bar");
+        assert!((exit_point.equity - 11_000.0).abs() < 1e-6);
+        assert!(
+            exit_point.drawdown_pct.abs() < 1e-9,
+            "the pre-exit close-marked snapshot must not become the peak, got drawdown {}",
+            exit_point.drawdown_pct
+        );
+        assert!(
+            result.metrics.max_drawdown_pct.abs() < 1e-9,
+            "expected no drawdown against the realized peak, got {}",
+            result.metrics.max_drawdown_pct
+        );
+    }
+
+    #[test]
+    fn ex_date_bar_curve_point_includes_the_same_bar_dividend() {
+        use crate::models::chart::Dividend;
+
+        let candles = make_candles(&[100.0; 6]);
+        let dividends = vec![Dividend {
+            timestamp: candles[2].timestamp,
+            amount: 5.0,
+            provider_id: None,
+        }];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run_with_dividends("TEST", &candles, EnterLongHold, &dividends)
+            .unwrap();
+
+        let ex_date_point = result
+            .equity_curve
+            .iter()
+            .find(|p| p.timestamp == candles[2].timestamp)
+            .expect("equity point on the ex-date bar");
+        assert!(
+            (ex_date_point.equity - 10_500.0).abs() < 1e-6,
+            "expected the ex-date bar's curve point to include the dividend, got {}",
+            ex_date_point.equity
+        );
+    }
+
+    #[test]
+    fn a_buy_limit_follow_signal_queues_instead_of_market_filling() {
+        #[derive(Clone)]
+        struct ExitThenBuyLimit;
+        impl Strategy for ExitThenBuyLimit {
+            fn name(&self) -> &str {
+                "ExitThenBuyLimit"
+            }
+            fn required_indicators(&self) -> Vec<(String, crate::indicators::Indicator)> {
+                vec![]
+            }
+            fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+                match ctx.index {
+                    0 => Signal::long(ctx.timestamp(), ctx.close()),
+                    1 if ctx.has_position() => Signal::exit(ctx.timestamp(), ctx.close()),
+                    1 => Signal::buy_limit(ctx.timestamp(), ctx.close(), 90.0),
+                    _ => Signal::hold(),
+                }
+            }
+        }
+
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(2, 100.0, 100.0, 95.0, 97.0),
+            make_candle_ohlc(3, 100.0, 100.0, 88.0, 90.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, ExitThenBuyLimit).unwrap();
+
+        let pos = result
+            .open_position
+            .expect("the follow limit order should have filled once price reached it");
+        assert!(
+            (pos.entry_price - 90.0).abs() < 1e-9,
+            "follow signal should honor its limit price, not market-fill at the next open, got {}",
+            pos.entry_price
         );
     }
 }
