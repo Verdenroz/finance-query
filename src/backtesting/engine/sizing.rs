@@ -8,7 +8,7 @@ use super::BacktestEngine;
 /// Series the active sizing scheme reads, computed once per run. Both fields
 /// stay `None` for schemes that need no bar history.
 #[derive(Default)]
-pub(super) struct SizingSeries {
+pub(crate) struct SizingSeries {
     atr: Option<Vec<Option<f64>>>,
     vol: Option<Vec<Option<f64>>>,
 }
@@ -90,7 +90,7 @@ fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Opt
 }
 
 impl BacktestEngine {
-    pub(super) fn compute_sizing_series(&self, candles: &[Candle]) -> SizingSeries {
+    pub(crate) fn compute_sizing_series(&self, candles: &[Candle]) -> SizingSeries {
         match self.config.position_sizing {
             PositionSizing::Atr { atr_period, .. } => {
                 let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
@@ -117,7 +117,7 @@ impl BacktestEngine {
     /// Sizing inputs as of `index`, which must be the last bar closed before
     /// the fill: a market order filling at the open of bar `i + 1` sizes from
     /// `i`, an intrabar limit or stop fill on bar `i` sizes from `i - 1`.
-    pub(super) fn build_sizing_context(
+    pub(crate) fn build_sizing_context(
         &self,
         index: usize,
         series: &SizingSeries,

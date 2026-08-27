@@ -7,7 +7,7 @@ use crate::backtesting::strategy::{PositionExtremes, Strategy, StrategyContext};
 use crate::models::chart::{Candle, Dividend};
 
 use super::BacktestEngine;
-use super::exits::{update_position_extremes, update_trailing_hwm};
+use super::exits::{check_sl_tp, update_position_extremes, update_trailing_hwm};
 use super::sizing::SizingSeries;
 
 impl BacktestEngine {
@@ -124,7 +124,7 @@ impl BacktestEngine {
             // The signal carries the intrabar fill price (stop/TP level with gap guard),
             // so we execute on the current bar at that price — no next-bar deferral needed.
             if let Some(ref pos) = position
-                && let Some(exit_signal) = self.check_sl_tp(pos, candle, hwm)
+                && let Some(exit_signal) = check_sl_tp(pos, candle, hwm, &self.config)
             {
                 let fill_price = exit_signal.price;
                 let executed = self.close_position_at(
