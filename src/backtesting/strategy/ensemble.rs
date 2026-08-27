@@ -349,7 +349,7 @@ impl Strategy for EnsembleStrategy {
             .flat_map(|(s, _)| s.required_indicators())
             .collect();
         indicators.sort_by(|a, b| a.0.cmp(&b.0));
-        indicators.dedup_by(|a, b| a.0 == b.0);
+        indicators.dedup_by(|a, b| a == b);
         indicators
     }
 
@@ -419,6 +419,7 @@ mod tests {
             equity: 10_000.0,
             indicators,
             extremes: None,
+            indicator_index: None,
         }
     }
 
@@ -479,6 +480,7 @@ mod tests {
             equity: 10_000.0,
             indicators,
             extremes: None,
+            indicator_index: None,
         }
     }
 
@@ -899,5 +901,27 @@ mod tests {
         assert!(indicators.iter().any(|(k, _)| k == "sma_10"));
         assert!(indicators.iter().any(|(k, _)| k == "sma_20"));
         assert!(indicators.iter().any(|(k, _)| k == "rsi_14"));
+    }
+
+    #[test]
+    fn test_required_indicators_keeps_same_key_different_params() {
+        use crate::backtesting::strategy::MacdSignal;
+
+        let ensemble = EnsembleStrategy::new("test")
+            .add(MacdSignal::new(12, 26, 9), 1.0)
+            .add(MacdSignal::new(5, 35, 5), 1.0)
+            .build();
+
+        let indicators = ensemble.required_indicators();
+        let macd_indicators: Vec<&Indicator> = indicators
+            .iter()
+            .filter(|(k, _)| k == "macd")
+            .map(|(_, ind)| ind)
+            .collect();
+        assert_eq!(
+            macd_indicators.len(),
+            2,
+            "both MacdSignal variants must survive dedup: {macd_indicators:?}"
+        );
     }
 }
