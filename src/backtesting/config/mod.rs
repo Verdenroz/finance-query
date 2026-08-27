@@ -257,17 +257,17 @@ impl BacktestConfig {
 
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<()> {
-        if self.initial_capital <= 0.0 {
+        if !self.initial_capital.is_finite() || self.initial_capital <= 0.0 {
             return Err(BacktestError::invalid_param(
                 "initial_capital",
-                "must be positive",
+                "must be finite and positive",
             ));
         }
 
-        if self.commission < 0.0 {
+        if !self.commission.is_finite() || self.commission < 0.0 {
             return Err(BacktestError::invalid_param(
                 "commission",
-                "cannot be negative",
+                "must be finite and cannot be negative",
             ));
         }
 
@@ -285,7 +285,7 @@ impl BacktestConfig {
             ));
         }
 
-        if self.position_size_pct <= 0.0 || self.position_size_pct > 1.0 {
+        if !(self.position_size_pct > 0.0 && self.position_size_pct <= 1.0) {
             return Err(BacktestError::invalid_param(
                 "position_size_pct",
                 "must be between 0.0 (exclusive) and 1.0 (inclusive)",
@@ -333,10 +333,10 @@ impl BacktestConfig {
             ));
         }
 
-        if self.bars_per_year <= 0.0 {
+        if !self.bars_per_year.is_finite() || self.bars_per_year <= 0.0 {
             return Err(BacktestError::invalid_param(
                 "bars_per_year",
-                "must be positive (e.g. 252 for daily, 52 for weekly)",
+                "must be finite and positive (e.g. 252 for daily, 52 for weekly)",
             ));
         }
 
@@ -368,11 +368,14 @@ impl BacktestConfig {
             ));
         }
 
-        if self.max_leverage > 1.0 && self.max_leverage * self.maintenance_margin_pct >= 1.0 {
+        if (self.max_leverage > 1.0 || self.allow_short)
+            && self.max_leverage * self.maintenance_margin_pct >= 1.0
+        {
             return Err(BacktestError::invalid_param(
                 "max_leverage",
-                "must be below 1.0 / maintenance_margin_pct, or a full-size entry \
-                 is liquidated on the bar after it opens",
+                "leverage times maintenance_margin_pct must be below 1.0, or a \
+                 full-size entry (levered, or short at any leverage) is \
+                 liquidated on the bar after it opens",
             ));
         }
 
@@ -486,6 +489,15 @@ mod tests {
         assert!(levered(4.0, 0.25).is_err());
         assert!(levered(3.0, 0.25).is_ok());
         assert!(levered(1.0, 1.0).is_ok());
+
+        assert!(
+            BacktestConfig::builder()
+                .max_leverage(1.0)
+                .maintenance_margin_pct(1.0)
+                .allow_short(true)
+                .build()
+                .is_err()
+        );
     }
 
     #[test]
@@ -689,6 +701,52 @@ mod tests {
         assert!(
             BacktestConfig::builder()
                 .margin_interest_rate(1.5)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_non_finite_fields_rejected() {
+        assert!(
+            BacktestConfig::builder()
+                .initial_capital(f64::NAN)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .initial_capital(f64::INFINITY)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .commission(f64::NAN)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .commission(f64::INFINITY)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .position_size_pct(f64::NAN)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .bars_per_year(f64::NAN)
+                .build()
+                .is_err()
+        );
+        assert!(
+            BacktestConfig::builder()
+                .bars_per_year(f64::INFINITY)
                 .build()
                 .is_err()
         );
