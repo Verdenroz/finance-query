@@ -794,6 +794,7 @@ mod tests {
                 equity: 10_000.0,
                 indicators: &indicators,
                 extremes: Some(&scanned),
+                indicator_index: None,
             };
             let without = StrategyContext {
                 candles: &candles[..=index],
@@ -802,6 +803,7 @@ mod tests {
                 equity: 10_000.0,
                 indicators: &indicators,
                 extremes: None,
+                indicator_index: None,
             };
             assert_eq!(
                 cond.evaluate(&with),
