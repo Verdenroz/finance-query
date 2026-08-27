@@ -95,17 +95,15 @@ impl BacktestEngine {
             .config
             .calculate_transaction_tax(additional_value, is_long);
         let buying_power = margin::add_buying_power(*cash, pos, candle.open, &self.config);
-        if is_long {
-            if additional_value + commission + entry_tax > buying_power {
-                return false; // Not enough buying power
-            }
-        } else {
-            if commission > *cash {
-                return false; // Not enough cash to pay entry commission
-            }
-            if additional_value > buying_power {
-                return false; // Notional exceeds leveraged buying power
-            }
+        if !margin::fits_buying_power(
+            is_long,
+            additional_value,
+            commission,
+            entry_tax,
+            *cash,
+            buying_power,
+        ) {
+            return false;
         }
 
         if is_long {
@@ -222,17 +220,15 @@ impl BacktestEngine {
         let entry_tax = self.config.calculate_transaction_tax(entry_value, is_long);
 
         let buying_power = margin::entry_buying_power(*cash, &self.config);
-        if is_long {
-            if entry_value + commission + entry_tax > buying_power {
-                return false; // Not enough buying power including commission and tax
-            }
-        } else {
-            if commission > *cash {
-                return false; // Not enough cash to pay entry commission
-            }
-            if entry_value > buying_power {
-                return false; // Notional exceeds leveraged buying power
-            }
+        if !margin::fits_buying_power(
+            is_long,
+            entry_value,
+            commission,
+            entry_tax,
+            *cash,
+            buying_power,
+        ) {
+            return false;
         }
 
         let side = if is_long {
