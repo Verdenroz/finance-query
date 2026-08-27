@@ -317,10 +317,9 @@ impl PerformanceMetrics {
             .map(|e| e.equity)
             .unwrap_or(initial_capital);
 
-        // A no-trade run that never drew down and ended where it started has
-        // every remaining metric at zero, so skip the O(n) risk block. A
-        // no-trade run with a moving curve (close_at_end = false) cannot pass
-        // this test: any excursion either draws down or moves an endpoint.
+        // Zero drawdown with both endpoints at initial capital means a flat
+        // curve: any excursion draws down or moves an endpoint. Flat with no
+        // trades zeroes every remaining metric, so skip the risk block.
         if trades.is_empty()
             && risk_free_rate >= 0.0
             && max_drawdown_pct == 0.0
