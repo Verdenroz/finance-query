@@ -62,7 +62,7 @@ pub struct PerformanceMetrics {
     /// Average losing trade return percentage
     pub avg_loss_pct: f64,
 
-    /// Average trade duration in bars
+    /// Average trade duration in seconds
     pub avg_trade_duration: f64,
 
     /// Total number of trades
@@ -136,11 +136,13 @@ pub struct PerformanceMetrics {
 
     /// Kelly Criterion: optimal fraction of capital to risk per trade.
     ///
-    /// Computed as `W - (1 - W) / R` where `W` is win rate and `R` is
-    /// `avg_win_pct / abs(avg_loss_pct)`. A positive value suggests the
-    /// strategy has an edge; a negative value suggests it does not. Values
-    /// above 1 indicate extreme edge (rare in practice). Returns `0.0` when
-    /// there are no losing trades to compute a ratio.
+    /// Computed as `W - (1 - W) / R` where `R` is `avg_win_pct /
+    /// abs(avg_loss_pct)` and `W` is the win rate over decisive
+    /// (non-break-even) trades, unlike [`win_rate`](Self::win_rate) which is
+    /// diluted by break-even trades. A positive value suggests the strategy
+    /// has an edge; a negative value suggests it does not. Values above 1
+    /// indicate extreme edge (rare in practice). Returns `0.0` when there are
+    /// no losing trades to compute a ratio.
     pub kelly_criterion: f64,
 
     /// Van Tharp's System Quality Number.
@@ -303,46 +305,12 @@ impl PerformanceMetrics {
         risk_free_rate: f64,
         bars_per_year: f64,
     ) -> Self {
-        if trades.is_empty() {
-            return Self::empty(
-                initial_capital,
-                equity_curve,
-                total_signals,
-                executed_signals,
-            );
-        }
-
         let total_trades = trades.len();
         let stats = analyze_trades(trades);
 
-        let win_rate = stats.winning_trades as f64 / total_trades as f64;
-
-        let profit_factor = if stats.gross_loss > 0.0 {
-            stats.gross_profit / stats.gross_loss
-        } else if stats.gross_profit > 0.0 {
-            f64::MAX
-        } else {
-            0.0
-        };
-
-        let avg_trade_return_pct = stats.total_return_sum / total_trades as f64;
-
-        let avg_win_pct = if !stats.winning_returns.is_empty() {
-            stats.winning_returns.iter().sum::<f64>() / stats.winning_returns.len() as f64
-        } else {
-            0.0
-        };
-
-        let avg_loss_pct = if !stats.losing_returns.is_empty() {
-            stats.losing_returns.iter().sum::<f64>() / stats.losing_returns.len() as f64
-        } else {
-            0.0
-        };
-
-        let avg_trade_duration = stats.total_duration as f64 / total_trades as f64;
-
-        // Consecutive wins/losses
-        let (max_consecutive_wins, max_consecutive_losses) = calculate_consecutive(trades);
+        // Curve-derived metrics come before the zero-trade early return: a
+        // position left open the whole run (close_at_end = false) has no
+        // closed trades but still carries real drawdown/risk.
 
         // Drawdown metrics
         let max_drawdown_pct = equity_curve
@@ -391,36 +359,11 @@ impl PerformanceMetrics {
             0.0
         };
 
-        // Trade duration analysis
-        let (avg_win_duration, avg_loss_duration) = calculate_win_loss_durations(trades);
-        let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
-        let max_idle_period = calculate_max_idle_period(trades);
-
-        // Phase 1 — extended metrics
-        let kelly_criterion = calculate_kelly(win_rate, avg_win_pct, avg_loss_pct);
-        let sqn = calculate_sqn(&stats.all_returns);
-        // Dollar expectancy: expected profit per trade in the same currency as
-        // initial_capital. This is distinct from avg_trade_return_pct (which
-        // is a percentage). Break-even trades reduce both probabilities without
-        // contributing to either avg, so each outcome is weighted independently.
-        let loss_rate = stats.losing_trades as f64 / total_trades as f64;
-        let avg_win_dollar = if stats.winning_trades > 0 {
-            stats.gross_profit / stats.winning_trades as f64
-        } else {
-            0.0
-        };
-        let avg_loss_dollar = if stats.losing_trades > 0 {
-            -(stats.gross_loss / stats.losing_trades as f64)
-        } else {
-            0.0
-        };
-        let expectancy = win_rate * avg_win_dollar + loss_rate * avg_loss_dollar;
         // Omega Ratio is defined on the continuous return distribution —
         // use the same bar-by-bar periodic returns as Sharpe/Sortino, not
         // per-trade returns (which vary by holding period and are incomparable
         // across strategies with different average trade durations).
         let omega_ratio = calculate_omega_ratio(&returns);
-        let tail_ratio = calculate_tail_ratio(&stats.all_returns);
         let recovery_factor = if max_drawdown_pct > 0.0 {
             total_return_pct / (max_drawdown_pct * 100.0)
         } else if total_return_pct > 0.0 {
@@ -438,6 +381,111 @@ impl PerformanceMetrics {
         } else {
             0.0
         };
+
+        if total_trades == 0 {
+            return Self {
+                total_return_pct,
+                annualized_return_pct,
+                sharpe_ratio,
+                sortino_ratio,
+                max_drawdown_pct,
+                max_drawdown_duration,
+                win_rate: 0.0,
+                profit_factor: 0.0,
+                avg_trade_return_pct: 0.0,
+                avg_win_pct: 0.0,
+                avg_loss_pct: 0.0,
+                avg_trade_duration: 0.0,
+                total_trades: 0,
+                winning_trades: 0,
+                losing_trades: 0,
+                largest_win: 0.0,
+                largest_loss: 0.0,
+                max_consecutive_wins: 0,
+                max_consecutive_losses: 0,
+                calmar_ratio,
+                total_commission: 0.0,
+                total_financing_cost: 0.0,
+                long_trades: 0,
+                short_trades: 0,
+                total_signals,
+                executed_signals,
+                avg_win_duration: 0.0,
+                avg_loss_duration: 0.0,
+                time_in_market_pct: 0.0,
+                max_idle_period: 0,
+                total_dividend_income: 0.0,
+                kelly_criterion: 0.0,
+                sqn: 0.0,
+                expectancy: 0.0,
+                omega_ratio,
+                tail_ratio: 0.0,
+                recovery_factor,
+                ulcer_index,
+                serenity_ratio,
+            };
+        }
+
+        let win_rate = stats.winning_trades as f64 / total_trades as f64;
+
+        let profit_factor = if stats.gross_loss > 0.0 {
+            stats.gross_profit / stats.gross_loss
+        } else if stats.gross_profit > 0.0 {
+            f64::MAX
+        } else {
+            0.0
+        };
+
+        let avg_trade_return_pct = stats.total_return_sum / total_trades as f64;
+
+        let avg_win_pct = if !stats.winning_returns.is_empty() {
+            stats.winning_returns.iter().sum::<f64>() / stats.winning_returns.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_loss_pct = if !stats.losing_returns.is_empty() {
+            stats.losing_returns.iter().sum::<f64>() / stats.losing_returns.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_trade_duration = stats.total_duration as f64 / total_trades as f64;
+
+        // Consecutive wins/losses
+        let (max_consecutive_wins, max_consecutive_losses) = calculate_consecutive(trades);
+
+        // Trade duration analysis
+        let (avg_win_duration, avg_loss_duration) = calculate_win_loss_durations(trades);
+        let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
+        let max_idle_period = calculate_max_idle_period(trades);
+
+        // Phase 1 — extended metrics
+        let decisive_trades = stats.winning_trades + stats.losing_trades;
+        let kelly_win_rate = if decisive_trades > 0 {
+            stats.winning_trades as f64 / decisive_trades as f64
+        } else {
+            0.0
+        };
+        let kelly_criterion = calculate_kelly(kelly_win_rate, avg_win_pct, avg_loss_pct);
+        let sqn = calculate_sqn(&stats.all_returns);
+        // Dollar expectancy: expected profit per trade in the same currency as
+        // initial_capital. This is distinct from avg_trade_return_pct (which
+        // is a percentage). Break-even trades reduce both probabilities without
+        // contributing to either avg, so each outcome is weighted independently.
+        let loss_rate = stats.losing_trades as f64 / total_trades as f64;
+        let avg_win_dollar = if stats.winning_trades > 0 {
+            stats.gross_profit / stats.winning_trades as f64
+        } else {
+            0.0
+        };
+        let avg_loss_dollar = if stats.losing_trades > 0 {
+            -(stats.gross_loss / stats.losing_trades as f64)
+        } else {
+            0.0
+        };
+        let expectancy = win_rate * avg_win_dollar + loss_rate * avg_loss_dollar;
+        let tail_ratio = calculate_tail_ratio(&stats.all_returns);
 
         Self {
             total_return_pct,
@@ -670,5 +718,73 @@ mod tests {
 
         let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 2, 2, 0.0, 252.0);
         assert_eq!(metrics.profit_factor, f64::MAX);
+    }
+
+    #[test]
+    fn test_kelly_uses_decisive_win_rate_not_diluted_win_rate() {
+        // 1 win (+10%), 2 break-even, 1 loss (-5%): diluted win_rate=0.25
+        // would give a negative Kelly, but the decisive win_rate (1 win of
+        // 2 decisive trades = 0.5) gives Kelly = 0.5 - 0.5/2 = 0.25.
+        let trades = vec![
+            make_trade(10.0, 10.0, true),
+            make_trade(0.0, 0.0, true),
+            make_trade(0.0, 0.0, true),
+            make_trade(-5.0, -5.0, true),
+        ];
+        let equity = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 10005.0,
+                drawdown_pct: 0.0,
+            },
+        ];
+
+        let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 4, 4, 0.0, 252.0);
+
+        assert!((metrics.win_rate - 0.25).abs() < 1e-9);
+        assert!(
+            (metrics.kelly_criterion - 0.25).abs() < 1e-9,
+            "expected 0.25, got {}",
+            metrics.kelly_criterion
+        );
+    }
+
+    #[test]
+    fn test_metrics_no_trades_reports_curve_drawdown_for_open_position() {
+        // close_at_end = false leaves an open position with no closed trades,
+        // but the equity curve still marks the position to market every bar.
+        let equity = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 7000.0,
+                drawdown_pct: 0.3,
+            },
+            EquityPoint {
+                timestamp: 2,
+                equity: 10500.0,
+                drawdown_pct: 0.0,
+            },
+        ];
+
+        let metrics = PerformanceMetrics::calculate(&[], &equity, 10000.0, 0, 0, 0.0, 252.0);
+
+        assert_eq!(metrics.total_trades, 0);
+        assert!((metrics.total_return_pct - 5.0).abs() < 0.01);
+        assert!(
+            (metrics.max_drawdown_pct - 0.3).abs() < 1e-9,
+            "expected 0.3, got {}",
+            metrics.max_drawdown_pct
+        );
+        assert!(metrics.ulcer_index > 0.0);
     }
 }

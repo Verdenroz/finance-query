@@ -312,9 +312,15 @@ pub(super) fn calculate_win_loss_durations(trades: &[Trade]) -> (f64, f64) {
 /// Calculate fraction of backtest time spent in a position.
 ///
 /// Uses the ratio of total trade duration to the total backtest duration
-/// derived from the equity curve timestamps.
+/// derived from the equity curve timestamps. Partial (scale-out) trades share
+/// their entry timestamp with the position's final trade, so they are
+/// excluded to avoid double-counting the overlapping span.
 pub(super) fn calculate_time_in_market(trades: &[Trade], equity_curve: &[EquityPoint]) -> f64 {
-    let total_duration_secs: i64 = trades.iter().map(|t| t.duration_secs()).sum();
+    let total_duration_secs: i64 = trades
+        .iter()
+        .filter(|t| !t.is_partial)
+        .map(|t| t.duration_secs())
+        .sum();
 
     let backtest_secs = match (equity_curve.first(), equity_curve.last()) {
         (Some(first), Some(last)) if last.timestamp > first.timestamp => {
@@ -656,5 +662,68 @@ mod tests {
         let bpy = infer_bars_per_year(&pts, 252.0);
         // 103 return periods over ~2 years ≈ 51.5; accept 48–56 as reasonable
         assert!(bpy > 48.0 && bpy < 56.0, "expected ~52, got {bpy}");
+    }
+
+    #[test]
+    fn calculate_time_in_market_ignores_partial_scale_out_overlap() {
+        use crate::backtesting::position::PositionSide;
+        use crate::backtesting::signal::Signal;
+
+        // Entry at t=0, scale-out at t=5 (partial trade spans 0..5), final
+        // exit at t=10 (non-partial trade spans 0..10). Both trades share the
+        // same entry timestamp, so summing both would double-count 0..5.
+        let partial = Trade {
+            side: PositionSide::Long,
+            entry_timestamp: 0,
+            exit_timestamp: 5,
+            entry_price: 100.0,
+            exit_price: 105.0,
+            quantity: 5.0,
+            entry_quantity: 10.0,
+            commission: 0.0,
+            transaction_tax: 0.0,
+            pnl: 25.0,
+            return_pct: 5.0,
+            dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
+            financing_cost: 0.0,
+            tags: Vec::new(),
+            is_partial: true,
+            scale_sequence: 0,
+            entry_signal: Signal::long(0, 100.0),
+            exit_signal: Signal::exit(5, 105.0),
+        };
+        let final_trade = Trade {
+            side: PositionSide::Long,
+            entry_timestamp: 0,
+            exit_timestamp: 10,
+            entry_price: 100.0,
+            exit_price: 110.0,
+            quantity: 5.0,
+            entry_quantity: 10.0,
+            commission: 0.0,
+            transaction_tax: 0.0,
+            pnl: 50.0,
+            return_pct: 10.0,
+            dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
+            financing_cost: 0.0,
+            tags: Vec::new(),
+            is_partial: false,
+            scale_sequence: 0,
+            entry_signal: Signal::long(0, 100.0),
+            exit_signal: Signal::exit(10, 110.0),
+        };
+
+        let equity = vec![
+            equity_point(0, 10000.0, 0.0),
+            equity_point(100, 10075.0, 0.0),
+        ];
+
+        let fraction = calculate_time_in_market(&[partial, final_trade], &equity);
+        assert!(
+            (fraction - 0.10).abs() < 1e-9,
+            "expected 0.10, got {fraction}"
+        );
     }
 }
