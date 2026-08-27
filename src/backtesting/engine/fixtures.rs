@@ -87,6 +87,35 @@ impl Strategy for BuyStopAt {
     }
 }
 
+#[derive(Clone)]
+pub(super) struct BuyLimitAt {
+    pub(super) bar: usize,
+    pub(super) limit_price: f64,
+    pub(super) expires_in_bars: Option<usize>,
+}
+
+impl Strategy for BuyLimitAt {
+    fn name(&self) -> &str {
+        "Buy Limit At"
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        vec![]
+    }
+
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        if ctx.index == self.bar && !ctx.has_position() {
+            let signal = Signal::buy_limit(ctx.timestamp(), ctx.close(), self.limit_price);
+            match self.expires_in_bars {
+                Some(n) => signal.expires_in_bars(n),
+                None => signal,
+            }
+        } else {
+            Signal::hold()
+        }
+    }
+}
+
 pub(super) fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices
         .iter()
