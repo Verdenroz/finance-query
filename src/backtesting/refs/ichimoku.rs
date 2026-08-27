@@ -270,6 +270,9 @@ impl IndicatorRef for IchimokuLeadingBRef {
 /// time, not the plot-aligned span itself — that array is stored shifted
 /// forward for charting (slot `j` holds `close[j + lagging]`) and would leak
 /// future closes if read directly at the current bar.
+///
+/// Reads base-timeframe candles directly, so inside an `htf()` wrapper it
+/// still lags by base bars, not HTF bars.
 #[derive(Debug, Clone)]
 pub struct IchimokuLaggingRef {
     pub conversion: usize,
