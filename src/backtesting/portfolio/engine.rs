@@ -285,7 +285,7 @@ impl PortfolioEngine {
 
                 // Compute portfolio equity with an immutable borrow (no conflict now)
                 let portfolio_equity = compute_portfolio_equity(cash, &states, timestamp);
-                let buying_power = compute_buying_power(cash, &states);
+                let buying_power = compute_buying_power(cash, &states, timestamp);
 
                 // Re-acquire the mutable borrow for strategy evaluation and signal dispatch
                 let state = states.get_mut(sym).unwrap();
@@ -412,11 +412,9 @@ impl PortfolioEngine {
                                         .config
                                         .base
                                         .calculate_transaction_tax(add_value, is_long);
-                                    let total_cost = if is_long {
-                                        add_value + commission + entry_tax
-                                    } else {
-                                        commission
-                                    };
+                                    // Both directions consume buying power by
+                                    // the added notional plus costs.
+                                    let total_cost = add_value + commission + entry_tax;
                                     if add_qty <= 0.0 || total_cost > buying_power {
                                         return false;
                                     }
@@ -588,7 +586,7 @@ impl PortfolioEngine {
                 }
 
                 let is_long = signal.direction == SignalDirection::Long;
-                let buying_power = compute_buying_power(cash, &states);
+                let buying_power = compute_buying_power(cash, &states, timestamp);
                 let target_capital =
                     self.config
                         .allocation_target(&sym, buying_power, initial_capital, n_symbols);
@@ -641,11 +639,9 @@ impl PortfolioEngine {
                     .calculate_transaction_tax(entry_price * quantity, is_long);
                 let entry_cost = entry_price * quantity + entry_comm + entry_tax;
 
-                if is_long {
-                    if entry_cost > buying_power {
-                        continue;
-                    }
-                } else if entry_comm > buying_power {
+                // A short consumes buying power by its notional just like a
+                // long, even though it credits cash instead of debiting it.
+                if entry_cost > buying_power {
                     continue;
                 }
 
@@ -947,16 +943,26 @@ struct SymbolState<S: Strategy> {
     strategy_name: String,
 }
 
-/// Cash available to size a new entry: raw cash minus the notional of open
-/// short positions, so a short's sale proceeds can't fund another symbol.
-fn compute_buying_power<S: Strategy>(cash: f64, states: &HashMap<String, SymbolState<S>>) -> f64 {
-    let short_reserve: f64 = states
+/// Cash available to size a new entry: equity minus marked gross exposure,
+/// so aggregate exposure stays within equity in this unlevered engine.
+///
+/// Per position this is `current_value - quantity * close`: zero for a long
+/// (raw cash carries its cost), twice the marked notional for a short (its
+/// sale proceeds sit in cash but its exposure consumes the same headroom).
+fn compute_buying_power<S: Strategy>(
+    cash: f64,
+    states: &HashMap<String, SymbolState<S>>,
+    timestamp: i64,
+) -> f64 {
+    cash + states
         .values()
-        .filter_map(|s| s.position.as_ref())
-        .filter(|pos| pos.is_short())
-        .map(|pos| pos.entry_price * pos.entry_quantity)
-        .sum();
-    cash - short_reserve
+        .filter_map(|s| {
+            s.position.as_ref().and_then(|pos| {
+                close_at_or_before(s, timestamp)
+                    .map(|close| pos.current_value(close) - pos.quantity * close)
+            })
+        })
+        .sum::<f64>()
 }
 
 /// Compute total portfolio equity: cash + sum of all open position values.
@@ -1322,6 +1328,60 @@ mod tests {
                 sym.max_leverage_used,
             );
         }
+        assert!(
+            result.symbols["B"].trades.is_empty(),
+            "A's full-size short leaves no buying power for B's long"
+        );
+    }
+
+    #[derive(Clone)]
+    struct ShortThenScaleIn;
+
+    impl Strategy for ShortThenScaleIn {
+        fn name(&self) -> &str {
+            "Short Then Scale In"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 {
+                Signal::short(ctx.timestamp(), ctx.close())
+            } else if ctx.has_position() {
+                Signal::scale_in(1.0, ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_scale_in_cannot_exceed_portfolio_equity() {
+        let prices = vec![100.0; 10];
+        let data = vec![SymbolData::new("A", make_candles(&prices))];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .allow_short(true)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .close_at_end(false)
+                .build()
+                .unwrap(),
+        );
+
+        let result = PortfolioEngine::new(config)
+            .run(&data, |_| ShortThenScaleIn)
+            .unwrap();
+
+        assert!(
+            result.symbols["A"].max_leverage_used <= 1.0 + 1e-9,
+            "repeated short scale-ins reached {:.3}x in an unlevered portfolio",
+            result.symbols["A"].max_leverage_used,
+        );
     }
 
     #[test]
