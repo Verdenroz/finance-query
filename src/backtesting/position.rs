@@ -290,14 +290,14 @@ impl Position {
             return;
         }
 
-        let old_value = self.entry_price * self.quantity;
+        // Blend from entry_quantity, not quantity, so reinvested-dividend shares
+        // (zero cash cost) don't get priced into the basis at fill_price.
+        let old_value = self.entry_price * self.entry_quantity;
         let new_value = fill_price * additional_qty;
-        let total_qty = self.quantity + additional_qty;
 
-        self.entry_price = (old_value + new_value) / total_qty;
-        self.quantity = total_qty;
-        // Keep entry_quantity in sync so close_with_tax computes the correct cost basis.
-        self.entry_quantity = total_qty;
+        self.entry_quantity += additional_qty;
+        self.entry_price = (old_value + new_value) / self.entry_quantity;
+        self.quantity += additional_qty;
         // Track commission and tax in their respective fields for correct proportional
         // slicing in subsequent partial_close calls.
         self.entry_commission += commission;
@@ -342,6 +342,7 @@ impl Position {
         let fraction = fraction.clamp(0.0, 1.0);
         let qty_closed = self.quantity * fraction;
         let qty_remaining = self.quantity - qty_closed;
+        let entry_qty_closed = self.entry_quantity * fraction;
 
         // Proportional dividend income for the closed slice.
         let div_income = self.dividend_income * fraction;
@@ -350,10 +351,10 @@ impl Position {
         let entry_tax_slice = self.entry_transaction_tax * fraction;
         let financing_slice = self.financing_cost_accrued * fraction;
 
-        // Reduce the open position; keep entry_quantity in sync with quantity so
-        // close_with_tax computes the correct cost basis for the remainder.
+        // Slice entry_quantity by the same fraction as quantity, not to the
+        // same value, so the remainder keeps its reinvested-dividend gap.
         self.quantity = qty_remaining;
-        self.entry_quantity = qty_remaining;
+        self.entry_quantity -= entry_qty_closed;
         self.dividend_income -= div_income;
         self.unreinvested_dividends -= unreinvested;
         self.entry_commission -= entry_comm_slice;
@@ -361,14 +362,14 @@ impl Position {
         self.financing_cost_accrued -= financing_slice;
 
         let gross_pnl = match self.side {
-            PositionSide::Long => (exit_price - self.entry_price) * qty_closed,
-            PositionSide::Short => (self.entry_price - exit_price) * qty_closed,
+            PositionSide::Long => exit_price * qty_closed - self.entry_price * entry_qty_closed,
+            PositionSide::Short => self.entry_price * entry_qty_closed - exit_price * qty_closed,
         };
         let partial_commission = entry_comm_slice + commission;
         let partial_tax = entry_tax_slice + exit_tax;
 
         let pnl = gross_pnl - partial_commission - partial_tax + unreinvested - financing_slice;
-        let entry_value = self.entry_price * qty_closed;
+        let entry_value = self.entry_price * entry_qty_closed;
         let return_pct = if entry_value > 0.0 {
             (pnl / entry_value) * 100.0
         } else {
@@ -385,7 +386,7 @@ impl Position {
             entry_price: self.entry_price,
             exit_price,
             quantity: qty_closed,
-            entry_quantity: qty_closed,
+            entry_quantity: entry_qty_closed,
             commission: partial_commission,
             transaction_tax: partial_tax,
             pnl,
@@ -1009,5 +1010,50 @@ mod tests {
         // closed 10 shares; gross PnL = (140 - 110) * 10 = $300
         assert!((final_trade.pnl - 300.0).abs() < 1e-10);
         assert!(!final_trade.is_partial);
+    }
+
+    // ── reinvested dividends + scaling ──────────────────────────────────────
+
+    #[test]
+    fn test_scale_in_after_reinvested_dividend_matches_cash_gain() {
+        let mut pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        let outlay = 10.0 * 100.0;
+
+        pos.credit_dividend(100.0, 110.0, true);
+        pos.scale_in(110.0, 10.0, 0.0, 0.0);
+        let outlay = outlay + 10.0 * 110.0;
+
+        let trade = pos.close(2000, 110.0, 0.0, make_exit_signal());
+        let proceeds = trade.exit_value();
+
+        assert!((trade.pnl - (proceeds - outlay)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_partial_close_after_reinvested_dividend_matches_cash_gain() {
+        let mut pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        let outlay = 10.0 * 100.0;
+
+        pos.credit_dividend(100.0, 110.0, true);
+
+        let partial = pos.partial_close(0.5, 1500, 110.0, 0.0, 0.0, make_exit_signal());
+        let final_trade = pos.close(2000, 110.0, 0.0, make_exit_signal());
+        let proceeds = partial.exit_value() + final_trade.exit_value();
+
+        assert!(((partial.pnl + final_trade.pnl) - (proceeds - outlay)).abs() < 1e-6);
     }
 }
