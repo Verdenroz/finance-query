@@ -175,8 +175,9 @@ impl BacktestConfigBuilder {
 
     /// Set the equity floor as a fraction of gross exposure (0.0 - 1.0).
     ///
-    /// The engine liquidates the position when equity falls below it. Only
-    /// consulted when [`max_leverage`](Self::max_leverage) exceeds `1.0`.
+    /// The engine liquidates the position when equity falls below it.
+    /// Consulted for any levered position, and for a short at any leverage;
+    /// an unlevered long is never checked.
     pub fn maintenance_margin_pct(mut self, pct: f64) -> Self {
         self.config.maintenance_margin_pct = pct;
         self
