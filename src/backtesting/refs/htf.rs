@@ -20,15 +20,21 @@
 //! On each bar, `evaluate()` does only O(k) work (k = # inner indicators):
 //! it reads the pre-computed values, builds a tiny 2-element indicator map, and
 //! evaluates the inner condition. HTF crossovers work correctly because the map
-//! stores `[prev, current]`.
+//! stores `[prev, current]`. The inner condition keeps the full base candle
+//! history and index, so price-action refs, candle-window refs, and position
+//! conditions all stay on the base timeframe; only indicator refs read HTF
+//! values.
 //!
 //! # Fallback (dynamic resampling)
 //!
 //! If the pre-computed arrays are not found in `ctx.indicators` (e.g. a raw
 //! [`Strategy`] implementation that doesn't forward `htf_requirements()`), the
-//! condition falls back to dynamic resampling — O(n) per bar, O(n²) total.
-//! A `tracing::warn!` is emitted once per evaluation so the caller can diagnose
-//! the performance issue.
+//! condition falls back to dynamic resampling — O(n) per bar, O(n²) total —
+//! with the same context shape as the fast path. One divergence is inherent:
+//! the fallback sees only candles up to the current bar, so it counts an HTF
+//! bar as completed one base bar later than the fast path does on the bucket's
+//! final bar. A `tracing::warn!` is emitted once per evaluation so the caller
+//! can diagnose the performance issue.
 //!
 //! # Example
 //!
@@ -93,7 +99,7 @@ impl<C: Condition> Condition for HtfCondition<C> {
         //
         // We build a tiny 2-element indicators map [prev, curr] so that the inner
         // condition's crossover helpers (indicator_prev / crossed_above etc.) work
-        // correctly, then evaluate with index=1.
+        // correctly, then evaluate with indicator_index pinned to the curr slot.
         if !self.specs.is_empty() {
             let mut mini_indicators: HashMap<String, Vec<Option<f64>>> =
                 HashMap::with_capacity(self.specs.len());
@@ -106,7 +112,6 @@ impl<C: Condition> Condition for HtfCondition<C> {
                         .index
                         .checked_sub(1)
                         .and_then(|pi| stretched.get(pi).copied().flatten());
-                    // index=1 → curr; index=0 → prev (via indicator_prev)
                     mini_indicators.insert(spec.base_key.clone(), vec![prev, curr]);
                 } else {
                     all_found = false;
@@ -115,16 +120,17 @@ impl<C: Condition> Condition for HtfCondition<C> {
             }
 
             if all_found {
-                // Use a 2-candle slice [prev_bar, current_bar] so that
-                // current_candle() (index=1) returns the correct base bar.
-                let start = ctx.index.saturating_sub(1);
+                // Full base candle history with indicator_index pinned to the
+                // [prev, curr] map: price refs and position conditions keep
+                // base-bar indexing while indicator refs read the HTF pair.
                 let htf_ctx = StrategyContext {
-                    candles: &ctx.candles[start..=ctx.index],
-                    index: ctx.index - start, // 1 unless at bar 0
+                    candles: ctx.candles,
+                    index: ctx.index,
                     position: ctx.position,
                     equity: ctx.equity,
                     indicators: &mini_indicators,
                     extremes: ctx.extremes,
+                    indicator_index: Some(1),
                 };
                 return self.inner.evaluate(&htf_ctx);
             }
@@ -190,47 +196,54 @@ impl<C: Condition> HtfCondition<C> {
 
     /// Dynamic resampling fallback used when pre-computed data is unavailable.
     ///
-    /// This is O(n) per bar (O(n²) overall). It finds the most recently
-    /// *completed* HTF bar (timestamp < current bar) to avoid look-ahead bias.
+    /// O(n) per bar (O(n²) overall). Mirrors the fast path's context shape:
+    /// indicator refs read a `[prev, curr]` HTF pair while price refs and
+    /// position conditions stay on the base bars. Only candles up to
+    /// `ctx.index` exist here, so an HTF bar counts as completed one base bar
+    /// later than in the fast path (`<` instead of `<=`): the final resampled
+    /// bucket may still be partial and nothing in the slice can prove it closed.
     fn evaluate_dynamic(&self, ctx: &StrategyContext) -> bool {
         let htf_candles = resample(ctx.candles, self.interval, self.utc_offset_secs);
 
-        // Find the most recently completed HTF bar — timestamp strictly less than
-        // the current base bar's timestamp. In the dynamic path we use `<` (not
-        // `<=`) to conservatively exclude the in-progress period: we only have
-        // candles up to ctx.index, so the last HTF bar may be partial.
-        let current_ts = ctx.current_candle().timestamp;
-        let htf_idx = match htf_candles.iter().rposition(|c| c.timestamp < current_ts) {
-            Some(i) => i,
-            None => return false, // No completed HTF bar yet
-        };
-
-        let htf_indicators = if self.specs.is_empty() {
-            HashMap::new()
-        } else {
-            let required = self
-                .specs
-                .iter()
-                .map(|s| (s.base_key.clone(), s.indicator))
-                .collect();
-            match compute_for_candles(&htf_candles, required) {
-                Ok(map) => map,
-                Err(e) => {
-                    tracing::warn!("HTF indicator computation failed: {}", e);
-                    return false;
-                }
+        let required = self
+            .specs
+            .iter()
+            .map(|s| (s.base_key.clone(), s.indicator))
+            .collect();
+        let htf_indicators = match compute_for_candles(&htf_candles, required) {
+            Ok(map) => map,
+            Err(e) => {
+                tracing::warn!("HTF indicator computation failed: {}", e);
+                return false;
             }
         };
 
+        let last_completed = |ts: i64| htf_candles.iter().rposition(|c| c.timestamp < ts);
+        let curr_idx = last_completed(ctx.current_candle().timestamp);
+        let prev_idx = ctx
+            .index
+            .checked_sub(1)
+            .and_then(|pi| last_completed(ctx.candles[pi].timestamp));
+
+        let mut mini_indicators: HashMap<String, Vec<Option<f64>>> =
+            HashMap::with_capacity(self.specs.len());
+        for spec in &self.specs {
+            let series = htf_indicators.get(&spec.base_key);
+            let at = |idx: Option<usize>| {
+                idx.and_then(|i| series.and_then(|v| v.get(i)).copied().flatten())
+            };
+            mini_indicators.insert(spec.base_key.clone(), vec![at(prev_idx), at(curr_idx)]);
+        }
+
         let htf_ctx = StrategyContext {
-            candles: &htf_candles,
-            index: htf_idx,
+            candles: ctx.candles,
+            index: ctx.index,
             position: ctx.position,
             equity: ctx.equity,
-            indicators: &htf_indicators,
+            indicators: &mini_indicators,
             extremes: ctx.extremes,
+            indicator_index: Some(1),
         };
-
         self.inner.evaluate(&htf_ctx)
     }
 }
@@ -287,9 +300,12 @@ pub fn htf_region<C: Condition>(interval: Interval, region: Region, cond: C) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backtesting::condition::held_for_bars;
     use crate::backtesting::config::BacktestConfig;
     use crate::backtesting::engine::BacktestEngine;
-    use crate::backtesting::refs::{IndicatorRefExt, price, sma};
+    use crate::backtesting::position::{Position, PositionSide};
+    use crate::backtesting::refs::{IndicatorRefExt, price, relative_volume, sma};
+    use crate::backtesting::signal::Signal;
     use crate::backtesting::strategy::StrategyBuilder;
     use crate::models::chart::Candle;
 
@@ -380,5 +396,97 @@ mod tests {
     fn test_pure_price_condition_has_no_htf_requirements() {
         let cond = htf(Interval::OneWeek, price().above(100.0));
         assert!(cond.htf_requirements().is_empty());
+    }
+
+    #[test]
+    fn test_mixed_condition_keeps_base_candle_history() {
+        let candles = daily_candles(&[100.0; 30]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(1.0); 30]);
+
+        let cond = htf(
+            Interval::OneWeek,
+            sma(3).above(0.0).and(relative_volume(5).above(0.5)),
+        );
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 20,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_position_condition_sees_base_history() {
+        let candles = daily_candles(&[100.0; 30]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(1.0); 30]);
+        let entry_ts = candles[10].timestamp;
+        let pos = Position::new(
+            PositionSide::Long,
+            entry_ts,
+            100.0,
+            10.0,
+            0.0,
+            Signal::long(entry_ts, 100.0),
+        );
+
+        let cond = htf(Interval::OneWeek, sma(3).above(0.0).and(held_for_bars(3)));
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 15,
+            position: Some(&pos),
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_fast_path_reads_curr_slot_at_bar_0() {
+        let candles = daily_candles(&[100.0]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(5.0)]);
+
+        let cond = htf(Interval::OneWeek, sma(3).above(0.0));
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 0,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_dynamic_fallback_price_refs_stay_on_base_bars() {
+        let mut prices = vec![99.0; 14];
+        prices.push(101.0);
+        let candles = daily_candles(&prices);
+        let indicators = HashMap::new();
+
+        let cond = htf(
+            Interval::OneWeek,
+            price().above(100.0).and(sma(1).above(0.0)),
+        );
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 14,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
     }
 }

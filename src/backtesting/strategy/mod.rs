@@ -120,6 +120,14 @@ pub struct StrategyContext<'a> {
     /// reads it, or when the context was built outside the engine's bar loop —
     /// conditions that need it fall back to scanning from the entry bar.
     pub extremes: Option<&'a PositionExtremes>,
+
+    /// Index override for [`indicator`](Self::indicator) /
+    /// [`indicator_prev`](Self::indicator_prev) lookups; `None` means `index`.
+    ///
+    /// [`htf()`](crate::backtesting::refs::htf) keeps candles in base-bar index
+    /// space while its indicator map holds a per-bar `[prev, curr]` pair, so
+    /// indicator lookups address slot 1 while candle lookups keep `index`.
+    pub indicator_index: Option<usize>,
 }
 
 impl<'a> StrategyContext<'a> {
@@ -146,7 +154,7 @@ impl<'a> StrategyContext<'a> {
     pub fn indicator(&self, name: &str) -> Option<f64> {
         self.indicators
             .get(name)
-            .and_then(|v| v.get(self.index))
+            .and_then(|v| v.get(self.indicator_index.unwrap_or(self.index)))
             .and_then(|&v| v)
     }
 
@@ -160,8 +168,9 @@ impl<'a> StrategyContext<'a> {
 
     /// Get indicator value at previous index
     pub fn indicator_prev(&self, name: &str) -> Option<f64> {
-        if self.index > 0 {
-            self.indicator_at(name, self.index - 1)
+        let idx = self.indicator_index.unwrap_or(self.index);
+        if idx > 0 {
+            self.indicator_at(name, idx - 1)
         } else {
             None
         }
