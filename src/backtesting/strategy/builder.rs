@@ -294,9 +294,16 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
             indicators.extend(rf.required_indicators().iter().cloned());
         }
 
-        // Deduplicate by key
-        let mut seen = HashSet::new();
-        indicators.retain(|(key, _)| seen.insert(key.clone()));
+        // Deduplicate by (key, Indicator) pair: same-family strategies with
+        // different params share a key but must both survive.
+        let mut seen: Vec<(String, Indicator)> = Vec::new();
+        indicators.retain(|item| {
+            let is_new = !seen.contains(item);
+            if is_new {
+                seen.push(item.clone());
+            }
+            is_new
+        });
 
         indicators
     }
@@ -436,6 +443,7 @@ mod tests {
             equity: 10_000.0,
             indicators,
             extremes: None,
+            indicator_index: None,
         }
     }
 
@@ -556,6 +564,7 @@ mod tests {
             equity: 10_000.0,
             indicators: &indicators,
             extremes: None,
+            indicator_index: None,
         };
 
         // Exit must fire even though regime filter is false

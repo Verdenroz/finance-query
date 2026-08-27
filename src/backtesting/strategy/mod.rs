@@ -239,7 +239,7 @@ impl<'a> StrategyContext<'a> {
         let slow_prev = self.indicator_prev(slow_name);
 
         match (fast_now, slow_now, fast_prev, slow_prev) {
-            (Some(f), Some(s), Some(fp), Some(sp)) => fp < sp && f > s, // Fixed: changed <= to <
+            (Some(f), Some(s), Some(fp), Some(sp)) => fp <= sp && f > s,
             _ => false,
         }
     }
@@ -252,7 +252,7 @@ impl<'a> StrategyContext<'a> {
         let slow_prev = self.indicator_prev(slow_name);
 
         match (fast_now, slow_now, fast_prev, slow_prev) {
-            (Some(f), Some(s), Some(fp), Some(sp)) => fp > sp && f < s, // Fixed: changed >= to >
+            (Some(f), Some(s), Some(fp), Some(sp)) => fp >= sp && f < s,
             _ => false,
         }
     }
@@ -261,11 +261,9 @@ impl<'a> StrategyContext<'a> {
     ///
     /// Returns `true` when `prev <= threshold` **and** `current > threshold`.
     /// The inclusive lower bound (`<=`) means a signal fires even when the
-    /// previous bar sat exactly on the threshold, which is the conventional
-    /// "crosses above" definition.  This is intentionally asymmetric with the
-    /// strict crossover check in [`crossed_above`](Self::crossed_above) where
-    /// both sides use strict inequalities — threshold crossings and
-    /// indicator-vs-indicator crossings have different semantics.
+    /// previous bar sat exactly on the threshold, the same inclusive-previous
+    /// convention [`crossed_above`](Self::crossed_above) uses for
+    /// indicator-vs-indicator crossings.
     pub fn indicator_crossed_above(&self, name: &str, threshold: f64) -> bool {
         let now = self.indicator(name);
         let prev = self.indicator_prev(name);
@@ -482,10 +480,54 @@ mod tests {
             equity: 10000.0,
             indicators: &indicators,
             extremes: None,
+            indicator_index: None,
         };
 
         // fast was 9 (below slow 10), now 11 (above slow 10) -> crossed above
         assert!(ctx.crossed_above("fast", "slow"));
         assert!(!ctx.crossed_below("fast", "slow"));
+    }
+
+    #[test]
+    fn test_crossed_above_fires_on_touch() {
+        let candles = vec![
+            Candle {
+                timestamp: 1,
+                open: 100.0,
+                high: 101.0,
+                low: 99.0,
+                close: 100.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 2,
+                open: 100.0,
+                high: 102.0,
+                low: 99.0,
+                close: 101.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+        ];
+
+        let mut indicators = HashMap::new();
+        indicators.insert("fast".to_string(), vec![Some(10.0), Some(11.0)]);
+        indicators.insert("slow".to_string(), vec![Some(10.0), Some(10.0)]);
+
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 1,
+            position: None,
+            equity: 10000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+
+        // fast was exactly equal to slow (10 == 10), now above (11 > 10) -> crosses above
+        assert!(ctx.crossed_above("fast", "slow"));
     }
 }

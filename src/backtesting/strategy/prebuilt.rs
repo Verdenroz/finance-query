@@ -170,7 +170,7 @@ impl Strategy for SmaCrossover {
         };
 
         // Bullish crossover: fast crosses above slow
-        if fp < sp && fn_ > sn {
+        if fp <= sp && fn_ > sn {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bullish crossover - close short");
@@ -182,7 +182,7 @@ impl Strategy for SmaCrossover {
         }
 
         // Bearish crossover: fast crosses below slow
-        if fp > sp && fn_ < sn {
+        if fp >= sp && fn_ < sn {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bearish crossover - close long");
@@ -200,7 +200,7 @@ impl Strategy for SmaCrossover {
 /// RSI Reversal Strategy
 ///
 /// Goes long when RSI crosses above oversold level.
-/// Exits when RSI reaches overbought level.
+/// Exits the long when RSI crosses back below the overbought level.
 /// Emits short signals when RSI crosses below overbought (execution gated by
 /// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
@@ -275,19 +275,20 @@ impl Strategy for RsiReversal {
         };
         let rsi_prev = if i > 0 { get(i - 1) } else { None };
 
-        // Calculate signal strength based on RSI extremity
-        let strength = if !(20.0..=80.0).contains(&rsi_val) {
-            SignalStrength::strong()
-        } else if !(25.0..=75.0).contains(&rsi_val) {
-            SignalStrength::medium()
-        } else {
-            SignalStrength::weak()
-        };
-
         // Bullish: RSI crosses above oversold
-        let crossed_above_oversold =
-            rsi_prev.is_some_and(|p| p <= self.oversold) && rsi_val > self.oversold;
-        if crossed_above_oversold {
+        if let Some(prev) = rsi_prev
+            && prev <= self.oversold
+            && rsi_val > self.oversold
+        {
+            // Graded on the pre-cross value: the deeper RSI dipped before
+            // reversing, the stronger the signal.
+            let strength = if prev < 20.0 {
+                SignalStrength::strong()
+            } else if prev < 25.0 {
+                SignalStrength::medium()
+            } else {
+                SignalStrength::weak()
+            };
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -304,9 +305,17 @@ impl Strategy for RsiReversal {
         }
 
         // Bearish: RSI crosses below overbought
-        let crossed_below_overbought =
-            rsi_prev.is_some_and(|p| p >= self.overbought) && rsi_val < self.overbought;
-        if crossed_below_overbought {
+        if let Some(prev) = rsi_prev
+            && prev >= self.overbought
+            && rsi_val < self.overbought
+        {
+            let strength = if prev > 80.0 {
+                SignalStrength::strong()
+            } else if prev > 75.0 {
+                SignalStrength::medium()
+            } else {
+                SignalStrength::weak()
+            };
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -423,7 +432,7 @@ impl Strategy for MacdSignal {
 
         // MACD line and signal line are stored separately by the engine
         // Bullish crossover
-        if lp < sp && ln > sn {
+        if lp <= sp && ln > sn {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bullish crossover - close short");
@@ -435,7 +444,7 @@ impl Strategy for MacdSignal {
         }
 
         // Bearish crossover
-        if lp > sp && ln < sn {
+        if lp >= sp && ln < sn {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bearish crossover - close long");
@@ -834,10 +843,15 @@ impl Strategy for DonchianBreakout {
         // reference point for a confirmed breakout signal.
         if let Some(prev_up) = prev_upper
             && close > prev_up
-            && !ctx.has_position()
         {
-            return Signal::long(candle.timestamp, close)
-                .with_reason("Donchian upper channel breakout");
+            if ctx.is_short() {
+                return Signal::exit(candle.timestamp, close)
+                    .with_reason("Donchian upper channel breakout - close short");
+            }
+            if !ctx.has_position() {
+                return Signal::long(candle.timestamp, close)
+                    .with_reason("Donchian upper channel breakout");
+            }
         }
 
         // Breakdown below the *previous* bar's lower channel level (same
@@ -874,6 +888,21 @@ impl Strategy for DonchianBreakout {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backtesting::{Position, PositionSide};
+    use crate::models::chart::Candle;
+
+    fn make_candle(ts: i64, close: f64) -> Candle {
+        Candle {
+            timestamp: ts,
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: 1000,
+            adj_close: None,
+            provider_id: None,
+        }
+    }
 
     #[test]
     fn test_sma_crossover_default() {
@@ -959,5 +988,104 @@ mod tests {
         let indicators = rsi.required_indicators();
         assert_eq!(indicators.len(), 1);
         assert_eq!(indicators[0].0, "rsi_14");
+    }
+
+    #[test]
+    fn test_sma_crossover_fires_on_touch() {
+        use crate::backtesting::signal::SignalDirection;
+
+        let strategy = SmaCrossover::new(5, 10);
+        let candles = vec![make_candle(1, 100.0), make_candle(2, 101.0)];
+        let mut indicators = HashMap::new();
+        indicators.insert("sma_5".to_string(), vec![Some(10.0), Some(11.0)]);
+        indicators.insert("sma_10".to_string(), vec![Some(10.0), Some(10.0)]);
+
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 1,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+
+        // fast was exactly equal to slow (10 == 10), now above (11 > 10)
+        let signal = strategy.on_candle(&ctx);
+        assert_eq!(signal.direction, SignalDirection::Long);
+    }
+
+    #[test]
+    fn test_donchian_short_exits_on_upper_breakout_when_exit_at_middle_false() {
+        let strategy = DonchianBreakout::new(3).exit_at_middle(false);
+
+        let candles = vec![make_candle(1, 100.0), make_candle(2, 115.0)];
+        let mut indicators = HashMap::new();
+        indicators.insert(
+            "donchian_upper_3".to_string(),
+            vec![Some(110.0), Some(112.0)],
+        );
+        indicators.insert(
+            "donchian_middle_3".to_string(),
+            vec![Some(100.0), Some(101.0)],
+        );
+        indicators.insert("donchian_lower_3".to_string(), vec![Some(90.0), Some(91.0)]);
+
+        let position = Position::new(
+            PositionSide::Short,
+            1,
+            105.0,
+            10.0,
+            0.0,
+            Signal::short(1, 105.0),
+        );
+
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 1,
+            position: Some(&position),
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+
+        let signal = strategy.on_candle(&ctx);
+        assert!(signal.is_exit());
+    }
+
+    #[test]
+    fn test_rsi_strength_grades_on_precross_extreme() {
+        let strategy = RsiReversal::new(14);
+
+        let candles = vec![make_candle(1, 100.0), make_candle(2, 101.0)];
+
+        let mut deep_indicators = HashMap::new();
+        deep_indicators.insert("rsi_14".to_string(), vec![Some(15.0), Some(31.0)]);
+        let deep_ctx = StrategyContext {
+            candles: &candles,
+            index: 1,
+            position: None,
+            equity: 10_000.0,
+            indicators: &deep_indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        let deep_signal = strategy.on_candle(&deep_ctx);
+        assert_eq!(deep_signal.strength, SignalStrength::strong());
+
+        let mut shallow_indicators = HashMap::new();
+        shallow_indicators.insert("rsi_14".to_string(), vec![Some(28.0), Some(31.0)]);
+        let shallow_ctx = StrategyContext {
+            candles: &candles,
+            index: 1,
+            position: None,
+            equity: 10_000.0,
+            indicators: &shallow_indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        let shallow_signal = strategy.on_candle(&shallow_ctx);
+        assert_eq!(shallow_signal.strength, SignalStrength::weak());
     }
 }
