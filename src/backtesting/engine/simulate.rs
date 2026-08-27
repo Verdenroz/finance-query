@@ -88,6 +88,7 @@ impl BacktestEngine {
             // check below measures.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
 
+            let peak_before_bar = peak_equity;
             equity = Self::update_equity_and_curve(
                 position.as_ref(),
                 candle,
@@ -145,7 +146,12 @@ impl BacktestEngine {
                 });
 
                 if executed {
-                    Self::resync_equity_point(&mut equity_curve, &mut peak_equity, cash);
+                    Self::resync_equity_point(
+                        &mut equity_curve,
+                        &mut peak_equity,
+                        peak_before_bar,
+                        cash,
+                    );
                     hwm = None; // Reset HWM when position is closed
                     extremes = None;
                     continue; // Skip strategy signal this bar
@@ -178,7 +184,12 @@ impl BacktestEngine {
                 });
 
                 if executed {
-                    Self::resync_equity_point(&mut equity_curve, &mut peak_equity, cash);
+                    Self::resync_equity_point(
+                        &mut equity_curve,
+                        &mut peak_equity,
+                        peak_before_bar,
+                        cash,
+                    );
                     hwm = None;
                     extremes = None;
                     continue;
@@ -589,13 +600,17 @@ impl BacktestEngine {
     /// intrabar exit, so it isn't marked at a close price never traded through.
     ///
     /// The pre-exit snapshot may also have raised `peak_equity` to a value the
-    /// account never held, so the peak is re-derived from the corrected curve.
-    fn resync_equity_point(equity_curve: &mut [EquityPoint], peak_equity: &mut f64, cash: f64) {
+    /// account never held, so the peak reverts to the bar-entry value
+    /// (`peak_before_bar`, the running max over every earlier point) or cash.
+    fn resync_equity_point(
+        equity_curve: &mut [EquityPoint],
+        peak_equity: &mut f64,
+        peak_before_bar: f64,
+        cash: f64,
+    ) {
+        *peak_equity = peak_before_bar.max(cash);
         if let Some(last) = equity_curve.last_mut() {
             last.equity = cash;
-        }
-        *peak_equity = equity_curve.iter().map(|p| p.equity).fold(cash, f64::max);
-        if let Some(last) = equity_curve.last_mut() {
             last.drawdown_pct = if *peak_equity > 0.0 {
                 (*peak_equity - cash) / *peak_equity
             } else {
