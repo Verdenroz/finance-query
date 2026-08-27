@@ -103,6 +103,18 @@ pub(super) fn compute_benchmark_metrics(
         }
     }
 
+    if aligned_strategy.len() < 2 {
+        return BenchmarkMetrics {
+            symbol: benchmark_symbol.to_string(),
+            benchmark_return_pct,
+            buy_and_hold_return_pct,
+            alpha: 0.0,
+            beta: 0.0,
+            information_ratio: 0.0,
+            tracking_error: 0.0,
+        };
+    }
+
     let beta = compute_beta(&aligned_strategy, &aligned_benchmark);
 
     // CAPM alpha on the same aligned sample used for beta/IR.
@@ -329,6 +341,7 @@ mod tests {
             .initial_capital(10_000.0)
             .commission_pct(0.0)
             .slippage_pct(0.0)
+            .risk_free_rate(0.05)
             .build()
             .unwrap();
 
@@ -347,5 +360,10 @@ mod tests {
         let benchmark = result.benchmark.unwrap();
         assert!((benchmark.beta - 0.0).abs() < 1e-12);
         assert!((benchmark.information_ratio - 0.0).abs() < 1e-12);
+        assert!(
+            (benchmark.alpha - 0.0).abs() < 1e-12,
+            "alpha should be 0.0 with no timestamp overlap, got {}",
+            benchmark.alpha
+        );
     }
 }
