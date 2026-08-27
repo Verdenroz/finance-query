@@ -1,146 +1,141 @@
+use crate::backtesting::config::BacktestConfig;
 use crate::backtesting::position::Position;
 use crate::backtesting::signal::Signal;
 use crate::backtesting::strategy::PositionExtremes;
 use crate::models::chart::Candle;
 
-use super::BacktestEngine;
-
 // The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
 // lives in a sibling module and `[profile.bench]` builds without LTO.
 
-impl BacktestEngine {
-    /// Check if stop-loss, take-profit, or trailing stop should trigger intrabar.
-    ///
-    /// Uses `candle.low` / `candle.high` to detect breaches that occur during the
-    /// bar, not just at the close.  Returns an exit [`Signal`] whose `price` field
-    /// is the computed fill price (stop/TP level with a gap-guard: if the bar opens
-    /// through the level the open price is used instead so the fill is never better
-    /// than the market).
-    ///
-    /// `hwm` is the intrabar high-water mark for longs (`candle.high` is
-    /// incorporated each bar) or the low-water mark for shorts.
-    ///
-    /// # Exit Priority
-    ///
-    /// When multiple exit conditions are satisfied on the same bar, the first
-    /// one checked wins: **stop-loss → take-profit → trailing stop**.
-    ///
-    /// In reality, the intrabar order of events is unknowable from OHLCV data
-    /// alone — a bar could open through the take-profit level before touching
-    /// the stop-loss, or vice versa.  The fixed priority errs on the side of
-    /// pessimism (stop-loss before take-profit) for conservative simulation.
-    /// Strategies with both SL and TP set should be aware of this ordering
-    /// when both levels are close together relative to typical bar ranges.
-    #[inline]
-    pub(super) fn check_sl_tp(
-        &self,
-        position: &Position,
-        candle: &Candle,
-        hwm: Option<f64>,
-    ) -> Option<Signal> {
-        // Per-trade bracket overrides take precedence over config-level defaults.
-        let sl_pct = position.bracket_stop_loss_pct.or(self.config.stop_loss_pct);
-        let tp_pct = position
-            .bracket_take_profit_pct
-            .or(self.config.take_profit_pct);
-        let trail_pct = position
-            .bracket_trailing_stop_pct
-            .or(self.config.trailing_stop_pct);
+/// Check if stop-loss, take-profit, or trailing stop should trigger intrabar.
+///
+/// Uses `candle.low` / `candle.high` to detect breaches that occur during the
+/// bar, not just at the close.  Returns an exit [`Signal`] whose `price` field
+/// is the computed fill price (stop/TP level with a gap-guard: if the bar opens
+/// through the level the open price is used instead so the fill is never better
+/// than the market).
+///
+/// `hwm` is the intrabar high-water mark for longs (`candle.high` is
+/// incorporated each bar) or the low-water mark for shorts.
+///
+/// # Exit Priority
+///
+/// When multiple exit conditions are satisfied on the same bar, the first
+/// one checked wins: **stop-loss → take-profit → trailing stop**.
+///
+/// In reality, the intrabar order of events is unknowable from OHLCV data
+/// alone — a bar could open through the take-profit level before touching
+/// the stop-loss, or vice versa.  The fixed priority errs on the side of
+/// pessimism (stop-loss before take-profit) for conservative simulation.
+/// Strategies with both SL and TP set should be aware of this ordering
+/// when both levels are close together relative to typical bar ranges.
+#[inline]
+pub(crate) fn check_sl_tp(
+    position: &Position,
+    candle: &Candle,
+    hwm: Option<f64>,
+    config: &BacktestConfig,
+) -> Option<Signal> {
+    // Per-trade bracket overrides take precedence over config-level defaults.
+    let sl_pct = position.bracket_stop_loss_pct.or(config.stop_loss_pct);
+    let tp_pct = position.bracket_take_profit_pct.or(config.take_profit_pct);
+    let trail_pct = position
+        .bracket_trailing_stop_pct
+        .or(config.trailing_stop_pct);
 
-        // Stop-loss — intrabar breach via low (long) or high (short)
-        if let Some(sl_pct) = sl_pct {
-            let stop_price = if position.is_long() {
-                position.entry_price * (1.0 - sl_pct)
+    // Stop-loss — intrabar breach via low (long) or high (short)
+    if let Some(sl_pct) = sl_pct {
+        let stop_price = if position.is_long() {
+            position.entry_price * (1.0 - sl_pct)
+        } else {
+            position.entry_price * (1.0 + sl_pct)
+        };
+        let triggered = if position.is_long() {
+            candle.low <= stop_price
+        } else {
+            candle.high >= stop_price
+        };
+        if triggered {
+            // if the bar already opened through the stop level, fill
+            // at the open (slippage/gap) rather than the stop price.
+            let fill_price = if position.is_long() {
+                candle.open.min(stop_price)
             } else {
-                position.entry_price * (1.0 + sl_pct)
+                candle.open.max(stop_price)
             };
-            let triggered = if position.is_long() {
-                candle.low <= stop_price
-            } else {
-                candle.high >= stop_price
-            };
-            if triggered {
-                // if the bar already opened through the stop level, fill
-                // at the open (slippage/gap) rather than the stop price.
-                let fill_price = if position.is_long() {
-                    candle.open.min(stop_price)
-                } else {
-                    candle.open.max(stop_price)
-                };
-                let return_pct = position.unrealized_return_pct(fill_price);
-                return Some(
-                    Signal::exit(candle.timestamp, fill_price)
-                        .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct)),
-                );
-            }
+            let return_pct = position.unrealized_return_pct(fill_price);
+            return Some(
+                Signal::exit(candle.timestamp, fill_price)
+                    .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct)),
+            );
         }
-
-        // Take-profit — intrabar breach via high (long) or low (short)
-        if let Some(tp_pct) = tp_pct {
-            let tp_price = if position.is_long() {
-                position.entry_price * (1.0 + tp_pct)
-            } else {
-                position.entry_price * (1.0 - tp_pct)
-            };
-            let triggered = if position.is_long() {
-                candle.high >= tp_price
-            } else {
-                candle.low <= tp_price
-            };
-            if triggered {
-                // Gap guard: a gap-up open past TP gives a better fill at the open.
-                let fill_price = if position.is_long() {
-                    candle.open.max(tp_price)
-                } else {
-                    candle.open.min(tp_price)
-                };
-                let return_pct = position.unrealized_return_pct(fill_price);
-                return Some(
-                    Signal::exit(candle.timestamp, fill_price)
-                        .with_reason(format!("Take-profit triggered ({:.1}%)", return_pct)),
-                );
-            }
-        }
-
-        // Trailing stop — checked after SL/TP so explicit levels take priority.
-        //    `hwm` is the water mark through the prior bar; this bar's own
-        //    high/low can't arm and fire its own trail.
-        if let Some(trail_pct) = trail_pct
-            && let Some(extreme) = hwm
-            && extreme > 0.0
-        {
-            let trail_stop_price = if position.is_long() {
-                extreme * (1.0 - trail_pct)
-            } else {
-                extreme * (1.0 + trail_pct)
-            };
-            let triggered = if position.is_long() {
-                candle.low <= trail_stop_price
-            } else {
-                candle.high >= trail_stop_price
-            };
-            if triggered {
-                let fill_price = if position.is_long() {
-                    candle.open.min(trail_stop_price)
-                } else {
-                    candle.open.max(trail_stop_price)
-                };
-                let adverse_move_pct = if position.is_long() {
-                    (extreme - fill_price) / extreme
-                } else {
-                    (fill_price - extreme) / extreme
-                };
-                return Some(
-                    Signal::exit(candle.timestamp, fill_price).with_reason(format!(
-                        "Trailing stop triggered ({:.1}% adverse move)",
-                        adverse_move_pct * 100.0
-                    )),
-                );
-            }
-        }
-
-        None
     }
+
+    // Take-profit — intrabar breach via high (long) or low (short)
+    if let Some(tp_pct) = tp_pct {
+        let tp_price = if position.is_long() {
+            position.entry_price * (1.0 + tp_pct)
+        } else {
+            position.entry_price * (1.0 - tp_pct)
+        };
+        let triggered = if position.is_long() {
+            candle.high >= tp_price
+        } else {
+            candle.low <= tp_price
+        };
+        if triggered {
+            // Gap guard: a gap-up open past TP gives a better fill at the open.
+            let fill_price = if position.is_long() {
+                candle.open.max(tp_price)
+            } else {
+                candle.open.min(tp_price)
+            };
+            let return_pct = position.unrealized_return_pct(fill_price);
+            return Some(
+                Signal::exit(candle.timestamp, fill_price)
+                    .with_reason(format!("Take-profit triggered ({:.1}%)", return_pct)),
+            );
+        }
+    }
+
+    // Trailing stop — checked after SL/TP so explicit levels take priority.
+    //    `hwm` is the water mark through the prior bar; this bar's own
+    //    high/low can't arm and fire its own trail.
+    if let Some(trail_pct) = trail_pct
+        && let Some(extreme) = hwm
+        && extreme > 0.0
+    {
+        let trail_stop_price = if position.is_long() {
+            extreme * (1.0 - trail_pct)
+        } else {
+            extreme * (1.0 + trail_pct)
+        };
+        let triggered = if position.is_long() {
+            candle.low <= trail_stop_price
+        } else {
+            candle.high >= trail_stop_price
+        };
+        if triggered {
+            let fill_price = if position.is_long() {
+                candle.open.min(trail_stop_price)
+            } else {
+                candle.open.max(trail_stop_price)
+            };
+            let adverse_move_pct = if position.is_long() {
+                (extreme - fill_price) / extreme
+            } else {
+                (fill_price - extreme) / extreme
+            };
+            return Some(
+                Signal::exit(candle.timestamp, fill_price).with_reason(format!(
+                    "Trailing stop triggered ({:.1}% adverse move)",
+                    adverse_move_pct * 100.0
+                )),
+            );
+        }
+    }
+
+    None
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -204,7 +199,7 @@ pub(crate) fn update_trailing_hwm(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::super::BacktestEngine;
     use crate::backtesting::config::BacktestConfig;
     use crate::backtesting::engine::fixtures::*;
 

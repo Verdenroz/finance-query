@@ -1090,7 +1090,7 @@ println!("Sharpe p50:   {:.2}", mc.sharpe_ratio.p50);
 
 Run the same strategy across multiple symbols with a shared capital pool. `PortfolioEngine` works on plain candle data, so this example runs as a real test.
 
-It allocates from cash and never opens a margin loan, so a base config carrying `max_leverage`, `short_borrow_rate`, `margin_interest_rate`, or a non-default `position_sizing` is rejected rather than silently ignored. Run `BacktestEngine` per symbol for those.
+Margin, financing, and the `position_sizing` schemes all carry over from the single-symbol engine, applied at the account level. Buying power is portfolio equity times `max_leverage` minus the gross exposure of every open position, so a short's sale proceeds never fund another symbol's entry. Short borrow accrues per short position on its own bars; margin interest on a debit cash balance accrues once per portfolio bar, split across open positions by gross exposure so it exits through their trades. The maintenance check compares portfolio equity against `maintenance_margin_pct` of total gross exposure (after the bar's stops, at the close) and liquidates positions largest exposure first, ties alphabetical, until the requirement holds; an unlevered long-only book is never checked. Sizing schemes read each symbol's own ATR/volatility series and closed-trade history, and scale the rebalance mode's allocation by the fraction of the risk budget they ask for.
 
 ```rust feature=backtesting
 use finance_query::backtesting::portfolio::{

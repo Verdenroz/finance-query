@@ -10,8 +10,9 @@ mod positions;
 mod simulate;
 mod sizing;
 
-pub(crate) use exits::{update_position_extremes, update_trailing_hwm};
+pub(crate) use exits::{check_sl_tp, update_position_extremes, update_trailing_hwm};
 pub(crate) use indicators::compute_for_candles;
+pub(crate) use sizing::SizingSeries;
 
 use crate::models::chart::{Candle, Dividend};
 

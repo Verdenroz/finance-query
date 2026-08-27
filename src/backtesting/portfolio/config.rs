@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::backtesting::config::{BacktestConfig, PositionSizing};
+use crate::backtesting::config::BacktestConfig;
 use crate::backtesting::error::{BacktestError, Result};
 
 /// Controls how capital is divided among symbols when opening new positions.
@@ -125,67 +125,43 @@ impl PortfolioConfig {
             ));
         }
 
-        self.reject_unsupported_base()?;
-
         Ok(())
     }
 
-    /// Reject base settings the portfolio engine does not implement.
+    /// Compute the notional target for a new position in `symbol`.
     ///
-    /// It allocates from cash and never opens a margin loan, so accepting these
-    /// would return unlevered, financing-free results under a config that asked
-    /// for the opposite. Run per-symbol [`BacktestEngine`] for those.
+    /// `available` is the portfolio's remaining buying power (equity times
+    /// leverage minus gross exposure) and caps the result. `fraction` is the
+    /// active sizing scheme's fraction for this entry, at most the risk budget
+    /// (`position_size_pct * max_leverage`); [`AvailableCapital`] applies it to
+    /// the unlevered share of buying power, the anchored modes scale their slot
+    /// by the fraction's share of the budget (a no-op for `FixedFraction`).
     ///
-    /// [`BacktestEngine`]: crate::backtesting::BacktestEngine
-    fn reject_unsupported_base(&self) -> Result<()> {
-        if self.base.max_leverage > 1.0 {
-            return Err(BacktestError::invalid_param(
-                "max_leverage",
-                "portfolio backtests are unlevered; run BacktestEngine per symbol",
-            ));
-        }
-
-        if self.base.short_borrow_rate > 0.0 || self.base.margin_interest_rate > 0.0 {
-            return Err(BacktestError::invalid_param(
-                "short_borrow_rate/margin_interest_rate",
-                "portfolio backtests do not accrue financing; run BacktestEngine per symbol",
-            ));
-        }
-
-        if !matches!(self.base.position_sizing, PositionSizing::FixedFraction) {
-            return Err(BacktestError::invalid_param(
-                "position_sizing",
-                "portfolio backtests size from the rebalance mode; only FixedFraction applies",
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Compute the capital target for a new position in `symbol`.
-    ///
-    /// Returns the amount of capital to commit (before position sizing / commission
-    /// adjustment). The caller must not exceed `available_cash`.
+    /// [`AvailableCapital`]: RebalanceMode::AvailableCapital
     pub(crate) fn allocation_target(
         &self,
         symbol: &str,
-        available_cash: f64,
+        available: f64,
         initial_capital: f64,
         num_symbols: usize,
+        fraction: f64,
     ) -> f64 {
+        let leverage = self.base.max_leverage;
+        let budget = self.base.position_size_pct * leverage;
+        let utilization = if budget > 0.0 { fraction / budget } else { 0.0 };
         let base = match &self.rebalance {
-            RebalanceMode::AvailableCapital => available_cash * self.base.position_size_pct,
+            RebalanceMode::AvailableCapital => available * fraction / leverage,
             RebalanceMode::EqualWeight => {
                 let slots = self
                     .max_total_positions
                     .unwrap_or(num_symbols)
                     .min(num_symbols)
                     .max(1);
-                initial_capital / slots as f64
+                initial_capital / slots as f64 * utilization
             }
             RebalanceMode::CustomWeights(weights) => {
                 let weight = weights.get(symbol).copied().unwrap_or(0.0);
-                initial_capital * weight
+                initial_capital * weight * utilization
             }
         };
 
@@ -195,13 +171,14 @@ impl PortfolioConfig {
             .map(|pct| initial_capital * pct)
             .unwrap_or(f64::MAX);
 
-        base.min(cap).min(available_cash).max(0.0)
+        base.min(cap).min(available).max(0.0)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backtesting::config::PositionSizing;
 
     #[test]
     fn test_default_config_validates() {
@@ -210,17 +187,17 @@ mod tests {
     }
 
     #[test]
-    fn test_unsupported_base_settings_are_rejected() {
+    fn test_levered_financed_and_sized_bases_validate() {
         let with_base = |base: BacktestConfig| PortfolioConfig::new(base).validate(1);
 
         let levered = BacktestConfig::builder().max_leverage(2.0).build().unwrap();
-        assert!(with_base(levered).is_err());
+        assert!(with_base(levered).is_ok());
 
         let financed = BacktestConfig::builder()
             .short_borrow_rate(0.05)
             .build()
             .unwrap();
-        assert!(with_base(financed).is_err());
+        assert!(with_base(financed).is_ok());
 
         let sized = BacktestConfig::builder()
             .position_sizing(PositionSizing::VolatilityTarget {
@@ -229,7 +206,7 @@ mod tests {
             })
             .build()
             .unwrap();
-        assert!(with_base(sized).is_err());
+        assert!(with_base(sized).is_ok());
 
         assert!(with_base(BacktestConfig::default()).is_ok());
     }
@@ -241,11 +218,11 @@ mod tests {
         weights.insert("MSFT".to_string(), 0.3);
         let config = PortfolioConfig::default().rebalance(RebalanceMode::CustomWeights(weights));
 
-        let target = config.allocation_target("AAPL", 10_000.0, 10_000.0, 2);
+        let target = config.allocation_target("AAPL", 10_000.0, 10_000.0, 2, 1.0);
         assert!((target - 5_000.0).abs() < 0.01);
 
         // Unknown symbol → 0
-        let target_unknown = config.allocation_target("GOOG", 10_000.0, 10_000.0, 2);
+        let target_unknown = config.allocation_target("GOOG", 10_000.0, 10_000.0, 2, 1.0);
         assert!((target_unknown - 0.0).abs() < 0.01);
     }
 
@@ -256,8 +233,21 @@ mod tests {
         let config = config
             .rebalance(RebalanceMode::EqualWeight)
             .max_total_positions(2);
-        let target = config.allocation_target("AAPL", 10_000.0, 10_000.0, 2);
+        let target = config.allocation_target("AAPL", 10_000.0, 10_000.0, 2, 1.0);
         assert!((target - 3_000.0).abs() < 0.01, "got {target}");
+    }
+
+    #[test]
+    fn test_levered_available_capital_target() {
+        let base = BacktestConfig::builder().max_leverage(2.0).build().unwrap();
+        let config = PortfolioConfig::new(base);
+        // Buying power 20k at 2x on 10k equity; full budget fraction 2.0
+        // commits the whole levered notional.
+        let target = config.allocation_target("AAPL", 20_000.0, 10_000.0, 1, 2.0);
+        assert!((target - 20_000.0).abs() < 0.01, "got {target}");
+        // A scheme asking half the budget commits half.
+        let half = config.allocation_target("AAPL", 20_000.0, 10_000.0, 1, 1.0);
+        assert!((half - 10_000.0).abs() < 0.01, "got {half}");
     }
 
     #[test]

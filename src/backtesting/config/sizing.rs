@@ -116,7 +116,7 @@ impl BacktestConfig {
         self.size_from_fraction(available_capital, price, fraction)
     }
 
-    fn sizing_fraction(&self, price: f64, ctx: &SizingContext) -> f64 {
+    pub(crate) fn sizing_fraction(&self, price: f64, ctx: &SizingContext) -> f64 {
         let budget = self.position_size_pct * self.max_leverage;
         let base = match self.position_sizing {
             PositionSizing::FixedFraction => budget,
