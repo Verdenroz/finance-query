@@ -342,7 +342,9 @@ equity falls, so it can breach the floor without a margin loan. An unlevered
 long cannot, and is not checked.
 
 `max_leverage` above `1.0 / maintenance_margin_pct` is rejected: a full-size
-entry at that ratio is liquidated on the bar after it opens.
+entry at that ratio is liquidated on the bar after it opens. With
+`allow_short` enabled the same rejection applies at any leverage, `1.0`
+included, since shorts are always maintenance-checked.
 
 ```rust feature=backtesting
 use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
