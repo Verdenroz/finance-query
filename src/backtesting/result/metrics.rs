@@ -305,6 +305,23 @@ impl PerformanceMetrics {
         risk_free_rate: f64,
         bars_per_year: f64,
     ) -> Self {
+        // A no-trade run whose equity never moved has every metric at zero,
+        // so skip the O(n) risk block. A no-trade run with a moving curve
+        // (close_at_end = false) still computes it in full below.
+        if trades.is_empty()
+            && risk_free_rate >= 0.0
+            && equity_curve
+                .iter()
+                .all(|p| p.equity == initial_capital && p.drawdown_pct == 0.0)
+        {
+            return Self::empty(
+                initial_capital,
+                equity_curve,
+                total_signals,
+                executed_signals,
+            );
+        }
+
         let total_trades = trades.len();
         let stats = analyze_trades(trades);
 
