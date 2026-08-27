@@ -24,6 +24,7 @@ use super::BacktestConfig;
 ///     .unwrap();
 /// ```
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct CommissionFn(Arc<dyn Fn(f64, f64) -> f64 + Send + Sync>);
 
 impl CommissionFn {

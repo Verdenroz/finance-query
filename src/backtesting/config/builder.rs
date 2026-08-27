@@ -5,6 +5,7 @@ use crate::backtesting::error::Result;
 
 /// Builder for BacktestConfig
 #[derive(Default)]
+#[non_exhaustive]
 pub struct BacktestConfigBuilder {
     config: BacktestConfig,
 }
