@@ -516,3 +516,5 @@ use crate::backtesting::engine::check_sl_tp;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_margin;
