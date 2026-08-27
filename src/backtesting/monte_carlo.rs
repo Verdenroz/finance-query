@@ -134,8 +134,8 @@ impl MonteCarloConfig {
     /// using the configured [`MonteCarloMethod`], rebuilds a synthetic equity
     /// curve for each, and reports percentile statistics over all outcomes.
     ///
-    /// If the result has fewer than 2 trades, every percentile is derived from
-    /// the single observed result.
+    /// If the result has fewer than 2 trades, or `num_simulations` is `0`,
+    /// every percentile is derived from the single observed result.
     ///
     /// Use the percentile outputs as a *relative* stress-test tool rather than
     /// a precise probability statement about future performance.
@@ -143,7 +143,7 @@ impl MonteCarloConfig {
         let initial_capital = result.initial_capital;
         let trade_returns: Vec<f64> = result.trades.iter().map(|t| t.return_pct / 100.0).collect();
 
-        if trade_returns.len() < 2 {
+        if trade_returns.len() < 2 || self.num_simulations == 0 {
             // Not enough trades to reshuffle — return degenerate result
             let obs_return = result.metrics.total_return_pct;
             let obs_dd = result.metrics.max_drawdown_pct;
@@ -697,6 +697,17 @@ mod tests {
             spread < 1e-6,
             "expected tight spread for identical trades, got {spread}"
         );
+    }
+
+    #[test]
+    fn test_zero_simulations_returns_trivial_stats() {
+        let result = minimal_result(mixed_trades());
+        let mc = MonteCarloConfig::default().num_simulations(0).run(&result);
+
+        assert_eq!(mc.num_simulations, 0);
+        assert_eq!(mc.total_return.p5, mc.total_return.p50);
+        assert_eq!(mc.total_return.p50, mc.total_return.p95);
+        assert_eq!(mc.total_return.p50, result.metrics.total_return_pct);
     }
 
     // ── BlockBootstrap ──────────────────────────────────────────────────────

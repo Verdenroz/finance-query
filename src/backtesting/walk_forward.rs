@@ -155,7 +155,8 @@ impl WalkForwardConfig {
     /// strategy instance.
     ///
     /// Returns an error if there is not enough data for at least one complete
-    /// window pair, or if the grid search fails on every window.
+    /// window pair, or if the grid search or the out-of-sample simulation
+    /// fails on any window (fail-fast — a partial result is never returned).
     pub fn run<S, F>(
         &self,
         symbol: &str,
@@ -201,13 +202,6 @@ impl WalkForwardConfig {
             let (w, o) = r?;
             windows.push(w);
             opt_reports.push(o);
-        }
-
-        if windows.is_empty() {
-            return Err(BacktestError::invalid_param(
-                "candles",
-                "not enough data for any walk-forward window",
-            ));
         }
 
         let strategy_name = windows[0].in_sample.strategy_name.clone();
@@ -294,6 +288,12 @@ impl WalkForwardConfig {
         if self.out_of_sample_bars == 0 {
             return Err(BacktestError::invalid_param(
                 "out_of_sample_bars",
+                "must be greater than zero",
+            ));
+        }
+        if self.step_bars == Some(0) {
+            return Err(BacktestError::invalid_param(
+                "step_bars",
                 "must be greater than zero",
             ));
         }
@@ -582,6 +582,28 @@ mod tests {
         }
 
         assert_eq!(a.consistency_ratio, b.consistency_ratio);
+    }
+
+    #[test]
+    fn test_step_bars_zero_errors() {
+        let candles = make_candles(&trending_prices(300));
+        let config = BacktestConfig::default();
+        let grid = GridSearch::new()
+            .param("fast", ParamRange::int_range(3, 6, 3))
+            .param("slow", ParamRange::int_range(10, 10, 1));
+
+        let result = WalkForwardConfig::new(grid, config)
+            .in_sample_bars(200)
+            .out_of_sample_bars(100)
+            .step_bars(0)
+            .run("TEST", &candles, |params| {
+                SmaCrossover::new(
+                    params["fast"].as_int() as usize,
+                    params["slow"].as_int() as usize,
+                )
+            });
+
+        assert!(result.is_err());
     }
 
     #[test]

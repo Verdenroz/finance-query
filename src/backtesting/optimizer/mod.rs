@@ -192,6 +192,9 @@ impl ParamRange {
                 // Round the step count to avoid accumulated floating-point error.
                 // The last value is clamped to exactly `end` regardless of rounding.
                 let steps = ((end - start) / step).round() as usize;
+                if steps == 0 && start != end {
+                    return vec![ParamValue::Float(*start)];
+                }
                 (0..=steps)
                     .map(|i| {
                         let v = if i == steps {
