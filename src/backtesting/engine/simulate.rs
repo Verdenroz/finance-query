@@ -295,6 +295,18 @@ impl BacktestEngine {
                 true // keep unfilled order
             });
 
+            // The bar-top snapshot ran before this fill, so a limit/stop entry
+            // would otherwise go unmeasured until the next bar (never, on the
+            // final bar). Equity is recomputed: the fill moved cash.
+            if filled_this_bar && let Some(pos) = position.as_ref() {
+                let margin_equity =
+                    cash + pos.current_value(candle.close) + pos.unreinvested_dividends;
+                let exposure = pos.quantity * candle.close;
+                if margin_equity > 0.0 && exposure > max_leverage_used * margin_equity {
+                    max_leverage_used = exposure / margin_equity;
+                }
+            }
+
             // Skip strategy signals during warmup period
             if i < warmup.saturating_sub(1) {
                 continue;
@@ -1126,6 +1138,43 @@ mod tests {
 
         assert!(result.open_position.is_none());
         assert!(result.trades.is_empty());
+    }
+
+    #[test]
+    fn a_limit_fill_on_the_final_bar_counts_toward_max_leverage_used() {
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0),
+            make_candle_ohlc(2, 100.0, 100.0, 97.0, 100.0),
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BuyLimitAt {
+                    bar: 0,
+                    limit_price: 98.0,
+                    expires_in_bars: None,
+                },
+            )
+            .unwrap();
+
+        assert!(result.open_position.is_some());
+        assert!(
+            result.max_leverage_used > 0.99,
+            "the final bar's limit fill must register exposure, got {}",
+            result.max_leverage_used
+        );
     }
 
     #[test]
