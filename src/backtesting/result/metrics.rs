@@ -305,14 +305,29 @@ impl PerformanceMetrics {
         risk_free_rate: f64,
         bars_per_year: f64,
     ) -> Self {
-        // A no-trade run whose equity never moved has every metric at zero,
-        // so skip the O(n) risk block. A no-trade run with a moving curve
-        // (close_at_end = false) still computes it in full below.
+        // Drawdown metrics
+        let max_drawdown_pct = equity_curve
+            .iter()
+            .map(|e| e.drawdown_pct)
+            .fold(0.0, f64::max);
+
+        // Total return
+        let final_equity = equity_curve
+            .last()
+            .map(|e| e.equity)
+            .unwrap_or(initial_capital);
+
+        // A no-trade run that never drew down and ended where it started has
+        // every remaining metric at zero, so skip the O(n) risk block. A
+        // no-trade run with a moving curve (close_at_end = false) cannot pass
+        // this test: any excursion either draws down or moves an endpoint.
         if trades.is_empty()
             && risk_free_rate >= 0.0
+            && max_drawdown_pct == 0.0
+            && final_equity == initial_capital
             && equity_curve
-                .iter()
-                .all(|p| p.equity == initial_capital && p.drawdown_pct == 0.0)
+                .first()
+                .is_none_or(|f| f.equity == initial_capital)
         {
             return Self::empty(
                 initial_capital,
@@ -325,23 +340,8 @@ impl PerformanceMetrics {
         let total_trades = trades.len();
         let stats = analyze_trades(trades);
 
-        // Curve-derived metrics come before the zero-trade early return: a
-        // position left open the whole run (close_at_end = false) has no
-        // closed trades but still carries real drawdown/risk.
-
-        // Drawdown metrics
-        let max_drawdown_pct = equity_curve
-            .iter()
-            .map(|e| e.drawdown_pct)
-            .fold(0.0, f64::max);
-
         let max_drawdown_duration = calculate_max_drawdown_duration(equity_curve);
 
-        // Total return
-        let final_equity = equity_curve
-            .last()
-            .map(|e| e.equity)
-            .unwrap_or(initial_capital);
         let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
 
         // Annualized return using configured bars_per_year.
