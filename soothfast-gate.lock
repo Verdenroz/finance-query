@@ -1,0 +1,425 @@
+{
+  "entries": {
+    "finance_query::bt_grid_search": {
+      "base_fingerprint": "d8dab5ed9ee558dc",
+      "head_fingerprint": "d8dab5ed9ee558dc",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 13149647.0,
+        "instructions": 13149647.0
+      }
+    },
+    "finance_query::bt_sma_crossover": {
+      "base_fingerprint": "ecbebd33dca4d8a5",
+      "head_fingerprint": "ecbebd33dca4d8a5",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 9494995.0,
+        "instructions": 9494995.0
+      }
+    },
+    "finance_query::cond_bench_always_false": {
+      "base_fingerprint": "2aca2db448c98756",
+      "head_fingerprint": "2aca2db448c98756",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 250390.0,
+        "instructions": 250390.0
+      }
+    },
+    "finance_query::cond_bench_in_profit": {
+      "base_fingerprint": "4da9f8368bae4c7b",
+      "head_fingerprint": "4da9f8368bae4c7b",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 558416.0,
+        "instructions": 558416.0
+      }
+    },
+    "finance_query::cond_bench_is_short": {
+      "base_fingerprint": "3ba1bf496b31d556",
+      "head_fingerprint": "3ba1bf496b31d556",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 401339.0,
+        "instructions": 401339.0
+      }
+    },
+    "finance_query::cond_bench_no_position": {
+      "base_fingerprint": "d0234918ea9ef760",
+      "head_fingerprint": "d0234918ea9ef760",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 401339.0,
+        "instructions": 401339.0
+      }
+    },
+    "finance_query::cond_bench_stop_loss": {
+      "base_fingerprint": "21373e5c8514906c",
+      "head_fingerprint": "21373e5c8514906c",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 456629.0,
+        "instructions": 456629.0
+      }
+    },
+    "finance_query::cond_bench_take_profit": {
+      "base_fingerprint": "f3bd88ef95f664c6",
+      "head_fingerprint": "f3bd88ef95f664c6",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 443261.0,
+        "instructions": 443261.0
+      }
+    },
+    "finance_query::cond_bench_trailing_stop": {
+      "base_fingerprint": "06a3454eeed9da8d",
+      "head_fingerprint": "06a3454eeed9da8d",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 596791.0,
+        "instructions": 596791.0
+      }
+    },
+    "finance_query::cond_bench_trailing_take_profit": {
+      "base_fingerprint": "dd16b1f0cf140931",
+      "head_fingerprint": "dd16b1f0cf140931",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 605839.0,
+        "instructions": 605839.0
+      }
+    },
+    "finance_query::ref_bench_accumulation_distribution": {
+      "base_fingerprint": "6cb8fc3f81be9b03",
+      "head_fingerprint": "6cb8fc3f81be9b03",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 575894.0,
+        "instructions": 575894.0
+      }
+    },
+    "finance_query::ref_bench_atr": {
+      "base_fingerprint": "40cf51f87eca70a1",
+      "head_fingerprint": "40cf51f87eca70a1",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5548440.0,
+        "instructions": 5548440.0
+      }
+    },
+    "finance_query::ref_bench_balance_of_power": {
+      "base_fingerprint": "c0b953bc214d214b",
+      "head_fingerprint": "c0b953bc214d214b",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 574481.0,
+        "instructions": 574481.0
+      }
+    },
+    "finance_query::ref_bench_bear_power": {
+      "base_fingerprint": "35518ebf60d1ad65",
+      "head_fingerprint": "35518ebf60d1ad65",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 1539681.0,
+        "instructions": 1539681.0
+      }
+    },
+    "finance_query::ref_bench_bollinger": {
+      "base_fingerprint": "d95a3d343e387be7",
+      "head_fingerprint": "d95a3d343e387be7",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 6100669.0,
+        "instructions": 6100669.0
+      }
+    },
+    "finance_query::ref_bench_bull_power": {
+      "base_fingerprint": "755660e1ca4b6f4c",
+      "head_fingerprint": "755660e1ca4b6f4c",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5302870.0,
+        "instructions": 5302870.0
+      }
+    },
+    "finance_query::ref_bench_candle_body": {
+      "base_fingerprint": "e6ebc3f39ef638d3",
+      "head_fingerprint": "e6ebc3f39ef638d3",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 254372.0,
+        "instructions": 254372.0
+      }
+    },
+    "finance_query::ref_bench_cci": {
+      "base_fingerprint": "292be6529a67f518",
+      "head_fingerprint": "292be6529a67f518",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 3255646.0,
+        "instructions": 3255646.0
+      }
+    },
+    "finance_query::ref_bench_chaikin_oscillator": {
+      "base_fingerprint": "1e565932f94a09cb",
+      "head_fingerprint": "1e565932f94a09cb",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 647640.0,
+        "instructions": 647640.0
+      }
+    },
+    "finance_query::ref_bench_choppiness_index": {
+      "base_fingerprint": "8e173ddf6ba54929",
+      "head_fingerprint": "8e173ddf6ba54929",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5819348.0,
+        "instructions": 5819348.0
+      }
+    },
+    "finance_query::ref_bench_cmf": {
+      "base_fingerprint": "ee248b7f00d9aac7",
+      "head_fingerprint": "ee248b7f00d9aac7",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 589575.0,
+        "instructions": 589575.0
+      }
+    },
+    "finance_query::ref_bench_dema": {
+      "base_fingerprint": "6021ca1927fb6328",
+      "head_fingerprint": "6021ca1927fb6328",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5497704.0,
+        "instructions": 5497704.0
+      }
+    },
+    "finance_query::ref_bench_elder_bear_power": {
+      "base_fingerprint": "7b088242eac97b8c",
+      "head_fingerprint": "7b088242eac97b8c",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 1538368.0,
+        "instructions": 1538368.0
+      }
+    },
+    "finance_query::ref_bench_hma": {
+      "base_fingerprint": "8ee6f723af61264b",
+      "head_fingerprint": "8ee6f723af61264b",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5408125.0,
+        "instructions": 5408125.0
+      }
+    },
+    "finance_query::ref_bench_ichimoku": {
+      "base_fingerprint": "0ee327cd243d8384",
+      "head_fingerprint": "0ee327cd243d8384",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 6374313.0,
+        "instructions": 6374313.0
+      }
+    },
+    "finance_query::ref_bench_is_bearish": {
+      "base_fingerprint": "d5172f077cf2fc64",
+      "head_fingerprint": "d5172f077cf2fc64",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 255371.0,
+        "instructions": 255371.0
+      }
+    },
+    "finance_query::ref_bench_is_bullish": {
+      "base_fingerprint": "12f8a02407a9a4b3",
+      "head_fingerprint": "12f8a02407a9a4b3",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 255371.0,
+        "instructions": 255371.0
+      }
+    },
+    "finance_query::ref_bench_mfi": {
+      "base_fingerprint": "aa99a26cd11bc84a",
+      "head_fingerprint": "aa99a26cd11bc84a",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5599542.0,
+        "instructions": 5599542.0
+      }
+    },
+    "finance_query::ref_bench_price_change_pct": {
+      "base_fingerprint": "8f16dbb01a4520f9",
+      "head_fingerprint": "8f16dbb01a4520f9",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 2916808.0,
+        "instructions": 2916808.0
+      }
+    },
+    "finance_query::ref_bench_rsi": {
+      "base_fingerprint": "505108e04637c2aa",
+      "head_fingerprint": "505108e04637c2aa",
+      "justifications": [
+        {
+          "accepted_unix": 1787881813,
+          "text": "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
+        }
+      ],
+      "metrics": {
+        "callgrind_ir": 5544071.0,
+        "instructions": 5544071.0
+      }
+    }
+  },
+  "version": 1
+}
