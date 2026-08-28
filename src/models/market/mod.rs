@@ -19,4 +19,4 @@ pub mod sectors;
 
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod index_trend;
-pub(crate) use index_trend::{IndexTrend, IndustryTrend, SectorTrend};
+pub use index_trend::{IndexTrend, IndustryTrend, SectorTrend};

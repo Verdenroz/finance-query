@@ -3,8 +3,8 @@
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
 // Internal modules that remain in quote/
-pub(crate) mod price;
-pub(crate) mod quote_type;
+pub mod price;
+pub mod quote_type;
 pub(crate) mod response;
 
 // Public modules
@@ -40,8 +40,8 @@ pub(crate) use crate::models::corporate::{
 pub(crate) use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
 
 // Internal re-exports for crate use
-pub(crate) use price::Price;
-pub(crate) use quote_type::QuoteTypeData;
+pub use price::Price;
+pub use quote_type::QuoteTypeData;
 pub(crate) use response::QuoteSummaryResponse;
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint

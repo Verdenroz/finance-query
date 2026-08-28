@@ -68,6 +68,7 @@ mod set;
 pub(crate) use adapter::*;
 pub(crate) use build::build_providers;
 pub use capability::Capability;
+#[allow(unused_imports)] // each is used only by a feature-gated provider bridge
 pub(crate) use convert::{build_financial_statement, build_options, range_to_dates};
 pub use operation::Operation;
 pub use provider::Provider;

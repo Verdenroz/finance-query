@@ -290,9 +290,25 @@ pub mod translation;
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub mod domains;
-/// Not part of the stable public API — see [`ProviderAdapter`].
-#[doc(hidden)]
 pub use models::quote::response::QuoteSummaryResponse;
+
+/// Yahoo `quoteSummary` module types carried by [`QuoteSummaryResponse`].
+///
+/// A [`QuoteProvider`] implementation populates these; they are also what
+/// [`Ticker::price`], [`Ticker::asset_profile`] and the other module
+/// accessors return.
+pub mod quote {
+    pub use crate::models::corporate::{
+        AssetProfile, CalendarEvents, CompanyOfficer, Earnings, EarningsHistory, EarningsTrend,
+        EquityPerformance, FundOwnership, FundPerformance, FundProfile, InsiderHolders,
+        InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
+        RecommendationTrend, SecFilings, SummaryProfile, TopHoldings, UpgradeDowngradeHistory,
+    };
+    pub use crate::models::fundamentals::{DefaultKeyStatistics, FinancialData, SummaryDetail};
+    pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+    pub use crate::models::quote::price::Price;
+    pub use crate::models::quote::quote_type::QuoteTypeData;
+}
 pub use providers::config::{Providers, ProvidersBuilder};
 pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
 /// Not part of the stable public API — see [`ProviderAdapter`].
@@ -376,7 +392,6 @@ pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarE
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
@@ -480,7 +495,7 @@ pub use models::quote::snapshot::{AssetClass, MarketSnapshot};
 // Nested types - Commonly accessed fields within response types
 // ============================================================================
 pub use models::{
-    chart::{Candle, CapitalGain, ChartMeta, Dividend, DividendAnalytics, Split},
+    chart::{Candle, CapitalGain, ChartEvents, ChartMeta, Dividend, DividendAnalytics, Split},
     corporate::recommendation::SimilarSymbol,
     discovery::lookup::LookupQuote,
     discovery::screeners::ScreenerQuote,
