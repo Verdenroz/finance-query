@@ -185,9 +185,10 @@ mod tests {
     #[ignore = "requires network access; downloads a sample of filings"]
     async fn measure_scanned_filing_rate() {
         const PER_YEAR: usize = 40;
-        let (mut readable, mut no_text, mut other) = (0usize, 0usize, 0usize);
+        let (mut readable, mut no_text, mut other, mut unfetched) =
+            (0usize, 0usize, 0usize, 0usize);
 
-        for year in [2021, 2023, 2024, 2025, 2026] {
+        for year in [2021, 2022, 2023, 2024, 2025, 2026] {
             let entries = super::year_ptr_entries(year).await.expect("index");
             let step = (entries.len() / PER_YEAR).max(1);
             for entry in entries.iter().step_by(step).take(PER_YEAR) {
@@ -196,6 +197,7 @@ mod tests {
                     .fetch_filing_pdf(year, &entry.doc_id)
                     .await
                 else {
+                    unfetched += 1;
                     continue;
                 };
                 match super::super::pdf::extract_lines(bytes) {
@@ -212,10 +214,14 @@ mod tests {
         let total = readable + no_text + other;
         println!(
             "sampled {total}: readable={readable} no_text_layer={no_text} other={other} \
-             ({:.1}% no text layer)",
+             unfetched={unfetched} ({:.1}% no text layer)",
             100.0 * no_text as f64 / total as f64
         );
         assert!(total > 100, "sample too small to quote");
+        assert!(
+            unfetched * 20 < total,
+            "too many fetches failed to quote a rate"
+        );
         assert_eq!(other, 0, "unexpected extraction failures");
     }
 
