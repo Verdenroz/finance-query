@@ -15,7 +15,7 @@ Finance Query v2.6 introduces a provider abstraction layer that lets you route e
 
 Yahoo Finance is always available with no configuration. All others are opt-in via feature flags:
 
-<!-- soothfast:bind finance_query::providers::Provider -->
+<!-- soothfast:bind finance_query::providers::provider::Provider -->
 
 | Provider | Feature flag | Free tier | Env var |
 |----------|-------------|-----------|---------|
@@ -91,7 +91,7 @@ If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGA
 
 ### Available Capabilities
 
-<!-- soothfast:bind finance_query::providers::Capability -->
+<!-- soothfast:bind finance_query::providers::capability::Capability -->
 
 | Capability | Constant | Description |
 |------------|----------|-------------|
@@ -100,12 +100,15 @@ If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGA
 | Fundamentals | `Capability::FUNDAMENTALS` | Financial statements |
 | Corporate | `Capability::CORPORATE` | News, recommendations, SEC metadata |
 | Options | `Capability::OPTIONS` | Options chains |
+| Discovery | `Capability::DISCOVERY` | Symbol search, screeners, exchange reference data |
 | Crypto | `Capability::CRYPTO` | Cryptocurrency quotes |
 | Economic | `Capability::ECONOMIC` | Macro series (GDP, CPI, etc.) |
+| Calendar | `Capability::CALENDAR` | Market-wide earnings, IPO, dividend, split and economic calendars |
 | Forex | `Capability::FOREX` | FX currency pair rates |
 | Indices | `Capability::INDICES` | Market index quotes |
 | Futures | `Capability::FUTURES` | Futures contract quotes |
 | Commodities | `Capability::COMMODITIES` | Commodity price quotes |
+| Market | `Capability::MARKET` | Sector and industry performance, market movers |
 | Filings | `Capability::FILINGS` | SEC EDGAR filing data |
 
 <!-- /soothfast:bind -->
@@ -133,7 +136,7 @@ QUOTE.name() = "quote"
 
 `Fetch` controls how the provider list is queried:
 
-<!-- soothfast:bind finance_query::providers::Fetch -->
+<!-- soothfast:bind finance_query::providers::routes::Fetch -->
 
 | Strategy | Behavior | Best for |
 |----------|----------|----------|
