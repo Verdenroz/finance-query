@@ -30,7 +30,12 @@ struct OhlcvInput {
 }
 
 fuzz_target!(|input: OhlcvInput| {
-    let _ = adx(&input.highs, &input.lows, &input.closes, input.period as usize);
+    let _ = adx(
+        &input.highs,
+        &input.lows,
+        &input.closes,
+        input.period as usize,
+    );
     let _ = stochastic(
         &input.highs,
         &input.lows,

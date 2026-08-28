@@ -69,7 +69,7 @@ pub(crate) fn fuzz_unencrypted(bytes: &[u8]) {
     let _ = cmap::parse(bytes);
     let mut lex = object::Lexer::new(bytes, 0);
     for _ in 0..256 {
-        if lex.object().is_none() && lex.pos >= bytes.len() {
+        if lex.object().is_none() {
             break;
         }
     }

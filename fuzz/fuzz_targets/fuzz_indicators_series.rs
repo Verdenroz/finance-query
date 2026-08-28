@@ -33,7 +33,12 @@ fuzz_target!(|input: SeriesInput| {
         input.slow as usize,
         input.signal as usize,
     );
-    let _ = alma(&input.prices, input.period as usize, input.offset, input.sigma);
+    let _ = alma(
+        &input.prices,
+        input.period as usize,
+        input.offset,
+        input.sigma,
+    );
     let _ = stochastic_rsi(
         &input.prices,
         input.period as usize,
