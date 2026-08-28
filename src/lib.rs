@@ -603,3 +603,13 @@ const _: () = {
     let _ = assert_send_sync::<Ticker>;
     let _ = assert_send_sync::<Tickers>;
 };
+
+/// Parse PDF text lines from arbitrary bytes, for `fuzz/fuzz_targets`.
+///
+/// Not part of the public API. Requires the `fuzzing` feature, which no normal
+/// build enables.
+#[cfg(all(feature = "fuzzing", feature = "housetrades"))]
+#[doc(hidden)]
+pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
+    crate::adapters::housetrades::pdf::extract_lines(bytes).ok()
+}

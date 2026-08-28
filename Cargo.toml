@@ -170,6 +170,9 @@ secftd = ["dep:zip"]
 housetrades = ["dep:zip", "dep:flate2"]
 # Enable Senate Periodic Transaction Report disclosures (keyless, headless-Chromium)
 senatetrades = ["dep:chromiumoxide"]
+# Expose internal parsers to `fuzz/` targets. Never enabled by `full` or a
+# normal build: it widens the public surface for fuzzing only.
+fuzzing = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
