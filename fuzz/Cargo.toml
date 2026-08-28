@@ -15,7 +15,7 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 arbitrary = { version = "1", features = ["derive"] }
 serde_json = "1"
-finance-query = { path = "..", features = ["indicators"] }
+finance-query = { path = "..", features = ["indicators", "housetrades", "fuzzing"] }
 
 [[bin]]
 name = "fuzz_quote"
@@ -74,3 +74,8 @@ panic = "abort"
 [profile.dev]
 panic = "abort"
 debug-assertions = true
+
+[[bin]]
+name = "fuzz_pdf_text"
+path = "fuzz_targets/fuzz_pdf_text.rs"
+doc = false

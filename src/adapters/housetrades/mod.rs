@@ -18,7 +18,7 @@
 pub(crate) mod client;
 pub(crate) mod filings;
 pub(crate) mod models;
-mod pdf;
+pub(crate) mod pdf;
 
 use std::time::Duration;
 
