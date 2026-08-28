@@ -3,7 +3,7 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — providers](https://docs.rs/finance-query/latest/finance_query/providers/index.html)
 
-Finance Query v2.6 introduces a provider abstraction layer that lets you route each data capability (quotes, charts, fundamentals, etc.) to a different provider through a single builder API. The system automatically falls back to the next provider in the list on failure.
+Finance Query v3 introduces a provider abstraction layer that lets you route each data capability (quotes, charts, fundamentals, etc.) to a different provider through a single builder API. The system automatically falls back to the next provider in the list on failure.
 
 ## Why Multiple Providers?
 
@@ -32,7 +32,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **Binance** | `binance` | Keyless | *(keyless)* |
 | **Kraken** | `kraken` | Keyless | *(keyless)* |
 | **FINRA** | `finra` | Keyless (non-commercial) | *(keyless)* |
-| **OpenFIGI** | `openfigi` | Keyless 25 req/min | `OPENFIGI_API_KEY` *(optional)* |
+| OpenFIGI *(not provider-routed)* | `openfigi` | Keyless 25 req/min | `OPENFIGI_API_KEY` *(optional)* |
 | **DefiLlama** | `defi` | Keyless | *(keyless)* |
 | **GDELT DOC 2.0** | `gdelt` | Keyless (~1 req/5s) | *(keyless)* |
 | **CFTC** | `cftc` | Keyless | *(keyless)* |
@@ -41,12 +41,14 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **Wikipedia** | `wikipedia` | Keyless (~1 req/s) | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 | **Local Market Calendar** | *(always available)* | Keyless, no network call | *(keyless)* |
+| **Local Exchange** | *(always available)* | Keyless, no network call | *(keyless)* |
+| **Custom** | *(your own adapter)* | n/a | *(yours)* |
 
 <!-- /soothfast:bind -->
 
 ```toml
 [dependencies]
-finance-query = { version = "2.6", features = ["polygon", "fmp"] }
+finance-query = { version = "3", features = ["polygon", "fmp"] }
 ```
 
 ## Provider Initialization

@@ -2,11 +2,11 @@
 // source: docs/library/providers/index.md
 #![allow(unused)]
 
-// line 70: compile-only (no_run)
+// line 72: compile-only (no_run)
 #[cfg(feature = "full")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_70() {
+fn doc_block_line_72() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
@@ -26,11 +26,11 @@ fn doc_block_line_70() {
     }
 }
 
-// line 169: compile-only (no_run)
+// line 171: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_169() {
+fn doc_block_line_171() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
@@ -54,11 +54,11 @@ fn doc_block_line_169() {
     }
 }
 
-// line 224: compile-only (no_run)
+// line 226: compile-only (no_run)
 #[cfg(feature = "full")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_224() {
+fn doc_block_line_226() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
@@ -84,11 +84,11 @@ fn doc_block_line_224() {
     }
 }
 
-// line 307: compile-only (no_run)
+// line 309: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_307() {
+fn doc_block_line_309() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
