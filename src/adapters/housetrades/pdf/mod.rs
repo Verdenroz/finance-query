@@ -57,6 +57,24 @@ impl std::fmt::Display for PdfError {
 
 pub(super) type Result<T> = std::result::Result<T, PdfError>;
 
+/// Drive the parsers that read plain bytes, for `fuzz/fuzz_targets`.
+///
+/// Decryption gates [`extract_lines`], so mutating an encrypted filing mostly
+/// dies at key derivation. The lexer, the CMap decoder, and the width table
+/// take unencrypted input and are reachable directly.
+#[cfg(feature = "fuzzing")]
+pub(crate) fn fuzz_unencrypted(bytes: &[u8]) {
+    let _ = object::scan_objects(bytes);
+    let _ = object::trailer(bytes);
+    let _ = cmap::parse(bytes);
+    let mut lex = object::Lexer::new(bytes, 0);
+    for _ in 0..256 {
+        if lex.object().is_none() && lex.pos >= bytes.len() {
+            break;
+        }
+    }
+}
+
 /// Text lines of a PTR, in reading order.
 pub(crate) fn extract_lines(bytes: Vec<u8>) -> Result<Vec<String>> {
     let doc = Document::load(bytes)?;

@@ -613,3 +613,12 @@ const _: () = {
 pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
     crate::adapters::housetrades::pdf::extract_lines(bytes).ok()
 }
+
+/// Drive the PDF parsers that need no decryption, for `fuzz/fuzz_targets`.
+///
+/// Not part of the public API. Requires the `fuzzing` feature.
+#[cfg(all(feature = "fuzzing", feature = "housetrades"))]
+#[doc(hidden)]
+pub fn __fuzz_pdf_unencrypted(bytes: &[u8]) {
+    crate::adapters::housetrades::pdf::fuzz_unencrypted(bytes);
+}
