@@ -43,7 +43,7 @@ jobs:
       - name: Accept reviewed deltas
         run: |
           set -euo pipefail
-          cargo soothfast gate accept -p finance-query \
+          cargo soothfast gate accept -p finance-query --features bench-gate \
             --against-ref origin/master \
             --justification "margin/leverage/sizing feature plus 33 audited correctness fixes changed measured work by design; deltas bisected and reviewed in PR #409"
           cat soothfast-gate.lock
