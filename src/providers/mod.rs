@@ -1875,8 +1875,28 @@ mod tests {
     /// catches one missing from `all()`, which is a hand-maintained list.
     #[test]
     fn every_variant_has_its_serialized_form_pinned() {
+        const EXPECTED: usize = 4
+            + cfg!(feature = "polygon") as usize
+            + cfg!(feature = "fmp") as usize
+            + cfg!(feature = "alphavantage") as usize
+            + cfg!(feature = "crypto") as usize
+            + cfg!(feature = "fred") as usize
+            + cfg!(feature = "worldbank") as usize
+            + cfg!(feature = "fiscaldata") as usize
+            + cfg!(feature = "bls") as usize
+            + cfg!(feature = "frankfurter") as usize
+            + cfg!(feature = "binance") as usize
+            + cfg!(feature = "kraken") as usize
+            + cfg!(feature = "finra") as usize
+            + cfg!(feature = "defi") as usize
+            + cfg!(feature = "gdelt") as usize
+            + cfg!(feature = "cftc") as usize
+            + cfg!(feature = "nasdaq") as usize
+            + cfg!(feature = "wikipedia") as usize
+            + cfg!(any(feature = "housetrades", feature = "senatetrades")) as usize;
+
         let all = Provider::all();
-        assert_eq!(all.len(), 22, "Provider::all() is missing a variant");
+        assert_eq!(all.len(), EXPECTED, "Provider::all() is missing a variant");
         for provider in all {
             let (serialized, id) = pin_for(provider);
             assert_eq!(serde_json::to_string(&provider).unwrap(), serialized);
