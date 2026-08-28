@@ -1,5 +1,7 @@
 //! The [`Provider`] identifier.
 
+use std::borrow::Cow;
+
 use serde::de::{Error as DeError, Unexpected};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -305,9 +307,9 @@ impl Serialize for Provider {
 
 impl<'de> Deserialize<'de> for Provider {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
-        let id = <&str>::deserialize(deserializer)?;
-        Self::from_id_str(id)
-            .ok_or_else(|| D::Error::invalid_value(Unexpected::Str(id), &"a provider id"))
+        let id = Cow::<'de, str>::deserialize(deserializer)?;
+        Self::from_id_str(&id)
+            .ok_or_else(|| D::Error::invalid_value(Unexpected::Str(&id), &"a provider id"))
     }
 }
 

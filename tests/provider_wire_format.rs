@@ -57,6 +57,25 @@ fn the_documented_id_deserializes() {
     );
 }
 
+/// `serde_json::from_str` on an unescaped literal is the one input shape that
+/// hands the deserializer a borrowed `&str`. Deserializing through anything
+/// else must work too.
+#[test]
+fn deserializes_from_inputs_that_cannot_borrow() {
+    assert_eq!(
+        serde_json::from_reader::<_, Provider>(std::io::Cursor::new(b"\"yahoo\"")).unwrap(),
+        Provider::Yahoo
+    );
+    assert_eq!(
+        serde_json::from_str::<Provider>("\"yah\\u006fo\"").unwrap(),
+        Provider::Yahoo
+    );
+    assert_eq!(
+        serde_json::from_slice::<Provider>(b"\"yahoo\"").unwrap(),
+        Provider::Yahoo
+    );
+}
+
 #[test]
 fn the_old_variant_name_no_longer_deserializes() {
     assert!(serde_json::from_str::<Provider>("\"Yahoo\"").is_err());
