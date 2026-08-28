@@ -1394,10 +1394,13 @@ condition_bench!(
     trailing_take_profit(0.05)
 );
 
+// As tiny as the smallest ref benches: the engine's accepted per-bar cost
+// sits near +17% of its body and pulls walltime past its limit with it.
 #[bench(
     group = "backtesting_conditions",
     setup = backtest_inputs,
-    covers = "finance_query::backtesting::condition::always_false"
+    covers = "finance_query::backtesting::condition::always_false",
+    tolerance = "20%"
 )]
 fn cond_bench_always_false(input: &(BacktestConfig, Vec<Candle>)) {
     run_ref_strategy(input, always_false(), always_true());
