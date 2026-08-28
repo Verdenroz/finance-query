@@ -52,7 +52,7 @@
     "finance_query::providers::Fetch": "716d0ecf6acde694",
     "finance_query::providers::Provider": "0695391e93fc2b1a",
     "finance_query::providers::capability::Capability": "2f58b918177f54e7",
-    "finance_query::providers::provider::Provider": "0695391e93fc2b1a",
+    "finance_query::providers::provider::Provider": "23fdcb590a244a9e",
     "finance_query::providers::routes::Fetch": "716d0ecf6acde694",
     "finance_query::risk::RiskSummary": "ce95c5249016cb91",
     "finance_query::risk::beta::beta": "0dfd56b8cbadb56d",
