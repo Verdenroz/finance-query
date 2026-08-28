@@ -4,7 +4,8 @@
 name: Gate Accept (one-off)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [feat/backtesting-margin-sizing-pareto]
 
 permissions:
   contents: read
