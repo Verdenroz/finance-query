@@ -1589,7 +1589,6 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 name = "finance-query"
 version = "2.8.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "base64 0.22.1",
  "chromiumoxide",
@@ -1610,7 +1609,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_repr",
  "serial_test",
  "soothfast",
  "thiserror 2.0.20",
@@ -1619,7 +1617,6 @@ dependencies = [
  "tokio-test",
  "tokio-tungstenite 0.28.0",
  "tracing",
- "url",
  "vader_sentiment",
  "zip",
 ]
@@ -1660,7 +1657,6 @@ dependencies = [
 name = "finance-query-server"
 version = "2.8.0"
 dependencies = [
- "anyhow",
  "async-graphql",
  "async-graphql-axum",
  "axum",
@@ -1677,16 +1673,13 @@ dependencies = [
  "serde_json",
  "serial_test",
  "soothfast",
- "thiserror 2.0.20",
  "tokio",
  "tokio-stream",
  "tokio-test",
- "tokio-tungstenite 0.28.0",
  "tower",
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "url",
  "uuid",
 ]
 
@@ -4276,17 +4269,6 @@ dependencies = [
  "itoa",
  "serde",
  "serde_core",
-]
-
-[[package]]
-name = "serde_repr"
-version = "0.1.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d3b1629de253c70a0508c3899572da79ca359fdab27c7920ff00406df418906"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.4",
 ]
 
 [[package]]

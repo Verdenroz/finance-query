@@ -75,7 +75,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_commitments_of_traders` — `GET /v2/cftc/cot/{symbol}`: Weekly CFTC Commitments of Traders positioning (keyless)
 - `get_commodity` — `GET /v2/commodities/{symbol}`: Get a commodity's current quote
 - `get_company_profile` — `GET /v2/company-profile/{symbol}`: Get company profile
-- `get_congressional_trades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional (senate) trading disclosures for a symbol
+- `get_congressional_trades` — `GET /v2/filings/{symbol}/congressional-trades`: Congressional trading disclosures for a symbol
 - `get_crypto_coin` — `GET /v2/crypto/coins/{id}`: Single coin by CoinGecko ID
 - `get_crypto_coins` — `GET /v2/crypto/coins`: Top coins by market cap
 - `get_crypto_global` — `GET /v2/crypto/global`: Aggregate global cryptocurrency market statistics

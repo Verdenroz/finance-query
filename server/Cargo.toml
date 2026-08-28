@@ -21,7 +21,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Finance library (our own)
-finance-query = { path = "..", features = ["indicators", "fred", "crypto", "risk", "sentiment", "gdelt", "cftc", "alphavantage", "fmp", "worldbank", "fiscaldata", "frankfurter", "binance", "kraken", "secftd", "housetrades", "senatetrades", "nasdaq", "wikipedia"] }
+finance-query = { path = "..", features = ["indicators", "fred", "crypto", "risk", "sentiment", "gdelt", "cftc", "alphavantage", "fmp", "worldbank", "fiscaldata", "frankfurter", "binance", "kraken", "secftd", "housetrades", "nasdaq", "wikipedia"] }
 
 # GraphQL
 async-graphql = { version = "7", features = ["graphiql"] }
@@ -30,7 +30,6 @@ async-graphql-axum = "7"
 # Web framework
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
-tower = "0.5"
 tower-http = { version = "0.6.11", features = ["fs", "trace", "cors", "timeout", "limit", "compression-full"] }
 
 # Serialization
@@ -41,17 +40,12 @@ serde_json = "1"
 redis = { version = "1.2.2", features = ["tokio-comp", "connection-manager"], optional = true }
 
 # WebSocket
-tokio-tungstenite = "0.28"
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures-util = "0.3"
 
 # Logging and tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-
-# Error handling
-anyhow = "1"
-thiserror = "2.0.18"
 
 # Environment and configuration
 dotenvy = "0.15"
@@ -63,9 +57,6 @@ chrono-tz = "0.10"
 # UUID for request IDs
 uuid = { version = "1", features = ["v4", "serde"] }
 
-# URL parsing
-url = "2"
-
 # Metrics
 prometheus = "0.14"
 lazy_static = "1.5"
@@ -73,6 +64,7 @@ lazy_static = "1.5"
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"
+tower = "0.5"
 mockito = "1"
 serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }

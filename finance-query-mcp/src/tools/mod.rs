@@ -979,7 +979,7 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get congressional (House and Senate) trading disclosures for a symbol. Uses FMP when FMP_API_KEY is set, keyless House/Senate PTR filings otherwise."
+        description = "Get congressional trading disclosures for a symbol. Uses FMP when FMP_API_KEY is set, keyless House PTR filings otherwise."
     )]
     async fn get_congressional_trades(
         &self,

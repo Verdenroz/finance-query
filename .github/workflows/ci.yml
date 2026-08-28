@@ -312,6 +312,11 @@ jobs:
           shared-key: check-lib-default
       - name: Check lib (default features)
         run: cargo check --release -p finance-query --verbose
+      # Deliberately not --workspace/--all-targets: those unify the server's and
+      # dev-deps' wider feature sets over the library's, hiding a feature a
+      # crates.io consumer would need.
+      - name: Check lib (full features, no workspace unification)
+        run: cargo check -p finance-query --features full --verbose
 
   build-release:
     name: Build Release (binaries)

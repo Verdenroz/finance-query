@@ -1790,7 +1790,7 @@ paths:
   "/v2/filings/{symbol}/congressional-trades":
     get:
       operationId: getCongressionalTrades
-      summary: Congressional (senate) trading disclosures for a symbol
+      summary: Congressional trading disclosures for a symbol
       parameters:
         - name: cursor
           in: query
