@@ -13,16 +13,17 @@ use std::sync::OnceLock;
 /// on first access and cached for subsequent calls.
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ChartEvents {
+#[non_exhaustive]
+pub struct ChartEvents {
     /// Dividend events keyed by timestamp
     #[serde(default)]
-    pub dividends: HashMap<String, DividendEvent>,
+    pub(crate) dividends: HashMap<String, DividendEvent>,
     /// Stock split events keyed by timestamp
     #[serde(default)]
-    pub splits: HashMap<String, SplitEvent>,
+    pub(crate) splits: HashMap<String, SplitEvent>,
     /// Capital gain events keyed by timestamp
     #[serde(default)]
-    pub capital_gains: HashMap<String, CapitalGainEvent>,
+    pub(crate) capital_gains: HashMap<String, CapitalGainEvent>,
 
     /// Cached sorted dividend vector (computed once on first access)
     #[serde(skip)]
@@ -145,8 +146,74 @@ impl Clone for ChartEvents {
 }
 
 impl ChartEvents {
+    /// Build events from public model values.
+    ///
+    /// The only way to construct this outside the crate, for a
+    /// [`CorporateProvider`](crate::ProviderAdapter) implementation returning
+    /// events it fetched itself.
+    pub fn from_parts(
+        dividends: Vec<Dividend>,
+        splits: Vec<Split>,
+        capital_gains: Vec<CapitalGain>,
+    ) -> Self {
+        let events = Self {
+            dividends: dividends
+                .iter()
+                .map(|d| {
+                    (
+                        d.timestamp.to_string(),
+                        DividendEvent {
+                            amount: d.amount,
+                            date: d.timestamp,
+                        },
+                    )
+                })
+                .collect(),
+            splits: splits
+                .iter()
+                .map(|s| {
+                    (
+                        s.timestamp.to_string(),
+                        SplitEvent {
+                            date: s.timestamp,
+                            numerator: s.numerator,
+                            denominator: s.denominator,
+                            split_ratio: s.ratio.clone(),
+                        },
+                    )
+                })
+                .collect(),
+            capital_gains: capital_gains
+                .iter()
+                .map(|g| {
+                    (
+                        g.timestamp.to_string(),
+                        CapitalGainEvent {
+                            amount: g.amount,
+                            date: g.timestamp,
+                        },
+                    )
+                })
+                .collect(),
+            ..Default::default()
+        };
+        // Seeding the caches keeps `provider_id`, which the wire DTOs cannot carry.
+        let sorted = |mut v: Vec<Dividend>| {
+            v.sort_by_key(|d| d.timestamp);
+            v
+        };
+        let _ = events.dividends_cache.set(sorted(dividends));
+        let mut splits = splits;
+        splits.sort_by_key(|s| s.timestamp);
+        let _ = events.splits_cache.set(splits);
+        let mut capital_gains = capital_gains;
+        capital_gains.sort_by_key(|g| g.timestamp);
+        let _ = events.capital_gains_cache.set(capital_gains);
+        events
+    }
+
     /// Get sorted list of dividends (cached after first call)
-    pub(crate) fn to_dividends(&self) -> Vec<Dividend> {
+    pub fn to_dividends(&self) -> Vec<Dividend> {
         self.dividends_cache
             .get_or_init(|| {
                 let mut dividends: Vec<Dividend> = self
@@ -165,7 +232,7 @@ impl ChartEvents {
     }
 
     /// Get sorted list of splits (cached after first call)
-    pub(crate) fn to_splits(&self) -> Vec<Split> {
+    pub fn to_splits(&self) -> Vec<Split> {
         self.splits_cache
             .get_or_init(|| {
                 let mut splits: Vec<Split> = self
@@ -186,7 +253,7 @@ impl ChartEvents {
     }
 
     /// Get sorted list of capital gains (cached after first call)
-    pub(crate) fn to_capital_gains(&self) -> Vec<CapitalGain> {
+    pub fn to_capital_gains(&self) -> Vec<CapitalGain> {
         self.capital_gains_cache
             .get_or_init(|| {
                 let mut gains: Vec<CapitalGain> = self

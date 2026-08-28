@@ -5,7 +5,8 @@
 mod candle;
 mod data;
 pub mod dividend_analytics;
-pub(crate) mod events;
+pub mod events;
+pub use events::ChartEvents;
 pub(crate) mod indicators;
 mod meta;
 pub(crate) mod response;

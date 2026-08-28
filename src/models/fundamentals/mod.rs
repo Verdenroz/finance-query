@@ -47,9 +47,9 @@ pub(crate) use balance_sheet_history::{BalanceSheetHistory, BalanceSheetHistoryQ
 pub(crate) use cashflow_statement_history::{
     CashflowStatementHistory, CashflowStatementHistoryQuarterly,
 };
-pub(crate) use default_key_statistics::DefaultKeyStatistics;
-pub(crate) use financial_data::FinancialData;
+pub use default_key_statistics::DefaultKeyStatistics;
+pub use financial_data::FinancialData;
 pub(crate) use income_statement_history::{
     IncomeStatementHistory, IncomeStatementHistoryQuarterly,
 };
-pub(crate) use summary_detail::SummaryDetail;
+pub use summary_detail::SummaryDetail;

@@ -1779,14 +1779,19 @@ impl finance_query::ProviderCore for CannedProvider {
     }
 }
 
+/// `QuoteSummaryResponse` is `#[non_exhaustive]`, so a struct literal is not
+/// available outside the crate. Assigning fields on a default is.
+fn canned_quote(symbol: &str) -> QuoteSummaryResponse {
+    let mut quote = QuoteSummaryResponse::default();
+    quote.symbol = symbol.to_string();
+    quote.price = serde_json::from_value(serde_json::json!({})).ok();
+    quote
+}
+
 #[async_trait::async_trait]
 impl finance_query::QuoteProvider for CannedProvider {
     async fn fetch_quote(&self, symbol: &str) -> finance_query::Result<QuoteSummaryResponse> {
-        Ok(QuoteSummaryResponse {
-            symbol: symbol.to_string(),
-            price: serde_json::from_value(serde_json::json!({})).ok(),
-            ..Default::default()
-        })
+        Ok(canned_quote(symbol))
     }
 
     async fn fetch_quotes_batch(
@@ -1795,16 +1800,7 @@ impl finance_query::QuoteProvider for CannedProvider {
     ) -> finance_query::Result<Vec<(String, QuoteSummaryResponse)>> {
         Ok(symbols
             .iter()
-            .map(|s| {
-                (
-                    s.to_string(),
-                    QuoteSummaryResponse {
-                        symbol: s.to_string(),
-                        price: serde_json::from_value(serde_json::json!({})).ok(),
-                        ..Default::default()
-                    },
-                )
-            })
+            .map(|s| (s.to_string(), canned_quote(s)))
             .collect())
     }
 }
