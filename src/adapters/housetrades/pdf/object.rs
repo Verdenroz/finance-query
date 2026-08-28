@@ -88,7 +88,7 @@ fn is_delim(b: u8) -> bool {
     )
 }
 
-pub(crate) struct Lexer<'a> {
+pub(super) struct Lexer<'a> {
     buf: &'a [u8],
     pub(super) pos: usize,
 }

@@ -545,13 +545,15 @@ jobs:
         run: cargo fuzz run fuzz_discovery --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       # Seeded from the checked-in filings: this target gates on a %PDF header,
-      # a trailer, and an /Encrypt dict before reaching the parser.
+      # a trailer, and an /Encrypt dict before reaching the parser. The corpus
+      # is passed positionally so it does not depend on how cargo-fuzz resolves
+      # the workspace root.
       - name: Seed fuzz_pdf_text corpus
         run: |
           mkdir -p fuzz/corpus/fuzz_pdf_text
           cp tests/fixtures/housetrades/*.pdf fuzz/corpus/fuzz_pdf_text/
       - name: Run fuzz_pdf_text (30 s)
-        run: cargo fuzz run fuzz_pdf_text --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
+        run: cargo fuzz run fuzz_pdf_text corpus/fuzz_pdf_text --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30
         working-directory: fuzz
       - name: Run fuzz_pdf_objects (30 s)
         run: cargo fuzz run fuzz_pdf_objects --dev --target x86_64-unknown-linux-gnu -- -max_total_time=30

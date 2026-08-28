@@ -1,6 +1,6 @@
 #![no_main]
 use arbitrary::Arbitrary;
-use finance_query::{Candle, patterns};
+use finance_query::{patterns, Candle};
 use libfuzzer_sys::fuzz_target;
 
 // Exercises candlestick pattern detection with structured arbitrary input.
