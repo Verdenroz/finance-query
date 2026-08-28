@@ -36,4 +36,24 @@ pub use equity::{
     ChartProvider, CorporateProvider, FilingsProvider, FundamentalsProvider, OptionsProvider,
     QuoteProvider,
 };
-pub use markets::*;
+#[cfg(any(
+    feature = "binance",
+    feature = "crypto",
+    feature = "defi",
+    feature = "kraken"
+))]
+pub use markets::CryptoProvider;
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "worldbank"
+))]
+pub use markets::EconomicProvider;
+#[cfg(any(feature = "frankfurter", feature = "gdelt"))]
+pub use markets::ForexProvider;
+pub use markets::{
+    CalendarProvider, CommoditiesProvider, DiscoveryProvider, FuturesProvider, IndicesProvider,
+    MarketProvider,
+};
