@@ -310,10 +310,14 @@ pub mod quote {
     pub use crate::models::quote::quote_type::QuoteTypeData;
 }
 #[cfg(any(
+    feature = "alphavantage",
     feature = "binance",
     feature = "crypto",
     feature = "defi",
-    feature = "kraken"
+    feature = "fmp",
+    feature = "gdelt",
+    feature = "kraken",
+    feature = "polygon"
 ))]
 pub use providers::CryptoProvider;
 #[cfg(any(
@@ -321,10 +325,17 @@ pub use providers::CryptoProvider;
     feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
+    feature = "polygon",
     feature = "worldbank"
 ))]
 pub use providers::EconomicProvider;
-#[cfg(any(feature = "frankfurter", feature = "gdelt"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "gdelt",
+    feature = "polygon"
+))]
 pub use providers::ForexProvider;
 pub use providers::config::{Providers, ProvidersBuilder};
 pub use providers::{
