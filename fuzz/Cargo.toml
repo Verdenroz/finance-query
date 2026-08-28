@@ -79,3 +79,8 @@ debug-assertions = true
 name = "fuzz_pdf_text"
 path = "fuzz_targets/fuzz_pdf_text.rs"
 doc = false
+
+[[bin]]
+name = "fuzz_pdf_objects"
+path = "fuzz_targets/fuzz_pdf_objects.rs"
+doc = false
