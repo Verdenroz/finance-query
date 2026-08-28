@@ -7,7 +7,7 @@ use super::ProviderCore;
 use super::equity::*;
 use super::markets::*;
 
-/// A configured provider as seen by [`super::ProviderSet`] dispatch: lifecycle
+/// A configured provider as seen by [`crate::ProviderSet`] dispatch: lifecycle
 /// plus one `as_*` accessor per capability. Override an accessor to
 /// `Some(self)` for each capability trait the provider implements.
 ///
@@ -22,7 +22,7 @@ pub trait ProviderAdapter: ProviderCore {
 
     /// Best-effort estimate of remaining rate-limit budget — tokens
     /// currently available in this provider's own token bucket, for
-    /// [`super::Providers::health`]. Peeking never consumes a
+    /// [`crate::Providers::health`]. Peeking never consumes a
     /// token.
     ///
     /// `None` by default: providers with no local rate limiter to peek (e.g.
@@ -32,39 +32,39 @@ pub trait ProviderAdapter: ProviderCore {
         None
     }
 
-    /// Override to `Some(self)` to serve [`Capability::QUOTE`].
+    /// Override to `Some(self)` to serve [`crate::Capability::QUOTE`].
     fn as_quote(&self) -> Option<&dyn QuoteProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::CHART`].
+    /// Override to `Some(self)` to serve [`crate::Capability::CHART`].
     fn as_chart(&self) -> Option<&dyn ChartProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::FUNDAMENTALS`].
+    /// Override to `Some(self)` to serve [`crate::Capability::FUNDAMENTALS`].
     fn as_fundamentals(&self) -> Option<&dyn FundamentalsProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::CORPORATE`].
+    /// Override to `Some(self)` to serve [`crate::Capability::CORPORATE`].
     fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::OPTIONS`].
+    /// Override to `Some(self)` to serve [`crate::Capability::OPTIONS`].
     fn as_options(&self) -> Option<&dyn OptionsProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::FILINGS`].
+    /// Override to `Some(self)` to serve [`crate::Capability::FILINGS`].
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::DISCOVERY`].
+    /// Override to `Some(self)` to serve [`crate::Capability::DISCOVERY`].
     fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::CALENDAR`].
+    /// Override to `Some(self)` to serve [`crate::Capability::CALENDAR`].
     fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::MARKET`].
+    /// Override to `Some(self)` to serve [`crate::Capability::MARKET`].
     fn as_market(&self) -> Option<&dyn MarketProvider> {
         None
     }
@@ -78,7 +78,7 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "kraken",
         feature = "polygon"
     ))]
-    /// Override to `Some(self)` to serve [`Capability::CRYPTO`].
+    /// Override to `Some(self)` to serve [`crate::Capability::CRYPTO`].
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
         None
     }
@@ -90,7 +90,7 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "polygon",
         feature = "worldbank"
     ))]
-    /// Override to `Some(self)` to serve [`Capability::ECONOMIC`].
+    /// Override to `Some(self)` to serve [`crate::Capability::ECONOMIC`].
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         None
     }
@@ -101,19 +101,19 @@ pub trait ProviderAdapter: ProviderCore {
         feature = "gdelt",
         feature = "polygon"
     ))]
-    /// Override to `Some(self)` to serve [`Capability::FOREX`].
+    /// Override to `Some(self)` to serve [`crate::Capability::FOREX`].
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::INDICES`].
+    /// Override to `Some(self)` to serve [`crate::Capability::INDICES`].
     fn as_indices(&self) -> Option<&dyn IndicesProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::FUTURES`].
+    /// Override to `Some(self)` to serve [`crate::Capability::FUTURES`].
     fn as_futures(&self) -> Option<&dyn FuturesProvider> {
         None
     }
-    /// Override to `Some(self)` to serve [`Capability::COMMODITIES`].
+    /// Override to `Some(self)` to serve [`crate::Capability::COMMODITIES`].
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
         None
     }

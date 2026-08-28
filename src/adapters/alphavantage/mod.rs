@@ -89,7 +89,7 @@ provider_build_client!(
 ///
 /// # Errors
 ///
-/// Returns [`FinanceError::InvalidParameter`] if already initialized.
+/// Returns [`crate::FinanceError::InvalidParameter`] if already initialized.
 #[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))

@@ -5,7 +5,7 @@ use crate::error::Result;
 
 use super::ProviderCore;
 
-/// [`Capability::DISCOVERY`] — symbol search, reference data, exchanges,
+/// [`crate::Capability::DISCOVERY`] — symbol search, reference data, exchanges,
 /// screeners.
 #[async_trait::async_trait]
 pub trait DiscoveryProvider: ProviderCore {
@@ -52,7 +52,7 @@ pub trait DiscoveryProvider: ProviderCore {
     }
 }
 
-/// [`Capability::CALENDAR`] — market-wide calendars.
+/// [`crate::Capability::CALENDAR`] — market-wide calendars.
 #[async_trait::async_trait]
 pub trait CalendarProvider: ProviderCore {
     /// Fetch a market-wide calendar over `[from, to]` (`YYYY-MM-DD` dates).
@@ -68,7 +68,7 @@ pub trait CalendarProvider: ProviderCore {
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>>;
 }
 
-/// [`Capability::MARKET`] — sector/industry performance and movers.
+/// [`crate::Capability::MARKET`] — sector/industry performance and movers.
 ///
 /// Movers is the required primary (every current implementor serves it);
 /// the sector/industry statistics default to `NotSupported` since coverage
@@ -109,7 +109,7 @@ pub trait MarketProvider: ProviderCore {
     }
 }
 
-/// [`Capability::CRYPTO`] — cryptocurrency quotes.
+/// [`crate::Capability::CRYPTO`] — cryptocurrency quotes.
 #[cfg(any(
     feature = "alphavantage",
     feature = "binance",
@@ -168,7 +168,7 @@ pub trait CryptoProvider: ProviderCore {
     }
 }
 
-/// [`Capability::ECONOMIC`] — macro-economic data series.
+/// [`crate::Capability::ECONOMIC`] — macro-economic data series.
 #[cfg(any(
     feature = "alphavantage",
     feature = "bls",
@@ -236,7 +236,7 @@ pub trait EconomicProvider: ProviderCore {
     }
 }
 
-/// [`Capability::FOREX`] — currency-pair quotes.
+/// [`crate::Capability::FOREX`] — currency-pair quotes.
 #[cfg(any(
     feature = "alphavantage",
     feature = "fmp",
@@ -262,7 +262,7 @@ pub trait ForexProvider: ProviderCore {
     }
 }
 
-/// [`Capability::INDICES`] — stock market index quotes.
+/// [`crate::Capability::INDICES`] — stock market index quotes.
 #[async_trait::async_trait]
 pub trait IndicesProvider: ProviderCore {
     /// Fetch a quote for one market index.
@@ -286,7 +286,7 @@ pub trait IndicesProvider: ProviderCore {
     }
 }
 
-/// [`Capability::FUTURES`] — futures contract quotes.
+/// [`crate::Capability::FUTURES`] — futures contract quotes.
 #[async_trait::async_trait]
 pub trait FuturesProvider: ProviderCore {
     /// Fetch a quote for one futures contract.
@@ -306,7 +306,7 @@ pub trait FuturesProvider: ProviderCore {
     }
 }
 
-/// [`Capability::COMMODITIES`] — commodity price quotes.
+/// [`crate::Capability::COMMODITIES`] — commodity price quotes.
 #[async_trait::async_trait]
 pub trait CommoditiesProvider: ProviderCore {
     /// Fetch a quote for one commodity.
