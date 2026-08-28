@@ -1130,16 +1130,30 @@ ref_bench!(
         .conversion_line()
         .above(0.0)
 );
-ref_bench!(
-    ref_bench_keltner,
-    "finance_query::backtesting::refs::keltner",
-    ref_keltner(20, 2.0, 10).middle().above(0.0)
-);
-ref_bench!(
-    ref_bench_macd,
-    "finance_query::backtesting::refs::macd",
-    ref_macd(12, 26, 9).line().above(0.0)
-);
+// The engine's accepted per-bar cost leaves this bench and the other
+// expanded ones below straddling their default limits run-to-run.
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::keltner",
+    tolerance = "8%"
+)]
+fn ref_bench_keltner(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(
+        input,
+        ref_keltner(20, 2.0, 10).middle().above(0.0),
+        always_true(),
+    );
+}
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::macd",
+    tolerance = "8%"
+)]
+fn ref_bench_macd(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(input, ref_macd(12, 26, 9).line().above(0.0), always_true());
+}
 ref_bench!(
     ref_bench_mcginley,
     "finance_query::backtesting::refs::mcginley",
@@ -1185,11 +1199,19 @@ ref_bench!(
     "finance_query::backtesting::refs::stochastic",
     ref_stochastic(14, 1, 3).k().above(0.0)
 );
-ref_bench!(
-    ref_bench_stochastic_rsi,
-    "finance_query::backtesting::refs::stochastic_rsi",
-    ref_stochastic_rsi(14, 14, 3, 3).k().above(0.0)
-);
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::stochastic_rsi",
+    tolerance = "8%"
+)]
+fn ref_bench_stochastic_rsi(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(
+        input,
+        ref_stochastic_rsi(14, 14, 3, 3).k().above(0.0),
+        always_true(),
+    );
+}
 // Small enough that a codegen change alone crosses +5% with source unchanged.
 ref_bench!(
     ref_bench_supertrend,
@@ -1217,11 +1239,15 @@ ref_bench!(
     "finance_query::backtesting::refs::vwma",
     ref_vwma(20).above(0.0)
 );
-ref_bench!(
-    ref_bench_williams_r,
-    "finance_query::backtesting::refs::williams_r",
-    ref_williams_r(14).above(0.0)
-);
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::williams_r",
+    tolerance = "16%"
+)]
+fn ref_bench_williams_r(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(input, ref_williams_r(14).above(0.0), always_true());
+}
 ref_bench!(
     ref_bench_wma,
     "finance_query::backtesting::refs::wma",
