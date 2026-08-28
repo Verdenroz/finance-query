@@ -1,13 +1,15 @@
 //! The [`Provider`] identifier.
 
-use serde::{Deserialize, Serialize};
+use serde::de::{Error as DeError, Unexpected};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::*;
 
 /// Typed identifier for a financial data provider.
 ///
 /// Variants are feature-gated: unavailable providers are excluded at compile time.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Provider {
     #[default]
     /// Yahoo Finance (always available).
@@ -79,6 +81,15 @@ pub enum Provider {
     /// A static table of major global exchanges (always available, no
     /// network call).
     LocalExchange,
+    /// A provider supplied by a downstream crate and registered with
+    /// `ProvidersBuilder::with_adapter`. The string is its id, and is what
+    /// [`as_str`](Self::as_str) and [`Display`](std::fmt::Display) return.
+    ///
+    /// Serialization is asymmetric: a `Custom` serializes to its id, but
+    /// [`from_id_str`](Self::from_id_str) and `Deserialize` only know the
+    /// built-in ids, so `serde_json::from_str(&to_string(custom))` fails
+    /// where it succeeds for every other variant.
+    Custom(&'static str),
 }
 
 impl Provider {
@@ -174,6 +185,7 @@ impl Provider {
             Self::Edgar => "edgar",
             Self::LocalMarketCalendar => "local_market_calendar",
             Self::LocalExchange => "local_exchange",
+            Self::Custom(id) => id,
         }
     }
 
@@ -280,7 +292,22 @@ impl Provider {
             Self::LocalExchange => {
                 ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
             }
+            Self::Custom(_) => Capability::NONE,
         }
+    }
+}
+
+impl Serialize for Provider {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for Provider {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let id = <&str>::deserialize(deserializer)?;
+        Self::from_id_str(id)
+            .ok_or_else(|| D::Error::invalid_value(Unexpected::Str(id), &"a provider id"))
     }
 }
 
