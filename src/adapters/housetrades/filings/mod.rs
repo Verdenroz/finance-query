@@ -178,6 +178,47 @@ mod tests {
         );
     }
 
+    /// Reproduces the scanned-filing rate quoted in
+    /// `docs/library/providers/housetrades.md`. Scores through `extract_lines`
+    /// rather than a structural proxy, so it measures what a caller loses.
+    #[tokio::test]
+    #[ignore = "requires network access; downloads a sample of filings"]
+    async fn measure_scanned_filing_rate() {
+        const PER_YEAR: usize = 40;
+        let (mut readable, mut no_text, mut other) = (0usize, 0usize, 0usize);
+
+        for year in [2021, 2023, 2024, 2025, 2026] {
+            let entries = super::year_ptr_entries(year).await.expect("index");
+            let step = (entries.len() / PER_YEAR).max(1);
+            for entry in entries.iter().step_by(step).take(PER_YEAR) {
+                let Ok(bytes) = super::super::client()
+                    .expect("client")
+                    .fetch_filing_pdf(year, &entry.doc_id)
+                    .await
+                else {
+                    continue;
+                };
+                match super::super::pdf::extract_lines(bytes) {
+                    Ok(_) => readable += 1,
+                    Err(super::super::pdf::PdfError::NoTextLayer) => no_text += 1,
+                    Err(e) => {
+                        other += 1;
+                        println!("{year}/{}: {e}", entry.doc_id);
+                    }
+                }
+            }
+        }
+
+        let total = readable + no_text + other;
+        println!(
+            "sampled {total}: readable={readable} no_text_layer={no_text} other={other} \
+             ({:.1}% no text layer)",
+            100.0 * no_text as f64 / total as f64
+        );
+        assert!(total > 100, "sample too small to quote");
+        assert_eq!(other, 0, "unexpected extraction failures");
+    }
+
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_live_congressional_trades() {
