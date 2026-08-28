@@ -145,7 +145,7 @@ fn route_forex_get_forex() {}
 )]
 fn route_analysis_get_company_profile() {}
 
-/// Congressional (senate) trading disclosures for a symbol
+/// Congressional trading disclosures for a symbol
 ///
 /// Implements `handlers::filings::get_congressional_trades`.
 #[allow(dead_code)]

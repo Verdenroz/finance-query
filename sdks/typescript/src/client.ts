@@ -1168,7 +1168,7 @@ export class Client {
     });
   }
 
-  /** Congressional (senate) trading disclosures for a symbol */
+  /** Congressional trading disclosures for a symbol */
   getCongressionalTrades(symbol: string, options: GetCongressionalTradesOptions = {}): Promise<models.GqlCongressionalTrade[]> {
     return this.transport.request<models.GqlCongressionalTrade[]>("GET", `/v2/filings/${pathSeg(symbol)}/congressional-trades`, {
       query: queryOf(options),

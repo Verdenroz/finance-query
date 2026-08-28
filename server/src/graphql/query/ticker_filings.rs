@@ -1,5 +1,5 @@
 //! Per-symbol filings/disclosure fields routed via `Capability::FILINGS`:
-//! congressional trading (FMP, falling back to keyless House/Senate PTR
+//! congressional trading (FMP, falling back to keyless House PTR
 //! disclosures) and fails-to-deliver (FMP, falling back to keyless EDGAR).
 //! Distinct from Yahoo's `insiderTransactions`/`secFilings`
 //! (`TickerHoldersQuery`/`TickerCoreQuery`) and SEC EDGAR's own
@@ -21,8 +21,8 @@ pub(super) struct TickerFilingsQuery {
 #[Object]
 impl TickerFilingsQuery {
     /// Congressional trading disclosures for this symbol (FMP when
-    /// `FMP_API_KEY` is set, falling back to keyless House/Senate PTR
-    /// disclosures otherwise).
+    /// `FMP_API_KEY` is set, falling back to keyless House PTR disclosures
+    /// otherwise).
     async fn congressional_trades(
         &self,
         ctx: &Context<'_>,

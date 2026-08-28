@@ -501,7 +501,7 @@ class Client:
         fields: str | None = None,
         limit: int | None = None,
     ) -> list[models.GqlCongressionalTrade]:
-        """Congressional (senate) trading disclosures for a symbol"""
+        """Congressional trading disclosures for a symbol"""
         return self._transport.request(
             "GET",
             f"/v2/filings/{path_seg(symbol)}/congressional-trades",
@@ -2108,7 +2108,7 @@ class AsyncClient:
         fields: str | None = None,
         limit: int | None = None,
     ) -> list[models.GqlCongressionalTrade]:
-        """Congressional (senate) trading disclosures for a symbol"""
+        """Congressional trading disclosures for a symbol"""
         return await self._transport.request(
             "GET",
             f"/v2/filings/{path_seg(symbol)}/congressional-trades",
