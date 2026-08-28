@@ -178,15 +178,18 @@ impl TickerBuilder {
         } else if let Some(handle) = self.shared_client {
             let yahoo = YahooProvider::from_client(handle.0);
             let client = yahoo.client_arc();
-            Arc::new(ProviderSet::new(
-                vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
-                Some(client),
-                Routes::new(Fetch::Sequential),
-            ))
+            Arc::new(
+                ProviderSet::new(
+                    vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
+                    Routes::new(Fetch::Sequential),
+                )
+                .with_yahoo_client(Some(client)),
+            )
         } else {
             Arc::new(
                 build_providers(
                     &[Provider::Yahoo],
+                    Vec::new(),
                     &self.config,
                     Routes::new(Fetch::Sequential),
                 )

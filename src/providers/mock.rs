@@ -139,7 +139,6 @@ impl ProviderAdapter for CountingProvider {
 pub(crate) fn provider_set(provider: Arc<CountingProvider>) -> Arc<ProviderSet> {
     Arc::new(ProviderSet::new(
         vec![provider as Arc<dyn ProviderAdapter>],
-        None,
         Routes::new(Fetch::Sequential),
     ))
 }

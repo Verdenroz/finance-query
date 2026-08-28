@@ -168,6 +168,16 @@ pub enum FinanceError {
         candidates: Vec<Provider>,
     },
 
+    /// A route names a provider with no adapter registered for it.
+    #[error(
+        "no adapter registered for {provider}; register it with \
+         ProvidersBuilder::with_adapter(..) before routing to it"
+    )]
+    ProviderNotRegistered {
+        /// The provider id named by a route but never registered.
+        provider: Provider,
+    },
+
     /// Translation backend failure (model download, load, or inference)
     #[cfg(feature = "translation")]
     #[error("Translation error: {context}")]

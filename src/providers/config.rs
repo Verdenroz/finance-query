@@ -49,6 +49,30 @@ impl Providers {
         ProvidersBuilder::default()
     }
 
+    /// Wrap a [`ProviderSet`] assembled by hand.
+    ///
+    /// The lower-level counterpart to [`builder`](Self::builder), for a caller
+    /// that has already built its own adapters and route table. Nothing is
+    /// initialised: [`ProviderAdapter::initialize`](crate::ProviderAdapter::initialize)
+    /// is the builder's job, so a hand-built set must be ready to use.
+    pub fn from_set(set: Arc<ProviderSet>) -> Self {
+        Self::from_set_with_lang(set, ClientConfig::default().lang)
+    }
+
+    /// [`from_set`](Self::from_set) with an explicit language for the handles
+    /// this set creates.
+    pub fn from_set_with_lang(set: Arc<ProviderSet>, lang: impl Into<String>) -> Self {
+        Self {
+            set,
+            lang: lang.into(),
+        }
+    }
+
+    /// The underlying set, for `TickerBuilder::with_provider_set` and friends.
+    pub fn provider_set(&self) -> &Arc<ProviderSet> {
+        &self.set
+    }
+
     /// Create a [`TickerBuilder`](crate::TickerBuilder) pre-wired to this provider set.
     ///
     /// The returned builder accepts the same optional configuration as
@@ -236,18 +260,33 @@ impl Providers {
 }
 
 /// Builder for [`Providers`].
-#[derive(Debug)]
 pub struct ProvidersBuilder {
     provider_ids: Vec<Provider>,
+    adapters: Vec<Arc<dyn crate::ProviderAdapter>>,
     config: ClientConfig,
     routes: Routes,
     retry: Option<RetryPolicy>,
+}
+
+impl std::fmt::Debug for ProvidersBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ProvidersBuilder")
+            .field("provider_ids", &self.provider_ids)
+            .field(
+                "adapters",
+                &self.adapters.iter().map(|a| a.id()).collect::<Vec<_>>(),
+            )
+            .field("routes", &self.routes)
+            .field("retry", &self.retry)
+            .finish()
+    }
 }
 
 impl Default for ProvidersBuilder {
     fn default() -> Self {
         Self {
             provider_ids: vec![Provider::Yahoo],
+            adapters: Vec::new(),
             config: ClientConfig::default(),
             routes: Routes::new(Fetch::Sequential),
             retry: None,
@@ -276,6 +315,11 @@ impl ProvidersBuilder {
     ) -> Self {
         let providers: Vec<Provider> = providers.into_iter().collect();
         for provider in &providers {
+            // A Custom id has no arm in `build_providers`; it arrives only
+            // through `with_adapter`.
+            if matches!(provider, Provider::Custom(_)) {
+                continue;
+            }
             if !self.provider_ids.contains(provider) {
                 self.provider_ids.push(*provider);
             }
@@ -333,12 +377,57 @@ impl ProvidersBuilder {
         self
     }
 
+    /// Register an adapter this crate does not build itself.
+    ///
+    /// Route to it by the id its [`ProviderCore::id`](crate::ProviderCore::id)
+    /// returns, usually [`Provider::Custom`]. Registering alone does not route
+    /// anything: a capability with no explicit route still falls back to its
+    /// default provider.
+    ///
+    /// ```no_run
+    /// # use std::sync::Arc;
+    /// # use finance_query::{Capability, Provider, Providers, ProviderAdapter};
+    /// # async fn f(my_adapter: Arc<dyn ProviderAdapter>) -> finance_query::Result<()> {
+    /// let providers = Providers::builder()
+    ///     .with_adapter(my_adapter)
+    ///     .route(Capability::ECONOMIC, [Provider::Custom("my-source")])
+    ///     .build()
+    ///     .await?;
+    /// # let _ = providers;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn with_adapter(mut self, adapter: Arc<dyn crate::ProviderAdapter>) -> Self {
+        self.adapters.push(adapter);
+        self
+    }
+
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
         #[cfg(feature = "translation")]
         crate::translation::Lang::parse(&self.config.lang)?;
+        for adapter in &self.adapters {
+            let id = adapter.id();
+            if let Provider::Custom(name) = id
+                && Provider::from_id_str(name).is_some()
+            {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "adapter".to_string(),
+                    reason: format!("custom provider id `{name}` collides with a built-in"),
+                });
+            }
+            let duplicate = self.provider_ids.contains(&id)
+                || self.adapters.iter().filter(|a| a.id() == id).count() > 1;
+            if duplicate {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "adapter".to_string(),
+                    reason: format!("provider id `{id}` is already configured"),
+                });
+            }
+        }
         let lang = self.config.lang.clone();
-        let set = build_providers(&self.provider_ids, &self.config, self.routes)
+        let set = build_providers(&self.provider_ids, self.adapters, &self.config, self.routes)
             .await?
             .with_retry_policy(self.retry);
         Ok(Providers {

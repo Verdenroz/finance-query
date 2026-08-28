@@ -69,7 +69,6 @@ async fn spark_routes_through_provider_set() {
     // hitting a hardcoded Yahoo client.
     let set = ProviderSet::new(
         vec![Arc::new(NoSparkProvider)],
-        None,
         Routes::new(Fetch::Sequential),
     );
     let result = set
@@ -171,7 +170,6 @@ async fn all_candidates_unsupported_surfaces_precise_operation() {
     // name the spark operation, not collapse to NoProviderAvailable(CHART).
     let set = ProviderSet::new(
         vec![Arc::new(NoSparkProvider)],
-        None,
         Routes::new(Fetch::Sequential),
     );
     let err = set
@@ -241,7 +239,6 @@ async fn real_errors_outrank_not_supported_in_final_error() {
         .insert(Capability::CHART, vec![Provider::Yahoo, Provider::Edgar]);
     let set = ProviderSet::new(
         vec![Arc::new(NoSparkProvider), Arc::new(FailingChartProvider)],
-        None,
         routes,
     );
     let err = set
@@ -341,7 +338,6 @@ async fn no_retry_policy_means_a_single_attempt_per_candidate() {
     let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, usize::MAX));
     let set = ProviderSet::new(
         vec![provider.clone() as Arc<dyn ProviderAdapter>],
-        None,
         Routes::new(Fetch::Sequential),
     );
     let err = fetch_chart_via(&set).await.unwrap_err();
@@ -358,7 +354,6 @@ async fn retry_policy_retries_rate_limited_then_succeeds() {
     let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, 2));
     let set = ProviderSet::new(
         vec![provider.clone() as Arc<dyn ProviderAdapter>],
-        None,
         Routes::new(Fetch::Sequential),
     )
     .with_retry_policy(Some(RetryPolicy::new(5)));
@@ -384,7 +379,6 @@ async fn retry_policy_exhausts_and_falls_through_to_next_provider() {
             always_limited.clone() as Arc<dyn ProviderAdapter>,
             succeeds.clone() as Arc<dyn ProviderAdapter>,
         ],
-        None,
         routes,
     )
     .with_retry_policy(Some(RetryPolicy::new(3)));
@@ -401,7 +395,6 @@ async fn health_reflects_failures_and_recovers_after_success() {
     let provider = Arc::new(FlakyChartProvider::new(Provider::Yahoo, 1));
     let set = ProviderSet::new(
         vec![provider.clone() as Arc<dyn ProviderAdapter>],
-        None,
         Routes::new(Fetch::Sequential),
     );
 
@@ -437,7 +430,6 @@ impl ProviderAdapter for QuoteOnlyProvider {}
 async fn not_supported_is_excluded_from_health_accounting() {
     let set = ProviderSet::new(
         vec![Arc::new(QuoteOnlyProvider) as Arc<dyn ProviderAdapter>],
-        None,
         Routes::new(Fetch::Sequential),
     );
     // Goes through the real `record_health`, not a copy of its match.
