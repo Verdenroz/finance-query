@@ -89,8 +89,8 @@ ct2rs = { version = "0.9.19", optional = true, default-features = false, feature
 # Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
 zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
 
-# Optional: text extraction from born-digital House PTR PDFs
-pdf-extract = { version = "0.12", optional = true }
+# Optional: inflate PDF content streams for House PTR text extraction
+flate2 = { version = "1", optional = true }
 
 # Optional: headless-Chromium browser automation for the Senate eFD adapter
 chromiumoxide = { version = "0.9", optional = true }
@@ -167,7 +167,7 @@ wikipedia = []
 # Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
 secftd = ["dep:zip"]
 # Enable House of Representatives Periodic Transaction Report disclosures (keyless)
-housetrades = ["dep:zip", "dep:pdf-extract"]
+housetrades = ["dep:zip", "dep:flate2"]
 # Enable Senate Periodic Transaction Report disclosures (keyless, headless-Chromium)
 senatetrades = ["dep:chromiumoxide"]
 # Enable offline VADER lexicon-based news/transcript sentiment scoring

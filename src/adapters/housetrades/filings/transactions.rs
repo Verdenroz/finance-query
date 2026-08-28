@@ -1,24 +1,19 @@
-//! Transaction-table extraction from a PTR's `pdf_extract`-extracted text.
+//! Transaction-table extraction from a PTR's extracted text lines.
 //!
-//! Only born-digital filings (typed through fd.house.gov's e-filing system)
-//! carry a text layer; older or hand-signed PTRs are scanned images that
-//! `pdf_extract` returns as empty text, so those simply produce no rows here
-//! rather than being specially detected — OCR is out of scope.
-//!
-//! `pdf_extract` collapses each transaction to two physical lines regardless
-//! of how the description wraps in the rendered PDF:
+//! Rows keep the layout of the rendered table, so one transaction is the line
+//! carrying the transaction type, both dates, and the amount, plus at most one
+//! continuation line when the asset description or the amount wrapped:
 //! ```text
-//! SP Apple Inc. - Common Stock (AAPL)
-//! [ST] P 08/13/2026 08/18/2026 $1,001 - $15,000
+//! SP 3M Company (MMM) [ST] S 05/14/2020 05/20/2020 $15,001 -
+//! $50,000
 //! ```
-//! or, when the ticker doesn't fit on the description line:
 //! ```text
-//! GSK plc American Depositary Shares
-//! (GSK) [ST] S 07/28/2025 08/11/2025 $1,001 - $15,000
+//! Treasury Bill (3-month, matures P 08/18/2025 08/18/2025 $15,001 -
+//! 11/20/2025) [GS] $50,000
 //! ```
-//! The second line — asset-type code, transaction type, two dates, amount —
-//! is the reliable anchor; the description (and ticker, wherever it landed)
-//! comes from the line immediately before it.
+//! The type-and-dates run is the anchor because it never wraps. Everything
+//! left of it on the same line is the description; the asset-type code sits
+//! either there or on the continuation line.
 
 use std::sync::LazyLock;
 
@@ -30,7 +25,7 @@ use super::super::models::PtrIndexEntry;
 use super::index::parse_us_date;
 
 /// One row of the PTR's transaction table.
-pub(super) struct ParsedTransaction {
+pub(crate) struct ParsedTransaction {
     pub symbol: Option<String>,
     pub asset_description: String,
     pub trade_type: Option<String>,
@@ -38,60 +33,88 @@ pub(super) struct ParsedTransaction {
     pub amount: Option<String>,
 }
 
-static ANCHOR_LINE: LazyLock<Regex> = LazyLock::new(|| {
+static ANCHOR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?x)
-        ^\s*
-        (?:\((?P<ticker>[A-Za-z][A-Za-z.]{0,5})\)\s+)?  # ticker, when it spilled onto this line
-        \[[^\]]*\]\s+                                    # asset-type code, e.g. [ST]
-        (?P<ttype>[PSE])\s+
-        (?P<txdate>\d{1,2}/\d{1,2}/\d{4})\s+
-        \d{1,2}/\d{1,2}/\d{4}\s+                         # notification date, unused
-        (?P<amount>Over\s+\$[\d,]+|\$[\d,]+(?:\s*-\s*\$[\d,]+)?)
+        (?:^|\s)
+        (?P<ttype>[PSE])
+        (?:\s*\([^)]*\))?                               # qualifier such as (partial)
+        \s+ (?P<txdate>\d{1,2}/\d{1,2}/\d{4})
+        \s+ \d{1,2}/\d{1,2}/\d{4}                       # notification date, unused
+        \s+ (?P<amount>(?:Over\s+)?\$[\d,]+(?:\s*-\s*(?:\$[\d,]+)?)?)
         \s*$
         ",
     )
     .unwrap()
 });
 
+static ASSET_CODE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[[A-Za-z]{1,3}\]").unwrap());
+
 static TICKER_SUFFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\(([A-Za-z][A-Za-z.]{0,5})\)\s*$").unwrap());
 
-static OWNER_PREFIX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?:SP|DC|JT)\s+").unwrap());
+static OWNER_PREFIX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:\d{6,}\s+)?(?:SP|DC|JT)\s+").unwrap());
+
+static LEADING_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d{6,}\s+").unwrap());
 
 /// Extract every transaction row from one PTR's extracted text.
-pub(super) fn parse_transactions(text: &str) -> Vec<ParsedTransaction> {
-    let lines: Vec<&str> = text.lines().collect();
+pub(super) fn parse_transactions(lines: &[String]) -> Vec<ParsedTransaction> {
     lines
         .iter()
         .enumerate()
         .filter_map(|(i, line)| {
-            let caps = ANCHOR_LINE.captures(line)?;
-            let desc_line = lines[..i].iter().rev().find(|l| !l.trim().is_empty())?;
-            let desc_line = OWNER_PREFIX.replace(desc_line.trim_start(), "");
-
-            let symbol = caps
-                .name("ticker")
-                .map(|m| m.as_str().to_uppercase())
-                .or_else(|| {
-                    TICKER_SUFFIX
-                        .captures(desc_line.as_ref())
-                        .map(|c| c[1].to_uppercase())
-                });
-            let asset_description = TICKER_SUFFIX
-                .replace(desc_line.as_ref(), "")
-                .trim()
-                .to_string();
-
-            Some(ParsedTransaction {
-                symbol,
-                asset_description,
-                trade_type: map_trade_type(&caps["ttype"]),
-                transaction_date: parse_us_date(&caps["txdate"]).map(|d| d.to_string()),
-                amount: Some(caps["amount"].to_string()),
-            })
+            let caps = ANCHOR.captures(line)?;
+            let head = &line[..caps.get(0).map(|m| m.start())?];
+            let next = lines.get(i + 1).map(String::as_str).unwrap_or("");
+            Some(build(head, &caps, next))
         })
         .collect()
+}
+
+/// Split a continuation line around the asset-type code into the trailing
+/// description and the trailing amount.
+fn split_continuation(next: &str) -> (Option<&str>, &str, Option<&str>) {
+    match ASSET_CODE.find(next) {
+        Some(m) => (
+            Some(next[..m.start()].trim()).filter(|s| !s.is_empty()),
+            m.as_str(),
+            Some(next[m.end()..].trim()).filter(|s| !s.is_empty()),
+        ),
+        None => (None, "", Some(next.trim()).filter(|s| !s.is_empty())),
+    }
+}
+
+fn build(head: &str, caps: &regex::Captures<'_>, next: &str) -> ParsedTransaction {
+    let mut amount = caps["amount"].trim().to_string();
+    let wrapped_amount = amount.ends_with('-');
+    let has_code = ASSET_CODE.is_match(head);
+
+    let (desc_tail, _, amount_tail) = split_continuation(next);
+    let mut description = ASSET_CODE.replace(head, "").trim().to_string();
+
+    if !has_code && let Some(tail) = desc_tail {
+        description = format!("{description} {tail}").trim().to_string();
+    }
+    if wrapped_amount && let Some(tail) = amount_tail {
+        amount = format!("{amount} {tail}");
+    }
+
+    let description = OWNER_PREFIX.replace(&description, "").trim().to_string();
+    let description = LEADING_ID.replace(&description, "").trim().to_string();
+
+    let symbol = TICKER_SUFFIX
+        .captures(&description)
+        .map(|c| c[1].to_uppercase());
+    let asset_description = TICKER_SUFFIX.replace(&description, "").trim().to_string();
+
+    ParsedTransaction {
+        symbol,
+        asset_description,
+        trade_type: map_trade_type(&caps["ttype"]),
+        transaction_date: parse_us_date(&caps["txdate"]).map(|d| d.to_string()),
+        amount: Some(amount),
+    }
 }
 
 fn map_trade_type(code: &str) -> Option<String> {
@@ -140,69 +163,97 @@ pub(super) fn to_congressional_trade(
 mod tests {
     use super::*;
 
-    /// Verbatim (trimmed to the table) `pdf_extract` output for a real PTR
-    /// where the ticker doesn't fit on the description line.
-    fn aderholt_gsk_text() -> &'static str {
-        "ID Owner Asset Transaction\n\
-         Type Date Notification\n\
-         Date Amount Cap.\n\
-         Gains >\n\
-         $200?\n\
-         \n\
-         GSK plc American Depositary Shares\n\
-         (GSK) [ST] S 07/28/2025 08/11/2025 $1,001 - $15,000\n\
-         \n\
-         F      S     : New\n"
-    }
-
-    /// Verbatim `pdf_extract` output for a real PTR with an owner code and
-    /// an inline ticker.
-    fn ed_case_aapl_text() -> &'static str {
-        "ID Owner Asset Transaction\n\
-         Type Date Notification\n\
-         Date Amount Cap.\n\
-         Gains >\n\
-         $200?\n\
-         \n\
-         SP Apple Inc. - Common Stock (AAPL)\n\
-         [ST] P 08/13/2026 08/18/2026 $1,001 - $15,000\n\
-         \n\
-         F      S     : New\n\
-         D          : Automatic stock dividend reinvestment.\n"
+    fn lines(rows: &[&str]) -> Vec<String> {
+        rows.iter().map(|s| s.to_string()).collect()
     }
 
     #[test]
-    fn ticker_that_spills_onto_the_anchor_line_is_found() {
-        let rows = parse_transactions(aderholt_gsk_text());
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].symbol.as_deref(), Some("GSK"));
-        assert_eq!(rows[0].trade_type.as_deref(), Some("Sale"));
-        assert_eq!(rows[0].transaction_date.as_deref(), Some("2025-07-28"));
-        assert_eq!(rows[0].amount.as_deref(), Some("$1,001 - $15,000"));
-        assert_eq!(
-            rows[0].asset_description,
-            "GSK plc American Depositary Shares"
-        );
-    }
-
-    #[test]
-    fn ticker_inline_with_the_description_and_owner_code_is_found() {
-        let rows = parse_transactions(ed_case_aapl_text());
+    fn inline_ticker_and_owner_code_are_stripped_from_the_description() {
+        let rows = parse_transactions(&lines(&[
+            "SP Apple Inc. - Common Stock (AAPL) [ST] P 08/13/2026 08/18/2026 $1,001 - $15,000",
+        ]));
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(rows[0].trade_type.as_deref(), Some("Purchase"));
         assert_eq!(rows[0].transaction_date.as_deref(), Some("2026-08-13"));
+        assert_eq!(rows[0].amount.as_deref(), Some("$1,001 - $15,000"));
         assert_eq!(rows[0].asset_description, "Apple Inc. - Common Stock");
     }
 
     #[test]
-    fn non_table_text_yields_no_rows() {
-        assert!(parse_transactions("Digitally Signed: Hon. Ed Case , 08/18/2026").is_empty());
+    fn description_wrapping_onto_the_next_line_is_rejoined() {
+        let rows = parse_transactions(&lines(&[
+            "Fidelity National Information S 05/04/2023 09/14/2023 $1,001 - $15,000",
+            "Services, Inc. (FIS) [ST]",
+        ]));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].symbol.as_deref(), Some("FIS"));
+        assert_eq!(
+            rows[0].asset_description,
+            "Fidelity National Information Services, Inc."
+        );
     }
 
     #[test]
-    fn empty_text_yields_no_rows() {
-        assert!(parse_transactions("").is_empty());
+    fn amount_wrapping_onto_the_next_line_is_rejoined() {
+        let rows = parse_transactions(&lines(&[
+            "SP 3M Company (MMM) [ST] S 05/14/2020 05/20/2020 $15,001 -",
+            "$50,000",
+        ]));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].amount.as_deref(), Some("$15,001 - $50,000"));
+        assert_eq!(rows[0].asset_description, "3M Company");
+    }
+
+    #[test]
+    fn leading_filing_id_is_not_part_of_the_description() {
+        let rows = parse_transactions(&lines(&[
+            "2000086356 SP 3M Company (MMM) [ST] S 05/14/2020 05/20/2020 $1,001 - $15,000",
+        ]));
+        assert_eq!(rows[0].asset_description, "3M Company");
+    }
+
+    #[test]
+    fn partial_qualifier_does_not_break_the_anchor() {
+        let rows = parse_transactions(&lines(&[
+            "MAI Managed [PS] S (partial) 01/10/2025 02/07/2025 $50,001 -",
+            "$100,000",
+        ]));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].trade_type.as_deref(), Some("Sale"));
+        assert_eq!(rows[0].amount.as_deref(), Some("$50,001 - $100,000"));
+        assert_eq!(rows[0].asset_description, "MAI Managed");
+    }
+
+    #[test]
+    fn asset_code_on_the_continuation_line_keeps_both_halves() {
+        let rows = parse_transactions(&lines(&[
+            "Treasury Bill (3-month, matures P 08/18/2025 08/18/2025 $15,001 -",
+            "11/20/2025) [GS] $50,000",
+        ]));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].symbol, None);
+        assert_eq!(rows[0].amount.as_deref(), Some("$15,001 - $50,000"));
+        assert_eq!(
+            rows[0].asset_description,
+            "Treasury Bill (3-month, matures 11/20/2025)"
+        );
+    }
+
+    #[test]
+    fn a_word_ending_in_s_is_not_mistaken_for_a_sale() {
+        let rows = parse_transactions(&lines(&[
+            "Treasury Bill (3-month, matures P 08/18/2025 08/18/2025 $1,001 - $15,000",
+        ]));
+        assert_eq!(rows[0].trade_type.as_deref(), Some("Purchase"));
+    }
+
+    #[test]
+    fn non_table_text_yields_no_rows() {
+        assert!(
+            parse_transactions(&lines(&["Digitally Signed: Hon. Ed Case , 08/18/2026"])).is_empty()
+        );
+        assert!(parse_transactions(&[]).is_empty());
     }
 
     #[test]
@@ -221,7 +272,10 @@ mod tests {
             filing_date: "8/18/2026".to_string(),
             doc_id: "20035275".to_string(),
         };
-        let tx = parse_transactions(ed_case_aapl_text()).remove(0);
+        let tx = parse_transactions(&lines(&[
+            "SP Apple Inc. - Common Stock (AAPL) [ST] P 08/13/2026 08/18/2026 $1,001 - $15,000",
+        ]))
+        .remove(0);
         let trade = to_congressional_trade(&entry, 2026, tx);
 
         assert_eq!(trade.symbol.as_deref(), Some("AAPL"));
