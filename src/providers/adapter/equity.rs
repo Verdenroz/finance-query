@@ -6,7 +6,7 @@ use crate::models::quote::QuoteSummaryResponse;
 
 use super::ProviderCore;
 
-/// [`Capability::QUOTE`] — single and batch equity quotes.
+/// [`crate::Capability::QUOTE`] — single and batch equity quotes.
 #[async_trait::async_trait]
 pub trait QuoteProvider: ProviderCore {
     /// Fetch every quote module this provider serves for one symbol.
@@ -31,7 +31,7 @@ pub trait QuoteProvider: ProviderCore {
     }
 }
 
-/// [`Capability::CHART`] — historical OHLCV candles and sparklines.
+/// [`crate::Capability::CHART`] — historical OHLCV candles and sparklines.
 #[async_trait::async_trait]
 pub trait ChartProvider: ProviderCore {
     /// Fetch OHLCV candles at one interval over one range.
@@ -107,7 +107,7 @@ pub trait ChartProvider: ProviderCore {
     }
 }
 
-/// [`Capability::FUNDAMENTALS`] — financial statements and share-supply data.
+/// [`crate::Capability::FUNDAMENTALS`] — financial statements and share-supply data.
 #[async_trait::async_trait]
 pub trait FundamentalsProvider: ProviderCore {
     /// Fetch one financial statement at one reporting frequency.
@@ -220,7 +220,7 @@ pub trait FundamentalsProvider: ProviderCore {
     }
 }
 
-/// [`Capability::CORPORATE`] — news, corporate events, similar-symbol
+/// [`crate::Capability::CORPORATE`] — news, corporate events, similar-symbol
 /// recommendations.
 #[async_trait::async_trait]
 pub trait CorporateProvider: ProviderCore {
@@ -278,7 +278,7 @@ pub trait CorporateProvider: ProviderCore {
     }
 }
 
-/// [`Capability::OPTIONS`] — options chains.
+/// [`crate::Capability::OPTIONS`] — options chains.
 #[async_trait::async_trait]
 pub trait OptionsProvider: ProviderCore {
     /// Fetch the options chain for one symbol.
@@ -289,7 +289,7 @@ pub trait OptionsProvider: ProviderCore {
     ) -> Result<crate::models::options::Options>;
 }
 
-/// [`Capability::FILINGS`] — SEC filing data.
+/// [`crate::Capability::FILINGS`] — SEC filing data.
 #[async_trait::async_trait]
 pub trait FilingsProvider: ProviderCore {
     /// Fetch regulatory filings for one symbol.
