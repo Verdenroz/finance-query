@@ -319,9 +319,10 @@ jobs:
         run: cargo check -p finance-query --features full --verbose
       # The test job runs with `full`, so a test that assumes a feature-gated
       # item exists passes there and fails for anyone running the documented
-      # `cargo test -p finance-query`.
+      # `cargo test -p finance-query`. Covers tests/ too: the wire-format pin
+      # is an integration test, so --lib would leave it unguarded.
       - name: Test lib (default features)
-        run: cargo test -p finance-query --lib --verbose
+        run: cargo test -p finance-query --lib --tests --verbose
 
   build-release:
     name: Build Release (binaries)
