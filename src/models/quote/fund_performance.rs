@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use super::FormattedValue;
 
 /// Fund performance data including returns, risk metrics, and historical performance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct FundPerformance {
     /// Maximum age of the data in seconds
     #[serde(default)]

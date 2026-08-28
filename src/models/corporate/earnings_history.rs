@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Historical earnings data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct EarningsHistory {
     /// Default methodology (e.g., "gaap")
     #[serde(default)]

@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// SEC filings data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SecFilings {
     /// Maximum age of this data in seconds
     #[serde(default)]

@@ -11,8 +11,9 @@ use serde_json::Value;
 /// - `DefaultKeyStatistics` / `DefaultKeyStatistics<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[serde(rename_all = "camelCase", bound = "")]
+#[non_exhaustive]
 pub struct DefaultKeyStatistics<F: Format = Both> {
     /// 52-week price change percentage
     #[serde(rename = "52WeekChange", skip_serializing_if = "Option::is_none")]

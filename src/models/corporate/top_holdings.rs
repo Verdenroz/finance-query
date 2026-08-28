@@ -14,8 +14,9 @@ where
 }
 
 /// Fund holdings including asset allocation, top holdings, and sector weightings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct TopHoldings {
     /// Maximum age of the data in seconds
     #[serde(default)]

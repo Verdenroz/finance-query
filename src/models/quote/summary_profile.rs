@@ -7,8 +7,9 @@ use serde_json::Value;
 /// Company profile information
 ///
 /// Contains address, contact information, sector, industry, and business description.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SummaryProfile {
     /// Street address line 1
     #[serde(skip_serializing_if = "Option::is_none")]

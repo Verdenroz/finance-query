@@ -2,8 +2,9 @@ use super::FormattedValue;
 use serde::{Deserialize, Serialize};
 
 /// Index trend data (growth estimates for the index)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct IndexTrend {
     /// Maximum age of the data in seconds
     #[serde(default)]
@@ -27,8 +28,9 @@ pub struct IndexTrend {
 }
 
 /// Industry trend data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct IndustryTrend {
     /// Maximum age of the data in seconds
     #[serde(default)]
@@ -52,8 +54,9 @@ pub struct IndustryTrend {
 }
 
 /// Sector trend data
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SectorTrend {
     /// Maximum age of the data in seconds
     #[serde(default)]

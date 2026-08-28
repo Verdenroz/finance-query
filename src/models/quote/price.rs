@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 /// - `Price<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, Default)]
 #[serde(rename_all = "camelCase", bound = "")]
+#[non_exhaustive]
 pub struct Price<F: Format = Both> {
     /// Maximum age of the data in seconds
     #[serde(default)]

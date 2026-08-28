@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Breakdown of ownership by different types of holders
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct MajorHoldersBreakdown {
     /// Percentage of shares held by insiders
     #[serde(default)]

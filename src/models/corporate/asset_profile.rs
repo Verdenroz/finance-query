@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Company asset profile and information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct AssetProfile {
     /// Street address line 1
     #[serde(default)]
@@ -118,8 +119,9 @@ pub struct AssetProfile {
 }
 
 /// Company officer information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct CompanyOfficer {
     /// Maximum age of this data in seconds
     #[serde(default)]

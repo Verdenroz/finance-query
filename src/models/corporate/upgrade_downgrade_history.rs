@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Analyst upgrade/downgrade history
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct UpgradeDowngradeHistory {
     /// List of rating changes
     #[serde(default)]

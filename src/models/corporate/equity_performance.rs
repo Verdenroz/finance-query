@@ -6,8 +6,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Equity performance data comparing stock returns to benchmark
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct EquityPerformance {
     /// Maximum age of the data in seconds
     #[serde(default)]

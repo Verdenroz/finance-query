@@ -33,8 +33,9 @@ pub(crate) struct QuoteTypeResult {
 /// Quote type metadata for a symbol (used in quoteSummary module)
 ///
 /// Contains exchange information, company names, timezone data, and other metadata.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct QuoteTypeData {
     /// Exchange code (e.g., "NMS", "NYQ")
     #[serde(skip_serializing_if = "Option::is_none")]
