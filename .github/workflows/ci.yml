@@ -317,6 +317,11 @@ jobs:
       # crates.io consumer would need.
       - name: Check lib (full features, no workspace unification)
         run: cargo check -p finance-query --features full --verbose
+      # The test job runs with `full`, so a test that assumes a feature-gated
+      # item exists passes there and fails for anyone running the documented
+      # `cargo test -p finance-query`.
+      - name: Test lib (default features)
+        run: cargo test -p finance-query --lib --verbose
 
   build-release:
     name: Build Release (binaries)
