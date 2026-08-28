@@ -40,11 +40,6 @@ jobs:
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@bd5c2604e8923a376c6ee6f8bedcd2ae89f0f8ad # v0.1.19
-      - name: Gate against merge-base
-        run: |
-          set -uo pipefail
-          cargo soothfast gate -p finance-query --features bench-gate \
-            --against-ref origin/master || echo "gate failed as expected"
       - name: Accept reviewed deltas
         run: |
           set -euo pipefail
