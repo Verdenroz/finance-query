@@ -322,7 +322,7 @@ jobs:
       # `cargo test -p finance-query`. Covers tests/ too: the wire-format pin
       # is an integration test, so --lib would leave it unguarded.
       - name: Test lib (default features)
-        run: cargo test -p finance-query --lib --tests --verbose
+        run: cargo test -p finance-query --tests --verbose
 
   build-release:
     name: Build Release (binaries)
