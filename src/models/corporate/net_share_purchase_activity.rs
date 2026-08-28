@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Net share purchase activity by insiders
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct NetSharePurchaseActivity {
     /// Time period for this activity (e.g., "6m")
     #[serde(default)]

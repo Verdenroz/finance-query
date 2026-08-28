@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 /// Financial data and key metrics
 ///
 /// Contains financial ratios, margins, cash flow, and analyst recommendations.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct FinancialData {
     /// Current stock price
     #[serde(skip_serializing_if = "Option::is_none")]

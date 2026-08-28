@@ -17,8 +17,9 @@ use serde_json::Value;
 ///
 /// Obtain converted views via [`Quote::as_raw`](crate::Quote::as_raw) or call
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[serde(rename_all = "camelCase", bound = "")]
+#[non_exhaustive]
 pub struct SummaryDetail<F: Format = Both> {
     /// Algorithm (for crypto/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]

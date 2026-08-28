@@ -8,8 +8,9 @@ use serde_json::Value;
 /// Default key statistics for a symbol
 ///
 /// Contains extensive statistical data including valuation metrics, share data, and financial ratios.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct DefaultKeyStatistics {
     /// 52-week price change percentage
     #[serde(rename = "52WeekChange", skip_serializing_if = "Option::is_none")]

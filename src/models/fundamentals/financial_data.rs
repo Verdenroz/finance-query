@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 /// - `FinancialData` / `FinancialData<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `FinancialData<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `FinancialData<Pretty>` — fields hold `Option<String>` (human-readable)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[serde(rename_all = "camelCase", bound = "")]
+#[non_exhaustive]
 pub struct FinancialData<F: Format = Both> {
     /// Current stock price
     #[serde(skip_serializing_if = "Option::is_none")]

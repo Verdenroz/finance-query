@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use super::FormattedValue;
 
 /// Calendar events including earnings and dividend dates
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct CalendarEvents {
     /// Maximum age of the data in seconds
     #[serde(default)]

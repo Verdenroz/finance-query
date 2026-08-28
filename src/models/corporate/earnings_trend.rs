@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Earnings trend and estimates
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct EarningsTrend {
     /// Default methodology (e.g., "gaap")
     #[serde(default)]

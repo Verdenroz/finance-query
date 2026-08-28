@@ -5,8 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Insider transaction history
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct InsiderTransactions {
     /// Maximum age of this data in seconds
     #[serde(default)]

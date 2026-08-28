@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use super::FormattedValue;
 
 /// Fund profile information including management, fees, and expenses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct FundProfile {
     /// Maximum age of the data in seconds
     #[serde(default)]

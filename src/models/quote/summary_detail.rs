@@ -8,8 +8,9 @@ use serde_json::Value;
 /// Summary detail trading and valuation metrics
 ///
 /// Contains detailed information about price, volume, market cap, and other trading data.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SummaryDetail {
     /// Algorithm (for crypto/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
