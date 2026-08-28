@@ -47,7 +47,8 @@ async fn year_ptr_entries(year: i32) -> Result<Vec<PtrIndexEntry>> {
 
 /// Open one filing's PDF and return every transaction matching `symbol`.
 /// Fetch, text-extraction, or table-parsing failures all resolve to an empty
-/// list — a scanned (non-text) filing is an expected gap, not an error.
+/// list. A scanned filing carries no text layer and is an expected gap; any
+/// other extraction failure is logged before it is swallowed.
 async fn matching_transactions(entry: PtrIndexEntry, symbol: &str) -> Vec<CongressionalTrade> {
     let Ok(client) = super::client() else {
         return Vec::new();
@@ -55,11 +56,16 @@ async fn matching_transactions(entry: PtrIndexEntry, symbol: &str) -> Vec<Congre
     let Ok(bytes) = client.fetch_filing_pdf(entry.year, &entry.doc_id).await else {
         return Vec::new();
     };
-    let Ok(text) = pdf_extract::extract_text_from_mem(&bytes) else {
-        return Vec::new();
+    let lines = match super::pdf::extract_lines(bytes) {
+        Ok(lines) => lines,
+        Err(super::pdf::PdfError::NoTextLayer) => return Vec::new(),
+        Err(e) => {
+            tracing::debug!("House PTR {} is unreadable: {e}", entry.doc_id);
+            return Vec::new();
+        }
     };
     let year = entry.year;
-    parse_transactions(&text)
+    parse_transactions(&lines)
         .into_iter()
         .filter(|tx| {
             tx.symbol
@@ -110,6 +116,68 @@ pub(crate) async fn fetch_congressional_trades_response(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    /// Values in these assertions were read off the filings themselves, not
+    /// captured from this extractor.
+    fn rows(fixture: &str) -> Vec<transactions::ParsedTransaction> {
+        let path = format!(
+            "{}/tests/fixtures/housetrades/{fixture}",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let bytes = std::fs::read(path).expect("fixture");
+        let lines = super::super::pdf::extract_lines(bytes).expect("text layer");
+        parse_transactions(&lines)
+    }
+
+    #[test]
+    fn reads_every_row_of_a_real_filing() {
+        let rows = rows("ptr_20023717.pdf");
+        assert_eq!(rows.len(), 6);
+        let symbols: Vec<_> = rows.iter().filter_map(|r| r.symbol.as_deref()).collect();
+        assert_eq!(symbols, ["CCK", "DHR", "FIS", "FIS", "GPN", "JPM"]);
+
+        assert_eq!(rows[0].asset_description, "Crown Holdings, Inc.");
+        assert_eq!(rows[0].trade_type.as_deref(), Some("Purchase"));
+        assert_eq!(rows[0].transaction_date.as_deref(), Some("2023-04-19"));
+        assert_eq!(rows[0].amount.as_deref(), Some("$1,001 - $15,000"));
+    }
+
+    #[test]
+    fn rejoins_a_description_that_wrapped_in_the_rendered_table() {
+        let rows = rows("ptr_20023717.pdf");
+        assert_eq!(
+            rows[2].asset_description,
+            "Fidelity National Information Services, Inc."
+        );
+        assert_eq!(rows[2].trade_type.as_deref(), Some("Sale"));
+        assert_eq!(rows[2].transaction_date.as_deref(), Some("2023-05-04"));
+    }
+
+    #[test]
+    fn rejoins_an_amount_that_wrapped_in_the_rendered_table() {
+        let rows = rows("ptr_20026736.pdf");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].asset_description, "MAI Managed");
+        assert_eq!(rows[0].symbol, None);
+        assert_eq!(rows[0].trade_type.as_deref(), Some("Sale"));
+        assert_eq!(rows[0].transaction_date.as_deref(), Some("2025-01-10"));
+        assert_eq!(rows[0].amount.as_deref(), Some("$50,001 - $100,000"));
+    }
+
+    #[test]
+    fn a_scanned_filing_reports_no_text_layer() {
+        let path = format!(
+            "{}/tests/fixtures/housetrades/ptr_scanned_8217876.pdf",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let bytes = std::fs::read(path).expect("fixture");
+        assert_eq!(
+            super::super::pdf::extract_lines(bytes).unwrap_err(),
+            super::super::pdf::PdfError::NoTextLayer
+        );
+    }
+
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_live_congressional_trades() {

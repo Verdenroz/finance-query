@@ -44,13 +44,16 @@ There is no per-symbol or per-filing-type query endpoint on `disclosures-clerk.h
 
 1. Downloading the current year's bulk index archive (`{year}FD.zip`), a tab-delimited list of every filing that year, and filtering to Periodic Transaction Reports (`FilingType == "P"`).
 2. Sorting by filing date (newest first) and taking the most recent 120 filings, topping up with the prior year's archive if the current year hasn't accumulated that many yet (early January).
-3. Fetching each filing's PDF, extracting its text (`pdf_extract`), and keeping only the transaction rows whose ticker matches the requested symbol.
+3. Fetching each filing's PDF, extracting its text, and keeping only the transaction rows whose ticker matches the requested symbol.
 
 !!! warning "Bounded recency window, not a full historical search"
     Only the most recent 120 PTR filings across all members of the House are scanned per request. This is a bounded-cost recency window, not an index over the full historical archive. A symbol traded only in an older filing beyond that window won't appear.
 
 !!! warning "Scanned filings are silently skipped"
-    Only filings typed through fd.house.gov's e-filing system carry a text layer `pdf_extract` can read. Older or hand-signed PTRs are scanned images; those produce zero matching transactions rather than an error, since this adapter does not OCR them.
+    Only filings typed through fd.house.gov's e-filing system carry a text layer this adapter can read. Older or hand-signed PTRs are scanned images; those produce zero matching transactions rather than an error, since this adapter does not OCR them. Roughly one PTR in eight is scanned.
+
+!!! info "PDF text extraction carries no dependency"
+    Text comes out of a purpose-built extractor covering the slice fd.house.gov emits: PDF 1.4, a classic cross-reference table, RC4-128 encryption under an empty user password, and CIDFontType2 subsets carrying `ToUnicode` CMaps. Column positions come from the text and graphics matrices plus the `/W` glyph advances the font already declares, so no font program is parsed. A filing outside that shape is reported rather than read as empty, since zero rows would otherwise be indistinguishable from a member disclosing no trades.
 
 ## What the Fields Mean
 

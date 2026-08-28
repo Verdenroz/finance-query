@@ -8,7 +8,7 @@
 //! publishes these free of charge and without credentials at
 //! `disclosures-clerk.house.gov` (see [`client`] for the resource shape).
 //! Filings typed through fd.house.gov's e-filing system carry a text layer
-//! `pdf_extract` can read; older or hand-signed ones are scanned images and
+//! this adapter can read; older or hand-signed ones are scanned images and
 //! are silently skipped rather than OCR'd — see [`filings`] for that boundary.
 //!
 //! Senate PTRs are a separate adapter (`crate::adapters::senatetrades`) —
@@ -18,6 +18,7 @@
 pub(crate) mod client;
 pub(crate) mod filings;
 pub(crate) mod models;
+mod pdf;
 
 use std::time::Duration;
 
