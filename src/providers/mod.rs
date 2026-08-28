@@ -1824,74 +1824,64 @@ mod tests {
     }
 
     /// Companion to `tests/provider_wire_format.rs`, which can only name the
-    /// variants it hard-codes. `all()` is `pub(crate)`, so only an in-crate
-    /// test can prove no variant escapes the pin.
+    /// variants it hard-codes. The match has no wildcard, so a new variant
+    /// fails to compile until it is pinned here.
+    fn pin_for(provider: Provider) -> (&'static str, &'static str) {
+        match provider {
+            Provider::Yahoo => ("\"Yahoo\"", "yahoo"),
+            #[cfg(feature = "polygon")]
+            Provider::Polygon => ("\"Polygon\"", "polygon"),
+            #[cfg(feature = "fmp")]
+            Provider::Fmp => ("\"Fmp\"", "fmp"),
+            #[cfg(feature = "alphavantage")]
+            Provider::AlphaVantage => ("\"AlphaVantage\"", "alphavantage"),
+            #[cfg(feature = "crypto")]
+            Provider::CoinGecko => ("\"CoinGecko\"", "coingecko"),
+            #[cfg(feature = "fred")]
+            Provider::Fred => ("\"Fred\"", "fred"),
+            #[cfg(feature = "worldbank")]
+            Provider::WorldBank => ("\"WorldBank\"", "worldbank"),
+            #[cfg(feature = "fiscaldata")]
+            Provider::FiscalData => ("\"FiscalData\"", "fiscaldata"),
+            #[cfg(feature = "bls")]
+            Provider::Bls => ("\"Bls\"", "bls"),
+            #[cfg(feature = "frankfurter")]
+            Provider::Frankfurter => ("\"Frankfurter\"", "frankfurter"),
+            #[cfg(feature = "binance")]
+            Provider::Binance => ("\"Binance\"", "binance"),
+            #[cfg(feature = "kraken")]
+            Provider::Kraken => ("\"Kraken\"", "kraken"),
+            #[cfg(feature = "finra")]
+            Provider::Finra => ("\"Finra\"", "finra"),
+            #[cfg(feature = "defi")]
+            Provider::DefiLlama => ("\"DefiLlama\"", "defillama"),
+            #[cfg(feature = "gdelt")]
+            Provider::Gdelt => ("\"Gdelt\"", "gdelt"),
+            #[cfg(feature = "cftc")]
+            Provider::Cftc => ("\"Cftc\"", "cftc"),
+            #[cfg(feature = "nasdaq")]
+            Provider::Nasdaq => ("\"Nasdaq\"", "nasdaq"),
+            #[cfg(feature = "wikipedia")]
+            Provider::Wikipedia => ("\"Wikipedia\"", "wikipedia"),
+            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+            Provider::CongressTrades => ("\"CongressTrades\"", "congresstrades"),
+            Provider::Edgar => ("\"Edgar\"", "edgar"),
+            Provider::LocalMarketCalendar => ("\"LocalMarketCalendar\"", "local_market_calendar"),
+            Provider::LocalExchange => ("\"LocalExchange\"", "local_exchange"),
+        }
+    }
+
+    /// The match in `pin_for` catches a variant missing from the pin; this
+    /// catches one missing from `all()`, which is a hand-maintained list.
     #[test]
     fn every_variant_has_its_serialized_form_pinned() {
-        let expected: &[(Provider, &str, &str)] = &[
-            (Provider::Yahoo, "\"Yahoo\"", "yahoo"),
-            #[cfg(feature = "polygon")]
-            (Provider::Polygon, "\"Polygon\"", "polygon"),
-            #[cfg(feature = "fmp")]
-            (Provider::Fmp, "\"Fmp\"", "fmp"),
-            #[cfg(feature = "alphavantage")]
-            (Provider::AlphaVantage, "\"AlphaVantage\"", "alphavantage"),
-            #[cfg(feature = "crypto")]
-            (Provider::CoinGecko, "\"CoinGecko\"", "coingecko"),
-            #[cfg(feature = "fred")]
-            (Provider::Fred, "\"Fred\"", "fred"),
-            #[cfg(feature = "worldbank")]
-            (Provider::WorldBank, "\"WorldBank\"", "worldbank"),
-            #[cfg(feature = "fiscaldata")]
-            (Provider::FiscalData, "\"FiscalData\"", "fiscaldata"),
-            #[cfg(feature = "bls")]
-            (Provider::Bls, "\"Bls\"", "bls"),
-            #[cfg(feature = "frankfurter")]
-            (Provider::Frankfurter, "\"Frankfurter\"", "frankfurter"),
-            #[cfg(feature = "binance")]
-            (Provider::Binance, "\"Binance\"", "binance"),
-            #[cfg(feature = "kraken")]
-            (Provider::Kraken, "\"Kraken\"", "kraken"),
-            #[cfg(feature = "finra")]
-            (Provider::Finra, "\"Finra\"", "finra"),
-            #[cfg(feature = "defi")]
-            (Provider::DefiLlama, "\"DefiLlama\"", "defillama"),
-            #[cfg(feature = "gdelt")]
-            (Provider::Gdelt, "\"Gdelt\"", "gdelt"),
-            #[cfg(feature = "cftc")]
-            (Provider::Cftc, "\"Cftc\"", "cftc"),
-            #[cfg(feature = "nasdaq")]
-            (Provider::Nasdaq, "\"Nasdaq\"", "nasdaq"),
-            #[cfg(feature = "wikipedia")]
-            (Provider::Wikipedia, "\"Wikipedia\"", "wikipedia"),
-            #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
-            (
-                Provider::CongressTrades,
-                "\"CongressTrades\"",
-                "congresstrades",
-            ),
-            (Provider::Edgar, "\"Edgar\"", "edgar"),
-            (
-                Provider::LocalMarketCalendar,
-                "\"LocalMarketCalendar\"",
-                "local_market_calendar",
-            ),
-            (
-                Provider::LocalExchange,
-                "\"LocalExchange\"",
-                "local_exchange",
-            ),
-        ];
-
-        assert_eq!(
-            expected.len(),
-            Provider::all().len(),
-            "a Provider variant is missing from the wire-format pin"
-        );
-        for (provider, serialized, id) in expected {
-            assert_eq!(&serde_json::to_string(provider).unwrap(), serialized);
-            assert_eq!(&provider.as_str(), id);
-            assert_eq!(Provider::from_id_str(id), Some(*provider));
+        let all = Provider::all();
+        assert_eq!(all.len(), 22, "Provider::all() is missing a variant");
+        for provider in all {
+            let (serialized, id) = pin_for(provider);
+            assert_eq!(serde_json::to_string(&provider).unwrap(), serialized);
+            assert_eq!(provider.as_str(), id);
+            assert_eq!(Provider::from_id_str(id), Some(provider));
         }
     }
 }
