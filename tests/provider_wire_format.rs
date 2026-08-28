@@ -5,9 +5,9 @@
 //! tree asserts it: `openapi.yaml` types the field as a bare string, so
 //! `spec gen --check` cannot see the values move.
 //!
-//! These tests record what ships today, including the disagreement between
-//! `Serialize` and `as_str`. A change to either must fail here first and be
-//! re-recorded deliberately.
+//! One id per provider, used by `Serialize`, `Deserialize`, `as_str`,
+//! `Display`, and `from_id_str` alike. A change to any of them must fail here
+//! first and be re-recorded deliberately.
 
 use finance_query::Provider;
 
@@ -16,51 +16,51 @@ fn json(provider: Provider) -> String {
 }
 
 #[test]
-fn serializes_as_the_variant_name() {
-    assert_eq!(json(Provider::Yahoo), "\"Yahoo\"");
-    assert_eq!(json(Provider::Edgar), "\"Edgar\"");
-    assert_eq!(json(Provider::LocalExchange), "\"LocalExchange\"");
+fn serializes_as_the_provider_id() {
+    assert_eq!(json(Provider::Yahoo), "\"yahoo\"");
+    assert_eq!(json(Provider::Edgar), "\"edgar\"");
+    assert_eq!(
+        json(Provider::LocalMarketCalendar),
+        "\"local_market_calendar\""
+    );
+    assert_eq!(json(Provider::LocalExchange), "\"local_exchange\"");
 }
 
 #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
 #[test]
-fn congress_trades_serializes_unlike_its_id() {
-    assert_eq!(json(Provider::CongressTrades), "\"CongressTrades\"");
+fn congress_trades_serializes_as_its_id() {
+    assert_eq!(json(Provider::CongressTrades), "\"congresstrades\"");
     assert_eq!(Provider::CongressTrades.as_str(), "congresstrades");
 }
 
 #[cfg(feature = "defi")]
 #[test]
-fn defillama_serializes_unlike_its_id() {
-    assert_eq!(json(Provider::DefiLlama), "\"DefiLlama\"");
+fn defillama_serializes_as_its_id() {
+    assert_eq!(json(Provider::DefiLlama), "\"defillama\"");
     assert_eq!(Provider::DefiLlama.as_str(), "defillama");
 }
 
 #[test]
-fn local_market_calendar_serializes_unlike_its_id() {
-    assert_eq!(
-        json(Provider::LocalMarketCalendar),
-        "\"LocalMarketCalendar\""
-    );
-    assert_eq!(
-        Provider::LocalMarketCalendar.as_str(),
-        "local_market_calendar"
-    );
+fn display_and_serialize_agree_with_as_str() {
+    for provider in [Provider::Yahoo, Provider::Edgar, Provider::LocalExchange] {
+        assert_eq!(provider.to_string(), provider.as_str());
+        assert_eq!(json(provider), format!("\"{}\"", provider.as_str()));
+    }
 }
 
 #[test]
-fn display_agrees_with_as_str_not_with_serialize() {
-    assert_eq!(Provider::Yahoo.to_string(), Provider::Yahoo.as_str());
-    assert_ne!(format!("\"{}\"", Provider::Yahoo), json(Provider::Yahoo));
-}
-
-/// The documented id is what `from_id_str` accepts, and it is the one form
-/// `Deserialize` rejects.
-#[test]
-fn the_documented_id_does_not_deserialize() {
+fn the_documented_id_deserializes() {
     assert_eq!(Provider::from_id_str("yahoo"), Some(Provider::Yahoo));
-    assert!(serde_json::from_str::<Provider>("\"yahoo\"").is_err());
-    assert!(serde_json::from_str::<Provider>("\"Yahoo\"").is_ok());
+    assert_eq!(
+        serde_json::from_str::<Provider>("\"yahoo\"").unwrap(),
+        Provider::Yahoo
+    );
+}
+
+#[test]
+fn the_old_variant_name_no_longer_deserializes() {
+    assert!(serde_json::from_str::<Provider>("\"Yahoo\"").is_err());
+    assert!(serde_json::from_str::<Provider>("\"LocalExchange\"").is_err());
 }
 
 #[test]
@@ -75,6 +75,18 @@ fn serialized_form_round_trips_with_itself() {
         let decoded: Provider = serde_json::from_str(&encoded).expect("round trips");
         assert_eq!(decoded, provider);
     }
+}
+
+/// The one variant whose serialized form does not come back: `from_id_str`
+/// knows only the built-in ids.
+#[test]
+fn a_custom_provider_serializes_but_does_not_round_trip() {
+    let custom = Provider::Custom("my-source");
+    assert_eq!(json(custom), "\"my-source\"");
+    assert_eq!(custom.as_str(), "my-source");
+    assert_eq!(custom.to_string(), "my-source");
+    assert_eq!(Provider::from_id_str("my-source"), None);
+    assert!(serde_json::from_str::<Provider>("\"my-source\"").is_err());
 }
 
 #[test]

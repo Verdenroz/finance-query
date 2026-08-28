@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 
 /// Keyed on identity, not `capabilities().contains(FILINGS)`: a provider may
 /// advertise FILINGS only to reach a secondary op (Alpha Vantage does, for
@@ -67,6 +67,12 @@ pub(crate) async fn build_providers(
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
             Provider::LocalMarketCalendar => Arc::new(market_calendar::LocalMarketCalendarProvider),
             Provider::LocalExchange => Arc::new(local_exchanges::LocalExchangeProvider),
+            Provider::Custom(id) => {
+                return Err(FinanceError::InvalidParameter {
+                    param: "provider".to_string(),
+                    reason: format!("no adapter registered for custom provider `{id}`"),
+                });
+            }
         };
         adapter.initialize().await?;
         providers.push(adapter);
