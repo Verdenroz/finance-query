@@ -52,10 +52,14 @@ pub(crate) mod yahoo;
 mod yahoo_ttm;
 
 #[cfg(any(
+    feature = "alphavantage",
     feature = "binance",
     feature = "crypto",
     feature = "defi",
-    feature = "kraken"
+    feature = "fmp",
+    feature = "gdelt",
+    feature = "kraken",
+    feature = "polygon"
 ))]
 pub use adapter::CryptoProvider;
 #[cfg(any(
@@ -63,10 +67,17 @@ pub use adapter::CryptoProvider;
     feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
+    feature = "polygon",
     feature = "worldbank"
 ))]
 pub use adapter::EconomicProvider;
-#[cfg(any(feature = "frankfurter", feature = "gdelt"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "gdelt",
+    feature = "polygon"
+))]
 pub use adapter::ForexProvider;
 /// Not part of the stable public API — see [`ProviderAdapter`].
 #[doc(hidden)]

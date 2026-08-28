@@ -323,6 +323,19 @@ jobs:
       # is an integration test, so --lib would leave it unguarded.
       - name: Test lib (default features)
         run: cargo test -p finance-query --tests --verbose
+      # Default and full both hide cfg mismatches: a re-export gated on fewer
+      # features than the item it exports compiles under either, and fails only
+      # for a consumer enabling one provider.
+      - name: Check lib (each feature alone)
+        run: |
+          for f in alphavantage polygon fmp fred crypto worldbank fiscaldata bls \
+                   frankfurter binance kraken finra openfigi defi gdelt cftc \
+                   nasdaq wikipedia secftd housetrades indicators risk dataframe \
+                   backtesting sentiment translation; do
+            echo "::group::--features $f"
+            cargo check -p finance-query --lib --features "$f" || exit 1
+            echo "::endgroup::"
+          done
 
   build-release:
     name: Build Release (binaries)
