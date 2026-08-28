@@ -44,34 +44,38 @@ impl std::fmt::Debug for ProviderSet {
 }
 
 impl ProviderSet {
-    /// `YahooClient` stays crate-private (benches pass `None`); the leak in
-    /// this doc-hidden constructor's signature is deliberate.
-    #[allow(private_interfaces)]
-    pub fn new(
-        providers: Vec<Arc<dyn ProviderAdapter>>,
-        yahoo_client: Option<Arc<YahooClient>>,
-        routes: Routes,
-    ) -> Self {
+    /// Assemble a set from adapters and a route table.
+    ///
+    /// Adapters are tried in the order the route for a capability names them.
+    pub fn new(providers: Vec<Arc<dyn ProviderAdapter>>, routes: Routes) -> Self {
         Self {
             providers,
-            yahoo_client,
+            yahoo_client: None,
             routes,
             retry_policy: None,
             health: HealthTracker::new(),
         }
     }
 
+    /// Attach the shared Yahoo session that `Ticker::client_handle` and logo
+    /// fetching reach for. `YahooClient` is crate-private, so this cannot be
+    /// part of the public constructor.
+    pub(crate) fn with_yahoo_client(mut self, client: Option<Arc<YahooClient>>) -> Self {
+        self.yahoo_client = client;
+        self
+    }
+
     /// Opt into [`RetryPolicy`]-driven retry of `RateLimited` errors.
-    /// `None` (the default from [`new`](Self::new)) preserves the prior
-    /// no-retry behavior exactly.
-    pub(crate) fn with_retry_policy(mut self, policy: Option<RetryPolicy>) -> Self {
+    /// `None` (the default from [`new`](Self::new)) keeps a `RateLimited`
+    /// error treated like any other failure.
+    pub fn with_retry_policy(mut self, policy: Option<RetryPolicy>) -> Self {
         self.retry_policy = policy;
         self
     }
 
     /// Snapshot recent health for every configured provider, in the order
     /// they were added (see [`crate::Providers::health`]).
-    pub(crate) fn health(&self) -> Vec<ProviderHealth> {
+    pub fn health(&self) -> Vec<ProviderHealth> {
         self.providers
             .iter()
             .map(|p| {

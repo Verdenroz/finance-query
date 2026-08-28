@@ -15,6 +15,7 @@ fn needs_edgar_injection(ids: &[Provider]) -> bool {
 
 pub(crate) async fn build_providers(
     ids: &[Provider],
+    extra: Vec<Arc<dyn ProviderAdapter>>,
     config: &ClientConfig,
     routes: Routes,
 ) -> Result<ProviderSet> {
@@ -80,10 +81,23 @@ pub(crate) async fn build_providers(
         adapter.initialize().await?;
         providers.push(adapter);
     }
+    for adapter in extra {
+        adapter.initialize().await?;
+        providers.push(adapter);
+    }
     if needs_edgar_injection(ids) {
         providers.push(Arc::new(edgar::EdgarProvider));
     }
-    Ok(ProviderSet::new(providers, yahoo_client, routes))
+    for routed in routes.map.values() {
+        for provider in routed {
+            if !providers.iter().any(|p| p.id() == *provider) {
+                return Err(FinanceError::ProviderNotRegistered {
+                    provider: *provider,
+                });
+            }
+        }
+    }
+    Ok(ProviderSet::new(providers, routes).with_yahoo_client(yahoo_client))
 }
 
 #[cfg(test)]

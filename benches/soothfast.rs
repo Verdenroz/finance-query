@@ -1775,7 +1775,7 @@ struct CannedProvider;
 
 impl finance_query::ProviderCore for CannedProvider {
     fn id(&self) -> Provider {
-        Provider::Yahoo
+        Provider::Custom("canned")
     }
 }
 
@@ -1830,8 +1830,9 @@ impl ProviderAdapter for CannedProvider {
 fn canned_provider_set() -> Arc<ProviderSet> {
     Arc::new(ProviderSet::new(
         vec![Arc::new(CannedProvider) as Arc<dyn ProviderAdapter>],
-        None,
-        Routes::new(Fetch::Sequential),
+        Routes::new(Fetch::Sequential)
+            .route(Capability::QUOTE, [Provider::Custom("canned")])
+            .route(Capability::CHART, [Provider::Custom("canned")]),
     ))
 }
 
