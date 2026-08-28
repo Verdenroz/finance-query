@@ -309,13 +309,36 @@ pub mod quote {
     pub use crate::models::quote::price::Price;
     pub use crate::models::quote::quote_type::QuoteTypeData;
 }
+#[cfg(any(
+    feature = "binance",
+    feature = "crypto",
+    feature = "defi",
+    feature = "kraken"
+))]
+pub use providers::CryptoProvider;
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "worldbank"
+))]
+pub use providers::EconomicProvider;
+#[cfg(any(feature = "frankfurter", feature = "gdelt"))]
+pub use providers::ForexProvider;
 pub use providers::config::{Providers, ProvidersBuilder};
-pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
-/// Not part of the stable public API — see [`ProviderAdapter`].
-#[doc(hidden)]
 pub use providers::{
-    ChartProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
+    CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, DiscoveryProvider,
+    FilingsProvider, FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider,
+    OptionsProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
+pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
+
+/// The attribute every capability trait implementation needs.
+///
+/// Re-exported so a downstream crate does not add its own `async-trait`
+/// dependency and risk a version mismatch with this one.
+pub use async_trait::async_trait;
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
 // Domain-specific query handles — constructable via Providers factory methods.

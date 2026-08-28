@@ -51,9 +51,30 @@ pub(crate) mod worldbank;
 pub(crate) mod yahoo;
 mod yahoo_ttm;
 
+#[cfg(any(
+    feature = "binance",
+    feature = "crypto",
+    feature = "defi",
+    feature = "kraken"
+))]
+pub use adapter::CryptoProvider;
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "worldbank"
+))]
+pub use adapter::EconomicProvider;
+#[cfg(any(feature = "frankfurter", feature = "gdelt"))]
+pub use adapter::ForexProvider;
 /// Not part of the stable public API — see [`ProviderAdapter`].
 #[doc(hidden)]
-pub use adapter::{ChartProvider, ProviderAdapter, ProviderCore, QuoteProvider};
+pub use adapter::{
+    CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, DiscoveryProvider,
+    FilingsProvider, FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider,
+    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+};
 pub use health::ProviderHealth;
 pub use retry::RetryPolicy;
 
@@ -65,7 +86,6 @@ mod provider;
 mod routes;
 mod set;
 
-pub(crate) use adapter::*;
 pub(crate) use build::build_providers;
 pub use capability::Capability;
 #[allow(unused_imports)] // each is used only by a feature-gated provider bridge
