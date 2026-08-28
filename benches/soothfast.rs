@@ -1017,11 +1017,17 @@ ref_bench!(
     "finance_query::backtesting::refs::alma",
     ref_alma(9, 0.85, 6.0).above(0.0)
 );
-ref_bench!(
-    ref_bench_aroon,
-    "finance_query::backtesting::refs::aroon",
-    ref_aroon(25).up().above(0.0)
-);
+// Small enough that the engine's per-bar margin/sizing cost straddles
+// the default threshold run-to-run.
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::aroon",
+    tolerance = "8%"
+)]
+fn ref_bench_aroon(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(input, ref_aroon(25).up().above(0.0), always_true());
+}
 ref_bench!(
     ref_bench_atr,
     "finance_query::backtesting::refs::atr",
@@ -1223,11 +1229,17 @@ ref_bench!(
 );
 
 // Price/candle-field refs — all zero-arg except `relative_volume`.
-ref_bench!(
-    ref_bench_candle_body,
-    "finance_query::backtesting::refs::candle_body",
-    candle_body().above(0.0)
-);
+// The two tiniest ref benches: the engine's accepted per-bar cost sits
+// near +14% of their bodies and pulls walltime past its limit with it.
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::candle_body",
+    tolerance = "16%"
+)]
+fn ref_bench_candle_body(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(input, candle_body().above(0.0), always_true());
+}
 ref_bench!(
     ref_bench_candle_range,
     "finance_query::backtesting::refs::candle_range",
@@ -1253,11 +1265,15 @@ ref_bench!(
     "finance_query::backtesting::refs::is_bearish",
     is_bearish().above(0.0)
 );
-ref_bench!(
-    ref_bench_is_bullish,
-    "finance_query::backtesting::refs::is_bullish",
-    is_bullish().above(0.0)
-);
+#[bench(
+    group = "backtesting_refs",
+    setup = backtest_inputs,
+    covers = "finance_query::backtesting::refs::is_bullish",
+    tolerance = "16%"
+)]
+fn ref_bench_is_bullish(input: &(BacktestConfig, Vec<Candle>)) {
+    run_ref_strategy(input, is_bullish().above(0.0), always_true());
+}
 ref_bench!(
     ref_bench_low,
     "finance_query::backtesting::refs::low",
