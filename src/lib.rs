@@ -337,7 +337,9 @@ pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, Retr
 /// The attribute every capability trait implementation needs.
 ///
 /// Re-exported so a downstream crate does not add its own `async-trait`
-/// dependency and risk a version mismatch with this one.
+/// dependency and risk a version mismatch with this one. The trade is that
+/// this crate's semver now covers `async-trait`: an `async-trait` 0.2 would
+/// be a breaking change here, because downstream impls use this attribute.
 pub use async_trait::async_trait;
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
