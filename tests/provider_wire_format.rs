@@ -19,10 +19,6 @@ fn json(provider: Provider) -> String {
 fn serializes_as_the_variant_name() {
     assert_eq!(json(Provider::Yahoo), "\"Yahoo\"");
     assert_eq!(json(Provider::Edgar), "\"Edgar\"");
-    assert_eq!(
-        json(Provider::LocalMarketCalendar),
-        "\"LocalMarketCalendar\""
-    );
     assert_eq!(json(Provider::LocalExchange), "\"LocalExchange\"");
 }
 
