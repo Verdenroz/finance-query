@@ -58,6 +58,8 @@ pages = [
   "library/providers/cftc.md",
   "library/providers/housetrades.md",
   "library/providers/senatetrades.md",
+  "library/providers/nasdaq.md",
+  "library/providers/wikipedia.md",
 ]
 
 [[site.nav]]
