@@ -122,7 +122,7 @@ impl TickerBuilder {
         self.config = c;
         self
     }
-    /// Pre-inject a shared provider set (used by [`Providers::stock`](crate::Providers::stock)).
+    /// Pre-inject a shared provider set (used by [`Providers::ticker`](crate::Providers::ticker)).
     ///
     /// Not part of the stable public API — see [`ProviderAdapter`](crate::ProviderAdapter).
     #[doc(hidden)]
