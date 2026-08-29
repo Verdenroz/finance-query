@@ -102,6 +102,11 @@ pub trait MarketProvider: ProviderCore {
     }
 
     /// Fetch industry price/earnings ratios.
+    ///
+    /// NOTE: FMP is the only route among the providers integrated here.
+    /// Yahoo's screener fan-out backs `fetch_sector_pe` across 11 sectors,
+    /// but industries run to roughly 160 and the thin ones carry too few
+    /// sampled P/Es to aggregate into a publishable number.
     async fn fetch_industry_pe(
         &self,
     ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {

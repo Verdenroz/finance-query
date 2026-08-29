@@ -22,6 +22,10 @@ pub trait QuoteProvider: ProviderCore {
     /// Fetch a snapshot for symbols spanning several asset classes in one
     /// request. Rows the provider could not resolve are returned with
     /// `error` set rather than dropped.
+    ///
+    /// NOTE: Polygon is the only cross-asset snapshot among the providers
+    /// integrated here. The keyless sources are each single-asset-class, so
+    /// reproducing this means fanning out per class and inventing a merge.
     async fn fetch_unified_snapshot(
         &self,
         _symbols: &[&str],
