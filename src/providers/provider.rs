@@ -82,14 +82,16 @@ pub enum Provider {
     /// network call).
     LocalExchange,
     /// A provider supplied by a downstream crate and registered with
-    /// `ProvidersBuilder::with_adapter`. The string is its id, and is what
-    /// [`as_str`](Self::as_str) and [`Display`](std::fmt::Display) return.
+    /// `ProvidersBuilder::with_adapter`. Build one with
+    /// [`Provider::custom`], which is the only way to obtain a [`CustomId`].
     ///
-    /// Serialization is asymmetric: a `Custom` serializes to its id, but
-    /// [`from_id_str`](Self::from_id_str) and `Deserialize` only know the
-    /// built-in ids, so `serde_json::from_str(&to_string(custom))` fails
-    /// where it succeeds for every other variant.
-    Custom(&'static str),
+    /// Interning is per-process, so a custom id deserializes only after
+    /// something in this process has constructed it.
+    ///
+    /// The id is held as an index rather than a string so that `Provider`
+    /// stays small: it is stored in every model's `provider_id`, and a fat
+    /// pointer here grows `Candle` by 22%.
+    Custom(CustomId),
 }
 
 impl Provider {
@@ -138,8 +140,16 @@ impl Provider {
             "edgar" => Some(Self::Edgar),
             "local_market_calendar" => Some(Self::LocalMarketCalendar),
             "local_exchange" => Some(Self::LocalExchange),
-            _ => None,
+            other => lookup(other).map(Self::Custom),
         }
+    }
+
+    /// A provider this crate does not build, identified by `id`.
+    ///
+    /// Interning is process-wide and append-only, so the same id always maps
+    /// to the same value and `Provider::custom("x") == Provider::custom("x")`.
+    pub fn custom(id: &'static str) -> Self {
+        Self::Custom(intern(id))
     }
 
     /// String identifier matching [`ProviderCore::id`].
@@ -185,7 +195,7 @@ impl Provider {
             Self::Edgar => "edgar",
             Self::LocalMarketCalendar => "local_market_calendar",
             Self::LocalExchange => "local_exchange",
-            Self::Custom(id) => id,
+            Self::Custom(id) => id.as_str(),
         }
     }
 
@@ -295,6 +305,55 @@ impl Provider {
             Self::Custom(_) => Capability::NONE,
         }
     }
+}
+
+/// Index of a custom provider id, obtained from [`Provider::custom`].
+///
+/// Opaque so that only an interned id can be named: the index is meaningless
+/// outside the process that registered it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CustomId(u16);
+
+impl CustomId {
+    /// The id this index was interned from.
+    pub fn as_str(self) -> &'static str {
+        // Indices only come from `intern`, which never removes an entry.
+        registry()
+            .read()
+            .ok()
+            .and_then(|ids| ids.get(self.0 as usize).copied())
+            .unwrap_or("custom")
+    }
+}
+
+fn registry() -> &'static std::sync::RwLock<Vec<&'static str>> {
+    static IDS: std::sync::OnceLock<std::sync::RwLock<Vec<&'static str>>> =
+        std::sync::OnceLock::new();
+    IDS.get_or_init(|| std::sync::RwLock::new(Vec::new()))
+}
+
+fn intern(id: &'static str) -> CustomId {
+    let mut ids = match registry().write() {
+        Ok(ids) => ids,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let index = match ids.iter().position(|existing| *existing == id) {
+        Some(index) => index,
+        None => {
+            ids.push(id);
+            ids.len() - 1
+        }
+    };
+    CustomId(index as u16)
+}
+
+fn lookup(id: &str) -> Option<CustomId> {
+    registry()
+        .read()
+        .ok()?
+        .iter()
+        .position(|existing| *existing == id)
+        .map(|index| CustomId(index as u16))
 }
 
 impl Serialize for Provider {
