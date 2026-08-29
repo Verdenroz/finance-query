@@ -59,10 +59,9 @@ fn quote_summary_modules_are_nameable() {
     let _ = officers as fn(&AssetProfile) -> &Vec<CompanyOfficer>;
 }
 
-/// `MarketProvider` is compiled unconditionally, so its return types must be
-/// nameable unconditionally too.
 #[test]
 fn market_provider_return_types_are_nameable() {
+    // MarketProvider is compiled unconditionally, so no cfg gate here.
     fn accepts(
         _movers: Vec<MoverQuote>,
         _direction: MoverDirection,
@@ -83,8 +82,6 @@ fn market_provider_return_types_are_nameable() {
         );
 }
 
-/// `CorporateProvider::fetch_events` returns [`ChartEvents`], so a downstream
-/// implementation has to build one out of public values.
 #[test]
 fn chart_events_is_constructible_from_public_values() {
     let dividend: Dividend = serde_json::from_value(serde_json::json!({

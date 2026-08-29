@@ -199,11 +199,14 @@ impl Provider {
         }
     }
 
-    /// Every provider variant compiled into this build, regardless of whether
-    /// it's actually configured/initialized. Used to compute error-message
-    /// hints (see [`Capability::candidate_providers`]) without needing a live
-    /// `ProviderSet`.
-    pub(crate) fn all() -> Vec<Self> {
+    /// Every built-in provider variant compiled into this build, whether or
+    /// not it is configured.
+    ///
+    /// Custom providers are absent: they exist only once registered, and this
+    /// answers from the enum rather than from a live [`crate::ProviderSet`].
+    /// Returns a `Vec` rather than an iterator because the variants are
+    /// feature-gated and assembled at runtime.
+    pub fn all() -> Vec<Self> {
         let mut v = vec![Self::Yahoo];
         #[cfg(feature = "polygon")]
         v.push(Self::Polygon);
@@ -252,7 +255,12 @@ impl Provider {
     /// and declaring it can no longer drift apart. Yahoo is the one exception:
     /// constructing `YahooProvider` needs a live auth handshake, so its set is
     /// a const declared beside its accessor overrides (`yahoo::CAPS`).
-    pub(crate) fn capabilities(self) -> Capability {
+    ///
+    /// [`Provider::Custom`] returns [`Capability::NONE`]. An id carries no
+    /// adapter, so a custom provider's real set is
+    /// [`ProviderAdapter::capabilities`](crate::ProviderAdapter::capabilities)
+    /// on the registered instance.
+    pub fn capabilities(self) -> Capability {
         match self {
             Self::Yahoo => yahoo::CAPS,
             #[cfg(feature = "polygon")]
