@@ -13,7 +13,7 @@ struct Canned;
 
 impl ProviderCore for Canned {
     fn id(&self) -> Provider {
-        Provider::Custom("canned")
+        Provider::custom("canned")
     }
 }
 
@@ -48,7 +48,7 @@ fn canned() -> Arc<dyn ProviderAdapter> {
 async fn a_registered_adapter_serves_its_routed_capability() {
     let providers = Providers::builder()
         .with_adapter(canned())
-        .route(Capability::FILINGS, [Provider::Custom("canned")])
+        .route(Capability::FILINGS, [Provider::custom("canned")])
         .build()
         .await
         .expect("builds");
@@ -65,14 +65,14 @@ async fn a_registered_adapter_serves_its_routed_capability() {
 async fn health_reports_the_custom_identity() {
     let providers = Providers::builder()
         .with_adapter(canned())
-        .route(Capability::FILINGS, [Provider::Custom("canned")])
+        .route(Capability::FILINGS, [Provider::custom("canned")])
         .build()
         .await
         .expect("builds");
 
     let ids: Vec<Provider> = providers.health().into_iter().map(|h| h.provider).collect();
     assert!(
-        ids.contains(&Provider::Custom("canned")),
+        ids.contains(&Provider::custom("canned")),
         "custom provider should report under its own id, got {ids:?}"
     );
 }
@@ -80,17 +80,12 @@ async fn health_reports_the_custom_identity() {
 #[tokio::test]
 async fn routing_to_an_unregistered_id_fails_at_build() {
     let err = Providers::builder()
-        .route(Capability::FILINGS, [Provider::Custom("absent")])
+        .route(Capability::FILINGS, [Provider::custom("absent")])
         .build()
         .await
         .expect_err("an unregistered route is a build error");
     assert!(
-        matches!(
-            err,
-            FinanceError::ProviderNotRegistered {
-                provider: Provider::Custom("absent")
-            }
-        ),
+        matches!(err, FinanceError::ProviderNotRegistered { provider } if provider == Provider::custom("absent")),
         "got {err:?}"
     );
 }
@@ -100,7 +95,7 @@ async fn a_custom_id_may_not_shadow_a_built_in() {
     struct Impostor;
     impl ProviderCore for Impostor {
         fn id(&self) -> Provider {
-            Provider::Custom("yahoo")
+            Provider::custom("yahoo")
         }
     }
     impl ProviderAdapter for Impostor {}
@@ -120,7 +115,7 @@ async fn a_custom_id_may_not_shadow_a_built_in() {
 async fn an_unserved_capability_names_the_custom_provider() {
     let providers = Providers::builder()
         .with_adapter(canned())
-        .route(Capability::CHART, [Provider::Custom("canned")])
+        .route(Capability::CHART, [Provider::custom("canned")])
         .build()
         .await
         .expect("builds");
@@ -137,13 +132,7 @@ async fn an_unserved_capability_names_the_custom_provider() {
         .await
         .expect_err("the canned provider serves no chart");
     assert!(
-        matches!(
-            err,
-            FinanceError::NotSupported {
-                provider: Provider::Custom("canned"),
-                ..
-            }
-        ),
+        matches!(err, FinanceError::NotSupported { provider, .. } if provider == Provider::custom("canned")),
         "got {err:?}"
     );
 }
@@ -153,7 +142,7 @@ async fn an_unserved_capability_names_the_custom_provider() {
 async fn a_hand_built_set_reaches_a_domain_handle() {
     let set = ProviderSet::new(
         vec![canned()],
-        Routes::new(Fetch::Sequential).route(Capability::FILINGS, [Provider::Custom("canned")]),
+        Routes::new(Fetch::Sequential).route(Capability::FILINGS, [Provider::custom("canned")]),
     );
     let providers = Providers::from_set(Arc::new(set));
     assert_eq!(providers.provider_set().health().len(), 1);
@@ -165,11 +154,11 @@ async fn a_hand_built_set_reaches_a_domain_handle() {
 #[test]
 fn routes_report_what_they_carry() {
     let routes =
-        Routes::new(Fetch::Parallel).route(Capability::FILINGS, [Provider::Custom("canned")]);
+        Routes::new(Fetch::Parallel).route(Capability::FILINGS, [Provider::custom("canned")]);
     assert_eq!(routes.fetch_mode(), Fetch::Parallel);
     assert_eq!(
         routes.providers_for(Capability::FILINGS),
-        Some(&[Provider::Custom("canned")][..])
+        Some(&[Provider::custom("canned")][..])
     );
     assert_eq!(routes.providers_for(Capability::QUOTE), None);
 }

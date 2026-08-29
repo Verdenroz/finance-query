@@ -390,7 +390,7 @@ impl ProvidersBuilder {
     /// # async fn f(my_adapter: Arc<dyn ProviderAdapter>) -> finance_query::Result<()> {
     /// let providers = Providers::builder()
     ///     .with_adapter(my_adapter)
-    ///     .route(Capability::ECONOMIC, [Provider::Custom("my-source")])
+    ///     .route(Capability::ECONOMIC, [Provider::custom("my-source")])
     ///     .build()
     ///     .await?;
     /// # let _ = providers;
@@ -409,12 +409,19 @@ impl ProvidersBuilder {
         crate::translation::Lang::parse(&self.config.lang)?;
         for adapter in &self.adapters {
             let id = adapter.id();
-            if let Provider::Custom(name) = id
-                && Provider::from_id_str(name).is_some()
+            // `from_id_str` resolves interned custom ids too, so ask the
+            // built-in list directly.
+            if let Provider::Custom(custom) = id
+                && Provider::all()
+                    .iter()
+                    .any(|p| p.as_str() == custom.as_str())
             {
                 return Err(crate::FinanceError::InvalidParameter {
                     param: "adapter".to_string(),
-                    reason: format!("custom provider id `{name}` collides with a built-in"),
+                    reason: format!(
+                        "custom provider id `{}` collides with a built-in",
+                        custom.as_str()
+                    ),
                 });
             }
             let duplicate = self.provider_ids.contains(&id)
