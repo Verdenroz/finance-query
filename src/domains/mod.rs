@@ -539,80 +539,28 @@ macro_rules! impl_chartable_analytics {
 // ── Modules ─────────────────────────────────────────────────────────
 
 pub(crate) mod commodities;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub(crate) mod crypto;
 pub(crate) mod discovery;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub(crate) mod economic;
 pub(crate) mod filings;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub(crate) mod forex;
 pub(crate) mod futures;
 pub(crate) mod indices;
 pub(crate) mod market;
-#[cfg(feature = "polygon")]
 pub(crate) mod snapshot;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
 pub use commodities::Commodity;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub use crypto::CryptoCoin;
 pub use discovery::Discovery;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub use economic::{EconomicCatalog, EconomicIndicator};
 pub use filings::Filings;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub use forex::ForexPair;
 pub use futures::FuturesContract;
 pub use indices::Index;
 pub use market::Market;
 pub use market::MarketCalendar;
-#[cfg(feature = "polygon")]
 pub use snapshot::Snapshot;
 
 // ── Tests ───────────────────────────────────────────────────────────

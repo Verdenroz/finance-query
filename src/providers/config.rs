@@ -110,28 +110,11 @@ impl Providers {
     }
 
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "binance",
-        feature = "crypto",
-        feature = "defi",
-        feature = "fmp",
-        feature = "gdelt",
-        feature = "kraken",
-        feature = "polygon"
-    ))]
     pub fn crypto(&self, id: impl Into<String>) -> crate::domains::CryptoCoin {
         crate::domains::CryptoCoin::with_providers(id.into().into(), Arc::clone(&self.set))
     }
 
     /// Create a [`ForexPair`](crate::ForexPair) handle backed by this provider set.
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "fmp",
-        feature = "frankfurter",
-        feature = "gdelt",
-        feature = "polygon"
-    ))]
     pub fn forex(
         &self,
         from: impl Into<String>,
@@ -145,14 +128,6 @@ impl Providers {
     }
 
     /// Create an [`EconomicIndicator`](crate::EconomicIndicator) handle backed by this provider set.
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "bls",
-        feature = "fiscaldata",
-        feature = "fred",
-        feature = "polygon",
-        feature = "worldbank"
-    ))]
     pub fn economic(&self, series_id: impl Into<String>) -> crate::domains::EconomicIndicator {
         crate::domains::EconomicIndicator::with_providers(
             series_id.into().into(),
@@ -209,7 +184,6 @@ impl Providers {
     /// [`Capability::ECONOMIC`](crate::Capability::ECONOMIC). Unlike
     /// [`economic`](Self::economic) it takes no series id — it is how you find
     /// one.
-    #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
     pub fn economic_catalog(&self) -> crate::domains::EconomicCatalog {
         crate::domains::EconomicCatalog::with_providers(Arc::clone(&self.set))
     }
@@ -220,7 +194,6 @@ impl Providers {
     /// [`Capability::QUOTE`](crate::Capability::QUOTE). Needs a provider whose
     /// snapshot endpoint spans asset classes — currently Polygon only, which is
     /// why the handle is gated on that feature.
-    #[cfg(feature = "polygon")]
     pub fn snapshot(&self) -> crate::domains::Snapshot {
         crate::domains::Snapshot::with_providers(Arc::clone(&self.set))
     }

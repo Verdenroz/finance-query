@@ -36,33 +36,8 @@ pub use equity::{
     ChartProvider, CorporateProvider, FilingsProvider, FundamentalsProvider, OptionsProvider,
     QuoteProvider,
 };
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub use markets::CryptoProvider;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub use markets::EconomicProvider;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub use markets::ForexProvider;
 pub use markets::{
     CalendarProvider, CommoditiesProvider, DiscoveryProvider, FuturesProvider, IndicesProvider,

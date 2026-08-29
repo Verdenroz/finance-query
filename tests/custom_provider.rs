@@ -161,3 +161,53 @@ fn routes_report_what_they_carry() {
     );
     assert_eq!(routes.providers_for(Capability::QUOTE), None);
 }
+
+struct CannedForex;
+
+impl ProviderCore for CannedForex {
+    fn id(&self) -> Provider {
+        Provider::custom("canned-forex")
+    }
+}
+
+#[finance_query::async_trait]
+impl finance_query::ForexProvider for CannedForex {
+    async fn fetch_forex_quote(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> finance_query::Result<finance_query::ForexQuote> {
+        serde_json::from_value(serde_json::json!({
+            "symbol": format!("{from}{to}=X"),
+            "price": 1.25,
+        }))
+        .map_err(|e| FinanceError::ResponseStructureError {
+            field: "forex".to_string(),
+            context: e.to_string(),
+        })
+    }
+}
+
+impl ProviderAdapter for CannedForex {
+    fn as_forex(&self) -> Option<&dyn finance_query::ForexProvider> {
+        Some(self)
+    }
+}
+
+#[tokio::test]
+async fn forex_handle_reachable_with_no_builtin_forex_feature() {
+    let providers = Providers::builder()
+        .with_adapter(Arc::new(CannedForex))
+        .route(Capability::FOREX, [Provider::custom("canned-forex")])
+        .build()
+        .await
+        .expect("builds");
+
+    let quote = providers
+        .forex("EUR", "USD")
+        .quote()
+        .await
+        .expect("the custom adapter serves FOREX");
+    assert_eq!(quote.price, Some(1.25));
+    assert_eq!(quote.symbol, "EURUSD=X");
+}
