@@ -425,6 +425,76 @@ fn route_filings_get_fails_to_deliver() {}
 )]
 fn route_fundamentals_ttm_get_short_volume() {}
 
+/// A DeFi protocol's total value locked (DefiLlama, keyless).
+///
+/// Implements `handlers::discovery_extra::get_protocol_tvl`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getProtocolTvl",
+    method = "GET",
+    path = "/v2/crypto/coins/{id}/tvl",
+    params = "AnalysisQuery",
+    response = "GqlProtocolTvl"
+)]
+fn route_discovery_extra_get_protocol_tvl() {}
+
+/// A protocol's TVL history, oldest first.
+///
+/// Implements `handlers::discovery_extra::get_protocol_tvl_history`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getProtocolTvlHistory",
+    method = "GET",
+    path = "/v2/crypto/coins/{id}/tvl-history",
+    params = "FilingsQuery",
+    response = "[GqlTvlPoint]"
+)]
+fn route_discovery_extra_get_protocol_tvl_history() {}
+
+/// Reference detail for one symbol.
+///
+/// Implements `handlers::discovery_extra::get_symbol_details`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getSymbolDetails",
+    method = "GET",
+    path = "/v2/symbol-details/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlSymbolDetails"
+)]
+fn route_discovery_extra_get_symbol_details() {}
+
+/// Additions and removals from an index's constituent list.
+///
+/// Implements `handlers::discovery_extra::get_index_constituent_changes`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getIndexConstituentChanges",
+    method = "GET",
+    path = "/v2/indices/{symbol}/constituent-changes",
+    params = "FilingsQuery",
+    response = "[GqlIndexConstituentChange]"
+)]
+fn route_discovery_extra_get_index_constituent_changes() {}
+
+/// Sector performance per session.
+///
+/// Implements `handlers::discovery_extra::get_sector_performance_history`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getSectorPerformanceHistory",
+    method = "GET",
+    path = "/v2/sector-performance/history",
+    params = "FilingsQuery",
+    response = "[GqlSectorPerformanceHistory]"
+)]
+fn route_discovery_extra_get_sector_performance_history() {}
+
 /// Provider-routed analyst upgrades and downgrades.
 ///
 /// Implements `handlers::fundamentals_ttm::get_grading_actions`.
@@ -1276,6 +1346,54 @@ fn route_feeds_stream_ws_feeds_stream_handler_send() {}
     path = "backtest"
 )]
 fn route_gql_root_backtest_backtest() {}
+
+/// Reference detail for one symbol, provider-routed.
+///
+/// Implements `graphql::query::root_discovery::symbol_details` (field `symbolDetails`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "symbolDetails",
+    method = "QUERY",
+    path = "symbolDetails"
+)]
+fn route_gql_symboldetails() {}
+
+/// Listed or delisted symbols, provider-routed.
+///
+/// Implements `graphql::query::root_discovery::listing_status` (field `listingStatus`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "listingStatus",
+    method = "QUERY",
+    path = "listingStatus"
+)]
+fn route_gql_listingstatus() {}
+
+/// Additions and removals from an index's constituent list.
+///
+/// Implements `graphql::query::root_commodities::index_constituent_changes` (field `indexConstituentChanges`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "indexConstituentChanges",
+    method = "QUERY",
+    path = "indexConstituentChanges"
+)]
+fn route_gql_indexconstituentchanges() {}
+
+/// Sector performance per session.
+///
+/// Implements `graphql::query::root_commodities::sector_performance_history` (field `sectorPerformanceHistory`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "sectorPerformanceHistory",
+    method = "QUERY",
+    path = "sectorPerformanceHistory"
+)]
+fn route_gql_sectorperformancehistory() {}
 
 /// Implements `graphql::query::root_batch::ticker` (field `ticker`).
 #[allow(dead_code)]

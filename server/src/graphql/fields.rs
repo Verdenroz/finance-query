@@ -1289,3 +1289,61 @@ pub const GQL_RATIOS_TTM_VALID_FIELDS: &[&str] = &[
     "debtToMarketCap",
     "effectiveTaxRate",
 ];
+
+// ── TVL, discovery detail, index changes, sector history ───────────────────
+
+/// Valid GraphQL field names for `GqlProtocolTvl`.
+pub const GQL_PROTOCOL_TVL_VALID_FIELDS: &[&str] = &[
+    "slug",
+    "name",
+    "symbol",
+    "url",
+    "chains",
+    "tvl",
+    "tvlByChain",
+    "change1dPercent",
+    "change7dPercent",
+    "marketCap",
+];
+
+/// Valid GraphQL field names for `GqlTvlPoint`.
+pub const GQL_TVL_POINT_VALID_FIELDS: &[&str] = &["timestamp", "tvl"];
+
+/// Valid GraphQL field names for `GqlSymbolDetails`.
+pub const GQL_SYMBOL_DETAILS_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "name",
+    "description",
+    "exchange",
+    "assetType",
+    "cik",
+    "sicCode",
+    "sicDescription",
+    "homepageUrl",
+    "employees",
+    "marketCap",
+    "listDate",
+    "sharesOutstanding",
+];
+
+/// Valid GraphQL field names for `GqlIndexConstituentChange`.
+pub const GQL_INDEX_CONSTITUENT_CHANGE_VALID_FIELDS: &[&str] = &[
+    "date",
+    "symbol",
+    "addedSecurity",
+    "removedTicker",
+    "removedSecurity",
+    "reason",
+];
+
+/// Valid GraphQL field names for `GqlSectorPerformanceHistory`.
+pub const GQL_SECTOR_PERFORMANCE_HISTORY_VALID_FIELDS: &[&str] = &["date", "sectors"];
+
+/// `tvlByChain` and `sectors` are composite and need their own sub-selection.
+pub const PROTOCOL_TVL_COMPOSITE_FIELDS: &[(&str, &str)] = &[("tvlByChain", "{ chain tvl }")];
+
+pub const SECTOR_PERFORMANCE_HISTORY_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
+    "sectors",
+    "{ ytdChangePercent dayChangePercent oneYearChangePercent \
+       threeYearChangePercent fiveYearChangePercent }",
+)];

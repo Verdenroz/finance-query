@@ -260,9 +260,30 @@ impl RootMetadataQuery {
     }
 
     /// A FRED economic data series (e.g. "FEDFUNDS", "CPIAUCSL"). Requires `FRED_API_KEY`.
-    async fn fred_series(&self, ctx: &Context<'_>, id: String) -> Result<GqlMacroSeries> {
+    async fn fred_series(
+        &self,
+        ctx: &Context<'_>,
+        id: String,
+        #[graphql(desc = "Vintage date (YYYY-MM-DD): the series as it stood then, \
+                          before later revisions. Omitted = latest values.")]
+        as_of: Option<String>,
+    ) -> Result<GqlMacroSeries> {
         let state = ctx.data::<AppState>()?;
-        exec_gql(crate::services::fred::get_series(&state.cache, &id)).await
+        // The vintage view is provider-routed; the latest-values path is a
+        // keyed FRED shortcut, so they are different services rather than one
+        // taking a nullable date.
+        match as_of {
+            Some(date) => {
+                exec_gql(crate::services::fred::get_series_as_of(
+                    &state.cache,
+                    &state.providers,
+                    &id,
+                    &date,
+                ))
+                .await
+            }
+            None => exec_gql(crate::services::fred::get_series(&state.cache, &id)).await,
+        }
     }
 
     /// US Treasury yield curve rates for a calendar year (keyless).

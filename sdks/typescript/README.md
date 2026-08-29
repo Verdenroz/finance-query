@@ -112,6 +112,7 @@ Requires Node 18+.
 - `getGradingActions` — `GET /v2/grading-actions/{symbol}`: Provider-routed analyst upgrades and downgrades.
 - `getHolders` — `GET /v2/holders/{symbol}/{type}`: Get holder data
 - `getHours` — `GET /v2/hours`: Get market hours
+- `getIndexConstituentChanges` — `GET /v2/indices/{symbol}/constituent-changes`: Additions and removals from an index's constituent list.
 - `getIndexConstituents` — `GET /v2/index-constituents/{symbol}`: Get an index's current constituent list
 - `getIndicators` — `GET /v2/indicators/{symbol}`: Get technical indicators
 - `getIndices` — `GET /v2/indices`: Get world market indices
@@ -125,6 +126,8 @@ Requires Node 18+.
 - `getPressReleases` — `GET /v2/press-releases/{symbol}`: Get a company's own press releases
 - `getPriceTargetConsensus` — `GET /v2/price-target-consensus/{symbol}`: Get consensus analyst price target
 - `getPriceTargetSummary` — `GET /v2/price-target-summary/{symbol}`: Analyst price-target counts and averages per window.
+- `getProtocolTvl` — `GET /v2/crypto/coins/{id}/tvl`: A DeFi protocol's total value locked (DefiLlama, keyless).
+- `getProtocolTvlHistory` — `GET /v2/crypto/coins/{id}/tvl-history`: A protocol's TVL history, oldest first.
 - `getQuote` — `GET /v2/quote/{symbol}`: Get quote for a symbol
 - `getQuoteType` — `GET /v2/quote-type/{symbol}`: Get quote type
 - `getQuotes` — `GET /v2/quotes`: Get quotes for multiple symbols
@@ -137,9 +140,11 @@ Requires Node 18+.
 - `getSector` — `GET /v2/sectors/{sector}`: Get sector data
 - `getSectorPe` — `GET /v2/sector-pe`: Get price/earnings ratios by sector
 - `getSectorPerformance` — `GET /v2/sector-performance`: Get aggregate performance for every sector
+- `getSectorPerformanceHistory` — `GET /v2/sector-performance/history`: Sector performance per session.
 - `getShortVolume` — `GET /v2/short-volume/{symbol}`: Daily FINRA short-sale volume for a symbol (keyless).
 - `getSpark` — `GET /v2/spark`: Get batch sparkline data
 - `getSplits` — `GET /v2/splits/{symbol}`: Get stock split history
+- `getSymbolDetails` — `GET /v2/symbol-details/{symbol}`: Reference detail for one symbol.
 - `getTranscript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript
 - `getTranscripts` — `GET /v2/transcripts/{symbol}/all`: Get all earnings transcripts
 - `getTrending` — `GET /v2/trending`: Get trending tickers

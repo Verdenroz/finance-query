@@ -199,6 +199,12 @@ export interface GqlCapitalGainsBatch {
   errors: GqlBatchError[];
 }
 
+/** One chain's share of a protocol's TVL. */
+export interface GqlChainAllocation {
+  chain: string;
+  tvl: number;
+}
+
 /** Historical chart data for a single symbol. */
 export interface GqlChart {
   /** OHLCV candles for the requested interval/range. */
@@ -770,6 +776,16 @@ export interface GqlIndexConstituent {
   symbol: string;
 }
 
+/** One addition or removal from an index's constituent list. */
+export interface GqlIndexConstituentChange {
+  addedSecurity?: string;
+  date?: string;
+  reason?: string;
+  removedSecurity?: string;
+  removedTicker?: string;
+  symbol?: string;
+}
+
 /** Result of the batch `indicatorsBatch` root field: successfully computed indicators plus any per-symbol fetch errors. */
 export interface GqlIndicatorsBatch {
   errors: GqlBatchError[];
@@ -1159,6 +1175,20 @@ export interface GqlPriceTargetSummary {
   lastYearAvg?: number;
   lastYearCount?: number;
   symbol?: string;
+}
+
+/** A DeFi protocol's total value locked, provider-routed (DefiLlama, keyless). */
+export interface GqlProtocolTvl {
+  chains: string[];
+  change1DPercent?: number;
+  change7DPercent?: number;
+  marketCap?: number;
+  name?: string;
+  slug: string;
+  symbol?: string;
+  tvl?: number;
+  tvlByChain: GqlChainAllocation[];
+  url?: string;
 }
 
 /** Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`. */
@@ -1611,6 +1641,12 @@ export interface GqlSectorPerformance {
   ytdChangePercent?: GqlFormattedValue;
 }
 
+/** Sector performance for one date. */
+export interface GqlSectorPerformanceHistory {
+  date?: string;
+  sectors: GqlSectorPerformance[];
+}
+
 export interface GqlSectorResearchReport {
   headline?: string;
   id: string;
@@ -1712,6 +1748,23 @@ export interface GqlSymbolCapitalGains {
 /** Wraps a symbol name with its chart data, used by the batch `charts` root field. */
 export interface GqlSymbolChart {
   chart: GqlChart;
+  symbol: string;
+}
+
+/** Reference detail for one symbol, provider-routed (Capability::DISCOVERY). */
+export interface GqlSymbolDetails {
+  assetType?: string;
+  cik?: string;
+  description?: string;
+  employees?: number;
+  exchange?: string;
+  homepageUrl?: string;
+  listDate?: string;
+  marketCap?: number;
+  name?: string;
+  sharesOutstanding?: number;
+  sicCode?: string;
+  sicDescription?: string;
   symbol: string;
 }
 
@@ -1870,6 +1923,12 @@ export interface GqlTrendingQuote {
   regularMarketPrice?: GqlFormattedValue;
   shortName?: string;
   symbol?: string;
+}
+
+/** One point on a protocol's TVL history. */
+export interface GqlTvlPoint {
+  timestamp: number;
+  tvl: number;
 }
 
 export interface GqlWord {

@@ -697,6 +697,16 @@ export interface GetHoursOptions {
   region?: models.Region;
 }
 
+/** Query parameters for {@link Client.getIndexConstituentChanges}. */
+export interface GetIndexConstituentChangesOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getIndexConstituents}. */
 export interface GetIndexConstituentsOptions {
   /** Comma-separated list of fields to include in response */
@@ -813,6 +823,22 @@ export interface GetPriceTargetSummaryOptions {
   fields?: string;
 }
 
+/** Query parameters for {@link Client.getProtocolTvl}. */
+export interface GetProtocolTvlOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+}
+
+/** Query parameters for {@link Client.getProtocolTvlHistory}. */
+export interface GetProtocolTvlHistoryOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getQuote}. */
 export interface GetQuoteOptions {
   /** Comma-separated list of fields to include in response */
@@ -921,6 +947,16 @@ export interface GetSectorPerformanceOptions {
   fields?: string;
 }
 
+/** Query parameters for {@link Client.getSectorPerformanceHistory}. */
+export interface GetSectorPerformanceHistoryOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max entries per page; omitted (with cursor also omitted) = every fetched entry as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+}
+
 /** Query parameters for {@link Client.getShortVolume}. */
 export interface GetShortVolumeOptions {
   /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
@@ -949,6 +985,12 @@ export interface GetSplitsOptions {
   fields?: string;
   /** Time range (default: max) */
   range?: models.TimeRange;
+}
+
+/** Query parameters for {@link Client.getSymbolDetails}. */
+export interface GetSymbolDetailsOptions {
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
 }
 
 /** Query parameters for {@link Client.getTranscript}. */
@@ -1573,6 +1615,13 @@ export class Client {
     });
   }
 
+  /** Additions and removals from an index's constituent list. */
+  getIndexConstituentChanges(symbol: string, options: GetIndexConstituentChangesOptions = {}): Promise<models.GqlIndexConstituentChange[]> {
+    return this.transport.request<models.GqlIndexConstituentChange[]>("GET", `/v2/indices/${pathSeg(symbol)}/constituent-changes`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get an index's current constituent list */
   getIndexConstituents(symbol: string, options: GetIndexConstituentsOptions = {}): Promise<models.GqlIndexConstituent[]> {
     return this.transport.request<models.GqlIndexConstituent[]>("GET", `/v2/index-constituents/${pathSeg(symbol)}`, {
@@ -1690,6 +1739,20 @@ export class Client {
     });
   }
 
+  /** A DeFi protocol's total value locked (DefiLlama, keyless). */
+  getProtocolTvl(id: string, options: GetProtocolTvlOptions = {}): Promise<models.GqlProtocolTvl> {
+    return this.transport.request<models.GqlProtocolTvl>("GET", `/v2/crypto/coins/${pathSeg(id)}/tvl`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** A protocol's TVL history, oldest first. */
+  getProtocolTvlHistory(id: string, options: GetProtocolTvlHistoryOptions = {}): Promise<models.GqlTvlPoint[]> {
+    return this.transport.request<models.GqlTvlPoint[]>("GET", `/v2/crypto/coins/${pathSeg(id)}/tvl-history`, {
+      query: queryOf(options),
+    });
+  }
+
   /** Get quote for a symbol */
   getQuote(symbol: string, options: GetQuoteOptions = {}): Promise<models.GqlQuote> {
     return this.transport.request<models.GqlQuote>("GET", `/v2/quote/${pathSeg(symbol)}`, {
@@ -1788,6 +1851,13 @@ export class Client {
     });
   }
 
+  /** Sector performance per session. */
+  getSectorPerformanceHistory(options: GetSectorPerformanceHistoryOptions = {}): Promise<models.GqlSectorPerformanceHistory[]> {
+    return this.transport.request<models.GqlSectorPerformanceHistory[]>("GET", "/v2/sector-performance/history", {
+      query: queryOf(options),
+    });
+  }
+
   /** Daily FINRA short-sale volume for a symbol (keyless). */
   getShortVolume(symbol: string, options: GetShortVolumeOptions = {}): Promise<models.GqlShortVolume[]> {
     return this.transport.request<models.GqlShortVolume[]>("GET", `/v2/short-volume/${pathSeg(symbol)}`, {
@@ -1805,6 +1875,13 @@ export class Client {
   /** Get stock split history */
   getSplits(symbol: string, options: GetSplitsOptions = {}): Promise<models.GqlSplit[]> {
     return this.transport.request<models.GqlSplit[]>("GET", `/v2/splits/${pathSeg(symbol)}`, {
+      query: queryOf(options),
+    });
+  }
+
+  /** Reference detail for one symbol. */
+  getSymbolDetails(symbol: string, options: GetSymbolDetailsOptions = {}): Promise<models.GqlSymbolDetails> {
+    return this.transport.request<models.GqlSymbolDetails>("GET", `/v2/symbol-details/${pathSeg(symbol)}`, {
       query: queryOf(options),
     });
   }

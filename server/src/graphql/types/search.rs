@@ -115,3 +115,22 @@ pub struct GqlLookupResults {
     pub start: Option<i32>,
     pub count: Option<i32>,
 }
+
+/// Reference detail for one symbol, provider-routed (Capability::DISCOVERY).
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlSymbolDetails {
+    pub symbol: String,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub exchange: Option<String>,
+    pub asset_type: Option<String>,
+    pub cik: Option<String>,
+    pub sic_code: Option<String>,
+    pub sic_description: Option<String>,
+    pub homepage_url: Option<String>,
+    pub employees: Option<u64>,
+    pub market_cap: Option<f64>,
+    pub list_date: Option<String>,
+    pub shares_outstanding: Option<f64>,
+}

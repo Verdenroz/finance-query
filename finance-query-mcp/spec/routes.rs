@@ -366,6 +366,149 @@ fn route_mcp_get_fails_to_deliver() {}
 )]
 fn route_mcp_get_forex_news() {}
 
+/// Daily FINRA short-sale volume for a symbol, keyless.
+///
+/// Implements `tools::FinanceTools::get_short_volume`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_short_volume",
+    method = "TOOL",
+    path = "get_short_volume",
+    params = "ShortVolumeParams"
+)]
+fn route_mcp_get_short_volume() {}
+
+/// A DeFi protocol's total value locked and per-chain split.
+///
+/// Implements `tools::FinanceTools::get_protocol_tvl`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_protocol_tvl",
+    method = "TOOL",
+    path = "get_protocol_tvl",
+    params = "ProtocolTvlParams"
+)]
+fn route_mcp_get_protocol_tvl() {}
+
+/// A DeFi protocol's TVL history, oldest first.
+///
+/// Implements `tools::FinanceTools::get_protocol_tvl_history`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_protocol_tvl_history",
+    method = "TOOL",
+    path = "get_protocol_tvl_history",
+    params = "ProtocolTvlHistoryParams"
+)]
+fn route_mcp_get_protocol_tvl_history() {}
+
+/// Reference detail for one symbol.
+///
+/// Implements `tools::FinanceTools::get_symbol_details`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_symbol_details",
+    method = "TOOL",
+    path = "get_symbol_details",
+    params = "SymbolDetailsParams"
+)]
+fn route_mcp_get_symbol_details() {}
+
+/// Additions and removals from an index's constituent list.
+///
+/// Implements `tools::FinanceTools::get_index_constituent_changes`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_index_constituent_changes",
+    method = "TOOL",
+    path = "get_index_constituent_changes",
+    params = "IndexConstituentChangesParams"
+)]
+fn route_mcp_get_index_constituent_changes() {}
+
+/// Sector performance per session.
+///
+/// Implements `tools::FinanceTools::get_sector_performance_history`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_sector_performance_history",
+    method = "TOOL",
+    path = "get_sector_performance_history",
+    params = "SectorPerformanceHistoryParams"
+)]
+fn route_mcp_get_sector_performance_history() {}
+
+/// Provider-routed analyst upgrades and downgrades.
+///
+/// Implements `tools::FinanceTools::get_grading_actions`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_grading_actions",
+    method = "TOOL",
+    path = "get_grading_actions",
+    params = "GradingActionsParams"
+)]
+fn route_mcp_get_grading_actions() {}
+
+/// Disclosed executive compensation by year.
+///
+/// Implements `tools::FinanceTools::get_executive_compensation`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_executive_compensation",
+    method = "TOOL",
+    path = "get_executive_compensation",
+    params = "ExecutiveCompensationParams"
+)]
+fn route_mcp_get_executive_compensation() {}
+
+/// Analyst price-target counts and averages per window.
+///
+/// Implements `tools::FinanceTools::get_price_target_summary`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_price_target_summary",
+    method = "TOOL",
+    path = "get_price_target_summary",
+    params = "PriceTargetSummaryParams"
+)]
+fn route_mcp_get_price_target_summary() {}
+
+/// Trailing-twelve-month key metrics.
+///
+/// Implements `tools::FinanceTools::get_key_metrics_ttm`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_key_metrics_ttm",
+    method = "TOOL",
+    path = "get_key_metrics_ttm",
+    params = "KeyMetricsTtmParams"
+)]
+fn route_mcp_get_key_metrics_ttm() {}
+
+/// Trailing-twelve-month financial ratios.
+///
+/// Implements `tools::FinanceTools::get_ratios_ttm`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_ratios_ttm",
+    method = "TOOL",
+    path = "get_ratios_ttm",
+    params = "RatiosTtmParams"
+)]
+fn route_mcp_get_ratios_ttm() {}
+
 /// Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only).
 ///
 /// Implements `tools::FinanceTools::get_index_constituents`.

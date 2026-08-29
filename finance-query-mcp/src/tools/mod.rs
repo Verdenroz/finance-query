@@ -5,6 +5,7 @@ pub mod calendar;
 pub mod chart;
 pub mod commodity_futures;
 pub mod crypto;
+pub mod discovery_extra;
 pub mod dividends;
 pub mod edgar;
 pub mod feeds;
@@ -12,6 +13,7 @@ pub mod filings;
 pub mod financials;
 pub mod forex;
 pub mod fred;
+pub mod fundamentals_ttm;
 pub mod gql;
 pub mod helpers;
 pub mod indicators;
@@ -286,6 +288,114 @@ pub struct FailsToDeliverParams {
     pub limit: Option<u32>,
     /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
     pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProtocolTvlParams {
+    /// CoinGecko coin id (e.g. aave)
+    pub id: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProtocolTvlHistoryParams {
+    /// CoinGecko coin id (e.g. aave)
+    pub id: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct SymbolDetailsParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct IndexConstituentChangesParams {
+    /// Index symbol (e.g. ^GSPC)
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct SectorPerformanceHistoryParams {
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Sessions to return; omitted = 30
+    pub limit: Option<u32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ShortVolumeParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct GradingActionsParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ExecutiveCompensationParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct PriceTargetSummaryParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct KeyMetricsTtmParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct RatiosTtmParams {
+    /// Stock ticker symbol
+    pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -644,6 +754,8 @@ pub struct FredSeriesParams {
     pub limit: Option<u32>,
     /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
     pub cursor: Option<String>,
+    /// Vintage date (YYYY-MM-DD): the series as it stood then, before later revisions; omitted = latest
+    pub as_of: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -1341,7 +1453,15 @@ impl FinanceTools {
         &self,
         p: Parameters<FredSeriesParams>,
     ) -> Result<CallToolResult, McpError> {
-        fred::get_fred_series(&self.schema, p.0.id, p.0.fields, p.0.limit, p.0.cursor).await
+        fred::get_fred_series(
+            &self.schema,
+            p.0.id,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+            p.0.as_of,
+        )
+        .await
     }
 
     #[tool(
@@ -1382,6 +1502,135 @@ impl FinanceTools {
     )]
     async fn get_forex(&self, p: Parameters<ForexParams>) -> Result<CallToolResult, McpError> {
         forex::get_forex(&self.schema, p.0.from, p.0.to, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get a DeFi protocol's total value locked and per-chain split (DefiLlama, keyless)."
+    )]
+    async fn get_protocol_tvl(
+        &self,
+        p: Parameters<ProtocolTvlParams>,
+    ) -> Result<CallToolResult, McpError> {
+        discovery_extra::get_protocol_tvl(&self.schema, p.0.id, p.0.fields).await
+    }
+
+    #[tool(description = "Get a DeFi protocol's TVL history, oldest first (DefiLlama, keyless).")]
+    async fn get_protocol_tvl_history(
+        &self,
+        p: Parameters<ProtocolTvlHistoryParams>,
+    ) -> Result<CallToolResult, McpError> {
+        discovery_extra::get_protocol_tvl_history(
+            &self.schema,
+            p.0.id,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(
+        description = "Get reference detail for one symbol (name, exchange, SIC code, employees, list date)."
+    )]
+    async fn get_symbol_details(
+        &self,
+        p: Parameters<SymbolDetailsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        discovery_extra::get_symbol_details(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(description = "Get additions and removals from an index's constituent list.")]
+    async fn get_index_constituent_changes(
+        &self,
+        p: Parameters<IndexConstituentChangesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        discovery_extra::get_index_constituent_changes(
+            &self.schema,
+            p.0.symbol,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(description = "Get sector performance per session, most recent first.")]
+    async fn get_sector_performance_history(
+        &self,
+        p: Parameters<SectorPerformanceHistoryParams>,
+    ) -> Result<CallToolResult, McpError> {
+        discovery_extra::get_sector_performance_history(&self.schema, p.0.limit, p.0.fields).await
+    }
+
+    #[tool(description = "Get daily FINRA short-sale volume for a symbol (keyless).")]
+    async fn get_short_volume(
+        &self,
+        p: Parameters<ShortVolumeParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_short_volume(
+            &self.schema,
+            p.0.symbol,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(description = "Get provider-routed analyst upgrades and downgrades for a symbol.")]
+    async fn get_grading_actions(
+        &self,
+        p: Parameters<GradingActionsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_grading_actions(
+            &self.schema,
+            p.0.symbol,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(description = "Get disclosed executive compensation by year for a symbol.")]
+    async fn get_executive_compensation(
+        &self,
+        p: Parameters<ExecutiveCompensationParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_executive_compensation(
+            &self.schema,
+            p.0.symbol,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
+    }
+
+    #[tool(
+        description = "Get analyst price-target counts and averages per window (FMP only, requires FMP_API_KEY)."
+    )]
+    async fn get_price_target_summary(
+        &self,
+        p: Parameters<PriceTargetSummaryParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_price_target_summary(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(description = "Get trailing-twelve-month key metrics for a symbol.")]
+    async fn get_key_metrics_ttm(
+        &self,
+        p: Parameters<KeyMetricsTtmParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_key_metrics_ttm(&self.schema, p.0.symbol, p.0.fields).await
+    }
+
+    #[tool(description = "Get trailing-twelve-month financial ratios for a symbol.")]
+    async fn get_ratios_ttm(
+        &self,
+        p: Parameters<RatiosTtmParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fundamentals_ttm::get_ratios_ttm(&self.schema, p.0.symbol, p.0.fields).await
     }
 
     #[tool(description = "Get market-wide forex news (currently FMP only, requires FMP_API_KEY).")]

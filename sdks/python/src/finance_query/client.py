@@ -1177,6 +1177,22 @@ class Client:
             into=models.GqlMarketHours,
         )
 
+    def get_index_constituent_changes(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlIndexConstituentChange]:
+        """Additions and removals from an index's constituent list."""
+        return self._transport.request(
+            "GET",
+            f"/v2/indices/{path_seg(symbol)}/constituent-changes",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlIndexConstituentChange],
+        )
+
     def get_index_constituents(
         self,
         symbol: str,
@@ -1411,6 +1427,36 @@ class Client:
             into=models.GqlPriceTargetSummary,
         )
 
+    def get_protocol_tvl(
+        self,
+        id: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlProtocolTvl:
+        """A DeFi protocol's total value locked (DefiLlama, keyless)."""
+        return self._transport.request(
+            "GET",
+            f"/v2/crypto/coins/{path_seg(id)}/tvl",
+            query=query_of({"fields": fields}),
+            into=models.GqlProtocolTvl,
+        )
+
+    def get_protocol_tvl_history(
+        self,
+        id: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlTvlPoint]:
+        """A protocol's TVL history, oldest first."""
+        return self._transport.request(
+            "GET",
+            f"/v2/crypto/coins/{path_seg(id)}/tvl-history",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlTvlPoint],
+        )
+
     def get_quote(
         self,
         symbol: str,
@@ -1614,6 +1660,21 @@ class Client:
             into=list[models.GqlMarketSectorPerformance],
         )
 
+    def get_sector_performance_history(
+        self,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlSectorPerformanceHistory]:
+        """Sector performance per session."""
+        return self._transport.request(
+            "GET",
+            "/v2/sector-performance/history",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlSectorPerformanceHistory],
+        )
+
     def get_short_volume(
         self,
         symbol: str,
@@ -1659,6 +1720,20 @@ class Client:
             f"/v2/splits/{path_seg(symbol)}",
             query=query_of({"fields": fields, "range": range}),
             into=list[models.GqlSplit],
+        )
+
+    def get_symbol_details(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlSymbolDetails:
+        """Reference detail for one symbol."""
+        return self._transport.request(
+            "GET",
+            f"/v2/symbol-details/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlSymbolDetails,
         )
 
     def get_transcript(
@@ -2887,6 +2962,22 @@ class AsyncClient:
             into=models.GqlMarketHours,
         )
 
+    async def get_index_constituent_changes(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlIndexConstituentChange]:
+        """Additions and removals from an index's constituent list."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/indices/{path_seg(symbol)}/constituent-changes",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlIndexConstituentChange],
+        )
+
     async def get_index_constituents(
         self,
         symbol: str,
@@ -3121,6 +3212,36 @@ class AsyncClient:
             into=models.GqlPriceTargetSummary,
         )
 
+    async def get_protocol_tvl(
+        self,
+        id: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlProtocolTvl:
+        """A DeFi protocol's total value locked (DefiLlama, keyless)."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/crypto/coins/{path_seg(id)}/tvl",
+            query=query_of({"fields": fields}),
+            into=models.GqlProtocolTvl,
+        )
+
+    async def get_protocol_tvl_history(
+        self,
+        id: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlTvlPoint]:
+        """A protocol's TVL history, oldest first."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/crypto/coins/{path_seg(id)}/tvl-history",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlTvlPoint],
+        )
+
     async def get_quote(
         self,
         symbol: str,
@@ -3324,6 +3445,21 @@ class AsyncClient:
             into=list[models.GqlMarketSectorPerformance],
         )
 
+    async def get_sector_performance_history(
+        self,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlSectorPerformanceHistory]:
+        """Sector performance per session."""
+        return await self._transport.request(
+            "GET",
+            "/v2/sector-performance/history",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlSectorPerformanceHistory],
+        )
+
     async def get_short_volume(
         self,
         symbol: str,
@@ -3369,6 +3505,20 @@ class AsyncClient:
             f"/v2/splits/{path_seg(symbol)}",
             query=query_of({"fields": fields, "range": range}),
             into=list[models.GqlSplit],
+        )
+
+    async def get_symbol_details(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlSymbolDetails:
+        """Reference detail for one symbol."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/symbol-details/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlSymbolDetails,
         )
 
     async def get_transcript(

@@ -10,6 +10,7 @@ mod calendar;
 mod chart;
 mod commodity_futures;
 mod crypto;
+mod discovery_extra;
 mod edgar;
 mod events;
 mod feeds;
@@ -208,6 +209,31 @@ pub(crate) fn api_routes() -> Router {
         .route(
             "/short-volume/{symbol}",
             get(fundamentals_ttm::get_short_volume),
+        )
+        // GET /v2/crypto/coins/{id}/tvl?fields=
+        .route(
+            "/crypto/coins/{id}/tvl",
+            get(discovery_extra::get_protocol_tvl),
+        )
+        // GET /v2/crypto/coins/{id}/tvl-history?fields=&limit=&cursor=
+        .route(
+            "/crypto/coins/{id}/tvl-history",
+            get(discovery_extra::get_protocol_tvl_history),
+        )
+        // GET /v2/symbol-details/{symbol}?fields=
+        .route(
+            "/symbol-details/{symbol}",
+            get(discovery_extra::get_symbol_details),
+        )
+        // GET /v2/indices/{symbol}/constituent-changes?fields=&limit=&cursor=
+        .route(
+            "/indices/{symbol}/constituent-changes",
+            get(discovery_extra::get_index_constituent_changes),
+        )
+        // GET /v2/sector-performance/history?fields=&limit=
+        .route(
+            "/sector-performance/history",
+            get(discovery_extra::get_sector_performance_history),
         )
         // GET /v2/grading-actions/{symbol}?fields=&limit=&cursor=
         .route(

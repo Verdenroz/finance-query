@@ -98,3 +98,47 @@ pub async fn get_coin(cache: &Cache, coin_id: &str, vs_currency: &str) -> Servic
         )
         .await
 }
+
+/// A protocol's current TVL, provider-routed (DefiLlama, keyless).
+pub async fn get_protocol_tvl(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    id: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("crypto_tvl", &[id]);
+    let providers = Arc::clone(providers);
+    let id = id.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::QUOTES,
+            cache::is_market_open(),
+            || async move {
+                let tvl = providers.crypto(&id).tvl().await?;
+                serde_json::to_value(&tvl).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+/// A protocol's TVL history, oldest first.
+pub async fn get_protocol_tvl_history(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    id: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("crypto_tvl_history", &[id]);
+    let providers = Arc::clone(providers);
+    let id = id.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let points = providers.crypto(&id).tvl_history().await?;
+                serde_json::to_value(&points).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}

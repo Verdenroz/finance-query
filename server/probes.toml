@@ -473,3 +473,32 @@ path = "/v2/key-metrics-ttm/AAPL"
 [[probe]]
 name = "ratios-ttm"
 path = "/v2/ratios-ttm/AAPL"
+
+# TVL, symbol detail, index changes and sector history. All five have a
+# keyless route, so they probe unkeyed. `shape = false` on the two list
+# endpoints for the Connection-vs-array reason above.
+
+[[probe]]
+name = "protocol-tvl"
+path = "/v2/crypto/coins/aave/tvl"
+assert = ["slug == \"aave\""]
+
+[[probe]]
+name = "protocol-tvl-history"
+shape = false
+path = "/v2/crypto/coins/aave/tvl-history"
+
+[[probe]]
+name = "symbol-details"
+path = "/v2/symbol-details/AAPL"
+assert = ["symbol == \"AAPL\""]
+
+[[probe]]
+name = "index-constituent-changes"
+shape = false
+path = "/v2/indices/%5EGSPC/constituent-changes"
+
+[[probe]]
+name = "sector-performance-history"
+shape = false
+path = "/v2/sector-performance/history?limit=5"
