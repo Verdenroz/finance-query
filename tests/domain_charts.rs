@@ -1,4 +1,4 @@
-//! Network integration tests for `chart()` / `history()` on domain handles (#197).
+//! Network integration tests for `chart()` / `history()` on domain handles.
 //!
 //! All chart-capable handles route through `Capability::CHART` (Yahoo by
 //! default), so these exercise the symbol mapping per asset class against the

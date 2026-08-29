@@ -115,17 +115,6 @@ pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTrad
         .await
 }
 
-/// Fetch the insider trading RSS feed. FMP has not published a `/stable`
-/// replacement for this endpoint.
-#[allow(dead_code)] // unrouted: global feed has no per-symbol shape to route through FilingsProvider
-pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
-    let client = build_client()?;
-    let limit_str = limit.to_string();
-    client
-        .get("/api/v4/insider-trading-rss-feed", &[("limit", &limit_str)])
-        .await
-}
-
 /// Fetch fail-to-deliver data for a symbol. FMP has not published a
 /// `/stable` replacement for this endpoint.
 pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {

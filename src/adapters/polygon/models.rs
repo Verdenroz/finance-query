@@ -137,32 +137,6 @@ pub struct AggregateResponseDTO {
     pub next_url: Option<String>,
 }
 
-/// Daily open/close response for a single ticker.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct DailyOpenCloseDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Date (YYYY-MM-DD).
-    pub from: Option<String>,
-    /// Open price.
-    pub open: Option<f64>,
-    /// High price.
-    pub high: Option<f64>,
-    /// Low price.
-    pub low: Option<f64>,
-    /// Close price.
-    pub close: Option<f64>,
-    /// Volume.
-    pub volume: Option<f64>,
-    /// After-hours price.
-    #[serde(rename = "afterHours")]
-    pub after_hours: Option<f64>,
-    /// Pre-market price.
-    #[serde(rename = "preMarket")]
-    pub pre_market: Option<f64>,
-}
-
 // ============================================================================
 // TradeDTO and quote types
 // ============================================================================

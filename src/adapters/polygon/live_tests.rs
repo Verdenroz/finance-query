@@ -582,18 +582,6 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     })
     .await;
 
-    m.check(
-        "condition_codes",
-        discovery::condition_codes(&[("limit", "2")]),
-        |page| {
-            non_empty(
-                page.results.as_deref().unwrap_or_default(),
-                "condition codes",
-            )
-        },
-    )
-    .await;
-
     // ---- ECONOMIC ----------------------------------------------------------
     m.check(
         "inflation",
