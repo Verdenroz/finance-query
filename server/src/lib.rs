@@ -40,6 +40,7 @@ struct ProviderFlags {
     fmp: bool,
     alphavantage: bool,
     fred: bool,
+    polygon: bool,
 }
 
 /// The capability → provider fallback list for every routed capability.
@@ -88,10 +89,9 @@ fn route_table(
         fundamentals.push(Provider::AlphaVantage);
     }
     fundamentals.push(Provider::Yahoo);
+    fundamentals.push(Provider::Finra); // short-sale volume only
     routes.push((Capability::FUNDAMENTALS, fundamentals));
 
-    // FMP/AV are additive; DISCOVERY stays Yahoo-served through `finance::`
-    // shortcuts rather than this route (never provider-routed).
     let mut discovery = Vec::new();
     if flags.fmp {
         discovery.push(Provider::Fmp);
@@ -99,9 +99,9 @@ fn route_table(
     if flags.alphavantage {
         discovery.push(Provider::AlphaVantage);
     }
-    if !discovery.is_empty() {
-        routes.push((Capability::DISCOVERY, discovery));
-    }
+    discovery.push(Provider::Yahoo);
+    discovery.push(Provider::LocalExchange); // static exchange table
+    routes.push((Capability::DISCOVERY, discovery));
 
     let mut calendar = vec![Provider::Yahoo, Provider::LocalMarketCalendar];
     if flags.fmp {
@@ -131,7 +131,7 @@ fn route_table(
     }
     routes.push((Capability::INDICES, indices));
 
-    routes.push((Capability::FUTURES, vec![Provider::Yahoo]));
+    routes.push((Capability::FUTURES, vec![Provider::Yahoo, Provider::Cftc]));
 
     let mut economic = Vec::new();
     if flags.fred {
@@ -142,6 +142,7 @@ fn route_table(
     if flags.alphavantage {
         economic.push(Provider::AlphaVantage);
     }
+    economic.push(Provider::Bls);
     routes.push((Capability::ECONOMIC, economic));
 
     let mut crypto = Vec::new();
@@ -151,6 +152,7 @@ fn route_table(
     crypto.push(Provider::CoinGecko);
     crypto.push(Provider::Binance);
     crypto.push(Provider::Kraken);
+    crypto.push(Provider::DefiLlama); // TVL and stablecoin supply only
     crypto.push(Provider::Gdelt); // market-wide news only
     routes.push((Capability::CRYPTO, crypto));
 
@@ -174,6 +176,31 @@ fn route_table(
     filings.push(Provider::Yahoo);
     routes.push((Capability::FILINGS, filings));
 
+    if flags.polygon {
+        // Appended last so a Polygon key widens reach without reordering the
+        // providers already serving these capabilities.
+        const POLYGON_CAPS: [Capability; 13] = [
+            Capability::QUOTE,
+            Capability::CHART,
+            Capability::OPTIONS,
+            Capability::CORPORATE,
+            Capability::FUNDAMENTALS,
+            Capability::DISCOVERY,
+            Capability::CALENDAR,
+            Capability::INDICES,
+            Capability::FUTURES,
+            Capability::ECONOMIC,
+            Capability::CRYPTO,
+            Capability::FOREX,
+            Capability::FILINGS,
+        ];
+        for (cap, route) in &mut routes {
+            if POLYGON_CAPS.contains(cap) {
+                route.push(Provider::Polygon);
+            }
+        }
+    }
+
     routes
 }
 
@@ -192,10 +219,12 @@ pub async fn build_providers() -> Arc<finance_query::Providers> {
         fmp: std::env::var("FMP_API_KEY").is_ok(),
         alphavantage: std::env::var("ALPHAVANTAGE_API_KEY").is_ok(),
         fred: std::env::var("FRED_API_KEY").is_ok(),
+        polygon: std::env::var("POLYGON_API_KEY").is_ok(),
     };
     log_routing("Alpha Vantage", "ALPHAVANTAGE_API_KEY", flags.alphavantage);
     log_routing("FMP", "FMP_API_KEY", flags.fmp);
     log_routing("FRED", "FRED_API_KEY", flags.fred);
+    log_routing("Polygon", "POLYGON_API_KEY", flags.polygon);
 
     let mut builder = Providers::builder();
     for (cap, route) in route_table(flags) {
@@ -236,6 +265,7 @@ mod provider_routing_tests {
             fmp: false,
             alphavantage: false,
             fred: false,
+            polygon: false,
         });
         assert_eq!(
             route(&routes, Capability::QUOTE),
@@ -248,6 +278,7 @@ mod provider_routing_tests {
                     Provider::CoinGecko,
                     Provider::Binance,
                     Provider::Kraken,
+                    Provider::DefiLlama,
                     Provider::Gdelt
                 ][..]
             )
@@ -258,9 +289,12 @@ mod provider_routing_tests {
         );
         assert_eq!(
             route(&routes, Capability::ECONOMIC),
-            Some(&[Provider::WorldBank, Provider::FiscalData][..])
+            Some(&[Provider::WorldBank, Provider::FiscalData, Provider::Bls][..])
         );
-        assert_eq!(route(&routes, Capability::DISCOVERY), None);
+        assert_eq!(
+            route(&routes, Capability::DISCOVERY),
+            Some(&[Provider::Yahoo, Provider::LocalExchange][..])
+        );
         assert_eq!(
             route(&routes, Capability::INDICES),
             Some(&[Provider::Yahoo, Provider::Wikipedia][..])
@@ -271,7 +305,7 @@ mod provider_routing_tests {
         );
         assert_eq!(
             route(&routes, Capability::FUTURES),
-            Some(&[Provider::Yahoo][..])
+            Some(&[Provider::Yahoo, Provider::Cftc][..])
         );
         assert_eq!(
             route(&routes, Capability::CALENDAR),
@@ -295,6 +329,7 @@ mod provider_routing_tests {
             fmp: true,
             alphavantage: false,
             fred: false,
+            polygon: false,
         });
         assert!(
             route(&routes, Capability::QUOTE)
@@ -329,10 +364,78 @@ mod provider_routing_tests {
             fmp: true,
             alphavantage: true,
             fred: false,
+            polygon: false,
         });
-        assert_eq!(
-            route(&routes, Capability::FUNDAMENTALS).unwrap().last(),
-            Some(&Provider::Yahoo)
+        let fundamentals = route(&routes, Capability::FUNDAMENTALS).unwrap();
+        let position = |p| fundamentals.iter().position(|q| *q == p);
+        assert!(position(Provider::Yahoo) > position(Provider::Fmp));
+        assert!(position(Provider::Yahoo) > position(Provider::AlphaVantage));
+    }
+
+    #[test]
+    fn keyless_providers_are_reachable_with_no_key_set() {
+        let routes = route_table(ProviderFlags {
+            fmp: false,
+            alphavantage: false,
+            fred: false,
+            polygon: false,
+        });
+        let serves = |cap, provider| route(&routes, cap).unwrap().contains(&provider);
+        assert!(serves(Capability::FUNDAMENTALS, Provider::Finra));
+        assert!(serves(Capability::CRYPTO, Provider::DefiLlama));
+        assert!(serves(Capability::FUTURES, Provider::Cftc));
+        assert!(serves(Capability::DISCOVERY, Provider::LocalExchange));
+        assert!(serves(Capability::ECONOMIC, Provider::Bls));
+    }
+
+    #[test]
+    fn a_polygon_key_appends_without_reordering() {
+        let keyless = route_table(ProviderFlags {
+            fmp: false,
+            alphavantage: false,
+            fred: false,
+            polygon: false,
+        });
+        let keyed = route_table(ProviderFlags {
+            fmp: false,
+            alphavantage: false,
+            fred: false,
+            polygon: true,
+        });
+        for (cap, before) in &keyless {
+            let after = route(&keyed, *cap).unwrap();
+            match after.len() == before.len() {
+                true => assert_eq!(after, before.as_slice()),
+                false => {
+                    assert_eq!(&after[..before.len()], before.as_slice());
+                    assert_eq!(after.last(), Some(&Provider::Polygon));
+                }
+            }
+        }
+        assert!(
+            route(&keyed, Capability::QUOTE)
+                .unwrap()
+                .contains(&Provider::Polygon)
+        );
+    }
+
+    #[test]
+    fn polygon_stays_out_of_capabilities_it_does_not_serve() {
+        let routes = route_table(ProviderFlags {
+            fmp: false,
+            alphavantage: false,
+            fred: false,
+            polygon: true,
+        });
+        assert!(
+            !route(&routes, Capability::MARKET)
+                .unwrap()
+                .contains(&Provider::Polygon)
+        );
+        assert!(
+            !route(&routes, Capability::COMMODITIES)
+                .unwrap()
+                .contains(&Provider::Polygon)
         );
     }
 }

@@ -175,6 +175,37 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_chains_list_falls_back_to_the_non_breakdown_keys() {
+        let payload = serde_json::json!({
+            "name": "Aave",
+            "chains": [],
+            "currentChainTvls": {
+                "Ethereum": 9_000_000_000.0_f64,
+                "Ethereum-borrowed": 5_000_000_000.0_f64,
+                "Ethereum-staking": 1_000_000.0_f64,
+                "OP Mainnet": 2_000_000_000.0_f64,
+                "borrowed": 7_000_000_000.0_f64,
+                "pool2": 12_345.0_f64,
+                "staking": 999.0_f64
+            },
+            "tvl": []
+        })
+        .to_string();
+        let response: ProtocolResponse = serde_json::from_str(&payload).unwrap();
+        let summary = to_protocol_tvl("aave", &response);
+
+        assert_eq!(summary.chains, vec!["Ethereum", "OP Mainnet"]);
+        assert_eq!(summary.tvl_by_chain.len(), 2);
+        assert!(
+            summary
+                .tvl_by_chain
+                .iter()
+                .all(|a| summary.chains.contains(&a.chain)),
+            "an allocation named something absent from the chain list"
+        );
+    }
+
+    #[test]
     fn change_is_measured_against_the_closest_earlier_snapshot() {
         let history = vec![
             super::super::super::models::crypto::defi::TvlPoint {

@@ -42,10 +42,30 @@ pub(crate) struct ChainResponse {
     pub token_symbol: Option<String>,
     #[serde(default)]
     pub gecko_id: Option<String>,
-    #[serde(default, rename = "chainId")]
+    #[serde(default, rename = "chainId", deserialize_with = "lenient_chain_id")]
     pub chain_id: Option<i64>,
     #[serde(default)]
     pub tvl: Option<f64>,
+}
+
+/// DefiLlama serialises `chainId` as a number for most chains and as a string
+/// for others, so one string would otherwise fail the whole chains response.
+fn lenient_chain_id<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ChainId {
+        Int(i64),
+        Text(String),
+    }
+
+    Ok(match Option::<ChainId>::deserialize(deserializer)? {
+        Some(ChainId::Int(id)) => Some(id),
+        Some(ChainId::Text(id)) => id.parse().ok(),
+        None => None,
+    })
 }
 
 /// `GET stablecoins.llama.fi/stablecoins`.

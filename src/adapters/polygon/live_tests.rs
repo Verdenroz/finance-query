@@ -212,7 +212,10 @@ fn is_plan_gap(context: &str) -> bool {
 #[ignore = "requires POLYGON_API_KEY and consumes live Massive API quota"]
 #[allow(clippy::too_many_lines)]
 async fn all_routed_polygon_endpoints_return_populated_data() {
-    let api_key = std::env::var("POLYGON_API_KEY").expect("POLYGON_API_KEY must be set");
+    let Ok(api_key) = std::env::var("POLYGON_API_KEY") else {
+        eprintln!("skipping: POLYGON_API_KEY not set");
+        return;
+    };
     super::init_with_timeout(api_key.clone(), std::time::Duration::from_secs(120))
         .expect("Polygon client must initialize");
 

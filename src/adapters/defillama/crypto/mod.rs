@@ -23,11 +23,29 @@ pub(super) fn slug(id: &str) -> String {
 /// the *same* capital (`"Ethereum-borrowed"`, `"pool2"`, `"staking"`).
 /// Summing everything would double-count, so only keys naming a chain the
 /// protocol actually reports are kept.
+/// Capital breakdowns DefiLlama reports beside chains in the same map, either
+/// bare or suffixed onto a chain name.
+const BREAKDOWN_KEYS: [&str; 5] = ["borrowed", "pool2", "staking", "treasury", "vesting"];
+
+fn is_breakdown_key(key: &str) -> bool {
+    BREAKDOWN_KEYS.contains(&key)
+        || key
+            .rsplit_once('-')
+            .is_some_and(|(_, suffix)| BREAKDOWN_KEYS.contains(&suffix))
+}
+
 pub(super) fn chain_allocations(response: &ProtocolResponse) -> Vec<ChainAllocation> {
+    // `chains` is the authoritative allow-list when present. Some protocols
+    // now come back with it empty while still reporting per-chain TVL, so fall
+    // back to every key that is not a breakdown.
+    let named = !response.chains.is_empty();
     let mut out: Vec<ChainAllocation> = response
         .current_chain_tvls
         .iter()
-        .filter(|(key, _)| response.chains.iter().any(|chain| chain == *key))
+        .filter(|(key, _)| match named {
+            true => response.chains.iter().any(|chain| chain == *key),
+            false => !is_breakdown_key(key),
+        })
         .map(|(chain, tvl)| ChainAllocation {
             chain: chain.clone(),
             tvl: *tvl,
@@ -72,14 +90,21 @@ pub(super) fn to_history(response: &ProtocolResponse) -> Vec<TvlPoint> {
 /// Build the public [`ProtocolTvl`] summary.
 pub(super) fn to_protocol_tvl(slug: &str, response: &ProtocolResponse) -> ProtocolTvl {
     let history = to_history(response);
+    let tvl_by_chain = chain_allocations(response);
+    // DefiLlama has started returning an empty `chains` for protocols whose
+    // `chainTvls` still names them, so fall back to the chains it allocates to.
+    let chains = match response.chains.is_empty() {
+        true => tvl_by_chain.iter().map(|a| a.chain.clone()).collect(),
+        false => response.chains.clone(),
+    };
     ProtocolTvl {
         slug: slug.to_string(),
         name: response.name.clone(),
         symbol: response.symbol.clone(),
         url: response.url.clone(),
-        chains: response.chains.clone(),
+        chains,
         tvl: history.last().map(|point| point.tvl),
-        tvl_by_chain: chain_allocations(response),
+        tvl_by_chain,
         change_1d_percent: change_percent(&history, 1),
         change_7d_percent: change_percent(&history, 7),
         market_cap: response.mcap,
