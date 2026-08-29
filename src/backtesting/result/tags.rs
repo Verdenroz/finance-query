@@ -3,7 +3,7 @@ use super::{BacktestResult, EquityPoint, PerformanceMetrics};
 use crate::backtesting::position::Trade;
 
 impl BacktestResult {
-    // ─── Phase 3 — Trade Tagging & Subgroup Analysis ─────────────────────────
+    // ─── Trade tagging & subgroup analysis ───────────────────────────────────
 
     /// Return all trades that carry the given tag.
     ///
@@ -126,7 +126,7 @@ mod tests {
     use crate::backtesting::position::{Position, PositionSide};
     use crate::backtesting::signal::Signal;
 
-    // ─── Phase 3 — Trade Tagging & Subgroup Analysis ─────────────────────────
+    // ─── Trade tagging & subgroup analysis ───────────────────────────────────
 
     /// Create a tagged trade by going through the real `Position::close` path
     /// so that tag propagation is exercised end-to-end in tests.

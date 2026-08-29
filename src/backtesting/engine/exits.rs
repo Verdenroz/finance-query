@@ -340,7 +340,7 @@ mod tests {
         );
     }
 
-    // ── Per-trade bracket orders (Phase 11) ──────────────────────────────────
+    // ── Per-trade bracket orders ─────────────────────────────────────────────
 
     // Each bracket type is tested for both Long and Short sides.
     // Long:  SL fires on low breach; TP fires on high breach; trail tracks HWM (peak).

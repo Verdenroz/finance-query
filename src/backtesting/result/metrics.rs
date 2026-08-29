@@ -474,7 +474,7 @@ impl PerformanceMetrics {
         let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
         let max_idle_period = calculate_max_idle_period(trades);
 
-        // Phase 1 — extended metrics
+        // Extended metrics
         let decisive_trades = stats.winning_trades + stats.losing_trades;
         let kelly_win_rate = if decisive_trades > 0 {
             stats.winning_trades as f64 / decisive_trades as f64
