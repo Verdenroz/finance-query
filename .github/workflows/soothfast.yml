@@ -207,6 +207,10 @@ jobs:
         run: |
           cargo soothfast docs check -p finance-query --features full --baseline base \
             docs/library README.md
+      - name: Check captured example output
+        # Shares the Makefile's path list so CI and `make soothfast` check the
+        # same set; the excluded pages capture live prices and timestamps.
+        run: make docs-capture-check
       - name: Public API doc coverage (ratchet — currently 99%)
         run: cargo soothfast coverage docs -p finance-query --features full --min 95
       - name: Public API surface diff vs PR base

@@ -153,6 +153,9 @@ docs: ## Serve the docs site locally with live reload (run `make docs-pages` fir
 # are point-in-time and jitter between runs — regression detection is the
 # `gate` step below, not this. Every step stays inline rather than becoming
 # its own target; run one standalone with `cargo soothfast <cmd>` directly.
+docs-capture-check: ## Verify every captured example's output is current
+	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
+
 soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
 	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
 	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
@@ -161,7 +164,7 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	@echo "$(GREEN)Checking living docs (binds, claims, generated tests)...$(NC)"
 	$(SOOTHFAST) docs check -p finance-query --features full --baseline base docs/library README.md
 	@echo "$(GREEN)Verifying captured doc example output...$(NC)"
-	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
+	@$(MAKE) --no-print-directory docs-capture-check
 	@echo "$(GREEN)Checking public API doc coverage...$(NC)"
 	$(SOOTHFAST) coverage docs -p finance-query --features full --min 95
 	@echo "$(GREEN)Reconciling pricing.proto against PricingData...$(NC)"
