@@ -1757,6 +1757,13 @@ export class Client {
     return this.transport.request<models.PingResponse>("GET", "/v2/ping");
   }
 
+  /** Run a strategy backtest */
+  postBacktest(symbol: string, body: models.BacktestRequest): Promise<models.GqlBacktestResult> {
+    return this.transport.request<models.GqlBacktestResult>("POST", `/v2/backtest/${pathSeg(symbol)}`, {
+      body,
+    });
+  }
+
   /** Custom screener query */
   postCustomScreener(body: models.CustomScreenerRequest): Promise<models.GqlScreenerResults> {
     return this.transport.request<models.GqlScreenerResults>("POST", "/v2/screeners/custom", {

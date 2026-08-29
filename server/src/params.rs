@@ -1298,3 +1298,39 @@ pub struct EarningsTranscriptsQuery {
     /// falls back to the Accept-Language header
     pub lang: Option<String>,
 }
+
+fn default_backtest_interval() -> Interval {
+    crate::graphql::types::backtest::BACKTEST_DEFAULT_INTERVAL.into()
+}
+
+fn default_backtest_range() -> TimeRange {
+    crate::graphql::types::backtest::BACKTEST_DEFAULT_RANGE.into()
+}
+
+/// Request body for `POST /v2/backtest/{symbol}`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BacktestRequest {
+    /// Prebuilt strategy: sma_crossover, rsi_reversal, macd_signal,
+    /// bollinger_mean_reversion, supertrend_follow, donchian_breakout
+    pub strategy: String,
+    /// Candle interval (default: 1d)
+    #[serde(default = "default_backtest_interval")]
+    pub interval: Interval,
+    /// History window (default: 1y)
+    #[serde(default = "default_backtest_range")]
+    pub range: TimeRange,
+    /// Strategy and execution knobs; each falls back to the library default
+    #[serde(default)]
+    pub params: crate::graphql::types::backtest::GqlBacktestParams,
+    /// Equity-curve page size
+    pub equity_limit: Option<i32>,
+    /// Equity-curve cursor
+    pub equity_cursor: Option<String>,
+    /// Trade-log page size
+    pub trades_limit: Option<i32>,
+    /// Trade-log cursor
+    pub trades_cursor: Option<String>,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+}

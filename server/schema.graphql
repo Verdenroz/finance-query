@@ -102,6 +102,100 @@ type GqlAroonData {
 }
 
 """
+Performance summary over the whole run.
+"""
+type GqlBacktestMetrics {
+	totalReturnPct: Float!
+	annualizedReturnPct: Float!
+	sharpeRatio: Float!
+	sortinoRatio: Float!
+	maxDrawdownPct: Float!
+	maxDrawdownDuration: Int!
+	winRate: Float!
+	profitFactor: Float!
+	avgTradeReturnPct: Float!
+	avgWinPct: Float!
+	avgLossPct: Float!
+	avgTradeDuration: Float!
+	totalTrades: Int!
+	winningTrades: Int!
+	losingTrades: Int!
+	largestWin: Float!
+	largestLoss: Float!
+	maxConsecutiveWins: Int!
+	maxConsecutiveLosses: Int!
+	calmarRatio: Float!
+	totalCommission: Float!
+	totalFinancingCost: Float!
+	longTrades: Int!
+	shortTrades: Int!
+	totalSignals: Int!
+	executedSignals: Int!
+	avgWinDuration: Float!
+	avgLossDuration: Float!
+	timeInMarketPct: Float!
+	maxIdlePeriod: Int!
+	totalDividendIncome: Float!
+	kellyCriterion: Float!
+	sqn: Float!
+	expectancy: Float!
+	omegaRatio: Float!
+	tailRatio: Float!
+	recoveryFactor: Float!
+	ulcerIndex: Float!
+	serenityRatio: Float!
+}
+
+"""
+Strategy and execution knobs. Every field falls back to the library default.
+"""
+input GqlBacktestParams {
+	fastPeriod: Int
+	slowPeriod: Int
+	period: Int
+	signalPeriod: Int
+	stdDev: Float
+	multiplier: Float
+	oversold: Float
+	overbought: Float
+	exitAtMiddle: Boolean
+	initialCapital: Float
+	commissionPct: Float
+	slippagePct: Float
+	positionSizePct: Float
+	allowShort: Boolean
+	stopLossPct: Float
+	takeProfitPct: Float
+	maxLeverage: Float
+	maintenanceMarginPct: Float
+	shortBorrowRate: Float
+	marginInterestRate: Float
+}
+
+"""
+A completed backtest.
+"""
+type GqlBacktestResult {
+	symbol: String!
+	strategyName: String!
+	startTimestamp: Int!
+	endTimestamp: Int!
+	initialCapital: Float!
+	finalEquity: Float!
+	maxLeverageUsed: Float!
+	metrics: GqlBacktestMetrics!
+	diagnostics: [String!]!
+	"""
+	Portfolio value per bar, oldest first.
+	"""
+	equityCurve(first: Int, after: String): GqlEquityPointConnection!
+	"""
+	Completed round trips, oldest first.
+	"""
+	trades(first: Int, after: String): GqlTradeConnection!
+}
+
+"""
 A single symbol's fetch failure within a batch root field.
 """
 type GqlBatchError {
@@ -842,6 +936,44 @@ type GqlEpsTrend {
 	thirtyDaysAgo: JSON
 	sixtyDaysAgo: JSON
 	ninetyDaysAgo: JSON
+}
+
+"""
+Portfolio value at one bar.
+"""
+type GqlEquityPoint {
+	timestamp: Int!
+	equity: Float!
+	drawdownPct: Float!
+}
+
+type GqlEquityPointConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlEquityPointEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlEquityPoint!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlEquityPointEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlEquityPoint!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
 }
 
 """
@@ -2985,6 +3117,18 @@ type GqlStochasticData {
 	d: Float
 }
 
+"""
+The prebuilt strategies a backtest can run.
+"""
+enum GqlStrategy {
+	SMA_CROSSOVER
+	RSI_REVERSAL
+	MACD_SIGNAL
+	BOLLINGER_MEAN_REVERSION
+	SUPERTREND_FOLLOW
+	DONCHIAN_BREAKOUT
+}
+
 type GqlSuperTrendData {
 	value: Float
 	trend: String
@@ -3433,6 +3577,80 @@ enum GqlTimeRange {
 	MAX
 }
 
+"""
+One completed round trip.
+"""
+type GqlTrade {
+	side: String!
+	entryTimestamp: Int!
+	exitTimestamp: Int!
+	entryPrice: Float!
+	exitPrice: Float!
+	quantity: Float!
+	entryQuantity: Float!
+	commission: Float!
+	transactionTax: Float!
+	pnl: Float!
+	returnPct: Float!
+	dividendIncome: Float!
+	unreinvestedDividends: Float!
+	financingCost: Float!
+	entrySignal: GqlTradeSignal!
+	exitSignal: GqlTradeSignal!
+	tags: [String!]!
+	isPartial: Boolean!
+	scaleSequence: Int!
+}
+
+type GqlTradeConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlTradeEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlTrade!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlTradeEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlTrade!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
+The signal that opened or closed a trade.
+
+Carries the direction, conviction and context a trade log needs; the
+engine-side ordering knobs on `finance_query::backtesting::Signal`
+(order type, bracket overrides, expiry) are inputs, not results.
+"""
+type GqlTradeSignal {
+	"""
+	`SignalDirection` is `#[non_exhaustive]`, so a new library variant
+	must not fail deserialization here.
+	"""
+	direction: String!
+	strength: Float!
+	timestamp: Int!
+	price: Float!
+	reason: String
+	tags: [String!]!
+}
+
 type GqlTranscript {
 	transcriptContent: GqlTranscriptContent!
 	transcriptMetadata: GqlTranscriptMetadata!
@@ -3664,6 +3882,14 @@ type PageInfo {
 }
 
 type QueryRoot {
+	"""
+	Simulate `strategy` over `symbol`'s bars and report the resulting
+	trades, equity curve and performance metrics.
+	
+	`equityCurve` and `trades` paginate independently; both are ordered
+	oldest first.
+	"""
+	backtest(symbol: String!, strategy: GqlStrategy!, interval: GqlInterval! = ONE_DAY, range: GqlTimeRange! = ONE_YEAR, params: GqlBacktestParams! = {fastPeriod: null, slowPeriod: null, period: null, signalPeriod: null, stdDev: null, multiplier: null, oversold: null, overbought: null, exitAtMiddle: null, initialCapital: null, commissionPct: null, slippagePct: null, positionSizePct: null, allowShort: null, stopLossPct: null, takeProfitPct: null, maxLeverage: null, maintenanceMarginPct: null, shortBorrowRate: null, marginInterestRate: null}): GqlBacktestResult!
 	"""
 	Fetch data for a single ticker symbol.
 	"""

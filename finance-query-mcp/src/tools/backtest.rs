@@ -14,6 +14,9 @@ use finance_query::backtesting::{
     BacktestConfig, BacktestResult, BollingerMeanReversion, DonchianBreakout, MacdSignal,
     RsiReversal, SmaCrossover, Strategy, SuperTrendFollow,
 };
+use finance_query_server::graphql::types::backtest::{
+    BACKTEST_DEFAULT_INTERVAL, BACKTEST_DEFAULT_RANGE,
+};
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 use serde::Serialize;
 
@@ -151,8 +154,16 @@ fn build_response(result: &BacktestResult, p: &RunBacktestParams) -> serde_json:
 }
 
 pub async fn run_backtest(p: RunBacktestParams) -> Result<CallToolResult, McpError> {
-    let interval = parse_interval(p.interval.as_deref().unwrap_or("1d"));
-    let range = parse_range(p.range.as_deref().unwrap_or("1y"));
+    let interval = parse_interval(
+        p.interval
+            .as_deref()
+            .unwrap_or(BACKTEST_DEFAULT_INTERVAL.as_str()),
+    );
+    let range = parse_range(
+        p.range
+            .as_deref()
+            .unwrap_or(BACKTEST_DEFAULT_RANGE.as_str()),
+    );
     let strategy = build_strategy(&p)?;
     let config = build_config(&p, interval)?;
 
@@ -171,6 +182,18 @@ pub async fn run_backtest(p: RunBacktestParams) -> Result<CallToolResult, McpErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shared_defaults_survive_their_string_form() {
+        assert_eq!(
+            parse_range(BACKTEST_DEFAULT_RANGE.as_str()),
+            BACKTEST_DEFAULT_RANGE.into()
+        );
+        assert_eq!(
+            parse_interval(BACKTEST_DEFAULT_INTERVAL.as_str()),
+            BACKTEST_DEFAULT_INTERVAL.into()
+        );
+    }
 
     fn base_params(strategy: &str) -> RunBacktestParams {
         RunBacktestParams {

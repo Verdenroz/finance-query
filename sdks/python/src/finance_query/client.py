@@ -1655,6 +1655,19 @@ class Client:
             into=models.PingResponse,
         )
 
+    def post_backtest(
+        self,
+        symbol: str,
+        body: models.BacktestRequest,
+    ) -> models.GqlBacktestResult:
+        """Run a strategy backtest"""
+        return self._transport.request(
+            "POST",
+            f"/v2/backtest/{path_seg(symbol)}",
+            json_body=to_wire(body),
+            into=models.GqlBacktestResult,
+        )
+
     def post_custom_screener(
         self,
         body: models.CustomScreenerRequest,
@@ -3260,6 +3273,19 @@ class AsyncClient:
             "GET",
             "/v2/ping",
             into=models.PingResponse,
+        )
+
+    async def post_backtest(
+        self,
+        symbol: str,
+        body: models.BacktestRequest,
+    ) -> models.GqlBacktestResult:
+        """Run a strategy backtest"""
+        return await self._transport.request(
+            "POST",
+            f"/v2/backtest/{path_seg(symbol)}",
+            json_body=to_wire(body),
+            into=models.GqlBacktestResult,
         )
 
     async def post_custom_screener(

@@ -63,6 +63,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/backtest/{symbol}":
+    post:
+      operationId: postBacktest
+      summary: Run a strategy backtest
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlBacktestResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/calendar:
     get:
       operationId: getCalendar
@@ -4982,6 +5033,41 @@ components:
       required:
         - error
         - status
+    BacktestRequest:
+      description: "Request body for `POST /v2/backtest/{symbol}`."
+      type: object
+      properties:
+        equityCursor:
+          description: Equity-curve cursor
+          type: string
+        equityLimit:
+          description: Equity-curve page size
+          type: integer
+          format: int32
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        interval:
+          description: "Candle interval (default: 1d)"
+          $ref: "#/components/schemas/Interval"
+        params:
+          description: Strategy and execution knobs; each falls back to the library default
+          $ref: "#/components/schemas/GqlBacktestParams"
+        range:
+          description: "History window (default: 1y)"
+          $ref: "#/components/schemas/TimeRange"
+        strategy:
+          description: "Prebuilt strategy: sma_crossover, rsi_reversal, macd_signal,\nbollinger_mean_reversion, supertrend_follow, donchian_breakout"
+          type: string
+        tradesCursor:
+          description: Trade-log cursor
+          type: string
+        tradesLimit:
+          description: Trade-log page size
+          type: integer
+          format: int32
+      required:
+        - strategy
     BatchCapitalGainsQuery:
       description: "Query parameters for `GET /v2/capital-gains`."
       type: object
@@ -5646,6 +5732,288 @@ components:
         aroonUp:
           type: number
           format: double
+    GqlBacktestMetrics:
+      description: Performance summary over the whole run.
+      type: object
+      properties:
+        annualizedReturnPct:
+          type: number
+          format: double
+        avgLossDuration:
+          type: number
+          format: double
+        avgLossPct:
+          type: number
+          format: double
+        avgTradeDuration:
+          type: number
+          format: double
+        avgTradeReturnPct:
+          type: number
+          format: double
+        avgWinDuration:
+          type: number
+          format: double
+        avgWinPct:
+          type: number
+          format: double
+        calmarRatio:
+          type: number
+          format: double
+        executedSignals:
+          type: integer
+          format: int32
+          minimum: 0
+        expectancy:
+          type: number
+          format: double
+        kellyCriterion:
+          type: number
+          format: double
+        largestLoss:
+          type: number
+          format: double
+        largestWin:
+          type: number
+          format: double
+        longTrades:
+          type: integer
+          format: int32
+          minimum: 0
+        losingTrades:
+          type: integer
+          format: int32
+          minimum: 0
+        maxConsecutiveLosses:
+          type: integer
+          format: int32
+          minimum: 0
+        maxConsecutiveWins:
+          type: integer
+          format: int32
+          minimum: 0
+        maxDrawdownDuration:
+          type: integer
+          format: int64
+        maxDrawdownPct:
+          type: number
+          format: double
+        maxIdlePeriod:
+          type: integer
+          format: int64
+        omegaRatio:
+          type: number
+          format: double
+        profitFactor:
+          type: number
+          format: double
+        recoveryFactor:
+          type: number
+          format: double
+        serenityRatio:
+          type: number
+          format: double
+        sharpeRatio:
+          type: number
+          format: double
+        shortTrades:
+          type: integer
+          format: int32
+          minimum: 0
+        sortinoRatio:
+          type: number
+          format: double
+        sqn:
+          type: number
+          format: double
+        tailRatio:
+          type: number
+          format: double
+        timeInMarketPct:
+          type: number
+          format: double
+        totalCommission:
+          type: number
+          format: double
+        totalDividendIncome:
+          type: number
+          format: double
+        totalFinancingCost:
+          type: number
+          format: double
+        totalReturnPct:
+          type: number
+          format: double
+        totalSignals:
+          type: integer
+          format: int32
+          minimum: 0
+        totalTrades:
+          type: integer
+          format: int32
+          minimum: 0
+        ulcerIndex:
+          type: number
+          format: double
+        winRate:
+          type: number
+          format: double
+        winningTrades:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+        - totalReturnPct
+        - annualizedReturnPct
+        - sharpeRatio
+        - sortinoRatio
+        - maxDrawdownPct
+        - maxDrawdownDuration
+        - winRate
+        - profitFactor
+        - avgTradeReturnPct
+        - avgWinPct
+        - avgLossPct
+        - avgTradeDuration
+        - totalTrades
+        - winningTrades
+        - losingTrades
+        - largestWin
+        - largestLoss
+        - maxConsecutiveWins
+        - maxConsecutiveLosses
+        - calmarRatio
+        - totalCommission
+        - totalFinancingCost
+        - longTrades
+        - shortTrades
+        - totalSignals
+        - executedSignals
+        - avgWinDuration
+        - avgLossDuration
+        - timeInMarketPct
+        - maxIdlePeriod
+        - totalDividendIncome
+        - kellyCriterion
+        - sqn
+        - expectancy
+        - omegaRatio
+        - tailRatio
+        - recoveryFactor
+        - ulcerIndex
+        - serenityRatio
+    GqlBacktestParams:
+      description: Strategy and execution knobs. Every field falls back to the library default.
+      type: object
+      properties:
+        allowShort:
+          type: boolean
+        commissionPct:
+          type: number
+          format: double
+        exitAtMiddle:
+          type: boolean
+        fastPeriod:
+          type: integer
+          format: int32
+          minimum: 0
+        initialCapital:
+          type: number
+          format: double
+        maintenanceMarginPct:
+          type: number
+          format: double
+        marginInterestRate:
+          type: number
+          format: double
+        maxLeverage:
+          type: number
+          format: double
+        multiplier:
+          type: number
+          format: double
+        overbought:
+          type: number
+          format: double
+        oversold:
+          type: number
+          format: double
+        period:
+          type: integer
+          format: int32
+          minimum: 0
+        positionSizePct:
+          type: number
+          format: double
+        shortBorrowRate:
+          type: number
+          format: double
+        signalPeriod:
+          type: integer
+          format: int32
+          minimum: 0
+        slippagePct:
+          type: number
+          format: double
+        slowPeriod:
+          type: integer
+          format: int32
+          minimum: 0
+        stdDev:
+          type: number
+          format: double
+        stopLossPct:
+          type: number
+          format: double
+        takeProfitPct:
+          type: number
+          format: double
+    GqlBacktestResult:
+      description: A completed backtest.
+      type: object
+      properties:
+        diagnostics:
+          type: array
+          items:
+            type: string
+        endTimestamp:
+          type: integer
+          format: int64
+        equityCurve:
+          description: "Portfolio value per bar, oldest first."
+          $ref: "#/components/schemas/Page_GqlEquityPoint"
+        finalEquity:
+          type: number
+          format: double
+        initialCapital:
+          type: number
+          format: double
+        maxLeverageUsed:
+          type: number
+          format: double
+        metrics:
+          $ref: "#/components/schemas/GqlBacktestMetrics"
+        startTimestamp:
+          type: integer
+          format: int64
+        strategyName:
+          type: string
+        symbol:
+          type: string
+        trades:
+          description: "Completed round trips, oldest first."
+          $ref: "#/components/schemas/Page_GqlTrade"
+      required:
+        - symbol
+        - strategyName
+        - startTimestamp
+        - endTimestamp
+        - initialCapital
+        - finalEquity
+        - maxLeverageUsed
+        - metrics
+        - equityCurve
+        - trades
     GqlBatchError:
       description: "A single symbol's fetch failure within a batch root field."
       type: object
@@ -6357,6 +6725,23 @@ components:
         bullPower:
           type: number
           format: double
+    GqlEquityPoint:
+      description: Portfolio value at one bar.
+      type: object
+      properties:
+        drawdownPct:
+          type: number
+          format: double
+        equity:
+          type: number
+          format: double
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - timestamp
+        - equity
+        - drawdownPct
     GqlEtfCountryWeighting:
       description: "Mirrors `finance_query::EtfCountryWeighting`."
       type: object
@@ -8980,6 +9365,112 @@ components:
       required:
         - symbol
         - splits
+    GqlTrade:
+      description: One completed round trip.
+      type: object
+      properties:
+        commission:
+          type: number
+          format: double
+        dividendIncome:
+          type: number
+          format: double
+        entryPrice:
+          type: number
+          format: double
+        entryQuantity:
+          type: number
+          format: double
+        entrySignal:
+          $ref: "#/components/schemas/GqlTradeSignal"
+        entryTimestamp:
+          type: integer
+          format: int64
+        exitPrice:
+          type: number
+          format: double
+        exitSignal:
+          $ref: "#/components/schemas/GqlTradeSignal"
+        exitTimestamp:
+          type: integer
+          format: int64
+        financingCost:
+          type: number
+          format: double
+        isPartial:
+          type: boolean
+        pnl:
+          type: number
+          format: double
+        quantity:
+          type: number
+          format: double
+        returnPct:
+          type: number
+          format: double
+        scaleSequence:
+          type: integer
+          format: int32
+          minimum: 0
+        side:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        transactionTax:
+          type: number
+          format: double
+        unreinvestedDividends:
+          type: number
+          format: double
+      required:
+        - side
+        - entryTimestamp
+        - exitTimestamp
+        - entryPrice
+        - exitPrice
+        - quantity
+        - entryQuantity
+        - commission
+        - transactionTax
+        - pnl
+        - returnPct
+        - dividendIncome
+        - unreinvestedDividends
+        - financingCost
+        - entrySignal
+        - exitSignal
+        - tags
+        - isPartial
+        - scaleSequence
+    GqlTradeSignal:
+      description: The signal that opened or closed a trade.
+      type: object
+      properties:
+        direction:
+          description: "`SignalDirection` is `#[non_exhaustive]`, so a new library variant\nmust not fail deserialization here."
+          type: string
+        price:
+          type: number
+          format: double
+        reason:
+          type: string
+        strength:
+          type: number
+          format: double
+        tags:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - direction
+        - strength
+        - timestamp
+        - price
     GqlTranscript:
       type: object
       properties:
@@ -9787,6 +10278,47 @@ components:
         - pageInfo
         - edges
         - nodes
+    Page_GqlEquityPoint:
+      type: object
+      properties:
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              cursor:
+                type: string
+              node:
+                $ref: "#/components/schemas/GqlEquityPoint"
+            required:
+              - cursor
+              - node
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlEquityPoint"
+        pageInfo:
+          type: object
+          properties:
+            endCursor:
+              type:
+                - string
+                - "null"
+            hasNextPage:
+              type: boolean
+            hasPreviousPage:
+              type: boolean
+            startCursor:
+              type:
+                - string
+                - "null"
+          required:
+            - hasPreviousPage
+            - hasNextPage
+      required:
+        - pageInfo
+        - edges
+        - nodes
     Page_GqlFactDataPoint:
       type: object
       properties:
@@ -10216,6 +10748,47 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/GqlSymbolOptions"
+        pageInfo:
+          type: object
+          properties:
+            endCursor:
+              type:
+                - string
+                - "null"
+            hasNextPage:
+              type: boolean
+            hasPreviousPage:
+              type: boolean
+            startCursor:
+              type:
+                - string
+                - "null"
+          required:
+            - hasPreviousPage
+            - hasNextPage
+      required:
+        - pageInfo
+        - edges
+        - nodes
+    Page_GqlTrade:
+      type: object
+      properties:
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              cursor:
+                type: string
+              node:
+                $ref: "#/components/schemas/GqlTrade"
+            required:
+              - cursor
+              - node
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlTrade"
         pageInfo:
           type: object
           properties:

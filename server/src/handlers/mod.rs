@@ -5,6 +5,7 @@
 //! instead.
 
 mod analysis;
+mod backtest;
 mod calendar;
 mod chart;
 mod commodity_futures;
@@ -230,6 +231,8 @@ pub(crate) fn api_routes() -> Router {
         .route("/screeners/{screener}", get(screener::get_screeners))
         // POST /v2/screeners/custom
         .route("/screeners/custom", post(screener::post_custom_screener))
+        // POST /v2/backtest/{symbol}
+        .route("/backtest/{symbol}", post(backtest::run_backtest))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search::search))
         // GET /v2/sector-pe

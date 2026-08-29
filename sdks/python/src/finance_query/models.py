@@ -7,6 +7,28 @@ import typing
 
 
 @dataclasses.dataclass(frozen=True)
+class BacktestRequest:
+    """Request body for `POST /v2/backtest/{symbol}`."""
+
+    strategy: str
+    equity_cursor: str | None = None
+    equity_limit: int | None = None
+    fields: str | None = None
+    interval: Interval | None = None
+    params: GqlBacktestParams | None = None
+    range: TimeRange | None = None
+    trades_cursor: str | None = None
+    trades_limit: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "equity_cursor": "equityCursor",
+        "equity_limit": "equityLimit",
+        "trades_cursor": "tradesCursor",
+        "trades_limit": "tradesLimit",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class CustomScreenerRequest:
     """Request body for `POST /v2/screeners/custom`."""
 
@@ -43,6 +65,163 @@ class GqlAroonData:
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "aroon_down": "aroonDown",
         "aroon_up": "aroonUp",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlBacktestMetrics:
+    """Performance summary over the whole run."""
+
+    annualized_return_pct: float
+    avg_loss_duration: float
+    avg_loss_pct: float
+    avg_trade_duration: float
+    avg_trade_return_pct: float
+    avg_win_duration: float
+    avg_win_pct: float
+    calmar_ratio: float
+    executed_signals: int
+    expectancy: float
+    kelly_criterion: float
+    largest_loss: float
+    largest_win: float
+    long_trades: int
+    losing_trades: int
+    max_consecutive_losses: int
+    max_consecutive_wins: int
+    max_drawdown_duration: int
+    max_drawdown_pct: float
+    max_idle_period: int
+    omega_ratio: float
+    profit_factor: float
+    recovery_factor: float
+    serenity_ratio: float
+    sharpe_ratio: float
+    short_trades: int
+    sortino_ratio: float
+    sqn: float
+    tail_ratio: float
+    time_in_market_pct: float
+    total_commission: float
+    total_dividend_income: float
+    total_financing_cost: float
+    total_return_pct: float
+    total_signals: int
+    total_trades: int
+    ulcer_index: float
+    win_rate: float
+    winning_trades: int
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "annualized_return_pct": "annualizedReturnPct",
+        "avg_loss_duration": "avgLossDuration",
+        "avg_loss_pct": "avgLossPct",
+        "avg_trade_duration": "avgTradeDuration",
+        "avg_trade_return_pct": "avgTradeReturnPct",
+        "avg_win_duration": "avgWinDuration",
+        "avg_win_pct": "avgWinPct",
+        "calmar_ratio": "calmarRatio",
+        "executed_signals": "executedSignals",
+        "kelly_criterion": "kellyCriterion",
+        "largest_loss": "largestLoss",
+        "largest_win": "largestWin",
+        "long_trades": "longTrades",
+        "losing_trades": "losingTrades",
+        "max_consecutive_losses": "maxConsecutiveLosses",
+        "max_consecutive_wins": "maxConsecutiveWins",
+        "max_drawdown_duration": "maxDrawdownDuration",
+        "max_drawdown_pct": "maxDrawdownPct",
+        "max_idle_period": "maxIdlePeriod",
+        "omega_ratio": "omegaRatio",
+        "profit_factor": "profitFactor",
+        "recovery_factor": "recoveryFactor",
+        "serenity_ratio": "serenityRatio",
+        "sharpe_ratio": "sharpeRatio",
+        "short_trades": "shortTrades",
+        "sortino_ratio": "sortinoRatio",
+        "tail_ratio": "tailRatio",
+        "time_in_market_pct": "timeInMarketPct",
+        "total_commission": "totalCommission",
+        "total_dividend_income": "totalDividendIncome",
+        "total_financing_cost": "totalFinancingCost",
+        "total_return_pct": "totalReturnPct",
+        "total_signals": "totalSignals",
+        "total_trades": "totalTrades",
+        "ulcer_index": "ulcerIndex",
+        "win_rate": "winRate",
+        "winning_trades": "winningTrades",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlBacktestParams:
+    """Strategy and execution knobs. Every field falls back to the library default."""
+
+    allow_short: bool | None = None
+    commission_pct: float | None = None
+    exit_at_middle: bool | None = None
+    fast_period: int | None = None
+    initial_capital: float | None = None
+    maintenance_margin_pct: float | None = None
+    margin_interest_rate: float | None = None
+    max_leverage: float | None = None
+    multiplier: float | None = None
+    overbought: float | None = None
+    oversold: float | None = None
+    period: int | None = None
+    position_size_pct: float | None = None
+    short_borrow_rate: float | None = None
+    signal_period: int | None = None
+    slippage_pct: float | None = None
+    slow_period: int | None = None
+    std_dev: float | None = None
+    stop_loss_pct: float | None = None
+    take_profit_pct: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "allow_short": "allowShort",
+        "commission_pct": "commissionPct",
+        "exit_at_middle": "exitAtMiddle",
+        "fast_period": "fastPeriod",
+        "initial_capital": "initialCapital",
+        "maintenance_margin_pct": "maintenanceMarginPct",
+        "margin_interest_rate": "marginInterestRate",
+        "max_leverage": "maxLeverage",
+        "position_size_pct": "positionSizePct",
+        "short_borrow_rate": "shortBorrowRate",
+        "signal_period": "signalPeriod",
+        "slippage_pct": "slippagePct",
+        "slow_period": "slowPeriod",
+        "std_dev": "stdDev",
+        "stop_loss_pct": "stopLossPct",
+        "take_profit_pct": "takeProfitPct",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlBacktestResult:
+    """A completed backtest."""
+
+    end_timestamp: int
+    equity_curve: Page_GqlEquityPoint
+    final_equity: float
+    initial_capital: float
+    max_leverage_used: float
+    metrics: GqlBacktestMetrics
+    start_timestamp: int
+    strategy_name: str
+    symbol: str
+    trades: Page_GqlTrade
+    diagnostics: list[str] | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "end_timestamp": "endTimestamp",
+        "equity_curve": "equityCurve",
+        "final_equity": "finalEquity",
+        "initial_capital": "initialCapital",
+        "max_leverage_used": "maxLeverageUsed",
+        "start_timestamp": "startTimestamp",
+        "strategy_name": "strategyName",
     }
 
 
@@ -549,6 +728,19 @@ class GqlElderRayData:
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "bear_power": "bearPower",
         "bull_power": "bullPower",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlEquityPoint:
+    """Portfolio value at one bar."""
+
+    drawdown_pct: float
+    equity: float
+    timestamp: int
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "drawdown_pct": "drawdownPct",
     }
 
 
@@ -2429,6 +2621,60 @@ class GqlSymbolSplits:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlTrade:
+    """One completed round trip."""
+
+    commission: float
+    dividend_income: float
+    entry_price: float
+    entry_quantity: float
+    entry_signal: GqlTradeSignal
+    entry_timestamp: int
+    exit_price: float
+    exit_signal: GqlTradeSignal
+    exit_timestamp: int
+    financing_cost: float
+    is_partial: bool
+    pnl: float
+    quantity: float
+    return_pct: float
+    scale_sequence: int
+    side: str
+    tags: list[str]
+    transaction_tax: float
+    unreinvested_dividends: float
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "dividend_income": "dividendIncome",
+        "entry_price": "entryPrice",
+        "entry_quantity": "entryQuantity",
+        "entry_signal": "entrySignal",
+        "entry_timestamp": "entryTimestamp",
+        "exit_price": "exitPrice",
+        "exit_signal": "exitSignal",
+        "exit_timestamp": "exitTimestamp",
+        "financing_cost": "financingCost",
+        "is_partial": "isPartial",
+        "return_pct": "returnPct",
+        "scale_sequence": "scaleSequence",
+        "transaction_tax": "transactionTax",
+        "unreinvested_dividends": "unreinvestedDividends",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlTradeSignal:
+    """The signal that opened or closed a trade."""
+
+    direction: str
+    price: float
+    strength: float
+    timestamp: int
+    reason: str | None = None
+    tags: list[str] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlTranscript:
     transcript_content: GqlTranscriptContent
     transcript_metadata: GqlTranscriptMetadata
@@ -2650,6 +2896,17 @@ class Page_GqlEdgarFiling:
 
 
 @dataclasses.dataclass(frozen=True)
+class Page_GqlEquityPoint:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlEquityPoint]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class Page_GqlFactDataPoint:
     edges: list[dict[str, typing.Any]]
     nodes: list[GqlFactDataPoint]
@@ -2763,6 +3020,17 @@ class Page_GqlSymbolIndicators:
 class Page_GqlSymbolOptions:
     edges: list[dict[str, typing.Any]]
     nodes: list[GqlSymbolOptions]
+    page_info: dict[str, typing.Any]
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "page_info": "pageInfo",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class Page_GqlTrade:
+    edges: list[dict[str, typing.Any]]
+    nodes: list[GqlTrade]
     page_info: dict[str, typing.Any]
 
     _WIRE: typing.ClassVar[dict[str, str]] = {

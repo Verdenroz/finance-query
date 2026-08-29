@@ -136,5 +136,6 @@ Those values win over the ambient environment; anything left out falls back to w
 - `health_check` — `GET /v2/health`: Health check
 - `lookup` — `GET /v2/lookup`: Look up symbols by type
 - `ping` — `GET /v2/ping`: Ping endpoint
+- `post_backtest` — `POST /v2/backtest/{symbol}`: Run a strategy backtest
 - `post_custom_screener` — `POST /v2/screeners/custom`: Custom screener query
 - `search` — `GET /v2/search`: Search symbols and companies
