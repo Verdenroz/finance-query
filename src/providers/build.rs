@@ -70,7 +70,10 @@ pub(crate) async fn build_providers(
             Provider::Custom(id) => {
                 return Err(FinanceError::InvalidParameter {
                     param: "provider".to_string(),
-                    reason: format!("no adapter registered for custom provider `{id}`"),
+                    reason: format!(
+                        "no adapter registered for custom provider `{}`",
+                        id.as_str()
+                    ),
                 });
             }
         };

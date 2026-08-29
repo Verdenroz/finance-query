@@ -96,16 +96,28 @@ fn serialized_form_round_trips_with_itself() {
     }
 }
 
-/// The one variant whose serialized form does not come back: `from_id_str`
-/// knows only the built-in ids.
+/// Interning is process-wide, so a custom id round-trips once registered and
+/// is unknown before that.
 #[test]
-fn a_custom_provider_serializes_but_does_not_round_trip() {
-    let custom = Provider::Custom("my-source");
+fn a_custom_provider_round_trips_once_registered() {
+    assert_eq!(Provider::from_id_str("my-source"), None);
+    assert!(serde_json::from_str::<Provider>("\"my-source\"").is_err());
+
+    let custom = Provider::custom("my-source");
     assert_eq!(json(custom), "\"my-source\"");
     assert_eq!(custom.as_str(), "my-source");
     assert_eq!(custom.to_string(), "my-source");
-    assert_eq!(Provider::from_id_str("my-source"), None);
-    assert!(serde_json::from_str::<Provider>("\"my-source\"").is_err());
+    assert_eq!(Provider::from_id_str("my-source"), Some(custom));
+    assert_eq!(
+        serde_json::from_str::<Provider>("\"my-source\"").unwrap(),
+        custom
+    );
+}
+
+#[test]
+fn interning_the_same_id_twice_yields_the_same_value() {
+    assert_eq!(Provider::custom("repeated"), Provider::custom("repeated"));
+    assert_ne!(Provider::custom("repeated"), Provider::custom("distinct"));
 }
 
 #[test]

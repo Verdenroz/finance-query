@@ -495,7 +495,7 @@ fn id_for(provider: Provider) -> &'static str {
         Provider::Edgar => "edgar",
         Provider::LocalMarketCalendar => "local_market_calendar",
         Provider::LocalExchange => "local_exchange",
-        Provider::Custom(id) => id,
+        Provider::Custom(id) => id.as_str(),
     }
 }
 
