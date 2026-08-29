@@ -22,7 +22,6 @@ pub trait QuoteProvider: ProviderCore {
     /// Fetch a snapshot for symbols spanning several asset classes in one
     /// request. Rows the provider could not resolve are returned with
     /// `error` set rather than dropped.
-    #[cfg(feature = "polygon")]
     async fn fetch_unified_snapshot(
         &self,
         _symbols: &[&str],

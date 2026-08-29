@@ -309,33 +309,8 @@ pub mod quote {
     pub use crate::models::quote::price::Price;
     pub use crate::models::quote::quote_type::QuoteTypeData;
 }
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub use providers::CryptoProvider;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub use providers::EconomicProvider;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub use providers::ForexProvider;
 pub use providers::config::{Providers, ProvidersBuilder};
 pub use providers::{
@@ -355,33 +330,8 @@ pub use async_trait::async_trait;
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
 // Domain-specific query handles — constructable via Providers factory methods.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub use domains::CryptoCoin;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub use domains::ForexPair;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
@@ -390,7 +340,6 @@ pub use domains::Discovery;
 pub use domains::Filings;
 pub use domains::FuturesContract;
 pub use domains::Index;
-#[cfg(feature = "polygon")]
 pub use domains::Snapshot;
 // `Market` is unconditional — its grouped-daily/crypto methods route through
 // CHART/CRYPTO, which have their own (broader) per-method gating rather than
@@ -490,41 +439,15 @@ pub use models::{
 pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentiment};
 // Multi-provider capability response types (feature-gated)
 pub use models::commodities::CommodityQuote;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 pub use models::crypto::CryptoQuote;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 pub use models::economic::{
     EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch,
 };
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 pub use models::forex::ForexQuote;
 pub use models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]
 pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
-#[cfg(feature = "polygon")]
 pub use models::quote::snapshot::{AssetClass, MarketSnapshot};
 
 // ============================================================================

@@ -110,16 +110,6 @@ pub trait MarketProvider: ProviderCore {
 }
 
 /// [`crate::Capability::CRYPTO`] — cryptocurrency quotes.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "binance",
-    feature = "crypto",
-    feature = "defi",
-    feature = "fmp",
-    feature = "gdelt",
-    feature = "kraken",
-    feature = "polygon"
-))]
 #[async_trait::async_trait]
 pub trait CryptoProvider: ProviderCore {
     /// Fetch a quote for one coin, priced in `vs_currency`.
@@ -169,14 +159,6 @@ pub trait CryptoProvider: ProviderCore {
 }
 
 /// [`crate::Capability::ECONOMIC`] — macro-economic data series.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fiscaldata",
-    feature = "fred",
-    feature = "polygon",
-    feature = "worldbank"
-))]
 #[async_trait::async_trait]
 pub trait EconomicProvider: ProviderCore {
     /// Fetch observations for one macro-economic series.
@@ -237,13 +219,6 @@ pub trait EconomicProvider: ProviderCore {
 }
 
 /// [`crate::Capability::FOREX`] — currency-pair quotes.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "gdelt",
-    feature = "polygon"
-))]
 #[async_trait::async_trait]
 pub trait ForexProvider: ProviderCore {
     /// Fetch the exchange rate for one currency pair.

@@ -68,39 +68,14 @@ pub trait ProviderAdapter: ProviderCore {
     fn as_market(&self) -> Option<&dyn MarketProvider> {
         None
     }
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "binance",
-        feature = "crypto",
-        feature = "defi",
-        feature = "fmp",
-        feature = "gdelt",
-        feature = "kraken",
-        feature = "polygon"
-    ))]
     /// Override to `Some(self)` to serve [`crate::Capability::CRYPTO`].
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
         None
     }
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "bls",
-        feature = "fiscaldata",
-        feature = "fred",
-        feature = "polygon",
-        feature = "worldbank"
-    ))]
     /// Override to `Some(self)` to serve [`crate::Capability::ECONOMIC`].
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         None
     }
-    #[cfg(any(
-        feature = "alphavantage",
-        feature = "fmp",
-        feature = "frankfurter",
-        feature = "gdelt",
-        feature = "polygon"
-    ))]
     /// Override to `Some(self)` to serve [`crate::Capability::FOREX`].
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
