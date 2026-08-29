@@ -89,7 +89,7 @@ pub(crate) async fn build_providers(
         providers.push(Arc::new(edgar::EdgarProvider));
     }
     for routed in routes.map.values() {
-        for provider in routed {
+        for provider in &routed.providers {
             if !providers.iter().any(|p| p.id() == *provider) {
                 return Err(FinanceError::ProviderNotRegistered {
                     provider: *provider,
