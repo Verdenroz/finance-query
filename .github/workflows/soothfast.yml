@@ -211,8 +211,8 @@ jobs:
         # Shares the Makefile's path list so CI and `make soothfast` check the
         # same set; the excluded pages capture live prices and timestamps.
         run: make docs-capture-check
-      - name: Public API doc coverage (ratchet — currently 99%)
-        run: cargo soothfast coverage docs -p finance-query --features full --min 95
+      - name: Public API doc coverage (every public item)
+        run: cargo soothfast coverage docs -p finance-query --features full --min 100
       - name: Public API surface diff vs PR base
         if: github.event_name == 'pull_request'
         # Informational only (exits 0 regardless of diff content)
