@@ -90,8 +90,9 @@ impl ProviderSet {
     /// explicit route configured via `.route()`. When no route is configured,
     /// defaults to Yahoo for all capabilities and EDGAR for filings.
     fn candidates_for(&self, cap: Capability) -> Vec<&Arc<dyn ProviderAdapter>> {
-        if let Some(provider_ids) = self.routes.map.get(&cap) {
-            provider_ids
+        if let Some(route) = self.routes.map.get(&cap) {
+            route
+                .providers
                 .iter()
                 .filter_map(|id| self.providers.iter().find(|p| p.id() == *id))
                 .collect()
@@ -182,7 +183,7 @@ impl ProviderSet {
         if candidates.is_empty() {
             return Err(Self::no_provider(cap));
         }
-        match self.routes.fetch {
+        match self.routes.fetch_mode_for(cap) {
             Fetch::Sequential => {
                 let mut last = None;
                 let mut unsupported = None;

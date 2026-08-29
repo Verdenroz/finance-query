@@ -301,9 +301,31 @@ impl ProvidersBuilder {
     /// initialisation list if not already present. If omitted for a capability,
     /// Yahoo is used as default.
     pub fn route(
+        self,
+        cap: crate::providers::Capability,
+        providers: impl IntoIterator<Item = Provider>,
+    ) -> Self {
+        self.insert_route(cap, providers, None)
+    }
+
+    /// Route a capability, overriding [`fetch`](Self::fetch) for it alone.
+    ///
+    /// Lets a quota-limited capability stay sequential while another races
+    /// its providers.
+    pub fn route_with(
+        self,
+        cap: crate::providers::Capability,
+        providers: impl IntoIterator<Item = Provider>,
+        fetch: Fetch,
+    ) -> Self {
+        self.insert_route(cap, providers, Some(fetch))
+    }
+
+    fn insert_route(
         mut self,
         cap: crate::providers::Capability,
         providers: impl IntoIterator<Item = Provider>,
+        fetch: Option<Fetch>,
     ) -> Self {
         let providers: Vec<Provider> = providers.into_iter().collect();
         for provider in &providers {
@@ -316,7 +338,9 @@ impl ProvidersBuilder {
                 self.provider_ids.push(*provider);
             }
         }
-        self.routes.map.insert(cap, providers);
+        self.routes
+            .map
+            .insert(cap, super::routes::Route { providers, fetch });
         self
     }
 

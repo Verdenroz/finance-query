@@ -233,10 +233,8 @@ async fn real_errors_outrank_not_supported_in_final_error() {
         }
     }
 
-    let mut routes = Routes::new(Fetch::Sequential);
-    routes
-        .map
-        .insert(Capability::CHART, vec![Provider::Yahoo, Provider::Edgar]);
+    let routes =
+        Routes::new(Fetch::Sequential).route(Capability::CHART, [Provider::Yahoo, Provider::Edgar]);
     let set = ProviderSet::new(
         vec![Arc::new(NoSparkProvider), Arc::new(FailingChartProvider)],
         routes,
@@ -370,10 +368,8 @@ async fn retry_policy_retries_rate_limited_then_succeeds() {
 async fn retry_policy_exhausts_and_falls_through_to_next_provider() {
     let always_limited = Arc::new(FlakyChartProvider::new(Provider::Yahoo, usize::MAX));
     let succeeds = Arc::new(FlakyChartProvider::new(Provider::Edgar, 0));
-    let mut routes = Routes::new(Fetch::Sequential);
-    routes
-        .map
-        .insert(Capability::CHART, vec![Provider::Yahoo, Provider::Edgar]);
+    let routes =
+        Routes::new(Fetch::Sequential).route(Capability::CHART, [Provider::Yahoo, Provider::Edgar]);
     let set = ProviderSet::new(
         vec![
             always_limited.clone() as Arc<dyn ProviderAdapter>,
@@ -526,4 +522,138 @@ fn every_variant_has_its_serialized_form_pinned() {
         assert_eq!(provider.as_str(), id);
         assert_eq!(Provider::from_id_str(id), Some(provider));
     }
+}
+
+#[test]
+fn a_route_without_a_mode_uses_the_table_default() {
+    let routes = Routes::new(Fetch::Parallel).route(Capability::QUOTE, [Provider::Yahoo]);
+    assert_eq!(routes.fetch_mode_for(Capability::QUOTE), Fetch::Parallel);
+}
+
+#[test]
+fn a_route_mode_overrides_the_table_default() {
+    let routes = Routes::new(Fetch::Parallel).route_with(
+        Capability::FUNDAMENTALS,
+        [Provider::Yahoo],
+        Fetch::Sequential,
+    );
+    assert_eq!(
+        routes.fetch_mode_for(Capability::FUNDAMENTALS),
+        Fetch::Sequential
+    );
+    assert_eq!(routes.fetch_mode(), Fetch::Parallel);
+}
+
+#[test]
+fn an_unrouted_capability_uses_the_table_default() {
+    let routes = Routes::new(Fetch::Sequential).route_with(
+        Capability::QUOTE,
+        [Provider::Yahoo],
+        Fetch::Parallel,
+    );
+    assert_eq!(routes.fetch_mode_for(Capability::CHART), Fetch::Sequential);
+}
+
+#[test]
+fn modes_are_independent_across_capabilities() {
+    let routes = Routes::new(Fetch::Sequential)
+        .route_with(Capability::QUOTE, [Provider::Yahoo], Fetch::Parallel)
+        .route(Capability::FUNDAMENTALS, [Provider::Yahoo]);
+    assert_eq!(routes.fetch_mode_for(Capability::QUOTE), Fetch::Parallel);
+    assert_eq!(
+        routes.fetch_mode_for(Capability::FUNDAMENTALS),
+        Fetch::Sequential
+    );
+}
+
+struct CountingChartProvider {
+    id: Provider,
+    calls: std::sync::atomic::AtomicUsize,
+}
+
+impl CountingChartProvider {
+    fn new(id: Provider) -> Self {
+        Self {
+            id,
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+impl ProviderCore for CountingChartProvider {
+    fn id(&self) -> Provider {
+        self.id
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for CountingChartProvider {
+    async fn fetch_chart(
+        &self,
+        symbol: &str,
+        _: crate::Interval,
+        _: crate::TimeRange,
+    ) -> Result<crate::models::chart::Chart> {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        tokio::task::yield_now().await;
+        Ok(crate::models::chart::Chart {
+            symbol: symbol.to_string(),
+            meta: Default::default(),
+            candles: Vec::new(),
+            interval: None,
+            range: None,
+            provider_id: Some(self.id),
+        })
+    }
+}
+
+impl ProviderAdapter for CountingChartProvider {
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+}
+
+async fn chart_calls_under(routes: Routes) -> (usize, usize) {
+    let first = Arc::new(CountingChartProvider::new(Provider::Yahoo));
+    let second = Arc::new(CountingChartProvider::new(Provider::Edgar));
+    let set = ProviderSet::new(
+        vec![
+            first.clone() as Arc<dyn ProviderAdapter>,
+            second.clone() as Arc<dyn ProviderAdapter>,
+        ],
+        routes,
+    );
+    set.fetch(Capability::CHART, |p| {
+        let p = p.clone();
+        async move {
+            p.as_chart()
+                .ok_or_else(|| p.not_supported(Operation::Chart))?
+                .fetch_chart("AAPL", crate::Interval::OneDay, crate::TimeRange::FiveDays)
+                .await
+        }
+    })
+    .await
+    .expect("a provider succeeds");
+    (first.calls(), second.calls())
+}
+
+#[tokio::test]
+async fn a_sequential_route_stops_at_the_first_success() {
+    let routes =
+        Routes::new(Fetch::Sequential).route(Capability::CHART, [Provider::Yahoo, Provider::Edgar]);
+    assert_eq!(chart_calls_under(routes).await, (1, 0));
+}
+
+#[tokio::test]
+async fn route_with_parallel_overrides_a_sequential_default() {
+    let routes = Routes::new(Fetch::Sequential).route_with(
+        Capability::CHART,
+        [Provider::Yahoo, Provider::Edgar],
+        Fetch::Parallel,
+    );
+    assert_eq!(chart_calls_under(routes).await, (1, 1));
 }
