@@ -37,17 +37,16 @@ fn chunk_permits() -> &'static tokio::sync::Semaphore {
 /// - `max_lookback_secs`: how far back Yahoo will serve data via period1/period2 (hard 422 beyond)
 /// - `native_ranges`: the `range=` values Yahoo accepts natively for this interval
 ///
-/// When the requested range is not in `native_ranges`, `fetch` reroutes to `fetch_with_dates`
-/// with `start = now - max_lookback_secs`. `Ticker::chart_range` handles chunking for spans
-/// that exceed the per-request limit.
+/// Nothing clamps a request to these bounds. An intraday range beyond
+/// `max_lookback_secs` reaches Yahoo as asked and comes back 422; this table and
+/// its tests are the record of where the bounds sit, not an enforcement of them.
 ///
 /// Empirically verified limits:
 /// - 1m:         max age 29d, max span/request 8d → chunked into 7d windows
 /// - 5m/15m/30m: max age 58d, max span/request 8d → chunked into 7d windows
 /// - 1h:         max age 728d, single request covers full window
 /// - 1d+:        no restriction
-// Test-only infrastructure — validates empirically determined Yahoo API limits.
-#[allow(dead_code)] // kept for interval-limit lookups; no current caller
+#[allow(dead_code)] // asserted by the interval-limit tests; the fetch path never consults it
 pub(crate) fn intraday_limit(interval: Interval) -> Option<(i64, &'static [TimeRange])> {
     match interval {
         Interval::OneMinute => Some((29 * 24 * 3600, &[TimeRange::OneDay, TimeRange::FiveDays])),

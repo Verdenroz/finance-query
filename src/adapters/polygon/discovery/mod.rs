@@ -155,7 +155,7 @@ pub struct MarketHolidayDTO {
 /// Currency-market statuses returned by the market-status endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+#[allow(dead_code)] // optional fields Polygon omits per market
 pub struct CurrencyMarketStatusDTO {
     /// Cryptocurrency market status.
     pub crypto: Option<String>,
@@ -166,7 +166,7 @@ pub struct CurrencyMarketStatusDTO {
 /// U.S. exchange statuses returned by the market-status endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+#[allow(dead_code)] // optional fields Polygon omits per market
 pub struct ExchangeMarketStatusDTO {
     /// Nasdaq market status.
     pub nasdaq: Option<String>,
@@ -179,7 +179,7 @@ pub struct ExchangeMarketStatusDTO {
 /// Current cross-asset market status.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+#[allow(dead_code)] // optional fields Polygon omits per market
 pub struct MarketStatusDTO {
     /// Whether U.S. equities are in after-hours trading.
     #[serde(rename = "afterHours")]
@@ -199,24 +199,6 @@ pub struct MarketStatusDTO {
     /// Massive server time in RFC 3339 format.
     #[serde(rename = "serverTime")]
     pub server_time: Option<String>,
-}
-
-/// Trade or quote condition-code definition.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
-pub struct ConditionCodeDTO {
-    /// Asset class for this condition.
-    pub asset_class: Option<String>,
-    /// Data types to which the condition applies.
-    pub data_types: Option<Vec<String>>,
-    /// Numeric condition identifier.
-    pub id: Option<i64>,
-    /// Human-readable condition name.
-    pub name: Option<String>,
-    /// Condition type.
-    #[serde(rename = "type")]
-    pub condition_type: Option<String>,
 }
 
 /// Fetch all tickers.
@@ -363,7 +345,7 @@ pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
 }
 
 /// Fetch the current status of U.S. equities, currencies, and index groups.
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
+#[allow(dead_code)] // optional fields Polygon omits per market
 pub async fn market_status() -> Result<MarketStatusDTO> {
     build_client()?
         .get_as(
@@ -372,16 +354,6 @@ pub async fn market_status() -> Result<MarketStatusDTO> {
             "market_status",
             "market status response",
         )
-        .await
-}
-
-/// Fetch trade and quote condition-code definitions.
-#[allow(dead_code)] // unrouted: awaiting a capability route; see #264.
-pub async fn condition_codes(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponseDTO<ConditionCodeDTO>> {
-    build_client()?
-        .get("/v3/reference/conditions", params)
         .await
 }
 

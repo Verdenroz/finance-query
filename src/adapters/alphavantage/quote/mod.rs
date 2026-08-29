@@ -46,7 +46,6 @@ fn parse_time_series(
 }
 
 /// Helper to parse adjusted OHLCV entries.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 fn parse_adjusted_time_series(
     json: &serde_json::Value,
     series_key: &str,
@@ -162,7 +161,10 @@ pub async fn time_series_daily(
 }
 
 /// Fetch daily adjusted time series (includes dividends and splits).
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
+///
+/// Premium-only upstream. The chart path deliberately uses the unadjusted
+/// endpoint so a free-tier key still gets bars.
+#[allow(dead_code)] // premium-only; the chart path uses the unadjusted endpoint
 pub async fn time_series_daily_adjusted(
     symbol: &str,
     output_size: Option<OutputSize>,
@@ -184,23 +186,7 @@ pub async fn time_series_daily_adjusted(
     })
 }
 
-/// Fetch weekly time series (raw, unadjusted).
-pub async fn time_series_weekly(symbol: &str) -> Result<TimeSeriesDTO> {
-    let client = build_client()?;
-    let json = client
-        .get("TIME_SERIES_WEEKLY", &[("symbol", symbol)])
-        .await?;
-    let entries = parse_time_series(&json, "Weekly")?;
-
-    Ok(TimeSeriesDTO {
-        symbol: extract_symbol(&json),
-        last_refreshed: extract_last_refreshed(&json),
-        entries,
-    })
-}
-
 /// Fetch weekly adjusted time series.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_weekly_adjusted(symbol: &str) -> Result<AdjustedTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -215,23 +201,7 @@ pub async fn time_series_weekly_adjusted(symbol: &str) -> Result<AdjustedTimeSer
     })
 }
 
-/// Fetch monthly time series (raw, unadjusted).
-pub async fn time_series_monthly(symbol: &str) -> Result<TimeSeriesDTO> {
-    let client = build_client()?;
-    let json = client
-        .get("TIME_SERIES_MONTHLY", &[("symbol", symbol)])
-        .await?;
-    let entries = parse_time_series(&json, "Monthly")?;
-
-    Ok(TimeSeriesDTO {
-        symbol: extract_symbol(&json),
-        last_refreshed: extract_last_refreshed(&json),
-        entries,
-    })
-}
-
 /// Fetch monthly adjusted time series.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_monthly_adjusted(symbol: &str) -> Result<AdjustedTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -579,8 +549,22 @@ pub async fn fetch_chart_response(
         crate::Interval::OneHour => {
             time_series_intraday(symbol, AvInterval::SixtyMin, None).await?
         }
-        crate::Interval::OneWeek => time_series_weekly(symbol).await?,
-        crate::Interval::OneMonth => time_series_monthly(symbol).await?,
+        // Intraday has no adjusted variant upstream; the daily and longer bars
+        // do, and `Candle::adj_close` has nowhere to come from without them.
+        crate::Interval::OneWeek => {
+            return Ok(adjusted_chart(
+                symbol,
+                time_series_weekly_adjusted(symbol).await?,
+            ));
+        }
+        crate::Interval::OneMonth => {
+            return Ok(adjusted_chart(
+                symbol,
+                time_series_monthly_adjusted(symbol).await?,
+            ));
+        }
+        // TIME_SERIES_DAILY_ADJUSTED is premium-only, and the free tier is the
+        // expected configuration here, so daily bars carry no adj_close.
         _ => time_series_daily(symbol, None).await?,
     };
 
@@ -620,6 +604,35 @@ pub async fn fetch_chart_range_response(
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
     })
+}
+
+fn adjusted_chart(symbol: &str, ts: AdjustedTimeSeriesDTO) -> Chart {
+    Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles: adjusted_entries_to_candles(ts.entries),
+        interval: None,
+        range: None,
+        provider_id: Some(crate::Provider::AlphaVantage),
+    }
+}
+
+fn adjusted_entries_to_candles(entries: Vec<AdjustedTimeSeriesEntryDTO>) -> Vec<Candle> {
+    let mut candles: Vec<Candle> = entries
+        .into_iter()
+        .map(|bar| Candle {
+            timestamp: parse_entry_timestamp(&bar.timestamp),
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: bar.volume as i64,
+            adj_close: Some(bar.adjusted_close),
+            provider_id: Some(crate::Provider::AlphaVantage),
+        })
+        .collect();
+    candles.sort_unstable_by_key(|c| c.timestamp);
+    candles
 }
 
 /// Convert time series entries into canonical candles, ascending by timestamp.
