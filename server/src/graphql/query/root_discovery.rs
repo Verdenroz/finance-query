@@ -5,6 +5,8 @@ use async_graphql::{Context, Object, Result};
 use super::{resolve_gql_lang, screener_error_to_gql};
 use crate::AppState;
 use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
+use crate::graphql::types::crypto::GqlSymbolMatch as GqlListedSymbol;
+use crate::graphql::types::search::GqlSymbolDetails;
 use crate::graphql::types::{
     enums::{GqlLookupType, GqlScreener, GqlValueFormat},
     screener::{GqlCustomScreenerInput, GqlScreenerResults},
@@ -89,6 +91,38 @@ impl RootDiscoveryQuery {
     }
 
     /// Predefined stock screener results.
+    /// Reference detail for one symbol, provider-routed
+    /// (Capability::DISCOVERY).
+    async fn symbol_details(&self, ctx: &Context<'_>, symbol: String) -> Result<GqlSymbolDetails> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::keyless::get_symbol_details(
+            &state.cache,
+            &state.providers,
+            &symbol,
+        ))
+        .await
+    }
+
+    /// Listed or delisted symbols, provider-routed (Capability::DISCOVERY).
+    async fn listing_status(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "true = currently listed, false = delisted", default = true)] active: bool,
+        #[graphql(desc = "Max entries per page; omitted = every entry in one page")] first: Option<
+            i32,
+        >,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<crate::graphql::pagination::Page<GqlListedSymbol>> {
+        let state = ctx.data::<AppState>()?;
+        let json =
+            crate::services::keyless::get_listing_status(&state.cache, &state.providers, active)
+                .await
+                .map_err(to_gql_error)?;
+        let symbols: Vec<GqlListedSymbol> = from_gql_json(json)?;
+        crate::graphql::pagination::paginate(&symbols, first, after).await
+    }
+
     async fn screener(
         &self,
         ctx: &Context<'_>,

@@ -7,6 +7,8 @@ use async_graphql::{Context, Object, Result};
 
 use crate::AppState;
 use crate::graphql::error::{from_gql_json, to_gql_error};
+use crate::graphql::types::commodity_futures::GqlIndexConstituentChange;
+use crate::graphql::types::sector::GqlSectorPerformanceHistory;
 use crate::graphql::types::{
     commodity_futures::{GqlCommodityQuote, GqlFuturesQuote, GqlIndexConstituent},
     market::{GqlMarketSectorPe, GqlMarketSectorPerformance},
@@ -92,6 +94,46 @@ impl RootCommodityQuery {
     /// Aggregate performance for every sector, provider-routed via
     /// `Providers::market()` (Yahoo screener fan-out, keyless). Distinct from
     /// `sector`, a per-sector Yahoo-only shortcut.
+    /// Additions and removals from an index's constituent list.
+    async fn index_constituent_changes(
+        &self,
+        ctx: &Context<'_>,
+        symbol: String,
+        #[graphql(desc = "Max entries per page; omitted = every entry in one page")] first: Option<
+            i32,
+        >,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<crate::graphql::pagination::Page<GqlIndexConstituentChange>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::market::get_index_constituent_changes(
+            &state.cache,
+            &state.providers,
+            &symbol,
+        )
+        .await
+        .map_err(to_gql_error)?;
+        let changes: Vec<GqlIndexConstituentChange> = from_gql_json(json)?;
+        crate::graphql::pagination::paginate(&changes, first, after).await
+    }
+
+    /// Sector performance per session, most recent first.
+    async fn sector_performance_history(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Sessions to return", default = 30)] limit: u32,
+    ) -> Result<Vec<GqlSectorPerformanceHistory>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::market::get_sector_performance_history(
+            &state.cache,
+            &state.providers,
+            limit,
+        )
+        .await
+        .map_err(to_gql_error)?;
+        from_gql_json(json)
+    }
+
     async fn sector_performance(
         &self,
         ctx: &Context<'_>,

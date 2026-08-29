@@ -110,3 +110,11 @@ pub struct GqlSectorResearchReport {
     pub target_price_status: Option<String>,
     pub investment_rating: Option<String>,
 }
+
+/// Sector performance for one date.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlSectorPerformanceHistory {
+    pub date: Option<String>,
+    pub sectors: Vec<GqlSectorPerformance>,
+}

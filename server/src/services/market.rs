@@ -210,3 +210,41 @@ pub async fn get_sector_pe(cache: &Cache, providers: &Arc<Providers>) -> Service
         )
         .await
 }
+
+/// Additions and removals from an index's constituent list.
+pub async fn get_index_constituent_changes(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("index_constituent_changes", &[&symbol.to_uppercase()]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(&cache_key, cache::ttl::METADATA, false, || async move {
+            let changes = providers.index(&symbol).constituent_changes().await?;
+            serde_json::to_value(&changes).map_err(|e| Box::new(e) as ServiceError)
+        })
+        .await
+}
+
+/// Sector performance for the last `limit` sessions.
+pub async fn get_sector_performance_history(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    limit: u32,
+) -> ServiceResult {
+    let cache_key = Cache::key("sector_performance_history", &[&limit.to_string()]);
+    let providers = Arc::clone(providers);
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SECTORS,
+            cache::is_market_open(),
+            || async move {
+                let history = providers.market().sector_performance_history(limit).await?;
+                serde_json::to_value(&history).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}

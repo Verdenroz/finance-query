@@ -318,6 +318,14 @@ capital gains histories plus any per-symbol fetch errors."""
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlChainAllocation:
+    """One chain's share of a protocol's TVL."""
+
+    chain: str
+    tvl: float
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlChart:
     """Historical chart data for a single symbol."""
 
@@ -1254,6 +1262,24 @@ class GqlIndexConstituent:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlIndexConstituentChange:
+    """One addition or removal from an index's constituent list."""
+
+    added_security: str | None = None
+    date: str | None = None
+    reason: str | None = None
+    removed_security: str | None = None
+    removed_ticker: str | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "added_security": "addedSecurity",
+        "removed_security": "removedSecurity",
+        "removed_ticker": "removedTicker",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlIndicatorsBatch:
     """Result of the batch `indicatorsBatch` root field: successfully computed
 indicators plus any per-symbol fetch errors."""
@@ -1888,6 +1914,29 @@ class GqlPriceTargetSummary:
         "last_quarter_count": "lastQuarterCount",
         "last_year_avg": "lastYearAvg",
         "last_year_count": "lastYearCount",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlProtocolTvl:
+    """A DeFi protocol's total value locked, provider-routed (DefiLlama, keyless)."""
+
+    chains: list[str]
+    slug: str
+    tvl_by_chain: list[GqlChainAllocation]
+    change1_dpercent: float | None = None
+    change7_dpercent: float | None = None
+    market_cap: float | None = None
+    name: str | None = None
+    symbol: str | None = None
+    tvl: float | None = None
+    url: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "change1_dpercent": "change1DPercent",
+        "change7_dpercent": "change7DPercent",
+        "market_cap": "marketCap",
+        "tvl_by_chain": "tvlByChain",
     }
 
 
@@ -2713,6 +2762,14 @@ class GqlSectorPerformance:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlSectorPerformanceHistory:
+    """Sector performance for one date."""
+
+    sectors: list[GqlSectorPerformance]
+    date: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlSectorResearchReport:
     id: str
     headline: str | None = None
@@ -2866,6 +2923,35 @@ class GqlSymbolChart:
 
     chart: GqlChart
     symbol: str
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlSymbolDetails:
+    """Reference detail for one symbol, provider-routed (Capability::DISCOVERY)."""
+
+    symbol: str
+    asset_type: str | None = None
+    cik: str | None = None
+    description: str | None = None
+    employees: int | None = None
+    exchange: str | None = None
+    homepage_url: str | None = None
+    list_date: str | None = None
+    market_cap: float | None = None
+    name: str | None = None
+    shares_outstanding: float | None = None
+    sic_code: str | None = None
+    sic_description: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "asset_type": "assetType",
+        "homepage_url": "homepageUrl",
+        "list_date": "listDate",
+        "market_cap": "marketCap",
+        "shares_outstanding": "sharesOutstanding",
+        "sic_code": "sicCode",
+        "sic_description": "sicDescription",
+    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -3127,6 +3213,14 @@ class GqlTrendingQuote:
         "regular_market_price": "regularMarketPrice",
         "short_name": "shortName",
     }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlTvlPoint:
+    """One point on a protocol's TVL history."""
+
+    timestamp: int
+    tvl: float
 
 
 @dataclasses.dataclass(frozen=True)

@@ -569,6 +569,67 @@ pub async fn execute_query(
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
+// ── Short-sale, grading, compensation and trailing-twelve-month ─────────────
+
+pub const GQL_SHORT_VOLUME_DEFAULT_FIELDS: &[&str] =
+    &["date", "shortVolume", "shortExemptVolume", "totalVolume"];
+
+pub const GQL_GRADING_ACTION_DEFAULT_FIELDS: &[&str] =
+    &["date", "gradingCompany", "previousGrade", "newGrade"];
+
+pub const GQL_PRICE_TARGET_SUMMARY_DEFAULT_FIELDS: &[&str] = &[
+    "symbol",
+    "lastMonthCount",
+    "lastMonthAvg",
+    "lastQuarterCount",
+    "lastQuarterAvg",
+    "allTimeCount",
+    "allTimeAvg",
+];
+
+pub const GQL_EXECUTIVE_COMPENSATION_DEFAULT_FIELDS: &[&str] = &[
+    "nameAndPosition",
+    "year",
+    "salary",
+    "bonus",
+    "stockAward",
+    "optionAward",
+    "total",
+];
+
+/// 43 fields is more context than a headline answer needs, so the default is
+/// the valuation, return and leverage metrics an agent asks for first.
+pub const GQL_KEY_METRICS_TTM_DEFAULT_FIELDS: &[&str] = &[
+    "symbol",
+    "marketCap",
+    "enterpriseValue",
+    "evToSales",
+    "evToEbitda",
+    "netDebtToEbitda",
+    "currentRatio",
+    "returnOnEquity",
+    "returnOnInvestedCapital",
+    "earningsYield",
+    "freeCashFlowYield",
+    "workingCapital",
+];
+
+/// Same reasoning as the key metrics default, against 62 fields.
+pub const GQL_RATIOS_TTM_DEFAULT_FIELDS: &[&str] = &[
+    "symbol",
+    "grossProfitMargin",
+    "operatingProfitMargin",
+    "netProfitMargin",
+    "currentRatio",
+    "quickRatio",
+    "debtEquityRatio",
+    "interestCoverage",
+    "priceEarningsRatio",
+    "priceToBookRatio",
+    "priceToSalesRatio",
+    "dividendYield",
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;

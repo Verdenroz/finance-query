@@ -108,6 +108,7 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_grading_actions` — `GET /v2/grading-actions/{symbol}`: Provider-routed analyst upgrades and downgrades.
 - `get_holders` — `GET /v2/holders/{symbol}/{type}`: Get holder data
 - `get_hours` — `GET /v2/hours`: Get market hours
+- `get_index_constituent_changes` — `GET /v2/indices/{symbol}/constituent-changes`: Additions and removals from an index's constituent list.
 - `get_index_constituents` — `GET /v2/index-constituents/{symbol}`: Get an index's current constituent list
 - `get_indicators` — `GET /v2/indicators/{symbol}`: Get technical indicators
 - `get_indices` — `GET /v2/indices`: Get world market indices
@@ -121,6 +122,8 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_press_releases` — `GET /v2/press-releases/{symbol}`: Get a company's own press releases
 - `get_price_target_consensus` — `GET /v2/price-target-consensus/{symbol}`: Get consensus analyst price target
 - `get_price_target_summary` — `GET /v2/price-target-summary/{symbol}`: Analyst price-target counts and averages per window.
+- `get_protocol_tvl` — `GET /v2/crypto/coins/{id}/tvl`: A DeFi protocol's total value locked (DefiLlama, keyless).
+- `get_protocol_tvl_history` — `GET /v2/crypto/coins/{id}/tvl-history`: A protocol's TVL history, oldest first.
 - `get_quote` — `GET /v2/quote/{symbol}`: Get quote for a symbol
 - `get_quote_type` — `GET /v2/quote-type/{symbol}`: Get quote type
 - `get_quotes` — `GET /v2/quotes`: Get quotes for multiple symbols
@@ -133,9 +136,11 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_sector` — `GET /v2/sectors/{sector}`: Get sector data
 - `get_sector_pe` — `GET /v2/sector-pe`: Get price/earnings ratios by sector
 - `get_sector_performance` — `GET /v2/sector-performance`: Get aggregate performance for every sector
+- `get_sector_performance_history` — `GET /v2/sector-performance/history`: Sector performance per session.
 - `get_short_volume` — `GET /v2/short-volume/{symbol}`: Daily FINRA short-sale volume for a symbol (keyless).
 - `get_spark` — `GET /v2/spark`: Get batch sparkline data
 - `get_splits` — `GET /v2/splits/{symbol}`: Get stock split history
+- `get_symbol_details` — `GET /v2/symbol-details/{symbol}`: Reference detail for one symbol.
 - `get_transcript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript
 - `get_transcripts` — `GET /v2/transcripts/{symbol}/all`: Get all earnings transcripts
 - `get_trending` — `GET /v2/trending`: Get trending tickers

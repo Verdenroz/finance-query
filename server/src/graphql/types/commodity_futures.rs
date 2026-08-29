@@ -49,3 +49,15 @@ pub struct GqlIndexConstituent {
     pub cik: Option<String>,
     pub founded: Option<String>,
 }
+
+/// One addition or removal from an index's constituent list.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlIndexConstituentChange {
+    pub date: Option<String>,
+    pub symbol: Option<String>,
+    pub added_security: Option<String>,
+    pub removed_ticker: Option<String>,
+    pub removed_security: Option<String>,
+    pub reason: Option<String>,
+}

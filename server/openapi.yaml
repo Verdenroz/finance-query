@@ -778,6 +778,124 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/crypto/coins/{id}/tvl":
+    get:
+      operationId: getProtocolTvl
+      summary: "A DeFi protocol's total value locked (DefiLlama, keyless)."
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlProtocolTvl"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/crypto/coins/{id}/tvl-history":
+    get:
+      operationId: getProtocolTvlHistory
+      summary: "A protocol's TVL history, oldest first."
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlTvlPoint"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/crypto/global:
     get:
       operationId: getCryptoGlobal
@@ -3158,6 +3276,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/indices/{symbol}/constituent-changes":
+    get:
+      operationId: getIndexConstituentChanges
+      summary: "Additions and removals from an index's constituent list."
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlIndexConstituentChange"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/industries/{industry}":
     get:
       operationId: getIndustry
@@ -4863,6 +5048,68 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v2/sector-performance/history:
+    get:
+      operationId: getSectorPerformanceHistory
+      summary: Sector performance per session.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlSectorPerformanceHistory"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/sectors/{sector}":
     get:
       operationId: getSector
@@ -5146,6 +5393,57 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/GqlSplit"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/symbol-details/{symbol}":
+    get:
+      operationId: getSymbolDetails
+      summary: Reference detail for one symbol.
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlSymbolDetails"
         "400":
           description: Bad request
           content:
@@ -6497,6 +6795,18 @@ components:
       required:
         - capitalGains
         - errors
+    GqlChainAllocation:
+      description: "One chain's share of a protocol's TVL."
+      type: object
+      properties:
+        chain:
+          type: string
+        tvl:
+          type: number
+          format: double
+      required:
+        - chain
+        - tvl
     GqlChart:
       description: Historical chart data for a single symbol.
       type: object
@@ -7851,6 +8161,22 @@ components:
           type: string
       required:
         - symbol
+    GqlIndexConstituentChange:
+      description: "One addition or removal from an index's constituent list."
+      type: object
+      properties:
+        addedSecurity:
+          type: string
+        date:
+          type: string
+        reason:
+          type: string
+        removedSecurity:
+          type: string
+        removedTicker:
+          type: string
+        symbol:
+          type: string
     GqlIndicatorsBatch:
       description: "Result of the batch `indicatorsBatch` root field: successfully computed\nindicators plus any per-symbol fetch errors."
       type: object
@@ -8909,6 +9235,42 @@ components:
           format: int64
         symbol:
           type: string
+    GqlProtocolTvl:
+      description: "A DeFi protocol's total value locked, provider-routed (DefiLlama, keyless)."
+      type: object
+      properties:
+        chains:
+          type: array
+          items:
+            type: string
+        change1DPercent:
+          type: number
+          format: double
+        change7DPercent:
+          type: number
+          format: double
+        marketCap:
+          type: number
+          format: double
+        name:
+          type: string
+        slug:
+          type: string
+        symbol:
+          type: string
+        tvl:
+          type: number
+          format: double
+        tvlByChain:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlChainAllocation"
+        url:
+          type: string
+      required:
+        - slug
+        - chains
+        - tvlByChain
     GqlQuote:
       description: "Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`."
       type: object
@@ -9822,6 +10184,18 @@ components:
           $ref: "#/components/schemas/GqlFormattedValue"
         ytdChangePercent:
           $ref: "#/components/schemas/GqlFormattedValue"
+    GqlSectorPerformanceHistory:
+      description: Sector performance for one date.
+      type: object
+      properties:
+        date:
+          type: string
+        sectors:
+          type: array
+          items:
+            $ref: "#/components/schemas/GqlSectorPerformance"
+      required:
+        - sectors
     GqlSectorResearchReport:
       type: object
       properties:
@@ -10050,6 +10424,42 @@ components:
       required:
         - symbol
         - chart
+    GqlSymbolDetails:
+      description: "Reference detail for one symbol, provider-routed (Capability::DISCOVERY)."
+      type: object
+      properties:
+        assetType:
+          type: string
+        cik:
+          type: string
+        description:
+          type: string
+        employees:
+          type: integer
+          format: int64
+          minimum: 0
+        exchange:
+          type: string
+        homepageUrl:
+          type: string
+        listDate:
+          type: string
+        marketCap:
+          type: number
+          format: double
+        name:
+          type: string
+        sharesOutstanding:
+          type: number
+          format: double
+        sicCode:
+          type: string
+        sicDescription:
+          type: string
+        symbol:
+          type: string
+      required:
+        - symbol
     GqlSymbolDividends:
       description: "Wrapper for batch dividends: `{symbol, dividends}`. `dividends` is a plain\npayment list here (mirrors `BatchDividendsResponse.dividends:\nHashMap<String, Vec<Dividend>>`) — batch dividends has no per-symbol\nanalytics, unlike the single-symbol `GqlDividends`."
       type: object
@@ -10434,6 +10844,19 @@ components:
           type: string
         symbol:
           type: string
+    GqlTvlPoint:
+      description: "One point on a protocol's TVL history."
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        tvl:
+          type: number
+          format: double
+      required:
+        - timestamp
+        - tvl
     GqlUnknownEvent:
       description: "Fallback for `EventKind` variants added to the library after this schema\nwas written — `EventKind` is `#[non_exhaustive]`, so this keeps the\nconversion total instead of panicking on a future variant."
       type: object

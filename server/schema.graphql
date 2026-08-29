@@ -306,6 +306,14 @@ type GqlCapitalGainsBatch {
 }
 
 """
+One chain's share of a protocol's TVL.
+"""
+type GqlChainAllocation {
+	chain: String!
+	tvl: Float!
+}
+
+"""
 Historical chart data for a single symbol.
 """
 type GqlChart {
@@ -400,6 +408,24 @@ type GqlCoinQuote {
 	circulatingSupply: Float
 	image: String
 	marketCapRank: Int
+	"""
+	Total value locked for this coin's protocol, provider-routed
+	(DefiLlama, keyless). Resolved only when selected.
+	"""
+	tvl: GqlProtocolTvl!
+	"""
+	TVL history for this coin's protocol, oldest first.
+	"""
+	tvlHistory(
+		"""
+		Max points per page; omitted = every fetched point in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlTvlPointConnection!
 }
 
 type GqlCoinQuoteConnection {
@@ -1604,6 +1630,47 @@ type GqlIndexConstituent {
 }
 
 """
+One addition or removal from an index's constituent list.
+"""
+type GqlIndexConstituentChange {
+	date: String
+	symbol: String
+	addedSecurity: String
+	removedTicker: String
+	removedSecurity: String
+	reason: String
+}
+
+type GqlIndexConstituentChangeConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlIndexConstituentChangeEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlIndexConstituentChange!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlIndexConstituentChangeEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlIndexConstituentChange!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 Result of the batch `indicatorsBatch` root field: successfully computed
 indicators plus any per-symbol fetch errors.
 """
@@ -2577,6 +2644,22 @@ type GqlPriceUpdate {
 }
 
 """
+A DeFi protocol's total value locked, provider-routed (DefiLlama, keyless).
+"""
+type GqlProtocolTvl {
+	slug: String!
+	name: String
+	symbol: String
+	url: String
+	chains: [String!]!
+	tvl: Float
+	tvlByChain: [GqlChainAllocation!]!
+	change1DPercent: Float
+	change7DPercent: Float
+	marketCap: Float
+}
+
+"""
 Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`.
 
 Scalar and formatted-value fields are typed directly; complex nested objects
@@ -3235,6 +3318,14 @@ type GqlSectorPerformance {
 	fiveYearChangePercent: JSON
 }
 
+"""
+Sector performance for one date.
+"""
+type GqlSectorPerformanceHistory {
+	date: String
+	sectors: [GqlSectorPerformance!]!
+}
+
 type GqlSectorResearchReport {
 	id: String!
 	headline: String
@@ -3437,6 +3528,25 @@ type GqlSymbolChartEdge {
 	A cursor for use in pagination
 	"""
 	cursor: String!
+}
+
+"""
+Reference detail for one symbol, provider-routed (Capability::DISCOVERY).
+"""
+type GqlSymbolDetails {
+	symbol: String!
+	name: String
+	description: String
+	exchange: String
+	assetType: String
+	cik: String
+	sicCode: String
+	sicDescription: String
+	homepageUrl: String
+	employees: Int
+	marketCap: Float
+	listDate: String
+	sharesOutstanding: Float
 }
 
 """
@@ -4122,6 +4232,43 @@ type GqlTrendingQuote {
 }
 
 """
+One point on a protocol's TVL history.
+"""
+type GqlTvlPoint {
+	timestamp: Int!
+	tvl: Float!
+}
+
+type GqlTvlPointConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlTvlPointEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlTvlPoint!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlTvlPointEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlTvlPoint!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 Fallback for `EventKind` variants added to the library after this schema
 was written — `EventKind` is `#[non_exhaustive]`, so this keeps the
 conversion total instead of panicking on a future variant.
@@ -4374,7 +4521,27 @@ type QueryRoot {
 	Aggregate performance for every sector, provider-routed via
 	`Providers::market()` (Yahoo screener fan-out, keyless). Distinct from
 	`sector`, a per-sector Yahoo-only shortcut.
+	Additions and removals from an index's constituent list.
 	"""
+	indexConstituentChanges(		symbol: String!,
+		"""
+		Max entries per page; omitted = every entry in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlIndexConstituentChangeConnection!
+	"""
+	Sector performance per session, most recent first.
+	"""
+	sectorPerformanceHistory(
+		"""
+		Sessions to return
+		"""
+		limit: Int! = 30
+	): [GqlSectorPerformanceHistory!]!
 	sectorPerformance: [GqlMarketSectorPerformance!]!
 	"""
 	Price/earnings ratios by sector, provider-routed via
@@ -4409,7 +4576,27 @@ type QueryRoot {
 	): GqlLookupResults!
 	"""
 	Predefined stock screener results.
+	Reference detail for one symbol, provider-routed
+	(Capability::DISCOVERY).
 	"""
+	symbolDetails(symbol: String!): GqlSymbolDetails!
+	"""
+	Listed or delisted symbols, provider-routed (Capability::DISCOVERY).
+	"""
+	listingStatus(
+		"""
+		true = currently listed, false = delisted
+		"""
+		active: Boolean! = true,
+		"""
+		Max entries per page; omitted = every entry in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlSymbolMatchConnection!
 	screener(type: GqlScreener!, count: Int! = 25, format: GqlValueFormat! = RAW): GqlScreenerResults!
 	"""
 	Custom stock/fund screener with flexible filter conditions.
@@ -4562,7 +4749,12 @@ type QueryRoot {
 	"""
 	A FRED economic data series (e.g. "FEDFUNDS", "CPIAUCSL"). Requires `FRED_API_KEY`.
 	"""
-	fredSeries(id: String!): GqlMacroSeries!
+	fredSeries(		id: String!,
+		"""
+		Vintage date (YYYY-MM-DD): the series as it stood then, before later revisions. Omitted = latest values.
+		"""
+		asOf: String
+	): GqlMacroSeries!
 	"""
 	US Treasury yield curve rates for a calendar year (keyless).
 	"""

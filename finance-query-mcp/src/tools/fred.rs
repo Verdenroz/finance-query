@@ -25,6 +25,7 @@ pub async fn get_fred_series(
     fields: Option<String>,
     limit: Option<u32>,
     cursor: Option<String>,
+    as_of: Option<String>,
 ) -> Result<CallToolResult, McpError> {
     if std::env::var("FRED_API_KEY").is_err() {
         return Err(invalid_params(
@@ -44,7 +45,13 @@ pub async fn get_fred_series(
         Some(limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE)),
         cursor.as_deref(),
     );
-    let query = format!("query GetFredSeries($id: String!) {{ fredSeries(id: $id) {selection} }}");
+    let as_of_arg = as_of
+        .as_deref()
+        .map(|d| format!(", asOf: \"{}\"", escape_gql_string(d)))
+        .unwrap_or_default();
+    let query = format!(
+        "query GetFredSeries($id: String!) {{ fredSeries(id: $id{as_of_arg}) {selection} }}"
+    );
     let mut variables = async_graphql::Variables::default();
     variables.insert(async_graphql::Name::new("id"), id.into());
     let json = execute_query(schema, &query, variables).await?;

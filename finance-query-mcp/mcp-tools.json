@@ -540,6 +540,36 @@
       }
     },
     {
+      "name": "get_executive_compensation",
+      "description": "Disclosed executive compensation by year.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_fails_to_deliver",
       "description": "Fails-to-deliver records for a symbol, FMP when keyed and keyless EDGAR otherwise.",
       "inputSchema": {
@@ -761,6 +791,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "as_of": {
+            "description": "Vintage date (YYYY-MM-DD): the series as it stood then, before later revisions; omitted = latest",
+            "type": "string"
+          },
           "cursor": {
             "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
             "type": "string"
@@ -797,6 +831,36 @@
           },
           "symbol": {
             "description": "Futures contract symbol (e.g. \"ESM26\" for E-mini S&P June 2026)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_grading_actions",
+      "description": "Provider-routed analyst upgrades and downgrades.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
             "type": "string"
           }
         },
@@ -852,6 +916,36 @@
             ]
           }
         }
+      }
+    },
+    {
+      "name": "get_index_constituent_changes",
+      "description": "Additions and removals from an index's constituent list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Index symbol (e.g. ^GSPC)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -1160,6 +1254,26 @@
       }
     },
     {
+      "name": "get_key_metrics_ttm",
+      "description": "Trailing-twelve-month key metrics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_market_calendar",
       "description": "Get a market-wide event calendar over a date range: earnings, IPOs, dividends, splits, economic releases, market holidays, or live exchange open/closed status. Unlike get_calendar (per-symbol), this spans the whole market.",
       "inputSchema": {
@@ -1433,6 +1547,76 @@
       }
     },
     {
+      "name": "get_price_target_summary",
+      "description": "Analyst price-target counts and averages per window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_protocol_tvl",
+      "description": "A DeFi protocol's total value locked and per-chain split.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "id": {
+            "description": "CoinGecko coin id (e.g. aave)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "get_protocol_tvl_history",
+      "description": "A DeFi protocol's TVL history, oldest first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "id": {
+            "description": "CoinGecko coin id (e.g. aave)",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
       "name": "get_quote",
       "description": "Get current quote and company data (price, market cap, PE ratio, 52-week range, etc.) for one or more stock symbols (comma-separated). A single symbol returns one quote object; multiple symbols return a paginated batch of quotes plus per-symbol errors.",
       "inputSchema": {
@@ -1474,6 +1658,26 @@
         "properties": {
           "fields": {
             "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_ratios_ttm",
+      "description": "Trailing-twelve-month financial ratios.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
             "type": "string"
           },
           "symbol": {
@@ -1671,6 +1875,55 @@
       }
     },
     {
+      "name": "get_sector_performance_history",
+      "description": "Sector performance per session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Sessions to return; omitted = 30",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "get_short_volume",
+      "description": "Daily FINRA short-sale volume for a symbol, keyless.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_spark",
       "description": "Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols.",
       "inputSchema": {
@@ -1776,6 +2029,26 @@
             ]
           }
         }
+      }
+    },
+    {
+      "name": "get_symbol_details",
+      "description": "Reference detail for one symbol.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
       }
     },
     {

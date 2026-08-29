@@ -2,7 +2,10 @@
 //! of Traders. Both call the library's keyless shortcut modules directly —
 //! neither needs an API key or provider routing.
 
+use std::sync::Arc;
+
 use crate::cache::{self, Cache};
+use finance_query::Providers;
 
 use super::{ServiceError, ServiceResult};
 
@@ -34,6 +37,39 @@ pub async fn get_commitments_of_traders(cache: &Cache, symbol: &str) -> ServiceR
         .get_or_fetch(&cache_key, cache::ttl::FINANCIALS, false, || async move {
             let cot = finance_query::cftc::commitments_of_traders(&sym).await?;
             serde_json::to_value(&cot).map_err(|e| Box::new(e) as ServiceError)
+        })
+        .await
+}
+
+/// Reference detail for one symbol, provider-routed (Capability::DISCOVERY).
+pub async fn get_symbol_details(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("symbol_details", &[&symbol.to_uppercase()]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(&cache_key, cache::ttl::METADATA, false, || async move {
+            let details = providers.discovery().details(&symbol).await?;
+            serde_json::to_value(&details).map_err(|e| Box::new(e) as ServiceError)
+        })
+        .await
+}
+
+/// Listed or delisted symbols, provider-routed (Capability::DISCOVERY).
+pub async fn get_listing_status(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    active: bool,
+) -> ServiceResult {
+    let cache_key = Cache::key("listing_status", &[&active.to_string()]);
+    let providers = Arc::clone(providers);
+    cache
+        .get_or_fetch(&cache_key, cache::ttl::METADATA, false, || async move {
+            let symbols = providers.discovery().listing_status(active).await?;
+            serde_json::to_value(&symbols).map_err(|e| Box::new(e) as ServiceError)
         })
         .await
 }

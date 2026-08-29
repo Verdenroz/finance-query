@@ -1,14 +1,18 @@
 //! GraphQL types for CoinGecko cryptocurrency quotes.
 
-use async_graphql::SimpleObject;
+use async_graphql::{ComplexObject, Context, Result, SimpleObject};
 use serde::Deserialize;
+
+use crate::AppState;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
+use crate::graphql::pagination::{self, Page};
 
 /// A cryptocurrency quote from CoinGecko, mirroring `finance_query::CoinQuote`,
 /// which has no serde rename of its own (plain snake_case JSON keys) — must
 /// not rename for deserialization either, even though GraphQL field names
 /// are camelCase.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(default)]
 pub struct GqlCoinQuote {
     pub id: String,
@@ -67,4 +71,72 @@ pub struct GqlGlobalCryptoStats {
     pub btc_dominance: Option<f64>,
     pub eth_dominance: Option<f64>,
     pub market_cap_change_percentage_24h_usd: Option<f64>,
+}
+
+/// One chain's share of a protocol's TVL.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlChainAllocation {
+    pub chain: String,
+    pub tvl: f64,
+}
+
+/// A DeFi protocol's total value locked, provider-routed (DefiLlama, keyless).
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlProtocolTvl {
+    pub slug: String,
+    pub name: Option<String>,
+    pub symbol: Option<String>,
+    pub url: Option<String>,
+    pub chains: Vec<String>,
+    pub tvl: Option<f64>,
+    pub tvl_by_chain: Vec<GqlChainAllocation>,
+    pub change_1d_percent: Option<f64>,
+    pub change_7d_percent: Option<f64>,
+    pub market_cap: Option<f64>,
+}
+
+/// One point on a protocol's TVL history.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlTvlPoint {
+    pub timestamp: i64,
+    pub tvl: f64,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlCoinQuote {
+    /// Total value locked for this coin's protocol, provider-routed
+    /// (DefiLlama, keyless). Resolved only when selected.
+    async fn tvl(&self, ctx: &Context<'_>) -> Result<GqlProtocolTvl> {
+        let state = ctx.data::<AppState>()?;
+        exec_gql(crate::services::crypto::get_protocol_tvl(
+            &state.cache,
+            &state.providers,
+            &self.id,
+        ))
+        .await
+    }
+
+    /// TVL history for this coin's protocol, oldest first.
+    async fn tvl_history(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Max points per page; omitted = every fetched point in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlTvlPoint>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::crypto::get_protocol_tvl_history(
+            &state.cache,
+            &state.providers,
+            &self.id,
+        )
+        .await
+        .map_err(to_gql_error)?;
+        let points: Vec<GqlTvlPoint> = from_gql_json(json)?;
+        pagination::paginate(&points, first, after).await
+    }
 }
