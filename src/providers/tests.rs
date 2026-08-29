@@ -657,3 +657,144 @@ async fn route_with_parallel_overrides_a_sequential_default() {
     );
     assert_eq!(chart_calls_under(routes).await, (1, 1));
 }
+
+#[tokio::test]
+async fn an_empty_api_key_is_rejected_at_build() {
+    let err = crate::Providers::builder()
+        .api_key(Provider::Yahoo, "   ")
+        .build()
+        .await
+        .expect_err("an empty key is refused");
+    assert!(matches!(err, FinanceError::InvalidParameter { .. }));
+}
+
+#[test]
+fn debug_names_keyed_providers_without_their_keys() {
+    let builder = crate::Providers::builder().api_key(Provider::Yahoo, "super-secret");
+    let rendered = format!("{builder:?}");
+    assert!(rendered.contains("yahoo"));
+    assert!(!rendered.contains("super-secret"));
+}
+
+struct KeyObservingProvider {
+    id: Provider,
+    seen: std::sync::Mutex<Option<Option<String>>>,
+}
+
+impl KeyObservingProvider {
+    fn new(id: Provider) -> Self {
+        Self {
+            id,
+            seen: std::sync::Mutex::new(None),
+        }
+    }
+
+    fn seen(&self) -> Option<String> {
+        self.seen
+            .lock()
+            .expect("not poisoned")
+            .clone()
+            .expect("the adapter was called")
+    }
+}
+
+impl ProviderCore for KeyObservingProvider {
+    fn id(&self) -> Provider {
+        self.id
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for KeyObservingProvider {
+    async fn fetch_chart(
+        &self,
+        symbol: &str,
+        _: crate::Interval,
+        _: crate::TimeRange,
+    ) -> Result<crate::models::chart::Chart> {
+        let observed = crate::adapters::keys::scoped_key("fmp").map(|k| k.api_key);
+        *self.seen.lock().expect("not poisoned") = Some(observed);
+        tokio::task::yield_now().await;
+        Ok(crate::models::chart::Chart {
+            symbol: symbol.to_string(),
+            meta: Default::default(),
+            candles: Vec::new(),
+            interval: None,
+            range: None,
+            provider_id: Some(self.id),
+        })
+    }
+}
+
+impl ProviderAdapter for KeyObservingProvider {
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+}
+
+fn scoped_fmp(key: &str) -> crate::adapters::keys::KeyMap {
+    let mut keys = crate::adapters::keys::KeyMap::new();
+    keys.insert(
+        "fmp",
+        crate::adapters::keys::ScopedKey::new(key.to_string(), std::time::Duration::from_secs(30)),
+    );
+    keys
+}
+
+async fn drive_chart(set: &ProviderSet) {
+    set.fetch(Capability::CHART, |p| {
+        let p = p.clone();
+        async move {
+            p.as_chart()
+                .ok_or_else(|| p.not_supported(Operation::Chart))?
+                .fetch_chart("AAPL", crate::Interval::OneDay, crate::TimeRange::FiveDays)
+                .await
+        }
+    })
+    .await
+    .expect("a provider succeeds");
+}
+
+#[tokio::test]
+async fn dispatch_publishes_a_scoped_key_to_the_adapter() {
+    let provider = Arc::new(KeyObservingProvider::new(Provider::Yahoo));
+    let set = ProviderSet::new(
+        vec![provider.clone() as Arc<dyn ProviderAdapter>],
+        Routes::new(Fetch::Sequential),
+    )
+    .with_api_keys(scoped_fmp("scoped-key"));
+    drive_chart(&set).await;
+    assert_eq!(provider.seen(), Some("scoped-key".into()));
+}
+
+#[tokio::test]
+async fn dispatch_without_scoped_keys_leaves_the_adapter_unscoped() {
+    let provider = Arc::new(KeyObservingProvider::new(Provider::Yahoo));
+    let set = ProviderSet::new(
+        vec![provider.clone() as Arc<dyn ProviderAdapter>],
+        Routes::new(Fetch::Sequential),
+    );
+    drive_chart(&set).await;
+    assert_eq!(provider.seen(), None);
+}
+
+#[tokio::test]
+async fn parallel_dispatch_publishes_the_scope_to_every_provider() {
+    let first = Arc::new(KeyObservingProvider::new(Provider::Yahoo));
+    let second = Arc::new(KeyObservingProvider::new(Provider::Edgar));
+    let set = ProviderSet::new(
+        vec![
+            first.clone() as Arc<dyn ProviderAdapter>,
+            second.clone() as Arc<dyn ProviderAdapter>,
+        ],
+        Routes::new(Fetch::Sequential).route_with(
+            Capability::CHART,
+            [Provider::Yahoo, Provider::Edgar],
+            Fetch::Parallel,
+        ),
+    )
+    .with_api_keys(scoped_fmp("scoped-key"));
+    drive_chart(&set).await;
+    assert_eq!(first.seen(), Some("scoped-key".into()));
+    assert_eq!(second.seen(), Some("scoped-key".into()));
+}
