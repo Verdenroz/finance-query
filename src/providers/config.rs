@@ -258,6 +258,7 @@ pub struct ProvidersBuilder {
     config: ClientConfig,
     routes: Routes,
     retry: Option<RetryPolicy>,
+    api_keys: std::collections::HashMap<&'static str, String>,
 }
 
 impl std::fmt::Debug for ProvidersBuilder {
@@ -270,6 +271,10 @@ impl std::fmt::Debug for ProvidersBuilder {
             )
             .field("routes", &self.routes)
             .field("retry", &self.retry)
+            .field(
+                "api_keys",
+                &self.api_keys.keys().copied().collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -282,6 +287,7 @@ impl Default for ProvidersBuilder {
             config: ClientConfig::default(),
             routes: Routes::new(Fetch::Sequential),
             retry: None,
+            api_keys: std::collections::HashMap::new(),
         }
     }
 }
@@ -292,6 +298,18 @@ impl ProvidersBuilder {
     /// Use [`Fetch::Sequential`] or [`Fetch::Parallel`].
     pub fn fetch(mut self, mode: Fetch) -> Self {
         self.routes.fetch = mode;
+        self
+    }
+
+    /// Set `provider`'s API key for the [`Providers`] this builds, instead of
+    /// the process-global key from its `init` function.
+    ///
+    /// Two `Providers` can hold different keys for the same provider, and a
+    /// key can be replaced without restarting. Each distinct key gets its own
+    /// rate-limit budget. Providers left unset fall back to the process-global
+    /// key, then to the environment variable.
+    pub fn api_key(mut self, provider: Provider, key: impl Into<String>) -> Self {
+        self.api_keys.insert(provider.as_str(), key.into());
         self
     }
 
@@ -450,9 +468,28 @@ impl ProvidersBuilder {
             }
         }
         let lang = self.config.lang.clone();
-        let set = build_providers(&self.provider_ids, self.adapters, &self.config, self.routes)
-            .await?
-            .with_retry_policy(self.retry);
+        let mut keys = crate::adapters::keys::KeyMap::new();
+        for (provider_key, api_key) in self.api_keys {
+            if api_key.trim().is_empty() {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: provider_key.to_string(),
+                    reason: "API key must not be empty".to_string(),
+                });
+            }
+            keys.insert(
+                provider_key,
+                crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout),
+            );
+        }
+        // `initialize` builds each keyed client, so the scope has to cover
+        // construction as well as dispatch.
+        let set = crate::adapters::keys::scope(
+            Arc::new(keys.clone()),
+            build_providers(&self.provider_ids, self.adapters, &self.config, self.routes),
+        )
+        .await?
+        .with_api_keys(keys)
+        .with_retry_policy(self.retry);
         Ok(Providers {
             set: Arc::new(set),
             lang,

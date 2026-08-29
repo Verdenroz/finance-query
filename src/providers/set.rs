@@ -25,6 +25,9 @@ pub struct ProviderSet {
     /// behavior exactly: a `RateLimited` error is treated like any
     /// other failure and dispatch moves straight to the next candidate.
     retry_policy: Option<RetryPolicy>,
+    /// Keys scoped to this set, published for the duration of each dispatch
+    /// so keyed adapters prefer them over the process-global singletons.
+    api_keys: Arc<crate::adapters::keys::KeyMap>,
     /// In-memory recent success/failure tracker, always active (cheap to
     /// maintain) and surfaced on request via [`ProviderSet::health`].
     health: HealthTracker,
@@ -53,6 +56,7 @@ impl ProviderSet {
             yahoo_client: None,
             routes,
             retry_policy: None,
+            api_keys: Arc::new(crate::adapters::keys::KeyMap::new()),
             health: HealthTracker::new(),
         }
     }
@@ -62,6 +66,12 @@ impl ProviderSet {
     /// part of the public constructor.
     pub(crate) fn with_yahoo_client(mut self, client: Option<Arc<YahooClient>>) -> Self {
         self.yahoo_client = client;
+        self
+    }
+
+    /// Scope API keys to this set rather than the process-global singletons.
+    pub(crate) fn with_api_keys(mut self, keys: crate::adapters::keys::KeyMap) -> Self {
+        self.api_keys = Arc::new(keys);
         self
     }
 
@@ -175,6 +185,23 @@ impl ProviderSet {
     }
 
     pub(crate) async fn fetch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        if self.api_keys.is_empty() {
+            return self.dispatch(cap, f).await;
+        }
+        // Boxed so the scoped variant does not enlarge the future every
+        // dispatch builds; only callers that configure a key pay for it.
+        Box::pin(crate::adapters::keys::scope(
+            Arc::clone(&self.api_keys),
+            self.dispatch(cap, f),
+        ))
+        .await
+    }
+
+    async fn dispatch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
     where
         F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
