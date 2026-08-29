@@ -110,11 +110,19 @@ impl Providers {
     }
 
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
+    ///
+    /// Compiled in unconditionally. With no built-in provider for this
+    /// capability, register one with [`ProvidersBuilder::with_adapter`] or
+    /// enable its feature, or these calls return `NoProviderAvailable`.
     pub fn crypto(&self, id: impl Into<String>) -> crate::domains::CryptoCoin {
         crate::domains::CryptoCoin::with_providers(id.into().into(), Arc::clone(&self.set))
     }
 
     /// Create a [`ForexPair`](crate::ForexPair) handle backed by this provider set.
+    ///
+    /// Compiled in unconditionally. With no built-in provider for this
+    /// capability, register one with [`ProvidersBuilder::with_adapter`] or
+    /// enable its feature, or these calls return `NoProviderAvailable`.
     pub fn forex(
         &self,
         from: impl Into<String>,
@@ -128,6 +136,10 @@ impl Providers {
     }
 
     /// Create an [`EconomicIndicator`](crate::EconomicIndicator) handle backed by this provider set.
+    ///
+    /// Compiled in unconditionally. With no built-in provider for this
+    /// capability, register one with [`ProvidersBuilder::with_adapter`] or
+    /// enable its feature, or these calls return `NoProviderAvailable`.
     pub fn economic(&self, series_id: impl Into<String>) -> crate::domains::EconomicIndicator {
         crate::domains::EconomicIndicator::with_providers(
             series_id.into().into(),
@@ -184,6 +196,10 @@ impl Providers {
     /// [`Capability::ECONOMIC`](crate::Capability::ECONOMIC). Unlike
     /// [`economic`](Self::economic) it takes no series id — it is how you find
     /// one.
+    ///
+    /// Compiled in unconditionally. With no built-in provider for this
+    /// capability, register one with [`ProvidersBuilder::with_adapter`] or
+    /// enable its feature, or these calls return `NoProviderAvailable`.
     pub fn economic_catalog(&self) -> crate::domains::EconomicCatalog {
         crate::domains::EconomicCatalog::with_providers(Arc::clone(&self.set))
     }
@@ -192,8 +208,11 @@ impl Providers {
     ///
     /// Routes cross-market snapshots through
     /// [`Capability::QUOTE`](crate::Capability::QUOTE). Needs a provider whose
-    /// snapshot endpoint spans asset classes — currently Polygon only, which is
-    /// why the handle is gated on that feature.
+    /// snapshot endpoint spans asset classes, currently Polygon alone.
+    ///
+    /// Compiled in unconditionally. With no built-in provider for this
+    /// capability, register one with [`ProvidersBuilder::with_adapter`] or
+    /// enable its feature, or these calls return `NoProviderAvailable`.
     pub fn snapshot(&self) -> crate::domains::Snapshot {
         crate::domains::Snapshot::with_providers(Arc::clone(&self.set))
     }
