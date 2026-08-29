@@ -203,21 +203,53 @@ Capabilities supported by each provider. Providers that don't support a given ca
   and completes in **single-digit nanoseconds** — routing adds no measurable
   overhead to any call.
 
-| Capability | Yahoo | Polygon | FMP | Alpha Vantage | CoinGecko | FRED | EDGAR |
-|------------|:-----:|:-------:|:---:|:-------------:|:---------:|:----:|:-----:|
-| Quote | ✓ | ✓ | ✓ | ✓ | — | — | — |
-| Chart | ✓ | ✓ | ✓ | ✓ | — | — | — |
-| Fundamentals | ✓ | ✓ | ✓ | ✓ | — | — | — |
-| Corporate | ✓ | ✓ | ✓ | ✓ | — | — | — |
-| Options | ✓ | ✓ | — | ✓ | — | — | — |
-| Crypto | — | ✓ | ✓ | ✓ | ✓ | — | — |
-| Economic | — | ✓ | — | ✓ | — | ✓ | — |
-| Forex | — | ✓ | ✓ | ✓ | — | — | — |
-| Indices | — | ✓ | ✓ | — | — | — | — |
-| Futures | — | ✓ | — | — | — | — | — |
-| Commodities | — | — | ✓ | ✓ | — | — | — |
-| Filings | — | ✓ | — | — | — | — | ✓ |
-| Sentiment | — | ✓ | — | — | — | — | — |
+This table is printed by the program below rather than maintained by hand, so
+it cannot fall behind `Provider::capabilities()`.
+
+```rust capture-output covers=finance_query::providers::Provider
+use finance_query::{Capability, Provider};
+
+println!("| Provider | Capabilities |");
+println!("|----------|--------------|");
+for provider in Provider::all() {
+    let declared: Vec<&str> = Capability::all()
+        .filter(|c| provider.capabilities().contains(*c))
+        .map(Capability::name)
+        .collect();
+    let declared = match declared.is_empty() {
+        true => "none".to_string(),
+        false => declared.join(", "),
+    };
+    println!("| `{}` | {declared} |", provider.as_str());
+}
+```
+
+```text soothfast-output
+| Provider | Capabilities |
+|----------|--------------|
+| `yahoo` | quote, chart, fundamentals, corporate, options, discovery, calendar, market, indices, futures, commodities |
+| `polygon` | quote, chart, fundamentals, corporate, options, discovery, crypto, economic, calendar, forex, indices, futures, filings |
+| `fmp` | quote, chart, fundamentals, corporate, discovery, crypto, calendar, market, forex, indices, commodities, filings |
+| `alphavantage` | quote, chart, fundamentals, corporate, options, discovery, crypto, economic, calendar, market, forex, commodities, filings |
+| `coingecko` | chart, discovery, crypto |
+| `fred` | economic, calendar |
+| `worldbank` | economic |
+| `fiscaldata` | economic |
+| `bls` | economic |
+| `frankfurter` | forex |
+| `binance` | chart, crypto |
+| `kraken` | chart, crypto |
+| `finra` | fundamentals |
+| `defillama` | crypto |
+| `gdelt` | corporate, crypto, forex |
+| `cftc` | futures |
+| `nasdaq` | calendar |
+| `wikipedia` | indices |
+| `congresstrades` | filings |
+| `edgar` | corporate, discovery, filings |
+| `local_market_calendar` | calendar |
+| `local_exchange` | discovery |
+```
 
 ## Providers Factory (Shared Connections)
 
