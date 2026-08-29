@@ -943,6 +943,20 @@ fn route_filings_get_risk_factors() {}
 )]
 fn route_screener_post_custom_screener() {}
 
+/// Run a strategy backtest
+///
+/// Implements `handlers::backtest::run_backtest`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "postBacktest",
+    method = "POST",
+    path = "/v2/backtest/{symbol}",
+    request = "BacktestRequest",
+    response = "GqlBacktestResult"
+)]
+fn route_backtest_run_backtest() {}
+
 /// Get screener results
 ///
 /// Implements `handlers::screener::get_screeners`.
@@ -1168,6 +1182,16 @@ fn route_feeds_stream_ws_feeds_stream_handler_send() {}
 // in graphql/query/ticker_*.rs) and the 4 nested pagination resolvers in
 // graphql/types/holders.rs are outside this — a real GraphQL schema-graph
 // walk would be needed to cover those; not attempted here.
+
+/// Implements `graphql::query::root_backtest::backtest` (field `backtest`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "backtest",
+    method = "QUERY",
+    path = "backtest"
+)]
+fn route_gql_root_backtest_backtest() {}
 
 /// Implements `graphql::query::root_batch::ticker` (field `ticker`).
 #[allow(dead_code)]

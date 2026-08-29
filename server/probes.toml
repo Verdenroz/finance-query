@@ -31,6 +31,11 @@ assert = [
 # excludes. Shape validation stays off until the generated spec models the
 # REST default shape.
 
+# POST routes are not probed and cannot be: `cargo soothfast spec probe`
+# writes a literal `GET {path}` request and its probe entry has no method or
+# body field. That covers `/v2/screeners/custom` and `/v2/backtest/{symbol}`,
+# whose request contracts are covered by unit tests in their handlers instead.
+
 [[probe]]
 name = "quotes-batch"
 shape = false

@@ -7,6 +7,7 @@
 //! union of all fields — keeping each piece to a handful of fields keeps that
 //! frame small regardless of how large the schema grows overall.
 
+mod root_backtest;
 mod root_batch;
 mod root_commodities;
 mod root_discovery;
@@ -21,6 +22,7 @@ mod ticker_holders;
 
 use async_graphql::{ErrorExtensions, MergedObject};
 
+use root_backtest::RootBacktestQuery;
 use root_batch::RootBatchQuery;
 use root_commodities::RootCommodityQuery;
 use root_discovery::RootDiscoveryQuery;
@@ -108,6 +110,7 @@ fn screener_error_to_gql(err: crate::services::screener::ScreenerError) -> async
 
 #[derive(MergedObject, Default)]
 pub struct QueryRoot(
+    RootBacktestQuery,
     RootBatchQuery,
     RootMarketQuery,
     RootCommodityQuery,

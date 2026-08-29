@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod backtest;
 pub mod batch;
 pub mod calendar;
 pub mod chart;

@@ -1078,3 +1078,55 @@ pub const INDUSTRY_COMPOSITE_FIELDS: &[(&str, &str)] = &[
         "{ id title provider reportDate reportType investmentRating targetPrice targetPriceStatus }",
     ),
 ];
+
+// ── Backtesting ─────────────────────────────────────────────────────────────
+
+/// Valid GraphQL field names for `GqlBacktestResult` (top-level `backtest`
+/// root field).
+pub const GQL_BACKTEST_VALID_FIELDS: &[&str] = &[
+    "symbol",
+    "strategyName",
+    "startTimestamp",
+    "endTimestamp",
+    "initialCapital",
+    "finalEquity",
+    "maxLeverageUsed",
+    "metrics",
+    "diagnostics",
+    "equityCurve",
+    "trades",
+];
+
+/// Full field set for `GqlBacktestMetrics` — expanded whole when `metrics`
+/// is selected, matching every other composite boundary here.
+pub const GQL_BACKTEST_METRICS_FIELDS: &str = "{ \
+    totalReturnPct annualizedReturnPct sharpeRatio sortinoRatio \
+    maxDrawdownPct maxDrawdownDuration winRate profitFactor \
+    avgTradeReturnPct avgWinPct avgLossPct avgTradeDuration totalTrades \
+    winningTrades losingTrades largestWin largestLoss maxConsecutiveWins \
+    maxConsecutiveLosses calmarRatio totalCommission totalFinancingCost \
+    longTrades shortTrades totalSignals executedSignals avgWinDuration \
+    avgLossDuration timeInMarketPct maxIdlePeriod totalDividendIncome \
+    kellyCriterion sqn expectancy omegaRatio tailRatio recoveryFactor \
+    ulcerIndex serenityRatio \
+}";
+
+/// Full field set for one `GqlTrade` node, inside its connection wrapper.
+pub const GQL_BACKTEST_TRADE_FIELDS: &str = "{ edges { node { \
+    side entryTimestamp exitTimestamp entryPrice exitPrice quantity \
+    entryQuantity commission transactionTax pnl returnPct dividendIncome \
+    unreinvestedDividends financingCost tags isPartial scaleSequence \
+    entrySignal { direction strength timestamp price reason tags } \
+    exitSignal { direction strength timestamp price reason tags } \
+} } pageInfo { hasNextPage endCursor } }";
+
+/// `equityCurve` and `trades` are Relay connections and paginate separately.
+pub const BACKTEST_COMPOSITE_FIELDS: &[(&str, &str)] = &[
+    ("metrics", GQL_BACKTEST_METRICS_FIELDS),
+    (
+        "equityCurve",
+        "{ edges { node { timestamp equity drawdownPct } } \
+           pageInfo { hasNextPage endCursor } }",
+    ),
+    ("trades", GQL_BACKTEST_TRADE_FIELDS),
+];
