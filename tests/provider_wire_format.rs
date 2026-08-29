@@ -57,11 +57,10 @@ fn the_documented_id_deserializes() {
     );
 }
 
-/// `serde_json::from_str` on an unescaped literal is the one input shape that
-/// hands the deserializer a borrowed `&str`. Deserializing through anything
-/// else must work too.
 #[test]
 fn deserializes_from_inputs_that_cannot_borrow() {
+    // from_str on an unescaped literal is the one shape that hands the
+    // deserializer a borrowed &str, so testing only that proves nothing.
     assert_eq!(
         serde_json::from_reader::<_, Provider>(std::io::Cursor::new(b"\"yahoo\"")).unwrap(),
         Provider::Yahoo
@@ -96,11 +95,10 @@ fn serialized_form_round_trips_with_itself() {
     }
 }
 
-/// Interning is process-wide and append-only, so these ids must not appear in
-/// any other test: the "unknown before registration" assertion would then
-/// depend on which test ran first.
 #[test]
 fn a_custom_provider_round_trips_once_registered() {
+    // The registry is process-wide and append-only, so these ids must appear
+    // in no other test or the "unknown before registration" check races.
     assert_eq!(Provider::from_id_str("wire-format-round-trip"), None);
     assert!(serde_json::from_str::<Provider>("\"wire-format-round-trip\"").is_err());
 

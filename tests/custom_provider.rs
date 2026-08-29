@@ -137,7 +137,6 @@ async fn an_unserved_capability_names_the_custom_provider() {
     );
 }
 
-/// The lower-level path: assemble a set by hand and wrap it, without the builder.
 #[tokio::test]
 async fn a_hand_built_set_reaches_a_domain_handle() {
     let set = ProviderSet::new(

@@ -45,12 +45,19 @@ impl Capability {
     pub const FILINGS: Self = Self(1 << 14);
 
     /// The empty capability set — starting point for derived accumulation.
-    pub(crate) const NONE: Self = Self(0);
+    pub const NONE: Self = Self(0);
 
     /// Const-context union, for capability-set consts ([`std::ops::BitOr`]
     /// isn't const-callable).
-    pub(crate) const fn union(self, other: Self) -> Self {
+    pub const fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
+    }
+
+    /// Every single-bit capability, in declaration order.
+    ///
+    /// Combined sets are not included: this yields exactly the constants above.
+    pub fn all() -> impl Iterator<Item = Self> {
+        Self::ALL.iter().map(|(capability, _)| *capability)
     }
 
     /// Returns `true` if this capability set includes all bits in `other`.
@@ -127,7 +134,10 @@ impl Capability {
     /// Purely informational — used to make [`crate::FinanceError::NotSupported`]/
     /// [`crate::FinanceError::NoProviderAvailable`] point at what would need to
     /// be enabled (feature flag) and/or routed (`Providers::builder().route(...)`).
-    pub(crate) fn candidate_providers(self) -> Vec<Provider> {
+    ///
+    /// Built-ins only. A registered custom provider never appears here, since
+    /// [`Provider::capabilities`] cannot see an adapter's accessors.
+    pub fn candidate_providers(self) -> Vec<Provider> {
         Provider::all()
             .into_iter()
             .filter(|p| p.capabilities().contains(self))
