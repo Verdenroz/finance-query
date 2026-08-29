@@ -275,6 +275,97 @@ fn route_mcp_get_futures() {}
 )]
 fn route_mcp_get_forex() {}
 
+/// A company's identity/classification profile (name, description, asset type, exchange, currency, country, sector, industry, market capitalization).
+///
+/// Implements `tools::FinanceTools::get_company_profile`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_company_profile",
+    method = "TOOL",
+    path = "get_company_profile",
+    params = "CompanyProfileParams"
+)]
+fn route_mcp_get_company_profile() {}
+
+/// Congressional trading disclosures for a symbol, FMP when keyed and keyless House PTR filings otherwise.
+///
+/// Implements `tools::FinanceTools::get_congressional_trades`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_congressional_trades",
+    method = "TOOL",
+    path = "get_congressional_trades",
+    params = "CongressionalTradesParams"
+)]
+fn route_mcp_get_congressional_trades() {}
+
+/// Market-wide crypto news (currently FMP only, requires FMP_API_KEY).
+///
+/// Implements `tools::FinanceTools::get_crypto_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_crypto_news",
+    method = "TOOL",
+    path = "get_crypto_news",
+    params = "CryptoNewsParams"
+)]
+fn route_mcp_get_crypto_news() {}
+
+/// A stock's earnings-surprise history (actual vs. estimated EPS).
+///
+/// Implements `tools::FinanceTools::get_earnings_surprises`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_earnings_surprises",
+    method = "TOOL",
+    path = "get_earnings_surprises",
+    params = "EarningsSurprisesParams"
+)]
+fn route_mcp_get_earnings_surprises() {}
+
+/// An earnings call transcript for a symbol, latest when quarter and year are omitted.
+///
+/// Implements `tools::FinanceTools::get_earnings_transcript`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_earnings_transcript",
+    method = "TOOL",
+    path = "get_earnings_transcript",
+    params = "EarningsTranscriptParams"
+)]
+fn route_mcp_get_earnings_transcript() {}
+
+/// Fails-to-deliver records for a symbol, FMP when keyed and keyless EDGAR otherwise.
+///
+/// Implements `tools::FinanceTools::get_fails_to_deliver`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_fails_to_deliver",
+    method = "TOOL",
+    path = "get_fails_to_deliver",
+    params = "FailsToDeliverParams"
+)]
+fn route_mcp_get_fails_to_deliver() {}
+
+/// Market-wide forex news (currently FMP only, requires FMP_API_KEY).
+///
+/// Implements `tools::FinanceTools::get_forex_news`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_forex_news",
+    method = "TOOL",
+    path = "get_forex_news",
+    params = "ForexNewsParams"
+)]
+fn route_mcp_get_forex_news() {}
+
 /// Get an index's current constituent list, provider-routed (Wikipedia, S&P 500 only).
 ///
 /// Implements `tools::FinanceTools::get_index_constituents`.
