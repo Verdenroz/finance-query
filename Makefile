@@ -166,7 +166,7 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	@echo "$(GREEN)Verifying captured doc example output...$(NC)"
 	@$(MAKE) --no-print-directory docs-capture-check
 	@echo "$(GREEN)Checking public API doc coverage...$(NC)"
-	$(SOOTHFAST) coverage docs -p finance-query --features full --min 95
+	$(SOOTHFAST) coverage docs -p finance-query --features full --min 100
 	@echo "$(GREEN)Reconciling pricing.proto against PricingData...$(NC)"
 	$(SOOTHFAST) spec check-proto -p finance-query --proto proto/pricing.proto \
 		--message PricingData --source src/streaming/pricing.rs --struct PricingData

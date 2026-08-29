@@ -1196,6 +1196,7 @@ impl Ticker {
 }
 
 super::macros::define_quote_accessors! {
+    /// Regular, pre- and post-market price, plus the day's range and volume.
     price -> Price, price,
     summary_detail -> SummaryDetail, summary_detail,
     financial_data -> FinancialData, financial_data,
