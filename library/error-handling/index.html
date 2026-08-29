@@ -261,6 +261,7 @@ try { var t = localStorage.getItem("soothfast-theme");
 <tr><td><code>TranslationError</code></td><td>Translation backend failure (<code>translation</code> feature)</td><td>✗</td></tr>
 <tr><td><code>NotSupported</code></td><td>Provider doesn't support the requested operation</td><td>✗</td></tr>
 <tr><td><code>NoProviderAvailable</code></td><td>No configured provider supports this operation</td><td>✗</td></tr>
+<tr><td><code>ProviderNotRegistered</code></td><td>A route names a provider id no adapter was registered for. Raised by <code>build()</code>, so a misconfigured route fails at startup rather than on the first request</td><td>✗</td></tr>
 </tbody>
 </table></div>
 <h2 id="checking-error-types">Checking Error Types<a class="anchor" href="#checking-error-types" aria-label="Link to this section">#</a></h2>

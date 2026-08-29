@@ -267,13 +267,16 @@ try { var t = localStorage.getItem("soothfast-theme");
 <ol>
 <li>Downloading the current year's bulk index archive (<code>{year}FD.zip</code>), a tab-delimited list of every filing that year, and filtering to Periodic Transaction Reports (<code>FilingType == &quot;P&quot;</code>).</li>
 <li>Sorting by filing date (newest first) and taking the most recent 120 filings, topping up with the prior year's archive if the current year hasn't accumulated that many yet (early January).</li>
-<li>Fetching each filing's PDF, extracting its text (<code>pdf_extract</code>), and keeping only the transaction rows whose ticker matches the requested symbol.</li>
+<li>Fetching each filing's PDF, extracting its text, and keeping only the transaction rows whose ticker matches the requested symbol.</li>
 </ol>
 <div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Bounded recency window, not a full historical search</p>
 <p>Only the most recent 120 PTR filings across all members of the House are scanned per request. This is a bounded-cost recency window, not an index over the full historical archive. A symbol traded only in an older filing beyond that window won't appear.</p>
 </div>
 <div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Scanned filings are silently skipped</p>
-<p>Only filings typed through fd.house.gov's e-filing system carry a text layer <code>pdf_extract</code> can read. Older or hand-signed PTRs are scanned images; those produce zero matching transactions rather than an error, since this adapter does not OCR them.</p>
+<p>Only filings typed through fd.house.gov's e-filing system carry a text layer this adapter can read. Older or hand-signed PTRs are scanned images; those produce zero matching transactions rather than an error, since this adapter does not OCR them. Across a 240-filing sample spanning 2021-2026, 12.5% had no text layer and the rest extracted without error; the ignored <code>measure_scanned_filing_rate</code> test reproduces the figure.</p>
+</div>
+<div class="adm adm-info"><p class="adm-title"><span class="adm-kind">info</span> · PDF text extraction carries no dependency</p>
+<p>Text comes out of a purpose-built extractor covering the slice fd.house.gov emits: PDF 1.4, a classic cross-reference table, RC4-128 encryption under an empty user password, and CIDFontType2 subsets carrying <code>ToUnicode</code> CMaps. Column positions come from the text and graphics matrices plus the <code>/W</code> glyph advances the font already declares, so no font program is parsed. A filing outside that shape is reported rather than read as empty, since zero rows would otherwise be indistinguishable from a member disclosing no trades.</p>
 </div>
 <h2 id="what-the-fields-mean">What the Fields Mean<a class="anchor" href="#what-the-fields-mean" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
