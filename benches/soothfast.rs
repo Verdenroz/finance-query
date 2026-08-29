@@ -2192,7 +2192,14 @@ fn news_titles() -> Vec<String> {
     news.into_iter().map(|n| n.title).collect()
 }
 
-#[bench(group = "sentiment", setup = news_titles, covers = "finance_query::analyze_sentiment")]
+// Small enough that its instruction count tracks codegen-unit composition:
+// reshuffling unrelated modules moves it ~5% without touching sentiment code.
+#[bench(
+    group = "sentiment",
+    setup = news_titles,
+    covers = "finance_query::analyze_sentiment",
+    tolerance = "8%"
+)]
 fn score_news(titles: &[String]) {
     keep(
         titles
