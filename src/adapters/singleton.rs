@@ -77,10 +77,9 @@ macro_rules! provider_singleton_state {
 /// Generates `build_client()` and `build_test_client()` for a provider whose
 /// client is constructed via `$builder::new(api_key).timeout(t).build_with_limiter(limiter)`.
 ///
-/// `build_client()` falls back to reading `$env_var` if [`init`]/
-/// [`init_with_timeout`] was never called (convenience for scripts/tests that
-/// only set the env var), then reads the shared singleton state back out to
-/// build a fresh client. Requires [`provider_singleton_state!`] to have been
+/// `build_client()` resolves the key in order: a key scoped to the running
+/// dispatch (see [`crate::adapters::keys`]), the singleton set by [`init`]/
+/// [`init_with_timeout`], then `$env_var`. It then builds a fresh client. Requires [`provider_singleton_state!`] to have been
 /// invoked first in the same module (uses its `$struct_name`/`$static_name`).
 #[allow(unused_macros)]
 macro_rules! provider_build_client {
@@ -98,6 +97,12 @@ macro_rules! provider_build_client {
         ///
         /// Used internally by all query functions.
         pub(crate) fn build_client() -> crate::error::Result<$client_ty> {
+            if let Some(scoped) = crate::adapters::keys::scoped_key($provider_key) {
+                let limiter = scoped.limiter($provider_key, $rate_const);
+                return <$builder>::new(&scoped.api_key)
+                    .timeout(scoped.timeout)
+                    .build_with_limiter(limiter);
+            }
             if $static_name.get().is_none()
                 && let Ok(key) = ::std::env::var($env_var)
                 && !key.trim().is_empty()
