@@ -2,7 +2,7 @@ use super::BacktestResult;
 use super::stats::{calculate_periodic_returns, calculate_risk_ratios};
 
 impl BacktestResult {
-    // ─── Phase 2 — Rolling & Temporal Analysis ───────────────────────────────
+    // ─── Rolling & temporal analysis ─────────────────────────────────────────
 
     /// Rolling Sharpe ratio over a sliding window of equity-curve bars.
     ///
@@ -93,7 +93,7 @@ mod tests {
     use super::super::fixtures::{equity_point, make_result, make_trade};
     use crate::backtesting::position::Trade;
 
-    // ─── Phase 2 — Rolling & Temporal Analysis ───────────────────────────────
+    // ─── Rolling & temporal analysis ─────────────────────────────────────────
 
     // ── rolling_sharpe ────────────────────────────────────────────────────────
 

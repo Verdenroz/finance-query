@@ -101,7 +101,7 @@ pub struct BacktestConfig {
     /// benchmark metrics.
     pub bars_per_year: f64,
 
-    // ── Phase 5: Enhanced Broker Simulation ──────────────────────────────────
+    // ── Broker simulation ────────────────────────────────────────────────────
     /// Symmetric bid-ask spread as a fraction of price (0.0 – 1.0).
     ///
     /// On each fill, **half** the spread widens the entry price adversely and

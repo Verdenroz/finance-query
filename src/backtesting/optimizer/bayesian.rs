@@ -255,7 +255,7 @@ impl BayesianSearch {
         let mut n_evaluations: usize = 0;
         let mut best_score: Option<f64> = None;
 
-        // ── Phase 1: Latin Hypercube initial sampling ──────────────────────────
+        // ── Latin Hypercube initial sampling ───────────────────────────────────
 
         for norm_point in latin_hypercube_sample(n_init, d, &mut rng) {
             n_evaluations += 1;
@@ -280,7 +280,7 @@ impl BayesianSearch {
             }
         }
 
-        // ── Phase 2: Sequential surrogate-guided search ────────────────────────
+        // ── Sequential surrogate-guided search ─────────────────────────────────
 
         for _ in 0..max_eval.saturating_sub(n_init) {
             let norm_point = if observations.len() < 2 {
