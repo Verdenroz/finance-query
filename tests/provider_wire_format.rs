@@ -96,28 +96,38 @@ fn serialized_form_round_trips_with_itself() {
     }
 }
 
-/// Interning is process-wide, so a custom id round-trips once registered and
-/// is unknown before that.
+/// Interning is process-wide and append-only, so these ids must not appear in
+/// any other test: the "unknown before registration" assertion would then
+/// depend on which test ran first.
 #[test]
 fn a_custom_provider_round_trips_once_registered() {
-    assert_eq!(Provider::from_id_str("my-source"), None);
-    assert!(serde_json::from_str::<Provider>("\"my-source\"").is_err());
+    assert_eq!(Provider::from_id_str("wire-format-round-trip"), None);
+    assert!(serde_json::from_str::<Provider>("\"wire-format-round-trip\"").is_err());
 
-    let custom = Provider::custom("my-source");
-    assert_eq!(json(custom), "\"my-source\"");
-    assert_eq!(custom.as_str(), "my-source");
-    assert_eq!(custom.to_string(), "my-source");
-    assert_eq!(Provider::from_id_str("my-source"), Some(custom));
+    let custom = Provider::custom("wire-format-round-trip");
+    assert_eq!(json(custom), "\"wire-format-round-trip\"");
+    assert_eq!(custom.as_str(), "wire-format-round-trip");
+    assert_eq!(custom.to_string(), "wire-format-round-trip");
     assert_eq!(
-        serde_json::from_str::<Provider>("\"my-source\"").unwrap(),
+        Provider::from_id_str("wire-format-round-trip"),
+        Some(custom)
+    );
+    assert_eq!(
+        serde_json::from_str::<Provider>("\"wire-format-round-trip\"").unwrap(),
         custom
     );
 }
 
 #[test]
 fn interning_the_same_id_twice_yields_the_same_value() {
-    assert_eq!(Provider::custom("repeated"), Provider::custom("repeated"));
-    assert_ne!(Provider::custom("repeated"), Provider::custom("distinct"));
+    assert_eq!(
+        Provider::custom("wire-format-same"),
+        Provider::custom("wire-format-same")
+    );
+    assert_ne!(
+        Provider::custom("wire-format-same"),
+        Provider::custom("wire-format-other")
+    );
 }
 
 #[test]
