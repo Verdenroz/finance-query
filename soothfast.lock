@@ -14,7 +14,7 @@
     "finance_query::constants::sectors::Sector": "4874780d34cbf6dc",
     "finance_query::edgar": "545a80b885c504e8",
     "finance_query::error::ErrorCategory": "097d7603a22d9d23",
-    "finance_query::error::FinanceError": "f01af11e96248242",
+    "finance_query::error::FinanceError": "875dbaf42e776d70",
     "finance_query::feeds::FeedEntry": "98f0206442e5b875",
     "finance_query::indicators::bollinger::BollingerBands": "4551d0602a01f279",
     "finance_query::indicators::macd::MacdResult": "910bbe221282af50",

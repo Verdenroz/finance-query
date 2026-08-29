@@ -32,6 +32,7 @@ Finance Query uses a single `FinanceError` enum for all error cases. Every libra
 | `TranslationError` | Translation backend failure (`translation` feature) | ✗ |
 | `NotSupported` | Provider doesn't support the requested operation | ✗ |
 | `NoProviderAvailable` | No configured provider supports this operation | ✗ |
+| `ProviderNotRegistered` | A route names a provider id no adapter was registered for. Raised by `build()`, so a misconfigured route fails at startup rather than on the first request | ✗ |
 
 <!-- /soothfast:bind -->
 
