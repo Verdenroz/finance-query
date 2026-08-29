@@ -318,7 +318,9 @@ pub use providers::{
     FilingsProvider, FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider,
     OptionsProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
-pub use providers::{Capability, Fetch, Operation, Provider, ProviderHealth, RetryPolicy};
+pub use providers::{
+    Capability, CustomId, Fetch, Operation, Provider, ProviderHealth, RetryPolicy,
+};
 
 /// The attribute every capability trait implementation needs.
 ///
