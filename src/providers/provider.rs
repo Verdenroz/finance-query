@@ -317,14 +317,22 @@ pub struct CustomId(u16);
 impl CustomId {
     /// The id this index was interned from.
     pub fn as_str(self) -> &'static str {
-        // Indices only come from `intern`, which never removes an entry.
-        registry()
-            .read()
-            .ok()
-            .and_then(|ids| ids.get(self.0 as usize).copied())
-            .unwrap_or("custom")
+        self.get().unwrap_or(UNKNOWN_CUSTOM)
+    }
+
+    fn get(self) -> Option<&'static str> {
+        let ids = registry().read().ok()?;
+        ids.get(self.0 as usize).copied()
     }
 }
+
+/// Only reachable past [`MAX_CUSTOM_IDS`], where `intern` stops issuing new
+/// indices rather than wrapping onto another provider's identity.
+const UNKNOWN_CUSTOM: &str = "custom:overflow";
+
+/// `CustomId` is a `u16` so that `Provider` fits the padding every model
+/// already had; a wider index grows `Candle` and its siblings.
+const MAX_CUSTOM_IDS: usize = u16::MAX as usize;
 
 fn registry() -> &'static std::sync::RwLock<Vec<&'static str>> {
     static IDS: std::sync::OnceLock<std::sync::RwLock<Vec<&'static str>>> =
@@ -337,14 +345,14 @@ fn intern(id: &'static str) -> CustomId {
         Ok(ids) => ids,
         Err(poisoned) => poisoned.into_inner(),
     };
-    let index = match ids.iter().position(|existing| *existing == id) {
-        Some(index) => index,
-        None => {
-            ids.push(id);
-            ids.len() - 1
-        }
-    };
-    CustomId(index as u16)
+    if let Some(index) = ids.iter().position(|existing| *existing == id) {
+        return CustomId(index as u16);
+    }
+    if ids.len() >= MAX_CUSTOM_IDS {
+        return CustomId(u16::MAX);
+    }
+    ids.push(id);
+    CustomId((ids.len() - 1) as u16)
 }
 
 fn lookup(id: &str) -> Option<CustomId> {
