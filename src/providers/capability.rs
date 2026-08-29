@@ -5,7 +5,8 @@ use super::Provider;
 /// Capability bits that a provider can declare.
 ///
 /// Route a capability to specific providers using `.route(Capability::QUOTE, [Provider::Fmp])`.
-/// If no route is configured for a capability, all providers declaring that capability are used.
+/// If no route is configured for a capability, only Yahoo is used, or EDGAR
+/// then Yahoo for [`Capability::FILINGS`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Capability(u32);
 
