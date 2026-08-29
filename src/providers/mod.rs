@@ -77,7 +77,7 @@ pub use capability::Capability;
 #[allow(unused_imports)] // each is used only by a feature-gated provider bridge
 pub(crate) use convert::{build_financial_statement, build_options, range_to_dates};
 pub use operation::Operation;
-pub use provider::Provider;
+pub use provider::{CustomId, Provider};
 pub use routes::{Fetch, Routes};
 pub use set::ProviderSet;
 
