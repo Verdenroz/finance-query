@@ -832,6 +832,22 @@ class Client:
             into=list[models.GqlExchange],
         )
 
+    def get_executive_compensation(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlExecutiveCompensation]:
+        """Disclosed executive compensation by year."""
+        return self._transport.request(
+            "GET",
+            f"/v2/executive-compensation/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlExecutiveCompensation],
+        )
+
     def get_fails_to_deliver(
         self,
         symbol: str,
@@ -1095,6 +1111,22 @@ class Client:
 
         return SyncPager(fetch, models.GqlNews)
 
+    def get_grading_actions(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlGradingAction]:
+        """Provider-routed analyst upgrades and downgrades."""
+        return self._transport.request(
+            "GET",
+            f"/v2/grading-actions/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlGradingAction],
+        )
+
     def get_holders(
         self,
         symbol: str,
@@ -1204,6 +1236,20 @@ class Client:
             f"/v2/industries/{path_seg(industry)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlIndustryData,
+        )
+
+    def get_key_metrics_ttm(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlKeyMetricsTtm:
+        """Trailing-twelve-month key metrics."""
+        return self._transport.request(
+            "GET",
+            f"/v2/key-metrics-ttm/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlKeyMetricsTtm,
         )
 
     def get_market_calendar(
@@ -1351,6 +1397,20 @@ class Client:
             into=models.GqlPriceTargetConsensus,
         )
 
+    def get_price_target_summary(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlPriceTargetSummary:
+        """Analyst price-target counts and averages per window."""
+        return self._transport.request(
+            "GET",
+            f"/v2/price-target-summary/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlPriceTargetSummary,
+        )
+
     def get_quote(
         self,
         symbol: str,
@@ -1434,6 +1494,20 @@ class Client:
             f"/v2/rating-consensus/{path_seg(symbol)}",
             query=query_of({"fields": fields}),
             into=models.GqlRatingConsensus,
+        )
+
+    def get_ratios_ttm(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlFinancialRatiosTtm:
+        """Trailing-twelve-month financial ratios."""
+        return self._transport.request(
+            "GET",
+            f"/v2/ratios-ttm/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlFinancialRatiosTtm,
         )
 
     def get_recommendations(
@@ -1538,6 +1612,22 @@ class Client:
             "/v2/sector-performance",
             query=query_of({"fields": fields}),
             into=list[models.GqlMarketSectorPerformance],
+        )
+
+    def get_short_volume(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlShortVolume]:
+        """Daily FINRA short-sale volume for a symbol (keyless)."""
+        return self._transport.request(
+            "GET",
+            f"/v2/short-volume/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlShortVolume],
         )
 
     def get_spark(
@@ -2452,6 +2542,22 @@ class AsyncClient:
             into=list[models.GqlExchange],
         )
 
+    async def get_executive_compensation(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlExecutiveCompensation]:
+        """Disclosed executive compensation by year."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/executive-compensation/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlExecutiveCompensation],
+        )
+
     async def get_fails_to_deliver(
         self,
         symbol: str,
@@ -2715,6 +2821,22 @@ class AsyncClient:
 
         return AsyncPager(fetch, models.GqlNews)
 
+    async def get_grading_actions(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlGradingAction]:
+        """Provider-routed analyst upgrades and downgrades."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/grading-actions/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlGradingAction],
+        )
+
     async def get_holders(
         self,
         symbol: str,
@@ -2824,6 +2946,20 @@ class AsyncClient:
             f"/v2/industries/{path_seg(industry)}",
             query=query_of({"fields": fields, "format": format, "lang": lang}),
             into=models.GqlIndustryData,
+        )
+
+    async def get_key_metrics_ttm(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlKeyMetricsTtm:
+        """Trailing-twelve-month key metrics."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/key-metrics-ttm/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlKeyMetricsTtm,
         )
 
     async def get_market_calendar(
@@ -2971,6 +3107,20 @@ class AsyncClient:
             into=models.GqlPriceTargetConsensus,
         )
 
+    async def get_price_target_summary(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlPriceTargetSummary:
+        """Analyst price-target counts and averages per window."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/price-target-summary/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlPriceTargetSummary,
+        )
+
     async def get_quote(
         self,
         symbol: str,
@@ -3054,6 +3204,20 @@ class AsyncClient:
             f"/v2/rating-consensus/{path_seg(symbol)}",
             query=query_of({"fields": fields}),
             into=models.GqlRatingConsensus,
+        )
+
+    async def get_ratios_ttm(
+        self,
+        symbol: str,
+        *,
+        fields: str | None = None,
+    ) -> models.GqlFinancialRatiosTtm:
+        """Trailing-twelve-month financial ratios."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/ratios-ttm/{path_seg(symbol)}",
+            query=query_of({"fields": fields}),
+            into=models.GqlFinancialRatiosTtm,
         )
 
     async def get_recommendations(
@@ -3158,6 +3322,22 @@ class AsyncClient:
             "/v2/sector-performance",
             query=query_of({"fields": fields}),
             into=list[models.GqlMarketSectorPerformance],
+        )
+
+    async def get_short_volume(
+        self,
+        symbol: str,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlShortVolume]:
+        """Daily FINRA short-sale volume for a symbol (keyless)."""
+        return await self._transport.request(
+            "GET",
+            f"/v2/short-volume/{path_seg(symbol)}",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlShortVolume],
         )
 
     async def get_spark(

@@ -1718,6 +1718,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/executive-compensation/{symbol}":
+    get:
+      operationId: getExecutiveCompensation
+      summary: Disclosed executive compensation by year.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlExecutiveCompensation"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/fear-and-greed:
     get:
       operationId: getFearAndGreed
@@ -2609,6 +2676,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/grading-actions/{symbol}":
+    get:
+      operationId: getGradingActions
+      summary: Provider-routed analyst upgrades and downgrades.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlGradingAction"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/health:
     get:
       operationId: healthCheck
@@ -3059,6 +3193,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlIndustryData"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/key-metrics-ttm/{symbol}":
+    get:
+      operationId: getKeyMetricsTtm
+      summary: Trailing-twelve-month key metrics.
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlKeyMetricsTtm"
         "400":
           description: Bad request
           content:
@@ -3795,6 +3980,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  "/v2/price-target-summary/{symbol}":
+    get:
+      operationId: getPriceTargetSummary
+      summary: Analyst price-target counts and averages per window.
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlPriceTargetSummary"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   "/v2/quote-type/{symbol}":
     get:
       operationId: getQuoteType
@@ -4022,6 +4258,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlRatingConsensus"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/ratios-ttm/{symbol}":
+    get:
+      operationId: getRatiosTtm
+      summary: Trailing-twelve-month financial ratios.
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GqlFinancialRatiosTtm"
         "400":
           description: Bad request
           content:
@@ -4611,6 +4898,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GqlSectorData"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  "/v2/short-volume/{symbol}":
+    get:
+      operationId: getShortVolume
+      summary: Daily FINRA short-sale volume for a symbol (keyless).
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max entries per page; omitted (with cursor also omitted) = every\nfetched entry as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlShortVolume"
         "400":
           description: Bad request
           content:
@@ -6883,6 +7237,46 @@ components:
         - suffix
         - delay
         - dataProvider
+    GqlExecutiveCompensation:
+      description: "One executive's disclosed compensation for a year."
+      type: object
+      properties:
+        bonus:
+          type: number
+          format: double
+        cik:
+          type: string
+        companyName:
+          type: string
+        filingDate:
+          type: string
+        incentivePlanCompensation:
+          type: number
+          format: double
+        nameAndPosition:
+          type: string
+        optionAward:
+          type: number
+          format: double
+        otherCompensation:
+          type: number
+          format: double
+        salary:
+          type: number
+          format: double
+        stockAward:
+          type: number
+          format: double
+        symbol:
+          type: string
+        total:
+          type: number
+          format: double
+        url:
+          type: string
+        year:
+          type: integer
+          format: int32
     GqlFactConcept:
       description: A single XBRL fact concept with its data points.
       type: object
@@ -7038,6 +7432,195 @@ components:
       required:
         - metric
         - values
+    GqlFinancialRatiosTtm:
+      description: Trailing-twelve-month financial ratios.
+      type: object
+      properties:
+        assetTurnover:
+          type: number
+          format: double
+        bookValuePerShare:
+          type: number
+          format: double
+        bottomLineProfitMargin:
+          type: number
+          format: double
+        capexPerShare:
+          type: number
+          format: double
+        capitalExpenditureCoverageRatio:
+          type: number
+          format: double
+        cashPerShare:
+          type: number
+          format: double
+        cashRatio:
+          type: number
+          format: double
+        continuousOperationsProfitMargin:
+          type: number
+          format: double
+        currentRatio:
+          type: number
+          format: double
+        debtEquityRatio:
+          type: number
+          format: double
+        debtRatio:
+          type: number
+          format: double
+        debtServiceCoverageRatio:
+          type: number
+          format: double
+        debtToCapitalRatio:
+          type: number
+          format: double
+        debtToMarketCap:
+          type: number
+          format: double
+        dividendPaidAndCapexCoverageRatio:
+          type: number
+          format: double
+        dividendPerShare:
+          type: number
+          format: double
+        dividendYield:
+          type: number
+          format: double
+        ebitMargin:
+          type: number
+          format: double
+        ebitdaMargin:
+          type: number
+          format: double
+        ebtPerEbit:
+          type: number
+          format: double
+        effectiveTaxRate:
+          type: number
+          format: double
+        enterpriseValue:
+          type: number
+          format: double
+        enterpriseValueMultiple:
+          type: number
+          format: double
+        financialLeverageRatio:
+          type: number
+          format: double
+        fixedAssetTurnover:
+          type: number
+          format: double
+        forwardPegRatio:
+          type: number
+          format: double
+        freeCashFlowOperatingCashFlowRatio:
+          type: number
+          format: double
+        freeCashFlowPerShare:
+          type: number
+          format: double
+        grossProfitMargin:
+          type: number
+          format: double
+        interestCoverage:
+          type: number
+          format: double
+        interestDebtPerShare:
+          type: number
+          format: double
+        inventoryTurnover:
+          type: number
+          format: double
+        longTermDebtToCapitalRatio:
+          type: number
+          format: double
+        netIncomePerEbt:
+          type: number
+          format: double
+        netIncomePerShare:
+          type: number
+          format: double
+        netProfitMargin:
+          type: number
+          format: double
+        operatingCashFlowCoverageRatio:
+          type: number
+          format: double
+        operatingCashFlowPerShare:
+          type: number
+          format: double
+        operatingCashFlowRatio:
+          type: number
+          format: double
+        operatingCashFlowSalesRatio:
+          type: number
+          format: double
+        operatingProfitMargin:
+          type: number
+          format: double
+        payablesTurnover:
+          type: number
+          format: double
+        payoutRatio:
+          type: number
+          format: double
+        pegRatio:
+          type: number
+          format: double
+        pretaxProfitMargin:
+          type: number
+          format: double
+        priceEarningsRatio:
+          type: number
+          format: double
+        priceToBookRatio:
+          type: number
+          format: double
+        priceToEarningsDilutedGrowthRatio:
+          type: number
+          format: double
+        priceToEarningsDilutedRatio:
+          type: number
+          format: double
+        priceToFairValue:
+          type: number
+          format: double
+        priceToFreeCashFlowsRatio:
+          type: number
+          format: double
+        priceToOperatingCashFlowRatio:
+          type: number
+          format: double
+        priceToSalesRatio:
+          type: number
+          format: double
+        quickRatio:
+          type: number
+          format: double
+        receivablesTurnover:
+          type: number
+          format: double
+        revenuePerShare:
+          type: number
+          format: double
+        shareholdersEquityPerShare:
+          type: number
+          format: double
+        shortTermOperatingCashFlowCoverageRatio:
+          type: number
+          format: double
+        solvencyRatio:
+          type: number
+          format: double
+        symbol:
+          type: string
+        tangibleBookValuePerShare:
+          type: number
+          format: double
+        workingCapitalTurnoverRatio:
+          type: number
+          format: double
     GqlFinancialsBatch:
       description: "Result of the batch `financialsBatch` root field: successfully fetched\nstatements plus any per-symbol fetch errors."
       type: object
@@ -7171,6 +7754,20 @@ components:
         totalVolumeUsd:
           type: number
           format: double
+    GqlGradingAction:
+      description: "One analyst upgrade or downgrade, provider-routed."
+      type: object
+      properties:
+        date:
+          type: string
+        gradingCompany:
+          type: string
+        newGrade:
+          type: string
+        previousGrade:
+          type: string
+        symbol:
+          type: string
     GqlGrowthCompany:
       type: object
       properties:
@@ -7563,6 +8160,138 @@ components:
           type: number
           format: double
         upper:
+          type: number
+          format: double
+    GqlKeyMetricsTtm:
+      description: Trailing-twelve-month key metrics.
+      type: object
+      properties:
+        averageInventory:
+          type: number
+          format: double
+        averagePayables:
+          type: number
+          format: double
+        averageReceivables:
+          type: number
+          format: double
+        capexToDepreciation:
+          type: number
+          format: double
+        capexToOperatingCashFlow:
+          type: number
+          format: double
+        capexToRevenue:
+          type: number
+          format: double
+        cashConversionCycle:
+          type: number
+          format: double
+        currentRatio:
+          type: number
+          format: double
+        daysOfInventoryOutstanding:
+          type: number
+          format: double
+        daysOfPayablesOutstanding:
+          type: number
+          format: double
+        daysOfSalesOutstanding:
+          type: number
+          format: double
+        earningsYield:
+          type: number
+          format: double
+        enterpriseValue:
+          type: number
+          format: double
+        evToEbitda:
+          type: number
+          format: double
+        evToFreeCashFlow:
+          type: number
+          format: double
+        evToOperatingCashFlow:
+          type: number
+          format: double
+        evToSales:
+          type: number
+          format: double
+        freeCashFlowToEquity:
+          type: number
+          format: double
+        freeCashFlowToFirm:
+          type: number
+          format: double
+        freeCashFlowYield:
+          type: number
+          format: double
+        grahamNetNet:
+          type: number
+          format: double
+        grahamNumber:
+          type: number
+          format: double
+        incomeQuality:
+          type: number
+          format: double
+        intangiblesToTotalAssets:
+          type: number
+          format: double
+        interestBurden:
+          type: number
+          format: double
+        investedCapital:
+          type: number
+          format: double
+        marketCap:
+          type: number
+          format: double
+        netCurrentAssetValue:
+          type: number
+          format: double
+        netDebtToEbitda:
+          type: number
+          format: double
+        operatingCycle:
+          type: number
+          format: double
+        operatingReturnOnAssets:
+          type: number
+          format: double
+        researchAndDevelopmentToRevenue:
+          type: number
+          format: double
+        returnOnAssets:
+          type: number
+          format: double
+        returnOnCapitalEmployed:
+          type: number
+          format: double
+        returnOnEquity:
+          type: number
+          format: double
+        returnOnInvestedCapital:
+          type: number
+          format: double
+        returnOnTangibleAssets:
+          type: number
+          format: double
+        salesGeneralAndAdministrativeToRevenue:
+          type: number
+          format: double
+        stockBasedCompensationToRevenue:
+          type: number
+          format: double
+        symbol:
+          type: string
+        tangibleAssetValue:
+          type: number
+          format: double
+        taxBurden:
+          type: number
+          format: double
+        workingCapital:
           type: number
           format: double
     GqlLookupQuote:
@@ -8150,6 +8879,36 @@ components:
         targetMedian:
           type: number
           format: double
+    GqlPriceTargetSummary:
+      description: Analyst price-target publication counts and averages by window.
+      type: object
+      properties:
+        allTimeAvg:
+          type: number
+          format: double
+        allTimeCount:
+          type: integer
+          format: int64
+        lastMonthAvg:
+          type: number
+          format: double
+        lastMonthCount:
+          type: integer
+          format: int64
+        lastQuarterAvg:
+          type: number
+          format: double
+        lastQuarterCount:
+          type: integer
+          format: int64
+        lastYearAvg:
+          type: number
+          format: double
+        lastYearCount:
+          type: integer
+          format: int64
+        symbol:
+          type: string
     GqlQuote:
       description: "Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`."
       type: object
@@ -9123,6 +9882,21 @@ components:
         - label
         - score
         - confidence
+    GqlShortVolume:
+      description: One day of FINRA short-sale volume.
+      type: object
+      properties:
+        date:
+          type: string
+        shortExemptVolume:
+          type: number
+          format: double
+        shortVolume:
+          type: number
+          format: double
+        totalVolume:
+          type: number
+          format: double
     GqlSimilarSymbol:
       description: A single recommended/similar symbol with its similarity score.
       type: object

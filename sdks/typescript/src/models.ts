@@ -501,6 +501,24 @@ export interface GqlExchange {
   suffix: string;
 }
 
+/** One executive's disclosed compensation for a year. */
+export interface GqlExecutiveCompensation {
+  bonus?: number;
+  cik?: string;
+  companyName?: string;
+  filingDate?: string;
+  incentivePlanCompensation?: number;
+  nameAndPosition?: string;
+  optionAward?: number;
+  otherCompensation?: number;
+  salary?: number;
+  stockAward?: number;
+  symbol?: string;
+  total?: number;
+  url?: string;
+  year?: number;
+}
+
 /** A single XBRL fact concept with its data points. */
 export interface GqlFactConcept {
   concept: string;
@@ -583,6 +601,72 @@ export interface GqlFinancialLineItem {
   values: GqlFinancialDataPoint[];
 }
 
+/** Trailing-twelve-month financial ratios. */
+export interface GqlFinancialRatiosTtm {
+  assetTurnover?: number;
+  bookValuePerShare?: number;
+  bottomLineProfitMargin?: number;
+  capexPerShare?: number;
+  capitalExpenditureCoverageRatio?: number;
+  cashPerShare?: number;
+  cashRatio?: number;
+  continuousOperationsProfitMargin?: number;
+  currentRatio?: number;
+  debtEquityRatio?: number;
+  debtRatio?: number;
+  debtServiceCoverageRatio?: number;
+  debtToCapitalRatio?: number;
+  debtToMarketCap?: number;
+  dividendPaidAndCapexCoverageRatio?: number;
+  dividendPerShare?: number;
+  dividendYield?: number;
+  ebitMargin?: number;
+  ebitdaMargin?: number;
+  ebtPerEbit?: number;
+  effectiveTaxRate?: number;
+  enterpriseValue?: number;
+  enterpriseValueMultiple?: number;
+  financialLeverageRatio?: number;
+  fixedAssetTurnover?: number;
+  forwardPegRatio?: number;
+  freeCashFlowOperatingCashFlowRatio?: number;
+  freeCashFlowPerShare?: number;
+  grossProfitMargin?: number;
+  interestCoverage?: number;
+  interestDebtPerShare?: number;
+  inventoryTurnover?: number;
+  longTermDebtToCapitalRatio?: number;
+  netIncomePerEbt?: number;
+  netIncomePerShare?: number;
+  netProfitMargin?: number;
+  operatingCashFlowCoverageRatio?: number;
+  operatingCashFlowPerShare?: number;
+  operatingCashFlowRatio?: number;
+  operatingCashFlowSalesRatio?: number;
+  operatingProfitMargin?: number;
+  payablesTurnover?: number;
+  payoutRatio?: number;
+  pegRatio?: number;
+  pretaxProfitMargin?: number;
+  priceEarningsRatio?: number;
+  priceToBookRatio?: number;
+  priceToEarningsDilutedGrowthRatio?: number;
+  priceToEarningsDilutedRatio?: number;
+  priceToFairValue?: number;
+  priceToFreeCashFlowsRatio?: number;
+  priceToOperatingCashFlowRatio?: number;
+  priceToSalesRatio?: number;
+  quickRatio?: number;
+  receivablesTurnover?: number;
+  revenuePerShare?: number;
+  shareholdersEquityPerShare?: number;
+  shortTermOperatingCashFlowCoverageRatio?: number;
+  solvencyRatio?: number;
+  symbol?: string;
+  tangibleBookValuePerShare?: number;
+  workingCapitalTurnoverRatio?: number;
+}
+
 /** Result of the batch `financialsBatch` root field: successfully fetched statements plus any per-symbol fetch errors. */
 export interface GqlFinancialsBatch {
   errors: GqlBatchError[];
@@ -636,6 +720,15 @@ export interface GqlGlobalCryptoStats {
   markets?: number;
   totalMarketCapUsd?: number;
   totalVolumeUsd?: number;
+}
+
+/** One analyst upgrade or downgrade, provider-routed. */
+export interface GqlGradingAction {
+  date?: string;
+  gradingCompany?: string;
+  newGrade?: string;
+  previousGrade?: string;
+  symbol?: string;
 }
 
 export interface GqlGrowthCompany {
@@ -803,6 +896,53 @@ export interface GqlKeltnerChannelsData {
   lower?: number;
   middle?: number;
   upper?: number;
+}
+
+/** Trailing-twelve-month key metrics. */
+export interface GqlKeyMetricsTtm {
+  averageInventory?: number;
+  averagePayables?: number;
+  averageReceivables?: number;
+  capexToDepreciation?: number;
+  capexToOperatingCashFlow?: number;
+  capexToRevenue?: number;
+  cashConversionCycle?: number;
+  currentRatio?: number;
+  daysOfInventoryOutstanding?: number;
+  daysOfPayablesOutstanding?: number;
+  daysOfSalesOutstanding?: number;
+  earningsYield?: number;
+  enterpriseValue?: number;
+  evToEbitda?: number;
+  evToFreeCashFlow?: number;
+  evToOperatingCashFlow?: number;
+  evToSales?: number;
+  freeCashFlowToEquity?: number;
+  freeCashFlowToFirm?: number;
+  freeCashFlowYield?: number;
+  grahamNetNet?: number;
+  grahamNumber?: number;
+  incomeQuality?: number;
+  intangiblesToTotalAssets?: number;
+  interestBurden?: number;
+  investedCapital?: number;
+  marketCap?: number;
+  netCurrentAssetValue?: number;
+  netDebtToEbitda?: number;
+  operatingCycle?: number;
+  operatingReturnOnAssets?: number;
+  researchAndDevelopmentToRevenue?: number;
+  returnOnAssets?: number;
+  returnOnCapitalEmployed?: number;
+  returnOnEquity?: number;
+  returnOnInvestedCapital?: number;
+  returnOnTangibleAssets?: number;
+  salesGeneralAndAdministrativeToRevenue?: number;
+  stockBasedCompensationToRevenue?: number;
+  symbol?: string;
+  tangibleAssetValue?: number;
+  taxBurden?: number;
+  workingCapital?: number;
 }
 
 /** A quote/document result from `lookup`. */
@@ -1006,6 +1146,19 @@ export interface GqlPriceTargetConsensus {
   targetHigh?: number;
   targetLow?: number;
   targetMedian?: number;
+}
+
+/** Analyst price-target publication counts and averages by window. */
+export interface GqlPriceTargetSummary {
+  allTimeAvg?: number;
+  allTimeCount?: number;
+  lastMonthAvg?: number;
+  lastMonthCount?: number;
+  lastQuarterAvg?: number;
+  lastQuarterCount?: number;
+  lastYearAvg?: number;
+  lastYearCount?: number;
+  symbol?: string;
 }
 
 /** Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`. */
@@ -1482,6 +1635,14 @@ export interface GqlSentiment {
   confidence: number;
   label: string;
   score: number;
+}
+
+/** One day of FINRA short-sale volume. */
+export interface GqlShortVolume {
+  date?: string;
+  shortExemptVolume?: number;
+  shortVolume?: number;
+  totalVolume?: number;
 }
 
 /** A single recommended/similar symbol with its similarity score. */

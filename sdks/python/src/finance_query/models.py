@@ -813,6 +813,36 @@ class GqlExchange:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlExecutiveCompensation:
+    """One executive's disclosed compensation for a year."""
+
+    bonus: float | None = None
+    cik: str | None = None
+    company_name: str | None = None
+    filing_date: str | None = None
+    incentive_plan_compensation: float | None = None
+    name_and_position: str | None = None
+    option_award: float | None = None
+    other_compensation: float | None = None
+    salary: float | None = None
+    stock_award: float | None = None
+    symbol: str | None = None
+    total: float | None = None
+    url: str | None = None
+    year: int | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "company_name": "companyName",
+        "filing_date": "filingDate",
+        "incentive_plan_compensation": "incentivePlanCompensation",
+        "name_and_position": "nameAndPosition",
+        "option_award": "optionAward",
+        "other_compensation": "otherCompensation",
+        "stock_award": "stockAward",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlFactConcept:
     """A single XBRL fact concept with its data points."""
 
@@ -919,6 +949,138 @@ class GqlFinancialLineItem:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlFinancialRatiosTtm:
+    """Trailing-twelve-month financial ratios."""
+
+    asset_turnover: float | None = None
+    book_value_per_share: float | None = None
+    bottom_line_profit_margin: float | None = None
+    capex_per_share: float | None = None
+    capital_expenditure_coverage_ratio: float | None = None
+    cash_per_share: float | None = None
+    cash_ratio: float | None = None
+    continuous_operations_profit_margin: float | None = None
+    current_ratio: float | None = None
+    debt_equity_ratio: float | None = None
+    debt_ratio: float | None = None
+    debt_service_coverage_ratio: float | None = None
+    debt_to_capital_ratio: float | None = None
+    debt_to_market_cap: float | None = None
+    dividend_paid_and_capex_coverage_ratio: float | None = None
+    dividend_per_share: float | None = None
+    dividend_yield: float | None = None
+    ebit_margin: float | None = None
+    ebitda_margin: float | None = None
+    ebt_per_ebit: float | None = None
+    effective_tax_rate: float | None = None
+    enterprise_value: float | None = None
+    enterprise_value_multiple: float | None = None
+    financial_leverage_ratio: float | None = None
+    fixed_asset_turnover: float | None = None
+    forward_peg_ratio: float | None = None
+    free_cash_flow_operating_cash_flow_ratio: float | None = None
+    free_cash_flow_per_share: float | None = None
+    gross_profit_margin: float | None = None
+    interest_coverage: float | None = None
+    interest_debt_per_share: float | None = None
+    inventory_turnover: float | None = None
+    long_term_debt_to_capital_ratio: float | None = None
+    net_income_per_ebt: float | None = None
+    net_income_per_share: float | None = None
+    net_profit_margin: float | None = None
+    operating_cash_flow_coverage_ratio: float | None = None
+    operating_cash_flow_per_share: float | None = None
+    operating_cash_flow_ratio: float | None = None
+    operating_cash_flow_sales_ratio: float | None = None
+    operating_profit_margin: float | None = None
+    payables_turnover: float | None = None
+    payout_ratio: float | None = None
+    peg_ratio: float | None = None
+    pretax_profit_margin: float | None = None
+    price_earnings_ratio: float | None = None
+    price_to_book_ratio: float | None = None
+    price_to_earnings_diluted_growth_ratio: float | None = None
+    price_to_earnings_diluted_ratio: float | None = None
+    price_to_fair_value: float | None = None
+    price_to_free_cash_flows_ratio: float | None = None
+    price_to_operating_cash_flow_ratio: float | None = None
+    price_to_sales_ratio: float | None = None
+    quick_ratio: float | None = None
+    receivables_turnover: float | None = None
+    revenue_per_share: float | None = None
+    shareholders_equity_per_share: float | None = None
+    short_term_operating_cash_flow_coverage_ratio: float | None = None
+    solvency_ratio: float | None = None
+    symbol: str | None = None
+    tangible_book_value_per_share: float | None = None
+    working_capital_turnover_ratio: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "asset_turnover": "assetTurnover",
+        "book_value_per_share": "bookValuePerShare",
+        "bottom_line_profit_margin": "bottomLineProfitMargin",
+        "capex_per_share": "capexPerShare",
+        "capital_expenditure_coverage_ratio": "capitalExpenditureCoverageRatio",
+        "cash_per_share": "cashPerShare",
+        "cash_ratio": "cashRatio",
+        "continuous_operations_profit_margin": "continuousOperationsProfitMargin",
+        "current_ratio": "currentRatio",
+        "debt_equity_ratio": "debtEquityRatio",
+        "debt_ratio": "debtRatio",
+        "debt_service_coverage_ratio": "debtServiceCoverageRatio",
+        "debt_to_capital_ratio": "debtToCapitalRatio",
+        "debt_to_market_cap": "debtToMarketCap",
+        "dividend_paid_and_capex_coverage_ratio": "dividendPaidAndCapexCoverageRatio",
+        "dividend_per_share": "dividendPerShare",
+        "dividend_yield": "dividendYield",
+        "ebit_margin": "ebitMargin",
+        "ebitda_margin": "ebitdaMargin",
+        "ebt_per_ebit": "ebtPerEbit",
+        "effective_tax_rate": "effectiveTaxRate",
+        "enterprise_value": "enterpriseValue",
+        "enterprise_value_multiple": "enterpriseValueMultiple",
+        "financial_leverage_ratio": "financialLeverageRatio",
+        "fixed_asset_turnover": "fixedAssetTurnover",
+        "forward_peg_ratio": "forwardPegRatio",
+        "free_cash_flow_operating_cash_flow_ratio": "freeCashFlowOperatingCashFlowRatio",
+        "free_cash_flow_per_share": "freeCashFlowPerShare",
+        "gross_profit_margin": "grossProfitMargin",
+        "interest_coverage": "interestCoverage",
+        "interest_debt_per_share": "interestDebtPerShare",
+        "inventory_turnover": "inventoryTurnover",
+        "long_term_debt_to_capital_ratio": "longTermDebtToCapitalRatio",
+        "net_income_per_ebt": "netIncomePerEbt",
+        "net_income_per_share": "netIncomePerShare",
+        "net_profit_margin": "netProfitMargin",
+        "operating_cash_flow_coverage_ratio": "operatingCashFlowCoverageRatio",
+        "operating_cash_flow_per_share": "operatingCashFlowPerShare",
+        "operating_cash_flow_ratio": "operatingCashFlowRatio",
+        "operating_cash_flow_sales_ratio": "operatingCashFlowSalesRatio",
+        "operating_profit_margin": "operatingProfitMargin",
+        "payables_turnover": "payablesTurnover",
+        "payout_ratio": "payoutRatio",
+        "peg_ratio": "pegRatio",
+        "pretax_profit_margin": "pretaxProfitMargin",
+        "price_earnings_ratio": "priceEarningsRatio",
+        "price_to_book_ratio": "priceToBookRatio",
+        "price_to_earnings_diluted_growth_ratio": "priceToEarningsDilutedGrowthRatio",
+        "price_to_earnings_diluted_ratio": "priceToEarningsDilutedRatio",
+        "price_to_fair_value": "priceToFairValue",
+        "price_to_free_cash_flows_ratio": "priceToFreeCashFlowsRatio",
+        "price_to_operating_cash_flow_ratio": "priceToOperatingCashFlowRatio",
+        "price_to_sales_ratio": "priceToSalesRatio",
+        "quick_ratio": "quickRatio",
+        "receivables_turnover": "receivablesTurnover",
+        "revenue_per_share": "revenuePerShare",
+        "shareholders_equity_per_share": "shareholdersEquityPerShare",
+        "short_term_operating_cash_flow_coverage_ratio": "shortTermOperatingCashFlowCoverageRatio",
+        "solvency_ratio": "solvencyRatio",
+        "tangible_book_value_per_share": "tangibleBookValuePerShare",
+        "working_capital_turnover_ratio": "workingCapitalTurnoverRatio",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlFinancialsBatch:
     """Result of the batch `financialsBatch` root field: successfully fetched
 statements plus any per-symbol fetch errors."""
@@ -1003,6 +1165,23 @@ class GqlGlobalCryptoStats:
         "market_cap_change_percentage24_husd": "marketCapChangePercentage24HUsd",
         "total_market_cap_usd": "totalMarketCapUsd",
         "total_volume_usd": "totalVolumeUsd",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlGradingAction:
+    """One analyst upgrade or downgrade, provider-routed."""
+
+    date: str | None = None
+    grading_company: str | None = None
+    new_grade: str | None = None
+    previous_grade: str | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "grading_company": "gradingCompany",
+        "new_grade": "newGrade",
+        "previous_grade": "previousGrade",
     }
 
 
@@ -1275,6 +1454,100 @@ class GqlKeltnerChannelsData:
     lower: float | None = None
     middle: float | None = None
     upper: float | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlKeyMetricsTtm:
+    """Trailing-twelve-month key metrics."""
+
+    average_inventory: float | None = None
+    average_payables: float | None = None
+    average_receivables: float | None = None
+    capex_to_depreciation: float | None = None
+    capex_to_operating_cash_flow: float | None = None
+    capex_to_revenue: float | None = None
+    cash_conversion_cycle: float | None = None
+    current_ratio: float | None = None
+    days_of_inventory_outstanding: float | None = None
+    days_of_payables_outstanding: float | None = None
+    days_of_sales_outstanding: float | None = None
+    earnings_yield: float | None = None
+    enterprise_value: float | None = None
+    ev_to_ebitda: float | None = None
+    ev_to_free_cash_flow: float | None = None
+    ev_to_operating_cash_flow: float | None = None
+    ev_to_sales: float | None = None
+    free_cash_flow_to_equity: float | None = None
+    free_cash_flow_to_firm: float | None = None
+    free_cash_flow_yield: float | None = None
+    graham_net_net: float | None = None
+    graham_number: float | None = None
+    income_quality: float | None = None
+    intangibles_to_total_assets: float | None = None
+    interest_burden: float | None = None
+    invested_capital: float | None = None
+    market_cap: float | None = None
+    net_current_asset_value: float | None = None
+    net_debt_to_ebitda: float | None = None
+    operating_cycle: float | None = None
+    operating_return_on_assets: float | None = None
+    research_and_development_to_revenue: float | None = None
+    return_on_assets: float | None = None
+    return_on_capital_employed: float | None = None
+    return_on_equity: float | None = None
+    return_on_invested_capital: float | None = None
+    return_on_tangible_assets: float | None = None
+    sales_general_and_administrative_to_revenue: float | None = None
+    stock_based_compensation_to_revenue: float | None = None
+    symbol: str | None = None
+    tangible_asset_value: float | None = None
+    tax_burden: float | None = None
+    working_capital: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "average_inventory": "averageInventory",
+        "average_payables": "averagePayables",
+        "average_receivables": "averageReceivables",
+        "capex_to_depreciation": "capexToDepreciation",
+        "capex_to_operating_cash_flow": "capexToOperatingCashFlow",
+        "capex_to_revenue": "capexToRevenue",
+        "cash_conversion_cycle": "cashConversionCycle",
+        "current_ratio": "currentRatio",
+        "days_of_inventory_outstanding": "daysOfInventoryOutstanding",
+        "days_of_payables_outstanding": "daysOfPayablesOutstanding",
+        "days_of_sales_outstanding": "daysOfSalesOutstanding",
+        "earnings_yield": "earningsYield",
+        "enterprise_value": "enterpriseValue",
+        "ev_to_ebitda": "evToEbitda",
+        "ev_to_free_cash_flow": "evToFreeCashFlow",
+        "ev_to_operating_cash_flow": "evToOperatingCashFlow",
+        "ev_to_sales": "evToSales",
+        "free_cash_flow_to_equity": "freeCashFlowToEquity",
+        "free_cash_flow_to_firm": "freeCashFlowToFirm",
+        "free_cash_flow_yield": "freeCashFlowYield",
+        "graham_net_net": "grahamNetNet",
+        "graham_number": "grahamNumber",
+        "income_quality": "incomeQuality",
+        "intangibles_to_total_assets": "intangiblesToTotalAssets",
+        "interest_burden": "interestBurden",
+        "invested_capital": "investedCapital",
+        "market_cap": "marketCap",
+        "net_current_asset_value": "netCurrentAssetValue",
+        "net_debt_to_ebitda": "netDebtToEbitda",
+        "operating_cycle": "operatingCycle",
+        "operating_return_on_assets": "operatingReturnOnAssets",
+        "research_and_development_to_revenue": "researchAndDevelopmentToRevenue",
+        "return_on_assets": "returnOnAssets",
+        "return_on_capital_employed": "returnOnCapitalEmployed",
+        "return_on_equity": "returnOnEquity",
+        "return_on_invested_capital": "returnOnInvestedCapital",
+        "return_on_tangible_assets": "returnOnTangibleAssets",
+        "sales_general_and_administrative_to_revenue": "salesGeneralAndAdministrativeToRevenue",
+        "stock_based_compensation_to_revenue": "stockBasedCompensationToRevenue",
+        "tangible_asset_value": "tangibleAssetValue",
+        "tax_burden": "taxBurden",
+        "working_capital": "workingCapital",
+    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1589,6 +1862,32 @@ class GqlPriceTargetConsensus:
         "target_high": "targetHigh",
         "target_low": "targetLow",
         "target_median": "targetMedian",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlPriceTargetSummary:
+    """Analyst price-target publication counts and averages by window."""
+
+    all_time_avg: float | None = None
+    all_time_count: int | None = None
+    last_month_avg: float | None = None
+    last_month_count: int | None = None
+    last_quarter_avg: float | None = None
+    last_quarter_count: int | None = None
+    last_year_avg: float | None = None
+    last_year_count: int | None = None
+    symbol: str | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "all_time_avg": "allTimeAvg",
+        "all_time_count": "allTimeCount",
+        "last_month_avg": "lastMonthAvg",
+        "last_month_count": "lastMonthCount",
+        "last_quarter_avg": "lastQuarterAvg",
+        "last_quarter_count": "lastQuarterCount",
+        "last_year_avg": "lastYearAvg",
+        "last_year_count": "lastYearCount",
     }
 
 
@@ -2450,6 +2749,22 @@ class GqlSentiment:
     confidence: float
     label: str
     score: float
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlShortVolume:
+    """One day of FINRA short-sale volume."""
+
+    date: str | None = None
+    short_exempt_volume: float | None = None
+    short_volume: float | None = None
+    total_volume: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "short_exempt_volume": "shortExemptVolume",
+        "short_volume": "shortVolume",
+        "total_volume": "totalVolume",
+    }
 
 
 @dataclasses.dataclass(frozen=True)

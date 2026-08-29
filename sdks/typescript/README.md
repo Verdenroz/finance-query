@@ -96,6 +96,7 @@ Requires Node 18+.
 - `getEdgarSubmissions` — `GET /v2/edgar/submissions/{symbol}`: Get SEC filing history
 - `getEtfProfile` — `GET /v2/etf-profile/{symbol}`: Get ETF profile and holdings
 - `getExchanges` — `GET /v2/exchanges`: Get supported exchanges
+- `getExecutiveCompensation` — `GET /v2/executive-compensation/{symbol}`: Disclosed executive compensation by year.
 - `getFailsToDeliver` — `GET /v2/filings/{symbol}/fails-to-deliver`: Fails-to-deliver records for a symbol
 - `getFearAndGreed` — `GET /v2/fear-and-greed`: Fear & Greed Index
 - `getFeeds` — `GET /v2/feeds`: RSS/Atom news feeds
@@ -108,12 +109,14 @@ Requires Node 18+.
 - `getFutures` — `GET /v2/futures/{symbol}`: Get a futures contract's current quote
 - `getGdeltNews` — `GET /v2/gdelt/news/{symbol}`: Worldwide news mentioning a symbol (GDELT, keyless)
 - `getGeneralNews` — `GET /v2/news`: Get general market news
+- `getGradingActions` — `GET /v2/grading-actions/{symbol}`: Provider-routed analyst upgrades and downgrades.
 - `getHolders` — `GET /v2/holders/{symbol}/{type}`: Get holder data
 - `getHours` — `GET /v2/hours`: Get market hours
 - `getIndexConstituents` — `GET /v2/index-constituents/{symbol}`: Get an index's current constituent list
 - `getIndicators` — `GET /v2/indicators/{symbol}`: Get technical indicators
 - `getIndices` — `GET /v2/indices`: Get world market indices
 - `getIndustry` — `GET /v2/industries/{industry}`: Get industry data
+- `getKeyMetricsTtm` — `GET /v2/key-metrics-ttm/{symbol}`: Trailing-twelve-month key metrics.
 - `getMarketCalendar` — `GET /v2/market-calendar`: Get a market-wide event calendar
 - `getMarketSummary` — `GET /v2/market-summary`: Get market summary
 - `getMetrics` — `GET /v2/metrics`: Prometheus metrics
@@ -121,10 +124,12 @@ Requires Node 18+.
 - `getOptions` — `GET /v2/options/{symbol}`: Get options chain
 - `getPressReleases` — `GET /v2/press-releases/{symbol}`: Get a company's own press releases
 - `getPriceTargetConsensus` — `GET /v2/price-target-consensus/{symbol}`: Get consensus analyst price target
+- `getPriceTargetSummary` — `GET /v2/price-target-summary/{symbol}`: Analyst price-target counts and averages per window.
 - `getQuote` — `GET /v2/quote/{symbol}`: Get quote for a symbol
 - `getQuoteType` — `GET /v2/quote-type/{symbol}`: Get quote type
 - `getQuotes` — `GET /v2/quotes`: Get quotes for multiple symbols
 - `getRatingConsensus` — `GET /v2/rating-consensus/{symbol}`: Get consensus rating rollup
+- `getRatiosTtm` — `GET /v2/ratios-ttm/{symbol}`: Trailing-twelve-month financial ratios.
 - `getRecommendations` — `GET /v2/recommendations/{symbol}`: Get similar stock recommendations
 - `getRisk` — `GET /v2/risk/{symbol}`: Risk analytics
 - `getRiskFactors` — `GET /v2/filings/{symbol}/risk-factors`: Get risk factors extracted from SEC filings
@@ -132,6 +137,7 @@ Requires Node 18+.
 - `getSector` — `GET /v2/sectors/{sector}`: Get sector data
 - `getSectorPe` — `GET /v2/sector-pe`: Get price/earnings ratios by sector
 - `getSectorPerformance` — `GET /v2/sector-performance`: Get aggregate performance for every sector
+- `getShortVolume` — `GET /v2/short-volume/{symbol}`: Daily FINRA short-sale volume for a symbol (keyless).
 - `getSpark` — `GET /v2/spark`: Get batch sparkline data
 - `getSplits` — `GET /v2/splits/{symbol}`: Get stock split history
 - `getTranscript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript
