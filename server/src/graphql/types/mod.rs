@@ -16,6 +16,7 @@ pub mod forex;
 pub mod formatted;
 pub mod fred;
 pub mod fundamentals_extra;
+pub mod fundamentals_ttm;
 pub mod holders;
 pub mod indicators;
 pub mod industry;

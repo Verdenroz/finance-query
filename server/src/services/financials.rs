@@ -1,5 +1,6 @@
 use crate::cache::{self, Cache};
-use finance_query::{Frequency, StatementType, Ticker, Tickers};
+use finance_query::{Frequency, Providers, StatementType, Ticker, Tickers};
+use std::sync::Arc;
 use tracing::info;
 
 use super::{ServiceError, ServiceResult};
@@ -56,5 +57,49 @@ pub async fn get_batch_financials(
             );
             serde_json::to_value(&batch_response).map_err(|e| Box::new(e) as ServiceError)
         })
+        .await
+}
+
+pub async fn get_key_metrics_ttm(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("financials", &[&symbol.to_uppercase(), "key-metrics-ttm"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.key_metrics_ttm().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_ratios_ttm(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("financials", &[&symbol.to_uppercase(), "ratios-ttm"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.ratios_ttm().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
         .await
 }

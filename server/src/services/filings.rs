@@ -93,3 +93,25 @@ pub async fn get_risk_factors(
         )
         .await
 }
+
+pub async fn get_short_volume(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("filings", &[&symbol.to_uppercase(), "short-volume"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.short_volume().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}

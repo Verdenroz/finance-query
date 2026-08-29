@@ -1,5 +1,6 @@
 use crate::cache::{self, Cache};
-use finance_query::Ticker;
+use finance_query::{Providers, Ticker};
+use std::sync::Arc;
 
 use super::{ServiceError, ServiceResult};
 
@@ -105,6 +106,31 @@ pub async fn get_insider_roster(cache: &Cache, symbol: &str) -> ServiceResult {
             || async move {
                 let ticker = Ticker::new(&symbol).await?;
                 let data = ticker.insider_holders().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_executive_compensation(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key(
+        "holders",
+        &[&symbol.to_uppercase(), "executive-compensation"],
+    );
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.executive_compensation().await?;
                 serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
             },
         )
