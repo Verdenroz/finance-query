@@ -1042,6 +1042,55 @@ type GqlExchange {
 }
 
 """
+One executive's disclosed compensation for a year.
+"""
+type GqlExecutiveCompensation {
+	symbol: String
+	cik: String
+	companyName: String
+	nameAndPosition: String
+	year: Int
+	salary: Float
+	bonus: Float
+	stockAward: Float
+	optionAward: Float
+	incentivePlanCompensation: Float
+	otherCompensation: Float
+	total: Float
+	filingDate: String
+	url: String
+}
+
+type GqlExecutiveCompensationConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlExecutiveCompensationEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlExecutiveCompensation!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlExecutiveCompensationEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlExecutiveCompensation!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 A single XBRL fact concept with its data points.
 """
 type GqlFactConcept {
@@ -1278,6 +1327,74 @@ type GqlFinancialLineItem {
 }
 
 """
+Trailing-twelve-month financial ratios.
+"""
+type GqlFinancialRatiosTtm {
+	symbol: String
+	grossProfitMargin: Float
+	ebitMargin: Float
+	ebitdaMargin: Float
+	operatingProfitMargin: Float
+	pretaxProfitMargin: Float
+	continuousOperationsProfitMargin: Float
+	netProfitMargin: Float
+	bottomLineProfitMargin: Float
+	receivablesTurnover: Float
+	payablesTurnover: Float
+	inventoryTurnover: Float
+	fixedAssetTurnover: Float
+	assetTurnover: Float
+	currentRatio: Float
+	quickRatio: Float
+	solvencyRatio: Float
+	cashRatio: Float
+	priceEarningsRatio: Float
+	pegRatio: Float
+	forwardPegRatio: Float
+	priceToEarningsDilutedRatio: Float
+	priceToEarningsDilutedGrowthRatio: Float
+	priceToBookRatio: Float
+	priceToSalesRatio: Float
+	priceToFreeCashFlowsRatio: Float
+	priceToOperatingCashFlowRatio: Float
+	debtRatio: Float
+	debtEquityRatio: Float
+	debtToCapitalRatio: Float
+	longTermDebtToCapitalRatio: Float
+	financialLeverageRatio: Float
+	workingCapitalTurnoverRatio: Float
+	operatingCashFlowRatio: Float
+	operatingCashFlowSalesRatio: Float
+	freeCashFlowOperatingCashFlowRatio: Float
+	debtServiceCoverageRatio: Float
+	interestCoverage: Float
+	shortTermOperatingCashFlowCoverageRatio: Float
+	operatingCashFlowCoverageRatio: Float
+	capitalExpenditureCoverageRatio: Float
+	dividendPaidAndCapexCoverageRatio: Float
+	payoutRatio: Float
+	dividendYield: Float
+	dividendPerShare: Float
+	enterpriseValue: Float
+	enterpriseValueMultiple: Float
+	revenuePerShare: Float
+	netIncomePerShare: Float
+	interestDebtPerShare: Float
+	cashPerShare: Float
+	bookValuePerShare: Float
+	tangibleBookValuePerShare: Float
+	shareholdersEquityPerShare: Float
+	operatingCashFlowPerShare: Float
+	capexPerShare: Float
+	freeCashFlowPerShare: Float
+	netIncomePerEbt: Float
+	ebtPerEbit: Float
+	priceToFairValue: Float
+	debtToMarketCap: Float
+	effectiveTaxRate: Float
+}
+
+"""
 Result of the batch `financialsBatch` root field: successfully fetched
 statements plus any per-symbol fetch errors.
 """
@@ -1401,6 +1518,46 @@ type GqlGradeChange {
 	priorPriceTarget: Float
 	currentPriceTarget: Float
 	priceTargetAction: String
+}
+
+"""
+One analyst upgrade or downgrade, provider-routed.
+"""
+type GqlGradingAction {
+	symbol: String
+	date: String
+	gradingCompany: String
+	previousGrade: String
+	newGrade: String
+}
+
+type GqlGradingActionConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlGradingActionEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlGradingAction!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlGradingActionEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlGradingAction!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
 }
 
 type GqlGrowthCompany {
@@ -1789,6 +1946,55 @@ type GqlKeltnerChannelsData {
 	upper: Float
 	middle: Float
 	lower: Float
+}
+
+"""
+Trailing-twelve-month key metrics.
+"""
+type GqlKeyMetricsTtm {
+	symbol: String
+	marketCap: Float
+	enterpriseValue: Float
+	evToSales: Float
+	evToOperatingCashFlow: Float
+	evToFreeCashFlow: Float
+	evToEbitda: Float
+	netDebtToEbitda: Float
+	currentRatio: Float
+	incomeQuality: Float
+	grahamNumber: Float
+	grahamNetNet: Float
+	taxBurden: Float
+	interestBurden: Float
+	workingCapital: Float
+	investedCapital: Float
+	returnOnAssets: Float
+	operatingReturnOnAssets: Float
+	returnOnTangibleAssets: Float
+	returnOnEquity: Float
+	returnOnInvestedCapital: Float
+	returnOnCapitalEmployed: Float
+	earningsYield: Float
+	freeCashFlowYield: Float
+	capexToOperatingCashFlow: Float
+	capexToDepreciation: Float
+	capexToRevenue: Float
+	salesGeneralAndAdministrativeToRevenue: Float
+	researchAndDevelopmentToRevenue: Float
+	stockBasedCompensationToRevenue: Float
+	intangiblesToTotalAssets: Float
+	averageReceivables: Float
+	averagePayables: Float
+	averageInventory: Float
+	daysOfSalesOutstanding: Float
+	daysOfPayablesOutstanding: Float
+	daysOfInventoryOutstanding: Float
+	operatingCycle: Float
+	cashConversionCycle: Float
+	freeCashFlowToEquity: Float
+	freeCashFlowToFirm: Float
+	tangibleAssetValue: Float
+	netCurrentAssetValue: Float
 }
 
 """
@@ -2314,6 +2520,21 @@ type GqlPriceTargetConsensus {
 	targetLow: Float
 	targetConsensus: Float
 	targetMedian: Float
+}
+
+"""
+Analyst price-target publication counts and averages by window.
+"""
+type GqlPriceTargetSummary {
+	symbol: String
+	lastMonthCount: Int
+	lastMonthAvg: Float
+	lastQuarterCount: Int
+	lastQuarterAvg: Float
+	lastYearCount: Int
+	lastYearAvg: Float
+	allTimeCount: Int
+	allTimeAvg: Float
 }
 
 """
@@ -3043,6 +3264,45 @@ type GqlSentiment {
 }
 
 """
+One day of FINRA short-sale volume.
+"""
+type GqlShortVolume {
+	date: String
+	shortVolume: Float
+	shortExemptVolume: Float
+	totalVolume: Float
+}
+
+type GqlShortVolumeConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlShortVolumeEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlShortVolume!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlShortVolumeEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlShortVolume!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 A single recommended/similar symbol with its similarity score.
 """
 type GqlSimilarSymbol {
@@ -3561,6 +3821,58 @@ type GqlTicker {
 	ETF profile and holdings (only meaningful for ETF symbols).
 	"""
 	etfProfile: GqlEtfProfile!
+	"""
+	Daily FINRA short-sale volume, oldest first. Keyless.
+	"""
+	shortVolume(
+		"""
+		Max entries per page; omitted = every fetched record in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlShortVolumeConnection!
+	"""
+	Analyst upgrades and downgrades, provider-routed. Distinct from
+	`gradingHistory`, which is Yahoo's own quote-summary module.
+	"""
+	gradingActions(
+		"""
+		Max entries per page; omitted = every fetched record in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlGradingActionConnection!
+	"""
+	Disclosed executive compensation by year.
+	"""
+	executiveCompensation(
+		"""
+		Max entries per page; omitted = every fetched record in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlExecutiveCompensationConnection!
+	"""
+	Analyst price-target publication counts and averages per window.
+	"""
+	priceTargetSummary: GqlPriceTargetSummary!
+	"""
+	Trailing-twelve-month key metrics.
+	"""
+	keyMetricsTtm: GqlKeyMetricsTtm!
+	"""
+	Trailing-twelve-month financial ratios.
+	"""
+	ratiosTtm: GqlFinancialRatiosTtm!
 }
 
 enum GqlTimeRange {

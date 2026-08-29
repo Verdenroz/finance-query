@@ -275,3 +275,50 @@ pub async fn get_earnings_transcript(
         )
         .await
 }
+
+pub async fn get_grading_actions(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "grading-actions"]);
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.grading_actions().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_price_target_summary(
+    cache: &Cache,
+    providers: &Arc<Providers>,
+    symbol: &str,
+) -> ServiceResult {
+    let cache_key = Cache::key(
+        "analysis",
+        &[&symbol.to_uppercase(), "price-target-summary"],
+    );
+    let providers = Arc::clone(providers);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = providers.ticker(&symbol).build().await?;
+                let data = ticker.price_target_summary().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}

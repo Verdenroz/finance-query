@@ -18,6 +18,7 @@ mod ticker_core;
 mod ticker_events;
 mod ticker_filings;
 mod ticker_fundamentals_extra;
+mod ticker_fundamentals_ttm;
 mod ticker_holders;
 
 use async_graphql::{ErrorExtensions, MergedObject};
@@ -33,6 +34,7 @@ use ticker_core::TickerCoreQuery;
 use ticker_events::TickerEventsQuery;
 use ticker_filings::TickerFilingsQuery;
 use ticker_fundamentals_extra::TickerFundamentalsExtraQuery;
+use ticker_fundamentals_ttm::TickerFundamentalsTtmQuery;
 use ticker_holders::TickerHoldersQuery;
 
 use super::types::{batch::GqlBatchError, options::GqlOptions};
@@ -128,6 +130,7 @@ pub struct GqlTicker(
     TickerAnalysisQuery,
     TickerFilingsQuery,
     TickerFundamentalsExtraQuery,
+    TickerFundamentalsTtmQuery,
 );
 
 impl GqlTicker {
@@ -148,7 +151,10 @@ impl GqlTicker {
             TickerFilingsQuery {
                 symbol: symbol.clone(),
             },
-            TickerFundamentalsExtraQuery { symbol },
+            TickerFundamentalsExtraQuery {
+                symbol: symbol.clone(),
+            },
+            TickerFundamentalsTtmQuery { symbol },
         )
     }
 }
