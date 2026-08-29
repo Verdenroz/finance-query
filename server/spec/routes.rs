@@ -411,6 +411,90 @@ fn route_metadata_get_exchanges() {}
 )]
 fn route_filings_get_fails_to_deliver() {}
 
+/// Daily FINRA short-sale volume for a symbol (keyless).
+///
+/// Implements `handlers::fundamentals_ttm::get_short_volume`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getShortVolume",
+    method = "GET",
+    path = "/v2/short-volume/{symbol}",
+    params = "FilingsQuery",
+    response = "[GqlShortVolume]"
+)]
+fn route_fundamentals_ttm_get_short_volume() {}
+
+/// Provider-routed analyst upgrades and downgrades.
+///
+/// Implements `handlers::fundamentals_ttm::get_grading_actions`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getGradingActions",
+    method = "GET",
+    path = "/v2/grading-actions/{symbol}",
+    params = "FilingsQuery",
+    response = "[GqlGradingAction]"
+)]
+fn route_fundamentals_ttm_get_grading_actions() {}
+
+/// Disclosed executive compensation by year.
+///
+/// Implements `handlers::fundamentals_ttm::get_executive_compensation`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getExecutiveCompensation",
+    method = "GET",
+    path = "/v2/executive-compensation/{symbol}",
+    params = "FilingsQuery",
+    response = "[GqlExecutiveCompensation]"
+)]
+fn route_fundamentals_ttm_get_executive_compensation() {}
+
+/// Analyst price-target counts and averages per window.
+///
+/// Implements `handlers::fundamentals_ttm::get_price_target_summary`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getPriceTargetSummary",
+    method = "GET",
+    path = "/v2/price-target-summary/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlPriceTargetSummary"
+)]
+fn route_fundamentals_ttm_get_price_target_summary() {}
+
+/// Trailing-twelve-month key metrics.
+///
+/// Implements `handlers::fundamentals_ttm::get_key_metrics_ttm`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getKeyMetricsTtm",
+    method = "GET",
+    path = "/v2/key-metrics-ttm/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlKeyMetricsTtm"
+)]
+fn route_fundamentals_ttm_get_key_metrics_ttm() {}
+
+/// Trailing-twelve-month financial ratios.
+///
+/// Implements `handlers::fundamentals_ttm::get_ratios_ttm`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getRatiosTtm",
+    method = "GET",
+    path = "/v2/ratios-ttm/{symbol}",
+    params = "AnalysisQuery",
+    response = "GqlFinancialRatiosTtm"
+)]
+fn route_fundamentals_ttm_get_ratios_ttm() {}
+
 /// Fear & Greed Index
 ///
 /// Implements `handlers::market::get_fear_and_greed`.

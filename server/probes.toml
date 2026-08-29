@@ -444,3 +444,32 @@ path = "/v2/recommendations?symbols=AAPL,MSFT"
 name = "transcripts-all"
 shape = false
 path = "/v2/transcripts/AAPL/all"
+
+# Short-sale, grading, compensation and trailing-twelve-month endpoints. The
+# three list endpoints carry `shape = false` for the Connection-vs-array reason
+# above. `/v2/price-target-summary/{symbol}` has no probe: FMP is its only
+# provider and this job runs with no API keys, so it would fail every night and
+# file an issue saying nothing new.
+
+[[probe]]
+name = "short-volume"
+shape = false
+path = "/v2/short-volume/AAPL"
+
+[[probe]]
+name = "grading-actions"
+shape = false
+path = "/v2/grading-actions/AAPL"
+
+[[probe]]
+name = "executive-compensation"
+shape = false
+path = "/v2/executive-compensation/AAPL"
+
+[[probe]]
+name = "key-metrics-ttm"
+path = "/v2/key-metrics-ttm/AAPL"
+
+[[probe]]
+name = "ratios-ttm"
+path = "/v2/ratios-ttm/AAPL"

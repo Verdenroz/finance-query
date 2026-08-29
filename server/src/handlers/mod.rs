@@ -18,6 +18,7 @@ mod filings;
 mod financials;
 mod forex;
 mod fred;
+mod fundamentals_ttm;
 mod gql_bridge;
 mod holders;
 mod indicators;
@@ -203,6 +204,36 @@ pub(crate) fn api_routes() -> Router {
         // GET /v2/press-releases/{symbol}?limit=<u32>
         .route("/press-releases/{symbol}", get(news::get_press_releases))
         // GET /v2/price-target-consensus/{symbol}
+        // GET /v2/short-volume/{symbol}?fields=&limit=&cursor=
+        .route(
+            "/short-volume/{symbol}",
+            get(fundamentals_ttm::get_short_volume),
+        )
+        // GET /v2/grading-actions/{symbol}?fields=&limit=&cursor=
+        .route(
+            "/grading-actions/{symbol}",
+            get(fundamentals_ttm::get_grading_actions),
+        )
+        // GET /v2/executive-compensation/{symbol}?fields=&limit=&cursor=
+        .route(
+            "/executive-compensation/{symbol}",
+            get(fundamentals_ttm::get_executive_compensation),
+        )
+        // GET /v2/price-target-summary/{symbol}?fields=
+        .route(
+            "/price-target-summary/{symbol}",
+            get(fundamentals_ttm::get_price_target_summary),
+        )
+        // GET /v2/key-metrics-ttm/{symbol}?fields=
+        .route(
+            "/key-metrics-ttm/{symbol}",
+            get(fundamentals_ttm::get_key_metrics_ttm),
+        )
+        // GET /v2/ratios-ttm/{symbol}?fields=
+        .route(
+            "/ratios-ttm/{symbol}",
+            get(fundamentals_ttm::get_ratios_ttm),
+        )
         .route(
             "/price-target-consensus/{symbol}",
             get(analysis::get_price_target_consensus),
