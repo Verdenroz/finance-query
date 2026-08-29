@@ -1,7 +1,5 @@
 //! The [`Provider`] identifier.
 
-use std::borrow::Cow;
-
 use serde::de::{Error as DeError, Unexpected};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -305,11 +303,25 @@ impl Serialize for Provider {
     }
 }
 
+/// Borrowed, owned, and escaped inputs all land in `visit_str`, so no shape
+/// allocates. `Cow`'s own `Deserialize` always yields `Owned`.
+struct IdVisitor;
+
+impl serde::de::Visitor<'_> for IdVisitor {
+    type Value = Provider;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("a provider id")
+    }
+
+    fn visit_str<E: DeError>(self, v: &str) -> std::result::Result<Provider, E> {
+        Provider::from_id_str(v).ok_or_else(|| E::invalid_value(Unexpected::Str(v), &self))
+    }
+}
+
 impl<'de> Deserialize<'de> for Provider {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
-        let id = Cow::<'de, str>::deserialize(deserializer)?;
-        Self::from_id_str(&id)
-            .ok_or_else(|| D::Error::invalid_value(Unexpected::Str(&id), &"a provider id"))
+        deserializer.deserialize_str(IdVisitor)
     }
 }
 
