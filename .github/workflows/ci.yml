@@ -325,8 +325,13 @@ jobs:
         run: cargo test -p finance-query --tests --verbose
       # `cargo test --doc` compiles examples but never resolves intra-doc
       # links, so a broken one ships as dead text on docs.rs with nothing
-      # failing. This is the only job that builds rustdoc.
+      # failing. This is the only job that builds rustdoc. The deny lives here
+      # rather than in lib.rs: a link to a feature-gated item is unresolvable
+      # without that feature, so a crate attribute would break `cargo doc` for
+      # every consumer not building `full`.
       - name: Build rustdoc (deny broken links)
+        env:
+          RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
         run: cargo doc -p finance-query --no-deps --features full
       # Default and full both hide cfg mismatches: a re-export gated on fewer
       # features than the item it exports compiles under either, and fails only
