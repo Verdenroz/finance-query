@@ -186,6 +186,56 @@
       }
     },
     {
+      "name": "get_company_profile",
+      "description": "A company's identity/classification profile (name, description, asset type, exchange, currency, country, sector, industry, market capitalization).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_congressional_trades",
+      "description": "Congressional trading disclosures for a symbol, FMP when keyed and keyless House PTR filings otherwise.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
       "name": "get_crypto",
       "description": "Get top cryptocurrency coins by market cap from CoinGecko (no API key required).",
       "inputSchema": {
@@ -214,6 +264,35 @@
           "vs_currency": {
             "description": "Quote currency (default: usd)",
             "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_crypto_news",
+      "description": "Market-wide crypto news (currently FMP only, requires FMP_API_KEY).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "description": "Overall cap on articles fetched (default: 20)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum articles per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       }
@@ -266,6 +345,67 @@
               "10y",
               "ytd",
               "max"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_earnings_surprises",
+      "description": "A stock's earnings-surprise history (actual vs. estimated EPS).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_earnings_transcript",
+      "description": "An earnings call transcript for a symbol, latest when quarter and year are omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "quarter": {
+            "description": "Fiscal quarter (Q1, Q2, Q3, Q4). Required alongside `year` for providers\nwith no \"latest\" shortcut (Alpha Vantage); Yahoo defaults to latest when omitted",
+            "$ref": "#/$defs/Quarter"
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
+            "type": "string"
+          },
+          "year": {
+            "description": "Fiscal year. See `quarter`",
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "$defs": {
+          "Quarter": {
+            "description": "Fiscal quarter for `GET /v2/transcripts/{symbol}`.",
+            "type": "string",
+            "enum": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
             ]
           }
         }
@@ -391,6 +531,36 @@
           },
           "symbol": {
             "description": "ETF ticker symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    },
+    {
+      "name": "get_fails_to_deliver",
+      "description": "Fails-to-deliver records for a symbol, FMP when keyed and keyless EDGAR otherwise.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum entries per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "symbol": {
+            "description": "Stock ticker symbol",
             "type": "string"
           }
         },
@@ -554,6 +724,35 @@
           "from",
           "to"
         ]
+      }
+    },
+    {
+      "name": "get_forex_news",
+      "description": "Market-wide forex news (currently FMP only, requires FMP_API_KEY).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "description": "Overall cap on articles fetched (default: 20)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = curated default set",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum articles per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
       }
     },
     {

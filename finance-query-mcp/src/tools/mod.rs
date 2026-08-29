@@ -1377,6 +1377,13 @@ impl FinanceTools {
         crypto::get_crypto_news(&self.schema, p.0.count, p.0.fields, p.0.limit, p.0.cursor).await
     }
 
+    #[tool(
+        description = "Get a currency pair's current exchange rate, provider-routed (Capability::FOREX)."
+    )]
+    async fn get_forex(&self, p: Parameters<ForexParams>) -> Result<CallToolResult, McpError> {
+        forex::get_forex(&self.schema, p.0.from, p.0.to, p.0.fields).await
+    }
+
     #[tool(description = "Get market-wide forex news (currently FMP only, requires FMP_API_KEY).")]
     async fn get_forex_news(
         &self,
