@@ -68,7 +68,7 @@ axum = "0.8"
 [dev-dependencies]
 # Route/spec reconciliation (`cargo soothfast spec check`). Dev-only — never
 # compiled into the production binary (this crate isn't published anyway).
-soothfast = { version = "0.1", features = ["runner"] }
+soothfast = { version = "0.2", features = ["runner"] }
 
 [[bench]]
 name = "soothfast-routes"
