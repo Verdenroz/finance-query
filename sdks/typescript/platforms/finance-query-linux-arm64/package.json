@@ -1,6 +1,6 @@
 {
   "name": "finance-query-linux-arm64",
-  "version": "2.8.0",
+  "version": "3.0.0",
   "description": "The finance-query-server binary for linux-arm64, used by finance-query.",
   "os": ["linux"],
   "cpu": ["arm64"],

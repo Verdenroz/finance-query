@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-30
+
 The tool surface doubles from 32 to 64: the backtesting engine is exposed over MCP for the first time, and every operation from the library's keyless-provider wave gets a tool.
 
 ### Added

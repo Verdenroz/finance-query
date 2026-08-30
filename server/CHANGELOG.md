@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-30
+
 Every operation the library gained this cycle reaches the wire: strategy
 backtesting gets its first HTTP surface, and the keyless-provider wave —
 forex, DeFi TVL, congressional trades, fails-to-deliver, short volume, COT,
