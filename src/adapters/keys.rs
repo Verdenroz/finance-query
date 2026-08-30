@@ -78,10 +78,6 @@ fn shared_limiter(provider_key: &'static str, api_key: &str, rate: f64) -> Arc<R
     limiter
 }
 
-fn tracked_limiters() -> usize {
-    LIMITERS.read().unwrap_or_else(|e| e.into_inner()).len()
-}
-
 pub(crate) fn scoped_key(provider_key: &str) -> Option<ScopedKey> {
     SCOPED
         .try_with(|keys| keys.get(provider_key).cloned())
@@ -173,11 +169,17 @@ mod tests {
 
     #[test]
     fn a_dropped_key_stops_being_tracked() {
-        let before = tracked_limiters();
         {
             let key = ScopedKey::new("transient-xyz".into(), Duration::from_secs(30));
             let _live = key.limiter("fred", 5.0);
-            assert!(tracked_limiters() > before);
+            // Assert on this entry, not the map size: parallel tests prune
+            // their own dropped keys and shift the count.
+            assert!(
+                LIMITERS
+                    .read()
+                    .unwrap()
+                    .contains_key(&("fred", "transient-xyz".to_string()))
+            );
         }
         let _prune =
             ScopedKey::new("prune-trigger".into(), Duration::from_secs(30)).limiter("fred", 5.0);
