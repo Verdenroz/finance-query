@@ -462,7 +462,7 @@ impl Tickers {
         ClientHandle(
             self.providers
                 .first_yahoo()
-                .expect("Tickers always uses a Yahoo session"),
+                .expect("client_handle requires a Yahoo session; use Providers::tickers() for multi-provider tickers"),
         )
     }
 

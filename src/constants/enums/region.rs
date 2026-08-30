@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Each region has predefined language and region codes that work together.
 /// Using the Region enum ensures correct lang/region pairing.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum Region {
     /// Argentina (es-AR, AR)

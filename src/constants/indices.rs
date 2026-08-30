@@ -2,6 +2,7 @@
 ///
 /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
 /// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Region {

@@ -11,14 +11,14 @@ Add the `indicators` feature to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-finance-query = { version = "2", features = ["indicators"] }
+finance-query = { version = "3", features = ["indicators"] }
 ```
 
 Or enable it alongside other features:
 
 ```toml
 [dependencies]
-finance-query = { version = "2", features = ["dataframe", "indicators"] }
+finance-query = { version = "3", features = ["dataframe", "indicators"] }
 ```
 
 ## Getting Started

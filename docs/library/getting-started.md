@@ -9,7 +9,7 @@ Add `finance-query` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-finance-query = "2.0"
+finance-query = "3"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -17,7 +17,7 @@ tokio = { version = "1", features = ["full"] }
 
 ```toml
 [dependencies]
-finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
+finance-query = { version = "3", features = ["dataframe", "backtesting"] }
 ```
 
 | Feature | Description |

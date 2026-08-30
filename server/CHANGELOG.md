@@ -10,6 +10,87 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+Every operation the library gained this cycle reaches the wire: strategy
+backtesting gets its first HTTP surface, and the keyless-provider wave —
+forex, DeFi TVL, congressional trades, fails-to-deliver, short volume, COT,
+GDELT news, and the EDGAR-derived fundamentals — lands as new REST routes and
+GraphQL fields. Rate limiting is now per client IP, and a nightly data-quality
+probe gate watches field population on every route.
+
+### Added
+
+- **Strategy backtesting over REST and GraphQL** — `POST /v2/backtest/{symbol}`
+  and a `backtest` root field expose the engine, optimizer, and walk-forward
+  machinery that previously had no HTTP surface. REST and GraphQL share
+  `GqlBacktestParams` so the two surfaces cannot drift on which knobs they
+  accept; the equity curve and trade log paginate independently through the
+  shared `Connection` plumbing.
+- **Keyless-provider routes** — `GET /v2/forex/{base}/{quote}`,
+  `/v2/forex/news`, `/v2/gdelt/news/{symbol}`, `/v2/cftc/cot/{symbol}`,
+  `/v2/filings/{symbol}/congressional-trades`,
+  `/v2/filings/{symbol}/fails-to-deliver`, `/v2/filings/{symbol}/sections`,
+  `/v2/filings/{symbol}/risk-factors`, `/v2/crypto/trending`,
+  `/v2/crypto/global`, `/v2/crypto/search`, `/v2/crypto/coins/{id}/tvl`
+  (+`/tvl-history`), `/v2/crypto/news`, `/v2/market-calendar`,
+  `/v2/commodities/{symbol}`, `/v2/futures/{symbol}`,
+  `/v2/index-constituents/{symbol}`, `/v2/indices/{symbol}/constituent-changes`,
+  `/v2/sector-pe`, `/v2/sector-performance` (+`/history`),
+  `/v2/symbol-details/{symbol}`, `/v2/company-profile/{symbol}`,
+  `/v2/etf-profile/{symbol}`, `/v2/earnings-surprises/{symbol}`,
+  `/v2/earnings-transcript/{symbol}`, and `/v2/press-releases/{symbol}`,
+  each with a matching GraphQL field.
+- **Six ticker fundamentals bridged** — `/v2/short-volume/{symbol}`,
+  `/v2/grading-actions/{symbol}`, `/v2/executive-compensation/{symbol}`,
+  `/v2/price-target-consensus/{symbol}` (+ summary), `/v2/rating-consensus/{symbol}`,
+  `/v2/key-metrics-ttm/{symbol}`, and `/v2/ratios-ttm/{symbol}` — these
+  existed on `Ticker` but reached no published surface, so FINRA's keyless
+  short volume was routed but unreachable. Field selection is validated
+  against the shared allow-lists so REST and MCP cannot diverge.
+- **Remaining operations folded into existing surfaces** — `tvl`/`tvlHistory`
+  hang off `cryptoCoin`, `asOf` (ALFRED vintage) is an argument on
+  `fredSeries`, and `symbolDetails`, `listingStatus`, `constituentChanges`,
+  and `sectorPerformanceHistory` sit beside the fields they extend.
+- **Data-quality probe gate** — `server/probes.toml` declares a probe per
+  REST route (94 total) and `probes.lock` records accepted field population;
+  a nightly workflow (`io-probe.yml`) fires them against a release build and
+  files an issue on regression, catching the
+  200-with-silently-null-fields class of failure that no schema check sees.
+
+### Changed
+
+- **Full capability routing** (`route_table()` in `server/src/lib.rs`) — all
+  14 routable capabilities now have provider fallback chains with keyless
+  floors (previously only 5 were wired past Yahoo): `FOREX` falls through
+  FMP → Alpha Vantage → Frankfurter, `CRYPTO` through FMP → CoinGecko →
+  Binance → Kraken, `FUNDAMENTALS` always has a Yahoo floor, and keyed
+  providers are appended only when their env var is set. Extracted into a
+  pure, unit-tested function per key-configuration case.
+- **The server image drops the headless-Chromium stack** — the Senate eFD
+  adapter cannot pass Akamai bot protection from a cloud IP, so the hosted
+  server builds without `senatetrades` and serves House-only congressional
+  trades; endpoint descriptions say so. Eight unused dependencies dropped
+  and tokio/reqwest features narrowed alongside.
+
+### Fixed
+
+- **Rate limiting is per client IP** instead of a single global token bucket,
+  so one heavy client can no longer exhaust the public server's limit for
+  everyone. Buckets live in a bounded map with LRU/idle eviction so memory
+  stays capped under load.
+- **Dropped or null fields in quote, chart, options, transcripts, and risk**
+  — ten places where fields came back null or wrong despite upstream data:
+  serde key mismatches stacked across the library and Gql layers
+  (`forwardPE`, `52WeekChange`), chart meta hand-copied at three call sites,
+  options fields hardcoded to `None`, a singular transcripts route that
+  always returned 400, and GraphQL schema drift after risk/indicator
+  additions. Verified live against a rebuilt release server.
+- Two crypto valid-field names used the wrong camelCase (`change1DPercent`,
+  not `change1dPercent`), so both were rejected as unknown fields; a test
+  now compares every valid-fields constant against `schema.graphql`.
+- String arguments in generated GraphQL are quoted; an unquoted value parsed
+  as an enum, so every affected bridged query was rejected before reaching a
+  resolver.
+
 ## [2.8.0] - 2026-07-10
 
 Every REST and MCP data endpoint is now bridged through one typed GraphQL

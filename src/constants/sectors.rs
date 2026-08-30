@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
 /// deserializing (axum path extraction, JSON) takes the same spellings parsing does.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Sector {

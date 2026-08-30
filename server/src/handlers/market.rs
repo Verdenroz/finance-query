@@ -32,6 +32,7 @@ fn indices_region_to_gql(region: IndicesRegion) -> &'static str {
         IndicesRegion::AsiaPacific => "ASIA_PACIFIC",
         IndicesRegion::MiddleEastAfrica => "MIDDLE_EAST_AFRICA",
         IndicesRegion::Currencies => "CURRENCIES",
+        _ => unreachable!("IndicesRegion variant missing a GqlIndicesRegion mapping"),
     }
 }
 

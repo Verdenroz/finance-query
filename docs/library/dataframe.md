@@ -10,7 +10,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
 
     ```toml
     [dependencies]
-    finance-query = { version = "2.0", features = ["dataframe"] }
+    finance-query = { version = "3", features = ["dataframe"] }
     polars = "0.53"
     ```
 
@@ -232,7 +232,7 @@ shape: (50, 59)
 !!! note "Feature Flag Required"
     The `indicators()` method requires the `indicators` feature flag:
     ```toml
-    finance-query = { version = "2.0", features = ["dataframe", "indicators"] }
+    finance-query = { version = "3", features = ["dataframe", "indicators"] }
     ```
 
 Convert technical indicators to DataFrame:

@@ -14,7 +14,7 @@ Backtesting requires the `backtesting` feature (which depends on `indicators`):
 
 ```toml
 [dependencies]
-finance-query = { version = "2.0", features = ["backtesting"] }
+finance-query = { version = "3", features = ["backtesting"] }
 ```
 
 ## Pre-built Strategies

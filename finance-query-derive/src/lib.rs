@@ -15,7 +15,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! finance-query = { version = "2.0", features = ["dataframe"] }
+//! finance-query = { version = "3", features = ["dataframe"] }
 //! ```
 //!
 //! ## Example
