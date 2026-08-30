@@ -1301,8 +1301,8 @@ pub const GQL_PROTOCOL_TVL_VALID_FIELDS: &[&str] = &[
     "chains",
     "tvl",
     "tvlByChain",
-    "change1dPercent",
-    "change7dPercent",
+    "change1DPercent",
+    "change7DPercent",
     "marketCap",
 ];
 
@@ -1347,3 +1347,51 @@ pub const SECTOR_PERFORMANCE_HISTORY_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
     "{ ytdChangePercent dayChangePercent oneYearChangePercent \
        threeYearChangePercent fiveYearChangePercent }",
 )];
+
+#[cfg(test)]
+mod valid_field_tests {
+    /// async-graphql's camelCase rename is not the same transform as splitting
+    /// on `_` and capitalising, so a hand-derived name can be subtly wrong:
+    /// `change_1d_percent` becomes `change1DPercent`, not `change1dPercent`.
+    /// The schema is the authority, so compare against it.
+    #[test]
+    fn every_valid_field_name_exists_in_the_schema() {
+        let schema = include_str!("../../schema.graphql");
+        for (type_name, fields) in [
+            ("GqlProtocolTvl", super::GQL_PROTOCOL_TVL_VALID_FIELDS),
+            ("GqlTvlPoint", super::GQL_TVL_POINT_VALID_FIELDS),
+            ("GqlShortVolume", super::GQL_SHORT_VOLUME_VALID_FIELDS),
+            ("GqlGradingAction", super::GQL_GRADING_ACTION_VALID_FIELDS),
+            (
+                "GqlPriceTargetSummary",
+                super::GQL_PRICE_TARGET_SUMMARY_VALID_FIELDS,
+            ),
+            (
+                "GqlExecutiveCompensation",
+                super::GQL_EXECUTIVE_COMPENSATION_VALID_FIELDS,
+            ),
+            ("GqlKeyMetricsTtm", super::GQL_KEY_METRICS_TTM_VALID_FIELDS),
+            ("GqlFinancialRatiosTtm", super::GQL_RATIOS_TTM_VALID_FIELDS),
+            ("GqlSymbolDetails", super::GQL_SYMBOL_DETAILS_VALID_FIELDS),
+            (
+                "GqlIndexConstituentChange",
+                super::GQL_INDEX_CONSTITUENT_CHANGE_VALID_FIELDS,
+            ),
+            (
+                "GqlSectorPerformanceHistory",
+                super::GQL_SECTOR_PERFORMANCE_HISTORY_VALID_FIELDS,
+            ),
+        ] {
+            let start = schema
+                .find(&format!("type {type_name} {{"))
+                .unwrap_or_else(|| panic!("{type_name} missing from schema.graphql"));
+            let body = &schema[start..][..schema[start..].find("\n}").expect("type closes")];
+            for field in fields {
+                assert!(
+                    body.contains(&format!("\n\t{field}")),
+                    "{type_name}.{field} is not a field in schema.graphql"
+                );
+            }
+        }
+    }
+}
