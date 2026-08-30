@@ -242,7 +242,7 @@ tokio = { version = "1", features = ["full", "test-util"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
 # never compiled into the published `finance-query` crate.
-soothfast = { version = "0.1", features = ["runner"] }
+soothfast = { version = "0.2", features = ["runner"] }
 
 [[bench]]
 name = "ticker"
