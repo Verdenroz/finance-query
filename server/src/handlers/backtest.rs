@@ -34,7 +34,7 @@ fn connection_args(limit: Option<i32>, cursor: Option<&str>) -> String {
     }
     if let Some(c) = cursor {
         args.push(format!(
-            "after: {}",
+            "after: \"{}\"",
             crate::graphql::fields::escape_gql_string(c)
         ));
     }
@@ -107,7 +107,7 @@ pub(crate) async fn run_backtest(
         "params": body.params,
     }));
     let query = format!(
-        "query Backtest($params: GqlBacktestParams!) {{ backtest(symbol: {}, strategy: {gql_strategy}, interval: {gql_interval}, range: {gql_range}, params: $params) {selection} }}",
+        "query Backtest($params: GqlBacktestParams!) {{ backtest(symbol: \"{}\", strategy: {gql_strategy}, interval: {gql_interval}, range: {gql_range}, params: $params) {selection} }}",
         crate::graphql::fields::escape_gql_string(&symbol)
     );
 
@@ -128,6 +128,13 @@ pub(crate) async fn run_backtest(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn interpolated_values_are_quoted_string_literals() {
+        // escape_gql_string returns the literal's contents, so an unquoted
+        // interpolation produces invalid GraphQL and a 400.
+        assert_eq!(connection_args(None, Some("abc")), "(after: \"abc\")");
+    }
 
     #[test]
     fn every_strategy_id_maps_to_a_gql_variant() {
