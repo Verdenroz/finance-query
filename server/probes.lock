@@ -357,6 +357,16 @@
         "totalVolumeUsd": "always"
       }
     },
+    "crypto-news": {
+      "fields": {
+        "[]": "always",
+        "[].img": "always",
+        "[].link": "always",
+        "[].source": "always",
+        "[].time": "always",
+        "[].title": "always"
+      }
+    },
     "crypto-search": {
       "fields": {
         "[]": "always",
@@ -549,6 +559,23 @@
         "[].suffix": "always"
       }
     },
+    "executive-compensation": {
+      "fields": {
+        "[]": "always",
+        "[].cik": "always",
+        "[].companyName": "always",
+        "[].filingDate": "always",
+        "[].incentivePlanCompensation": "always",
+        "[].nameAndPosition": "always",
+        "[].otherCompensation": "always",
+        "[].salary": "always",
+        "[].stockAward": "always",
+        "[].symbol": "always",
+        "[].total": "always",
+        "[].url": "always",
+        "[].year": "always"
+      }
+    },
     "fear-and-greed": {
       "fields": {
         "classification": "always",
@@ -717,6 +744,16 @@
         "[].source": "always",
         "[].time": "always",
         "[].title": "always"
+      }
+    },
+    "grading-actions": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].gradingCompany": "always",
+        "[].newGrade": "always",
+        "[].previousGrade": "always",
+        "[].symbol": "always"
       }
     },
     "holders-insider-purchases": {
@@ -890,6 +927,17 @@
         "markets[].time": "always",
         "markets[].timezone": "always",
         "markets[].timezoneShort": "always"
+      }
+    },
+    "index-constituent-changes": {
+      "fields": {
+        "[]": "always",
+        "[].addedSecurity": "always",
+        "[].date": "always",
+        "[].reason": "always",
+        "[].removedSecurity": "always",
+        "[].removedTicker": "always",
+        "[].symbol": "always"
       }
     },
     "index-constituents": {
@@ -1355,6 +1403,55 @@
         "topPerformingCompanies[].ytdReturn": "always"
       }
     },
+    "key-metrics-ttm": {
+      "fields": {
+        "averageInventory": "always",
+        "averagePayables": "always",
+        "averageReceivables": "always",
+        "capexToRevenue": "always",
+        "cashConversionCycle": "always",
+        "currentRatio": "always",
+        "daysOfInventoryOutstanding": "always",
+        "daysOfPayablesOutstanding": "always",
+        "daysOfSalesOutstanding": "always",
+        "earningsYield": "always",
+        "enterpriseValue": "always",
+        "evToEbitda": "always",
+        "evToSales": "always",
+        "grahamNumber": "always",
+        "marketCap": "always",
+        "operatingCycle": "always",
+        "returnOnAssets": "always",
+        "returnOnEquity": "always",
+        "symbol": "always",
+        "workingCapital": "always"
+      },
+      "uncovered": [
+        "capexToDepreciation",
+        "capexToOperatingCashFlow",
+        "evToFreeCashFlow",
+        "evToOperatingCashFlow",
+        "freeCashFlowToEquity",
+        "freeCashFlowToFirm",
+        "freeCashFlowYield",
+        "grahamNetNet",
+        "incomeQuality",
+        "intangiblesToTotalAssets",
+        "interestBurden",
+        "investedCapital",
+        "netCurrentAssetValue",
+        "netDebtToEbitda",
+        "operatingReturnOnAssets",
+        "researchAndDevelopmentToRevenue",
+        "returnOnCapitalEmployed",
+        "returnOnInvestedCapital",
+        "returnOnTangibleAssets",
+        "salesGeneralAndAdministrativeToRevenue",
+        "stockBasedCompensationToRevenue",
+        "tangibleAssetValue",
+        "taxBurden"
+      ]
+    },
     "lookup": {
       "fields": {
         "count": "always",
@@ -1543,6 +1640,31 @@
         "targetHigh": "always",
         "targetLow": "always",
         "targetMedian": "always"
+      }
+    },
+    "protocol-tvl": {
+      "fields": {
+        "chains": "always",
+        "chains[]": "always",
+        "change1DPercent": "always",
+        "change7DPercent": "always",
+        "marketCap": "always",
+        "name": "always",
+        "slug": "always",
+        "symbol": "always",
+        "tvl": "always",
+        "tvlByChain": "always",
+        "tvlByChain[]": "always",
+        "tvlByChain[].chain": "always",
+        "tvlByChain[].tvl": "always",
+        "url": "always"
+      }
+    },
+    "protocol-tvl-history": {
+      "fields": {
+        "[]": "always",
+        "[].timestamp": "always",
+        "[].tvl": "always"
       }
     },
     "quote": {
@@ -1999,6 +2121,74 @@
         "consensus"
       ]
     },
+    "ratios-ttm": {
+      "fields": {
+        "assetTurnover": "always",
+        "bookValuePerShare": "always",
+        "currentRatio": "always",
+        "debtEquityRatio": "always",
+        "dividendYield": "always",
+        "grossProfitMargin": "always",
+        "interestCoverage": "always",
+        "inventoryTurnover": "always",
+        "netIncomePerShare": "always",
+        "netProfitMargin": "always",
+        "operatingProfitMargin": "always",
+        "payablesTurnover": "always",
+        "priceEarningsRatio": "always",
+        "priceToBookRatio": "always",
+        "priceToSalesRatio": "always",
+        "quickRatio": "always",
+        "receivablesTurnover": "always",
+        "revenuePerShare": "always",
+        "symbol": "always"
+      },
+      "uncovered": [
+        "bottomLineProfitMargin",
+        "capexPerShare",
+        "capitalExpenditureCoverageRatio",
+        "cashPerShare",
+        "cashRatio",
+        "continuousOperationsProfitMargin",
+        "debtRatio",
+        "debtServiceCoverageRatio",
+        "debtToCapitalRatio",
+        "debtToMarketCap",
+        "dividendPaidAndCapexCoverageRatio",
+        "dividendPerShare",
+        "ebitMargin",
+        "ebitdaMargin",
+        "ebtPerEbit",
+        "effectiveTaxRate",
+        "enterpriseValue",
+        "enterpriseValueMultiple",
+        "financialLeverageRatio",
+        "fixedAssetTurnover",
+        "forwardPegRatio",
+        "freeCashFlowOperatingCashFlowRatio",
+        "freeCashFlowPerShare",
+        "interestDebtPerShare",
+        "longTermDebtToCapitalRatio",
+        "netIncomePerEbt",
+        "operatingCashFlowCoverageRatio",
+        "operatingCashFlowPerShare",
+        "operatingCashFlowRatio",
+        "operatingCashFlowSalesRatio",
+        "payoutRatio",
+        "pegRatio",
+        "pretaxProfitMargin",
+        "priceToEarningsDilutedGrowthRatio",
+        "priceToEarningsDilutedRatio",
+        "priceToFairValue",
+        "priceToFreeCashFlowsRatio",
+        "priceToOperatingCashFlowRatio",
+        "shareholdersEquityPerShare",
+        "shortTermOperatingCashFlowCoverageRatio",
+        "solvencyRatio",
+        "tangibleBookValuePerShare",
+        "workingCapitalTurnoverRatio"
+      ]
+    },
     "recommendations": {
       "fields": {
         "providerId": "always",
@@ -2235,6 +2425,23 @@
         "[].exchange"
       ]
     },
+    "sector-performance-history": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].sectors": "always",
+        "[].sectors[]": "always"
+      }
+    },
+    "short-volume": {
+      "fields": {
+        "[]": "always",
+        "[].date": "always",
+        "[].shortExemptVolume": "always",
+        "[].shortVolume": "always",
+        "[].totalVolume": "always"
+      }
+    },
     "spark": {
       "fields": {
         "sparks": "always",
@@ -2297,6 +2504,25 @@
         "splits[].splits[].timestamp": "always",
         "splits[].symbol": "always"
       }
+    },
+    "symbol-details": {
+      "fields": {
+        "assetType": "always",
+        "cik": "always",
+        "description": "always",
+        "employees": "always",
+        "exchange": "always",
+        "homepageUrl": "always",
+        "marketCap": "always",
+        "name": "always",
+        "sharesOutstanding": "always",
+        "sicCode": "always",
+        "sicDescription": "always",
+        "symbol": "always"
+      },
+      "uncovered": [
+        "listDate"
+      ]
     },
     "transcripts": {
       "fields": {
