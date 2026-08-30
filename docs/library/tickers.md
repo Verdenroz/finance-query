@@ -673,7 +673,7 @@ AAPL: 23 expirations
 
     ```toml
     [dependencies]
-    finance-query = { version = "2", features = ["indicators"] }
+    finance-query = { version = "3", features = ["indicators"] }
     ```
 
 Fetch technical indicators for all symbols concurrently.

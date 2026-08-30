@@ -47,10 +47,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-finance-query = "2.3"
+finance-query = "3"
 
 # Or with additional features
-finance-query = { version = "2.3", features = ["dataframe", "indicators", "fred", "crypto", "risk", "translation"] }
+finance-query = { version = "3", features = ["dataframe", "indicators", "fred", "crypto", "risk", "translation"] }
 ```
 
 **Single symbol:**
