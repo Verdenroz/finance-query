@@ -17,6 +17,16 @@ VERSION=${VERSION#v}
 
 # Extract the section for this version
 # Skip the header line, then print until the next ## [
-awk "/## \[$VERSION\]/{found=1; next} found && /## \[/{exit} found" "$CHANGELOG_FILE"
+# Then unwrap hard-wrapped lines: GitHub renders newlines in release bodies
+# as hard breaks, so 80-column continuation lines come out jagged.
+awk "/## \[$VERSION\]/{found=1; next} found && /## \[/{exit} found" "$CHANGELOG_FILE" | awk '
+  function trim(s) { sub(/^[[:space:]]+/, "", s); return s }
+  /^```/ { if (buf != "") { print buf; buf = "" }; print; fence = !fence; next }
+  fence { print; next }
+  /^[[:space:]]*$/ { if (buf != "") { print buf; buf = "" }; print; next }
+  /^(#{1,6} |\||[-*] |[0-9]+\. )/ { if (buf != "") { print buf }; buf = $0; next }
+  { t = trim($0); buf = (buf == "" ? t : buf " " t) }
+  END { if (buf != "") print buf }
+'
 
 exit 0
