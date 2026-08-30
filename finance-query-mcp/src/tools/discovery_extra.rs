@@ -64,7 +64,7 @@ pub async fn get_protocol_tvl(
         PROTOCOL_TVL_COMPOSITE_FIELDS,
     );
     let query = format!(
-        "query GetTvl {{ cryptoCoin(id: {}) {{ tvl {selection} }} }}",
+        "query GetTvl {{ cryptoCoin(id: \"{}\") {{ tvl {selection} }} }}",
         escape_gql_string(&id)
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
@@ -91,7 +91,7 @@ pub async fn get_protocol_tvl_history(
         .map(|c| format!(", after: \"{}\"", escape_gql_string(c)))
         .unwrap_or_default();
     let query = format!(
-        "query GetTvlHistory {{ cryptoCoin(id: {}) {{ tvlHistory(first: {first}{after}) {selection} }} }}",
+        "query GetTvlHistory {{ cryptoCoin(id: \"{}\") {{ tvlHistory(first: {first}{after}) {selection} }} }}",
         escape_gql_string(&id)
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;

@@ -43,7 +43,7 @@ pub(crate) async fn get_protocol_tvl(
         PROTOCOL_TVL_COMPOSITE_FIELDS,
     );
     let query = format!(
-        "query GetTvl {{ cryptoCoin(id: {}) {{ tvl {selection} }} }}",
+        "query GetTvl {{ cryptoCoin(id: \"{}\") {{ tvl {selection} }} }}",
         escape_gql_string(&id)
     );
     info!("Fetching protocol TVL for {}", id);
@@ -65,7 +65,7 @@ pub(crate) async fn get_protocol_tvl_history(
     let selection = build_connection_selection(&inner);
     let args = conn_args_str(params.limit, params.cursor.as_deref());
     let query = format!(
-        "query GetTvlHistory {{ cryptoCoin(id: {}) {{ tvlHistory{args} {selection} }} }}",
+        "query GetTvlHistory {{ cryptoCoin(id: \"{}\") {{ tvlHistory{args} {selection} }} }}",
         escape_gql_string(&id)
     );
     info!("Fetching protocol TVL history for {}", id);
