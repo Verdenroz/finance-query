@@ -681,6 +681,21 @@
         "[].values[].value": "always"
       }
     },
+    "forex": {
+      "fields": {
+        "baseCurrency": "always",
+        "change": "always",
+        "changePercent": "always",
+        "price": "always",
+        "quoteCurrency": "always",
+        "symbol": "always",
+        "timestamp": "always"
+      },
+      "uncovered": [
+        "ask",
+        "bid"
+      ]
+    },
     "forex-news": {
       "fields": {
         "[]": "always",
