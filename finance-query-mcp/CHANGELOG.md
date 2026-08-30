@@ -12,6 +12,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+The tool surface doubles from 32 to 64: the backtesting engine is exposed over MCP for the first time, and every operation from the library's keyless-provider wave gets a tool.
+
+### Added
+
+- **`run_backtest`** — exposes the backtesting engine over MCP for the first time (prebuilt strategy, symbol, interval/range, commission, short selling), extended with the new leverage, margin, and borrow-cost knobs and peak-leverage reporting as the engine gained them. The equity curve and trade log paginate through the shared `Connection` plumbing (`equity_limit`/`equity_cursor`, `trades_limit`/`trades_cursor`).
+- **`get_forex`** — forex pair quotes (only `get_forex_news` existed before), keyless via Frankfurter/ECB.
+- **30 further tools** covering the newly routed operations: `get_congressional_trades`, `get_fails_to_deliver`, `get_short_volume`, `get_protocol_tvl`(+`_history`), `get_symbol_details`, `get_company_profile`, `get_etf_profile`, `get_index_constituents`, `get_index_constituent_changes`, `get_sector_pe`, `get_sector_performance`(+`_history`), `get_earnings_surprises`, `get_earnings_transcript`, `get_executive_compensation`, `get_grading_actions`, `get_price_target_consensus`, `get_price_target_summary`, `get_rating_consensus`, `get_key_metrics_ttm`, `get_ratios_ttm`, `get_press_releases`, `get_filing_sections`, `get_risk_factors`, `get_market_calendar`, `get_commodity`, `get_futures`, `get_forex_news`, and `get_crypto_news` — each with the standard `fields` selection and pagination contracts.
+
+### Fixed
+
+- **Seven tools were undiscoverable** — they had no route marker, so `mcp-tools.json` never listed them; one marker named `get_forex` while nothing implemented it, so the manifest advertised a tool that did not exist. Markers and tools are reconciled, and the manifest freshness check now runs with the `backtesting` feature so `run_backtest` cannot silently drop out of it.
+- **Financing prorated by bar interval** on `run_backtest` — an intraday run charged borrow and margin rates as if every bar were a day, undercharging by the intraday bar multiple.
+- The shared GraphQL bridge fixes land here too: string arguments are quoted in generated queries (unquoted values parsed as enums and were rejected), and two crypto field names use the correct camelCase (`change1DPercent`).
+
 ## [2.8.0] - 2026-07-10
 
 Bridges every MCP tool through the same in-process GraphQL schema that powers the REST API, adding consistent field selection and pagination — and folding several paired batch tools into their singular counterparts along the way. **This includes a breaking change to the MCP tool surface**: six tools disappeared (see Changed below).

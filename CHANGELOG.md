@@ -8,83 +8,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased (draft vs v2.8.0)
 
 <!-- soothfast:notes -->
-### Breaking
-
-- `Ticker`, `Tickers`, and the domain handles cache responses by default for the
-  lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
-  set, so every accessor refetched — which contradicted the documentation. Call
-  `.no_cache()` for the old behavior.
-- `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
-  sorted ascending by timestamp, with the same `InvalidParameter` error already
-  used for unsorted dividends. Conditions binary-search the candle slice, so an
-  unsorted series previously produced a silently wrong entry index. `GridSearch`,
-  `BayesianSearch`, and `WalkForward` apply the same check once per series rather
-  than once per candidate.
-- A Yahoo HTTP 403 whose body names the crumb now surfaces as
-  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared session
-  refreshes instead of failing every later caller on it. A 403 that does *not*
-  mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
-  `UnexpectedResponse`, since no handshake can clear it and retrying would cost
-  an extra handshake and a discarded session per blocked request.
-- `FinanceError` is now `#[non_exhaustive]`, as every other public enum in the
-  crate already is. Downstream `match` expressions over it need a wildcard arm;
-  in exchange, later variants are additive.
-- `Region`, `IndicesRegion`, `Screener`, `Sector`, and `Fetch` are now
-  `#[non_exhaustive]` — these sets grow (new markets, screeners, dispatch
-  modes), so later variants become additive rather than semver-major.
-  Downstream `match` expressions over them need a wildcard arm. The closed-set
-  constants enums (`Interval`, `TimeRange`, `Frequency`, `StatementType`,
-  `ValueFormat`) deliberately stay exhaustive.
-
-### Changed
-
-- The Polygon adapter now calls `api.massive.com` and
-  `wss://socket.massive.com` rather than the `polygon.io` hosts, following
-  Polygon.io's rebrand to Massive on 2025-10-30. Existing `POLYGON_API_KEY`
-  values and the `polygon` feature flag are unchanged.
-- `Capability` values combining several bits display as `"quote|chart"`
-  instead of `"unknown"`; `Capability::name()` keeps its documented
-  single-bit contract.
-- When no routed provider supports the specific operation, the error now
-  names that operation and the providers that could serve it
-  (`NotSupported`) instead of the generic capability-level
-  `NoProviderAvailable`.
-- Yahoo sessions are now shared per tokio runtime and client configuration.
-  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
-  authenticated session instead of running a fresh cookie + crumb handshake per
-  call, cutting each `finance::*` call from three HTTP requests to one.
-- Eight oversized source files were split into directories of focused modules:
-  `constants.rs`, `backtesting/refs/computed.rs`, `backtesting/result.rs`,
-  `backtesting/engine.rs`, `tickers/core.rs`, and the CLI's
-  `dashboard/render.rs`, `backtest/results.rs`, and `backtest/state.rs`. Every
-  existing path is preserved by re-export; no public API or behavior change.
+The library opens up: downstream crates can now register their own providers,
+implement the sixteen capability traits directly, and route them alongside the
+built-ins. A wave of new keyless providers — World Bank, US Treasury
+FiscalData, BLS, Frankfurter/ECB, Binance, Kraken, FINRA, OpenFIGI, DefiLlama,
+GDELT, CFTC, plus House/Senate congressional trades and SEC fails-to-deliver —
+closes the last key-only capabilities, so forex, crypto, short volume, and
+filings all work with nothing configured. The backtesting engine gains margin,
+leverage, financing costs, position-sizing schemes, and Pareto multi-objective
+search, alongside a large batch of correctness fixes. Streaming adds options
+chains, trades, order-book depth, and price alerts. `Ticker`/`Tickers` and the
+domain handles now cache by default. Includes several breaking API changes —
+see the **Breaking** items under Changed.
 
 ### Added
 
-- `FinanceError::NetworkError` for transport failures whose source is withheld.
-  Alpha Vantage, FMP, FRED, and Massive all authenticate with a query
-  parameter, so all four now use it instead of `HttpError`, whose
-  `reqwest::Error` renders the full URL in both `Display` and `Debug` and would
-  leak the key into logs. It is retriable.
-- `finance_query::alphavantage`, `finance_query::fmp`, and
-  `finance_query::polygon` config modules, each exposing `init` and
-  `init_with_timeout` alongside the existing `fred::init`. An API key can now
-  come from application configuration rather than only from the process
-  environment. The adapters' response types stay internal; data still flows
-  through `Providers`.
-- **CoinGecko trending, global stats, and coin search** are exposed keylessly on
-  the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
-  `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
-  GraphQL root fields). The library gains matching `crypto::trending()`,
-  `crypto::global()`, and `crypto::search()` shortcuts alongside
-  `crypto::coins()`/`crypto::coin()`.
-- `CalendarKind::MarketStatus` and `MarketCalendar::market_status()` for live
-  exchange open/closed status, which Alpha Vantage serves. It was previously
-  mapped onto `CalendarKind::MarketHoliday`, so a holiday-calendar query routed
-  to Alpha Vantage silently returned live status rows instead.
-- `SymbolMatch` gains `id`, `market_cap_rank`, `thumbnail`, and `image`. `id`
-  carries a provider-native identifier when it differs from the ticker — the
-  CoinGecko coin id, for instance, is what `Providers::crypto` accepts.
+- **Custom provider registration** — the Providers API is now an extension
+  point. All sixteen capability traits are public and implementable
+  (`async_trait` is re-exported so impls can't version-skew), their signature
+  types are nameable, and the capability layer — traits, models, domain
+  handles — is compiled unconditionally rather than gated behind built-in
+  provider features, so `Providers::forex()` exists even when no built-in
+  forex provider is compiled in. `ProvidersBuilder::with_adapter` registers a
+  downstream adapter under `Provider::Custom(CustomId)`, `Routes::route` names
+  it in a route, and `Providers::from_set` wraps a hand-built set. Routing to
+  an id nothing registered fails at build with the new
+  `ProviderNotRegistered` error rather than `NoProviderAvailable` on first
+  call. Custom ids are interned and capped at `u16`; a collision is checked
+  against built-ins only.
+- **Provider introspection** — `Provider::all()`, `Provider::capabilities()`,
+  and `Capability::candidate_providers()` are now public, so code can ask
+  what a provider serves or who serves a capability instead of triggering an
+  error and reading its hint. `Capability::all()` iterates the single-bit
+  constants, and `Capability::NONE`/`union` allow declaring capability sets
+  in a `const`. All three answer for built-ins; a custom provider's set
+  lives on its adapter.
+- **Instance-scoped API keys** — `ProvidersBuilder` can carry keys per
+  `Providers` instance instead of only process-global `init` singletons, so
+  two instances can hold different keys for one provider, and rotation and
+  test isolation work. Resolution order is scoped key, then singleton, then
+  environment; rate-limit buckets are per key.
+- **Per-capability fetch mode** — `Routes::route_with` and `fetch_mode_for`
+  set `Fetch::Sequential`/`Fetch::Parallel` per capability, so `QUOTE` can
+  race providers while a quota-limited capability stays sequential.
 - **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
   serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
   indicators across 200+ economies, closing the gap left by FRED's US focus.
@@ -180,15 +146,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   …) to their CFTC contract code; anything else is passed through as a raw
   `cftc_contract_market_code`. New public model `CommitmentsOfTraders` /
   `CotObservation`. Covers physical commodities only (agriculture, energy,
-  metals) — CFTC reports financial futures (equity indices, rates,
-  currencies) separately in the Traders in Financial Futures report, which
-  this adapter does not serve; CFTC publishes no price quotes at all, so
-  `fetch_futures_quote` reports `NotSupported` and falls through to another
-  routed provider (e.g. Polygon).
-- Both keyless providers are exposed on the server: `GET /v2/gdelt/news/{symbol}`
-  and `GET /v2/cftc/cot/{symbol}`, plus the `gdeltNews`/`commitmentsOfTraders`
-  GraphQL root fields. The library gains `gdelt::news()` and
-  `cftc::commitments_of_traders()` shortcuts so neither needs provider routing.
+  metals) — CFTC reports financial futures separately in the Traders in
+  Financial Futures report, which this adapter does not serve; CFTC publishes
+  no price quotes at all, so `fetch_futures_quote` reports `NotSupported` and
+  falls through to another routed provider (e.g. Polygon).
+- **Congressional trades** (`housetrades` / `senatetrades` features, keyless)
+  — `Provider::CongressTrades` serves House and Senate Periodic Transaction
+  Reports. The House adapter downloads the Clerk's yearly bulk ZIP archives
+  and extracts text from born-digital PTR PDFs in-crate (scanned or
+  hand-signed filings are skipped — there is no OCR); there is no per-symbol
+  query endpoint upstream, so a lookup scans the most recent filings,
+  trading completeness for bounded latency. The Senate site renders
+  client-side behind bot protection with no query API, so its adapter
+  (`senatetrades`) drives the real search flow through headless Chromium.
+  With both features compiled in, House and Senate fetch concurrently and
+  merge into one result, each row labeled by `office`; if Senate fails — bot
+  block, rate limit, network — the merge returns House-only data rather than
+  failing the call. New public model `CongressionalTrade`.
+- **SEC fails-to-deliver** (`secftd` feature, keyless) — the EDGAR adapter
+  now reads the SEC's bi-monthly fails-to-deliver flat files, so
+  `Ticker::fails_to_deliver()` works without FMP. `FILINGS` routes
+  EDGAR + Yahoo unconditionally instead of only when `FMP_API_KEY` is set.
+- **Keyless replacements for keyed-only surfaces** — capabilities that
+  previously required FMP, Alpha Vantage, or Polygon now have primary-source
+  or derived keyless routes: executive compensation parsed from DEF 14A
+  proxy-statement HTML (the Summary Compensation Table, matched by header
+  shape since the data is not XBRL-tagged), employee count from EDGAR's
+  `dei:EntityNumberOfEmployees` cover-page tag (voluntary — falls back to
+  FMP when absent), active listing status from the SEC's bulk ticker files
+  (delisted history stays keyed-only), symbol details composed from Yahoo's
+  profile modules plus an EDGAR submissions lookup, sector performance
+  history derived from the 11 SPDR sector ETFs' daily closes, S&P 500
+  constituent changes scraped from Wikipedia's historical-components table,
+  and exchange listings served from a local static table of 18 major venues.
+  `CALENDAR`, `DISCOVERY`, `INDICES`, `COMMODITIES`, `FUTURES`, and
+  `FILINGS` all route through keyless providers by default.
+- **Backtesting: margin, leverage, and financing** — `BacktestConfig` gains
+  `max_leverage`, margin interest, and a short borrow fee (leverage is free
+  without a financing rate, so a debit cash balance accrues margin interest
+  alongside the borrow fee), margin-call liquidation, and peak-leverage
+  reporting on results. Portfolio backtests accept the same knobs at the
+  account level — largest-first maintenance liquidation, pro-rata margin
+  interest — instead of rejecting them, and per-trade stop-loss/take-profit
+  brackets fire in portfolios through the same shared check as the
+  single-symbol engine.
+- **Backtesting: position sizing schemes** — configurable sizing
+  (`PositionSizing`) replaces all-in entries, applied consistently across
+  single-symbol and portfolio engines.
+- **Backtesting: Pareto multi-objective search** — optimize across several
+  objectives at once and get the non-dominated front back, alongside the
+  existing `GridSearch`/`BayesianSearch`/`WalkForward`.
+- **New indicators and risk metrics** — Pivot Points, Heikin-Ashi, ZigZag,
+  and Fibonacci Retracement join the indicator suite (computation function,
+  `Indicator` dispatch, `Chart` extension method, and `IndicatorsSummary`
+  field each). CVaR joins `risk::`, and Omega Ratio, Kelly Criterion, Ulcer
+  Index, and Information Ratio move from backtest-only metrics to fields on
+  the standalone `risk::RiskSummary`, sharing formulas through one
+  feature-independent module. Fear & Greed picks up a crypto variant from
+  Alternative.me.
+- **Streaming: options chains, trades, order-book depth, and price alerts** —
+  four new subscribable streams, each a thin handle over the shared
+  subscription machinery rather than its own copy.
+- **Retry policy and provider health** — opt-in retry with backoff and
+  jitter on provider dispatch (`RetryPolicy`), a per-provider health
+  snapshot (`ProviderHealth`: success/failure counts, last error,
+  rate-limit budget), and exponential reconnect backoff for streaming, all
+  sharing one delay implementation.
+- Provider-neutral models for company profile, earnings surprises, earnings
+  transcripts, and analyst grading history (`CompanyProfile`,
+  `EarningsSurprise`, `EarningsTranscript`, grading actions), routed through
+  `Ticker` and the filings handle across providers.
+- Polygon grouped-daily aggregates and Alpha Vantage market status, wired
+  through the public API (both already existed in the adapters, unrouted).
+- `FinanceError::NetworkError` for transport failures whose source is withheld.
+  Alpha Vantage, FMP, FRED, and Massive all authenticate with a query
+  parameter, so all four now use it instead of `HttpError`, whose
+  `reqwest::Error` renders the full URL in both `Display` and `Debug` and would
+  leak the key into logs. It is retriable.
+- `finance_query::alphavantage`, `finance_query::fmp`, and
+  `finance_query::polygon` config modules, each exposing `init` and
+  `init_with_timeout` alongside the existing `fred::init`. An API key can now
+  come from application configuration rather than only from the process
+  environment. The adapters' response types stay internal; data still flows
+  through `Providers`.
+- **CoinGecko trending, global stats, and coin search** are exposed keylessly on
+  the server: `GET /v2/crypto/trending`, `GET /v2/crypto/global`, and
+  `GET /v2/crypto/search` (plus the `cryptoTrending`/`cryptoGlobal`/`cryptoSearch`
+  GraphQL root fields). The library gains matching `crypto::trending()`,
+  `crypto::global()`, and `crypto::search()` shortcuts alongside
+  `crypto::coins()`/`crypto::coin()`.
+- `CalendarKind::MarketStatus` and `MarketCalendar::market_status()` for live
+  exchange open/closed status, which Alpha Vantage serves. It was previously
+  mapped onto `CalendarKind::MarketHoliday`, so a holiday-calendar query routed
+  to Alpha Vantage silently returned live status rows instead.
+- `SymbolMatch` gains `id`, `market_cap_rank`, `thumbnail`, and `image`. `id`
+  carries a provider-native identifier when it differs from the ticker — the
+  CoinGecko coin id, for instance, is what `Providers::crypto` accepts.
 - Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
   `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
   (heaviest first) — no other wired provider serves ETF composition —
@@ -242,33 +295,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fiscal period and reason about whether it is still current. New public models
   `KeyMetricsTtm` and `FinancialRatiosTtm`.
 - Ownership/governance on `Ticker`: `executive_compensation()` and
-  `employee_count()` via the `CORPORATE` route (FMP), both extracted from the
+  `employee_count()` via the `CORPORATE` route, both extracted from the
   company's own SEC filings and returned newest-first. FMP also now serves
   `share_float()` on the `FUNDAMENTALS` route, so it works when FMP is routed
   ahead of Yahoo. New public models `ExecutiveCompensation` and `EmployeeCount`.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
-  the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
+  the S&P 500, Nasdaq 100, and Dow Jones. Constituents and S&P 500 changes
+  have keyless routes (Wikipedia); FMP serves the rest.
   `MajorIndex::from_symbol` maps common symbol spellings.
 - Short data on `Ticker`: `short_interest()`, `short_volume()`, and
   `share_float()` via the `FUNDAMENTALS` route. The default Yahoo route
   derives short interest (current + prior-month snapshots) and float from
-  key statistics keylessly; Polygon adds the full history and daily short
-  volume.
+  key statistics keylessly; FINRA serves daily short volume keyless, and
+  Polygon adds the full history.
 - Filing text: `providers.filings("AAPL").sections(accession, form)` returns
   the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
-  risk factors (Polygon; EDGAR still serves metadata).
+  risk factors (EDGAR keyless, Polygon keyed).
 - `Ticker::press_releases(limit)` — the company's own releases, distinct from
-  press coverage via `news()` (FMP).
+  press coverage via `news()`.
 - `providers.calendar().holidays()` — upcoming market holidays and early
-  closes as a new `CalendarKind::MarketHoliday` (Polygon).
-- `providers.market().sector_performance_history(limit)` (FMP), and market
+  closes as a new `CalendarKind::MarketHoliday`, served keylessly from a
+  local rules table with Polygon as a keyed route.
+- `providers.market().sector_performance_history(limit)`, and market
   movers now work on the default keyless route: Yahoo serves
   `gainers()`/`losers()`/`most_active()` derived from its predefined
   screeners, with Alpha Vantage as a second keyed route. `providers.market()`
   and the mover/sector models are available without any provider feature.
-- Three market-wide capabilities and handles on the Providers API (each needs
-  at least one of the `fmp`/`polygon`/`alphavantage` features):
+- Three market-wide capabilities and handles on the Providers API:
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,
   reference data, exchanges, screeners), `Capability::CALENDAR` with
   `providers.calendar()` (market-wide earnings/IPO/dividend/split/economic
@@ -278,7 +332,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-Yahoo provider previously fell back to one request per symbol; a
   10-symbol batch now costs one request instead of ten.
 - `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
-  on the domain handles.
+  on the domain handles; `.cache_forever()` for the old unbounded-lifetime
+  caching.
 - `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
   and lowest bar high/low/close since the open position was entered. The engine
   folds these once per bar, so `TrailingStop` and `TrailingTakeProfit` read one
@@ -289,8 +344,121 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Yahoo handshake once and retries. If the refresh itself fails, the shared
   session is dropped so the next caller builds a fresh one.
 
+### Changed
+
+- **Breaking**: `Ticker`, `Tickers`, and the domain handles now cache
+  responses by default with a 60-second TTL (matching the server's own quote
+  TTL), deduplicating concurrent identical fetches. Previously caching was
+  off unless `.cache(ttl)` was set — contradicting the documentation — and
+  `CacheMode`'s default was an unbounded lifetime.
+  - Migration: `.no_cache()` restores uncached behavior; `.cache_forever()`
+    restores unbounded-lifetime caching.
+- **Breaking**: `BacktestEngine::run` and `run_with_dividends` now reject
+  candles that are not sorted ascending by timestamp, with the same
+  `InvalidParameter` error already used for unsorted dividends. Conditions
+  binary-search the candle slice, so an unsorted series previously produced
+  a silently wrong entry index. `GridSearch`, `BayesianSearch`, and
+  `WalkForward` apply the same check once per series rather than once per
+  candidate.
+- **Breaking**: a Yahoo HTTP 403 whose body names the crumb now surfaces as
+  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared
+  session refreshes instead of failing every later caller on it. A 403 that
+  does *not* mention the crumb — a datacenter-IP block or abuse throttle —
+  keeps mapping to `UnexpectedResponse`, since no handshake can clear it and
+  retrying would cost an extra handshake and a discarded session per blocked
+  request.
+- **Breaking**: `FinanceError` is now `#[non_exhaustive]`. Downstream `match`
+  expressions over it need a wildcard arm; in exchange, later variants are
+  additive.
+- **Breaking**: `Region`, `IndicesRegion`, `Screener`, `Sector`, and `Fetch`
+  are now `#[non_exhaustive]` — these sets grow (new markets, screeners,
+  dispatch modes), so later variants become additive rather than
+  semver-major. Downstream `match` expressions over them need a wildcard
+  arm. The closed-set constants enums (`Interval`, `TimeRange`, `Frequency`,
+  `StatementType`, `ValueFormat`) deliberately stay exhaustive.
+- **Breaking**: `Provider`'s `Serialize` implementation now emits the
+  lowercase provider id (`"yahoo"`) instead of the variant name (`"Yahoo"`),
+  matching `as_str`, `Display`, and `from_id_str` — previously the
+  documented id was the one form that failed to deserialize.
+  `Provider::Custom` serializes but does not round-trip, since `from_id_str`
+  knows only built-in ids.
+- **Breaking**: `streaming::pricing::OptionTypeProto` is renamed to
+  `OptionType`.
+- The Polygon adapter now calls `api.massive.com` and
+  `wss://socket.massive.com` rather than the `polygon.io` hosts, following
+  Polygon.io's rebrand to Massive on 2025-10-30. Existing `POLYGON_API_KEY`
+  values and the `polygon` feature flag are unchanged.
+- Keyed adapters (Alpha Vantage, BLS, FMP, FRED, OpenFIGI, Massive) resolve
+  their API keys lazily at request time instead of eagerly from the
+  environment, and FMP moved off its legacy `/api/v3`/`/api/v4` paths to
+  `/stable` wherever one is published. Transport errors are sanitized so
+  keys and request URLs cannot leak through public error types.
+- `Capability` values combining several bits display as `"quote|chart"`
+  instead of `"unknown"`; `Capability::name()` keeps its documented
+  single-bit contract.
+- When no routed provider supports the specific operation, the error now
+  names that operation and the providers that could serve it
+  (`NotSupported`) instead of the generic capability-level
+  `NoProviderAvailable`.
+- Yahoo sessions are now shared per tokio runtime and client configuration.
+  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
+  authenticated session instead of running a fresh cookie + crumb handshake per
+  call, cutting each `finance::*` call from three HTTP requests to one.
+- Eight oversized source files were split into directories of focused modules:
+  `constants.rs`, `backtesting/refs/computed.rs`, `backtesting/result.rs`,
+  `backtesting/engine.rs`, `tickers/core.rs`, and the CLI's
+  `dashboard/render.rs`, `backtest/results.rs`, and `backtest/state.rs`. Every
+  existing path is preserved by re-export; no public API or behavior change.
+- The `fq` CLI moved out of the workspace to
+  [Verdenroz/fq-cli](https://github.com/Verdenroz/fq-cli) (history
+  preserved), removing the only source of `backtesting`/`rayon` compilation
+  in default-feature workspace builds. The CLI itself is unaffected.
+- Doc examples in `docs/library/**.md` are now generated and compiled
+  living docs, and the CI performance gate runs on native `perf_event`
+  measurement (soothfast) instead of valgrind, so regressions reproduce
+  locally.
+
 ### Fixed
 
+- **Backtesting sizing and margin** — the engine sizes entries from the last
+  bar closed before the fill, not the fill bar itself. Short scale-ins are
+  sized off equity at 1x and capped at the leverage ceiling, short proceeds
+  are reserved in portfolio sizing, and gross exposure is capped at equity.
+  Sleeve leverage is measured against portfolio equity. A levered short now
+  gets margin-called at any leverage, an intrabar stop outranks a margin
+  call on the same bar, a limit fill measures leverage on its fill bar, and
+  a leverage setting that would liquidate its own entry is rejected up
+  front.
+- **Backtesting orders and accounting** — the engine honors order expiry and
+  intrabar timing, charges financing on a position still open at the end of
+  the series, keeps reinvested dividends across position scaling, and
+  measures peak leverage after dividend adjustments. An open position counts
+  in summary metrics, crossover and prebuilt exits share one set of
+  semantics, and `total_financing_cost` defaults when decoding results
+  serialized by older versions.
+- **Backtesting metrics and validation** — break-even trades no longer count
+  toward the Kelly win rate, and Kelly's inputs are corrected. Metric edge
+  cases (empty or degenerate series) return `None` instead of nonsense.
+  Non-finite configs, position-sizing parameters the engine cannot honor,
+  and degenerate optimizer parameter ranges are rejected with
+  `InvalidParameter`. A volatility window ending on a zero close is skipped,
+  and sizing schemes stay inside the risk budget.
+- **Indicator causality** — the Ichimoku Chikou span reference is causal
+  (no look-ahead), and higher-timeframe conditions are evaluated in base
+  index space, fixing off-by-one signal alignment inside HTF strategies.
+- Yahoo chart candles now populate `adj_close`; it was parsed correctly and
+  then discarded during conversion to the public `Candle` model. Alpha
+  Vantage weekly and monthly bars carry it too (daily stays unadjusted —
+  the adjusted daily endpoint is premium-only).
+- Polygon's index-value websocket event (`ev: "V"`) is parsed; it previously
+  fell through to `Unknown` and every index-value update was discarded.
+- The Yahoo earnings-calls scraper forces HTTP/1.1: reqwest's default HTTP/2
+  negotiation against Yahoo's edge intermittently reset streams with
+  `PROTOCOL_ERROR`.
+- EDGAR's filing-index URL pointed at the wrong host, Yahoo's sector-PE
+  sampling had drifted from the sector list, and the local market-calendar
+  provider errored on an empty date range instead of defaulting to upcoming
+  holidays.
 - Alpha Vantage, FMP, and Massive classified an HTTP 429 or 5xx that carried a
   JSON error body as a non-retriable `InvalidParameter`, because the envelope
   was inspected before the status. The status is now authoritative and the
@@ -341,7 +509,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A zero base delay produced the maximum delay instead of zero at high
   attempt counts (`0.0 * inf` is NaN, and `f64::min` returns the other
   operand for NaN).
-
 - `finance::hours()` no longer labels every region's market "U.S. markets".
   Yahoo returns correct per-region session times but hardcodes the U.S.
   label; the name (and its occurrence in the status message) is now derived
@@ -352,6 +519,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than returning a value derived from a cancelled-out denominator.
 - A batch quote response whose `result` array contains a non-object element now
   fails that batch instead of yielding an all-empty quote for it.
+
+### Security
+
+- No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment
+  were fixed in the library or its direct dependencies in this release. The
+  yanked `chacha20` 0.10.1 was replaced with 0.10.2.
+- Keyed-provider error paths no longer leak credentials: the configured API
+  key is redacted from forwarded upstream error text, and transport errors
+  no longer render the keyed request URL (see Fixed).
 <!-- /soothfast:notes -->
 
 ### API surface
