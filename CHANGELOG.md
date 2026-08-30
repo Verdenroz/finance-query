@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FinanceError` is now `#[non_exhaustive]`, as every other public enum in the
   crate already is. Downstream `match` expressions over it need a wildcard arm;
   in exchange, later variants are additive.
+- `Region`, `IndicesRegion`, `Screener`, `Sector`, and `Fetch` are now
+  `#[non_exhaustive]` — these sets grow (new markets, screeners, dispatch
+  modes), so later variants become additive rather than semver-major.
+  Downstream `match` expressions over them need a wildcard arm. The closed-set
+  constants enums (`Interval`, `TimeRange`, `Frequency`, `StatementType`,
+  `ValueFormat`) deliberately stay exhaustive.
 
 ### Changed
 

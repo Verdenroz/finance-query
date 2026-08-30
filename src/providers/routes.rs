@@ -7,6 +7,7 @@ use super::{Capability, Provider};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// How providers are queried.
+#[non_exhaustive]
 pub enum Fetch {
     /// Try providers in priority order; first success wins.
     Sequential,
