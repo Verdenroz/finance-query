@@ -3,7 +3,7 @@
 # Build Stage: Compile Rust application
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM rust:1-slim-bookworm@sha256:99e09cb2284e2ddbb73a995deee3e91783fd04d177602ccf6eab326d778ee777 AS builder
+FROM rust:1-slim-bookworm@sha256:1469a27c125cb5a3aebfa4f4e4665d935b02fb72cc093b2c974b3d740e43f157 AS builder
 
 # translation-offline for published images; dev overrides to translation
 # (dictionary tier only) to skip the from-source CTranslate2 C++ build.
