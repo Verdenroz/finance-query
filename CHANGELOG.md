@@ -17,10 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump debian from `abd67ff` to `8820086` in /server (#461)
+- Bump rust from `99e09cb` to `1469a27` in /server (#460)
+- Bump rust from `99e09cb` to `1469a27` in /finance-query-mcp (#459)
+- Bump debian from `abd67ff` to `8820086` in /finance-query-mcp (#458)
 - Bump soothfast to 0.2.0 (#455)
 
 ### 🔧 Internal
 
+- Bump docker/setup-buildx-action from 3.12.0 to 4.3.0 (#463)
+- Bump docker/login-action from 4.5.1 to 4.6.0 (#464)
+- Bump step-security/harden-runner from 2.19.4 to 2.21.0 (#465)
+- Bump actions/upload-artifact from 4.6.2 to 7.0.1 (#462)
+- Bump taiki-e/install-action from 2.82.3 to 2.86.7 (#466)
+- Regenerate derived artifacts (#457)
 - Regenerate derived artifacts (#454)
 
 
