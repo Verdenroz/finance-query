@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Move onto the soothfast v0.3 bot action (#472)
 - Bump docker/setup-buildx-action from 3.12.0 to 4.3.0 (#463)
 - Bump docker/login-action from 4.5.1 to 4.6.0 (#464)
 - Bump step-security/harden-runner from 2.19.4 to 2.21.0 (#465)
