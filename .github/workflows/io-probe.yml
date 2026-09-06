@@ -38,17 +38,11 @@ jobs:
         with:
           shared-key: io-probe
           cache-on-failure: true
-      # Pinned to the locked runner, same as the perf gate: an unpinned CLI
-      # silently outruns the workspace's soothfast version.
-      - name: Install cargo-binstall
-        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
-        with:
-          tool: cargo-binstall
       - name: Install cargo-soothfast
-        run: |
-          RUNNER=$(grep -A1 '^name = "soothfast"$' Cargo.lock | grep '^version' | cut -d'"' -f2)
-          command -v cargo-soothfast >/dev/null || FORCE=--force
-          cargo binstall cargo-soothfast --version "$RUNNER" --locked --no-confirm ${FORCE:-}
+        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        with:
+          gate: false
+          changelog: false
       - name: Build release server
         run: cargo build --release -p finance-query-server
       - name: Probe
