@@ -29,15 +29,10 @@ jobs:
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: false
-      - name: Install cargo-binstall
-        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
-        with:
-          tool: cargo-binstall
       - name: Install cargo-soothfast
-        # rust-cache can restore binstall's install record without the
-        # binary itself; --force reinstalls past the stale record.
-        run: |
-          command -v cargo-soothfast >/dev/null || FORCE=--force
-          cargo binstall cargo-soothfast --locked --no-confirm ${FORCE:-}
+        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        with:
+          gate: false
+          changelog: false
       - name: Publish
         run: cargo soothfast sdk publish -p finance-query-server --target soothfast-routes --only python
