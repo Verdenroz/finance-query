@@ -314,6 +314,7 @@ impl RootMetadataQuery {
 
     /// US Treasury securities auctions, most recent auction date first
     /// (keyless).
+    #[allow(clippy::too_many_arguments)]
     async fn treasury_auctions(
         &self,
         ctx: &Context<'_>,
