@@ -160,7 +160,7 @@ FiscalData encodes every column as a string, including numbers, and marks a miss
 
 Series are fetched at the API's maximum page size (10,000 rows) and pagination is followed automatically, capped at 5 pages. A dataset larger than that logs a warning rather than silently returning a truncated series.
 
-Auction queries instead ask for a single page sized to `limit`, so `limit` bounds the request itself rather than trimming a larger response.
+Auction queries ask for a single page sized to `limit`, so `limit` bounds the request itself rather than trimming a larger response.
 
 ## Rate Limits
 
