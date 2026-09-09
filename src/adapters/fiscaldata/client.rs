@@ -100,6 +100,15 @@ impl FiscalDataClient {
             )
             .await?;
 
+        if meta.total_pages.is_some_and(|pages| pages > MAX_PAGES) {
+            warn!(
+                "FiscalData series {}/{} has {} pages; truncated at {MAX_PAGES}",
+                query.dataset,
+                query.value_field,
+                meta.total_pages.unwrap_or_default()
+            );
+        }
+
         if rows.is_empty() {
             return Err(FinanceError::SymbolNotFound {
                 symbol: Some(format!("{}/{}", query.dataset, query.value_field)),
@@ -120,14 +129,7 @@ impl FiscalDataClient {
         // Page 1 self-reports the page count, so the rest are independent and
         // knowable up front — no reason to walk them one round trip at a time.
         let mut first = self.page(query, 1).await?;
-        let reported_pages = first.meta.total_pages.unwrap_or(1);
-        let total_pages = reported_pages.min(max_pages);
-        if reported_pages > max_pages {
-            warn!(
-                "FiscalData {} has {reported_pages} pages; truncated at {max_pages}",
-                query.dataset
-            );
-        }
+        let total_pages = first.meta.total_pages.unwrap_or(1).min(max_pages);
 
         let mut rows = std::mem::take(&mut first.data);
         if !rows.is_empty() && total_pages > 1 {
@@ -190,7 +192,7 @@ impl FiscalDataClient {
         {
             return FinanceError::MacroDataError {
                 provider: API.to_string(),
-                context: format!("{}: {detail}", query.dataset),
+                context: format!("{} [{}]: {detail}", query.dataset, query.fields),
             };
         }
         if status == StatusCode::NOT_FOUND {

@@ -4,7 +4,7 @@
 //! every auction from announcement through settlement, and
 //! `upcoming_auctions` holds the forward schedule.
 
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 use crate::models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 
 use super::super::client::{DATE_FIELD, RowQuery};
@@ -36,22 +36,56 @@ const MAX_LIMIT: u32 = 1_000;
 /// The whole forward schedule is under a hundred rows, so one page covers it.
 const UPCOMING_PAGE_SIZE: u32 = 1_000;
 
+/// Reject a filter value that would be read as extra clauses. `,` separates
+/// clauses in FiscalData's filter grammar and `:` separates their parts.
+fn check_value(param: &str, value: &str) -> Result<()> {
+    if value.contains([',', ':']) {
+        return Err(FinanceError::InvalidParameter {
+            param: param.to_string(),
+            reason: format!("'{value}' may not contain ',' or ':'"),
+        });
+    }
+    Ok(())
+}
+
+fn check_date(param: &str, value: &str) -> Result<()> {
+    let bytes = value.as_bytes();
+    let well_formed = bytes.len() == 10
+        && bytes[4] == b'-'
+        && bytes[7] == b'-'
+        && bytes
+            .iter()
+            .enumerate()
+            .all(|(i, b)| i == 4 || i == 7 || b.is_ascii_digit());
+    if !well_formed {
+        return Err(FinanceError::InvalidParameter {
+            param: param.to_string(),
+            reason: format!("'{value}' is not a YYYY-MM-DD date"),
+        });
+    }
+    Ok(())
+}
+
 /// Compose the FiscalData row filter for `query`.
-fn build_filter(query: &TreasuryAuctionQuery) -> Option<String> {
+fn build_filter(query: &TreasuryAuctionQuery) -> Result<Option<String>> {
     let mut clauses: Vec<String> = Vec::new();
     if let Some(security_type) = &query.security_type {
+        check_value("security_type", security_type)?;
         clauses.push(format!("security_type:eq:{security_type}"));
     }
     if let Some(security_term) = &query.security_term {
+        check_value("security_term", security_term)?;
         clauses.push(format!("security_term:eq:{security_term}"));
     }
     if let Some(from) = &query.from {
+        check_date("from", from)?;
         clauses.push(format!("auction_date:gte:{from}"));
     }
     if let Some(to) = &query.to {
+        check_date("to", to)?;
         clauses.push(format!("auction_date:lte:{to}"));
     }
-    (!clauses.is_empty()).then(|| clauses.join(","))
+    Ok((!clauses.is_empty()).then(|| clauses.join(",")))
 }
 
 /// Read a column that carries text, treating FiscalData's `"null"` sentinel as
@@ -122,7 +156,7 @@ pub(crate) async fn fetch_treasury_auctions_response(
     query: &TreasuryAuctionQuery,
 ) -> Result<Vec<TreasuryAuction>> {
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
-    let filter = build_filter(query);
+    let filter = build_filter(query)?;
     let (rows, _) = super::super::client()?
         .rows(
             &RowQuery {
@@ -241,7 +275,7 @@ mod tests {
 
     #[test]
     fn empty_query_sends_no_filter() {
-        assert_eq!(build_filter(&TreasuryAuctionQuery::new()), None);
+        assert_eq!(build_filter(&TreasuryAuctionQuery::new()).unwrap(), None);
     }
 
     #[test]
@@ -251,12 +285,30 @@ mod tests {
             .security_term("13-Week")
             .dates(Some("2026-01-01"), Some("2026-06-30"));
         assert_eq!(
-            build_filter(&query).as_deref(),
+            build_filter(&query).unwrap().as_deref(),
             Some(
                 "security_type:eq:Bill,security_term:eq:13-Week,\
                  auction_date:gte:2026-01-01,auction_date:lte:2026-06-30"
             )
         );
+    }
+
+    #[test]
+    fn filter_value_with_grammar_characters_is_rejected() {
+        let query = TreasuryAuctionQuery::new().security_type("Bill,Note");
+        assert!(matches!(
+            build_filter(&query),
+            Err(FinanceError::InvalidParameter { .. })
+        ));
+    }
+
+    #[test]
+    fn malformed_date_is_rejected() {
+        let query = TreasuryAuctionQuery::new().dates(Some("01/2025"), None);
+        assert!(matches!(
+            build_filter(&query),
+            Err(FinanceError::InvalidParameter { .. })
+        ));
     }
 
     #[test]
@@ -340,7 +392,7 @@ mod tests {
                     dataset: AUCTIONS_DATASET,
                     fields: AUCTION_FIELDS,
                     sort: "-auction_date",
-                    filter: build_filter(&query).as_deref(),
+                    filter: build_filter(&query).unwrap().as_deref(),
                     page_size: query.limit.unwrap(),
                 },
                 1,

@@ -65,8 +65,8 @@ impl EconomicIndicator {
 /// The macro-economic series catalog: search and browse rather than fetch.
 ///
 /// Routes through [`Capability::ECONOMIC`]. [`EconomicIndicator`] needs a
-/// series id you already know; this handle is how you find one. FRED is
-/// currently the only provider.
+/// series id you already know; this handle is how you find one. FRED serves
+/// the catalog searches; US Treasury FiscalData serves the auction methods.
 ///
 /// Created via [`Providers::economic_catalog`](crate::Providers::economic_catalog).
 pub struct EconomicCatalog {

@@ -48,7 +48,7 @@ pub struct TreasuryAuction {
     pub total_tendered: Option<f64>,
     /// Par amount awarded across all bidders (US dollars).
     pub total_accepted: Option<f64>,
-    /// Total tendered divided by total accepted — the standard demand gauge.
+    /// Total tendered divided by total accepted, the standard demand gauge.
     pub bid_to_cover_ratio: Option<f64>,
     /// Highest accepted yield (%), for notes and bonds.
     pub high_yield: Option<f64>,
