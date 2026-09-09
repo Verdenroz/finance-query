@@ -77,6 +77,71 @@ Dataset paths and column names come from the [FiscalData dataset catalogue](http
 
 Passing anything that is neither a curated id nor a `dataset:column` pair returns `FinanceError::InvalidParameter` listing the curated catalogue.
 
+## Treasury Auctions
+
+Auction records and the forward schedule hang off the [`EconomicCatalog`](../economic.md) handle rather than a series id, since neither is a single value per date.
+
+```rust no_run feature=fiscaldata
+use finance_query::{Capability, Provider, Providers, TreasuryAuctionQuery};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::FiscalData])
+        .build()
+        .await?;
+
+    let query = TreasuryAuctionQuery::new()
+        .security_type("Note")
+        .dates(Some("2025-01-01"), Some("2025-03-31"))
+        .limit(50);
+
+    for auction in providers.economic_catalog().treasury_auctions(&query).await? {
+        println!(
+            "{} {} {}: bid-to-cover {:?}, high yield {:?}",
+            auction.auction_date,
+            auction.security_term,
+            auction.cusip,
+            auction.bid_to_cover_ratio,
+            auction.high_yield,
+        );
+    }
+    Ok(())
+}
+```
+
+```rust no_run feature=fiscaldata
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .route(Capability::ECONOMIC, [Provider::FiscalData])
+        .build()
+        .await?;
+
+    for auction in providers.economic_catalog().upcoming_auctions().await? {
+        println!(
+            "{}: {} {} (announced {})",
+            auction.auction_date,
+            auction.security_term,
+            auction.security_type,
+            auction.announcement_date,
+        );
+    }
+    Ok(())
+}
+```
+
+Auctions come back newest first; the schedule comes back soonest first.
+
+Every filter on `TreasuryAuctionQuery` is optional, and `limit` caps how many auctions are fetched from Treasury (default 100, maximum 1,000). `security_type`, `security_term`, `from`, and `to` are rejected with `FinanceError::InvalidParameter` if they carry a `,` or `:`, which FiscalData's filter grammar reads as clause separators; `from` and `to` must be `YYYY-MM-DD`.
+
+!!! warning "Result fields are empty until an auction settles"
+    `auctions_query` carries a row from the moment Treasury announces an auction, so the most recent rows have terms (`offering_amt`, `maturity_date`) but no results yet. Bills price off `high_discnt_rate` and `high_investment_rate` and leave `high_yield` unset; notes and bonds do the reverse.
+
+`upcoming_auctions()` returns only the newest published schedule. The underlying dataset appends each week's snapshot without retiring the last, so its older rows describe auctions that have already been held.
+
 ## Response Shape
 
 Results come back as the provider-neutral [`EconomicSeries`](../economic.md):
@@ -94,6 +159,8 @@ FiscalData encodes every column as a string, including numbers, and marks a miss
 ## Pagination
 
 Series are fetched at the API's maximum page size (10,000 rows) and pagination is followed automatically, capped at 5 pages. A dataset larger than that logs a warning rather than silently returning a truncated series.
+
+Auction queries instead ask for a single page sized to `limit`, so `limit` bounds the request itself rather than trimming a larger response.
 
 ## Rate Limits
 

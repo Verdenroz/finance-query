@@ -143,7 +143,9 @@ Those values win over the ambient environment; anything left out falls back to w
 - `get_symbol_details` — `GET /v2/symbol-details/{symbol}`: Reference detail for one symbol.
 - `get_transcript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript
 - `get_transcripts` — `GET /v2/transcripts/{symbol}/all`: Get all earnings transcripts
+- `get_treasury_auctions` — `GET /v2/treasury/auctions`: US Treasury securities auctions
 - `get_trending` — `GET /v2/trending`: Get trending tickers
+- `get_upcoming_auctions` — `GET /v2/treasury/auctions/upcoming`: US Treasury auctions scheduled but not yet held
 - `health_check` — `GET /v2/health`: Health check
 - `lookup` — `GET /v2/lookup`: Look up symbols by type
 - `ping` — `GET /v2/ping`: Ping endpoint

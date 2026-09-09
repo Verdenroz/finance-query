@@ -2092,6 +2092,55 @@
       }
     },
     {
+      "name": "get_treasury_auctions",
+      "description": "Get US Treasury securities auction results (bid-to-cover ratio, high yield or discount rate, and the primary-dealer/direct/indirect bidder split), newest first. Set upcoming=true for the announced schedule of auctions not yet held. No API key required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "description": "Total auctions fetched from Treasury, newest first (default: 100); `limit`/`cursor` page through them",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "cursor": {
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Comma-separated list of GraphQL field names to include; omitted = all fields",
+            "type": "string"
+          },
+          "from": {
+            "description": "Earliest auction date to include, `YYYY-MM-DD`; ignored when `upcoming` is true",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum rows per page; omitted = curated default (25)",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "security_term": {
+            "description": "Security term filter as Treasury spells it (e.g. \"13-Week\"); ignored when `upcoming` is true",
+            "type": "string"
+          },
+          "security_type": {
+            "description": "Security class filter (\"Bill\", \"Note\", \"Bond\"); ignored when `upcoming` is true",
+            "type": "string"
+          },
+          "to": {
+            "description": "Latest auction date to include, `YYYY-MM-DD`; ignored when `upcoming` is true",
+            "type": "string"
+          },
+          "upcoming": {
+            "description": "Return the not-yet-held auction schedule instead of auction records",
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
       "name": "get_treasury_yields",
       "description": "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required.",
       "inputSchema": {

@@ -1767,6 +1767,26 @@ class Client:
             into=list[models.GqlTranscriptWithMeta],
         )
 
+    def get_treasury_auctions(
+        self,
+        *,
+        count: int | None = None,
+        cursor: str | None = None,
+        fields: str | None = None,
+        from_: str | None = None,
+        limit: int | None = None,
+        security_term: str | None = None,
+        security_type: str | None = None,
+        to: str | None = None,
+    ) -> list[models.GqlTreasuryAuction]:
+        """US Treasury securities auctions"""
+        return self._transport.request(
+            "GET",
+            "/v2/treasury/auctions",
+            query=query_of({"count": count, "cursor": cursor, "fields": fields, "from": from_, "limit": limit, "securityTerm": security_term, "securityType": security_type, "to": to}),
+            into=list[models.GqlTreasuryAuction],
+        )
+
     def get_trending(
         self,
         *,
@@ -1779,6 +1799,21 @@ class Client:
             "/v2/trending",
             query=query_of({"fields": fields, "region": region}),
             into=list[models.GqlTrendingQuote],
+        )
+
+    def get_upcoming_auctions(
+        self,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlUpcomingAuction]:
+        """US Treasury auctions scheduled but not yet held"""
+        return self._transport.request(
+            "GET",
+            "/v2/treasury/auctions/upcoming",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlUpcomingAuction],
         )
 
     def health_check(
@@ -3552,6 +3587,26 @@ class AsyncClient:
             into=list[models.GqlTranscriptWithMeta],
         )
 
+    async def get_treasury_auctions(
+        self,
+        *,
+        count: int | None = None,
+        cursor: str | None = None,
+        fields: str | None = None,
+        from_: str | None = None,
+        limit: int | None = None,
+        security_term: str | None = None,
+        security_type: str | None = None,
+        to: str | None = None,
+    ) -> list[models.GqlTreasuryAuction]:
+        """US Treasury securities auctions"""
+        return await self._transport.request(
+            "GET",
+            "/v2/treasury/auctions",
+            query=query_of({"count": count, "cursor": cursor, "fields": fields, "from": from_, "limit": limit, "securityTerm": security_term, "securityType": security_type, "to": to}),
+            into=list[models.GqlTreasuryAuction],
+        )
+
     async def get_trending(
         self,
         *,
@@ -3564,6 +3619,21 @@ class AsyncClient:
             "/v2/trending",
             query=query_of({"fields": fields, "region": region}),
             into=list[models.GqlTrendingQuote],
+        )
+
+    async def get_upcoming_auctions(
+        self,
+        *,
+        cursor: str | None = None,
+        fields: str | None = None,
+        limit: int | None = None,
+    ) -> list[models.GqlUpcomingAuction]:
+        """US Treasury auctions scheduled but not yet held"""
+        return await self._transport.request(
+            "GET",
+            "/v2/treasury/auctions/upcoming",
+            query=query_of({"cursor": cursor, "fields": fields, "limit": limit}),
+            into=list[models.GqlUpcomingAuction],
         )
 
     async def health_check(

@@ -3153,6 +3153,64 @@ class GqlTranscriptWithMeta:
 
 
 @dataclasses.dataclass(frozen=True)
+class GqlTreasuryAuction:
+    """One US Treasury securities auction. Rows exist from announcement onwards,
+so an auction that has not been held yet carries its terms with every
+result field `null`. Bills report `highDiscntRate`/`highInvestmentRate`
+and leave `highYield` unset; notes and bonds do the reverse."""
+
+    auction_date: str
+    cusip: str
+    issue_date: str
+    maturity_date: str
+    record_date: str
+    security_term: str
+    security_type: str
+    auction_format: str | None = None
+    bid_to_cover_ratio: float | None = None
+    comp_accepted: float | None = None
+    direct_bidder_accepted: float | None = None
+    high_discnt_rate: float | None = None
+    high_investment_rate: float | None = None
+    high_price: float | None = None
+    high_yield: float | None = None
+    indirect_bidder_accepted: float | None = None
+    int_rate: float | None = None
+    noncomp_accepted: float | None = None
+    offering_amt: float | None = None
+    primary_dealer_accepted: float | None = None
+    reopening: bool | None = None
+    soma_accepted: float | None = None
+    total_accepted: float | None = None
+    total_tendered: float | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "auction_date": "auctionDate",
+        "auction_format": "auctionFormat",
+        "bid_to_cover_ratio": "bidToCoverRatio",
+        "comp_accepted": "compAccepted",
+        "direct_bidder_accepted": "directBidderAccepted",
+        "high_discnt_rate": "highDiscntRate",
+        "high_investment_rate": "highInvestmentRate",
+        "high_price": "highPrice",
+        "high_yield": "highYield",
+        "indirect_bidder_accepted": "indirectBidderAccepted",
+        "int_rate": "intRate",
+        "issue_date": "issueDate",
+        "maturity_date": "maturityDate",
+        "noncomp_accepted": "noncompAccepted",
+        "offering_amt": "offeringAmt",
+        "primary_dealer_accepted": "primaryDealerAccepted",
+        "record_date": "recordDate",
+        "security_term": "securityTerm",
+        "security_type": "securityType",
+        "soma_accepted": "somaAccepted",
+        "total_accepted": "totalAccepted",
+        "total_tendered": "totalTendered",
+    }
+
+
+@dataclasses.dataclass(frozen=True)
 class GqlTreasuryYield:
     """One day of US Treasury yield curve rates. Maturities with no published
 rate on a given date are `null`."""
@@ -3221,6 +3279,32 @@ class GqlTvlPoint:
 
     timestamp: int
     tvl: float
+
+
+@dataclasses.dataclass(frozen=True)
+class GqlUpcomingAuction:
+    """A US Treasury auction scheduled but not yet held. `offeringAmt` stays
+`null` until Treasury formally announces the auction's terms."""
+
+    announcement_date: str
+    auction_date: str
+    cusip: str
+    issue_date: str
+    record_date: str
+    security_term: str
+    security_type: str
+    offering_amt: float | None = None
+    reopening: bool | None = None
+
+    _WIRE: typing.ClassVar[dict[str, str]] = {
+        "announcement_date": "announcementDate",
+        "auction_date": "auctionDate",
+        "issue_date": "issueDate",
+        "offering_amt": "offeringAmt",
+        "record_date": "recordDate",
+        "security_term": "securityTerm",
+        "security_type": "securityType",
+    }
 
 
 @dataclasses.dataclass(frozen=True)

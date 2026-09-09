@@ -783,7 +783,7 @@ pub struct TreasuryAuctionsParams {
     pub from: Option<String>,
     /// Latest auction date to include, `YYYY-MM-DD`; ignored when `upcoming` is true
     pub to: Option<String>,
-    /// Overall cap on auctions fetched from Treasury, newest first (default: 100)
+    /// Total auctions fetched from Treasury, newest first (default: 100); `limit`/`cursor` page through them
     pub count: Option<u32>,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
@@ -2098,6 +2098,20 @@ mod param_tests {
     fn treasury_yields_params_all_optional() {
         let p: TreasuryYieldsParams = serde_json::from_value(json!({})).unwrap();
         assert_eq!(p.year, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn treasury_auctions_params_all_optional() {
+        let p: TreasuryAuctionsParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.upcoming, None);
+        assert_eq!(p.security_type, None);
+        assert_eq!(p.security_term, None);
+        assert_eq!(p.from, None);
+        assert_eq!(p.to, None);
+        assert_eq!(p.count, None);
         assert_eq!(p.fields, None);
         assert_eq!(p.limit, None);
         assert_eq!(p.cursor, None);

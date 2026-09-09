@@ -323,7 +323,9 @@ impl RootMetadataQuery {
         #[graphql(desc = "Security term filter, e.g. 13-Week")] security_term: Option<String>,
         #[graphql(desc = "Earliest auction date to include (YYYY-MM-DD)")] from: Option<String>,
         #[graphql(desc = "Latest auction date to include (YYYY-MM-DD)")] to: Option<String>,
-        #[graphql(desc = "Overall cap on auctions fetched from Treasury (default 100)")]
+        #[graphql(
+            desc = "Total auctions fetched from Treasury (default 100); `first`/`after` page through them"
+        )]
         count: Option<u32>,
         #[graphql(desc = "Max auctions per page; omitted = every fetched auction in one page")]
         first: Option<i32>,

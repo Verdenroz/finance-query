@@ -1011,12 +1011,42 @@ export interface GetTranscriptsOptions {
   limit?: number;
 }
 
+/** Query parameters for {@link Client.getTreasuryAuctions}. */
+export interface GetTreasuryAuctionsOptions {
+  /** Overall cap on auctions fetched from Treasury, newest first (default 100) */
+  count?: number;
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Earliest auction date to include (`YYYY-MM-DD`) */
+  from?: string;
+  /** Max rows per page; omitted (with cursor also omitted) = every matching row as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
+  /** Security term filter, spelled as Treasury spells it (e.g. `13-Week`) */
+  securityTerm?: string;
+  /** Security class filter (`Bill`, `Note`, `Bond`, ...) */
+  securityType?: string;
+  /** Latest auction date to include (`YYYY-MM-DD`) */
+  to?: string;
+}
+
 /** Query parameters for {@link Client.getTrending}. */
 export interface GetTrendingOptions {
   /** Comma-separated list of fields to include in response */
   fields?: string;
   /** Region code for localization (e.g., "US", "JP", "GB") */
   region?: models.Region;
+}
+
+/** Query parameters for {@link Client.getUpcomingAuctions}. */
+export interface GetUpcomingAuctionsOptions {
+  /** Opaque continuation cursor from a previous response's `pageInfo.endCursor` */
+  cursor?: string;
+  /** Comma-separated list of fields to include in response */
+  fields?: string;
+  /** Max rows per page; omitted (with cursor also omitted) = every matching row as a bare array, unchanged from pre-pagination behavior */
+  limit?: number;
 }
 
 /** Query parameters for {@link Client.lookup}. */
@@ -1900,9 +1930,23 @@ export class Client {
     });
   }
 
+  /** US Treasury securities auctions */
+  getTreasuryAuctions(options: GetTreasuryAuctionsOptions = {}): Promise<models.GqlTreasuryAuction[]> {
+    return this.transport.request<models.GqlTreasuryAuction[]>("GET", "/v2/treasury/auctions", {
+      query: queryOf(options),
+    });
+  }
+
   /** Get trending tickers */
   getTrending(options: GetTrendingOptions = {}): Promise<models.GqlTrendingQuote[]> {
     return this.transport.request<models.GqlTrendingQuote[]>("GET", "/v2/trending", {
+      query: queryOf(options),
+    });
+  }
+
+  /** US Treasury auctions scheduled but not yet held */
+  getUpcomingAuctions(options: GetUpcomingAuctionsOptions = {}): Promise<models.GqlUpcomingAuction[]> {
+    return this.transport.request<models.GqlUpcomingAuction[]>("GET", "/v2/treasury/auctions/upcoming", {
       query: queryOf(options),
     });
   }

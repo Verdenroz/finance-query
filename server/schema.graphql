@@ -4130,6 +4130,68 @@ type GqlTranscriptWithMeta {
 }
 
 """
+One US Treasury securities auction. Rows exist from announcement onwards,
+so an auction that has not been held yet carries its terms with every
+result field `null`. Bills report `highDiscntRate`/`highInvestmentRate`
+and leave `highYield` unset; notes and bonds do the reverse.
+"""
+type GqlTreasuryAuction {
+	recordDate: String!
+	cusip: String!
+	securityType: String!
+	securityTerm: String!
+	auctionDate: String!
+	issueDate: String!
+	maturityDate: String!
+	reopening: Boolean
+	auctionFormat: String
+	intRate: Float
+	offeringAmt: Float
+	totalTendered: Float
+	totalAccepted: Float
+	bidToCoverRatio: Float
+	highYield: Float
+	highDiscntRate: Float
+	highInvestmentRate: Float
+	highPrice: Float
+	primaryDealerAccepted: Float
+	directBidderAccepted: Float
+	indirectBidderAccepted: Float
+	compAccepted: Float
+	noncompAccepted: Float
+	somaAccepted: Float
+}
+
+type GqlTreasuryAuctionConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlTreasuryAuctionEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlTreasuryAuction!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlTreasuryAuctionEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlTreasuryAuction!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+"""
 One day of US Treasury yield curve rates. Maturities with no published
 rate on a given date are `null`.
 """
@@ -4275,6 +4337,51 @@ conversion total instead of panicking on a future variant.
 """
 type GqlUnknownEvent {
 	raw: JSON!
+}
+
+"""
+A US Treasury auction scheduled but not yet held. `offeringAmt` stays
+`null` until Treasury formally announces the auction's terms.
+"""
+type GqlUpcomingAuction {
+	recordDate: String!
+	securityType: String!
+	securityTerm: String!
+	cusip: String!
+	reopening: Boolean
+	offeringAmt: Float
+	announcementDate: String!
+	auctionDate: String!
+	issueDate: String!
+}
+
+type GqlUpcomingAuctionConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [GqlUpcomingAuctionEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [GqlUpcomingAuction!]!
+}
+
+"""
+An edge in a connection.
+"""
+type GqlUpcomingAuctionEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: GqlUpcomingAuction!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
 }
 
 type GqlUpgradeDowngradeHistory {
@@ -4772,6 +4879,54 @@ type QueryRoot {
 		"""
 		after: String
 	): GqlTreasuryYieldConnection!
+	"""
+	US Treasury securities auctions, most recent auction date first
+	(keyless).
+	"""
+	treasuryAuctions(
+		"""
+		Security class filter (Bill, Note, Bond, ...)
+		"""
+		securityType: String,
+		"""
+		Security term filter, e.g. 13-Week
+		"""
+		securityTerm: String,
+		"""
+		Earliest auction date to include (YYYY-MM-DD)
+		"""
+		from: String,
+		"""
+		Latest auction date to include (YYYY-MM-DD)
+		"""
+		to: String,
+		"""
+		Total auctions fetched from Treasury (default 100); `first`/`after` page through them
+		"""
+		count: Int,
+		"""
+		Max auctions per page; omitted = every fetched auction in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlTreasuryAuctionConnection!
+	"""
+	US Treasury auctions scheduled but not yet held, soonest first
+	(keyless).
+	"""
+	upcomingAuctions(
+		"""
+		Max auctions per page; omitted = every scheduled auction in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlUpcomingAuctionConnection!
 	"""
 	SEC EDGAR full-text search.
 	"""
