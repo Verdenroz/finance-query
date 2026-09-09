@@ -141,6 +141,12 @@ pub enum Operation {
     EconomicCategories,
     /// Scheduled macro data releases.
     EconomicReleases,
+    /// US Treasury securities auctions, announced through settled.
+    #[cfg(feature = "fiscaldata")]
+    TreasuryAuctions,
+    /// US Treasury auctions scheduled but not yet held.
+    #[cfg(feature = "fiscaldata")]
+    UpcomingAuctions,
     /// ETF profile and portfolio holdings.
     EtfProfile,
     /// Earnings-surprise history.
@@ -233,6 +239,10 @@ impl Operation {
             Self::EconomicSearch => "economic_search",
             Self::EconomicCategories => "economic_categories",
             Self::EconomicReleases => "economic_releases",
+            #[cfg(feature = "fiscaldata")]
+            Self::TreasuryAuctions => "treasury_auctions",
+            #[cfg(feature = "fiscaldata")]
+            Self::UpcomingAuctions => "upcoming_auctions",
             Self::EtfProfile => "etf_profile",
             Self::EarningsSurprises => "earnings_surprises",
             Self::GradingHistory => "grading_history",
@@ -288,6 +298,8 @@ impl Operation {
             | Self::EconomicSearch
             | Self::EconomicCategories
             | Self::EconomicReleases => Capability::ECONOMIC,
+            #[cfg(feature = "fiscaldata")]
+            Self::TreasuryAuctions | Self::UpcomingAuctions => Capability::ECONOMIC,
             Self::ForexQuote | Self::ForexNews => Capability::FOREX,
             Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
                 Capability::INDICES

@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::models::economic::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
+#[cfg(feature = "fiscaldata")]
+use crate::models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 use crate::providers::{Capability, Operation, ProviderSet};
 
 domain_handle! {
@@ -112,6 +114,45 @@ impl EconomicCatalog {
             as_economic,
             EconomicReleases,
             fetch_economic_releases,
+            []
+        )
+    }
+
+    /// Fetch US Treasury securities auctions matching `query`, most recent
+    /// auction date first.
+    ///
+    /// Covers auctions from announcement onwards, so the newest rows carry
+    /// their terms with the result figures still unset. US Treasury FiscalData
+    /// is the only provider.
+    #[cfg(feature = "fiscaldata")]
+    pub async fn treasury_auctions(
+        &self,
+        query: &TreasuryAuctionQuery,
+    ) -> Result<Vec<TreasuryAuction>> {
+        let query = query.clone();
+        dispatch_via!(
+            self,
+            ECONOMIC,
+            as_economic,
+            TreasuryAuctions,
+            fetch_treasury_auctions,
+            [query],
+            &query
+        )
+    }
+
+    /// Fetch the US Treasury auctions scheduled but not yet held, soonest
+    /// first.
+    ///
+    /// US Treasury FiscalData is the only provider.
+    #[cfg(feature = "fiscaldata")]
+    pub async fn upcoming_auctions(&self) -> Result<Vec<UpcomingAuction>> {
+        dispatch_via!(
+            self,
+            ECONOMIC,
+            as_economic,
+            UpcomingAuctions,
+            fetch_upcoming_auctions,
             []
         )
     }

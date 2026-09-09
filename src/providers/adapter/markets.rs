@@ -221,6 +221,32 @@ pub trait EconomicProvider: ProviderCore {
     ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
         Err(self.not_supported(Operation::EconomicReleases))
     }
+
+    /// Fetch US Treasury securities auctions matching `query`, most recent
+    /// auction date first.
+    ///
+    /// NOTE: Treasury publishes the auction record itself through FiscalData;
+    /// no other provider integrated here carries per-auction bidder
+    /// breakdowns. Stays FiscalData-only.
+    #[cfg(feature = "fiscaldata")]
+    async fn fetch_treasury_auctions(
+        &self,
+        _query: &crate::models::economic::TreasuryAuctionQuery,
+    ) -> Result<Vec<crate::models::economic::TreasuryAuction>> {
+        Err(self.not_supported(Operation::TreasuryAuctions))
+    }
+
+    /// Fetch the US Treasury auctions scheduled but not yet held, soonest
+    /// first.
+    ///
+    /// NOTE: FiscalData-only for the same reason as
+    /// [`fetch_treasury_auctions`](Self::fetch_treasury_auctions).
+    #[cfg(feature = "fiscaldata")]
+    async fn fetch_upcoming_auctions(
+        &self,
+    ) -> Result<Vec<crate::models::economic::UpcomingAuction>> {
+        Err(self.not_supported(Operation::UpcomingAuctions))
+    }
 }
 
 /// [`crate::Capability::FOREX`] — currency-pair quotes.
