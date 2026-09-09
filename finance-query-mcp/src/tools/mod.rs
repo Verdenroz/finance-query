@@ -24,6 +24,7 @@ pub mod quotes;
 pub mod risk;
 pub mod search;
 pub mod transcripts;
+pub mod treasury;
 
 use crate::metrics::ToolCallTimer;
 use finance_query::{
@@ -771,6 +772,28 @@ pub struct TreasuryYieldsParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct TreasuryAuctionsParams {
+    /// Return the not-yet-held auction schedule instead of auction records
+    pub upcoming: Option<bool>,
+    /// Security class filter ("Bill", "Note", "Bond"); ignored when `upcoming` is true
+    pub security_type: Option<String>,
+    /// Security term filter as Treasury spells it (e.g. "13-Week"); ignored when `upcoming` is true
+    pub security_term: Option<String>,
+    /// Earliest auction date to include, `YYYY-MM-DD`; ignored when `upcoming` is true
+    pub from: Option<String>,
+    /// Latest auction date to include, `YYYY-MM-DD`; ignored when `upcoming` is true
+    pub to: Option<String>,
+    /// Overall cap on auctions fetched from Treasury, newest first (default: 100)
+    pub count: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum rows per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct TranscriptsParams {
     /// Stock ticker symbol
     pub symbol: String,
@@ -1472,6 +1495,28 @@ impl FinanceTools {
         p: Parameters<TreasuryYieldsParams>,
     ) -> Result<CallToolResult, McpError> {
         fred::get_treasury_yields(&self.schema, p.0.year, p.0.fields, p.0.limit, p.0.cursor).await
+    }
+
+    #[tool(
+        description = "Get US Treasury securities auction results (bid-to-cover ratio, high yield or discount rate, and the primary-dealer/direct/indirect bidder split), newest first. Set upcoming=true for the announced schedule of auctions not yet held. No API key required."
+    )]
+    async fn get_treasury_auctions(
+        &self,
+        p: Parameters<TreasuryAuctionsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        treasury::get_treasury_auctions(
+            &self.schema,
+            p.0.upcoming,
+            p.0.security_type,
+            p.0.security_term,
+            p.0.from,
+            p.0.to,
+            p.0.count,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
