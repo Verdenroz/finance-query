@@ -542,6 +542,47 @@ pub const GQL_TREASURY_YIELD_VALID_FIELDS: &[&str] = &[
     "date", "y1M", "y2M", "y3M", "y4M", "y6M", "y1", "y2", "y3", "y5", "y7", "y10", "y20", "y30",
 ];
 
+// ── US Treasury auctions (FiscalData) ───────────────────────────────────────
+
+pub const GQL_TREASURY_AUCTION_VALID_FIELDS: &[&str] = &[
+    "recordDate",
+    "cusip",
+    "securityType",
+    "securityTerm",
+    "auctionDate",
+    "issueDate",
+    "maturityDate",
+    "reopening",
+    "auctionFormat",
+    "intRate",
+    "offeringAmt",
+    "totalTendered",
+    "totalAccepted",
+    "bidToCoverRatio",
+    "highYield",
+    "highDiscntRate",
+    "highInvestmentRate",
+    "highPrice",
+    "primaryDealerAccepted",
+    "directBidderAccepted",
+    "indirectBidderAccepted",
+    "compAccepted",
+    "noncompAccepted",
+    "somaAccepted",
+];
+
+pub const GQL_UPCOMING_AUCTION_VALID_FIELDS: &[&str] = &[
+    "recordDate",
+    "securityType",
+    "securityTerm",
+    "cusip",
+    "reopening",
+    "offeringAmt",
+    "announcementDate",
+    "auctionDate",
+    "issueDate",
+];
+
 // ── Market metadata (hours, quote type, currencies, exchanges) ─────────────
 
 pub const GQL_MARKET_HOURS_VALID_FIELDS: &[&str] = &["markets"];

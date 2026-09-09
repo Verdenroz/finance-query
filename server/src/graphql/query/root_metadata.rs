@@ -7,6 +7,7 @@ use crate::AppState;
 use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
+    auctions::{GqlTreasuryAuction, GqlUpcomingAuction},
     calendar::GqlCalendarEvent,
     crypto::{GqlCoinQuote, GqlGlobalCryptoStats, GqlSymbolMatch, GqlTrendingCoin},
     edgar::{GqlEdgarCik, GqlEdgarSearchHit, GqlEdgarSearchResults},
@@ -308,6 +309,62 @@ impl RootMetadataQuery {
             .await
             .map_err(to_gql_error)?;
         let rows: Vec<GqlTreasuryYield> = from_gql_json(json)?;
+        pagination::paginate(&rows, first, after).await
+    }
+
+    /// US Treasury securities auctions, most recent auction date first
+    /// (keyless).
+    async fn treasury_auctions(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Security class filter (Bill, Note, Bond, ...)")] security_type: Option<
+            String,
+        >,
+        #[graphql(desc = "Security term filter, e.g. 13-Week")] security_term: Option<String>,
+        #[graphql(desc = "Earliest auction date to include (YYYY-MM-DD)")] from: Option<String>,
+        #[graphql(desc = "Latest auction date to include (YYYY-MM-DD)")] to: Option<String>,
+        #[graphql(desc = "Overall cap on auctions fetched from Treasury (default 100)")]
+        count: Option<u32>,
+        #[graphql(desc = "Max auctions per page; omitted = every fetched auction in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlTreasuryAuction>> {
+        let state = ctx.data::<AppState>()?;
+        let mut query =
+            finance_query::TreasuryAuctionQuery::new().dates(from.as_deref(), to.as_deref());
+        if let Some(security_type) = security_type {
+            query = query.security_type(security_type);
+        }
+        if let Some(security_term) = security_term {
+            query = query.security_term(security_term);
+        }
+        if let Some(count) = count {
+            query = query.limit(count);
+        }
+        let json =
+            crate::services::treasury::get_treasury_auctions(&state.cache, &state.providers, query)
+                .await
+                .map_err(to_gql_error)?;
+        let rows: Vec<GqlTreasuryAuction> = from_gql_json(json)?;
+        pagination::paginate(&rows, first, after).await
+    }
+
+    /// US Treasury auctions scheduled but not yet held, soonest first
+    /// (keyless).
+    async fn upcoming_auctions(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "Max auctions per page; omitted = every scheduled auction in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlUpcomingAuction>> {
+        let state = ctx.data::<AppState>()?;
+        let json = crate::services::treasury::get_upcoming_auctions(&state.cache, &state.providers)
+            .await
+            .map_err(to_gql_error)?;
+        let rows: Vec<GqlUpcomingAuction> = from_gql_json(json)?;
         pagination::paginate(&rows, first, after).await
     }
 

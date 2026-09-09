@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod auctions;
 pub mod backtest;
 pub mod batch;
 pub mod calendar;

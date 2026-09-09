@@ -37,6 +37,7 @@ mod stream;
 mod support;
 mod system;
 mod transcripts;
+mod treasury;
 
 pub(crate) use system::metrics_middleware;
 
@@ -312,6 +313,13 @@ pub(crate) fn api_routes() -> Router {
         .route(
             "/transcripts/{symbol}/all",
             get(transcripts::get_transcripts),
+        )
+        // GET /v2/treasury/auctions?securityType=<str>&securityTerm=<str>&from=<date>&to=<date>&count=<u32>
+        .route("/treasury/auctions", get(treasury::get_treasury_auctions))
+        // GET /v2/treasury/auctions/upcoming
+        .route(
+            "/treasury/auctions/upcoming",
+            get(treasury::get_upcoming_auctions),
         )
         // GET /v2/trending?region=<str>
         .route("/trending", get(market::get_trending))
