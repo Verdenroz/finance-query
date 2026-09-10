@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### ✨ Features
+
+- Treasury auction results and upcoming auction schedule (#476)
+
 ### 📦 Dependencies
 
 - Bump debian from `abd67ff` to `8820086` in /server (#461)
@@ -25,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Regenerate soothfast outputs (#474)
+- Regenerate derived artifacts (#473)
 - Move onto the soothfast v0.3 bot action (#472)
 - Bump docker/setup-buildx-action from 3.12.0 to 4.3.0 (#463)
 - Bump docker/login-action from 4.5.1 to 4.6.0 (#464)
@@ -33,6 +39,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump taiki-e/install-action from 2.82.3 to 2.86.7 (#466)
 - Regenerate derived artifacts (#457)
 - Regenerate derived artifacts (#454)
+
+---
+
+### 🔍 API surface
+
+```
+ADDED    finance_query::TreasuryAuction
+ADDED    finance_query::TreasuryAuctionQuery
+ADDED    finance_query::UpcomingAuction
+ADDED    finance_query::domains::economic::EconomicCatalog::treasury_auctions
+ADDED    finance_query::models::economic::auctions::TreasuryAuction
+ADDED    finance_query::models::economic::auctions::TreasuryAuctionQuery
+ADDED    finance_query::models::economic::auctions::TreasuryAuctionQuery::new
+ADDED    finance_query::models::economic::auctions::UpcomingAuction
+CHANGED  finance_query::EconomicProvider (body)
+CHANGED  finance_query::Operation (signature)
+CHANGED  finance_query::providers::adapter::markets::EconomicProvider (body)
+CHANGED  finance_query::providers::operation::Operation (signature)
+CHANGED  finance_query::providers::operation::Operation::capability (body)
+```
 
 
 ## [3.0.0] - 2026-08-30
