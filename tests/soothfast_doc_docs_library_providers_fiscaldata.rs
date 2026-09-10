@@ -47,3 +47,63 @@ fn doc_block_line_58() {
         Ok(())
     }
 }
+
+// line 84: compile-only (no_run)
+#[cfg(feature = "fiscaldata")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_84() {
+    use finance_query::{Capability, Provider, Providers, TreasuryAuctionQuery};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .route(Capability::ECONOMIC, [Provider::FiscalData])
+            .build()
+            .await?;
+
+        let query = TreasuryAuctionQuery::new()
+            .security_type("Note")
+            .dates(Some("2025-01-01"), Some("2025-03-31"))
+            .limit(50);
+
+        for auction in providers.economic_catalog().treasury_auctions(&query).await? {
+            println!(
+                "{} {} {}: bid-to-cover {:?}, high yield {:?}",
+                auction.auction_date,
+                auction.security_term,
+                auction.cusip,
+                auction.bid_to_cover_ratio,
+                auction.high_yield,
+            );
+        }
+        Ok(())
+    }
+}
+
+// line 113: compile-only (no_run)
+#[cfg(feature = "fiscaldata")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_113() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .route(Capability::ECONOMIC, [Provider::FiscalData])
+            .build()
+            .await?;
+
+        for auction in providers.economic_catalog().upcoming_auctions().await? {
+            println!(
+                "{}: {} {} (announced {})",
+                auction.auction_date,
+                auction.security_term,
+                auction.security_type,
+                auction.announcement_date,
+            );
+        }
+        Ok(())
+    }
+}

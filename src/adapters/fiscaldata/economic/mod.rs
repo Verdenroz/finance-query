@@ -9,6 +9,9 @@ use crate::models::economic::{EconomicSeries, MacroObservation};
 use super::client::{DATE_FIELD, SeriesQuery};
 use super::models::{FiscalMeta, FiscalRow};
 
+mod auctions;
+pub(crate) use auctions::{fetch_treasury_auctions_response, fetch_upcoming_auctions_response};
+
 /// A curated series: a stable short name for a `(dataset, column, filter)`
 /// triple, so callers need not know FiscalData's table layout.
 #[derive(Debug)]

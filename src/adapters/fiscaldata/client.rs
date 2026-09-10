@@ -47,6 +47,18 @@ pub(super) struct SeriesQuery<'a> {
     pub filter: Option<&'a str>,
 }
 
+/// A raw dataset query: which dataset, which columns, how to order them, and
+/// an optional row filter. [`SeriesQuery`] is the one-value-column special
+/// case built on top of this.
+#[derive(Debug, Clone)]
+pub(super) struct RowQuery<'a> {
+    pub dataset: &'a str,
+    pub fields: &'a str,
+    pub sort: &'a str,
+    pub filter: Option<&'a str>,
+    pub page_size: u32,
+}
+
 pub(super) struct FiscalDataClient {
     http: Client,
     limiter: Arc<RateLimiter>,
@@ -75,29 +87,26 @@ impl FiscalDataClient {
         query: &SeriesQuery<'_>,
     ) -> Result<(Vec<FiscalRow>, FiscalMeta)> {
         let fields = format!("{DATE_FIELD},{}", query.value_field);
+        let (rows, meta) = self
+            .rows(
+                &RowQuery {
+                    dataset: query.dataset,
+                    fields: &fields,
+                    sort: DATE_FIELD,
+                    filter: query.filter,
+                    page_size: PAGE_SIZE,
+                },
+                MAX_PAGES,
+            )
+            .await?;
 
-        // Page 1 self-reports the page count, so the rest are independent and
-        // knowable up front — no reason to walk them one round trip at a time.
-        let mut first = self.page(query, &fields, 1).await?;
-        let reported_pages = first.meta.total_pages.unwrap_or(1);
-        let total_pages = reported_pages.min(MAX_PAGES);
-        if reported_pages > MAX_PAGES {
+        if meta.total_pages.is_some_and(|pages| pages > MAX_PAGES) {
             warn!(
-                "FiscalData series {}/{} has {reported_pages} pages; truncated at {MAX_PAGES}",
-                query.dataset, query.value_field
+                "FiscalData series {}/{} has {} pages; truncated at {MAX_PAGES}",
+                query.dataset,
+                query.value_field,
+                meta.total_pages.unwrap_or_default()
             );
-        }
-
-        let mut rows = std::mem::take(&mut first.data);
-        if !rows.is_empty() && total_pages > 1 {
-            // `buffered` preserves input order, so the pages reassemble
-            // chronologically however the responses interleave.
-            let rest: Vec<FiscalResponse> = futures::stream::iter(2..=total_pages)
-                .map(|page| self.page(query, &fields, page))
-                .buffered(MAX_CONCURRENT_PAGES)
-                .try_collect()
-                .await?;
-            rows.extend(rest.into_iter().flat_map(|page| page.data));
         }
 
         if rows.is_empty() {
@@ -107,26 +116,47 @@ impl FiscalDataClient {
                     .to_string(),
             });
         }
+        Ok((rows, meta))
+    }
+
+    /// Fetch up to `max_pages` pages of `query`, in the order the API serves
+    /// them.
+    pub(super) async fn rows(
+        &self,
+        query: &RowQuery<'_>,
+        max_pages: u32,
+    ) -> Result<(Vec<FiscalRow>, FiscalMeta)> {
+        // Page 1 self-reports the page count, so the rest are independent and
+        // knowable up front — no reason to walk them one round trip at a time.
+        let mut first = self.page(query, 1).await?;
+        let total_pages = first.meta.total_pages.unwrap_or(1).min(max_pages);
+
+        let mut rows = std::mem::take(&mut first.data);
+        if !rows.is_empty() && total_pages > 1 {
+            // `buffered` preserves input order, so the pages reassemble in
+            // sort order however the responses interleave.
+            let rest: Vec<FiscalResponse> = futures::stream::iter(2..=total_pages)
+                .map(|page| self.page(query, page))
+                .buffered(MAX_CONCURRENT_PAGES)
+                .try_collect()
+                .await?;
+            rows.extend(rest.into_iter().flat_map(|page| page.data));
+        }
         Ok((rows, first.meta))
     }
 
     /// Fetch one page of `query`. The rate limiter still paces every call, so
     /// concurrency here never outruns the token bucket.
-    async fn page(
-        &self,
-        query: &SeriesQuery<'_>,
-        fields: &str,
-        page: u32,
-    ) -> Result<FiscalResponse> {
+    async fn page(&self, query: &RowQuery<'_>, page: u32) -> Result<FiscalResponse> {
         self.limiter.acquire().await;
 
         let url = format!("{}/{}", self.base_url, query.dataset);
         let page_str = page.to_string();
-        let size_str = PAGE_SIZE.to_string();
+        let size_str = query.page_size.to_string();
         let mut params: Vec<(&str, &str)> = vec![
             ("format", "json"),
-            ("fields", fields),
-            ("sort", DATE_FIELD),
+            ("fields", query.fields),
+            ("sort", query.sort),
             ("page[size]", &size_str),
             ("page[number]", &page_str),
         ];
@@ -151,7 +181,7 @@ impl FiscalDataClient {
 
     /// Map a non-2xx response, preferring the API's own explanation of what
     /// was wrong with the query over a bare status code.
-    fn map_error(status: StatusCode, body: &[u8], query: &SeriesQuery<'_>) -> FinanceError {
+    fn map_error(status: StatusCode, body: &[u8], query: &RowQuery<'_>) -> FinanceError {
         // Checked before the body: a throttled response carries no useful
         // explanation of the query.
         if status == StatusCode::TOO_MANY_REQUESTS {
@@ -162,7 +192,7 @@ impl FiscalDataClient {
         {
             return FinanceError::MacroDataError {
                 provider: API.to_string(),
-                context: format!("{}/{}: {detail}", query.dataset, query.value_field),
+                context: format!("{} [{}]: {detail}", query.dataset, query.fields),
             };
         }
         if status == StatusCode::NOT_FOUND {

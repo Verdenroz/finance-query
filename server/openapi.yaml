@@ -5597,6 +5597,162 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v2/treasury/auctions:
+    get:
+      operationId: getTreasuryAuctions
+      summary: US Treasury securities auctions
+      parameters:
+        - name: count
+          in: query
+          required: false
+          schema:
+            description: "Overall cap on auctions fetched from Treasury, newest first (default 100)"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            description: "Earliest auction date to include (`YYYY-MM-DD`)"
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max rows per page; omitted (with cursor also omitted) = every matching\nrow as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+        - name: securityTerm
+          in: query
+          required: false
+          schema:
+            description: "Security term filter, spelled as Treasury spells it (e.g. `13-Week`)"
+            type: string
+        - name: securityType
+          in: query
+          required: false
+          schema:
+            description: "Security class filter (`Bill`, `Note`, `Bond`, ...)"
+            type: string
+        - name: to
+          in: query
+          required: false
+          schema:
+            description: "Latest auction date to include (`YYYY-MM-DD`)"
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlTreasuryAuction"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v2/treasury/auctions/upcoming:
+    get:
+      operationId: getUpcomingAuctions
+      summary: US Treasury auctions scheduled but not yet held
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+            type: string
+        - name: fields
+          in: query
+          required: false
+          schema:
+            description: Comma-separated list of fields to include in response
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            description: "Max rows per page; omitted (with cursor also omitted) = every matching\nrow as a bare array, unchanged from pre-pagination behavior"
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GqlUpcomingAuction"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Symbol or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited (global token bucket)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+          headers:
+            Retry-After:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v2/trending:
     get:
       operationId: getTrending
@@ -10764,6 +10920,81 @@ components:
         - title
         - url
         - transcript
+    GqlTreasuryAuction:
+      description: "One US Treasury securities auction. Rows exist from announcement onwards,\nso an auction that has not been held yet carries its terms with every\nresult field `null`. Bills report `highDiscntRate`/`highInvestmentRate`\nand leave `highYield` unset; notes and bonds do the reverse."
+      type: object
+      properties:
+        auctionDate:
+          type: string
+        auctionFormat:
+          type: string
+        bidToCoverRatio:
+          type: number
+          format: double
+        compAccepted:
+          type: number
+          format: double
+        cusip:
+          type: string
+        directBidderAccepted:
+          type: number
+          format: double
+        highDiscntRate:
+          type: number
+          format: double
+        highInvestmentRate:
+          type: number
+          format: double
+        highPrice:
+          type: number
+          format: double
+        highYield:
+          type: number
+          format: double
+        indirectBidderAccepted:
+          type: number
+          format: double
+        intRate:
+          type: number
+          format: double
+        issueDate:
+          type: string
+        maturityDate:
+          type: string
+        noncompAccepted:
+          type: number
+          format: double
+        offeringAmt:
+          type: number
+          format: double
+        primaryDealerAccepted:
+          type: number
+          format: double
+        recordDate:
+          type: string
+        reopening:
+          type: boolean
+        securityTerm:
+          type: string
+        securityType:
+          type: string
+        somaAccepted:
+          type: number
+          format: double
+        totalAccepted:
+          type: number
+          format: double
+        totalTendered:
+          type: number
+          format: double
+      required:
+        - recordDate
+        - cusip
+        - securityType
+        - securityTerm
+        - auctionDate
+        - issueDate
+        - maturityDate
     GqlTreasuryYield:
       description: "One day of US Treasury yield curve rates. Maturities with no published\nrate on a given date are `null`."
       type: object
@@ -10864,6 +11095,37 @@ components:
         raw: {}
       required:
         - raw
+    GqlUpcomingAuction:
+      description: "A US Treasury auction scheduled but not yet held. `offeringAmt` stays\n`null` until Treasury formally announces the auction's terms."
+      type: object
+      properties:
+        announcementDate:
+          type: string
+        auctionDate:
+          type: string
+        cusip:
+          type: string
+        issueDate:
+          type: string
+        offeringAmt:
+          type: number
+          format: double
+        recordDate:
+          type: string
+        reopening:
+          type: boolean
+        securityTerm:
+          type: string
+        securityType:
+          type: string
+      required:
+        - recordDate
+        - securityType
+        - securityTerm
+        - cusip
+        - announcementDate
+        - auctionDate
+        - issueDate
     GqlWord:
       type: object
       properties:
@@ -12365,6 +12627,38 @@ components:
         - 10y
         - ytd
         - max
+    TreasuryAuctionsQuery:
+      description: "Query parameters for `GET /v2/treasury/auctions`."
+      type: object
+      properties:
+        count:
+          description: "Overall cap on auctions fetched from Treasury, newest first (default 100)"
+          type: integer
+          format: int32
+          minimum: 0
+        cursor:
+          description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+          type: string
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        from:
+          description: "Earliest auction date to include (`YYYY-MM-DD`)"
+          type: string
+        limit:
+          description: "Max rows per page; omitted (with cursor also omitted) = every matching\nrow as a bare array, unchanged from pre-pagination behavior"
+          type: integer
+          format: int32
+          minimum: 0
+        securityTerm:
+          description: "Security term filter, spelled as Treasury spells it (e.g. `13-Week`)"
+          type: string
+        securityType:
+          description: "Security class filter (`Bill`, `Note`, `Bond`, ...)"
+          type: string
+        to:
+          description: "Latest auction date to include (`YYYY-MM-DD`)"
+          type: string
     TreasuryYieldsQuery:
       description: "Query parameters for `GET /v2/fred/treasury-yields`."
       type: object
@@ -12395,6 +12689,21 @@ components:
         region:
           description: "Region code for localization (e.g., \"US\", \"JP\", \"GB\")"
           $ref: "#/components/schemas/Region"
+    UpcomingAuctionsQuery:
+      description: "Query parameters for `GET /v2/treasury/auctions/upcoming`."
+      type: object
+      properties:
+        cursor:
+          description: "Opaque continuation cursor from a previous response's `pageInfo.endCursor`"
+          type: string
+        fields:
+          description: Comma-separated list of fields to include in response
+          type: string
+        limit:
+          description: "Max rows per page; omitted (with cursor also omitted) = every matching\nrow as a bare array, unchanged from pre-pagination behavior"
+          type: integer
+          format: int32
+          minimum: 0
     ValueFormat:
       description: Value format for API responses
       type: string

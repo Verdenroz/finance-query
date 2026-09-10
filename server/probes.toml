@@ -230,6 +230,32 @@ name = "fred-treasury"
 path = "/v2/fred/treasury-yields"
 assert = ["[].y10 exists"]
 
+# A settled historical window, so the result columns are populated and the
+# assertions do not depend on where today falls in the auction cycle.
+[[probe]]
+name = "treasury-auctions"
+shape = false
+path = "/v2/treasury/auctions?from=2025-01-01&to=2025-01-31&count=50"
+sometimes = ["highYield", "intRate", "highDiscntRate", "highInvestmentRate"]
+assert = [
+  "[]#len >= 1",
+  "[].cusip exists",
+  "[].securityType exists",
+  "[].bidToCoverRatio > 0",
+  "[].totalAccepted > 0",
+]
+
+[[probe]]
+name = "treasury-auctions-upcoming"
+shape = false
+path = "/v2/treasury/auctions/upcoming"
+sometimes = ["offeringAmt"]
+assert = [
+  "[].cusip exists",
+  "[].auctionDate exists",
+  "[].announcementDate exists",
+]
+
 [[probe]]
 name = "crypto-coins"
 path = "/v2/crypto/coins?count=10"

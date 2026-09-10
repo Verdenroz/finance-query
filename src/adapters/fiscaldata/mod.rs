@@ -36,7 +36,10 @@ fn client() -> Result<FiscalDataClient> {
     FiscalDataClient::new(DEFAULT_TIMEOUT, shared_limiter(), client::FISCALDATA_BASE)
 }
 
-pub(crate) use economic::fetch_economic_series_response;
+pub(crate) use economic::{
+    fetch_economic_series_response, fetch_treasury_auctions_response,
+    fetch_upcoming_auctions_response,
+};
 
 #[cfg(test)]
 mod tests {

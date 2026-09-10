@@ -755,6 +755,42 @@ pub struct TreasuryYieldsQuery {
     pub cursor: Option<String>,
 }
 
+/// Query parameters for `GET /v2/treasury/auctions`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TreasuryAuctionsQuery {
+    /// Security class filter (`Bill`, `Note`, `Bond`, ...)
+    pub security_type: Option<String>,
+    /// Security term filter, spelled as Treasury spells it (e.g. `13-Week`)
+    pub security_term: Option<String>,
+    /// Earliest auction date to include (`YYYY-MM-DD`)
+    pub from: Option<String>,
+    /// Latest auction date to include (`YYYY-MM-DD`)
+    pub to: Option<String>,
+    /// Overall cap on auctions fetched from Treasury, newest first (default 100)
+    pub count: Option<u32>,
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+    /// Max rows per page; omitted (with cursor also omitted) = every matching
+    /// row as a bare array, unchanged from pre-pagination behavior
+    pub limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    pub cursor: Option<String>,
+}
+
+/// Query parameters for `GET /v2/treasury/auctions/upcoming`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpcomingAuctionsQuery {
+    /// Comma-separated list of fields to include in response
+    pub fields: Option<String>,
+    /// Max rows per page; omitted (with cursor also omitted) = every matching
+    /// row as a bare array, unchanged from pre-pagination behavior
+    pub limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    pub cursor: Option<String>,
+}
+
 // -- holders ---------------------------------------------------------------
 
 /// Query parameters for `GET /v2/holders/{symbol}/{type}`.

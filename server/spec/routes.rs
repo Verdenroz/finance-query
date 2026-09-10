@@ -678,6 +678,34 @@ fn route_fred_get_fred_series() {}
 )]
 fn route_fred_get_fred_treasury_yields() {}
 
+/// US Treasury securities auctions
+///
+/// Implements `handlers::treasury::get_treasury_auctions`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getTreasuryAuctions",
+    method = "GET",
+    path = "/v2/treasury/auctions",
+    params = "TreasuryAuctionsQuery",
+    response = "[GqlTreasuryAuction]"
+)]
+fn route_treasury_get_treasury_auctions() {}
+
+/// US Treasury auctions scheduled but not yet held
+///
+/// Implements `handlers::treasury::get_upcoming_auctions`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "openapi.yaml",
+    operation = "getUpcomingAuctions",
+    method = "GET",
+    path = "/v2/treasury/auctions/upcoming",
+    params = "UpcomingAuctionsQuery",
+    response = "[GqlUpcomingAuction]"
+)]
+fn route_treasury_get_upcoming_auctions() {}
+
 /// Get a futures contract's current quote
 ///
 /// Implements `handlers::commodity_futures::get_futures`.
@@ -1794,6 +1822,26 @@ fn route_gql_root_metadata_fred_series() {}
     path = "treasuryYields"
 )]
 fn route_gql_root_metadata_treasury_yields() {}
+
+/// Implements `graphql::query::root_metadata::treasury_auctions` (field `treasuryAuctions`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "treasuryAuctions",
+    method = "QUERY",
+    path = "treasuryAuctions"
+)]
+fn route_gql_root_metadata_treasury_auctions() {}
+
+/// Implements `graphql::query::root_metadata::upcoming_auctions` (field `upcomingAuctions`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "upcomingAuctions",
+    method = "QUERY",
+    path = "upcomingAuctions"
+)]
+fn route_gql_root_metadata_upcoming_auctions() {}
 
 /// Implements `graphql::query::root_metadata::edgar_search` (field `edgarSearch`).
 #[allow(dead_code)]

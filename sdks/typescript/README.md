@@ -147,7 +147,9 @@ Requires Node 18+.
 - `getSymbolDetails` — `GET /v2/symbol-details/{symbol}`: Reference detail for one symbol.
 - `getTranscript` — `GET /v2/transcripts/{symbol}`: Get earnings transcript
 - `getTranscripts` — `GET /v2/transcripts/{symbol}/all`: Get all earnings transcripts
+- `getTreasuryAuctions` — `GET /v2/treasury/auctions`: US Treasury securities auctions
 - `getTrending` — `GET /v2/trending`: Get trending tickers
+- `getUpcomingAuctions` — `GET /v2/treasury/auctions/upcoming`: US Treasury auctions scheduled but not yet held
 - `healthCheck` — `GET /v2/health`: Health check
 - `lookup` — `GET /v2/lookup`: Look up symbols by type
 - `ping` — `GET /v2/ping`: Ping endpoint

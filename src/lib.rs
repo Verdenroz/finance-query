@@ -445,6 +445,8 @@ pub use models::crypto::CryptoQuote;
 pub use models::economic::{
     EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch,
 };
+#[cfg(feature = "fiscaldata")]
+pub use models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 pub use models::forex::ForexQuote;
 pub use models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]

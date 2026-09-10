@@ -4,7 +4,11 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "fiscaldata")]
+mod auctions;
 mod catalog;
+#[cfg(feature = "fiscaldata")]
+pub use auctions::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
 
 /// A provider-agnostic economic data series with metadata.

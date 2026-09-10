@@ -808,6 +808,19 @@ fn route_mcp_get_fred_series() {}
 )]
 fn route_mcp_get_treasury_yields() {}
 
+/// Get US Treasury securities auction results (bid-to-cover ratio, high yield or discount rate, and the primary-dealer/direct/indirect bidder split), newest first. Set upcoming=true for the announced schedule of auctions not yet held. No API key required.
+///
+/// Implements `tools::FinanceTools::get_treasury_auctions`.
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "mcp-tools.json",
+    operation = "get_treasury_auctions",
+    method = "TOOL",
+    path = "get_treasury_auctions",
+    params = "TreasuryAuctionsParams"
+)]
+fn route_mcp_get_treasury_auctions() {}
+
 /// Get top cryptocurrency coins by market cap from CoinGecko (no API key required).
 ///
 /// Implements `tools::FinanceTools::get_crypto`.

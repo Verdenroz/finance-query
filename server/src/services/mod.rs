@@ -29,6 +29,7 @@ pub mod risk;
 pub mod screener;
 pub mod search;
 pub mod transcripts;
+pub mod treasury;
 
 /// Shared error type for service functions.
 pub type ServiceError = Box<dyn std::error::Error + Send + Sync>;

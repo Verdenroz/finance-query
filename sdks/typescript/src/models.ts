@@ -1889,6 +1889,34 @@ export interface GqlTranscriptWithMeta {
   year?: number;
 }
 
+/** One US Treasury securities auction. Rows exist from announcement onwards, so an auction that has not been held yet carries its terms with every result field `null`. Bills report `highDiscntRate`/`highInvestmentRate` and leave `highYield` unset; notes and bonds do the reverse. */
+export interface GqlTreasuryAuction {
+  auctionDate: string;
+  auctionFormat?: string;
+  bidToCoverRatio?: number;
+  compAccepted?: number;
+  cusip: string;
+  directBidderAccepted?: number;
+  highDiscntRate?: number;
+  highInvestmentRate?: number;
+  highPrice?: number;
+  highYield?: number;
+  indirectBidderAccepted?: number;
+  intRate?: number;
+  issueDate: string;
+  maturityDate: string;
+  noncompAccepted?: number;
+  offeringAmt?: number;
+  primaryDealerAccepted?: number;
+  recordDate: string;
+  reopening?: boolean;
+  securityTerm: string;
+  securityType: string;
+  somaAccepted?: number;
+  totalAccepted?: number;
+  totalTendered?: number;
+}
+
 /** One day of US Treasury yield curve rates. Maturities with no published rate on a given date are `null`. */
 export interface GqlTreasuryYield {
   date: string;
@@ -1929,6 +1957,19 @@ export interface GqlTrendingQuote {
 export interface GqlTvlPoint {
   timestamp: number;
   tvl: number;
+}
+
+/** A US Treasury auction scheduled but not yet held. `offeringAmt` stays `null` until Treasury formally announces the auction's terms. */
+export interface GqlUpcomingAuction {
+  announcementDate: string;
+  auctionDate: string;
+  cusip: string;
+  issueDate: string;
+  offeringAmt?: number;
+  recordDate: string;
+  reopening?: boolean;
+  securityTerm: string;
+  securityType: string;
 }
 
 export interface GqlWord {
