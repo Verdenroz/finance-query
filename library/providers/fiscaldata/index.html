@@ -298,6 +298,62 @@ try { var t = localStorage.getItem("soothfast-theme");
 </code></pre></figure>
 <p>Dataset paths and column names come from the <a href="https://fiscaldata.treasury.gov/datasets/">FiscalData dataset catalogue</a>. Passthrough series report <code>units</code> from the column's declared type and leave <code>frequency</code> as <code>None</code> — the adapter will not guess.</p>
 <p>Passing anything that is neither a curated id nor a <code>dataset:column</code> pair returns <code>FinanceError::InvalidParameter</code> listing the curated catalogue.</p>
+<h2 id="treasury-auctions">Treasury Auctions<a class="anchor" href="#treasury-auctions" aria-label="Link to this section">#</a></h2>
+<p>Auction records and the forward schedule hang off the <a href="../../../library/economic/"><code>EconomicCatalog</code></a> handle rather than a series id, since neither is a single value per date.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fiscaldata</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">TreasuryAuctionQuery</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">ECONOMIC</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">FiscalData</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">let</span> query = <span class="tok-ty">TreasuryAuctionQuery</span>::<span class="tok-fn">new</span>()
+        .<span class="tok-fn">security_type</span>(<span class="tok-str">&quot;Note&quot;</span>)
+        .<span class="tok-fn">dates</span>(<span class="tok-ty">Some</span>(<span class="tok-str">&quot;2025-01-01&quot;</span>), <span class="tok-ty">Some</span>(<span class="tok-str">&quot;2025-03-31&quot;</span>))
+        .<span class="tok-fn">limit</span>(<span class="tok-num">50</span>);
+
+    <span class="tok-kw">for</span> auction <span class="tok-kw">in</span> providers.<span class="tok-fn">economic_catalog</span>().<span class="tok-fn">treasury_auctions</span>(&amp;query).<span class="tok-kw">await</span>? {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{} {} {}: bid-to-cover {:?}, high yield {:?}&quot;</span>,
+            auction.auction_date,
+            auction.security_term,
+            auction.cusip,
+            auction.bid_to_cover_ratio,
+            auction.high_yield,
+        );
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fiscaldata</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">ECONOMIC</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">FiscalData</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">for</span> auction <span class="tok-kw">in</span> providers.<span class="tok-fn">economic_catalog</span>().<span class="tok-fn">upcoming_auctions</span>().<span class="tok-kw">await</span>? {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{}: {} {} (announced {})&quot;</span>,
+            auction.auction_date,
+            auction.security_term,
+            auction.security_type,
+            auction.announcement_date,
+        );
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<p>Auctions come back newest first; the schedule comes back soonest first.</p>
+<p>Every filter on <code>TreasuryAuctionQuery</code> is optional, and <code>limit</code> caps how many auctions are fetched from Treasury (default 100, maximum 1,000). <code>security_type</code>, <code>security_term</code>, <code>from</code>, and <code>to</code> are rejected with <code>FinanceError::InvalidParameter</code> if they carry a <code>,</code> or <code>:</code>, which FiscalData's filter grammar reads as clause separators; <code>from</code> and <code>to</code> must be <code>YYYY-MM-DD</code>.</p>
+<div class="adm adm-warning"><p class="adm-title"><span class="adm-kind">warning</span> · Result fields are empty until an auction settles</p>
+<p><code>auctions_query</code> carries a row from the moment Treasury announces an auction, so the most recent rows have terms (<code>offering_amt</code>, <code>maturity_date</code>) but no results yet. Bills price off <code>high_discnt_rate</code> and <code>high_investment_rate</code> and leave <code>high_yield</code> unset; notes and bonds do the reverse.</p>
+</div>
+<p><code>upcoming_auctions()</code> returns only the newest published schedule. The underlying dataset appends each week's snapshot without retiring the last, so its older rows describe auctions that have already been held.</p>
 <h2 id="response-shape">Response Shape<a class="anchor" href="#response-shape" aria-label="Link to this section">#</a></h2>
 <p>Results come back as the provider-neutral <a href="../../../library/economic/"><code>EconomicSeries</code></a>:</p>
 <div class="tablewrap"><table>
@@ -313,6 +369,7 @@ try { var t = localStorage.getItem("soothfast-theme");
 <p>FiscalData encodes every column as a string, including numbers, and marks a missing figure with the literal string <code>&quot;null&quot;</code> — both are normalised, so <code>value</code> is a real <code>Option&lt;f64&gt;</code>.</p>
 <h2 id="pagination">Pagination<a class="anchor" href="#pagination" aria-label="Link to this section">#</a></h2>
 <p>Series are fetched at the API's maximum page size (10,000 rows) and pagination is followed automatically, capped at 5 pages. A dataset larger than that logs a warning rather than silently returning a truncated series.</p>
+<p>Auction queries ask for a single page sized to <code>limit</code>, so <code>limit</code> bounds the request itself rather than trimming a larger response.</p>
 <h2 id="rate-limits">Rate Limits<a class="anchor" href="#rate-limits" aria-label="Link to this section">#</a></h2>
 <p>FiscalData publishes no documented quota. The client paces itself at 5 requests/second, and a <code>429</code> surfaces as <a href="../../../library/error-handling/"><code>FinanceError::RateLimited</code></a>.</p>
 <h2 id="next-steps">Next Steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
@@ -338,6 +395,8 @@ try { var t = localStorage.getItem("soothfast-theme");
     <li><a class="toc-l2" href="#curated-series">Curated Series</a></li>
   
     <li><a class="toc-l2" href="#any-other-dataset">Any Other Dataset</a></li>
+  
+    <li><a class="toc-l2" href="#treasury-auctions">Treasury Auctions</a></li>
   
     <li><a class="toc-l2" href="#response-shape">Response Shape</a></li>
   
