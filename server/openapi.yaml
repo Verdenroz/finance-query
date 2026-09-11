@@ -3110,7 +3110,7 @@ paths:
           in: query
           required: false
           schema:
-            description: "Time range (default: 1mo)"
+            description: "Time range (default: 1y)"
             $ref: "#/components/schemas/TimeRange"
         - name: symbols
           in: query
@@ -3174,7 +3174,7 @@ paths:
           in: query
           required: false
           schema:
-            description: "Time range (default: 1mo)"
+            description: "Time range (default: 1y)"
             $ref: "#/components/schemas/TimeRange"
         - name: symbol
           in: path
@@ -5984,7 +5984,7 @@ components:
           format: int32
           minimum: 0
         range:
-          description: "Time range (default: 1mo)"
+          description: "Time range (default: 1y)"
           $ref: "#/components/schemas/TimeRange"
         symbols:
           description: Comma-separated symbols (required)
@@ -11239,7 +11239,7 @@ components:
           description: "Candle interval (default: 1d)"
           $ref: "#/components/schemas/Interval"
         range:
-          description: "Time range (default: 1mo)"
+          description: "Time range (default: 1y)"
           $ref: "#/components/schemas/TimeRange"
     IndicesQuery:
       description: "Query parameters for `GET /v2/indices`."

@@ -193,6 +193,16 @@ pub fn default_range() -> TimeRange {
         .unwrap_or(TimeRange::OneMonth)
 }
 
+/// Default indicators range.
+///
+/// Longer than [`default_range`], and deliberately not tied to
+/// `DEFAULT_RANGE`: the 200-period indicators need about 200 candles, and a
+/// month of daily candles is 21, so a shorter window leaves 20 of the 57
+/// indicators null.
+pub fn default_indicators_range() -> TimeRange {
+    TimeRange::OneYear
+}
+
 fn default_vs_currency() -> String {
     "usd".to_string()
 }
@@ -819,8 +829,8 @@ pub struct BatchIndicatorsQuery {
     /// Candle interval (default: 1d)
     #[serde(default = "default_interval")]
     pub interval: Interval,
-    /// Time range (default: 1mo)
-    #[serde(default = "default_range")]
+    /// Time range (default: 1y)
+    #[serde(default = "default_indicators_range")]
     pub range: TimeRange,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
@@ -838,8 +848,8 @@ pub struct IndicatorsQuery {
     /// Candle interval (default: 1d)
     #[serde(default = "default_interval")]
     pub interval: Interval,
-    /// Time range (default: 1mo)
-    #[serde(default = "default_range")]
+    /// Time range (default: 1y)
+    #[serde(default = "default_indicators_range")]
     pub range: TimeRange,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
