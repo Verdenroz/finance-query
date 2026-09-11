@@ -266,9 +266,20 @@ name = "crypto-coins"
 path = "/v2/crypto/coins?count=10"
 assert = ["[].currentPrice > 0"]
 
+# Screener rows carry the same session-dependent quote fields as the `quote`
+# probe: pre-market and post-market populate only inside their own session,
+# and bid/ask only while a book is open.
 [[probe]]
 name = "screener-most-actives"
 path = "/v2/screeners/most-actives"
+sometimes = [
+  "quotes[].preMarket*",
+  "quotes[].postMarket*",
+  "quotes[].bid",
+  "quotes[].bidSize",
+  "quotes[].ask",
+  "quotes[].askSize",
+]
 assert = ["quotes#len >= 1"]
 
 [[probe]]
