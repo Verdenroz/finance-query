@@ -95,13 +95,15 @@ pub async fn series(series_id: &str) -> Result<MacroSeries> {
     build_client()?.series(series_id).await
 }
 
+fn not_configured() -> FinanceError {
+    FinanceError::ProviderNotConfigured {
+        provider: "FRED".to_string(),
+        env_var: "FRED_API_KEY".to_string(),
+    }
+}
+
 pub(crate) fn build_client() -> Result<client::FredClient> {
-    let s = FRED_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
-        })?;
+    let s = FRED_SINGLETON.get().ok_or_else(not_configured)?;
     FredClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
         .build_with_limiter(Arc::clone(&s.limiter))
@@ -110,12 +112,7 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
 pub(crate) async fn latest_observation(
     series_id: &str,
 ) -> Result<Option<crate::models::economic::MacroObservation>> {
-    let s = FRED_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
-        })?;
+    let s = FRED_SINGLETON.get().ok_or_else(not_configured)?;
     let c = FredClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
         .build_with_limiter(Arc::clone(&s.limiter))?;
@@ -390,18 +387,10 @@ mod tests {
     }
 
     #[test]
-    fn test_series_without_init_fails_gracefully() {
-        // If somehow the singleton is not set, series() must return an error.
-        // (This test only exercises the error path if FRED_SINGLETON isn't set yet,
-        //  which may not be the case if other tests run first.)
-        if FRED_SINGLETON.get().is_none() {
-            // We can't reset OnceLock in tests, but we can verify the error shape:
-            // Synthesise the error manually.
-            let err = FinanceError::InvalidParameter {
-                param: "fred".to_string(),
-                reason: "not initialized".to_string(),
-            };
-            assert!(matches!(err, FinanceError::InvalidParameter { .. }));
-        }
+    fn an_unconfigured_fred_names_the_variable_that_configures_it() {
+        assert_eq!(
+            not_configured().to_string(),
+            "FRED is not configured; set FRED_API_KEY"
+        );
     }
 }
