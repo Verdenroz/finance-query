@@ -238,7 +238,7 @@ shape = false
 path = "/v2/treasury/auctions?from=2025-01-01&to=2025-01-31&count=50"
 sometimes = ["highYield", "intRate", "highDiscntRate", "highInvestmentRate"]
 assert = [
-  "[]#len >= 1",
+  "#len >= 1",
   "[].cusip exists",
   "[].securityType exists",
   "[].bidToCoverRatio > 0",
@@ -251,6 +251,7 @@ shape = false
 path = "/v2/treasury/auctions/upcoming"
 sometimes = ["offeringAmt"]
 assert = [
+  "#len >= 1",
   "[].cusip exists",
   "[].auctionDate exists",
   "[].announcementDate exists",
