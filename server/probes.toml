@@ -181,10 +181,14 @@ assert = [
   "transcriptContent.speakerMapping#len >= 1",
 ]
 
+# Yahoo attaches `dispSecIndFlag` to the top-ranked hit alone, and only when
+# that hit is an equity — a futures or ETF best match leaves it unset on every
+# result, so whether `q=apple` populates it depends on Yahoo's ranking.
 [[probe]]
 name = "search"
 shape = false
 path = "/v2/search?q=apple"
+sometimes = ["quotes[].dispSecIndFlag"]
 assert = ["quotes#len >= 1"]
 
 [[probe]]
