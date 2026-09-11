@@ -46,6 +46,9 @@ jobs:
       - name: Build release server
         run: cargo build --release -p finance-query-server
       - name: Probe
+        # `spec probe` exits 1 on problems, but the default step shell has no
+        # pipefail, so `tee` would mask it and skip the issue step below.
+        shell: bash
         run: cargo soothfast spec probe -p finance-query-server | tee probe.out
       - name: File or update failure issue
         if: failure()
@@ -53,9 +56,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           title="Nightly data-quality probe failing"
+          # An earlier step failing leaves no probe.out, which would otherwise
+          # file an issue whose only content is an empty code block.
+          summary="$(grep -E 'FAIL|spec probe:' probe.out 2>/dev/null | head -60)"
+          [ -n "$summary" ] || summary="No probe output: the job failed before probing."
           body="$(printf 'Run: %s\n\n```\n%s\n```\n' \
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            "$(grep -E 'FAIL|spec probe:' probe.out | head -60)")"
+            "$summary")"
           number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ -n "$number" ]; then
             gh issue comment "$number" --body "$body"
