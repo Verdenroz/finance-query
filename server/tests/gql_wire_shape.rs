@@ -167,7 +167,9 @@ async fn sdl_field_names_are_the_graphql_spelling_not_the_serde_one() {
         cache: Cache::new(None).await,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
-        providers: finance_query_server::build_providers().await,
+        providers: finance_query_server::build_providers()
+            .await
+            .expect("provider routing should build"),
     };
     let sdl = graphql::build_schema(state).sdl();
 

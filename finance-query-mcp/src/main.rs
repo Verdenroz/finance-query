@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
 
     // MCP is stateless — never connect to Redis, always fetch fresh.
     let cache = Cache::new(None).await;
-    let providers = finance_query_server::build_providers().await;
+    let providers = finance_query_server::build_providers().await?;
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
