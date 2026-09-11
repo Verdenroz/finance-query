@@ -45,6 +45,9 @@ fn finance_error_to_gql(err: &FinanceError) -> Error {
         FinanceError::InvalidParameter { .. } => ("BAD_REQUEST", 400),
         FinanceError::RateLimited { .. } => ("RATE_LIMITED", 429),
         FinanceError::Timeout { .. } => ("TIMEOUT", 408),
+        // Keyless adapters keep the raw `HttpError` — they have no key-bearing
+        // URL to withhold — so their timeouts arrive here, not as `Timeout`.
+        FinanceError::HttpError(e) if e.is_timeout() => ("TIMEOUT", 408),
         FinanceError::AuthenticationFailed { .. } => ("UNAUTHORIZED", 401),
         FinanceError::ServerError { status, .. } => ("SERVER_ERROR", *status),
         FinanceError::NotSupported { .. } | FinanceError::NoProviderAvailable { .. } => {
@@ -57,4 +60,52 @@ fn finance_error_to_gql(err: &FinanceError) -> Error {
         e.set("code", code);
         e.set("status", status);
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A `reqwest::Error` that `is_timeout()`, from a socket that accepts and
+    /// never answers.
+    async fn timed_out() -> reqwest::Error {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let _held = listener.accept().await;
+            std::future::pending::<()>().await;
+        });
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(50))
+            .build()
+            .unwrap()
+            .get(format!("http://{addr}/"))
+            .send()
+            .await
+            .unwrap_err()
+    }
+
+    fn status_of(err: &FinanceError) -> Option<async_graphql::Value> {
+        finance_error_to_gql(err)
+            .extensions
+            .and_then(|ext| ext.get("status").cloned())
+    }
+
+    #[tokio::test]
+    async fn a_keyless_transport_timeout_is_a_timeout_not_an_internal_error() {
+        let err = FinanceError::HttpError(timed_out().await);
+        assert_eq!(status_of(&err), Some(async_graphql::Value::from(408)));
+    }
+
+    #[tokio::test]
+    async fn a_transport_failure_that_is_not_a_timeout_stays_an_internal_error() {
+        let err = FinanceError::HttpError(
+            reqwest::Client::new()
+                .get("http://127.0.0.1:1/")
+                .send()
+                .await
+                .unwrap_err(),
+        );
+        assert_eq!(status_of(&err), Some(async_graphql::Value::from(500)));
+    }
 }
