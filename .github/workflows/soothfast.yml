@@ -93,6 +93,9 @@ jobs:
         with:
           shared-key: bench-gate
           cache-on-failure: true
+          # Compiles nothing on a master push; saving would overwrite the
+          # baseline job's warm target under the shared key.
+          save-if: false
       # Unique per commit with the prefix in restore-keys: an exact key is
       # never rewritten once saved, so later commits would all miss.
       - name: Restore measured reference runs
