@@ -106,7 +106,7 @@ jobs:
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
-      - uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+      - uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           packages: finance-query
           features: bench-gate
@@ -136,7 +136,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -186,7 +186,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -236,7 +236,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -287,7 +287,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -326,7 +326,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -358,7 +358,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
@@ -399,7 +399,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
