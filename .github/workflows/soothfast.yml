@@ -242,10 +242,8 @@ jobs:
           changelog: false
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
-      - name: Generated openapi.yaml/asyncapi.yaml are fresh
-        run: cargo soothfast spec gen -p finance-query-server --target soothfast-routes --check
-      - name: Generated Python SDK is fresh
-        run: cargo soothfast sdk gen -p finance-query-server --target soothfast-routes --check
+      # --from-committed reads the base's committed spec, not a fresh rebuild.
+      # A branch older than the bot's spec commit reports a BREAKING; rebase.
       - name: Spec compat gate vs merge-base
         if: github.event_name == 'pull_request'
         env:
@@ -295,8 +293,6 @@ jobs:
           changelog: false
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
-      - name: Generated mcp-tools.json is fresh
-        run: cargo soothfast spec gen -p finance-query-mcp --target soothfast-routes --check --features backtesting
       - name: Regenerate MCP route pages
         run: make docs-pages PAGES=mcp
       - name: Upload MCP route pages
