@@ -10,6 +10,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-12
+
+Treasury auctions reach the wire, and a nightly probe run that had been
+failing silently since 3.0.0 is now believed. Four of the six failures it
+reported were real server defects; this release fixes them.
+
+### Added
+
+- **Treasury auction routes** — `GET /v2/treasury/auctions` and
+  `GET /v2/treasury/auctions/upcoming`, with matching GraphQL fields on the
+  metadata root. Both keyless via FiscalData.
+
+### Changed
+
+- **Indicators default range is now 1 year**, up from 1 month. The
+  200-period indicators need roughly 200 candles and a month of daily candles
+  is 21, so the old default left 20 of the 57 indicators null in a response
+  that looked complete. Callers passing an explicit `range` are unaffected.
+- The `rust` and `debian` base images in `server/Dockerfile` were bumped to
+  current digests. Routine refreshes; no CVE fix is claimed.
+
+### Fixed
+
+- **A failed Yahoo handshake no longer discards every route.** Provider
+  construction answered a handshake failure by dropping the whole route
+  table and logging a warning, so the deployed MCP server reported that
+  Yahoo does not support Treasury auctions while the same query over GraphQL
+  worked.
+- **An unconfigured provider answers 501, not 400.** `ProviderNotConfigured`
+  maps to `NOT_SUPPORTED`/501 rather than being reported as a malformed
+  request.
+- **Keyless transport timeouts answer 408, not 500.** Providers that
+  withhold the request URL surface their timeouts as `HttpError`, which fell
+  through to a generic internal error; those are now classified as
+  `TIMEOUT`/408.
+- **The nightly probe can fail.** `cargo soothfast spec probe` was piped
+  through `tee`, which swallowed its exit code and left every run green, so
+  two Treasury auction probes had been failing unnoticed since they were
+  added. The probe assertion `[]#len >= 1` was itself malformed — it descends
+  into the array and asks each element for a length — as were two others of
+  the same shape. The workflow also had no step that writes `probes.lock`
+  despite being documented as owning it.
+
+### Security
+
+- No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment
+  were fixed in the server or its direct dependencies in this release.
+
 ## [3.0.0] - 2026-08-30
 
 Every operation the library gained this cycle reaches the wire: strategy

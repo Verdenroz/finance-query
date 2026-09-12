@@ -12,6 +12,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-12
+
+One new tool, and a fix for a route-table failure that made the hosted server
+deny capabilities it actually had.
+
+### Added
+
+- **`get_treasury_auctions`** — Treasury auction results with the
+  primary-dealer/direct/indirect bidder split, and the announced schedule of
+  auctions not yet held. Keyless via FiscalData, with the standard `fields`
+  selection and pagination contracts.
+
+### Changed
+
+- The `rust` and `debian` base images in `finance-query-mcp/Dockerfile` were
+  bumped to current digests. Routine refreshes; no CVE fix is claimed.
+
+### Fixed
+
+- **`finance-query.com/mcp` denied capabilities it had.** A failed Yahoo
+  handshake during provider construction discarded the entire route table
+  rather than the one provider, so the hosted server reported that Yahoo does
+  not support Treasury auctions while the same data over GraphQL worked.
+
+### Security
+
+- No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment
+  were fixed in the MCP server or its direct dependencies in this release.
+
 ## [3.0.0] - 2026-08-30
 
 The tool surface doubles from 32 to 64: the backtesting engine is exposed over MCP for the first time, and every operation from the library's keyless-provider wave gets a tool.

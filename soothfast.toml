@@ -2,7 +2,7 @@
 
 [site]
 name = "finance-query"
-version = "3.0.0"
+version = "3.1.0"
 repo = "https://github.com/Verdenroz/finance-query"
 logo = "assets/logo.png"
 favicon = "assets/logo.png"
