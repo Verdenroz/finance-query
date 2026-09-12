@@ -5,14 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.0.0)
+## [3.1.0] - 2026-09-12
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+A small release on top of 3.0.0's provider wave. Treasury auction results and
+the announced auction schedule join the keyless FiscalData surface:
+`EconomicCatalog::treasury_auctions()` returns auction records with the
+primary-dealer/direct/indirect bidder split, and `upcoming_auctions()` returns
+the schedule of auctions not yet held, both off
+`Providers::economic_catalog()`. This extends the FiscalData adapter rather
+than adding a provider, since the auction datasets sit behind the same query
+grammar as the curated series. A round of probe-driven fixes closes the gaps
+that let a misconfigured provider look like a transport failure.
+
+### ⬆️ Upgrade notes
+
+Nothing required. There are no breaking changes, and the Treasury types
+(`TreasuryAuction`, `UpcomingAuction`, `TreasuryAuctionQuery`) land under the
+existing `fiscaldata` feature rather than a new flag.
+
+Two things worth knowing:
+
+- A provider compiled in without credentials now reports
+  `FinanceError::ProviderNotConfigured { provider, env_var }`, naming the
+  environment variable that supplies them; a missing `FRED_API_KEY` produced a
+  generic client error before. The variant is new on a `#[non_exhaustive]`
+  enum, so existing matches keep compiling, but code that keyed off the old
+  error should move over. It is distinct from `AuthenticationFailed`, which
+  means a credential was supplied and refused.
+- `upcoming_auctions()` keeps only the rows carrying the newest published
+  `record_date`. Treasury appends each week's schedule without retiring the
+  last, so reading the dataset straight returns auctions from 2024.
 <!-- /soothfast:notes -->
 
 ### ✨ Features
@@ -46,6 +71,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump step-security/harden-runner from 2.19.4 to 2.21.0 (#465)
 - Bump actions/upload-artifact from 4.6.2 to 7.0.1 (#462)
 - Bump taiki-e/install-action from 2.82.3 to 2.86.7 (#466)
+
+### 🔒 Security
+
+- No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment
+  were fixed in the library or its direct dependencies in this release.
+  `flate2` 1.1.9 was replaced with 1.1.10, which switches its backend and
+  brings `miniz_oxide` 0.9.1 and the new transitive `zlib-rs` 0.6.7 into the
+  graph; `flate2` is optional here, so this reaches only builds that enable
+  it.
+- Three advisories were cleared in the legacy v1 documentation tooling, which
+  is not part of the published crate and ships in nothing the library links:
+  a high-severity ReDoS in `pymdown-extensions` (fixed in 11.0.1, taken at
+  11.0.2) and two DOM XSS advisories in `mkdocs-material` (fixed in 9.7.7).
 
 ---
 
@@ -1266,7 +1304,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/Verdenroz/finance-query/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/Verdenroz/finance-query/compare/v2.8.0...v3.0.0
 [2.8.0]: https://github.com/Verdenroz/finance-query/compare/v2.7.1...v2.8.0
 [2.7.1]: https://github.com/Verdenroz/finance-query/compare/v2.7.0...v2.7.1
