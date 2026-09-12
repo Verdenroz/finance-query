@@ -1,6 +1,6 @@
 name: Soothfast
 
-# Perf gate, bot-landed regeneration, living docs, spec reconciliation, and site build.
+# Perf gate, living docs, spec reconciliation, and site build.
 
 # No paths filter: a skipped job satisfies required checks, but a workflow
 # that never triggers blocks the merge.
@@ -61,8 +61,8 @@ jobs:
               - 'finance-query-mcp/mcp-tools.json'
 
   # Pull requests: gate against the base branch, commented by soothfast-bot.
-  # Master pushes: regenerate CHANGELOG.md, specs, and SDKs, landed as a
-  # soothfast-bot PR. "Gate" is a required check on master.
+  # "Gate" is a required check on master, but deploy.yml owns the
+  # regeneration and its bot PR, so master pushes here do nothing else.
   gate:
     name: Gate
     needs: changes
@@ -107,12 +107,7 @@ jobs:
         with:
           packages: finance-query
           features: bench-gate
-          changelog-features: full
-          regen-run: |
-            "$SOOTHFAST" spec gen -p finance-query-server --target soothfast-routes
-            "$SOOTHFAST" sdk gen -p finance-query-server --target soothfast-routes
-            "$SOOTHFAST" spec gen -p finance-query-mcp --target soothfast-routes --features backtesting
-          regen-paths: server/openapi.yaml server/asyncapi.yaml sdks finance-query-mcp/mcp-tools.json
+          changelog: false
 
   baseline:
     name: Baseline
