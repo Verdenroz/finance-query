@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Treasury auction results and upcoming auction schedule (#476)
 
+### 🐛 Fixes
+
+- Root-cause the six non-auction probe failures (#483)
+- Close four silent-failure gaps around the nightly probe (#481)
+
 ### 📦 Dependencies
 
 - Bump debian from `abd67ff` to `8820086` in /server (#461)
@@ -29,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Regenerate derived artifacts (#478)
+- Regenerate soothfast outputs (#477)
 - Regenerate soothfast outputs (#474)
 - Regenerate derived artifacts (#473)
 - Move onto the soothfast v0.3 bot action (#472)
@@ -54,11 +61,20 @@ ADDED    finance_query::models::economic::auctions::TreasuryAuctionQuery
 ADDED    finance_query::models::economic::auctions::TreasuryAuctionQuery::new
 ADDED    finance_query::models::economic::auctions::UpcomingAuction
 CHANGED  finance_query::EconomicProvider (body)
+CHANGED  finance_query::FinanceError (signature)
 CHANGED  finance_query::Operation (signature)
+CHANGED  finance_query::error::FinanceError (signature)
 CHANGED  finance_query::providers::adapter::markets::EconomicProvider (body)
 CHANGED  finance_query::providers::operation::Operation (signature)
 CHANGED  finance_query::providers::operation::Operation::capability (body)
 ```
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::score_news` | instructions | 951894.0 | 898200.0 | -5.6% |
+| `finance_query::translate_dictionary` | instructions | 19272.0 | 20286.0 | +5.3% |
 
 
 ## [3.0.0] - 2026-08-30
