@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Bump mkdocs-material and pymdown-extensions
+- Regenerate derived artifacts (#492)
 - Bump soothfast to v0.3.2 (#491)
 - Stop gating generated specs and SDKs at PR time (#487)
 - Collapse the two bot regeneration commits into one (#486)
