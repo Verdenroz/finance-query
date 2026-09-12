@@ -16,7 +16,9 @@ async fn main() {
         cache: Cache::new(None).await,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
-        providers: finance_query_server::build_providers().await,
+        providers: finance_query_server::build_providers()
+            .await
+            .expect("provider routing should build"),
     };
     print!("{}", graphql::build_schema(state).sdl());
 }

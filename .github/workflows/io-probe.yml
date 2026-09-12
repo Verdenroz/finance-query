@@ -23,15 +23,25 @@ jobs:
     name: Probe live endpoints
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    environment: soothfast-bot
     permissions:
       contents: read
       issues: write
+      id-token: write
     steps:
       - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+      - name: Checkout soothfast-bot scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Verdenroz/soothfast
+          ref: 80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+          path: soothfast-action
+          sparse-checkout: action
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
@@ -46,16 +56,135 @@ jobs:
       - name: Build release server
         run: cargo build --release -p finance-query-server
       - name: Probe
+        # `spec probe` exits 1 on problems, but the default step shell has no
+        # pipefail, so `tee` would mask it and skip the issue step below.
+        shell: bash
         run: cargo soothfast spec probe -p finance-query-server | tee probe.out
+      - name: Accept probes whose only drift is new fields
+        # `--accept` returns before `baseline.gate` ever runs, so a whole-run
+        # accept would demote a regressed field to `sometimes` and land the
+        # drift. The gate run above is the only thing that tells new from
+        # regressed, so only probes it reported as new-only are re-run under
+        # `--accept --filter`. Any other problem line, including one a later
+        # soothfast adds, taints the probe instead.
+        #
+        # `--filter` is a substring match, so an accept run also sweeps in
+        # names the eligible one is a prefix of. That is refused only when a
+        # swept-in probe is tainted, since re-locking a clean one is a no-op.
+        if: always()
+        id: accept
+        shell: bash
+        run: |
+          [ -f probe.out ] || exit 0
+          : > accept-summary.txt
+          : > eligible.txt
+          : > tainted.txt
+          : > accept.out
+          awk '
+            function flush() {
+              if (name == "") return
+              if (bad == 0 && good > 0) {
+                print name > "eligible.txt"
+                printf "%s", block > "accept-summary.txt"
+              } else if (bad > 0) {
+                print name > "tainted.txt"
+              }
+              name = ""; good = 0; bad = 0; block = ""
+            }
+            /^FAIL  / {
+              flush()
+              if ($0 ~ /^FAIL  [^: ]+:$/) {
+                name = substr($0, 7, length($0) - 7); block = $0 "\n"
+              } else if ($0 ~ /^FAIL  [^: ]+: /) {
+                print substr($0, 7, index($0, ":") - 7) > "tainted.txt"
+              }
+              next
+            }
+            /^      / {
+              if (name != "") {
+                if ($0 ~ /^      population: .* is new/) good++; else bad++
+                block = block $0 "\n"
+              }
+              next
+            }
+            { flush() }
+            END { flush() }
+          ' probe.out
+          eligible=$(sort -u eligible.txt)
+          if [ -z "$eligible" ]; then
+            echo "No probe reported new fields; probes.lock is unchanged."
+            exit 0
+          fi
+          echo "Eligible for accept:"
+          echo "$eligible"
+          for name in $eligible; do
+            status=0
+            cargo soothfast spec probe -p finance-query-server --accept --filter "$name" \
+              | tee -a accept.out || status=$?
+            # 1 is "NOT accepted", the normal refusal. Anything above it is
+            # soothfast itself failing, which no set check should paper over.
+            if [ "$status" -gt 1 ]; then
+              echo "spec probe --filter $name exited $status; not landing."
+              exit 1
+            fi
+          done
+          accepted=$(awk '$1 == "probe:" && / accepted \(/ { print $2 }' accept.out | sort -u)
+          if [ -z "$accepted" ]; then
+            echo "Every accept run refused; probes.lock is unchanged."
+            exit 0
+          fi
+          swept=$(echo "$accepted" | grep -Fxf tainted.txt || true)
+          if [ -n "$swept" ]; then
+            echo "Accept reached probes with non-new drift; not landing:"
+            echo "$swept"
+            exit 1
+          fi
+          {
+            echo "landed=true"
+            echo "summary<<SUMMARY_EOF"
+            echo "New fields accepted into \`probes.lock\` by the nightly probe."
+            echo
+            echo '```'
+            cat accept-summary.txt
+            echo '```'
+            echo "SUMMARY_EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Mint a soothfast-bot token
+        if: always() && steps.accept.outputs.landed == 'true'
+        id: bot
+        run: soothfast-action/action/bot-token.sh
+      - name: Land the accepted probes.lock
+        # The accept run re-requests the endpoint, so a field the gate run saw
+        # populated and this one sees empty still demotes to `sometimes`, for
+        # swept-in clean probes as much as for eligible ones. That residual is
+        # accepted; the bot PR diff is where it stays reviewable.
+        if: always() && steps.accept.outputs.landed == 'true'
+        env:
+          TOKEN: ${{ steps.bot.outputs.token }}
+          APP_SLUG: ${{ steps.bot.outputs.app_slug }}
+          BRANCH: bot/probes-lock
+          TITLE: "chore: accept new probe fields into probes.lock"
+          BODY: ${{ steps.accept.outputs.summary }}
+          PATHS: server/probes.lock
+        run: soothfast-action/action/land.sh
+      - name: Revoke the soothfast-bot token
+        if: always() && steps.bot.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.bot.outputs.token }}
+        run: gh api -X DELETE /installation/token || true
       - name: File or update failure issue
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           title="Nightly data-quality probe failing"
+          # An earlier step failing leaves no probe.out, which would otherwise
+          # file an issue whose only content is an empty code block.
+          summary="$(grep -E 'FAIL|spec probe:' probe.out 2>/dev/null | head -60)"
+          [ -n "$summary" ] || summary="No probe output: the job failed before probing."
           body="$(printf 'Run: %s\n\n```\n%s\n```\n' \
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            "$(grep -E 'FAIL|spec probe:' probe.out | head -60)")"
+            "$summary")"
           number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ -n "$number" ]; then
             gh issue comment "$number" --body "$body"

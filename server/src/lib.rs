@@ -18,6 +18,7 @@ use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -204,11 +205,23 @@ fn route_table(
     routes
 }
 
+/// Attempts at the provider build. Its only fallible step is Yahoo's live
+/// cookie + crumb handshake, which a retry re-runs rather than replaying:
+/// only successful sessions are cached.
+const PROVIDER_BUILD_ATTEMPTS: u32 = 3;
+
+/// Delay before the first retry, scaled by the attempt number.
+const PROVIDER_BUILD_BACKOFF: Duration = Duration::from_millis(500);
+
 /// Build the multi-provider routing shared by `AppState`. Each keyed
 /// provider is only routed in when its API key env var is set; a field
 /// backed solely by an unconfigured provider falls through to
 /// `NotSupported`, surfaced as a `501` by `finance_error_to_gql`.
-pub async fn build_providers() -> Arc<finance_query::Providers> {
+///
+/// Errors after [`PROVIDER_BUILD_ATTEMPTS`] rather than degrading to a
+/// narrower set: a caller handed a partial route table answers
+/// `NotSupported` for capabilities the deployment is configured to serve.
+pub async fn build_providers() -> Result<Arc<finance_query::Providers>, FinanceError> {
     use finance_query::Providers;
 
     let log_routing = |name: &str, key: &str, enabled: bool| match enabled {
@@ -226,23 +239,25 @@ pub async fn build_providers() -> Arc<finance_query::Providers> {
     log_routing("FRED", "FRED_API_KEY", flags.fred);
     log_routing("Polygon", "POLYGON_API_KEY", flags.polygon);
 
-    let mut builder = Providers::builder();
-    for (cap, route) in route_table(flags) {
-        builder = builder.route(cap, route);
-    }
-
-    match builder.build().await {
-        Ok(providers) => Arc::new(providers),
-        Err(e) => {
-            tracing::warn!(
-                "Failed to initialize provider routing, falling back to Yahoo-only: {e}"
-            );
-            Arc::new(
-                Providers::builder()
-                    .build()
-                    .await
-                    .expect("Yahoo-only Providers build cannot fail"),
-            )
+    let routes = route_table(flags);
+    let mut attempt = 1;
+    loop {
+        let mut builder = Providers::builder();
+        for (cap, route) in routes.clone() {
+            builder = builder.route(cap, route);
+        }
+        match builder.build().await {
+            Ok(providers) => return Ok(Arc::new(providers)),
+            Err(e) => {
+                if attempt == PROVIDER_BUILD_ATTEMPTS {
+                    return Err(e);
+                }
+                tracing::warn!(
+                    "Provider routing build failed (attempt {attempt}/{PROVIDER_BUILD_ATTEMPTS}), retrying: {e}"
+                );
+                tokio::time::sleep(PROVIDER_BUILD_BACKOFF * attempt).await;
+                attempt += 1;
+            }
         }
     }
 }

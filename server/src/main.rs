@@ -158,7 +158,9 @@ async fn create_app() -> Router {
         rate_limit_config.requests_per_minute
     );
 
-    let providers = finance_query_server::build_providers().await;
+    let providers = finance_query_server::build_providers()
+        .await
+        .expect("Failed to initialize provider routing");
 
     let state = AppState {
         cache,
