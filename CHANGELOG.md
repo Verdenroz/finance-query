@@ -21,11 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Install soothfast 0.3.2 in CI
 - Root-cause the six non-auction probe failures (#483)
 - Close four silent-failure gaps around the nightly probe (#481)
 
 ### 📦 Dependencies
 
+- Bump the all-dependencies group with 2 updates (#475)
 - Bump debian from `abd67ff` to `8820086` in /server (#461)
 - Bump rust from `99e09cb` to `1469a27` in /server (#460)
 - Bump rust from `99e09cb` to `1469a27` in /finance-query-mcp (#459)
@@ -35,24 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 Internal
 
 - Bump mkdocs-material and pymdown-extensions
-- Regenerate derived artifacts (#492)
 - Bump soothfast to v0.3.2 (#491)
 - Stop gating generated specs and SDKs at PR time (#487)
 - Collapse the two bot regeneration commits into one (#486)
-- Regenerate derived artifacts (#489)
-- Regenerate soothfast outputs (#488)
-- Regenerate derived artifacts (#478)
-- Regenerate soothfast outputs (#477)
-- Regenerate soothfast outputs (#474)
-- Regenerate derived artifacts (#473)
 - Move onto the soothfast v0.3 bot action (#472)
 - Bump docker/setup-buildx-action from 3.12.0 to 4.3.0 (#463)
 - Bump docker/login-action from 4.5.1 to 4.6.0 (#464)
 - Bump step-security/harden-runner from 2.19.4 to 2.21.0 (#465)
 - Bump actions/upload-artifact from 4.6.2 to 7.0.1 (#462)
 - Bump taiki-e/install-action from 2.82.3 to 2.86.7 (#466)
-- Regenerate derived artifacts (#457)
-- Regenerate derived artifacts (#454)
 
 ---
 
