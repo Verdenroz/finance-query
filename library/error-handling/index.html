@@ -245,6 +245,7 @@ try { var t = localStorage.getItem("soothfast-theme");
 <thead><tr><th>Variant</th><th>When it occurs</th><th>Retriable</th></tr></thead>
 <tbody>
 <tr><td><code>AuthenticationFailed</code></td><td>Yahoo crumb/cookie auth failure, EDGAR init rejected</td><td>✓</td></tr>
+<tr><td><code>ProviderNotConfigured</code></td><td>Provider is compiled in but has no credentials configured (e.g. <code>FRED_API_KEY</code> unset)</td><td>✗</td></tr>
 <tr><td><code>SymbolNotFound</code></td><td>Ticker symbol doesn't exist or returned no data</td><td>✗</td></tr>
 <tr><td><code>RateLimited</code></td><td>Provider rate limit exceeded</td><td>✓</td></tr>
 <tr><td><code>HttpError</code></td><td>Transport-level HTTP failure (DNS, TLS, connection refused)</td><td>✓</td></tr>
