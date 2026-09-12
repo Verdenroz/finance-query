@@ -30,7 +30,7 @@ jobs:
         with:
           enable-cache: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@80b18d8831521646b65fec79c6df14d6f763c602 # v0.3.1
+        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
         with:
           gate: false
           changelog: false
