@@ -14,6 +14,8 @@ permissions:
 jobs:
   build-and-push:
     name: Build ${{ matrix.image.name }}
+    # Not a blanket [bot] test: dependabot's base-image bumps must still rebuild.
+    if: github.actor != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -78,6 +80,7 @@ jobs:
 
   deploy-docs:
     name: Deploy docs site to GitHub Pages
+    if: github.actor != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
     # Rapid merges would each branch trend.jsonl off their own checkout,
     # and the second trend PR would conflict on master and hang.
@@ -97,6 +100,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
       - name: Checkout soothfast-bot scripts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -194,6 +198,12 @@ jobs:
           cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
           cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
 
+      - name: Regenerate specs, MCP tool manifest, and SDKs
+        run: |
+          cargo soothfast spec gen -p finance-query-server --target soothfast-routes
+          cargo soothfast sdk gen -p finance-query-server --target soothfast-routes
+          cargo soothfast spec gen -p finance-query-mcp --target soothfast-routes --features backtesting
+
       - name: Regenerate API reference, perf report, coverage page, and llms.txt
         run: |
           cargo soothfast docs reference -p finance-query --baseline base --features full --out docs/reference
@@ -232,6 +242,13 @@ jobs:
           git show HEAD:llms.txt | sed '/^\*\*Measured:\*\*/d' > target/llms-churn/old.txt
           cmp -s target/llms-churn/old.txt target/llms-churn/new.txt && git checkout -- llms.txt || true
 
+      - name: Regenerate CHANGELOG.md
+        # Without --against-ref the draft carries no commit entries and
+        # replaces the real Unreleased section, so a missing tag must fail.
+        run: |
+          prev=$(git describe --tags --abbrev=0)
+          cargo soothfast report changelog -p finance-query --baseline base --features full --against-ref "$prev"
+
       # Minted after every step that compiles the tree has run.
       - name: Mint a soothfast-bot token
         id: bot
@@ -254,8 +271,8 @@ jobs:
           APP_SLUG: ${{ steps.bot.outputs.app_slug }}
           BRANCH: bot/derived-artifacts
           TITLE: "chore: regenerate derived artifacts"
-          BODY: Automated trend, captured-output, and llms.txt regeneration.
-          PATHS: .soothfast/trend.jsonl llms.txt docs/library README.md
+          BODY: Automated regeneration of the changelog, trend, captured output, llms.txt, specs, and SDKs.
+          PATHS: CHANGELOG.md .soothfast/trend.jsonl llms.txt docs/library README.md server/openapi.yaml server/asyncapi.yaml sdks finance-query-mcp/mcp-tools.json
         run: soothfast-action/action/land.sh
       - name: Revoke the soothfast-bot token
         if: always() && steps.bot.outputs.token != ''
