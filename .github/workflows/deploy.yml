@@ -14,6 +14,8 @@ permissions:
 jobs:
   build-and-push:
     name: Build ${{ matrix.image.name }}
+    # Not a blanket [bot] test: dependabot's base-image bumps must still rebuild.
+    if: github.actor != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -78,6 +80,7 @@ jobs:
 
   deploy-docs:
     name: Deploy docs site to GitHub Pages
+    if: github.actor != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
     # Rapid merges would each branch trend.jsonl off their own checkout,
     # and the second trend PR would conflict on master and hang.
