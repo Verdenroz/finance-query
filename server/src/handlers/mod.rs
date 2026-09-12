@@ -89,7 +89,7 @@ pub(crate) fn api_routes() -> Router {
         .route("/crypto/global", get(crypto::get_crypto_global))
         // GET /v2/crypto/search?query=<str>
         .route("/crypto/search", get(crypto::get_crypto_search))
-        // GET /v2/crypto/news?limit=<u32> (currently FMP only)
+        // GET /v2/crypto/news?limit=<u32>
         .route("/crypto/news", get(crypto::get_crypto_news))
         // GET /v2/currencies
         .route("/currencies", get(metadata::get_currencies))

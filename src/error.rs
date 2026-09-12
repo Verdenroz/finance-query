@@ -20,6 +20,18 @@ pub enum FinanceError {
         context: String,
     },
 
+    /// A provider is compiled in but has no credentials configured.
+    ///
+    /// Distinct from [`FinanceError::AuthenticationFailed`], which means a
+    /// credential was supplied and rejected.
+    #[error("{provider} is not configured; set {env_var}")]
+    ProviderNotConfigured {
+        /// Provider that needs credentials
+        provider: String,
+        /// Environment variable that supplies them
+        env_var: String,
+    },
+
     /// The requested symbol was not found
     #[error("Symbol not found: {}", symbol.as_deref().unwrap_or("unknown"))]
     SymbolNotFound {

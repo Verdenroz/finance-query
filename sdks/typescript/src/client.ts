@@ -237,7 +237,7 @@ export interface GetBatchIndicatorsOptions {
   fields?: string;
   /** Candle interval (default: 1d) */
   interval?: models.Interval;
-  /** Time range (default: 1mo) */
+  /** Time range (default: 1y) */
   range?: models.TimeRange;
   /** Comma-separated symbols (required) */
   symbols: string;
@@ -719,7 +719,7 @@ export interface GetIndicatorsOptions {
   fields?: string;
   /** Candle interval (default: 1d) */
   interval?: models.Interval;
-  /** Time range (default: 1mo) */
+  /** Time range (default: 1y) */
   range?: models.TimeRange;
 }
 

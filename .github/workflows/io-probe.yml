@@ -59,6 +59,8 @@ jobs:
         # `spec probe` exits 1 on problems, but the default step shell has no
         # pipefail, so `tee` would mask it and skip the issue step below.
         shell: bash
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: cargo soothfast spec probe -p finance-query-server | tee probe.out
       - name: Accept probes whose only drift is new fields
         # `--accept` returns before `baseline.gate` ever runs, so a whole-run
@@ -74,6 +76,8 @@ jobs:
         if: always()
         id: accept
         shell: bash
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           [ -f probe.out ] || exit 0
           : > accept-summary.txt
