@@ -32,7 +32,7 @@ finance-query-server = { path = "../server", default-features = false, features 
 async-graphql = "7"
 
 # MCP SDK (official Rust MCP SDK from modelcontextprotocol/rust-sdk)
-rmcp = { version = "1", features = [
+rmcp = { version = "2", features = [
     "server",
     "macros",
     "transport-streamable-http-server",
