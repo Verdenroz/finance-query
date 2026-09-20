@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 /// One earnings call transcript.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EarningsTranscript {

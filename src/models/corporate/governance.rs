@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 /// One executive's reported compensation for one fiscal year.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ExecutiveCompensation {
@@ -44,6 +45,7 @@ pub struct ExecutiveCompensation {
 }
 
 /// Employee headcount as reported on one filing.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EmployeeCount {

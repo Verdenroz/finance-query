@@ -8,6 +8,7 @@ use vader_sentiment::SentimentIntensityAnalyzer;
 const THRESHOLD: f64 = 0.05;
 
 /// Directional sentiment classification for a piece of text.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum SentimentLabel {
@@ -33,6 +34,7 @@ impl SentimentLabel {
 /// Sentiment score for a news article or transcript segment.
 ///
 /// Only present when the `sentiment` feature is enabled.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

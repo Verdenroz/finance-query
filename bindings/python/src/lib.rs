@@ -389,6 +389,67 @@ impl CandleSeq {
     }
 }
 
+/// A sequence of `SimilarSymbol` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "SimilarSymbolSeq")]
+pub struct SimilarSymbolSeq(Vec<::finance_query::SimilarSymbol>);
+
+impl SimilarSymbolSeq {
+    fn new(values: Vec<::finance_query::SimilarSymbol>) -> Self {
+        SimilarSymbolSeq(values)
+    }
+}
+
+#[pymethods]
+impl SimilarSymbolSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<SimilarSymbol> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(SimilarSymbol)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("SimilarSymbolSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<SimilarSymbol> {
+        self.0.iter().cloned().map(SimilarSymbol).collect()
+    }
+
+    /// Stock symbol
+    #[getter]
+    fn symbol(&self) -> Vec<String> {
+        self.0.iter().map(|v| v.symbol.clone()).collect()
+    }
+
+    /// Recommendation score (higher = more similar)
+    #[getter]
+    fn score(&self) -> F64Array {
+        F64Array::new(self.0.iter().map(|v| v.score).collect())
+    }
+}
+
 ::pyo3::create_exception!(finance_query, Error, ::pyo3::exceptions::PyException, "Base of every error finance-query raises.");
 ::pyo3::create_exception!(finance_query, BacktestError, Error, "Backtest-specific errors");
 ::pyo3::create_exception!(finance_query, InvalidParameter, BacktestError, "Invalid configuration parameter");
@@ -575,6 +636,7 @@ pub enum Interval {
 }
 
 impl ::std::convert::From<::finance_query::Interval> for Interval {
+    #[allow(unreachable_patterns)]
     fn from(value: ::finance_query::Interval) -> Self {
         match value {
             ::finance_query::Interval::OneMinute => Interval::OneMinute,
@@ -589,6 +651,7 @@ impl ::std::convert::From<::finance_query::Interval> for Interval {
             ::finance_query::Interval::OneWeek => Interval::OneWeek,
             ::finance_query::Interval::OneMonth => Interval::OneMonth,
             ::finance_query::Interval::ThreeMonths => Interval::ThreeMonths,
+            _ => ::std::unreachable!("::finance_query::Interval gained a variant this binding was not generated for"),
         }
     }
 }
@@ -596,6 +659,7 @@ impl ::std::convert::From<::finance_query::Interval> for Interval {
 // A mirrored enum has no derived `Clone`; a field getter converts through
 // this one instead of cloning an owned copy just to consume it.
 impl ::std::convert::From<&::finance_query::Interval> for Interval {
+    #[allow(unreachable_patterns)]
     fn from(value: &::finance_query::Interval) -> Self {
         match value {
             ::finance_query::Interval::OneMinute => Interval::OneMinute,
@@ -610,6 +674,7 @@ impl ::std::convert::From<&::finance_query::Interval> for Interval {
             ::finance_query::Interval::OneWeek => Interval::OneWeek,
             ::finance_query::Interval::OneMonth => Interval::OneMonth,
             ::finance_query::Interval::ThreeMonths => Interval::ThreeMonths,
+            _ => ::std::unreachable!("::finance_query::Interval gained a variant this binding was not generated for"),
         }
     }
 }
@@ -651,6 +716,7 @@ pub enum TimeRange {
 }
 
 impl ::std::convert::From<::finance_query::TimeRange> for TimeRange {
+    #[allow(unreachable_patterns)]
     fn from(value: ::finance_query::TimeRange) -> Self {
         match value {
             ::finance_query::TimeRange::OneDay => TimeRange::OneDay,
@@ -664,6 +730,7 @@ impl ::std::convert::From<::finance_query::TimeRange> for TimeRange {
             ::finance_query::TimeRange::TenYears => TimeRange::TenYears,
             ::finance_query::TimeRange::YearToDate => TimeRange::YearToDate,
             ::finance_query::TimeRange::Max => TimeRange::Max,
+            _ => ::std::unreachable!("::finance_query::TimeRange gained a variant this binding was not generated for"),
         }
     }
 }
@@ -671,6 +738,7 @@ impl ::std::convert::From<::finance_query::TimeRange> for TimeRange {
 // A mirrored enum has no derived `Clone`; a field getter converts through
 // this one instead of cloning an owned copy just to consume it.
 impl ::std::convert::From<&::finance_query::TimeRange> for TimeRange {
+    #[allow(unreachable_patterns)]
     fn from(value: &::finance_query::TimeRange) -> Self {
         match value {
             ::finance_query::TimeRange::OneDay => TimeRange::OneDay,
@@ -684,6 +752,7 @@ impl ::std::convert::From<&::finance_query::TimeRange> for TimeRange {
             ::finance_query::TimeRange::TenYears => TimeRange::TenYears,
             ::finance_query::TimeRange::YearToDate => TimeRange::YearToDate,
             ::finance_query::TimeRange::Max => TimeRange::Max,
+            _ => ::std::unreachable!("::finance_query::TimeRange gained a variant this binding was not generated for"),
         }
     }
 }
@@ -862,6 +931,112 @@ impl Chart {
     }
 }
 
+/// Computed analytics derived from a symbol's dividend history.
+#[pyclass(name = "DividendAnalytics")]
+pub struct DividendAnalytics(::finance_query::DividendAnalytics);
+
+#[pymethods]
+impl DividendAnalytics {
+    /// Total dividends paid in the requested range
+    #[getter]
+    fn total_paid(&self) -> f64 {
+        self.0.total_paid.clone()
+    }
+
+    #[setter]
+    fn set_total_paid(&mut self, value: f64) {
+        self.0.total_paid = value;
+    }
+
+    /// Number of dividend payments in the requested range
+    #[getter]
+    fn payment_count(&self) -> usize {
+        self.0.payment_count.clone()
+    }
+
+    #[setter]
+    fn set_payment_count(&mut self, value: usize) {
+        self.0.payment_count = value;
+    }
+
+    /// Average dividend per payment
+    #[getter]
+    fn average_payment(&self) -> f64 {
+        self.0.average_payment.clone()
+    }
+
+    #[setter]
+    fn set_average_payment(&mut self, value: f64) {
+        self.0.average_payment = value;
+    }
+
+    /// Compound Annual Growth Rate of the dividend amount.
+    #[getter]
+    fn cagr(&self) -> Option<f64> {
+        self.0.cagr.clone()
+    }
+
+    #[setter]
+    fn set_cagr(&mut self, value: Option<f64>) {
+        self.0.cagr = value;
+    }
+
+    /// Most recent dividend payment
+    #[getter]
+    fn last_payment(&self) -> Option<Dividend> {
+        self.0.last_payment.clone().map(Dividend)
+    }
+
+    /// Earliest dividend payment in the requested range
+    #[getter]
+    fn first_payment(&self) -> Option<Dividend> {
+        self.0.first_payment.clone().map(Dividend)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DividendAnalytics(total_paid={:?}, payment_count={:?}, average_payment={:?}, cagr={:?})", self.0.total_paid, self.0.payment_count, self.0.average_payment, self.0.cagr)
+    }
+}
+
+/// Public capital gain data
+#[pyclass(name = "CapitalGain")]
+pub struct CapitalGain(::finance_query::CapitalGain);
+
+#[pymethods]
+impl CapitalGain {
+    /// Timestamp (Unix)
+    #[getter]
+    fn timestamp(&self) -> i64 {
+        self.0.timestamp.clone()
+    }
+
+    #[setter]
+    fn set_timestamp(&mut self, value: i64) {
+        self.0.timestamp = value;
+    }
+
+    /// Capital gain amount per share
+    #[getter]
+    fn amount(&self) -> f64 {
+        self.0.amount.clone()
+    }
+
+    #[setter]
+    fn set_amount(&mut self, value: f64) {
+        self.0.amount = value;
+    }
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[getter]
+    fn provider_id(&self) -> Option<Provider> {
+        self.0.provider_id.clone().map(Provider)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("CapitalGain(timestamp={:?}, amount={:?})", self.0.timestamp, self.0.amount)
+    }
+}
+
 /// Public dividend data
 #[pyclass(name = "Dividend")]
 pub struct Dividend(::finance_query::Dividend);
@@ -898,6 +1073,67 @@ impl Dividend {
 
     fn __repr__(&self) -> String {
         format!("Dividend(timestamp={:?}, amount={:?})", self.0.timestamp, self.0.amount)
+    }
+}
+
+/// Public stock split data
+#[pyclass(name = "Split")]
+pub struct Split(::finance_query::Split);
+
+#[pymethods]
+impl Split {
+    /// Timestamp (Unix)
+    #[getter]
+    fn timestamp(&self) -> i64 {
+        self.0.timestamp.clone()
+    }
+
+    #[setter]
+    fn set_timestamp(&mut self, value: i64) {
+        self.0.timestamp = value;
+    }
+
+    /// Numerator of the split ratio
+    #[getter]
+    fn numerator(&self) -> f64 {
+        self.0.numerator.clone()
+    }
+
+    #[setter]
+    fn set_numerator(&mut self, value: f64) {
+        self.0.numerator = value;
+    }
+
+    /// Denominator of the split ratio
+    #[getter]
+    fn denominator(&self) -> f64 {
+        self.0.denominator.clone()
+    }
+
+    #[setter]
+    fn set_denominator(&mut self, value: f64) {
+        self.0.denominator = value;
+    }
+
+    /// Split ratio as string (e.g., "2:1", "10:1")
+    #[getter]
+    fn ratio(&self) -> String {
+        self.0.ratio.clone()
+    }
+
+    #[setter]
+    fn set_ratio(&mut self, value: String) {
+        self.0.ratio = value;
+    }
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[getter]
+    fn provider_id(&self) -> Option<Provider> {
+        self.0.provider_id.clone().map(Provider)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Split(timestamp={:?}, numerator={:?}, denominator={:?}, ratio={:?})", self.0.timestamp, self.0.numerator, self.0.denominator, self.0.ratio)
     }
 }
 
@@ -1160,6 +1396,336 @@ impl ChartMeta {
     }
 }
 
+/// One earnings call transcript.
+#[pyclass(name = "EarningsTranscript")]
+pub struct EarningsTranscript(::finance_query::EarningsTranscript);
+
+#[pymethods]
+impl EarningsTranscript {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Fiscal quarter (e.g. `"Q4"`).
+    #[getter]
+    fn quarter(&self) -> Option<String> {
+        self.0.quarter.clone()
+    }
+
+    #[setter]
+    fn set_quarter(&mut self, value: Option<String>) {
+        self.0.quarter = value;
+    }
+
+    /// Fiscal year.
+    #[getter]
+    fn year(&self) -> Option<i32> {
+        self.0.year.clone()
+    }
+
+    #[setter]
+    fn set_year(&mut self, value: Option<i32>) {
+        self.0.year = value;
+    }
+
+    /// Call date (`YYYY-MM-DD`), when the provider reports one.
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    /// Full transcript text.
+    #[getter]
+    fn text(&self) -> String {
+        self.0.text.clone()
+    }
+
+    #[setter]
+    fn set_text(&mut self, value: String) {
+        self.0.text = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EarningsTranscript(symbol={:?}, quarter={:?}, year={:?}, date={:?}, text={:?})", self.0.symbol, self.0.quarter, self.0.year, self.0.date, self.0.text)
+    }
+}
+
+/// Employee headcount as reported on one filing.
+#[pyclass(name = "EmployeeCount")]
+pub struct EmployeeCount(::finance_query::EmployeeCount);
+
+#[pymethods]
+impl EmployeeCount {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// SEC Central Index Key of the filer.
+    #[getter]
+    fn cik(&self) -> Option<String> {
+        self.0.cik.clone()
+    }
+
+    #[setter]
+    fn set_cik(&mut self, value: Option<String>) {
+        self.0.cik = value;
+    }
+
+    /// Company name as filed.
+    #[getter]
+    fn company_name(&self) -> Option<String> {
+        self.0.company_name.clone()
+    }
+
+    #[setter]
+    fn set_company_name(&mut self, value: Option<String>) {
+        self.0.company_name = value;
+    }
+
+    /// Number of employees reported.
+    #[getter]
+    fn employee_count(&self) -> Option<i64> {
+        self.0.employee_count.clone()
+    }
+
+    #[setter]
+    fn set_employee_count(&mut self, value: Option<i64>) {
+        self.0.employee_count = value;
+    }
+
+    /// Period the count is as of (`YYYY-MM-DD`).
+    #[getter]
+    fn period_of_report(&self) -> Option<String> {
+        self.0.period_of_report.clone()
+    }
+
+    #[setter]
+    fn set_period_of_report(&mut self, value: Option<String>) {
+        self.0.period_of_report = value;
+    }
+
+    /// Form the count was reported on (e.g. `"10-K"`).
+    #[getter]
+    fn form_type(&self) -> Option<String> {
+        self.0.form_type.clone()
+    }
+
+    #[setter]
+    fn set_form_type(&mut self, value: Option<String>) {
+        self.0.form_type = value;
+    }
+
+    /// Filing date (`YYYY-MM-DD`).
+    #[getter]
+    fn filing_date(&self) -> Option<String> {
+        self.0.filing_date.clone()
+    }
+
+    #[setter]
+    fn set_filing_date(&mut self, value: Option<String>) {
+        self.0.filing_date = value;
+    }
+
+    /// URL of the source filing.
+    #[getter]
+    fn source(&self) -> Option<String> {
+        self.0.source.clone()
+    }
+
+    #[setter]
+    fn set_source(&mut self, value: Option<String>) {
+        self.0.source = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EmployeeCount(symbol={:?}, cik={:?}, company_name={:?}, employee_count={:?}, period_of_report={:?}, form_type={:?}, filing_date={:?}, source={:?})", self.0.symbol, self.0.cik, self.0.company_name, self.0.employee_count, self.0.period_of_report, self.0.form_type, self.0.filing_date, self.0.source)
+    }
+}
+
+/// One executive's reported compensation for one fiscal year.
+#[pyclass(name = "ExecutiveCompensation")]
+pub struct ExecutiveCompensation(::finance_query::ExecutiveCompensation);
+
+#[pymethods]
+impl ExecutiveCompensation {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// SEC Central Index Key of the filer.
+    #[getter]
+    fn cik(&self) -> Option<String> {
+        self.0.cik.clone()
+    }
+
+    #[setter]
+    fn set_cik(&mut self, value: Option<String>) {
+        self.0.cik = value;
+    }
+
+    /// Company name as filed.
+    #[getter]
+    fn company_name(&self) -> Option<String> {
+        self.0.company_name.clone()
+    }
+
+    #[setter]
+    fn set_company_name(&mut self, value: Option<String>) {
+        self.0.company_name = value;
+    }
+
+    /// Executive name and position, as a single filed string.
+    #[getter]
+    fn name_and_position(&self) -> Option<String> {
+        self.0.name_and_position.clone()
+    }
+
+    #[setter]
+    fn set_name_and_position(&mut self, value: Option<String>) {
+        self.0.name_and_position = value;
+    }
+
+    /// Fiscal year the compensation covers.
+    #[getter]
+    fn year(&self) -> Option<i32> {
+        self.0.year.clone()
+    }
+
+    #[setter]
+    fn set_year(&mut self, value: Option<i32>) {
+        self.0.year = value;
+    }
+
+    /// Base salary.
+    #[getter]
+    fn salary(&self) -> Option<f64> {
+        self.0.salary.clone()
+    }
+
+    #[setter]
+    fn set_salary(&mut self, value: Option<f64>) {
+        self.0.salary = value;
+    }
+
+    /// Cash bonus.
+    #[getter]
+    fn bonus(&self) -> Option<f64> {
+        self.0.bonus.clone()
+    }
+
+    #[setter]
+    fn set_bonus(&mut self, value: Option<f64>) {
+        self.0.bonus = value;
+    }
+
+    /// Value of stock awards.
+    #[getter]
+    fn stock_award(&self) -> Option<f64> {
+        self.0.stock_award.clone()
+    }
+
+    #[setter]
+    fn set_stock_award(&mut self, value: Option<f64>) {
+        self.0.stock_award = value;
+    }
+
+    /// Value of option awards.
+    #[getter]
+    fn option_award(&self) -> Option<f64> {
+        self.0.option_award.clone()
+    }
+
+    #[setter]
+    fn set_option_award(&mut self, value: Option<f64>) {
+        self.0.option_award = value;
+    }
+
+    /// Non-equity incentive plan compensation.
+    #[getter]
+    fn incentive_plan_compensation(&self) -> Option<f64> {
+        self.0.incentive_plan_compensation.clone()
+    }
+
+    #[setter]
+    fn set_incentive_plan_compensation(&mut self, value: Option<f64>) {
+        self.0.incentive_plan_compensation = value;
+    }
+
+    /// All other compensation.
+    #[getter]
+    fn other_compensation(&self) -> Option<f64> {
+        self.0.other_compensation.clone()
+    }
+
+    #[setter]
+    fn set_other_compensation(&mut self, value: Option<f64>) {
+        self.0.other_compensation = value;
+    }
+
+    /// Total compensation.
+    #[getter]
+    fn total(&self) -> Option<f64> {
+        self.0.total.clone()
+    }
+
+    #[setter]
+    fn set_total(&mut self, value: Option<f64>) {
+        self.0.total = value;
+    }
+
+    /// Filing date of the source document (`YYYY-MM-DD`).
+    #[getter]
+    fn filing_date(&self) -> Option<String> {
+        self.0.filing_date.clone()
+    }
+
+    #[setter]
+    fn set_filing_date(&mut self, value: Option<String>) {
+        self.0.filing_date = value;
+    }
+
+    /// URL of the source filing.
+    #[getter]
+    fn url(&self) -> Option<String> {
+        self.0.url.clone()
+    }
+
+    #[setter]
+    fn set_url(&mut self, value: Option<String>) {
+        self.0.url = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ExecutiveCompensation(symbol={:?}, cik={:?}, company_name={:?}, name_and_position={:?}, year={:?}, salary={:?}, bonus={:?}, stock_award={:?}, option_award={:?}, incentive_plan_compensation={:?}, other_compensation={:?}, total={:?}, filing_date={:?}, url={:?})", self.0.symbol, self.0.cik, self.0.company_name, self.0.name_and_position, self.0.year, self.0.salary, self.0.bonus, self.0.stock_award, self.0.option_award, self.0.incentive_plan_compensation, self.0.other_compensation, self.0.total, self.0.filing_date, self.0.url)
+    }
+}
+
 /// A news article
 #[pyclass(name = "News")]
 pub struct News(::finance_query::News);
@@ -1227,8 +1793,225 @@ impl News {
         self.0.provider_id.clone().map(Provider)
     }
 
+    /// Sentiment score for this article's title (VADER lexicon-based).
+    #[getter]
+    fn sentiment(&self) -> Option<Sentiment> {
+        self.0.sentiment.clone().map(Sentiment)
+    }
+
     fn __repr__(&self) -> String {
         format!("News(title={:?}, link={:?}, source={:?}, img={:?}, time={:?})", self.0.title, self.0.link, self.0.source, self.0.img, self.0.time)
+    }
+}
+
+/// A company press release.
+#[pyclass(name = "PressRelease")]
+pub struct PressRelease(::finance_query::PressRelease);
+
+#[pymethods]
+impl PressRelease {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Publication date/time as reported by the provider.
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    /// Release title.
+    #[getter]
+    fn title(&self) -> Option<String> {
+        self.0.title.clone()
+    }
+
+    #[setter]
+    fn set_title(&mut self, value: Option<String>) {
+        self.0.title = value;
+    }
+
+    /// Full release text.
+    #[getter]
+    fn text(&self) -> Option<String> {
+        self.0.text.clone()
+    }
+
+    #[setter]
+    fn set_text(&mut self, value: Option<String>) {
+        self.0.text = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("PressRelease(symbol={:?}, date={:?}, title={:?}, text={:?})", self.0.symbol, self.0.date, self.0.title, self.0.text)
+    }
+}
+
+/// Fully typed recommendation data
+#[pyclass(name = "Recommendation")]
+pub struct Recommendation(::finance_query::Recommendation);
+
+#[pymethods]
+impl Recommendation {
+    /// Symbol that was queried
+    #[getter]
+    fn symbol(&self) -> String {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: String) {
+        self.0.symbol = value;
+    }
+
+    /// Recommended/similar symbols with scores
+    #[getter]
+    fn recommendations(&self) -> SimilarSymbolSeq {
+        SimilarSymbolSeq::new(self.0.recommendations.clone())
+    }
+
+    /// Which provider supplied this data (None = Yahoo Finance default)
+    #[getter]
+    fn provider_id(&self) -> Option<Provider> {
+        self.0.provider_id.clone().map(Provider)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Recommendation(symbol={:?})", self.0.symbol)
+    }
+}
+
+/// A similar/recommended symbol with score
+#[pyclass(name = "SimilarSymbol")]
+pub struct SimilarSymbol(::finance_query::SimilarSymbol);
+
+#[pymethods]
+impl SimilarSymbol {
+    /// Stock symbol
+    #[getter]
+    fn symbol(&self) -> String {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: String) {
+        self.0.symbol = value;
+    }
+
+    /// Recommendation score (higher = more similar)
+    #[getter]
+    fn score(&self) -> f64 {
+        self.0.score.clone()
+    }
+
+    #[setter]
+    fn set_score(&mut self, value: f64) {
+        self.0.score = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("SimilarSymbol(symbol={:?}, score={:?})", self.0.symbol, self.0.score)
+    }
+}
+
+/// Sentiment score for a news article or transcript segment.
+#[pyclass(name = "Sentiment")]
+pub struct Sentiment(::finance_query::Sentiment);
+
+#[pymethods]
+impl Sentiment {
+    /// Directional classification.
+    #[getter]
+    fn label(&self) -> SentimentLabel {
+        (&self.0.label).into()
+    }
+
+    #[setter]
+    fn set_label(&mut self, value: SentimentLabel) {
+        self.0.label = value.into();
+    }
+
+    /// Compound score: -1.0 (most bearish) to +1.0 (most bullish).
+    #[getter]
+    fn score(&self) -> f64 {
+        self.0.score.clone()
+    }
+
+    #[setter]
+    fn set_score(&mut self, value: f64) {
+        self.0.score = value;
+    }
+
+    /// Confidence: 0.0 to 1.0 (magnitude of the compound score).
+    #[getter]
+    fn confidence(&self) -> f64 {
+        self.0.confidence.clone()
+    }
+
+    #[setter]
+    fn set_confidence(&mut self, value: f64) {
+        self.0.confidence = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Sentiment(label=SentimentLabel.{:?}, score={:?}, confidence={:?})", SentimentLabel::from(&self.0.label), self.0.score, self.0.confidence)
+    }
+}
+
+/// Directional sentiment classification for a piece of text.
+#[pyclass(name = "SentimentLabel", eq, eq_int, from_py_object)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SentimentLabel {
+    Bullish,
+    Neutral,
+    Bearish,
+}
+
+impl ::std::convert::From<::finance_query::SentimentLabel> for SentimentLabel {
+    #[allow(unreachable_patterns)]
+    fn from(value: ::finance_query::SentimentLabel) -> Self {
+        match value {
+            ::finance_query::SentimentLabel::Bullish => SentimentLabel::Bullish,
+            ::finance_query::SentimentLabel::Neutral => SentimentLabel::Neutral,
+            ::finance_query::SentimentLabel::Bearish => SentimentLabel::Bearish,
+            _ => ::std::unreachable!("::finance_query::SentimentLabel gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+// A mirrored enum has no derived `Clone`; a field getter converts through
+// this one instead of cloning an owned copy just to consume it.
+impl ::std::convert::From<&::finance_query::SentimentLabel> for SentimentLabel {
+    #[allow(unreachable_patterns)]
+    fn from(value: &::finance_query::SentimentLabel) -> Self {
+        match value {
+            ::finance_query::SentimentLabel::Bullish => SentimentLabel::Bullish,
+            ::finance_query::SentimentLabel::Neutral => SentimentLabel::Neutral,
+            ::finance_query::SentimentLabel::Bearish => SentimentLabel::Bearish,
+            _ => ::std::unreachable!("::finance_query::SentimentLabel gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+impl ::std::convert::From<SentimentLabel> for ::finance_query::SentimentLabel {
+    fn from(value: SentimentLabel) -> Self {
+        match value {
+            SentimentLabel::Bullish => ::finance_query::SentimentLabel::Bullish,
+            SentimentLabel::Neutral => ::finance_query::SentimentLabel::Neutral,
+            SentimentLabel::Bearish => ::finance_query::SentimentLabel::Bearish,
+        }
     }
 }
 
@@ -1242,6 +2025,16 @@ pub struct Ticker(::finance_query::Ticker);
 
 #[pymethods]
 impl Ticker {
+    /// Get capital gains distribution history.
+    async fn capital_gains(&self, range: TimeRange) -> PyResult<Vec<CapitalGain>> {
+        Ok(OnRuntime::new(self.0.capital_gains(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(CapitalGain).collect())
+    }
+
+    /// Blocking form of `capital_gains`: runs the call to completion on the package's runtime.
+    fn capital_gains_blocking(&self, range: TimeRange) -> PyResult<Vec<CapitalGain>> {
+        Ok(runtime().block_on(self.0.capital_gains(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(CapitalGain).collect())
+    }
+
     /// Get historical OHLCV chart data.
     async fn chart(&self, interval: Interval, range: TimeRange) -> PyResult<Chart> {
         Ok(Chart(OnRuntime::new(self.0.chart(interval.into(), range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
@@ -1262,6 +2055,16 @@ impl Ticker {
         Ok(Chart(runtime().block_on(self.0.chart_range(interval.into(), start, end)).map_err(BindErrorfinancequeryerrorFinanceError)?))
     }
 
+    /// Compute dividend analytics for the requested time range.
+    async fn dividend_analytics(&self, range: TimeRange) -> PyResult<DividendAnalytics> {
+        Ok(DividendAnalytics(OnRuntime::new(self.0.dividend_analytics(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `dividend_analytics`: runs the call to completion on the package's runtime.
+    fn dividend_analytics_blocking(&self, range: TimeRange) -> PyResult<DividendAnalytics> {
+        Ok(DividendAnalytics(runtime().block_on(self.0.dividend_analytics(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
     /// Get dividend history.
     async fn dividends(&self, range: TimeRange) -> PyResult<Vec<Dividend>> {
         Ok(OnRuntime::new(self.0.dividends(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(Dividend).collect())
@@ -1272,6 +2075,36 @@ impl Ticker {
         Ok(runtime().block_on(self.0.dividends(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(Dividend).collect())
     }
 
+    /// Fetch an earnings call transcript, provider-neutral shape, via the
+    async fn earnings_transcript(&self, quarter: Option<String>, year: Option<i32>) -> PyResult<EarningsTranscript> {
+        Ok(EarningsTranscript(OnRuntime::new(self.0.earnings_transcript(quarter.as_deref(), year)).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `earnings_transcript`: runs the call to completion on the package's runtime.
+    fn earnings_transcript_blocking(&self, quarter: Option<String>, year: Option<i32>) -> PyResult<EarningsTranscript> {
+        Ok(EarningsTranscript(runtime().block_on(self.0.earnings_transcript(quarter.as_deref(), year)).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch reported employee headcount history (most recent period first) via
+    async fn employee_count(&self) -> PyResult<Vec<EmployeeCount>> {
+        Ok(OnRuntime::new(self.0.employee_count()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(EmployeeCount).collect())
+    }
+
+    /// Blocking form of `employee_count`: runs the call to completion on the package's runtime.
+    fn employee_count_blocking(&self) -> PyResult<Vec<EmployeeCount>> {
+        Ok(runtime().block_on(self.0.employee_count()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(EmployeeCount).collect())
+    }
+
+    /// Fetch reported executive compensation (most recent fiscal year first)
+    async fn executive_compensation(&self) -> PyResult<Vec<ExecutiveCompensation>> {
+        Ok(OnRuntime::new(self.0.executive_compensation()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ExecutiveCompensation).collect())
+    }
+
+    /// Blocking form of `executive_compensation`: runs the call to completion on the package's runtime.
+    fn executive_compensation_blocking(&self) -> PyResult<Vec<ExecutiveCompensation>> {
+        Ok(runtime().block_on(self.0.executive_compensation()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ExecutiveCompensation).collect())
+    }
+
     /// Get news articles for this symbol.
     async fn news(&self) -> PyResult<Vec<News>> {
         Ok(OnRuntime::new(self.0.news()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(News).collect())
@@ -1280,6 +2113,46 @@ impl Ticker {
     /// Blocking form of `news`: runs the call to completion on the package's runtime.
     fn news_blocking(&self) -> PyResult<Vec<News>> {
         Ok(runtime().block_on(self.0.news()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(News).collect())
+    }
+
+    /// Average sentiment across recent news headlines for this symbol.
+    async fn news_sentiment(&self) -> PyResult<Sentiment> {
+        Ok(Sentiment(OnRuntime::new(self.0.news_sentiment()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `news_sentiment`: runs the call to completion on the package's runtime.
+    fn news_sentiment_blocking(&self) -> PyResult<Sentiment> {
+        Ok(Sentiment(runtime().block_on(self.0.news_sentiment()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch the company's own press releases via the configured
+    async fn press_releases(&self, limit: u32) -> PyResult<Vec<PressRelease>> {
+        Ok(OnRuntime::new(self.0.press_releases(limit)).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(PressRelease).collect())
+    }
+
+    /// Blocking form of `press_releases`: runs the call to completion on the package's runtime.
+    fn press_releases_blocking(&self, limit: u32) -> PyResult<Vec<PressRelease>> {
+        Ok(runtime().block_on(self.0.press_releases(limit)).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(PressRelease).collect())
+    }
+
+    /// Get analyst recommendations and similar symbols.
+    async fn recommendations(&self, limit: u32) -> PyResult<Recommendation> {
+        Ok(Recommendation(OnRuntime::new(self.0.recommendations(limit)).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `recommendations`: runs the call to completion on the package's runtime.
+    fn recommendations_blocking(&self, limit: u32) -> PyResult<Recommendation> {
+        Ok(Recommendation(runtime().block_on(self.0.recommendations(limit)).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Get stock split history.
+    async fn splits(&self, range: TimeRange) -> PyResult<Vec<Split>> {
+        Ok(OnRuntime::new(self.0.splits(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(Split).collect())
+    }
+
+    /// Blocking form of `splits`: runs the call to completion on the package's runtime.
+    fn splits_blocking(&self, range: TimeRange) -> PyResult<Vec<Split>> {
+        Ok(runtime().block_on(self.0.splits(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(Split).collect())
     }
 
     /// Returns the ticker symbol.
@@ -1305,13 +2178,25 @@ fn finance_query(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<F64Array>()?;
     m.add_class::<I64Array>()?;
     m.add_class::<CandleSeq>()?;
+    m.add_class::<SimilarSymbolSeq>()?;
     m.add_class::<Interval>()?;
     m.add_class::<TimeRange>()?;
     m.add_class::<Candle>()?;
     m.add_class::<Chart>()?;
+    m.add_class::<DividendAnalytics>()?;
+    m.add_class::<CapitalGain>()?;
     m.add_class::<Dividend>()?;
+    m.add_class::<Split>()?;
     m.add_class::<ChartMeta>()?;
+    m.add_class::<EarningsTranscript>()?;
+    m.add_class::<EmployeeCount>()?;
+    m.add_class::<ExecutiveCompensation>()?;
     m.add_class::<News>()?;
+    m.add_class::<PressRelease>()?;
+    m.add_class::<Recommendation>()?;
+    m.add_class::<SimilarSymbol>()?;
+    m.add_class::<Sentiment>()?;
+    m.add_class::<SentimentLabel>()?;
     m.add_class::<Provider>()?;
     m.add_class::<Ticker>()?;
     m.add("Error", m.py().get_type::<Error>())?;

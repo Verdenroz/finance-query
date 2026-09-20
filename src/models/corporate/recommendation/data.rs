@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// and API responses.
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::recommendations()` to obtain recommendations.
+#[soothfast::export]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Recommendation {

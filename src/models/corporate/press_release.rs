@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A company press release.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PressRelease {

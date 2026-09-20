@@ -271,6 +271,7 @@ impl Ticker {
         Self::builder(symbol).build().await
     }
     /// Creates a new builder for Ticker.
+    #[soothfast::export(skip)]
     pub fn builder(symbol: impl Into<String>) -> TickerBuilder {
         TickerBuilder::new(symbol)
     }
@@ -289,6 +290,7 @@ impl Ticker {
     /// Panics if this ticker was created via [`Providers`](crate::Providers) with
     /// no Yahoo provider configured. For session sharing across multiple tickers,
     /// prefer [`Providers::ticker`](crate::Providers::ticker) instead.
+    #[soothfast::export(skip)]
     pub fn client_handle(&self) -> ClientHandle {
         ClientHandle(
             self.providers
