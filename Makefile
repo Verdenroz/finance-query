@@ -201,6 +201,9 @@ probe-accept: ## Re-lock probes.lock after a deliberate response change
 	cargo build --release -p finance-query-server
 	$(SOOTHFAST) spec probe -p finance-query-server --accept
 
+smoke-python: ## Build the debug wheel and exercise the Python Ticker surface against live data
+	python3 tests/python/smoke_ticker.py
+
 # =============================================================================
 # Production Docker Compose
 # =============================================================================

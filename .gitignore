@@ -17,6 +17,8 @@ IDEAS.md
 # README and pyproject.toml went in.
 !sdks/python/src/**/*.py
 !sdks/python/hatch_build.py
+# The bindings smoke test is hand-written, not generated.
+!tests/python/**/*.py
 flamegraph.svg
 *.data
 /CLAUDE.md
