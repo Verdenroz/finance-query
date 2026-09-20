@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 /// A collection of SEC filings from a provider (e.g., Polygon EDGAR).
 ///
 /// Obtain via [`Ticker::filings`](crate::Ticker::filings).
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct ProviderFilings {
@@ -19,6 +20,7 @@ pub struct ProviderFilings {
 }
 
 /// A single SEC filing entry from a provider.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct ProviderFiling {

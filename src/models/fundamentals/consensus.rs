@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Consensus analyst price target for a symbol.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PriceTargetConsensus {
@@ -25,6 +26,7 @@ pub struct PriceTargetConsensus {
 
 /// Price-target activity over trailing windows: how many targets were published
 /// and their average, per window.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PriceTargetSummary {
@@ -50,6 +52,7 @@ pub struct PriceTargetSummary {
 
 /// Consensus rating rollup — the analyst panel's grade distribution plus the
 /// provider's headline recommendation.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct RatingConsensus {

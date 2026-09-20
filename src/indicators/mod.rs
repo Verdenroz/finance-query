@@ -171,6 +171,7 @@ pub type Result<T> = std::result::Result<T, IndicatorError>;
 /// Different indicators return different types of data:
 /// - Simple indicators (SMA, EMA, RSI, ATR) return a time series of values
 /// - Complex indicators (MACD, Bollinger Bands) return multiple series
+#[soothfast::export]
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum IndicatorResult {
@@ -210,6 +211,7 @@ pub enum IndicatorResult {
 ///
 /// This enum is used with `Ticker::indicator()` to calculate specific indicators
 /// over a given interval and time range.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[non_exhaustive]
 pub enum Indicator {

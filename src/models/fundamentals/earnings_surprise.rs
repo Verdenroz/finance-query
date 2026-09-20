@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// One reported earnings result versus the analyst estimate.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EarningsSurprise {

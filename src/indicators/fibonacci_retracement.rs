@@ -9,6 +9,7 @@ use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
 /// Fibonacci retracement levels between a swing high and swing low.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FibonacciLevels {

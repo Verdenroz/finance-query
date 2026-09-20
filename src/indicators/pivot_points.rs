@@ -9,6 +9,7 @@ use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
 /// Pivot point support/resistance levels for a single bar.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct PivotPoints {

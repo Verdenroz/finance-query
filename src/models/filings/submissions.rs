@@ -27,6 +27,7 @@ where
 ///
 /// Contains company metadata and filing history. The `filings` field holds
 /// the most recent ~1000 filings inline, with links to older history files.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -93,6 +94,7 @@ pub struct EdgarSubmissions {
 }
 
 /// Container for recent filings and links to older filing history files.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -107,6 +109,7 @@ pub struct EdgarFilings {
 }
 
 /// Reference to an additional filing history file for older filings.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -132,6 +135,7 @@ pub struct EdgarFilingFile {
 ///
 /// EDGAR returns filing data as parallel arrays (each field is a `Vec` of the same length).
 /// Use [`to_filings()`](EdgarFilingRecent::to_filings) to convert to a `Vec<EdgarFiling>`.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]

@@ -49,6 +49,7 @@ struct RawMeta {
 /// ```
 ///
 /// This matches the Python finance-query API response format.
+#[soothfast::export]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialStatement {

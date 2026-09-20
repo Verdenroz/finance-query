@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 
 /// Valuation, capital-efficiency, and working-capital metrics over the
 /// trailing twelve months.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct KeyMetricsTtm {
@@ -153,6 +154,7 @@ pub struct KeyMetricsTtm {
 
 /// Margin, turnover, liquidity, coverage, valuation, and per-share ratios over
 /// the trailing twelve months.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FinancialRatiosTtm {

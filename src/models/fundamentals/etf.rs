@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Profile and composition of an exchange-traded fund.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EtfProfile {
@@ -38,6 +39,7 @@ pub struct EtfProfile {
 }
 
 /// One position inside an ETF's portfolio.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EtfHolding {
@@ -50,6 +52,7 @@ pub struct EtfHolding {
 }
 
 /// One sector's weight inside an ETF's portfolio.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EtfSectorWeighting {
@@ -60,6 +63,7 @@ pub struct EtfSectorWeighting {
 }
 
 /// One country's weight inside an ETF's portfolio.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EtfCountryWeighting {

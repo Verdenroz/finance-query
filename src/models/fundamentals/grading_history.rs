@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A single analyst upgrade/downgrade/initiation action.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct GradingAction {

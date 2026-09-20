@@ -5,6 +5,7 @@ use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
 /// A single confirmed ZigZag swing point.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ZigZagPoint {

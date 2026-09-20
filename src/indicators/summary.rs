@@ -253,6 +253,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
 }
 
 /// Summary of all calculated technical indicators
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
@@ -449,6 +450,7 @@ pub struct IndicatorsSummary {
 }
 
 /// Stochastic Oscillator data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StochasticData {
@@ -461,6 +463,7 @@ pub struct StochasticData {
 }
 
 /// MACD indicator data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MacdData {
@@ -476,6 +479,7 @@ pub struct MacdData {
 }
 
 /// Aroon indicator data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AroonData {
@@ -488,6 +492,7 @@ pub struct AroonData {
 }
 
 /// Bollinger Bands data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BollingerBandsData {
@@ -503,6 +508,7 @@ pub struct BollingerBandsData {
 }
 
 /// SuperTrend indicator data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SuperTrendData {
@@ -515,6 +521,7 @@ pub struct SuperTrendData {
 }
 
 /// Ichimoku Cloud data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IchimokuData {
@@ -536,6 +543,7 @@ pub struct IchimokuData {
 }
 
 /// Keltner Channels data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeltnerChannelsData {
@@ -551,6 +559,7 @@ pub struct KeltnerChannelsData {
 }
 
 /// Donchian Channels data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DonchianChannelsData {
@@ -566,6 +575,7 @@ pub struct DonchianChannelsData {
 }
 
 /// Bull Bear Power indicator data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BullBearPowerData {
@@ -578,6 +588,7 @@ pub struct BullBearPowerData {
 }
 
 /// Elder Ray Index data
+#[soothfast::export]
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElderRayData {

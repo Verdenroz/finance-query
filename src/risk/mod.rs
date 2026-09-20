@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 /// Comprehensive risk summary for a symbol.
 ///
 /// Obtain via [`Ticker::risk`](crate::Ticker::risk).
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct RiskSummary {

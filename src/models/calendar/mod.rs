@@ -17,6 +17,7 @@ use crate::models::options::Options;
 use crate::models::quote::CalendarEvents;
 
 /// A single upcoming financial event.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct CalendarEvent {
@@ -31,6 +32,7 @@ pub struct CalendarEvent {
 }
 
 /// The kind of financial event, with its event-specific payload.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 #[serde(tag = "type", rename_all = "snake_case")]

@@ -47,6 +47,7 @@ fn deserialize_cik<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<
 /// }
 /// # }
 /// ```
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyFacts {
@@ -91,6 +92,7 @@ impl CompanyFacts {
 /// Facts within a single taxonomy (e.g., "us-gaap").
 ///
 /// Maps concept names (e.g., "Revenue", "Assets") to their [`FactConcept`].
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FactsByTaxonomy(pub HashMap<String, FactConcept>);
@@ -98,6 +100,7 @@ pub struct FactsByTaxonomy(pub HashMap<String, FactConcept>);
 /// A single XBRL concept (e.g., "Revenue") with all reported values.
 ///
 /// Values are organized by unit of measure (e.g., "USD", "shares", "pure").
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FactConcept {
@@ -199,6 +202,7 @@ impl FactConcept {
 /// A single data point for an XBRL fact.
 ///
 /// Represents one reported value from a specific filing and period.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

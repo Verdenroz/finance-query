@@ -20,14 +20,114 @@ import finance_query
 
 ## Classes
 
+### `Frequency`
+
+Frequency for financial data (annual or quarterly)
+
+
 ### `Interval`
 
 Chart intervals
 
 
+### `StatementType`
+
+Statement types for financial data
+
+
 ### `TimeRange`
 
 Time ranges for chart data
+
+
+### `Indicator`
+
+Enum representing all available technical indicators.
+
+
+### `IndicatorResult`
+
+Result of an indicator calculation
+
+
+### `FibonacciLevels`
+
+Fibonacci retracement levels between a swing high and swing low.
+
+
+### `PivotPoints`
+
+Pivot point support/resistance levels for a single bar.
+
+
+### `AroonData`
+
+Aroon indicator data
+
+
+### `BollingerBandsData`
+
+Bollinger Bands data
+
+
+### `BullBearPowerData`
+
+Bull Bear Power indicator data
+
+
+### `DonchianChannelsData`
+
+Donchian Channels data
+
+
+### `ElderRayData`
+
+Elder Ray Index data
+
+
+### `IchimokuData`
+
+Ichimoku Cloud data
+
+
+### `IndicatorsSummary`
+
+Summary of all calculated technical indicators
+
+
+### `KeltnerChannelsData`
+
+Keltner Channels data
+
+
+### `MacdData`
+
+MACD indicator data
+
+
+### `StochasticData`
+
+Stochastic Oscillator data
+
+
+### `SuperTrendData`
+
+SuperTrend indicator data
+
+
+### `ZigZagPoint`
+
+A single confirmed ZigZag swing point.
+
+
+### `CalendarEvent`
+
+A single upcoming financial event.
+
+
+### `EventKind`
+
+The kind of financial event, with its event-specific payload.
 
 
 ### `Candle`
@@ -100,6 +200,141 @@ Fully typed recommendation data
 A similar/recommended symbol with score
 
 
+### `CompanyFacts`
+
+Complete company facts response containing all XBRL financial data.
+
+
+### `FactConcept`
+
+A single XBRL concept (e.g., "Revenue") with all reported values.
+
+
+### `FactUnit`
+
+A single data point for an XBRL fact.
+
+
+### `FactsByTaxonomy`
+
+Facts within a single taxonomy (e.g., "us-gaap").
+
+
+### `ProviderFiling`
+
+A single SEC filing entry from a provider.
+
+
+### `ProviderFilings`
+
+A collection of SEC filings from a provider (e.g., Polygon EDGAR).
+
+
+### `EdgarFilingFile`
+
+Reference to an additional filing history file for older filings.
+
+
+### `EdgarFilingRecent`
+
+Recent filings data stored as parallel arrays.
+
+
+### `EdgarFilings`
+
+Container for recent filings and links to older filing history files.
+
+
+### `EdgarSubmissions`
+
+Full submissions response for a company from SEC EDGAR.
+
+
+### `CompanyProfile`
+
+A company's identity and classification profile.
+
+
+### `PriceTargetConsensus`
+
+Consensus analyst price target for a symbol.
+
+
+### `PriceTargetSummary`
+
+Price-target activity over trailing windows: how many targets were published
+
+
+### `RatingConsensus`
+
+Consensus rating rollup — the analyst panel's grade distribution plus the
+
+
+### `EarningsSurprise`
+
+One reported earnings result versus the analyst estimate.
+
+
+### `EtfCountryWeighting`
+
+One country's weight inside an ETF's portfolio.
+
+
+### `EtfHolding`
+
+One position inside an ETF's portfolio.
+
+
+### `EtfProfile`
+
+Profile and composition of an exchange-traded fund.
+
+
+### `EtfSectorWeighting`
+
+One sector's weight inside an ETF's portfolio.
+
+
+### `GradingAction`
+
+A single analyst upgrade/downgrade/initiation action.
+
+
+### `FinancialStatement`
+
+A flattened, user-friendly financial statement
+
+
+### `ShareFloat`
+
+Share float and shares outstanding.
+
+
+### `ShortInterest`
+
+A short-interest data point (bi-monthly settlement report).
+
+
+### `ShortVolume`
+
+A daily short-volume data point.
+
+
+### `FinancialRatiosTtm`
+
+Margin, turnover, liquidity, coverage, valuation, and per-share ratios over
+
+
+### `KeyMetricsTtm`
+
+Valuation, capital-efficiency, and working-capital metrics over the
+
+
+### `Options`
+
+Response wrapper for options endpoint
+
+
 ### `Sentiment`
 
 Sentiment score for a news article or transcript segment.
@@ -115,58 +350,59 @@ Directional sentiment classification for a piece of text.
 Typed identifier for a financial data provider.
 
 
+### `RiskSummary`
+
+Comprehensive risk summary for a symbol.
+
+
 ### `Ticker`
 
 The primary entry point for querying financial data for a single symbol.
 
+- `calendar`
 - `capital_gains`
 - `chart`
 - `chart_range`
+- `company_profile`
 - `dividend_analytics`
 - `dividends`
+- `earnings_surprises`
 - `earnings_transcript`
+- `edgar_company_facts`
+- `edgar_submissions`
 - `employee_count`
+- `etf_profile`
 - `executive_compensation`
+- `filings`
+- `financials`
+- `grading_actions`
+- `indicators`
+- `key_metrics_ttm`
 - `news`
 - `news_sentiment`
+- `options`
 - `press_releases`
+- `price_target_consensus`
+- `price_target_summary`
+- `rating_consensus`
+- `ratios_ttm`
 - `recommendations`
+- `risk`
+- `share_float`
+- `short_interest`
+- `short_volume`
 - `splits`
 - `symbol`
 - `new`
 
 ## Not bound
 
-- finance_query::providers::provider::Provider::Custom.0: foreign type `finance_query::providers::provider::CustomId` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::providers::provider::CustomId" = "str"` crosses it as a string through Display and FromStr)
 - finance_query::ticker::core::Ticker::backtest: type parameter `S` stayed open; bindings need a concrete signature, so export a monomorphic wrapper instead
 - finance_query::ticker::core::Ticker::backtest: foreign type `finance_query::backtesting::config::BacktestConfig` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::backtesting::config::BacktestConfig" = "str"` crosses it as a string through Display and FromStr)
 - finance_query::ticker::core::Ticker::backtest: foreign type `finance_query::backtesting::result::BacktestResult` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::backtesting::result::BacktestResult" = "str"` crosses it as a string through Display and FromStr)
 - finance_query::ticker::core::Ticker::backtest_with_benchmark: type parameter `S` stayed open; bindings need a concrete signature, so export a monomorphic wrapper instead
 - finance_query::ticker::core::Ticker::backtest_with_benchmark: foreign type `finance_query::backtesting::config::BacktestConfig` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::backtesting::config::BacktestConfig" = "str"` crosses it as a string through Display and FromStr)
 - finance_query::ticker::core::Ticker::backtest_with_benchmark: foreign type `finance_query::backtesting::result::BacktestResult` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::backtesting::result::BacktestResult" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::calendar: foreign type `finance_query::models::calendar::CalendarEvent` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::calendar::CalendarEvent" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::company_profile: foreign type `finance_query::models::fundamentals::company_profile::CompanyProfile` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::company_profile::CompanyProfile" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::earnings_surprises: foreign type `finance_query::models::fundamentals::earnings_surprise::EarningsSurprise` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::earnings_surprise::EarningsSurprise" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::edgar_company_facts: foreign type `finance_query::models::filings::company_facts::CompanyFacts` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::filings::company_facts::CompanyFacts" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::edgar_submissions: foreign type `finance_query::models::filings::submissions::EdgarSubmissions` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::filings::submissions::EdgarSubmissions" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::etf_profile: foreign type `finance_query::models::fundamentals::etf::EtfProfile` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::etf::EtfProfile" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::filings: foreign type `finance_query::models::filings::provider::ProviderFilings` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::filings::provider::ProviderFilings" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::financials: foreign type `finance_query::constants::enums::statement_type::StatementType` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::constants::enums::statement_type::StatementType" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::financials: foreign type `finance_query::constants::enums::frequency::Frequency` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::constants::enums::frequency::Frequency" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::financials: foreign type `finance_query::models::fundamentals::response::FinancialStatement` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::response::FinancialStatement" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::grading_actions: foreign type `finance_query::models::fundamentals::grading_history::GradingAction` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::grading_history::GradingAction" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::indicator: foreign type `finance_query::indicators::Indicator` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::indicators::Indicator" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::indicator: foreign type `finance_query::indicators::IndicatorResult` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::indicators::IndicatorResult" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::indicators: foreign type `finance_query::indicators::summary::IndicatorsSummary` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::indicators::summary::IndicatorsSummary" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::key_metrics_ttm: foreign type `finance_query::models::fundamentals::ttm::KeyMetricsTtm` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::ttm::KeyMetricsTtm" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::options: foreign type `finance_query::models::options::response::Options` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::options::response::Options" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::price_target_consensus: foreign type `finance_query::models::fundamentals::consensus::PriceTargetConsensus` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::consensus::PriceTargetConsensus" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::price_target_summary: foreign type `finance_query::models::fundamentals::consensus::PriceTargetSummary` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::consensus::PriceTargetSummary" = "str"` crosses it as a string through Display and FromStr)
 - finance_query::ticker::core::Ticker::quote: type parameter `F` stayed open; bindings need a concrete signature, so export a monomorphic wrapper instead
 - finance_query::ticker::core::Ticker::quote: foreign type `finance_query::models::quote::data::Quote` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::quote::data::Quote" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::rating_consensus: foreign type `finance_query::models::fundamentals::consensus::RatingConsensus` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::consensus::RatingConsensus" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::ratios_ttm: foreign type `finance_query::models::fundamentals::ttm::FinancialRatiosTtm` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::ttm::FinancialRatiosTtm" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::risk: foreign type `finance_query::risk::RiskSummary` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::risk::RiskSummary" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::share_float: foreign type `finance_query::models::fundamentals::short_activity::ShareFloat` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::short_activity::ShareFloat" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::short_interest: foreign type `finance_query::models::fundamentals::short_activity::ShortInterest` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::short_activity::ShortInterest" = "str"` crosses it as a string through Display and FromStr)
-- finance_query::ticker::core::Ticker::short_volume: foreign type `finance_query::models::fundamentals::short_activity::ShortVolume` has no mapping; map it under [bind.types] in soothfast.toml (`"finance_query::models::fundamentals::short_activity::ShortVolume" = "str"` crosses it as a string through Display and FromStr)
+- finance_query::ticker::core::Ticker::indicator: crosses the exported type `Indicator` by value, which would copy it; derive `Clone` on it (Python then reads a field of it as a fresh handle), take it by reference, or add a method returning what the caller needs

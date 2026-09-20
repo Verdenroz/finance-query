@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A short-interest data point (bi-monthly settlement report).
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ShortInterest {
@@ -20,6 +21,7 @@ pub struct ShortInterest {
 }
 
 /// A daily short-volume data point.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ShortVolume {
@@ -34,6 +36,7 @@ pub struct ShortVolume {
 }
 
 /// Share float and shares outstanding.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ShareFloat {

@@ -100,6 +100,59 @@ impl<F: ::std::future::Future> ::std::future::Future for OnRuntime<F> {
     }
 }
 
+/// An `u64` sequence read through the buffer protocol when the caller
+/// passes a buffer (`array.array`, `memoryview`, numpy), and unboxed element
+/// by element only when it is some other sequence.
+enum BorrowedU64 {
+    Buffer(::pyo3::buffer::PyBuffer<u64>),
+    Owned(Vec<u64>),
+}
+
+impl<'a, 'py> ::pyo3::FromPyObject<'a, 'py> for BorrowedU64 {
+    type Error = ::pyo3::PyErr;
+
+    fn extract(obj: ::pyo3::Borrowed<'a, 'py, ::pyo3::PyAny>) -> ::pyo3::PyResult<Self> {
+        if let Ok(buf) = ::pyo3::buffer::PyBuffer::<u64>::get(&obj)
+            && buf.is_c_contiguous()
+        {
+            return Ok(BorrowedU64::Buffer(buf));
+        }
+        Ok(BorrowedU64::Owned(obj.extract()?))
+    }
+}
+
+impl BorrowedU64 {
+    fn as_slice(&self) -> &[u64] {
+        match self {
+            // Item type and contiguity were both checked at extraction, so
+            // the pointer addresses exactly `item_count` items.
+            BorrowedU64::Buffer(b) => unsafe {
+                ::std::slice::from_raw_parts(b.buf_ptr() as *const u64, b.item_count())
+            },
+            BorrowedU64::Owned(v) => v,
+        }
+    }
+
+    fn into_vec(self) -> Vec<u64> {
+        match self {
+            BorrowedU64::Buffer(_) => self.as_slice().to_vec(),
+            BorrowedU64::Owned(v) => v,
+        }
+    }
+
+    /// The bytes this view reads from, or `None` for one Rust already owns a
+    /// private copy of: it cannot alias anything the caller can observe.
+    fn byte_range(&self) -> Option<(usize, usize)> {
+        match self {
+            BorrowedU64::Buffer(b) => {
+                let start = b.buf_ptr() as usize;
+                Some((start, start + b.item_count() * ::std::mem::size_of::<u64>()))
+            }
+            BorrowedU64::Owned(_) => None,
+        }
+    }
+}
+
 /// An owned `f64` sequence. `memoryview(x)` and `numpy.asarray(x)` read
 /// it without copying; `x.tolist()` copies it into a plain list.
 #[pyclass(name = "F64Array")]
@@ -298,6 +351,105 @@ impl I64Array {
     }
 }
 
+/// An owned `u64` sequence. `memoryview(x)` and `numpy.asarray(x)` read
+/// it without copying; `x.tolist()` copies it into a plain list.
+#[pyclass(name = "U64Array")]
+pub struct U64Array(Vec<u64>);
+
+impl U64Array {
+    fn new(values: Vec<u64>) -> Self {
+        U64Array(values)
+    }
+}
+
+#[pymethods]
+impl U64Array {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<u64> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .copied()
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, &self.0)?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("U64Array({:?})", self.0)
+    }
+
+    /// The same values as a plain Python list.
+    fn tolist(&self) -> Vec<u64> {
+        self.0.clone()
+    }
+
+    unsafe fn __getbuffer__(
+        slf: ::pyo3::Bound<'_, Self>,
+        view: *mut ::pyo3::ffi::Py_buffer,
+        flags: ::std::os::raw::c_int,
+    ) -> ::pyo3::PyResult<()> {
+        if view.is_null() {
+            return Err(::pyo3::exceptions::PyBufferError::new_err("view is null"));
+        }
+        if (flags & ::pyo3::ffi::PyBUF_WRITABLE) == ::pyo3::ffi::PyBUF_WRITABLE {
+            return Err(::pyo3::exceptions::PyBufferError::new_err(
+                "U64Array is read-only",
+            ));
+        }
+        let size = ::std::mem::size_of::<u64>() as isize;
+        let (buf, count) = {
+            let values = &slf.borrow().0;
+            (values.as_ptr() as *mut ::std::ffi::c_void, values.len() as isize)
+        };
+        let meta = Box::into_raw(Box::new([count, size]));
+        unsafe {
+            (*view).obj = slf.into_ptr();
+            (*view).buf = buf;
+            (*view).len = count * size;
+            (*view).readonly = 1;
+            (*view).itemsize = size;
+            (*view).ndim = 1;
+            (*view).format = match (flags & ::pyo3::ffi::PyBUF_FORMAT) == ::pyo3::ffi::PyBUF_FORMAT
+            {
+                true => c"Q".as_ptr() as *mut ::std::os::raw::c_char,
+                false => ::std::ptr::null_mut(),
+            };
+            (*view).shape = match (flags & ::pyo3::ffi::PyBUF_ND) == ::pyo3::ffi::PyBUF_ND {
+                true => meta as *mut isize,
+                false => ::std::ptr::null_mut(),
+            };
+            (*view).strides = match (flags & ::pyo3::ffi::PyBUF_STRIDES)
+                == ::pyo3::ffi::PyBUF_STRIDES
+            {
+                true => (meta as *mut isize).add(1),
+                false => ::std::ptr::null_mut(),
+            };
+            (*view).suboffsets = ::std::ptr::null_mut();
+            (*view).internal = meta as *mut ::std::ffi::c_void;
+        }
+        Ok(())
+    }
+
+    unsafe fn __releasebuffer__(&self, view: *mut ::pyo3::ffi::Py_buffer) {
+        // Paired with the `Box::into_raw` every filled view carries out.
+        unsafe { drop(Box::from_raw((*view).internal as *mut [isize; 2])) };
+    }
+}
+
 /// A sequence of `Candle` read from a field. Indexing builds one handle;
 /// `x.tolist()` builds them all; a column getter reads one field of every
 /// element at once.
@@ -447,6 +599,275 @@ impl SimilarSymbolSeq {
     #[getter]
     fn score(&self) -> F64Array {
         F64Array::new(self.0.iter().map(|v| v.score).collect())
+    }
+}
+
+/// A sequence of `ProviderFiling` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "ProviderFilingSeq")]
+pub struct ProviderFilingSeq(Vec<::finance_query::ProviderFiling>);
+
+impl ProviderFilingSeq {
+    fn new(values: Vec<::finance_query::ProviderFiling>) -> Self {
+        ProviderFilingSeq(values)
+    }
+}
+
+#[pymethods]
+impl ProviderFilingSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<ProviderFiling> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(ProviderFiling)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ProviderFilingSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<ProviderFiling> {
+        self.0.iter().cloned().map(ProviderFiling).collect()
+    }
+}
+
+/// A sequence of `EdgarFilingFile` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "EdgarFilingFileSeq")]
+pub struct EdgarFilingFileSeq(Vec<::finance_query::EdgarFilingFile>);
+
+impl EdgarFilingFileSeq {
+    fn new(values: Vec<::finance_query::EdgarFilingFile>) -> Self {
+        EdgarFilingFileSeq(values)
+    }
+}
+
+#[pymethods]
+impl EdgarFilingFileSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<EdgarFilingFile> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(EdgarFilingFile)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EdgarFilingFileSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<EdgarFilingFile> {
+        self.0.iter().cloned().map(EdgarFilingFile).collect()
+    }
+
+    /// Number of filings in this file
+    #[getter]
+    fn filing_count(&self) -> Vec<Option<u32>> {
+        self.0.iter().map(|v| v.filing_count).collect()
+    }
+}
+
+/// A sequence of `EtfCountryWeighting` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "EtfCountryWeightingSeq")]
+pub struct EtfCountryWeightingSeq(Vec<::finance_query::EtfCountryWeighting>);
+
+impl EtfCountryWeightingSeq {
+    fn new(values: Vec<::finance_query::EtfCountryWeighting>) -> Self {
+        EtfCountryWeightingSeq(values)
+    }
+}
+
+#[pymethods]
+impl EtfCountryWeightingSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<EtfCountryWeighting> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(EtfCountryWeighting)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfCountryWeightingSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<EtfCountryWeighting> {
+        self.0.iter().cloned().map(EtfCountryWeighting).collect()
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Vec<Option<f64>> {
+        self.0.iter().map(|v| v.weight).collect()
+    }
+}
+
+/// A sequence of `EtfHolding` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "EtfHoldingSeq")]
+pub struct EtfHoldingSeq(Vec<::finance_query::EtfHolding>);
+
+impl EtfHoldingSeq {
+    fn new(values: Vec<::finance_query::EtfHolding>) -> Self {
+        EtfHoldingSeq(values)
+    }
+}
+
+#[pymethods]
+impl EtfHoldingSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<EtfHolding> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(EtfHolding)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfHoldingSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<EtfHolding> {
+        self.0.iter().cloned().map(EtfHolding).collect()
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Vec<Option<f64>> {
+        self.0.iter().map(|v| v.weight).collect()
+    }
+}
+
+/// A sequence of `EtfSectorWeighting` read from a field. Indexing builds one handle;
+/// `x.tolist()` builds them all; a column getter reads one field of every
+/// element at once.
+#[pyclass(name = "EtfSectorWeightingSeq")]
+pub struct EtfSectorWeightingSeq(Vec<::finance_query::EtfSectorWeighting>);
+
+impl EtfSectorWeightingSeq {
+    fn new(values: Vec<::finance_query::EtfSectorWeighting>) -> Self {
+        EtfSectorWeightingSeq(values)
+    }
+}
+
+#[pymethods]
+impl EtfSectorWeightingSeq {
+    fn __len__(&self) -> usize {
+        self.0.len()
+    }
+
+    fn __getitem__(&self, index: isize) -> ::pyo3::PyResult<EtfSectorWeighting> {
+        let at = match index < 0 {
+            true => index + self.0.len() as isize,
+            false => index,
+        };
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| self.0.get(at))
+            .cloned()
+            .map(EtfSectorWeighting)
+            .ok_or_else(|| ::pyo3::exceptions::PyIndexError::new_err("index out of range"))
+    }
+
+    fn __iter__<'py>(
+        &self,
+        py: ::pyo3::Python<'py>,
+    ) -> ::pyo3::PyResult<::pyo3::Bound<'py, ::pyo3::PyAny>> {
+        use ::pyo3::types::PyAnyMethods;
+        Ok(::pyo3::types::PyList::new(py, self.tolist())?.try_iter()?.into_any())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfSectorWeightingSeq(len={})", self.0.len())
+    }
+
+    /// Every element as a handle, in a plain list.
+    fn tolist(&self) -> Vec<EtfSectorWeighting> {
+        self.0.iter().cloned().map(EtfSectorWeighting).collect()
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Vec<Option<f64>> {
+        self.0.iter().map(|v| v.weight).collect()
     }
 }
 
@@ -617,6 +1038,47 @@ impl ::std::convert::From<BindErrorfinancequeryerrorFinanceError> for ::pyo3::Py
     }
 }
 
+/// Frequency for financial data (annual or quarterly)
+#[pyclass(name = "Frequency", eq, eq_int, from_py_object)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Frequency {
+    Annual,
+    Quarterly,
+}
+
+impl ::std::convert::From<::finance_query::Frequency> for Frequency {
+    #[allow(unreachable_patterns)]
+    fn from(value: ::finance_query::Frequency) -> Self {
+        match value {
+            ::finance_query::Frequency::Annual => Frequency::Annual,
+            ::finance_query::Frequency::Quarterly => Frequency::Quarterly,
+            _ => ::std::unreachable!("::finance_query::Frequency gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+// A mirrored enum has no derived `Clone`; a field getter converts through
+// this one instead of cloning an owned copy just to consume it.
+impl ::std::convert::From<&::finance_query::Frequency> for Frequency {
+    #[allow(unreachable_patterns)]
+    fn from(value: &::finance_query::Frequency) -> Self {
+        match value {
+            ::finance_query::Frequency::Annual => Frequency::Annual,
+            ::finance_query::Frequency::Quarterly => Frequency::Quarterly,
+            _ => ::std::unreachable!("::finance_query::Frequency gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+impl ::std::convert::From<Frequency> for ::finance_query::Frequency {
+    fn from(value: Frequency) -> Self {
+        match value {
+            Frequency::Annual => ::finance_query::Frequency::Annual,
+            Frequency::Quarterly => ::finance_query::Frequency::Quarterly,
+        }
+    }
+}
+
 /// Chart intervals
 #[pyclass(name = "Interval", eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -698,6 +1160,51 @@ impl ::std::convert::From<Interval> for ::finance_query::Interval {
     }
 }
 
+/// Statement types for financial data
+#[pyclass(name = "StatementType", eq, eq_int, from_py_object)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StatementType {
+    Income,
+    Balance,
+    CashFlow,
+}
+
+impl ::std::convert::From<::finance_query::StatementType> for StatementType {
+    #[allow(unreachable_patterns)]
+    fn from(value: ::finance_query::StatementType) -> Self {
+        match value {
+            ::finance_query::StatementType::Income => StatementType::Income,
+            ::finance_query::StatementType::Balance => StatementType::Balance,
+            ::finance_query::StatementType::CashFlow => StatementType::CashFlow,
+            _ => ::std::unreachable!("::finance_query::StatementType gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+// A mirrored enum has no derived `Clone`; a field getter converts through
+// this one instead of cloning an owned copy just to consume it.
+impl ::std::convert::From<&::finance_query::StatementType> for StatementType {
+    #[allow(unreachable_patterns)]
+    fn from(value: &::finance_query::StatementType) -> Self {
+        match value {
+            ::finance_query::StatementType::Income => StatementType::Income,
+            ::finance_query::StatementType::Balance => StatementType::Balance,
+            ::finance_query::StatementType::CashFlow => StatementType::CashFlow,
+            _ => ::std::unreachable!("::finance_query::StatementType gained a variant this binding was not generated for"),
+        }
+    }
+}
+
+impl ::std::convert::From<StatementType> for ::finance_query::StatementType {
+    fn from(value: StatementType) -> Self {
+        match value {
+            StatementType::Income => ::finance_query::StatementType::Income,
+            StatementType::Balance => ::finance_query::StatementType::Balance,
+            StatementType::CashFlow => ::finance_query::StatementType::CashFlow,
+        }
+    }
+}
+
 /// Time ranges for chart data
 #[pyclass(name = "TimeRange", eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -774,6 +1281,1253 @@ impl ::std::convert::From<TimeRange> for ::finance_query::TimeRange {
         }
     }
 }
+
+/// Enum representing all available technical indicators.
+#[pyclass(name = "Indicator")]
+pub struct Indicator(::finance_query::Indicator);
+
+/// Result of an indicator calculation
+#[pyclass(name = "IndicatorResult")]
+pub struct IndicatorResult(::finance_query::IndicatorResult);
+
+/// Fibonacci retracement levels between a swing high and swing low.
+#[pyclass(name = "FibonacciLevels")]
+pub struct FibonacciLevels(::finance_query::indicators::FibonacciLevels);
+
+#[pymethods]
+impl FibonacciLevels {
+    /// Swing high over the lookback window (0% retracement level)
+    #[getter]
+    fn swing_high(&self) -> f64 {
+        self.0.swing_high.clone()
+    }
+
+    #[setter]
+    fn set_swing_high(&mut self, value: f64) {
+        self.0.swing_high = value;
+    }
+
+    /// Swing low over the lookback window (100% retracement level)
+    #[getter]
+    fn swing_low(&self) -> f64 {
+        self.0.swing_low.clone()
+    }
+
+    #[setter]
+    fn set_swing_low(&mut self, value: f64) {
+        self.0.swing_low = value;
+    }
+
+    /// 23.6% retracement level
+    #[getter]
+    fn level_23_6(&self) -> f64 {
+        self.0.level_23_6.clone()
+    }
+
+    #[setter]
+    fn set_level_23_6(&mut self, value: f64) {
+        self.0.level_23_6 = value;
+    }
+
+    /// 38.2% retracement level
+    #[getter]
+    fn level_38_2(&self) -> f64 {
+        self.0.level_38_2.clone()
+    }
+
+    #[setter]
+    fn set_level_38_2(&mut self, value: f64) {
+        self.0.level_38_2 = value;
+    }
+
+    /// 50% retracement level
+    #[getter]
+    fn level_50(&self) -> f64 {
+        self.0.level_50.clone()
+    }
+
+    #[setter]
+    fn set_level_50(&mut self, value: f64) {
+        self.0.level_50 = value;
+    }
+
+    /// 61.8% retracement level
+    #[getter]
+    fn level_61_8(&self) -> f64 {
+        self.0.level_61_8.clone()
+    }
+
+    #[setter]
+    fn set_level_61_8(&mut self, value: f64) {
+        self.0.level_61_8 = value;
+    }
+
+    /// 78.6% retracement level
+    #[getter]
+    fn level_78_6(&self) -> f64 {
+        self.0.level_78_6.clone()
+    }
+
+    #[setter]
+    fn set_level_78_6(&mut self, value: f64) {
+        self.0.level_78_6 = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("FibonacciLevels(swing_high={:?}, swing_low={:?}, level_23_6={:?}, level_38_2={:?}, level_50={:?}, level_61_8={:?}, level_78_6={:?})", self.0.swing_high, self.0.swing_low, self.0.level_23_6, self.0.level_38_2, self.0.level_50, self.0.level_61_8, self.0.level_78_6)
+    }
+}
+
+/// Pivot point support/resistance levels for a single bar.
+#[pyclass(name = "PivotPoints")]
+pub struct PivotPoints(::finance_query::indicators::PivotPoints);
+
+#[pymethods]
+impl PivotPoints {
+    /// Central pivot point: `(high + low + close) / 3`
+    #[getter]
+    fn pivot(&self) -> f64 {
+        self.0.pivot.clone()
+    }
+
+    #[setter]
+    fn set_pivot(&mut self, value: f64) {
+        self.0.pivot = value;
+    }
+
+    /// First resistance level
+    #[getter]
+    fn r1(&self) -> f64 {
+        self.0.r1.clone()
+    }
+
+    #[setter]
+    fn set_r1(&mut self, value: f64) {
+        self.0.r1 = value;
+    }
+
+    /// Second resistance level
+    #[getter]
+    fn r2(&self) -> f64 {
+        self.0.r2.clone()
+    }
+
+    #[setter]
+    fn set_r2(&mut self, value: f64) {
+        self.0.r2 = value;
+    }
+
+    /// Third resistance level
+    #[getter]
+    fn r3(&self) -> f64 {
+        self.0.r3.clone()
+    }
+
+    #[setter]
+    fn set_r3(&mut self, value: f64) {
+        self.0.r3 = value;
+    }
+
+    /// First support level
+    #[getter]
+    fn s1(&self) -> f64 {
+        self.0.s1.clone()
+    }
+
+    #[setter]
+    fn set_s1(&mut self, value: f64) {
+        self.0.s1 = value;
+    }
+
+    /// Second support level
+    #[getter]
+    fn s2(&self) -> f64 {
+        self.0.s2.clone()
+    }
+
+    #[setter]
+    fn set_s2(&mut self, value: f64) {
+        self.0.s2 = value;
+    }
+
+    /// Third support level
+    #[getter]
+    fn s3(&self) -> f64 {
+        self.0.s3.clone()
+    }
+
+    #[setter]
+    fn set_s3(&mut self, value: f64) {
+        self.0.s3 = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("PivotPoints(pivot={:?}, r1={:?}, r2={:?}, r3={:?}, s1={:?}, s2={:?}, s3={:?})", self.0.pivot, self.0.r1, self.0.r2, self.0.r3, self.0.s1, self.0.s2, self.0.s3)
+    }
+}
+
+/// Aroon indicator data
+#[pyclass(name = "AroonData")]
+pub struct AroonData(::finance_query::AroonData);
+
+#[pymethods]
+impl AroonData {
+    /// Aroon Up value
+    #[getter]
+    fn aroon_up(&self) -> Option<f64> {
+        self.0.aroon_up.clone()
+    }
+
+    #[setter]
+    fn set_aroon_up(&mut self, value: Option<f64>) {
+        self.0.aroon_up = value;
+    }
+
+    /// Aroon Down value
+    #[getter]
+    fn aroon_down(&self) -> Option<f64> {
+        self.0.aroon_down.clone()
+    }
+
+    #[setter]
+    fn set_aroon_down(&mut self, value: Option<f64>) {
+        self.0.aroon_down = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("AroonData(aroon_up={:?}, aroon_down={:?})", self.0.aroon_up, self.0.aroon_down)
+    }
+}
+
+/// Bollinger Bands data
+#[pyclass(name = "BollingerBandsData")]
+pub struct BollingerBandsData(::finance_query::BollingerBandsData);
+
+#[pymethods]
+impl BollingerBandsData {
+    /// Upper band value
+    #[getter]
+    fn upper(&self) -> Option<f64> {
+        self.0.upper.clone()
+    }
+
+    #[setter]
+    fn set_upper(&mut self, value: Option<f64>) {
+        self.0.upper = value;
+    }
+
+    /// Middle band value
+    #[getter]
+    fn middle(&self) -> Option<f64> {
+        self.0.middle.clone()
+    }
+
+    #[setter]
+    fn set_middle(&mut self, value: Option<f64>) {
+        self.0.middle = value;
+    }
+
+    /// Lower band value
+    #[getter]
+    fn lower(&self) -> Option<f64> {
+        self.0.lower.clone()
+    }
+
+    #[setter]
+    fn set_lower(&mut self, value: Option<f64>) {
+        self.0.lower = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("BollingerBandsData(upper={:?}, middle={:?}, lower={:?})", self.0.upper, self.0.middle, self.0.lower)
+    }
+}
+
+/// Bull Bear Power indicator data
+#[pyclass(name = "BullBearPowerData")]
+pub struct BullBearPowerData(::finance_query::BullBearPowerData);
+
+#[pymethods]
+impl BullBearPowerData {
+    /// Bull power value
+    #[getter]
+    fn bull_power(&self) -> Option<f64> {
+        self.0.bull_power.clone()
+    }
+
+    #[setter]
+    fn set_bull_power(&mut self, value: Option<f64>) {
+        self.0.bull_power = value;
+    }
+
+    /// Bear power value
+    #[getter]
+    fn bear_power(&self) -> Option<f64> {
+        self.0.bear_power.clone()
+    }
+
+    #[setter]
+    fn set_bear_power(&mut self, value: Option<f64>) {
+        self.0.bear_power = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("BullBearPowerData(bull_power={:?}, bear_power={:?})", self.0.bull_power, self.0.bear_power)
+    }
+}
+
+/// Donchian Channels data
+#[pyclass(name = "DonchianChannelsData")]
+pub struct DonchianChannelsData(::finance_query::DonchianChannelsData);
+
+#[pymethods]
+impl DonchianChannelsData {
+    /// Upper channel value
+    #[getter]
+    fn upper(&self) -> Option<f64> {
+        self.0.upper.clone()
+    }
+
+    #[setter]
+    fn set_upper(&mut self, value: Option<f64>) {
+        self.0.upper = value;
+    }
+
+    /// Middle channel value
+    #[getter]
+    fn middle(&self) -> Option<f64> {
+        self.0.middle.clone()
+    }
+
+    #[setter]
+    fn set_middle(&mut self, value: Option<f64>) {
+        self.0.middle = value;
+    }
+
+    /// Lower channel value
+    #[getter]
+    fn lower(&self) -> Option<f64> {
+        self.0.lower.clone()
+    }
+
+    #[setter]
+    fn set_lower(&mut self, value: Option<f64>) {
+        self.0.lower = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("DonchianChannelsData(upper={:?}, middle={:?}, lower={:?})", self.0.upper, self.0.middle, self.0.lower)
+    }
+}
+
+/// Elder Ray Index data
+#[pyclass(name = "ElderRayData")]
+pub struct ElderRayData(::finance_query::ElderRayData);
+
+#[pymethods]
+impl ElderRayData {
+    /// Bull power value
+    #[getter]
+    fn bull_power(&self) -> Option<f64> {
+        self.0.bull_power.clone()
+    }
+
+    #[setter]
+    fn set_bull_power(&mut self, value: Option<f64>) {
+        self.0.bull_power = value;
+    }
+
+    /// Bear power value
+    #[getter]
+    fn bear_power(&self) -> Option<f64> {
+        self.0.bear_power.clone()
+    }
+
+    #[setter]
+    fn set_bear_power(&mut self, value: Option<f64>) {
+        self.0.bear_power = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ElderRayData(bull_power={:?}, bear_power={:?})", self.0.bull_power, self.0.bear_power)
+    }
+}
+
+/// Ichimoku Cloud data
+#[pyclass(name = "IchimokuData")]
+pub struct IchimokuData(::finance_query::IchimokuData);
+
+#[pymethods]
+impl IchimokuData {
+    /// Conversion line (Tenkan-sen)
+    #[getter]
+    fn conversion_line(&self) -> Option<f64> {
+        self.0.conversion_line.clone()
+    }
+
+    #[setter]
+    fn set_conversion_line(&mut self, value: Option<f64>) {
+        self.0.conversion_line = value;
+    }
+
+    /// Base line (Kijun-sen)
+    #[getter]
+    fn base_line(&self) -> Option<f64> {
+        self.0.base_line.clone()
+    }
+
+    #[setter]
+    fn set_base_line(&mut self, value: Option<f64>) {
+        self.0.base_line = value;
+    }
+
+    /// Leading Span A (Senkou Span A)
+    #[getter]
+    fn leading_span_a(&self) -> Option<f64> {
+        self.0.leading_span_a.clone()
+    }
+
+    #[setter]
+    fn set_leading_span_a(&mut self, value: Option<f64>) {
+        self.0.leading_span_a = value;
+    }
+
+    /// Leading Span B (Senkou Span B)
+    #[getter]
+    fn leading_span_b(&self) -> Option<f64> {
+        self.0.leading_span_b.clone()
+    }
+
+    #[setter]
+    fn set_leading_span_b(&mut self, value: Option<f64>) {
+        self.0.leading_span_b = value;
+    }
+
+    /// Lagging Span (Chikou Span)
+    #[getter]
+    fn lagging_span(&self) -> Option<f64> {
+        self.0.lagging_span.clone()
+    }
+
+    #[setter]
+    fn set_lagging_span(&mut self, value: Option<f64>) {
+        self.0.lagging_span = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("IchimokuData(conversion_line={:?}, base_line={:?}, leading_span_a={:?}, leading_span_b={:?}, lagging_span={:?})", self.0.conversion_line, self.0.base_line, self.0.leading_span_a, self.0.leading_span_b, self.0.lagging_span)
+    }
+}
+
+/// Summary of all calculated technical indicators
+#[pyclass(name = "IndicatorsSummary")]
+pub struct IndicatorsSummary(::finance_query::IndicatorsSummary);
+
+#[pymethods]
+impl IndicatorsSummary {
+    /// Simple Moving Average (10-period)
+    #[getter]
+    fn sma_10(&self) -> Option<f64> {
+        self.0.sma_10.clone()
+    }
+
+    #[setter]
+    fn set_sma_10(&mut self, value: Option<f64>) {
+        self.0.sma_10 = value;
+    }
+
+    /// Simple Moving Average (20-period)
+    #[getter]
+    fn sma_20(&self) -> Option<f64> {
+        self.0.sma_20.clone()
+    }
+
+    #[setter]
+    fn set_sma_20(&mut self, value: Option<f64>) {
+        self.0.sma_20 = value;
+    }
+
+    /// Simple Moving Average (50-period)
+    #[getter]
+    fn sma_50(&self) -> Option<f64> {
+        self.0.sma_50.clone()
+    }
+
+    #[setter]
+    fn set_sma_50(&mut self, value: Option<f64>) {
+        self.0.sma_50 = value;
+    }
+
+    /// Simple Moving Average (100-period)
+    #[getter]
+    fn sma_100(&self) -> Option<f64> {
+        self.0.sma_100.clone()
+    }
+
+    #[setter]
+    fn set_sma_100(&mut self, value: Option<f64>) {
+        self.0.sma_100 = value;
+    }
+
+    /// Simple Moving Average (200-period)
+    #[getter]
+    fn sma_200(&self) -> Option<f64> {
+        self.0.sma_200.clone()
+    }
+
+    #[setter]
+    fn set_sma_200(&mut self, value: Option<f64>) {
+        self.0.sma_200 = value;
+    }
+
+    /// Exponential Moving Average (10-period)
+    #[getter]
+    fn ema_10(&self) -> Option<f64> {
+        self.0.ema_10.clone()
+    }
+
+    #[setter]
+    fn set_ema_10(&mut self, value: Option<f64>) {
+        self.0.ema_10 = value;
+    }
+
+    /// Exponential Moving Average (20-period)
+    #[getter]
+    fn ema_20(&self) -> Option<f64> {
+        self.0.ema_20.clone()
+    }
+
+    #[setter]
+    fn set_ema_20(&mut self, value: Option<f64>) {
+        self.0.ema_20 = value;
+    }
+
+    /// Exponential Moving Average (50-period)
+    #[getter]
+    fn ema_50(&self) -> Option<f64> {
+        self.0.ema_50.clone()
+    }
+
+    #[setter]
+    fn set_ema_50(&mut self, value: Option<f64>) {
+        self.0.ema_50 = value;
+    }
+
+    /// Exponential Moving Average (100-period)
+    #[getter]
+    fn ema_100(&self) -> Option<f64> {
+        self.0.ema_100.clone()
+    }
+
+    #[setter]
+    fn set_ema_100(&mut self, value: Option<f64>) {
+        self.0.ema_100 = value;
+    }
+
+    /// Exponential Moving Average (200-period)
+    #[getter]
+    fn ema_200(&self) -> Option<f64> {
+        self.0.ema_200.clone()
+    }
+
+    #[setter]
+    fn set_ema_200(&mut self, value: Option<f64>) {
+        self.0.ema_200 = value;
+    }
+
+    /// Weighted Moving Average (10-period)
+    #[getter]
+    fn wma_10(&self) -> Option<f64> {
+        self.0.wma_10.clone()
+    }
+
+    #[setter]
+    fn set_wma_10(&mut self, value: Option<f64>) {
+        self.0.wma_10 = value;
+    }
+
+    /// Weighted Moving Average (20-period)
+    #[getter]
+    fn wma_20(&self) -> Option<f64> {
+        self.0.wma_20.clone()
+    }
+
+    #[setter]
+    fn set_wma_20(&mut self, value: Option<f64>) {
+        self.0.wma_20 = value;
+    }
+
+    /// Weighted Moving Average (50-period)
+    #[getter]
+    fn wma_50(&self) -> Option<f64> {
+        self.0.wma_50.clone()
+    }
+
+    #[setter]
+    fn set_wma_50(&mut self, value: Option<f64>) {
+        self.0.wma_50 = value;
+    }
+
+    /// Weighted Moving Average (100-period)
+    #[getter]
+    fn wma_100(&self) -> Option<f64> {
+        self.0.wma_100.clone()
+    }
+
+    #[setter]
+    fn set_wma_100(&mut self, value: Option<f64>) {
+        self.0.wma_100 = value;
+    }
+
+    /// Weighted Moving Average (200-period)
+    #[getter]
+    fn wma_200(&self) -> Option<f64> {
+        self.0.wma_200.clone()
+    }
+
+    #[setter]
+    fn set_wma_200(&mut self, value: Option<f64>) {
+        self.0.wma_200 = value;
+    }
+
+    /// Double Exponential Moving Average (20-period)
+    #[getter]
+    fn dema_20(&self) -> Option<f64> {
+        self.0.dema_20.clone()
+    }
+
+    #[setter]
+    fn set_dema_20(&mut self, value: Option<f64>) {
+        self.0.dema_20 = value;
+    }
+
+    /// Triple Exponential Moving Average (20-period)
+    #[getter]
+    fn tema_20(&self) -> Option<f64> {
+        self.0.tema_20.clone()
+    }
+
+    #[setter]
+    fn set_tema_20(&mut self, value: Option<f64>) {
+        self.0.tema_20 = value;
+    }
+
+    /// Hull Moving Average (20-period)
+    #[getter]
+    fn hma_20(&self) -> Option<f64> {
+        self.0.hma_20.clone()
+    }
+
+    #[setter]
+    fn set_hma_20(&mut self, value: Option<f64>) {
+        self.0.hma_20 = value;
+    }
+
+    /// Volume Weighted Moving Average (20-period)
+    #[getter]
+    fn vwma_20(&self) -> Option<f64> {
+        self.0.vwma_20.clone()
+    }
+
+    #[setter]
+    fn set_vwma_20(&mut self, value: Option<f64>) {
+        self.0.vwma_20 = value;
+    }
+
+    /// Arnaud Legoux Moving Average (9-period)
+    #[getter]
+    fn alma_9(&self) -> Option<f64> {
+        self.0.alma_9.clone()
+    }
+
+    #[setter]
+    fn set_alma_9(&mut self, value: Option<f64>) {
+        self.0.alma_9 = value;
+    }
+
+    /// McGinley Dynamic (20-period)
+    #[getter]
+    fn mcginley_dynamic_20(&self) -> Option<f64> {
+        self.0.mcginley_dynamic_20.clone()
+    }
+
+    #[setter]
+    fn set_mcginley_dynamic_20(&mut self, value: Option<f64>) {
+        self.0.mcginley_dynamic_20 = value;
+    }
+
+    /// Relative Strength Index (14-period)
+    #[getter]
+    fn rsi_14(&self) -> Option<f64> {
+        self.0.rsi_14.clone()
+    }
+
+    #[setter]
+    fn set_rsi_14(&mut self, value: Option<f64>) {
+        self.0.rsi_14 = value;
+    }
+
+    /// Stochastic Oscillator (14, 3, 3)
+    #[getter]
+    fn stochastic(&self) -> Option<StochasticData> {
+        self.0.stochastic.clone().map(StochasticData)
+    }
+
+    /// Commodity Channel Index (20-period)
+    #[getter]
+    fn cci_20(&self) -> Option<f64> {
+        self.0.cci_20.clone()
+    }
+
+    #[setter]
+    fn set_cci_20(&mut self, value: Option<f64>) {
+        self.0.cci_20 = value;
+    }
+
+    /// Williams %R (14-period)
+    #[getter]
+    fn williams_r_14(&self) -> Option<f64> {
+        self.0.williams_r_14.clone()
+    }
+
+    #[setter]
+    fn set_williams_r_14(&mut self, value: Option<f64>) {
+        self.0.williams_r_14 = value;
+    }
+
+    /// Stochastic RSI (14, 14)
+    #[getter]
+    fn stochastic_rsi(&self) -> Option<StochasticData> {
+        self.0.stochastic_rsi.clone().map(StochasticData)
+    }
+
+    /// Rate of Change (12-period)
+    #[getter]
+    fn roc_12(&self) -> Option<f64> {
+        self.0.roc_12.clone()
+    }
+
+    #[setter]
+    fn set_roc_12(&mut self, value: Option<f64>) {
+        self.0.roc_12 = value;
+    }
+
+    /// Momentum (10-period)
+    #[getter]
+    fn momentum_10(&self) -> Option<f64> {
+        self.0.momentum_10.clone()
+    }
+
+    #[setter]
+    fn set_momentum_10(&mut self, value: Option<f64>) {
+        self.0.momentum_10 = value;
+    }
+
+    /// Chande Momentum Oscillator (14-period)
+    #[getter]
+    fn cmo_14(&self) -> Option<f64> {
+        self.0.cmo_14.clone()
+    }
+
+    #[setter]
+    fn set_cmo_14(&mut self, value: Option<f64>) {
+        self.0.cmo_14 = value;
+    }
+
+    /// Awesome Oscillator (5, 34)
+    #[getter]
+    fn awesome_oscillator(&self) -> Option<f64> {
+        self.0.awesome_oscillator.clone()
+    }
+
+    #[setter]
+    fn set_awesome_oscillator(&mut self, value: Option<f64>) {
+        self.0.awesome_oscillator = value;
+    }
+
+    /// Coppock Curve (10, 11, 14)
+    #[getter]
+    fn coppock_curve(&self) -> Option<f64> {
+        self.0.coppock_curve.clone()
+    }
+
+    #[setter]
+    fn set_coppock_curve(&mut self, value: Option<f64>) {
+        self.0.coppock_curve = value;
+    }
+
+    /// Moving Average Convergence Divergence (12, 26, 9)
+    #[getter]
+    fn macd(&self) -> Option<MacdData> {
+        self.0.macd.clone().map(MacdData)
+    }
+
+    /// Average Directional Index (14-period)
+    #[getter]
+    fn adx_14(&self) -> Option<f64> {
+        self.0.adx_14.clone()
+    }
+
+    #[setter]
+    fn set_adx_14(&mut self, value: Option<f64>) {
+        self.0.adx_14 = value;
+    }
+
+    /// Aroon Indicator (25-period)
+    #[getter]
+    fn aroon(&self) -> Option<AroonData> {
+        self.0.aroon.clone().map(AroonData)
+    }
+
+    /// SuperTrend Indicator (10, 3.0)
+    #[getter]
+    fn supertrend(&self) -> Option<SuperTrendData> {
+        self.0.supertrend.clone().map(SuperTrendData)
+    }
+
+    /// Ichimoku Cloud (9, 26, 52, 26)
+    #[getter]
+    fn ichimoku(&self) -> Option<IchimokuData> {
+        self.0.ichimoku.clone().map(IchimokuData)
+    }
+
+    /// Parabolic SAR (0.02, 0.2)
+    #[getter]
+    fn parabolic_sar(&self) -> Option<f64> {
+        self.0.parabolic_sar.clone()
+    }
+
+    #[setter]
+    fn set_parabolic_sar(&mut self, value: Option<f64>) {
+        self.0.parabolic_sar = value;
+    }
+
+    /// Bull Bear Power (13-period EMA based)
+    #[getter]
+    fn bull_bear_power(&self) -> Option<BullBearPowerData> {
+        self.0.bull_bear_power.clone().map(BullBearPowerData)
+    }
+
+    /// Elder Ray Index (13-period EMA based)
+    #[getter]
+    fn elder_ray_index(&self) -> Option<ElderRayData> {
+        self.0.elder_ray_index.clone().map(ElderRayData)
+    }
+
+    /// Bollinger Bands (20, 2.0)
+    #[getter]
+    fn bollinger_bands(&self) -> Option<BollingerBandsData> {
+        self.0.bollinger_bands.clone().map(BollingerBandsData)
+    }
+
+    /// Average True Range (14-period)
+    #[getter]
+    fn atr_14(&self) -> Option<f64> {
+        self.0.atr_14.clone()
+    }
+
+    #[setter]
+    fn set_atr_14(&mut self, value: Option<f64>) {
+        self.0.atr_14 = value;
+    }
+
+    /// Keltner Channels (20, 10, 2.0)
+    #[getter]
+    fn keltner_channels(&self) -> Option<KeltnerChannelsData> {
+        self.0.keltner_channels.clone().map(KeltnerChannelsData)
+    }
+
+    /// Donchian Channels (20-period)
+    #[getter]
+    fn donchian_channels(&self) -> Option<DonchianChannelsData> {
+        self.0.donchian_channels.clone().map(DonchianChannelsData)
+    }
+
+    /// True Range (current period)
+    #[getter]
+    fn true_range(&self) -> Option<f64> {
+        self.0.true_range.clone()
+    }
+
+    #[setter]
+    fn set_true_range(&mut self, value: Option<f64>) {
+        self.0.true_range = value;
+    }
+
+    /// Choppiness Index (14-period)
+    #[getter]
+    fn choppiness_index_14(&self) -> Option<f64> {
+        self.0.choppiness_index_14.clone()
+    }
+
+    #[setter]
+    fn set_choppiness_index_14(&mut self, value: Option<f64>) {
+        self.0.choppiness_index_14 = value;
+    }
+
+    /// On-Balance Volume
+    #[getter]
+    fn obv(&self) -> Option<f64> {
+        self.0.obv.clone()
+    }
+
+    #[setter]
+    fn set_obv(&mut self, value: Option<f64>) {
+        self.0.obv = value;
+    }
+
+    /// Money Flow Index (14-period)
+    #[getter]
+    fn mfi_14(&self) -> Option<f64> {
+        self.0.mfi_14.clone()
+    }
+
+    #[setter]
+    fn set_mfi_14(&mut self, value: Option<f64>) {
+        self.0.mfi_14 = value;
+    }
+
+    /// Chaikin Money Flow (20-period)
+    #[getter]
+    fn cmf_20(&self) -> Option<f64> {
+        self.0.cmf_20.clone()
+    }
+
+    #[setter]
+    fn set_cmf_20(&mut self, value: Option<f64>) {
+        self.0.cmf_20 = value;
+    }
+
+    /// Chaikin Oscillator (3, 10)
+    #[getter]
+    fn chaikin_oscillator(&self) -> Option<f64> {
+        self.0.chaikin_oscillator.clone()
+    }
+
+    #[setter]
+    fn set_chaikin_oscillator(&mut self, value: Option<f64>) {
+        self.0.chaikin_oscillator = value;
+    }
+
+    /// Accumulation/Distribution Line
+    #[getter]
+    fn accumulation_distribution(&self) -> Option<f64> {
+        self.0.accumulation_distribution.clone()
+    }
+
+    #[setter]
+    fn set_accumulation_distribution(&mut self, value: Option<f64>) {
+        self.0.accumulation_distribution = value;
+    }
+
+    /// Volume Weighted Average Price
+    #[getter]
+    fn vwap(&self) -> Option<f64> {
+        self.0.vwap.clone()
+    }
+
+    #[setter]
+    fn set_vwap(&mut self, value: Option<f64>) {
+        self.0.vwap = value;
+    }
+
+    /// Balance of Power
+    #[getter]
+    fn balance_of_power(&self) -> Option<f64> {
+        self.0.balance_of_power.clone()
+    }
+
+    #[setter]
+    fn set_balance_of_power(&mut self, value: Option<f64>) {
+        self.0.balance_of_power = value;
+    }
+
+    /// Standard (classic) Pivot Points, derived from the previous bar's high/low/close
+    #[getter]
+    fn pivot_points(&self) -> Option<PivotPoints> {
+        self.0.pivot_points.clone().map(PivotPoints)
+    }
+
+    /// Fibonacci Pivot Points, derived from the previous bar's high/low/close
+    #[getter]
+    fn fibonacci_pivot_points(&self) -> Option<PivotPoints> {
+        self.0.fibonacci_pivot_points.clone().map(PivotPoints)
+    }
+
+    /// Latest Heikin-Ashi ("average bar") candle
+    #[getter]
+    fn heikin_ashi(&self) -> Option<Candle> {
+        self.0.heikin_ashi.clone().map(Candle)
+    }
+
+    /// Most recent confirmed ZigZag swing point (5% reversal threshold)
+    #[getter]
+    fn zigzag_last_pivot(&self) -> Option<ZigZagPoint> {
+        self.0.zigzag_last_pivot.clone().map(ZigZagPoint)
+    }
+
+    /// Fibonacci Retracement levels (50-period rolling window)
+    #[getter]
+    fn fibonacci_retracement_50(&self) -> Option<FibonacciLevels> {
+        self.0.fibonacci_retracement_50.clone().map(FibonacciLevels)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("IndicatorsSummary(sma_10={:?}, sma_20={:?}, sma_50={:?}, sma_100={:?}, sma_200={:?}, ema_10={:?}, ema_20={:?}, ema_50={:?}, ema_100={:?}, ema_200={:?}, wma_10={:?}, wma_20={:?}, wma_50={:?}, wma_100={:?}, wma_200={:?}, dema_20={:?}, tema_20={:?}, hma_20={:?}, vwma_20={:?}, alma_9={:?}, mcginley_dynamic_20={:?}, rsi_14={:?}, cci_20={:?}, williams_r_14={:?}, roc_12={:?}, momentum_10={:?}, cmo_14={:?}, awesome_oscillator={:?}, coppock_curve={:?}, adx_14={:?}, parabolic_sar={:?}, atr_14={:?}, true_range={:?}, choppiness_index_14={:?}, obv={:?}, mfi_14={:?}, cmf_20={:?}, chaikin_oscillator={:?}, accumulation_distribution={:?}, vwap={:?}, balance_of_power={:?})", self.0.sma_10, self.0.sma_20, self.0.sma_50, self.0.sma_100, self.0.sma_200, self.0.ema_10, self.0.ema_20, self.0.ema_50, self.0.ema_100, self.0.ema_200, self.0.wma_10, self.0.wma_20, self.0.wma_50, self.0.wma_100, self.0.wma_200, self.0.dema_20, self.0.tema_20, self.0.hma_20, self.0.vwma_20, self.0.alma_9, self.0.mcginley_dynamic_20, self.0.rsi_14, self.0.cci_20, self.0.williams_r_14, self.0.roc_12, self.0.momentum_10, self.0.cmo_14, self.0.awesome_oscillator, self.0.coppock_curve, self.0.adx_14, self.0.parabolic_sar, self.0.atr_14, self.0.true_range, self.0.choppiness_index_14, self.0.obv, self.0.mfi_14, self.0.cmf_20, self.0.chaikin_oscillator, self.0.accumulation_distribution, self.0.vwap, self.0.balance_of_power)
+    }
+}
+
+/// Keltner Channels data
+#[pyclass(name = "KeltnerChannelsData")]
+pub struct KeltnerChannelsData(::finance_query::KeltnerChannelsData);
+
+#[pymethods]
+impl KeltnerChannelsData {
+    /// Upper channel value
+    #[getter]
+    fn upper(&self) -> Option<f64> {
+        self.0.upper.clone()
+    }
+
+    #[setter]
+    fn set_upper(&mut self, value: Option<f64>) {
+        self.0.upper = value;
+    }
+
+    /// Middle channel value
+    #[getter]
+    fn middle(&self) -> Option<f64> {
+        self.0.middle.clone()
+    }
+
+    #[setter]
+    fn set_middle(&mut self, value: Option<f64>) {
+        self.0.middle = value;
+    }
+
+    /// Lower channel value
+    #[getter]
+    fn lower(&self) -> Option<f64> {
+        self.0.lower.clone()
+    }
+
+    #[setter]
+    fn set_lower(&mut self, value: Option<f64>) {
+        self.0.lower = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("KeltnerChannelsData(upper={:?}, middle={:?}, lower={:?})", self.0.upper, self.0.middle, self.0.lower)
+    }
+}
+
+/// MACD indicator data
+#[pyclass(name = "MacdData")]
+pub struct MacdData(::finance_query::MacdData);
+
+#[pymethods]
+impl MacdData {
+    /// MACD line value
+    #[getter]
+    fn macd(&self) -> Option<f64> {
+        self.0.macd.clone()
+    }
+
+    #[setter]
+    fn set_macd(&mut self, value: Option<f64>) {
+        self.0.macd = value;
+    }
+
+    /// Signal line value
+    #[getter]
+    fn signal(&self) -> Option<f64> {
+        self.0.signal.clone()
+    }
+
+    #[setter]
+    fn set_signal(&mut self, value: Option<f64>) {
+        self.0.signal = value;
+    }
+
+    /// Histogram value
+    #[getter]
+    fn histogram(&self) -> Option<f64> {
+        self.0.histogram.clone()
+    }
+
+    #[setter]
+    fn set_histogram(&mut self, value: Option<f64>) {
+        self.0.histogram = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("MacdData(macd={:?}, signal={:?}, histogram={:?})", self.0.macd, self.0.signal, self.0.histogram)
+    }
+}
+
+/// Stochastic Oscillator data
+#[pyclass(name = "StochasticData")]
+pub struct StochasticData(::finance_query::StochasticData);
+
+#[pymethods]
+impl StochasticData {
+    /// %K line value
+    #[getter]
+    fn k(&self) -> Option<f64> {
+        self.0.k.clone()
+    }
+
+    #[setter]
+    fn set_k(&mut self, value: Option<f64>) {
+        self.0.k = value;
+    }
+
+    /// %D line value
+    #[getter]
+    fn d(&self) -> Option<f64> {
+        self.0.d.clone()
+    }
+
+    #[setter]
+    fn set_d(&mut self, value: Option<f64>) {
+        self.0.d = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("StochasticData(k={:?}, d={:?})", self.0.k, self.0.d)
+    }
+}
+
+/// SuperTrend indicator data
+#[pyclass(name = "SuperTrendData")]
+pub struct SuperTrendData(::finance_query::SuperTrendData);
+
+#[pymethods]
+impl SuperTrendData {
+    /// SuperTrend value
+    #[getter]
+    fn value(&self) -> Option<f64> {
+        self.0.value.clone()
+    }
+
+    #[setter]
+    fn set_value(&mut self, value: Option<f64>) {
+        self.0.value = value;
+    }
+
+    /// Trend direction
+    #[getter]
+    fn trend(&self) -> Option<String> {
+        self.0.trend.clone()
+    }
+
+    #[setter]
+    fn set_trend(&mut self, value: Option<String>) {
+        self.0.trend = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("SuperTrendData(value={:?}, trend={:?})", self.0.value, self.0.trend)
+    }
+}
+
+/// A single confirmed ZigZag swing point.
+#[pyclass(name = "ZigZagPoint")]
+pub struct ZigZagPoint(::finance_query::indicators::ZigZagPoint);
+
+#[pymethods]
+impl ZigZagPoint {
+    /// Index into the original `highs`/`lows` slices where this swing occurred.
+    #[getter]
+    fn index(&self) -> usize {
+        self.0.index.clone()
+    }
+
+    #[setter]
+    fn set_index(&mut self, value: usize) {
+        self.0.index = value;
+    }
+
+    /// Price at the pivot (the high or low that qualified as a swing point).
+    #[getter]
+    fn price(&self) -> f64 {
+        self.0.price.clone()
+    }
+
+    #[setter]
+    fn set_price(&mut self, value: f64) {
+        self.0.price = value;
+    }
+
+    /// `true` for a swing high, `false` for a swing low.
+    #[getter]
+    fn is_high(&self) -> bool {
+        self.0.is_high.clone()
+    }
+
+    #[setter]
+    fn set_is_high(&mut self, value: bool) {
+        self.0.is_high = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ZigZagPoint(index={:?}, price={:?}, is_high={:?})", self.0.index, self.0.price, self.0.is_high)
+    }
+}
+
+/// A single upcoming financial event.
+#[pyclass(name = "CalendarEvent")]
+pub struct CalendarEvent(::finance_query::CalendarEvent);
+
+#[pymethods]
+impl CalendarEvent {
+    /// Unix timestamp (seconds) when the event occurs.
+    #[getter]
+    fn timestamp(&self) -> i64 {
+        self.0.timestamp.clone()
+    }
+
+    #[setter]
+    fn set_timestamp(&mut self, value: i64) {
+        self.0.timestamp = value;
+    }
+
+    /// ISO 8601 date string for display (e.g. `"2026-01-23"`).
+    #[getter]
+    fn date(&self) -> String {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: String) {
+        self.0.date = value;
+    }
+
+    /// Ticker symbol this event belongs to. `None` for market-wide events.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// The specific event.
+    #[getter]
+    fn event(&self) -> EventKind {
+        EventKind(self.0.event.clone())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("CalendarEvent(timestamp={:?}, date={:?}, symbol={:?})", self.0.timestamp, self.0.date, self.0.symbol)
+    }
+}
+
+/// The kind of financial event, with its event-specific payload.
+#[pyclass(name = "EventKind")]
+pub struct EventKind(::finance_query::EventKind);
 
 /// A single OHLCV candle/bar
 #[pyclass(name = "Candle")]
@@ -1926,6 +3680,2859 @@ impl SimilarSymbol {
     }
 }
 
+/// Complete company facts response containing all XBRL financial data.
+#[pyclass(name = "CompanyFacts")]
+pub struct CompanyFacts(::finance_query::CompanyFacts);
+
+#[pymethods]
+impl CompanyFacts {
+    /// CIK number (SEC returns this as either a number or a zero-padded string)
+    #[getter]
+    fn cik(&self) -> Option<u64> {
+        self.0.cik.clone()
+    }
+
+    #[setter]
+    fn set_cik(&mut self, value: Option<u64>) {
+        self.0.cik = value;
+    }
+
+    /// Company name
+    #[getter]
+    fn entity_name(&self) -> Option<String> {
+        self.0.entity_name.clone()
+    }
+
+    #[setter]
+    fn set_entity_name(&mut self, value: Option<String>) {
+        self.0.entity_name = value;
+    }
+
+    /// Facts organized by taxonomy (e.g., "us-gaap", "ifrs-full", "dei")
+    #[getter]
+    fn facts(&self) -> ::std::collections::HashMap<String, FactsByTaxonomy> {
+        self.0.facts.clone().into_iter().map(|(key, value)| (key, FactsByTaxonomy(value))).collect()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("CompanyFacts(cik={:?}, entity_name={:?})", self.0.cik, self.0.entity_name)
+    }
+}
+
+/// A single XBRL concept (e.g., "Revenue") with all reported values.
+#[pyclass(name = "FactConcept")]
+pub struct FactConcept(::finance_query::FactConcept);
+
+#[pymethods]
+impl FactConcept {
+    /// Human-readable label
+    #[getter]
+    fn label(&self) -> Option<String> {
+        self.0.label.clone()
+    }
+
+    #[setter]
+    fn set_label(&mut self, value: Option<String>) {
+        self.0.label = value;
+    }
+
+    /// Description of this concept
+    #[getter]
+    fn description(&self) -> Option<String> {
+        self.0.description.clone()
+    }
+
+    #[setter]
+    fn set_description(&mut self, value: Option<String>) {
+        self.0.description = value;
+    }
+
+    /// Values organized by unit type (e.g., "USD" -> vec of data points)
+    #[getter]
+    fn units(&self) -> ::std::collections::HashMap<String, Vec<FactUnit>> {
+        self.0.units.clone().into_iter().map(|(key, value)| (key, value.into_iter().map(FactUnit).collect())).collect()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("FactConcept(label={:?}, description={:?})", self.0.label, self.0.description)
+    }
+}
+
+/// A single data point for an XBRL fact.
+#[pyclass(name = "FactUnit")]
+pub struct FactUnit(::finance_query::FactUnit);
+
+#[pymethods]
+impl FactUnit {
+    /// Start date of the reporting period (for duration facts, e.g., revenue)
+    #[getter]
+    fn start(&self) -> Option<String> {
+        self.0.start.clone()
+    }
+
+    #[setter]
+    fn set_start(&mut self, value: Option<String>) {
+        self.0.start = value;
+    }
+
+    /// End date of the period (for duration facts) or instant date (for point-in-time facts)
+    #[getter]
+    fn end(&self) -> Option<String> {
+        self.0.end.clone()
+    }
+
+    #[setter]
+    fn set_end(&mut self, value: Option<String>) {
+        self.0.end = value;
+    }
+
+    /// The reported value
+    #[getter]
+    fn val(&self) -> Option<f64> {
+        self.0.val.clone()
+    }
+
+    #[setter]
+    fn set_val(&mut self, value: Option<f64>) {
+        self.0.val = value;
+    }
+
+    /// Accession number of the filing that reported this value
+    #[getter]
+    fn accn(&self) -> Option<String> {
+        self.0.accn.clone()
+    }
+
+    #[setter]
+    fn set_accn(&mut self, value: Option<String>) {
+        self.0.accn = value;
+    }
+
+    /// Fiscal year
+    #[getter]
+    fn fy(&self) -> Option<i32> {
+        self.0.fy.clone()
+    }
+
+    #[setter]
+    fn set_fy(&mut self, value: Option<i32>) {
+        self.0.fy = value;
+    }
+
+    /// Fiscal period (FY, Q1, Q2, Q3, Q4)
+    #[getter]
+    fn fp(&self) -> Option<String> {
+        self.0.fp.clone()
+    }
+
+    #[setter]
+    fn set_fp(&mut self, value: Option<String>) {
+        self.0.fp = value;
+    }
+
+    /// Form type (10-K, 10-Q, etc.)
+    #[getter]
+    fn form(&self) -> Option<String> {
+        self.0.form.clone()
+    }
+
+    #[setter]
+    fn set_form(&mut self, value: Option<String>) {
+        self.0.form = value;
+    }
+
+    /// Date the filing was filed
+    #[getter]
+    fn filed(&self) -> Option<String> {
+        self.0.filed.clone()
+    }
+
+    #[setter]
+    fn set_filed(&mut self, value: Option<String>) {
+        self.0.filed = value;
+    }
+
+    /// Frame identifier (e.g., "CY2023Q4I")
+    #[getter]
+    fn frame(&self) -> Option<String> {
+        self.0.frame.clone()
+    }
+
+    #[setter]
+    fn set_frame(&mut self, value: Option<String>) {
+        self.0.frame = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("FactUnit(start={:?}, end={:?}, val={:?}, accn={:?}, fy={:?}, fp={:?}, form={:?}, filed={:?}, frame={:?})", self.0.start, self.0.end, self.0.val, self.0.accn, self.0.fy, self.0.fp, self.0.form, self.0.filed, self.0.frame)
+    }
+}
+
+/// Facts within a single taxonomy (e.g., "us-gaap").
+#[pyclass(name = "FactsByTaxonomy")]
+pub struct FactsByTaxonomy(::finance_query::FactsByTaxonomy);
+
+#[pymethods]
+impl FactsByTaxonomy {
+    #[getter]
+    fn _0(&self) -> ::std::collections::HashMap<String, FactConcept> {
+        self.0.0.clone().into_iter().map(|(key, value)| (key, FactConcept(value))).collect()
+    }
+}
+
+/// A single SEC filing entry from a provider.
+#[pyclass(name = "ProviderFiling")]
+pub struct ProviderFiling(::finance_query::ProviderFiling);
+
+#[pymethods]
+impl ProviderFiling {
+    /// SEC accession number (unique filing ID).
+    #[getter]
+    fn accession_number(&self) -> Option<String> {
+        self.0.accession_number.clone()
+    }
+
+    #[setter]
+    fn set_accession_number(&mut self, value: Option<String>) {
+        self.0.accession_number = value;
+    }
+
+    /// Filing date as `YYYY-MM-DD`.
+    #[getter]
+    fn filing_date(&self) -> Option<String> {
+        self.0.filing_date.clone()
+    }
+
+    #[setter]
+    fn set_filing_date(&mut self, value: Option<String>) {
+        self.0.filing_date = value;
+    }
+
+    /// Filing type (e.g., `"10-K"`, `"10-Q"`, `"8-K"`).
+    #[getter]
+    fn filing_type(&self) -> Option<String> {
+        self.0.filing_type.clone()
+    }
+
+    #[setter]
+    fn set_filing_type(&mut self, value: Option<String>) {
+        self.0.filing_type = value;
+    }
+
+    /// URL to the filing document.
+    #[getter]
+    fn filing_url(&self) -> Option<String> {
+        self.0.filing_url.clone()
+    }
+
+    #[setter]
+    fn set_filing_url(&mut self, value: Option<String>) {
+        self.0.filing_url = value;
+    }
+
+    /// Company name at time of filing.
+    #[getter]
+    fn company_name(&self) -> Option<String> {
+        self.0.company_name.clone()
+    }
+
+    #[setter]
+    fn set_company_name(&mut self, value: Option<String>) {
+        self.0.company_name = value;
+    }
+
+    /// SEC CIK number.
+    #[getter]
+    fn cik(&self) -> Option<String> {
+        self.0.cik.clone()
+    }
+
+    #[setter]
+    fn set_cik(&mut self, value: Option<String>) {
+        self.0.cik = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ProviderFiling(accession_number={:?}, filing_date={:?}, filing_type={:?}, filing_url={:?}, company_name={:?}, cik={:?})", self.0.accession_number, self.0.filing_date, self.0.filing_type, self.0.filing_url, self.0.company_name, self.0.cik)
+    }
+}
+
+/// A collection of SEC filings from a provider (e.g., Polygon EDGAR).
+#[pyclass(name = "ProviderFilings")]
+pub struct ProviderFilings(::finance_query::ProviderFilings);
+
+#[pymethods]
+impl ProviderFilings {
+    /// Ticker symbol these filings belong to.
+    #[getter]
+    fn symbol(&self) -> String {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: String) {
+        self.0.symbol = value;
+    }
+
+    /// Individual filing entries.
+    #[getter]
+    fn filings(&self) -> ProviderFilingSeq {
+        ProviderFilingSeq::new(self.0.filings.clone())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ProviderFilings(symbol={:?})", self.0.symbol)
+    }
+}
+
+/// Reference to an additional filing history file for older filings.
+#[pyclass(name = "EdgarFilingFile")]
+pub struct EdgarFilingFile(::finance_query::EdgarFilingFile);
+
+#[pymethods]
+impl EdgarFilingFile {
+    /// Filename of the additional filings JSON (relative to submissions URL)
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.0.name.clone()
+    }
+
+    #[setter]
+    fn set_name(&mut self, value: Option<String>) {
+        self.0.name = value;
+    }
+
+    /// Number of filings in this file
+    #[getter]
+    fn filing_count(&self) -> Option<u32> {
+        self.0.filing_count.clone()
+    }
+
+    #[setter]
+    fn set_filing_count(&mut self, value: Option<u32>) {
+        self.0.filing_count = value;
+    }
+
+    /// Earliest filing date in this file
+    #[getter]
+    fn filing_from(&self) -> Option<String> {
+        self.0.filing_from.clone()
+    }
+
+    #[setter]
+    fn set_filing_from(&mut self, value: Option<String>) {
+        self.0.filing_from = value;
+    }
+
+    /// Latest filing date in this file
+    #[getter]
+    fn filing_to(&self) -> Option<String> {
+        self.0.filing_to.clone()
+    }
+
+    #[setter]
+    fn set_filing_to(&mut self, value: Option<String>) {
+        self.0.filing_to = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EdgarFilingFile(name={:?}, filing_count={:?}, filing_from={:?}, filing_to={:?})", self.0.name, self.0.filing_count, self.0.filing_from, self.0.filing_to)
+    }
+}
+
+/// Recent filings data stored as parallel arrays.
+#[pyclass(name = "EdgarFilingRecent")]
+pub struct EdgarFilingRecent(::finance_query::EdgarFilingRecent);
+
+#[pymethods]
+impl EdgarFilingRecent {
+    /// Accession numbers (unique filing identifiers)
+    #[getter]
+    fn accession_number(&self) -> Vec<String> {
+        self.0.accession_number.clone()
+    }
+
+    #[setter]
+    fn set_accession_number(&mut self, value: Vec<String>) {
+        self.0.accession_number = value;
+    }
+
+    /// Filing dates (YYYY-MM-DD)
+    #[getter]
+    fn filing_date(&self) -> Vec<String> {
+        self.0.filing_date.clone()
+    }
+
+    #[setter]
+    fn set_filing_date(&mut self, value: Vec<String>) {
+        self.0.filing_date = value;
+    }
+
+    /// Report dates (YYYY-MM-DD, may be empty for some form types)
+    #[getter]
+    fn report_date(&self) -> Vec<String> {
+        self.0.report_date.clone()
+    }
+
+    #[setter]
+    fn set_report_date(&mut self, value: Vec<String>) {
+        self.0.report_date = value;
+    }
+
+    /// Acceptance date-times
+    #[getter]
+    fn acceptance_date_time(&self) -> Vec<String> {
+        self.0.acceptance_date_time.clone()
+    }
+
+    #[setter]
+    fn set_acceptance_date_time(&mut self, value: Vec<String>) {
+        self.0.acceptance_date_time = value;
+    }
+
+    /// Form types (10-K, 10-Q, 8-K, etc.)
+    #[getter]
+    fn form(&self) -> Vec<String> {
+        self.0.form.clone()
+    }
+
+    #[setter]
+    fn set_form(&mut self, value: Vec<String>) {
+        self.0.form = value;
+    }
+
+    /// Filing sizes in bytes
+    #[getter]
+    fn size(&self) -> U64Array {
+        U64Array::new(self.0.size.clone())
+    }
+
+    #[setter]
+    fn set_size(&mut self, value: BorrowedU64) {
+        self.0.size = value.into_vec();
+    }
+
+    /// Whether the filing is XBRL
+    #[getter]
+    fn is_xbrl(&self) -> Vec<u8> {
+        self.0.is_xbrl.clone()
+    }
+
+    #[setter]
+    fn set_is_xbrl(&mut self, value: Vec<u8>) {
+        self.0.is_xbrl = value;
+    }
+
+    /// Whether the filing is Inline XBRL
+    #[getter]
+    fn is_inline_xbrl(&self) -> Vec<u8> {
+        self.0.is_inline_xbrl.clone()
+    }
+
+    #[setter]
+    fn set_is_inline_xbrl(&mut self, value: Vec<u8>) {
+        self.0.is_inline_xbrl = value;
+    }
+
+    /// Primary document filenames
+    #[getter]
+    fn primary_document(&self) -> Vec<String> {
+        self.0.primary_document.clone()
+    }
+
+    #[setter]
+    fn set_primary_document(&mut self, value: Vec<String>) {
+        self.0.primary_document = value;
+    }
+
+    /// Primary document descriptions
+    #[getter]
+    fn primary_doc_description(&self) -> Vec<String> {
+        self.0.primary_doc_description.clone()
+    }
+
+    #[setter]
+    fn set_primary_doc_description(&mut self, value: Vec<String>) {
+        self.0.primary_doc_description = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EdgarFilingRecent(accession_number={:?}, filing_date={:?}, report_date={:?}, acceptance_date_time={:?}, form={:?}, size={:?}, is_xbrl={:?}, is_inline_xbrl={:?}, primary_document={:?}, primary_doc_description={:?})", self.0.accession_number, self.0.filing_date, self.0.report_date, self.0.acceptance_date_time, self.0.form, self.0.size, self.0.is_xbrl, self.0.is_inline_xbrl, self.0.primary_document, self.0.primary_doc_description)
+    }
+}
+
+/// Container for recent filings and links to older filing history files.
+#[pyclass(name = "EdgarFilings")]
+pub struct EdgarFilings(::finance_query::EdgarFilings);
+
+#[pymethods]
+impl EdgarFilings {
+    /// Recent filings (up to ~1000, inline in the response)
+    #[getter]
+    fn recent(&self) -> Option<EdgarFilingRecent> {
+        self.0.recent.clone().map(EdgarFilingRecent)
+    }
+
+    /// Links to additional filing history JSON files
+    #[getter]
+    fn files(&self) -> EdgarFilingFileSeq {
+        EdgarFilingFileSeq::new(self.0.files.clone())
+    }
+}
+
+/// Full submissions response for a company from SEC EDGAR.
+#[pyclass(name = "EdgarSubmissions")]
+pub struct EdgarSubmissions(::finance_query::EdgarSubmissions);
+
+#[pymethods]
+impl EdgarSubmissions {
+    /// CIK number (as string)
+    #[getter]
+    fn cik(&self) -> Option<String> {
+        self.0.cik.clone()
+    }
+
+    #[setter]
+    fn set_cik(&mut self, value: Option<String>) {
+        self.0.cik = value;
+    }
+
+    /// Company name
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.0.name.clone()
+    }
+
+    #[setter]
+    fn set_name(&mut self, value: Option<String>) {
+        self.0.name = value;
+    }
+
+    /// Entity type (e.g., "operating")
+    #[getter]
+    fn entity_type(&self) -> Option<String> {
+        self.0.entity_type.clone()
+    }
+
+    #[setter]
+    fn set_entity_type(&mut self, value: Option<String>) {
+        self.0.entity_type = value;
+    }
+
+    /// Standard Industrial Classification code
+    #[getter]
+    fn sic(&self) -> Option<String> {
+        self.0.sic.clone()
+    }
+
+    #[setter]
+    fn set_sic(&mut self, value: Option<String>) {
+        self.0.sic = value;
+    }
+
+    /// SIC description
+    #[getter]
+    fn sic_description(&self) -> Option<String> {
+        self.0.sic_description.clone()
+    }
+
+    #[setter]
+    fn set_sic_description(&mut self, value: Option<String>) {
+        self.0.sic_description = value;
+    }
+
+    /// Ticker symbols associated with this entity
+    #[getter]
+    fn tickers(&self) -> Vec<String> {
+        self.0.tickers.clone()
+    }
+
+    #[setter]
+    fn set_tickers(&mut self, value: Vec<String>) {
+        self.0.tickers = value;
+    }
+
+    /// Stock exchanges
+    #[getter]
+    fn exchanges(&self) -> Vec<String> {
+        self.0.exchanges.clone()
+    }
+
+    #[setter]
+    fn set_exchanges(&mut self, value: Vec<String>) {
+        self.0.exchanges = value;
+    }
+
+    /// State of incorporation
+    #[getter]
+    fn state_of_incorporation(&self) -> Option<String> {
+        self.0.state_of_incorporation.clone()
+    }
+
+    #[setter]
+    fn set_state_of_incorporation(&mut self, value: Option<String>) {
+        self.0.state_of_incorporation = value;
+    }
+
+    /// Fiscal year end (MMDD format, e.g., "0930" for September 30)
+    #[getter]
+    fn fiscal_year_end(&self) -> Option<String> {
+        self.0.fiscal_year_end.clone()
+    }
+
+    #[setter]
+    fn set_fiscal_year_end(&mut self, value: Option<String>) {
+        self.0.fiscal_year_end = value;
+    }
+
+    /// Employer Identification Number
+    #[getter]
+    fn ein(&self) -> Option<String> {
+        self.0.ein.clone()
+    }
+
+    #[setter]
+    fn set_ein(&mut self, value: Option<String>) {
+        self.0.ein = value;
+    }
+
+    /// Company website (often empty in SEC data)
+    #[getter]
+    fn website(&self) -> Option<String> {
+        self.0.website.clone()
+    }
+
+    #[setter]
+    fn set_website(&mut self, value: Option<String>) {
+        self.0.website = value;
+    }
+
+    /// Filer category (e.g., "Large accelerated filer")
+    #[getter]
+    fn category(&self) -> Option<String> {
+        self.0.category.clone()
+    }
+
+    #[setter]
+    fn set_category(&mut self, value: Option<String>) {
+        self.0.category = value;
+    }
+
+    /// Whether insider transaction data exists for this entity as owner (0 or 1)
+    #[getter]
+    fn insider_transaction_for_owner_exists(&self) -> Option<u8> {
+        self.0.insider_transaction_for_owner_exists.clone()
+    }
+
+    #[setter]
+    fn set_insider_transaction_for_owner_exists(&mut self, value: Option<u8>) {
+        self.0.insider_transaction_for_owner_exists = value;
+    }
+
+    /// Whether insider transaction data exists for this entity as issuer (0 or 1)
+    #[getter]
+    fn insider_transaction_for_issuer_exists(&self) -> Option<u8> {
+        self.0.insider_transaction_for_issuer_exists.clone()
+    }
+
+    #[setter]
+    fn set_insider_transaction_for_issuer_exists(&mut self, value: Option<u8>) {
+        self.0.insider_transaction_for_issuer_exists = value;
+    }
+
+    /// Filing history
+    #[getter]
+    fn filings(&self) -> Option<EdgarFilings> {
+        self.0.filings.clone().map(EdgarFilings)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EdgarSubmissions(cik={:?}, name={:?}, entity_type={:?}, sic={:?}, sic_description={:?}, tickers={:?}, exchanges={:?}, state_of_incorporation={:?}, fiscal_year_end={:?}, ein={:?}, website={:?}, category={:?}, insider_transaction_for_owner_exists={:?}, insider_transaction_for_issuer_exists={:?})", self.0.cik, self.0.name, self.0.entity_type, self.0.sic, self.0.sic_description, self.0.tickers, self.0.exchanges, self.0.state_of_incorporation, self.0.fiscal_year_end, self.0.ein, self.0.website, self.0.category, self.0.insider_transaction_for_owner_exists, self.0.insider_transaction_for_issuer_exists)
+    }
+}
+
+/// A company's identity and classification profile.
+#[pyclass(name = "CompanyProfile")]
+pub struct CompanyProfile(::finance_query::CompanyProfile);
+
+#[pymethods]
+impl CompanyProfile {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Company name.
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.0.name.clone()
+    }
+
+    #[setter]
+    fn set_name(&mut self, value: Option<String>) {
+        self.0.name = value;
+    }
+
+    /// Business description.
+    #[getter]
+    fn description(&self) -> Option<String> {
+        self.0.description.clone()
+    }
+
+    #[setter]
+    fn set_description(&mut self, value: Option<String>) {
+        self.0.description = value;
+    }
+
+    /// Asset type as reported by the provider (e.g. `"Common Stock"`).
+    #[getter]
+    fn asset_type(&self) -> Option<String> {
+        self.0.asset_type.clone()
+    }
+
+    #[setter]
+    fn set_asset_type(&mut self, value: Option<String>) {
+        self.0.asset_type = value;
+    }
+
+    /// Listing exchange.
+    #[getter]
+    fn exchange(&self) -> Option<String> {
+        self.0.exchange.clone()
+    }
+
+    #[setter]
+    fn set_exchange(&mut self, value: Option<String>) {
+        self.0.exchange = value;
+    }
+
+    /// Trading currency.
+    #[getter]
+    fn currency(&self) -> Option<String> {
+        self.0.currency.clone()
+    }
+
+    #[setter]
+    fn set_currency(&mut self, value: Option<String>) {
+        self.0.currency = value;
+    }
+
+    /// Country of incorporation or primary listing.
+    #[getter]
+    fn country(&self) -> Option<String> {
+        self.0.country.clone()
+    }
+
+    #[setter]
+    fn set_country(&mut self, value: Option<String>) {
+        self.0.country = value;
+    }
+
+    /// GICS sector.
+    #[getter]
+    fn sector(&self) -> Option<String> {
+        self.0.sector.clone()
+    }
+
+    #[setter]
+    fn set_sector(&mut self, value: Option<String>) {
+        self.0.sector = value;
+    }
+
+    /// GICS industry.
+    #[getter]
+    fn industry(&self) -> Option<String> {
+        self.0.industry.clone()
+    }
+
+    #[setter]
+    fn set_industry(&mut self, value: Option<String>) {
+        self.0.industry = value;
+    }
+
+    /// Market capitalization.
+    #[getter]
+    fn market_capitalization(&self) -> Option<f64> {
+        self.0.market_capitalization.clone()
+    }
+
+    #[setter]
+    fn set_market_capitalization(&mut self, value: Option<f64>) {
+        self.0.market_capitalization = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("CompanyProfile(symbol={:?}, name={:?}, description={:?}, asset_type={:?}, exchange={:?}, currency={:?}, country={:?}, sector={:?}, industry={:?}, market_capitalization={:?})", self.0.symbol, self.0.name, self.0.description, self.0.asset_type, self.0.exchange, self.0.currency, self.0.country, self.0.sector, self.0.industry, self.0.market_capitalization)
+    }
+}
+
+/// Consensus analyst price target for a symbol.
+#[pyclass(name = "PriceTargetConsensus")]
+pub struct PriceTargetConsensus(::finance_query::PriceTargetConsensus);
+
+#[pymethods]
+impl PriceTargetConsensus {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Highest price target across the analyst panel.
+    #[getter]
+    fn target_high(&self) -> Option<f64> {
+        self.0.target_high.clone()
+    }
+
+    #[setter]
+    fn set_target_high(&mut self, value: Option<f64>) {
+        self.0.target_high = value;
+    }
+
+    /// Lowest price target across the analyst panel.
+    #[getter]
+    fn target_low(&self) -> Option<f64> {
+        self.0.target_low.clone()
+    }
+
+    #[setter]
+    fn set_target_low(&mut self, value: Option<f64>) {
+        self.0.target_low = value;
+    }
+
+    /// Mean price target.
+    #[getter]
+    fn target_consensus(&self) -> Option<f64> {
+        self.0.target_consensus.clone()
+    }
+
+    #[setter]
+    fn set_target_consensus(&mut self, value: Option<f64>) {
+        self.0.target_consensus = value;
+    }
+
+    /// Median price target.
+    #[getter]
+    fn target_median(&self) -> Option<f64> {
+        self.0.target_median.clone()
+    }
+
+    #[setter]
+    fn set_target_median(&mut self, value: Option<f64>) {
+        self.0.target_median = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("PriceTargetConsensus(symbol={:?}, target_high={:?}, target_low={:?}, target_consensus={:?}, target_median={:?})", self.0.symbol, self.0.target_high, self.0.target_low, self.0.target_consensus, self.0.target_median)
+    }
+}
+
+/// Price-target activity over trailing windows: how many targets were published
+#[pyclass(name = "PriceTargetSummary")]
+pub struct PriceTargetSummary(::finance_query::PriceTargetSummary);
+
+#[pymethods]
+impl PriceTargetSummary {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Number of price targets published in the last month.
+    #[getter]
+    fn last_month_count(&self) -> Option<i64> {
+        self.0.last_month_count.clone()
+    }
+
+    #[setter]
+    fn set_last_month_count(&mut self, value: Option<i64>) {
+        self.0.last_month_count = value;
+    }
+
+    /// Average price target published in the last month.
+    #[getter]
+    fn last_month_avg(&self) -> Option<f64> {
+        self.0.last_month_avg.clone()
+    }
+
+    #[setter]
+    fn set_last_month_avg(&mut self, value: Option<f64>) {
+        self.0.last_month_avg = value;
+    }
+
+    /// Number of price targets published in the last quarter.
+    #[getter]
+    fn last_quarter_count(&self) -> Option<i64> {
+        self.0.last_quarter_count.clone()
+    }
+
+    #[setter]
+    fn set_last_quarter_count(&mut self, value: Option<i64>) {
+        self.0.last_quarter_count = value;
+    }
+
+    /// Average price target published in the last quarter.
+    #[getter]
+    fn last_quarter_avg(&self) -> Option<f64> {
+        self.0.last_quarter_avg.clone()
+    }
+
+    #[setter]
+    fn set_last_quarter_avg(&mut self, value: Option<f64>) {
+        self.0.last_quarter_avg = value;
+    }
+
+    /// Number of price targets published in the last year.
+    #[getter]
+    fn last_year_count(&self) -> Option<i64> {
+        self.0.last_year_count.clone()
+    }
+
+    #[setter]
+    fn set_last_year_count(&mut self, value: Option<i64>) {
+        self.0.last_year_count = value;
+    }
+
+    /// Average price target published in the last year.
+    #[getter]
+    fn last_year_avg(&self) -> Option<f64> {
+        self.0.last_year_avg.clone()
+    }
+
+    #[setter]
+    fn set_last_year_avg(&mut self, value: Option<f64>) {
+        self.0.last_year_avg = value;
+    }
+
+    /// Number of price targets published all time.
+    #[getter]
+    fn all_time_count(&self) -> Option<i64> {
+        self.0.all_time_count.clone()
+    }
+
+    #[setter]
+    fn set_all_time_count(&mut self, value: Option<i64>) {
+        self.0.all_time_count = value;
+    }
+
+    /// Average price target published all time.
+    #[getter]
+    fn all_time_avg(&self) -> Option<f64> {
+        self.0.all_time_avg.clone()
+    }
+
+    #[setter]
+    fn set_all_time_avg(&mut self, value: Option<f64>) {
+        self.0.all_time_avg = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("PriceTargetSummary(symbol={:?}, last_month_count={:?}, last_month_avg={:?}, last_quarter_count={:?}, last_quarter_avg={:?}, last_year_count={:?}, last_year_avg={:?}, all_time_count={:?}, all_time_avg={:?})", self.0.symbol, self.0.last_month_count, self.0.last_month_avg, self.0.last_quarter_count, self.0.last_quarter_avg, self.0.last_year_count, self.0.last_year_avg, self.0.all_time_count, self.0.all_time_avg)
+    }
+}
+
+/// Consensus rating rollup — the analyst panel's grade distribution plus the
+#[pyclass(name = "RatingConsensus")]
+pub struct RatingConsensus(::finance_query::RatingConsensus);
+
+#[pymethods]
+impl RatingConsensus {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Analysts rating the symbol a strong buy.
+    #[getter]
+    fn strong_buy(&self) -> Option<i64> {
+        self.0.strong_buy.clone()
+    }
+
+    #[setter]
+    fn set_strong_buy(&mut self, value: Option<i64>) {
+        self.0.strong_buy = value;
+    }
+
+    /// Analysts rating the symbol a buy.
+    #[getter]
+    fn buy(&self) -> Option<i64> {
+        self.0.buy.clone()
+    }
+
+    #[setter]
+    fn set_buy(&mut self, value: Option<i64>) {
+        self.0.buy = value;
+    }
+
+    /// Analysts rating the symbol a hold.
+    #[getter]
+    fn hold(&self) -> Option<i64> {
+        self.0.hold.clone()
+    }
+
+    #[setter]
+    fn set_hold(&mut self, value: Option<i64>) {
+        self.0.hold = value;
+    }
+
+    /// Analysts rating the symbol a sell.
+    #[getter]
+    fn sell(&self) -> Option<i64> {
+        self.0.sell.clone()
+    }
+
+    #[setter]
+    fn set_sell(&mut self, value: Option<i64>) {
+        self.0.sell = value;
+    }
+
+    /// Analysts rating the symbol a strong sell.
+    #[getter]
+    fn strong_sell(&self) -> Option<i64> {
+        self.0.strong_sell.clone()
+    }
+
+    #[setter]
+    fn set_strong_sell(&mut self, value: Option<i64>) {
+        self.0.strong_sell = value;
+    }
+
+    /// Headline consensus label (e.g. `"Buy"`).
+    #[getter]
+    fn consensus(&self) -> Option<String> {
+        self.0.consensus.clone()
+    }
+
+    #[setter]
+    fn set_consensus(&mut self, value: Option<String>) {
+        self.0.consensus = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("RatingConsensus(symbol={:?}, strong_buy={:?}, buy={:?}, hold={:?}, sell={:?}, strong_sell={:?}, consensus={:?})", self.0.symbol, self.0.strong_buy, self.0.buy, self.0.hold, self.0.sell, self.0.strong_sell, self.0.consensus)
+    }
+}
+
+/// One reported earnings result versus the analyst estimate.
+#[pyclass(name = "EarningsSurprise")]
+pub struct EarningsSurprise(::finance_query::EarningsSurprise);
+
+#[pymethods]
+impl EarningsSurprise {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Earnings report date (`YYYY-MM-DD`).
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    /// Actual reported EPS.
+    #[getter]
+    fn actual_eps(&self) -> Option<f64> {
+        self.0.actual_eps.clone()
+    }
+
+    #[setter]
+    fn set_actual_eps(&mut self, value: Option<f64>) {
+        self.0.actual_eps = value;
+    }
+
+    /// Analyst-estimated EPS.
+    #[getter]
+    fn estimated_eps(&self) -> Option<f64> {
+        self.0.estimated_eps.clone()
+    }
+
+    #[setter]
+    fn set_estimated_eps(&mut self, value: Option<f64>) {
+        self.0.estimated_eps = value;
+    }
+
+    /// `actual_eps - estimated_eps`.
+    #[getter]
+    fn surprise(&self) -> Option<f64> {
+        self.0.surprise.clone()
+    }
+
+    #[setter]
+    fn set_surprise(&mut self, value: Option<f64>) {
+        self.0.surprise = value;
+    }
+
+    /// Surprise as a percentage of the estimate.
+    #[getter]
+    fn surprise_percent(&self) -> Option<f64> {
+        self.0.surprise_percent.clone()
+    }
+
+    #[setter]
+    fn set_surprise_percent(&mut self, value: Option<f64>) {
+        self.0.surprise_percent = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EarningsSurprise(symbol={:?}, date={:?}, actual_eps={:?}, estimated_eps={:?}, surprise={:?}, surprise_percent={:?})", self.0.symbol, self.0.date, self.0.actual_eps, self.0.estimated_eps, self.0.surprise, self.0.surprise_percent)
+    }
+}
+
+/// One country's weight inside an ETF's portfolio.
+#[pyclass(name = "EtfCountryWeighting")]
+pub struct EtfCountryWeighting(::finance_query::EtfCountryWeighting);
+
+#[pymethods]
+impl EtfCountryWeighting {
+    /// Country name.
+    #[getter]
+    fn country(&self) -> Option<String> {
+        self.0.country.clone()
+    }
+
+    #[setter]
+    fn set_country(&mut self, value: Option<String>) {
+        self.0.country = value;
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Option<f64> {
+        self.0.weight.clone()
+    }
+
+    #[setter]
+    fn set_weight(&mut self, value: Option<f64>) {
+        self.0.weight = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfCountryWeighting(country={:?}, weight={:?})", self.0.country, self.0.weight)
+    }
+}
+
+/// One position inside an ETF's portfolio.
+#[pyclass(name = "EtfHolding")]
+pub struct EtfHolding(::finance_query::EtfHolding);
+
+#[pymethods]
+impl EtfHolding {
+    /// Ticker symbol of the held security.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Security description.
+    #[getter]
+    fn description(&self) -> Option<String> {
+        self.0.description.clone()
+    }
+
+    #[setter]
+    fn set_description(&mut self, value: Option<String>) {
+        self.0.description = value;
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Option<f64> {
+        self.0.weight.clone()
+    }
+
+    #[setter]
+    fn set_weight(&mut self, value: Option<f64>) {
+        self.0.weight = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfHolding(symbol={:?}, description={:?}, weight={:?})", self.0.symbol, self.0.description, self.0.weight)
+    }
+}
+
+/// Profile and composition of an exchange-traded fund.
+#[pyclass(name = "EtfProfile")]
+pub struct EtfProfile(::finance_query::EtfProfile);
+
+#[pymethods]
+impl EtfProfile {
+    /// Fund ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Fund name.
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.0.name.clone()
+    }
+
+    #[setter]
+    fn set_name(&mut self, value: Option<String>) {
+        self.0.name = value;
+    }
+
+    /// Asset type as reported by the provider.
+    #[getter]
+    fn asset_type(&self) -> Option<String> {
+        self.0.asset_type.clone()
+    }
+
+    #[setter]
+    fn set_asset_type(&mut self, value: Option<String>) {
+        self.0.asset_type = value;
+    }
+
+    /// Total net assets.
+    #[getter]
+    fn net_assets(&self) -> Option<f64> {
+        self.0.net_assets.clone()
+    }
+
+    #[setter]
+    fn set_net_assets(&mut self, value: Option<f64>) {
+        self.0.net_assets = value;
+    }
+
+    /// Net expense ratio, as a fraction (0.0003 = 3 bps).
+    #[getter]
+    fn net_expense_ratio(&self) -> Option<f64> {
+        self.0.net_expense_ratio.clone()
+    }
+
+    #[setter]
+    fn set_net_expense_ratio(&mut self, value: Option<f64>) {
+        self.0.net_expense_ratio = value;
+    }
+
+    /// Annual portfolio turnover, as a fraction.
+    #[getter]
+    fn portfolio_turnover(&self) -> Option<f64> {
+        self.0.portfolio_turnover.clone()
+    }
+
+    #[setter]
+    fn set_portfolio_turnover(&mut self, value: Option<f64>) {
+        self.0.portfolio_turnover = value;
+    }
+
+    /// Trailing dividend yield, as a fraction.
+    #[getter]
+    fn dividend_yield(&self) -> Option<f64> {
+        self.0.dividend_yield.clone()
+    }
+
+    #[setter]
+    fn set_dividend_yield(&mut self, value: Option<f64>) {
+        self.0.dividend_yield = value;
+    }
+
+    /// Inception date (`YYYY-MM-DD`).
+    #[getter]
+    fn inception_date(&self) -> Option<String> {
+        self.0.inception_date.clone()
+    }
+
+    #[setter]
+    fn set_inception_date(&mut self, value: Option<String>) {
+        self.0.inception_date = value;
+    }
+
+    /// Portfolio holdings, heaviest first.
+    #[getter]
+    fn holdings(&self) -> EtfHoldingSeq {
+        EtfHoldingSeq::new(self.0.holdings.clone())
+    }
+
+    /// Portfolio weight by sector.
+    #[getter]
+    fn sector_weightings(&self) -> EtfSectorWeightingSeq {
+        EtfSectorWeightingSeq::new(self.0.sector_weightings.clone())
+    }
+
+    /// Portfolio weight by country.
+    #[getter]
+    fn country_weightings(&self) -> EtfCountryWeightingSeq {
+        EtfCountryWeightingSeq::new(self.0.country_weightings.clone())
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfProfile(symbol={:?}, name={:?}, asset_type={:?}, net_assets={:?}, net_expense_ratio={:?}, portfolio_turnover={:?}, dividend_yield={:?}, inception_date={:?})", self.0.symbol, self.0.name, self.0.asset_type, self.0.net_assets, self.0.net_expense_ratio, self.0.portfolio_turnover, self.0.dividend_yield, self.0.inception_date)
+    }
+}
+
+/// One sector's weight inside an ETF's portfolio.
+#[pyclass(name = "EtfSectorWeighting")]
+pub struct EtfSectorWeighting(::finance_query::EtfSectorWeighting);
+
+#[pymethods]
+impl EtfSectorWeighting {
+    /// Sector name.
+    #[getter]
+    fn sector(&self) -> Option<String> {
+        self.0.sector.clone()
+    }
+
+    #[setter]
+    fn set_sector(&mut self, value: Option<String>) {
+        self.0.sector = value;
+    }
+
+    /// Portfolio weight, as a fraction of net assets.
+    #[getter]
+    fn weight(&self) -> Option<f64> {
+        self.0.weight.clone()
+    }
+
+    #[setter]
+    fn set_weight(&mut self, value: Option<f64>) {
+        self.0.weight = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("EtfSectorWeighting(sector={:?}, weight={:?})", self.0.sector, self.0.weight)
+    }
+}
+
+/// A single analyst upgrade/downgrade/initiation action.
+#[pyclass(name = "GradingAction")]
+pub struct GradingAction(::finance_query::GradingAction);
+
+#[pymethods]
+impl GradingAction {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Action date (`YYYY-MM-DD`).
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    /// The analyst firm issuing the grade.
+    #[getter]
+    fn grading_company(&self) -> Option<String> {
+        self.0.grading_company.clone()
+    }
+
+    #[setter]
+    fn set_grading_company(&mut self, value: Option<String>) {
+        self.0.grading_company = value;
+    }
+
+    /// Prior grade, if this is a change rather than an initiation.
+    #[getter]
+    fn previous_grade(&self) -> Option<String> {
+        self.0.previous_grade.clone()
+    }
+
+    #[setter]
+    fn set_previous_grade(&mut self, value: Option<String>) {
+        self.0.previous_grade = value;
+    }
+
+    /// New grade.
+    #[getter]
+    fn new_grade(&self) -> Option<String> {
+        self.0.new_grade.clone()
+    }
+
+    #[setter]
+    fn set_new_grade(&mut self, value: Option<String>) {
+        self.0.new_grade = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("GradingAction(symbol={:?}, date={:?}, grading_company={:?}, previous_grade={:?}, new_grade={:?})", self.0.symbol, self.0.date, self.0.grading_company, self.0.previous_grade, self.0.new_grade)
+    }
+}
+
+/// A flattened, user-friendly financial statement
+#[pyclass(name = "FinancialStatement")]
+pub struct FinancialStatement(::finance_query::FinancialStatement);
+
+#[pymethods]
+impl FinancialStatement {
+    /// Stock symbol
+    #[getter]
+    fn symbol(&self) -> String {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: String) {
+        self.0.symbol = value;
+    }
+
+    /// Type of financial statement (income, balance, cashflow)
+    #[getter]
+    fn statement_type(&self) -> String {
+        self.0.statement_type.clone()
+    }
+
+    #[setter]
+    fn set_statement_type(&mut self, value: String) {
+        self.0.statement_type = value;
+    }
+
+    /// Frequency (annual or quarterly)
+    #[getter]
+    fn frequency(&self) -> String {
+        self.0.frequency.clone()
+    }
+
+    #[setter]
+    fn set_frequency(&mut self, value: String) {
+        self.0.frequency = value;
+    }
+
+    /// Financial data: metric name -> (date -> value)
+    #[getter]
+    fn statement(&self) -> ::std::collections::HashMap<String, ::std::collections::HashMap<String, f64>> {
+        self.0.statement.clone()
+    }
+
+    #[setter]
+    fn set_statement(&mut self, value: ::std::collections::HashMap<String, ::std::collections::HashMap<String, f64>>) {
+        self.0.statement = value;
+    }
+
+    /// Which provider supplied this data (None = Yahoo Finance default)
+    #[getter]
+    fn provider_id(&self) -> Option<Provider> {
+        self.0.provider_id.clone().map(Provider)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("FinancialStatement(symbol={:?}, statement_type={:?}, frequency={:?})", self.0.symbol, self.0.statement_type, self.0.frequency)
+    }
+}
+
+/// Share float and shares outstanding.
+#[pyclass(name = "ShareFloat")]
+pub struct ShareFloat(::finance_query::ShareFloat);
+
+#[pymethods]
+impl ShareFloat {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Freely tradable shares.
+    #[getter]
+    fn float_shares(&self) -> Option<f64> {
+        self.0.float_shares.clone()
+    }
+
+    #[setter]
+    fn set_float_shares(&mut self, value: Option<f64>) {
+        self.0.float_shares = value;
+    }
+
+    /// Total shares outstanding, as reported by the provider. `None` when the
+    #[getter]
+    fn outstanding_shares(&self) -> Option<f64> {
+        self.0.outstanding_shares.clone()
+    }
+
+    #[setter]
+    fn set_outstanding_shares(&mut self, value: Option<f64>) {
+        self.0.outstanding_shares = value;
+    }
+
+    /// Freely tradable shares as a percentage of shares outstanding (0-100).
+    #[getter]
+    fn float_percent(&self) -> Option<f64> {
+        self.0.float_percent.clone()
+    }
+
+    #[setter]
+    fn set_float_percent(&mut self, value: Option<f64>) {
+        self.0.float_percent = value;
+    }
+
+    /// As-of date (`YYYY-MM-DD`).
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ShareFloat(symbol={:?}, float_shares={:?}, outstanding_shares={:?}, float_percent={:?}, date={:?})", self.0.symbol, self.0.float_shares, self.0.outstanding_shares, self.0.float_percent, self.0.date)
+    }
+}
+
+/// A short-interest data point (bi-monthly settlement report).
+#[pyclass(name = "ShortInterest")]
+pub struct ShortInterest(::finance_query::ShortInterest);
+
+#[pymethods]
+impl ShortInterest {
+    /// Settlement date (`YYYY-MM-DD`).
+    #[getter]
+    fn settlement_date(&self) -> Option<String> {
+        self.0.settlement_date.clone()
+    }
+
+    #[setter]
+    fn set_settlement_date(&mut self, value: Option<String>) {
+        self.0.settlement_date = value;
+    }
+
+    /// Total shares held short at settlement.
+    #[getter]
+    fn short_interest(&self) -> Option<f64> {
+        self.0.short_interest.clone()
+    }
+
+    #[setter]
+    fn set_short_interest(&mut self, value: Option<f64>) {
+        self.0.short_interest = value;
+    }
+
+    /// Average daily trading volume over the reporting period.
+    #[getter]
+    fn avg_daily_volume(&self) -> Option<f64> {
+        self.0.avg_daily_volume.clone()
+    }
+
+    #[setter]
+    fn set_avg_daily_volume(&mut self, value: Option<f64>) {
+        self.0.avg_daily_volume = value;
+    }
+
+    /// Days to cover (short interest / average daily volume).
+    #[getter]
+    fn days_to_cover(&self) -> Option<f64> {
+        self.0.days_to_cover.clone()
+    }
+
+    #[setter]
+    fn set_days_to_cover(&mut self, value: Option<f64>) {
+        self.0.days_to_cover = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ShortInterest(settlement_date={:?}, short_interest={:?}, avg_daily_volume={:?}, days_to_cover={:?})", self.0.settlement_date, self.0.short_interest, self.0.avg_daily_volume, self.0.days_to_cover)
+    }
+}
+
+/// A daily short-volume data point.
+#[pyclass(name = "ShortVolume")]
+pub struct ShortVolume(::finance_query::ShortVolume);
+
+#[pymethods]
+impl ShortVolume {
+    /// Trade date (`YYYY-MM-DD`).
+    #[getter]
+    fn date(&self) -> Option<String> {
+        self.0.date.clone()
+    }
+
+    #[setter]
+    fn set_date(&mut self, value: Option<String>) {
+        self.0.date = value;
+    }
+
+    /// Shares sold short.
+    #[getter]
+    fn short_volume(&self) -> Option<f64> {
+        self.0.short_volume.clone()
+    }
+
+    #[setter]
+    fn set_short_volume(&mut self, value: Option<f64>) {
+        self.0.short_volume = value;
+    }
+
+    /// Shares sold short exempt from the uptick rule.
+    #[getter]
+    fn short_exempt_volume(&self) -> Option<f64> {
+        self.0.short_exempt_volume.clone()
+    }
+
+    #[setter]
+    fn set_short_exempt_volume(&mut self, value: Option<f64>) {
+        self.0.short_exempt_volume = value;
+    }
+
+    /// Total volume.
+    #[getter]
+    fn total_volume(&self) -> Option<f64> {
+        self.0.total_volume.clone()
+    }
+
+    #[setter]
+    fn set_total_volume(&mut self, value: Option<f64>) {
+        self.0.total_volume = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ShortVolume(date={:?}, short_volume={:?}, short_exempt_volume={:?}, total_volume={:?})", self.0.date, self.0.short_volume, self.0.short_exempt_volume, self.0.total_volume)
+    }
+}
+
+/// Margin, turnover, liquidity, coverage, valuation, and per-share ratios over
+#[pyclass(name = "FinancialRatiosTtm")]
+pub struct FinancialRatiosTtm(::finance_query::FinancialRatiosTtm);
+
+#[pymethods]
+impl FinancialRatiosTtm {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Gross profit margin (fraction).
+    #[getter]
+    fn gross_profit_margin(&self) -> Option<f64> {
+        self.0.gross_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_gross_profit_margin(&mut self, value: Option<f64>) {
+        self.0.gross_profit_margin = value;
+    }
+
+    /// EBIT margin (fraction).
+    #[getter]
+    fn ebit_margin(&self) -> Option<f64> {
+        self.0.ebit_margin.clone()
+    }
+
+    #[setter]
+    fn set_ebit_margin(&mut self, value: Option<f64>) {
+        self.0.ebit_margin = value;
+    }
+
+    /// EBITDA margin (fraction).
+    #[getter]
+    fn ebitda_margin(&self) -> Option<f64> {
+        self.0.ebitda_margin.clone()
+    }
+
+    #[setter]
+    fn set_ebitda_margin(&mut self, value: Option<f64>) {
+        self.0.ebitda_margin = value;
+    }
+
+    /// Operating profit margin (fraction).
+    #[getter]
+    fn operating_profit_margin(&self) -> Option<f64> {
+        self.0.operating_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_operating_profit_margin(&mut self, value: Option<f64>) {
+        self.0.operating_profit_margin = value;
+    }
+
+    /// Pre-tax profit margin (fraction).
+    #[getter]
+    fn pretax_profit_margin(&self) -> Option<f64> {
+        self.0.pretax_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_pretax_profit_margin(&mut self, value: Option<f64>) {
+        self.0.pretax_profit_margin = value;
+    }
+
+    /// Continuing-operations profit margin (fraction).
+    #[getter]
+    fn continuous_operations_profit_margin(&self) -> Option<f64> {
+        self.0.continuous_operations_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_continuous_operations_profit_margin(&mut self, value: Option<f64>) {
+        self.0.continuous_operations_profit_margin = value;
+    }
+
+    /// Net profit margin (fraction).
+    #[getter]
+    fn net_profit_margin(&self) -> Option<f64> {
+        self.0.net_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_net_profit_margin(&mut self, value: Option<f64>) {
+        self.0.net_profit_margin = value;
+    }
+
+    /// Bottom-line profit margin (fraction).
+    #[getter]
+    fn bottom_line_profit_margin(&self) -> Option<f64> {
+        self.0.bottom_line_profit_margin.clone()
+    }
+
+    #[setter]
+    fn set_bottom_line_profit_margin(&mut self, value: Option<f64>) {
+        self.0.bottom_line_profit_margin = value;
+    }
+
+    /// Receivables turnover.
+    #[getter]
+    fn receivables_turnover(&self) -> Option<f64> {
+        self.0.receivables_turnover.clone()
+    }
+
+    #[setter]
+    fn set_receivables_turnover(&mut self, value: Option<f64>) {
+        self.0.receivables_turnover = value;
+    }
+
+    /// Payables turnover.
+    #[getter]
+    fn payables_turnover(&self) -> Option<f64> {
+        self.0.payables_turnover.clone()
+    }
+
+    #[setter]
+    fn set_payables_turnover(&mut self, value: Option<f64>) {
+        self.0.payables_turnover = value;
+    }
+
+    /// Inventory turnover.
+    #[getter]
+    fn inventory_turnover(&self) -> Option<f64> {
+        self.0.inventory_turnover.clone()
+    }
+
+    #[setter]
+    fn set_inventory_turnover(&mut self, value: Option<f64>) {
+        self.0.inventory_turnover = value;
+    }
+
+    /// Fixed-asset turnover.
+    #[getter]
+    fn fixed_asset_turnover(&self) -> Option<f64> {
+        self.0.fixed_asset_turnover.clone()
+    }
+
+    #[setter]
+    fn set_fixed_asset_turnover(&mut self, value: Option<f64>) {
+        self.0.fixed_asset_turnover = value;
+    }
+
+    /// Asset turnover.
+    #[getter]
+    fn asset_turnover(&self) -> Option<f64> {
+        self.0.asset_turnover.clone()
+    }
+
+    #[setter]
+    fn set_asset_turnover(&mut self, value: Option<f64>) {
+        self.0.asset_turnover = value;
+    }
+
+    /// Current ratio.
+    #[getter]
+    fn current_ratio(&self) -> Option<f64> {
+        self.0.current_ratio.clone()
+    }
+
+    #[setter]
+    fn set_current_ratio(&mut self, value: Option<f64>) {
+        self.0.current_ratio = value;
+    }
+
+    /// Quick ratio.
+    #[getter]
+    fn quick_ratio(&self) -> Option<f64> {
+        self.0.quick_ratio.clone()
+    }
+
+    #[setter]
+    fn set_quick_ratio(&mut self, value: Option<f64>) {
+        self.0.quick_ratio = value;
+    }
+
+    /// Solvency ratio.
+    #[getter]
+    fn solvency_ratio(&self) -> Option<f64> {
+        self.0.solvency_ratio.clone()
+    }
+
+    #[setter]
+    fn set_solvency_ratio(&mut self, value: Option<f64>) {
+        self.0.solvency_ratio = value;
+    }
+
+    /// Cash ratio.
+    #[getter]
+    fn cash_ratio(&self) -> Option<f64> {
+        self.0.cash_ratio.clone()
+    }
+
+    #[setter]
+    fn set_cash_ratio(&mut self, value: Option<f64>) {
+        self.0.cash_ratio = value;
+    }
+
+    /// Price-to-earnings ratio.
+    #[getter]
+    fn price_earnings_ratio(&self) -> Option<f64> {
+        self.0.price_earnings_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_earnings_ratio(&mut self, value: Option<f64>) {
+        self.0.price_earnings_ratio = value;
+    }
+
+    /// Price/earnings-to-growth ratio.
+    #[getter]
+    fn peg_ratio(&self) -> Option<f64> {
+        self.0.peg_ratio.clone()
+    }
+
+    #[setter]
+    fn set_peg_ratio(&mut self, value: Option<f64>) {
+        self.0.peg_ratio = value;
+    }
+
+    /// Forward price/earnings-to-growth ratio.
+    #[getter]
+    fn forward_peg_ratio(&self) -> Option<f64> {
+        self.0.forward_peg_ratio.clone()
+    }
+
+    #[setter]
+    fn set_forward_peg_ratio(&mut self, value: Option<f64>) {
+        self.0.forward_peg_ratio = value;
+    }
+
+    /// Diluted price-to-earnings ratio.
+    #[getter]
+    fn price_to_earnings_diluted_ratio(&self) -> Option<f64> {
+        self.0.price_to_earnings_diluted_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_earnings_diluted_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_earnings_diluted_ratio = value;
+    }
+
+    /// Diluted price/earnings-to-growth ratio.
+    #[getter]
+    fn price_to_earnings_diluted_growth_ratio(&self) -> Option<f64> {
+        self.0.price_to_earnings_diluted_growth_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_earnings_diluted_growth_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_earnings_diluted_growth_ratio = value;
+    }
+
+    /// Price-to-book ratio.
+    #[getter]
+    fn price_to_book_ratio(&self) -> Option<f64> {
+        self.0.price_to_book_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_book_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_book_ratio = value;
+    }
+
+    /// Price-to-sales ratio.
+    #[getter]
+    fn price_to_sales_ratio(&self) -> Option<f64> {
+        self.0.price_to_sales_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_sales_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_sales_ratio = value;
+    }
+
+    /// Price-to-free-cash-flow ratio.
+    #[getter]
+    fn price_to_free_cash_flows_ratio(&self) -> Option<f64> {
+        self.0.price_to_free_cash_flows_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_free_cash_flows_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_free_cash_flows_ratio = value;
+    }
+
+    /// Price-to-operating-cash-flow ratio.
+    #[getter]
+    fn price_to_operating_cash_flow_ratio(&self) -> Option<f64> {
+        self.0.price_to_operating_cash_flow_ratio.clone()
+    }
+
+    #[setter]
+    fn set_price_to_operating_cash_flow_ratio(&mut self, value: Option<f64>) {
+        self.0.price_to_operating_cash_flow_ratio = value;
+    }
+
+    /// Debt-to-assets ratio.
+    #[getter]
+    fn debt_ratio(&self) -> Option<f64> {
+        self.0.debt_ratio.clone()
+    }
+
+    #[setter]
+    fn set_debt_ratio(&mut self, value: Option<f64>) {
+        self.0.debt_ratio = value;
+    }
+
+    /// Debt-to-equity ratio.
+    #[getter]
+    fn debt_equity_ratio(&self) -> Option<f64> {
+        self.0.debt_equity_ratio.clone()
+    }
+
+    #[setter]
+    fn set_debt_equity_ratio(&mut self, value: Option<f64>) {
+        self.0.debt_equity_ratio = value;
+    }
+
+    /// Debt-to-capital ratio.
+    #[getter]
+    fn debt_to_capital_ratio(&self) -> Option<f64> {
+        self.0.debt_to_capital_ratio.clone()
+    }
+
+    #[setter]
+    fn set_debt_to_capital_ratio(&mut self, value: Option<f64>) {
+        self.0.debt_to_capital_ratio = value;
+    }
+
+    /// Long-term-debt-to-capital ratio.
+    #[getter]
+    fn long_term_debt_to_capital_ratio(&self) -> Option<f64> {
+        self.0.long_term_debt_to_capital_ratio.clone()
+    }
+
+    #[setter]
+    fn set_long_term_debt_to_capital_ratio(&mut self, value: Option<f64>) {
+        self.0.long_term_debt_to_capital_ratio = value;
+    }
+
+    /// Financial leverage ratio.
+    #[getter]
+    fn financial_leverage_ratio(&self) -> Option<f64> {
+        self.0.financial_leverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_financial_leverage_ratio(&mut self, value: Option<f64>) {
+        self.0.financial_leverage_ratio = value;
+    }
+
+    /// Working-capital turnover ratio.
+    #[getter]
+    fn working_capital_turnover_ratio(&self) -> Option<f64> {
+        self.0.working_capital_turnover_ratio.clone()
+    }
+
+    #[setter]
+    fn set_working_capital_turnover_ratio(&mut self, value: Option<f64>) {
+        self.0.working_capital_turnover_ratio = value;
+    }
+
+    /// Operating cash flow to current liabilities.
+    #[getter]
+    fn operating_cash_flow_ratio(&self) -> Option<f64> {
+        self.0.operating_cash_flow_ratio.clone()
+    }
+
+    #[setter]
+    fn set_operating_cash_flow_ratio(&mut self, value: Option<f64>) {
+        self.0.operating_cash_flow_ratio = value;
+    }
+
+    /// Operating cash flow to sales (fraction).
+    #[getter]
+    fn operating_cash_flow_sales_ratio(&self) -> Option<f64> {
+        self.0.operating_cash_flow_sales_ratio.clone()
+    }
+
+    #[setter]
+    fn set_operating_cash_flow_sales_ratio(&mut self, value: Option<f64>) {
+        self.0.operating_cash_flow_sales_ratio = value;
+    }
+
+    /// Free cash flow to operating cash flow (fraction).
+    #[getter]
+    fn free_cash_flow_operating_cash_flow_ratio(&self) -> Option<f64> {
+        self.0.free_cash_flow_operating_cash_flow_ratio.clone()
+    }
+
+    #[setter]
+    fn set_free_cash_flow_operating_cash_flow_ratio(&mut self, value: Option<f64>) {
+        self.0.free_cash_flow_operating_cash_flow_ratio = value;
+    }
+
+    /// Debt-service coverage ratio.
+    #[getter]
+    fn debt_service_coverage_ratio(&self) -> Option<f64> {
+        self.0.debt_service_coverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_debt_service_coverage_ratio(&mut self, value: Option<f64>) {
+        self.0.debt_service_coverage_ratio = value;
+    }
+
+    /// Interest coverage.
+    #[getter]
+    fn interest_coverage(&self) -> Option<f64> {
+        self.0.interest_coverage.clone()
+    }
+
+    #[setter]
+    fn set_interest_coverage(&mut self, value: Option<f64>) {
+        self.0.interest_coverage = value;
+    }
+
+    /// Short-term operating cash flow coverage ratio.
+    #[getter]
+    fn short_term_operating_cash_flow_coverage_ratio(&self) -> Option<f64> {
+        self.0.short_term_operating_cash_flow_coverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_short_term_operating_cash_flow_coverage_ratio(&mut self, value: Option<f64>) {
+        self.0.short_term_operating_cash_flow_coverage_ratio = value;
+    }
+
+    /// Operating cash flow coverage ratio.
+    #[getter]
+    fn operating_cash_flow_coverage_ratio(&self) -> Option<f64> {
+        self.0.operating_cash_flow_coverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_operating_cash_flow_coverage_ratio(&mut self, value: Option<f64>) {
+        self.0.operating_cash_flow_coverage_ratio = value;
+    }
+
+    /// Capital-expenditure coverage ratio.
+    #[getter]
+    fn capital_expenditure_coverage_ratio(&self) -> Option<f64> {
+        self.0.capital_expenditure_coverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_capital_expenditure_coverage_ratio(&mut self, value: Option<f64>) {
+        self.0.capital_expenditure_coverage_ratio = value;
+    }
+
+    /// Dividends-paid-and-capex coverage ratio.
+    #[getter]
+    fn dividend_paid_and_capex_coverage_ratio(&self) -> Option<f64> {
+        self.0.dividend_paid_and_capex_coverage_ratio.clone()
+    }
+
+    #[setter]
+    fn set_dividend_paid_and_capex_coverage_ratio(&mut self, value: Option<f64>) {
+        self.0.dividend_paid_and_capex_coverage_ratio = value;
+    }
+
+    /// Payout ratio (fraction).
+    #[getter]
+    fn payout_ratio(&self) -> Option<f64> {
+        self.0.payout_ratio.clone()
+    }
+
+    #[setter]
+    fn set_payout_ratio(&mut self, value: Option<f64>) {
+        self.0.payout_ratio = value;
+    }
+
+    /// Dividend yield (fraction, not percent).
+    #[getter]
+    fn dividend_yield(&self) -> Option<f64> {
+        self.0.dividend_yield.clone()
+    }
+
+    #[setter]
+    fn set_dividend_yield(&mut self, value: Option<f64>) {
+        self.0.dividend_yield = value;
+    }
+
+    /// Dividend per share.
+    #[getter]
+    fn dividend_per_share(&self) -> Option<f64> {
+        self.0.dividend_per_share.clone()
+    }
+
+    #[setter]
+    fn set_dividend_per_share(&mut self, value: Option<f64>) {
+        self.0.dividend_per_share = value;
+    }
+
+    /// Enterprise value.
+    #[getter]
+    fn enterprise_value(&self) -> Option<f64> {
+        self.0.enterprise_value.clone()
+    }
+
+    #[setter]
+    fn set_enterprise_value(&mut self, value: Option<f64>) {
+        self.0.enterprise_value = value;
+    }
+
+    /// Enterprise value multiple (EV/EBITDA).
+    #[getter]
+    fn enterprise_value_multiple(&self) -> Option<f64> {
+        self.0.enterprise_value_multiple.clone()
+    }
+
+    #[setter]
+    fn set_enterprise_value_multiple(&mut self, value: Option<f64>) {
+        self.0.enterprise_value_multiple = value;
+    }
+
+    /// Revenue per share.
+    #[getter]
+    fn revenue_per_share(&self) -> Option<f64> {
+        self.0.revenue_per_share.clone()
+    }
+
+    #[setter]
+    fn set_revenue_per_share(&mut self, value: Option<f64>) {
+        self.0.revenue_per_share = value;
+    }
+
+    /// Net income per share.
+    #[getter]
+    fn net_income_per_share(&self) -> Option<f64> {
+        self.0.net_income_per_share.clone()
+    }
+
+    #[setter]
+    fn set_net_income_per_share(&mut self, value: Option<f64>) {
+        self.0.net_income_per_share = value;
+    }
+
+    /// Interest-bearing debt per share.
+    #[getter]
+    fn interest_debt_per_share(&self) -> Option<f64> {
+        self.0.interest_debt_per_share.clone()
+    }
+
+    #[setter]
+    fn set_interest_debt_per_share(&mut self, value: Option<f64>) {
+        self.0.interest_debt_per_share = value;
+    }
+
+    /// Cash per share.
+    #[getter]
+    fn cash_per_share(&self) -> Option<f64> {
+        self.0.cash_per_share.clone()
+    }
+
+    #[setter]
+    fn set_cash_per_share(&mut self, value: Option<f64>) {
+        self.0.cash_per_share = value;
+    }
+
+    /// Book value per share.
+    #[getter]
+    fn book_value_per_share(&self) -> Option<f64> {
+        self.0.book_value_per_share.clone()
+    }
+
+    #[setter]
+    fn set_book_value_per_share(&mut self, value: Option<f64>) {
+        self.0.book_value_per_share = value;
+    }
+
+    /// Tangible book value per share.
+    #[getter]
+    fn tangible_book_value_per_share(&self) -> Option<f64> {
+        self.0.tangible_book_value_per_share.clone()
+    }
+
+    #[setter]
+    fn set_tangible_book_value_per_share(&mut self, value: Option<f64>) {
+        self.0.tangible_book_value_per_share = value;
+    }
+
+    /// Shareholders' equity per share.
+    #[getter]
+    fn shareholders_equity_per_share(&self) -> Option<f64> {
+        self.0.shareholders_equity_per_share.clone()
+    }
+
+    #[setter]
+    fn set_shareholders_equity_per_share(&mut self, value: Option<f64>) {
+        self.0.shareholders_equity_per_share = value;
+    }
+
+    /// Operating cash flow per share.
+    #[getter]
+    fn operating_cash_flow_per_share(&self) -> Option<f64> {
+        self.0.operating_cash_flow_per_share.clone()
+    }
+
+    #[setter]
+    fn set_operating_cash_flow_per_share(&mut self, value: Option<f64>) {
+        self.0.operating_cash_flow_per_share = value;
+    }
+
+    /// Capital expenditure per share.
+    #[getter]
+    fn capex_per_share(&self) -> Option<f64> {
+        self.0.capex_per_share.clone()
+    }
+
+    #[setter]
+    fn set_capex_per_share(&mut self, value: Option<f64>) {
+        self.0.capex_per_share = value;
+    }
+
+    /// Free cash flow per share.
+    #[getter]
+    fn free_cash_flow_per_share(&self) -> Option<f64> {
+        self.0.free_cash_flow_per_share.clone()
+    }
+
+    #[setter]
+    fn set_free_cash_flow_per_share(&mut self, value: Option<f64>) {
+        self.0.free_cash_flow_per_share = value;
+    }
+
+    /// Net income divided by pre-tax income (fraction).
+    #[getter]
+    fn net_income_per_ebt(&self) -> Option<f64> {
+        self.0.net_income_per_ebt.clone()
+    }
+
+    #[setter]
+    fn set_net_income_per_ebt(&mut self, value: Option<f64>) {
+        self.0.net_income_per_ebt = value;
+    }
+
+    /// Pre-tax income divided by EBIT (fraction).
+    #[getter]
+    fn ebt_per_ebit(&self) -> Option<f64> {
+        self.0.ebt_per_ebit.clone()
+    }
+
+    #[setter]
+    fn set_ebt_per_ebit(&mut self, value: Option<f64>) {
+        self.0.ebt_per_ebit = value;
+    }
+
+    /// Price to fair value.
+    #[getter]
+    fn price_to_fair_value(&self) -> Option<f64> {
+        self.0.price_to_fair_value.clone()
+    }
+
+    #[setter]
+    fn set_price_to_fair_value(&mut self, value: Option<f64>) {
+        self.0.price_to_fair_value = value;
+    }
+
+    /// Total debt to market capitalization (fraction).
+    #[getter]
+    fn debt_to_market_cap(&self) -> Option<f64> {
+        self.0.debt_to_market_cap.clone()
+    }
+
+    #[setter]
+    fn set_debt_to_market_cap(&mut self, value: Option<f64>) {
+        self.0.debt_to_market_cap = value;
+    }
+
+    /// Effective tax rate (fraction).
+    #[getter]
+    fn effective_tax_rate(&self) -> Option<f64> {
+        self.0.effective_tax_rate.clone()
+    }
+
+    #[setter]
+    fn set_effective_tax_rate(&mut self, value: Option<f64>) {
+        self.0.effective_tax_rate = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("FinancialRatiosTtm(symbol={:?}, gross_profit_margin={:?}, ebit_margin={:?}, ebitda_margin={:?}, operating_profit_margin={:?}, pretax_profit_margin={:?}, continuous_operations_profit_margin={:?}, net_profit_margin={:?}, bottom_line_profit_margin={:?}, receivables_turnover={:?}, payables_turnover={:?}, inventory_turnover={:?}, fixed_asset_turnover={:?}, asset_turnover={:?}, current_ratio={:?}, quick_ratio={:?}, solvency_ratio={:?}, cash_ratio={:?}, price_earnings_ratio={:?}, peg_ratio={:?}, forward_peg_ratio={:?}, price_to_earnings_diluted_ratio={:?}, price_to_earnings_diluted_growth_ratio={:?}, price_to_book_ratio={:?}, price_to_sales_ratio={:?}, price_to_free_cash_flows_ratio={:?}, price_to_operating_cash_flow_ratio={:?}, debt_ratio={:?}, debt_equity_ratio={:?}, debt_to_capital_ratio={:?}, long_term_debt_to_capital_ratio={:?}, financial_leverage_ratio={:?}, working_capital_turnover_ratio={:?}, operating_cash_flow_ratio={:?}, operating_cash_flow_sales_ratio={:?}, free_cash_flow_operating_cash_flow_ratio={:?}, debt_service_coverage_ratio={:?}, interest_coverage={:?}, short_term_operating_cash_flow_coverage_ratio={:?}, operating_cash_flow_coverage_ratio={:?}, capital_expenditure_coverage_ratio={:?}, dividend_paid_and_capex_coverage_ratio={:?}, payout_ratio={:?}, dividend_yield={:?}, dividend_per_share={:?}, enterprise_value={:?}, enterprise_value_multiple={:?}, revenue_per_share={:?}, net_income_per_share={:?}, interest_debt_per_share={:?}, cash_per_share={:?}, book_value_per_share={:?}, tangible_book_value_per_share={:?}, shareholders_equity_per_share={:?}, operating_cash_flow_per_share={:?}, capex_per_share={:?}, free_cash_flow_per_share={:?}, net_income_per_ebt={:?}, ebt_per_ebit={:?}, price_to_fair_value={:?}, debt_to_market_cap={:?}, effective_tax_rate={:?})", self.0.symbol, self.0.gross_profit_margin, self.0.ebit_margin, self.0.ebitda_margin, self.0.operating_profit_margin, self.0.pretax_profit_margin, self.0.continuous_operations_profit_margin, self.0.net_profit_margin, self.0.bottom_line_profit_margin, self.0.receivables_turnover, self.0.payables_turnover, self.0.inventory_turnover, self.0.fixed_asset_turnover, self.0.asset_turnover, self.0.current_ratio, self.0.quick_ratio, self.0.solvency_ratio, self.0.cash_ratio, self.0.price_earnings_ratio, self.0.peg_ratio, self.0.forward_peg_ratio, self.0.price_to_earnings_diluted_ratio, self.0.price_to_earnings_diluted_growth_ratio, self.0.price_to_book_ratio, self.0.price_to_sales_ratio, self.0.price_to_free_cash_flows_ratio, self.0.price_to_operating_cash_flow_ratio, self.0.debt_ratio, self.0.debt_equity_ratio, self.0.debt_to_capital_ratio, self.0.long_term_debt_to_capital_ratio, self.0.financial_leverage_ratio, self.0.working_capital_turnover_ratio, self.0.operating_cash_flow_ratio, self.0.operating_cash_flow_sales_ratio, self.0.free_cash_flow_operating_cash_flow_ratio, self.0.debt_service_coverage_ratio, self.0.interest_coverage, self.0.short_term_operating_cash_flow_coverage_ratio, self.0.operating_cash_flow_coverage_ratio, self.0.capital_expenditure_coverage_ratio, self.0.dividend_paid_and_capex_coverage_ratio, self.0.payout_ratio, self.0.dividend_yield, self.0.dividend_per_share, self.0.enterprise_value, self.0.enterprise_value_multiple, self.0.revenue_per_share, self.0.net_income_per_share, self.0.interest_debt_per_share, self.0.cash_per_share, self.0.book_value_per_share, self.0.tangible_book_value_per_share, self.0.shareholders_equity_per_share, self.0.operating_cash_flow_per_share, self.0.capex_per_share, self.0.free_cash_flow_per_share, self.0.net_income_per_ebt, self.0.ebt_per_ebit, self.0.price_to_fair_value, self.0.debt_to_market_cap, self.0.effective_tax_rate)
+    }
+}
+
+/// Valuation, capital-efficiency, and working-capital metrics over the
+#[pyclass(name = "KeyMetricsTtm")]
+pub struct KeyMetricsTtm(::finance_query::KeyMetricsTtm);
+
+#[pymethods]
+impl KeyMetricsTtm {
+    /// Ticker symbol.
+    #[getter]
+    fn symbol(&self) -> Option<String> {
+        self.0.symbol.clone()
+    }
+
+    #[setter]
+    fn set_symbol(&mut self, value: Option<String>) {
+        self.0.symbol = value;
+    }
+
+    /// Market capitalization.
+    #[getter]
+    fn market_cap(&self) -> Option<f64> {
+        self.0.market_cap.clone()
+    }
+
+    #[setter]
+    fn set_market_cap(&mut self, value: Option<f64>) {
+        self.0.market_cap = value;
+    }
+
+    /// Enterprise value.
+    #[getter]
+    fn enterprise_value(&self) -> Option<f64> {
+        self.0.enterprise_value.clone()
+    }
+
+    #[setter]
+    fn set_enterprise_value(&mut self, value: Option<f64>) {
+        self.0.enterprise_value = value;
+    }
+
+    /// Enterprise value to sales.
+    #[getter]
+    fn ev_to_sales(&self) -> Option<f64> {
+        self.0.ev_to_sales.clone()
+    }
+
+    #[setter]
+    fn set_ev_to_sales(&mut self, value: Option<f64>) {
+        self.0.ev_to_sales = value;
+    }
+
+    /// Enterprise value to operating cash flow.
+    #[getter]
+    fn ev_to_operating_cash_flow(&self) -> Option<f64> {
+        self.0.ev_to_operating_cash_flow.clone()
+    }
+
+    #[setter]
+    fn set_ev_to_operating_cash_flow(&mut self, value: Option<f64>) {
+        self.0.ev_to_operating_cash_flow = value;
+    }
+
+    /// Enterprise value to free cash flow.
+    #[getter]
+    fn ev_to_free_cash_flow(&self) -> Option<f64> {
+        self.0.ev_to_free_cash_flow.clone()
+    }
+
+    #[setter]
+    fn set_ev_to_free_cash_flow(&mut self, value: Option<f64>) {
+        self.0.ev_to_free_cash_flow = value;
+    }
+
+    /// Enterprise value to EBITDA.
+    #[getter]
+    fn ev_to_ebitda(&self) -> Option<f64> {
+        self.0.ev_to_ebitda.clone()
+    }
+
+    #[setter]
+    fn set_ev_to_ebitda(&mut self, value: Option<f64>) {
+        self.0.ev_to_ebitda = value;
+    }
+
+    /// Net debt to EBITDA.
+    #[getter]
+    fn net_debt_to_ebitda(&self) -> Option<f64> {
+        self.0.net_debt_to_ebitda.clone()
+    }
+
+    #[setter]
+    fn set_net_debt_to_ebitda(&mut self, value: Option<f64>) {
+        self.0.net_debt_to_ebitda = value;
+    }
+
+    /// Current ratio.
+    #[getter]
+    fn current_ratio(&self) -> Option<f64> {
+        self.0.current_ratio.clone()
+    }
+
+    #[setter]
+    fn set_current_ratio(&mut self, value: Option<f64>) {
+        self.0.current_ratio = value;
+    }
+
+    /// Operating cash flow divided by net income.
+    #[getter]
+    fn income_quality(&self) -> Option<f64> {
+        self.0.income_quality.clone()
+    }
+
+    #[setter]
+    fn set_income_quality(&mut self, value: Option<f64>) {
+        self.0.income_quality = value;
+    }
+
+    /// Graham number.
+    #[getter]
+    fn graham_number(&self) -> Option<f64> {
+        self.0.graham_number.clone()
+    }
+
+    #[setter]
+    fn set_graham_number(&mut self, value: Option<f64>) {
+        self.0.graham_number = value;
+    }
+
+    /// Graham net-net working capital per share.
+    #[getter]
+    fn graham_net_net(&self) -> Option<f64> {
+        self.0.graham_net_net.clone()
+    }
+
+    #[setter]
+    fn set_graham_net_net(&mut self, value: Option<f64>) {
+        self.0.graham_net_net = value;
+    }
+
+    /// Net income divided by pre-tax income (fraction).
+    #[getter]
+    fn tax_burden(&self) -> Option<f64> {
+        self.0.tax_burden.clone()
+    }
+
+    #[setter]
+    fn set_tax_burden(&mut self, value: Option<f64>) {
+        self.0.tax_burden = value;
+    }
+
+    /// Pre-tax income divided by EBIT (fraction).
+    #[getter]
+    fn interest_burden(&self) -> Option<f64> {
+        self.0.interest_burden.clone()
+    }
+
+    #[setter]
+    fn set_interest_burden(&mut self, value: Option<f64>) {
+        self.0.interest_burden = value;
+    }
+
+    /// Working capital.
+    #[getter]
+    fn working_capital(&self) -> Option<f64> {
+        self.0.working_capital.clone()
+    }
+
+    #[setter]
+    fn set_working_capital(&mut self, value: Option<f64>) {
+        self.0.working_capital = value;
+    }
+
+    /// Invested capital.
+    #[getter]
+    fn invested_capital(&self) -> Option<f64> {
+        self.0.invested_capital.clone()
+    }
+
+    #[setter]
+    fn set_invested_capital(&mut self, value: Option<f64>) {
+        self.0.invested_capital = value;
+    }
+
+    /// Return on assets (fraction).
+    #[getter]
+    fn return_on_assets(&self) -> Option<f64> {
+        self.0.return_on_assets.clone()
+    }
+
+    #[setter]
+    fn set_return_on_assets(&mut self, value: Option<f64>) {
+        self.0.return_on_assets = value;
+    }
+
+    /// Operating income divided by total assets (fraction).
+    #[getter]
+    fn operating_return_on_assets(&self) -> Option<f64> {
+        self.0.operating_return_on_assets.clone()
+    }
+
+    #[setter]
+    fn set_operating_return_on_assets(&mut self, value: Option<f64>) {
+        self.0.operating_return_on_assets = value;
+    }
+
+    /// Return on tangible assets (fraction).
+    #[getter]
+    fn return_on_tangible_assets(&self) -> Option<f64> {
+        self.0.return_on_tangible_assets.clone()
+    }
+
+    #[setter]
+    fn set_return_on_tangible_assets(&mut self, value: Option<f64>) {
+        self.0.return_on_tangible_assets = value;
+    }
+
+    /// Return on equity (fraction).
+    #[getter]
+    fn return_on_equity(&self) -> Option<f64> {
+        self.0.return_on_equity.clone()
+    }
+
+    #[setter]
+    fn set_return_on_equity(&mut self, value: Option<f64>) {
+        self.0.return_on_equity = value;
+    }
+
+    /// Return on invested capital (fraction).
+    #[getter]
+    fn return_on_invested_capital(&self) -> Option<f64> {
+        self.0.return_on_invested_capital.clone()
+    }
+
+    #[setter]
+    fn set_return_on_invested_capital(&mut self, value: Option<f64>) {
+        self.0.return_on_invested_capital = value;
+    }
+
+    /// Return on capital employed (fraction).
+    #[getter]
+    fn return_on_capital_employed(&self) -> Option<f64> {
+        self.0.return_on_capital_employed.clone()
+    }
+
+    #[setter]
+    fn set_return_on_capital_employed(&mut self, value: Option<f64>) {
+        self.0.return_on_capital_employed = value;
+    }
+
+    /// Earnings yield (fraction).
+    #[getter]
+    fn earnings_yield(&self) -> Option<f64> {
+        self.0.earnings_yield.clone()
+    }
+
+    #[setter]
+    fn set_earnings_yield(&mut self, value: Option<f64>) {
+        self.0.earnings_yield = value;
+    }
+
+    /// Free cash flow yield (fraction).
+    #[getter]
+    fn free_cash_flow_yield(&self) -> Option<f64> {
+        self.0.free_cash_flow_yield.clone()
+    }
+
+    #[setter]
+    fn set_free_cash_flow_yield(&mut self, value: Option<f64>) {
+        self.0.free_cash_flow_yield = value;
+    }
+
+    /// Capital expenditure to operating cash flow (fraction).
+    #[getter]
+    fn capex_to_operating_cash_flow(&self) -> Option<f64> {
+        self.0.capex_to_operating_cash_flow.clone()
+    }
+
+    #[setter]
+    fn set_capex_to_operating_cash_flow(&mut self, value: Option<f64>) {
+        self.0.capex_to_operating_cash_flow = value;
+    }
+
+    /// Capital expenditure to depreciation (fraction).
+    #[getter]
+    fn capex_to_depreciation(&self) -> Option<f64> {
+        self.0.capex_to_depreciation.clone()
+    }
+
+    #[setter]
+    fn set_capex_to_depreciation(&mut self, value: Option<f64>) {
+        self.0.capex_to_depreciation = value;
+    }
+
+    /// Capital expenditure to revenue (fraction).
+    #[getter]
+    fn capex_to_revenue(&self) -> Option<f64> {
+        self.0.capex_to_revenue.clone()
+    }
+
+    #[setter]
+    fn set_capex_to_revenue(&mut self, value: Option<f64>) {
+        self.0.capex_to_revenue = value;
+    }
+
+    /// Selling, general and administrative expense to revenue (fraction).
+    #[getter]
+    fn sales_general_and_administrative_to_revenue(&self) -> Option<f64> {
+        self.0.sales_general_and_administrative_to_revenue.clone()
+    }
+
+    #[setter]
+    fn set_sales_general_and_administrative_to_revenue(&mut self, value: Option<f64>) {
+        self.0.sales_general_and_administrative_to_revenue = value;
+    }
+
+    /// Research and development expense to revenue (fraction).
+    #[getter]
+    fn research_and_development_to_revenue(&self) -> Option<f64> {
+        self.0.research_and_development_to_revenue.clone()
+    }
+
+    #[setter]
+    fn set_research_and_development_to_revenue(&mut self, value: Option<f64>) {
+        self.0.research_and_development_to_revenue = value;
+    }
+
+    /// Stock-based compensation to revenue (fraction).
+    #[getter]
+    fn stock_based_compensation_to_revenue(&self) -> Option<f64> {
+        self.0.stock_based_compensation_to_revenue.clone()
+    }
+
+    #[setter]
+    fn set_stock_based_compensation_to_revenue(&mut self, value: Option<f64>) {
+        self.0.stock_based_compensation_to_revenue = value;
+    }
+
+    /// Intangible assets to total assets (fraction).
+    #[getter]
+    fn intangibles_to_total_assets(&self) -> Option<f64> {
+        self.0.intangibles_to_total_assets.clone()
+    }
+
+    #[setter]
+    fn set_intangibles_to_total_assets(&mut self, value: Option<f64>) {
+        self.0.intangibles_to_total_assets = value;
+    }
+
+    /// Average receivables.
+    #[getter]
+    fn average_receivables(&self) -> Option<f64> {
+        self.0.average_receivables.clone()
+    }
+
+    #[setter]
+    fn set_average_receivables(&mut self, value: Option<f64>) {
+        self.0.average_receivables = value;
+    }
+
+    /// Average payables.
+    #[getter]
+    fn average_payables(&self) -> Option<f64> {
+        self.0.average_payables.clone()
+    }
+
+    #[setter]
+    fn set_average_payables(&mut self, value: Option<f64>) {
+        self.0.average_payables = value;
+    }
+
+    /// Average inventory.
+    #[getter]
+    fn average_inventory(&self) -> Option<f64> {
+        self.0.average_inventory.clone()
+    }
+
+    #[setter]
+    fn set_average_inventory(&mut self, value: Option<f64>) {
+        self.0.average_inventory = value;
+    }
+
+    /// Days sales outstanding.
+    #[getter]
+    fn days_of_sales_outstanding(&self) -> Option<f64> {
+        self.0.days_of_sales_outstanding.clone()
+    }
+
+    #[setter]
+    fn set_days_of_sales_outstanding(&mut self, value: Option<f64>) {
+        self.0.days_of_sales_outstanding = value;
+    }
+
+    /// Days payables outstanding.
+    #[getter]
+    fn days_of_payables_outstanding(&self) -> Option<f64> {
+        self.0.days_of_payables_outstanding.clone()
+    }
+
+    #[setter]
+    fn set_days_of_payables_outstanding(&mut self, value: Option<f64>) {
+        self.0.days_of_payables_outstanding = value;
+    }
+
+    /// Days inventory outstanding.
+    #[getter]
+    fn days_of_inventory_outstanding(&self) -> Option<f64> {
+        self.0.days_of_inventory_outstanding.clone()
+    }
+
+    #[setter]
+    fn set_days_of_inventory_outstanding(&mut self, value: Option<f64>) {
+        self.0.days_of_inventory_outstanding = value;
+    }
+
+    /// Operating cycle in days.
+    #[getter]
+    fn operating_cycle(&self) -> Option<f64> {
+        self.0.operating_cycle.clone()
+    }
+
+    #[setter]
+    fn set_operating_cycle(&mut self, value: Option<f64>) {
+        self.0.operating_cycle = value;
+    }
+
+    /// Cash conversion cycle in days.
+    #[getter]
+    fn cash_conversion_cycle(&self) -> Option<f64> {
+        self.0.cash_conversion_cycle.clone()
+    }
+
+    #[setter]
+    fn set_cash_conversion_cycle(&mut self, value: Option<f64>) {
+        self.0.cash_conversion_cycle = value;
+    }
+
+    /// Free cash flow to equity.
+    #[getter]
+    fn free_cash_flow_to_equity(&self) -> Option<f64> {
+        self.0.free_cash_flow_to_equity.clone()
+    }
+
+    #[setter]
+    fn set_free_cash_flow_to_equity(&mut self, value: Option<f64>) {
+        self.0.free_cash_flow_to_equity = value;
+    }
+
+    /// Free cash flow to the firm.
+    #[getter]
+    fn free_cash_flow_to_firm(&self) -> Option<f64> {
+        self.0.free_cash_flow_to_firm.clone()
+    }
+
+    #[setter]
+    fn set_free_cash_flow_to_firm(&mut self, value: Option<f64>) {
+        self.0.free_cash_flow_to_firm = value;
+    }
+
+    /// Tangible asset value.
+    #[getter]
+    fn tangible_asset_value(&self) -> Option<f64> {
+        self.0.tangible_asset_value.clone()
+    }
+
+    #[setter]
+    fn set_tangible_asset_value(&mut self, value: Option<f64>) {
+        self.0.tangible_asset_value = value;
+    }
+
+    /// Net current asset value.
+    #[getter]
+    fn net_current_asset_value(&self) -> Option<f64> {
+        self.0.net_current_asset_value.clone()
+    }
+
+    #[setter]
+    fn set_net_current_asset_value(&mut self, value: Option<f64>) {
+        self.0.net_current_asset_value = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("KeyMetricsTtm(symbol={:?}, market_cap={:?}, enterprise_value={:?}, ev_to_sales={:?}, ev_to_operating_cash_flow={:?}, ev_to_free_cash_flow={:?}, ev_to_ebitda={:?}, net_debt_to_ebitda={:?}, current_ratio={:?}, income_quality={:?}, graham_number={:?}, graham_net_net={:?}, tax_burden={:?}, interest_burden={:?}, working_capital={:?}, invested_capital={:?}, return_on_assets={:?}, operating_return_on_assets={:?}, return_on_tangible_assets={:?}, return_on_equity={:?}, return_on_invested_capital={:?}, return_on_capital_employed={:?}, earnings_yield={:?}, free_cash_flow_yield={:?}, capex_to_operating_cash_flow={:?}, capex_to_depreciation={:?}, capex_to_revenue={:?}, sales_general_and_administrative_to_revenue={:?}, research_and_development_to_revenue={:?}, stock_based_compensation_to_revenue={:?}, intangibles_to_total_assets={:?}, average_receivables={:?}, average_payables={:?}, average_inventory={:?}, days_of_sales_outstanding={:?}, days_of_payables_outstanding={:?}, days_of_inventory_outstanding={:?}, operating_cycle={:?}, cash_conversion_cycle={:?}, free_cash_flow_to_equity={:?}, free_cash_flow_to_firm={:?}, tangible_asset_value={:?}, net_current_asset_value={:?})", self.0.symbol, self.0.market_cap, self.0.enterprise_value, self.0.ev_to_sales, self.0.ev_to_operating_cash_flow, self.0.ev_to_free_cash_flow, self.0.ev_to_ebitda, self.0.net_debt_to_ebitda, self.0.current_ratio, self.0.income_quality, self.0.graham_number, self.0.graham_net_net, self.0.tax_burden, self.0.interest_burden, self.0.working_capital, self.0.invested_capital, self.0.return_on_assets, self.0.operating_return_on_assets, self.0.return_on_tangible_assets, self.0.return_on_equity, self.0.return_on_invested_capital, self.0.return_on_capital_employed, self.0.earnings_yield, self.0.free_cash_flow_yield, self.0.capex_to_operating_cash_flow, self.0.capex_to_depreciation, self.0.capex_to_revenue, self.0.sales_general_and_administrative_to_revenue, self.0.research_and_development_to_revenue, self.0.stock_based_compensation_to_revenue, self.0.intangibles_to_total_assets, self.0.average_receivables, self.0.average_payables, self.0.average_inventory, self.0.days_of_sales_outstanding, self.0.days_of_payables_outstanding, self.0.days_of_inventory_outstanding, self.0.operating_cycle, self.0.cash_conversion_cycle, self.0.free_cash_flow_to_equity, self.0.free_cash_flow_to_firm, self.0.tangible_asset_value, self.0.net_current_asset_value)
+    }
+}
+
+/// Response wrapper for options endpoint
+#[pyclass(name = "Options")]
+pub struct Options(::finance_query::Options);
+
+#[pymethods]
+impl Options {
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[getter]
+    fn provider_id(&self) -> Option<Provider> {
+        self.0.provider_id.clone().map(Provider)
+    }
+}
+
 /// Sentiment score for a news article or transcript segment.
 #[pyclass(name = "Sentiment")]
 pub struct Sentiment(::finance_query::Sentiment);
@@ -2019,12 +6626,220 @@ impl ::std::convert::From<SentimentLabel> for ::finance_query::SentimentLabel {
 #[pyclass(name = "Provider")]
 pub struct Provider(::finance_query::Provider);
 
+/// Comprehensive risk summary for a symbol.
+#[pyclass(name = "RiskSummary")]
+pub struct RiskSummary(::finance_query::risk::RiskSummary);
+
+#[pymethods]
+impl RiskSummary {
+    /// 1-day historical Value at Risk at 95% confidence (expressed as positive loss fraction)
+    #[getter]
+    fn var_95(&self) -> f64 {
+        self.0.var_95.clone()
+    }
+
+    #[setter]
+    fn set_var_95(&mut self, value: f64) {
+        self.0.var_95 = value;
+    }
+
+    /// 1-day historical Value at Risk at 99% confidence
+    #[getter]
+    fn var_99(&self) -> f64 {
+        self.0.var_99.clone()
+    }
+
+    #[setter]
+    fn set_var_99(&mut self, value: f64) {
+        self.0.var_99 = value;
+    }
+
+    /// 1-day parametric VaR at 95% confidence (assumes normally distributed returns)
+    #[getter]
+    fn parametric_var_95(&self) -> f64 {
+        self.0.parametric_var_95.clone()
+    }
+
+    #[setter]
+    fn set_parametric_var_95(&mut self, value: f64) {
+        self.0.parametric_var_95 = value;
+    }
+
+    /// 1-day historical Conditional VaR (Expected Shortfall) at 95% confidence —
+    #[getter]
+    fn cvar_95(&self) -> f64 {
+        self.0.cvar_95.clone()
+    }
+
+    #[setter]
+    fn set_cvar_95(&mut self, value: f64) {
+        self.0.cvar_95 = value;
+    }
+
+    /// 1-day historical Conditional VaR at 99% confidence.
+    #[getter]
+    fn cvar_99(&self) -> f64 {
+        self.0.cvar_99.clone()
+    }
+
+    #[setter]
+    fn set_cvar_99(&mut self, value: f64) {
+        self.0.cvar_99 = value;
+    }
+
+    /// 1-day parametric Conditional VaR at 95% confidence (assumes normally
+    #[getter]
+    fn parametric_cvar_95(&self) -> f64 {
+        self.0.parametric_cvar_95.clone()
+    }
+
+    #[setter]
+    fn set_parametric_cvar_95(&mut self, value: f64) {
+        self.0.parametric_cvar_95 = value;
+    }
+
+    /// Omega Ratio at a 0.0 threshold: probability-weighted ratio of gains to
+    #[getter]
+    fn omega(&self) -> f64 {
+        self.0.omega.clone()
+    }
+
+    #[setter]
+    fn set_omega(&mut self, value: f64) {
+        self.0.omega = value;
+    }
+
+    /// Kelly Criterion: optimal fraction of capital to risk, treating each
+    #[getter]
+    fn kelly(&self) -> f64 {
+        self.0.kelly.clone()
+    }
+
+    #[setter]
+    fn set_kelly(&mut self, value: f64) {
+        self.0.kelly = value;
+    }
+
+    /// Annualised Sharpe Ratio (risk-free rate = 0, 252 trading days/year).
+    #[getter]
+    fn sharpe(&self) -> Option<f64> {
+        self.0.sharpe.clone()
+    }
+
+    #[setter]
+    fn set_sharpe(&mut self, value: Option<f64>) {
+        self.0.sharpe = value;
+    }
+
+    /// Annualised Sortino Ratio (penalises only downside volatility).
+    #[getter]
+    fn sortino(&self) -> Option<f64> {
+        self.0.sortino.clone()
+    }
+
+    #[setter]
+    fn set_sortino(&mut self, value: Option<f64>) {
+        self.0.sortino = value;
+    }
+
+    /// Calmar Ratio (annualised return / max drawdown).
+    #[getter]
+    fn calmar(&self) -> Option<f64> {
+        self.0.calmar.clone()
+    }
+
+    #[setter]
+    fn set_calmar(&mut self, value: Option<f64>) {
+        self.0.calmar = value;
+    }
+
+    /// Beta vs benchmark. `None` when no benchmark is provided or data is insufficient.
+    #[getter]
+    fn beta(&self) -> Option<f64> {
+        self.0.beta.clone()
+    }
+
+    #[setter]
+    fn set_beta(&mut self, value: Option<f64>) {
+        self.0.beta = value;
+    }
+
+    /// Maximum drawdown as a positive fraction (e.g., 0.30 = 30%)
+    #[getter]
+    fn max_drawdown(&self) -> f64 {
+        self.0.max_drawdown.clone()
+    }
+
+    #[setter]
+    fn set_max_drawdown(&mut self, value: f64) {
+        self.0.max_drawdown = value;
+    }
+
+    /// Number of trading periods to recover from the maximum drawdown.
+    #[getter]
+    fn max_drawdown_recovery_periods(&self) -> Option<u64> {
+        self.0.max_drawdown_recovery_periods.clone()
+    }
+
+    #[setter]
+    fn set_max_drawdown_recovery_periods(&mut self, value: Option<u64>) {
+        self.0.max_drawdown_recovery_periods = value;
+    }
+
+    /// Ulcer Index: root-mean-square of drawdown depth across all periods,
+    #[getter]
+    fn ulcer_index(&self) -> f64 {
+        self.0.ulcer_index.clone()
+    }
+
+    #[setter]
+    fn set_ulcer_index(&mut self, value: f64) {
+        self.0.ulcer_index = value;
+    }
+
+    /// Information Ratio vs benchmark: annualised mean excess return divided by
+    #[getter]
+    fn information_ratio(&self) -> Option<f64> {
+        self.0.information_ratio.clone()
+    }
+
+    #[setter]
+    fn set_information_ratio(&mut self, value: Option<f64>) {
+        self.0.information_ratio = value;
+    }
+
+    /// Tracking error vs benchmark: annualised standard deviation of
+    #[getter]
+    fn tracking_error(&self) -> Option<f64> {
+        self.0.tracking_error.clone()
+    }
+
+    #[setter]
+    fn set_tracking_error(&mut self, value: Option<f64>) {
+        self.0.tracking_error = value;
+    }
+
+    fn __repr__(&self) -> String {
+        format!("RiskSummary(var_95={:?}, var_99={:?}, parametric_var_95={:?}, cvar_95={:?}, cvar_99={:?}, parametric_cvar_95={:?}, omega={:?}, kelly={:?}, sharpe={:?}, sortino={:?}, calmar={:?}, beta={:?}, max_drawdown={:?}, max_drawdown_recovery_periods={:?}, ulcer_index={:?}, information_ratio={:?}, tracking_error={:?})", self.0.var_95, self.0.var_99, self.0.parametric_var_95, self.0.cvar_95, self.0.cvar_99, self.0.parametric_cvar_95, self.0.omega, self.0.kelly, self.0.sharpe, self.0.sortino, self.0.calmar, self.0.beta, self.0.max_drawdown, self.0.max_drawdown_recovery_periods, self.0.ulcer_index, self.0.information_ratio, self.0.tracking_error)
+    }
+}
+
 /// The primary entry point for querying financial data for a single symbol.
 #[pyclass(name = "Ticker")]
 pub struct Ticker(::finance_query::Ticker);
 
 #[pymethods]
 impl Ticker {
+    /// Aggregate upcoming financial events for this ticker into a single
+    async fn calendar(&self, range: TimeRange) -> PyResult<Vec<CalendarEvent>> {
+        Ok(OnRuntime::new(self.0.calendar(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(CalendarEvent).collect())
+    }
+
+    /// Blocking form of `calendar`: runs the call to completion on the package's runtime.
+    fn calendar_blocking(&self, range: TimeRange) -> PyResult<Vec<CalendarEvent>> {
+        Ok(runtime().block_on(self.0.calendar(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(CalendarEvent).collect())
+    }
+
     /// Get capital gains distribution history.
     async fn capital_gains(&self, range: TimeRange) -> PyResult<Vec<CapitalGain>> {
         Ok(OnRuntime::new(self.0.capital_gains(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(CapitalGain).collect())
@@ -2055,6 +6870,16 @@ impl Ticker {
         Ok(Chart(runtime().block_on(self.0.chart_range(interval.into(), start, end)).map_err(BindErrorfinancequeryerrorFinanceError)?))
     }
 
+    /// Fetch the company's identity/classification profile via the
+    async fn company_profile(&self) -> PyResult<CompanyProfile> {
+        Ok(CompanyProfile(OnRuntime::new(self.0.company_profile()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `company_profile`: runs the call to completion on the package's runtime.
+    fn company_profile_blocking(&self) -> PyResult<CompanyProfile> {
+        Ok(CompanyProfile(runtime().block_on(self.0.company_profile()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
     /// Compute dividend analytics for the requested time range.
     async fn dividend_analytics(&self, range: TimeRange) -> PyResult<DividendAnalytics> {
         Ok(DividendAnalytics(OnRuntime::new(self.0.dividend_analytics(range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
@@ -2075,6 +6900,16 @@ impl Ticker {
         Ok(runtime().block_on(self.0.dividends(range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(Dividend).collect())
     }
 
+    /// Fetch earnings-surprise history (most recent first) via the configured
+    async fn earnings_surprises(&self) -> PyResult<Vec<EarningsSurprise>> {
+        Ok(OnRuntime::new(self.0.earnings_surprises()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(EarningsSurprise).collect())
+    }
+
+    /// Blocking form of `earnings_surprises`: runs the call to completion on the package's runtime.
+    fn earnings_surprises_blocking(&self) -> PyResult<Vec<EarningsSurprise>> {
+        Ok(runtime().block_on(self.0.earnings_surprises()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(EarningsSurprise).collect())
+    }
+
     /// Fetch an earnings call transcript, provider-neutral shape, via the
     async fn earnings_transcript(&self, quarter: Option<String>, year: Option<i32>) -> PyResult<EarningsTranscript> {
         Ok(EarningsTranscript(OnRuntime::new(self.0.earnings_transcript(quarter.as_deref(), year)).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
@@ -2083,6 +6918,26 @@ impl Ticker {
     /// Blocking form of `earnings_transcript`: runs the call to completion on the package's runtime.
     fn earnings_transcript_blocking(&self, quarter: Option<String>, year: Option<i32>) -> PyResult<EarningsTranscript> {
         Ok(EarningsTranscript(runtime().block_on(self.0.earnings_transcript(quarter.as_deref(), year)).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Get SEC EDGAR company facts (structured XBRL financial data).
+    async fn edgar_company_facts(&self) -> PyResult<CompanyFacts> {
+        Ok(CompanyFacts(OnRuntime::new(self.0.edgar_company_facts()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `edgar_company_facts`: runs the call to completion on the package's runtime.
+    fn edgar_company_facts_blocking(&self) -> PyResult<CompanyFacts> {
+        Ok(CompanyFacts(runtime().block_on(self.0.edgar_company_facts()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Get SEC EDGAR filing history for this symbol.
+    async fn edgar_submissions(&self) -> PyResult<EdgarSubmissions> {
+        Ok(EdgarSubmissions(OnRuntime::new(self.0.edgar_submissions()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `edgar_submissions`: runs the call to completion on the package's runtime.
+    fn edgar_submissions_blocking(&self) -> PyResult<EdgarSubmissions> {
+        Ok(EdgarSubmissions(runtime().block_on(self.0.edgar_submissions()).map_err(BindErrorfinancequeryerrorFinanceError)?))
     }
 
     /// Fetch reported employee headcount history (most recent period first) via
@@ -2095,6 +6950,16 @@ impl Ticker {
         Ok(runtime().block_on(self.0.employee_count()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(EmployeeCount).collect())
     }
 
+    /// Fetch this fund's profile and portfolio holdings via the configured
+    async fn etf_profile(&self) -> PyResult<EtfProfile> {
+        Ok(EtfProfile(OnRuntime::new(self.0.etf_profile()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `etf_profile`: runs the call to completion on the package's runtime.
+    fn etf_profile_blocking(&self) -> PyResult<EtfProfile> {
+        Ok(EtfProfile(runtime().block_on(self.0.etf_profile()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
     /// Fetch reported executive compensation (most recent fiscal year first)
     async fn executive_compensation(&self) -> PyResult<Vec<ExecutiveCompensation>> {
         Ok(OnRuntime::new(self.0.executive_compensation()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ExecutiveCompensation).collect())
@@ -2103,6 +6968,56 @@ impl Ticker {
     /// Blocking form of `executive_compensation`: runs the call to completion on the package's runtime.
     fn executive_compensation_blocking(&self) -> PyResult<Vec<ExecutiveCompensation>> {
         Ok(runtime().block_on(self.0.executive_compensation()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ExecutiveCompensation).collect())
+    }
+
+    /// Fetch SEC filings via the configured [`Capability::FILINGS`] provider.
+    async fn filings(&self) -> PyResult<ProviderFilings> {
+        Ok(ProviderFilings(OnRuntime::new(self.0.filings()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `filings`: runs the call to completion on the package's runtime.
+    fn filings_blocking(&self) -> PyResult<ProviderFilings> {
+        Ok(ProviderFilings(runtime().block_on(self.0.filings()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Get financial statements.
+    async fn financials(&self, stmt_type: StatementType, frequency: Frequency) -> PyResult<FinancialStatement> {
+        Ok(FinancialStatement(OnRuntime::new(self.0.financials(stmt_type.into(), frequency.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `financials`: runs the call to completion on the package's runtime.
+    fn financials_blocking(&self, stmt_type: StatementType, frequency: Frequency) -> PyResult<FinancialStatement> {
+        Ok(FinancialStatement(runtime().block_on(self.0.financials(stmt_type.into(), frequency.into())).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch the raw per-analyst grade-action history via the configured
+    async fn grading_actions(&self) -> PyResult<Vec<GradingAction>> {
+        Ok(OnRuntime::new(self.0.grading_actions()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(GradingAction).collect())
+    }
+
+    /// Blocking form of `grading_actions`: runs the call to completion on the package's runtime.
+    fn grading_actions_blocking(&self) -> PyResult<Vec<GradingAction>> {
+        Ok(runtime().block_on(self.0.grading_actions()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(GradingAction).collect())
+    }
+
+    /// Calculate all technical indicators from chart data.
+    async fn indicators(&self, interval: Interval, range: TimeRange) -> PyResult<IndicatorsSummary> {
+        Ok(IndicatorsSummary(OnRuntime::new(self.0.indicators(interval.into(), range.into())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `indicators`: runs the call to completion on the package's runtime.
+    fn indicators_blocking(&self, interval: Interval, range: TimeRange) -> PyResult<IndicatorsSummary> {
+        Ok(IndicatorsSummary(runtime().block_on(self.0.indicators(interval.into(), range.into())).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch the trailing-twelve-month key-metrics snapshot via the configured
+    async fn key_metrics_ttm(&self) -> PyResult<KeyMetricsTtm> {
+        Ok(KeyMetricsTtm(OnRuntime::new(self.0.key_metrics_ttm()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `key_metrics_ttm`: runs the call to completion on the package's runtime.
+    fn key_metrics_ttm_blocking(&self) -> PyResult<KeyMetricsTtm> {
+        Ok(KeyMetricsTtm(runtime().block_on(self.0.key_metrics_ttm()).map_err(BindErrorfinancequeryerrorFinanceError)?))
     }
 
     /// Get news articles for this symbol.
@@ -2125,6 +7040,16 @@ impl Ticker {
         Ok(Sentiment(runtime().block_on(self.0.news_sentiment()).map_err(BindErrorfinancequeryerrorFinanceError)?))
     }
 
+    /// Get the options chain.
+    async fn options(&self, date: Option<i64>) -> PyResult<Options> {
+        Ok(Options(OnRuntime::new(self.0.options(date)).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `options`: runs the call to completion on the package's runtime.
+    fn options_blocking(&self, date: Option<i64>) -> PyResult<Options> {
+        Ok(Options(runtime().block_on(self.0.options(date)).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
     /// Fetch the company's own press releases via the configured
     async fn press_releases(&self, limit: u32) -> PyResult<Vec<PressRelease>> {
         Ok(OnRuntime::new(self.0.press_releases(limit)).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(PressRelease).collect())
@@ -2135,6 +7060,46 @@ impl Ticker {
         Ok(runtime().block_on(self.0.press_releases(limit)).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(PressRelease).collect())
     }
 
+    /// Fetch the aggregated analyst price-target consensus (high/low/mean/median)
+    async fn price_target_consensus(&self) -> PyResult<PriceTargetConsensus> {
+        Ok(PriceTargetConsensus(OnRuntime::new(self.0.price_target_consensus()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `price_target_consensus`: runs the call to completion on the package's runtime.
+    fn price_target_consensus_blocking(&self) -> PyResult<PriceTargetConsensus> {
+        Ok(PriceTargetConsensus(runtime().block_on(self.0.price_target_consensus()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch price-target publication activity over trailing windows (last
+    async fn price_target_summary(&self) -> PyResult<PriceTargetSummary> {
+        Ok(PriceTargetSummary(OnRuntime::new(self.0.price_target_summary()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `price_target_summary`: runs the call to completion on the package's runtime.
+    fn price_target_summary_blocking(&self) -> PyResult<PriceTargetSummary> {
+        Ok(PriceTargetSummary(runtime().block_on(self.0.price_target_summary()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch the aggregated analyst rating consensus (grade distribution plus a
+    async fn rating_consensus(&self) -> PyResult<RatingConsensus> {
+        Ok(RatingConsensus(OnRuntime::new(self.0.rating_consensus()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `rating_consensus`: runs the call to completion on the package's runtime.
+    fn rating_consensus_blocking(&self) -> PyResult<RatingConsensus> {
+        Ok(RatingConsensus(runtime().block_on(self.0.rating_consensus()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch the trailing-twelve-month financial-ratios snapshot via the
+    async fn ratios_ttm(&self) -> PyResult<FinancialRatiosTtm> {
+        Ok(FinancialRatiosTtm(OnRuntime::new(self.0.ratios_ttm()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `ratios_ttm`: runs the call to completion on the package's runtime.
+    fn ratios_ttm_blocking(&self) -> PyResult<FinancialRatiosTtm> {
+        Ok(FinancialRatiosTtm(runtime().block_on(self.0.ratios_ttm()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
     /// Get analyst recommendations and similar symbols.
     async fn recommendations(&self, limit: u32) -> PyResult<Recommendation> {
         Ok(Recommendation(OnRuntime::new(self.0.recommendations(limit)).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
@@ -2143,6 +7108,46 @@ impl Ticker {
     /// Blocking form of `recommendations`: runs the call to completion on the package's runtime.
     fn recommendations_blocking(&self, limit: u32) -> PyResult<Recommendation> {
         Ok(Recommendation(runtime().block_on(self.0.recommendations(limit)).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Compute a risk summary for this symbol.
+    async fn risk(&self, interval: Interval, range: TimeRange, benchmark: Option<String>) -> PyResult<RiskSummary> {
+        Ok(RiskSummary(OnRuntime::new(self.0.risk(interval.into(), range.into(), benchmark.as_deref())).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `risk`: runs the call to completion on the package's runtime.
+    fn risk_blocking(&self, interval: Interval, range: TimeRange, benchmark: Option<String>) -> PyResult<RiskSummary> {
+        Ok(RiskSummary(runtime().block_on(self.0.risk(interval.into(), range.into(), benchmark.as_deref())).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch share float and shares outstanding via the configured
+    async fn share_float(&self) -> PyResult<ShareFloat> {
+        Ok(ShareFloat(OnRuntime::new(self.0.share_float()).await.map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Blocking form of `share_float`: runs the call to completion on the package's runtime.
+    fn share_float_blocking(&self) -> PyResult<ShareFloat> {
+        Ok(ShareFloat(runtime().block_on(self.0.share_float()).map_err(BindErrorfinancequeryerrorFinanceError)?))
+    }
+
+    /// Fetch short-interest settlement reports via the configured
+    async fn short_interest(&self) -> PyResult<Vec<ShortInterest>> {
+        Ok(OnRuntime::new(self.0.short_interest()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ShortInterest).collect())
+    }
+
+    /// Blocking form of `short_interest`: runs the call to completion on the package's runtime.
+    fn short_interest_blocking(&self) -> PyResult<Vec<ShortInterest>> {
+        Ok(runtime().block_on(self.0.short_interest()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ShortInterest).collect())
+    }
+
+    /// Fetch daily short-volume data via the configured
+    async fn short_volume(&self) -> PyResult<Vec<ShortVolume>> {
+        Ok(OnRuntime::new(self.0.short_volume()).await.map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ShortVolume).collect())
+    }
+
+    /// Blocking form of `short_volume`: runs the call to completion on the package's runtime.
+    fn short_volume_blocking(&self) -> PyResult<Vec<ShortVolume>> {
+        Ok(runtime().block_on(self.0.short_volume()).map_err(BindErrorfinancequeryerrorFinanceError)?.into_iter().map(ShortVolume).collect())
     }
 
     /// Get stock split history.
@@ -2177,10 +7182,36 @@ impl Ticker {
 fn finance_query(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<F64Array>()?;
     m.add_class::<I64Array>()?;
+    m.add_class::<U64Array>()?;
     m.add_class::<CandleSeq>()?;
     m.add_class::<SimilarSymbolSeq>()?;
+    m.add_class::<ProviderFilingSeq>()?;
+    m.add_class::<EdgarFilingFileSeq>()?;
+    m.add_class::<EtfCountryWeightingSeq>()?;
+    m.add_class::<EtfHoldingSeq>()?;
+    m.add_class::<EtfSectorWeightingSeq>()?;
+    m.add_class::<Frequency>()?;
     m.add_class::<Interval>()?;
+    m.add_class::<StatementType>()?;
     m.add_class::<TimeRange>()?;
+    m.add_class::<Indicator>()?;
+    m.add_class::<IndicatorResult>()?;
+    m.add_class::<FibonacciLevels>()?;
+    m.add_class::<PivotPoints>()?;
+    m.add_class::<AroonData>()?;
+    m.add_class::<BollingerBandsData>()?;
+    m.add_class::<BullBearPowerData>()?;
+    m.add_class::<DonchianChannelsData>()?;
+    m.add_class::<ElderRayData>()?;
+    m.add_class::<IchimokuData>()?;
+    m.add_class::<IndicatorsSummary>()?;
+    m.add_class::<KeltnerChannelsData>()?;
+    m.add_class::<MacdData>()?;
+    m.add_class::<StochasticData>()?;
+    m.add_class::<SuperTrendData>()?;
+    m.add_class::<ZigZagPoint>()?;
+    m.add_class::<CalendarEvent>()?;
+    m.add_class::<EventKind>()?;
     m.add_class::<Candle>()?;
     m.add_class::<Chart>()?;
     m.add_class::<DividendAnalytics>()?;
@@ -2195,9 +7226,37 @@ fn finance_query(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PressRelease>()?;
     m.add_class::<Recommendation>()?;
     m.add_class::<SimilarSymbol>()?;
+    m.add_class::<CompanyFacts>()?;
+    m.add_class::<FactConcept>()?;
+    m.add_class::<FactUnit>()?;
+    m.add_class::<FactsByTaxonomy>()?;
+    m.add_class::<ProviderFiling>()?;
+    m.add_class::<ProviderFilings>()?;
+    m.add_class::<EdgarFilingFile>()?;
+    m.add_class::<EdgarFilingRecent>()?;
+    m.add_class::<EdgarFilings>()?;
+    m.add_class::<EdgarSubmissions>()?;
+    m.add_class::<CompanyProfile>()?;
+    m.add_class::<PriceTargetConsensus>()?;
+    m.add_class::<PriceTargetSummary>()?;
+    m.add_class::<RatingConsensus>()?;
+    m.add_class::<EarningsSurprise>()?;
+    m.add_class::<EtfCountryWeighting>()?;
+    m.add_class::<EtfHolding>()?;
+    m.add_class::<EtfProfile>()?;
+    m.add_class::<EtfSectorWeighting>()?;
+    m.add_class::<GradingAction>()?;
+    m.add_class::<FinancialStatement>()?;
+    m.add_class::<ShareFloat>()?;
+    m.add_class::<ShortInterest>()?;
+    m.add_class::<ShortVolume>()?;
+    m.add_class::<FinancialRatiosTtm>()?;
+    m.add_class::<KeyMetricsTtm>()?;
+    m.add_class::<Options>()?;
     m.add_class::<Sentiment>()?;
     m.add_class::<SentimentLabel>()?;
     m.add_class::<Provider>()?;
+    m.add_class::<RiskSummary>()?;
     m.add_class::<Ticker>()?;
     m.add("Error", m.py().get_type::<Error>())?;
     m.add("BacktestError", m.py().get_type::<BacktestError>())?;

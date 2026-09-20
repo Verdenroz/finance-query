@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A company's identity and classification profile.
+#[soothfast::export]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyProfile {

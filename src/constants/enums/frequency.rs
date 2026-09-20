@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// The `alias`es mirror the shorthands [`FromStr`](std::str::FromStr) accepts, so
 /// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Frequency {

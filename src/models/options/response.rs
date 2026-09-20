@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: While this type is public for return values, users should not manually construct it.
 /// Use `Ticker::options()` to obtain options data.
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Options {
