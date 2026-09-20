@@ -34,6 +34,8 @@ name = "finance_query"
 path = "src/lib.rs"
 
 [dependencies]
+soothfast = { version = "0.3" }
+
 # HTTP client (core dependency)
 reqwest = { version = "0.13", features = ["json", "cookies", "gzip", "brotli", "query"] }
 
@@ -297,3 +299,10 @@ codegen-units = 16
 [profile.dist]
 inherits = "release"
 lto = "thin"
+
+# Spike: bind against the unreleased native-bindings branch.
+[patch.crates-io]
+soothfast = { path = "../soothfast/soothfast" }
+soothfast-macros = { path = "../soothfast/soothfast-macros" }
+soothfast-registry = { path = "../soothfast/soothfast-registry" }
+soothfast-measure = { path = "../soothfast/soothfast-measure" }

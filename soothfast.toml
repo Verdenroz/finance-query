@@ -96,3 +96,11 @@ pages = ["perf/summary.md", "coverage.md"]
 [[site.nav]]
 title = "Development"
 pages = ["development/contributing.md"]
+
+[[bind]]
+lang = "python"
+out = "bindings/python"
+package = "finance-query"
+description = "finance-query, the Rust market-data library, called in-process from Python"
+interpreters = ["python3", "python3.14t"]
+blocking = true

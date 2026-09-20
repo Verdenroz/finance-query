@@ -6,6 +6,7 @@ use super::Interval;
 ///
 /// The `alias`es mirror the spellings [`FromStr`](std::str::FromStr) accepts, so
 /// deserializing (axum query extraction, JSON) takes the same spellings parsing does.
+#[soothfast::export]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TimeRange {
     /// 1 day

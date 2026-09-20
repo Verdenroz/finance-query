@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 /// Used for both single symbol and batch historical data requests.
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
+#[soothfast::export]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chart {

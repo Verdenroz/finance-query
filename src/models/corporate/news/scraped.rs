@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A news article
+#[soothfast::export]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

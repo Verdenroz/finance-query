@@ -71,6 +71,7 @@ pub(crate) struct CapitalGainEvent {
 /// Public dividend data
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::dividends()`.
+#[soothfast::export]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

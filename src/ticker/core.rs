@@ -233,6 +233,7 @@ impl TickerBuilder {
 /// Data is fetched on first access and cached for 60 seconds by default.
 /// Use the builder via [`Ticker::builder`] for custom configuration, including
 /// [`cache`](TickerBuilder::cache) and [`no_cache`](TickerBuilder::no_cache).
+#[soothfast::export]
 pub struct Ticker {
     symbol: Arc<str>,
     providers: Arc<ProviderSet>,
@@ -263,6 +264,7 @@ pub struct Ticker {
     edgar_facts_fetch: Arc<tokio::sync::Mutex<()>>,
 }
 
+#[soothfast::export]
 impl Ticker {
     /// Creates a new ticker with default configuration.
     pub async fn new(symbol: impl Into<String>) -> Result<Self> {

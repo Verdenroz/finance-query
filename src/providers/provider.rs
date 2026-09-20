@@ -8,6 +8,7 @@ use super::*;
 /// Typed identifier for a financial data provider.
 ///
 /// Variants are feature-gated: unavailable providers are excluded at compile time.
+#[soothfast::export]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Provider {

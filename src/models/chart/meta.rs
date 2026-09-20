@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Metadata for chart data
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
+#[soothfast::export]
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

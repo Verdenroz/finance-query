@@ -1,0 +1,7 @@
+# Spike only: the glue is its own workspace, so the root manifest's patch to
+# the unreleased soothfast branch does not reach it.
+[patch.crates-io]
+soothfast = { path = "../../../soothfast/soothfast" }
+soothfast-macros = { path = "../../../soothfast/soothfast-macros" }
+soothfast-registry = { path = "../../../soothfast/soothfast-registry" }
+soothfast-measure = { path = "../../../soothfast/soothfast-measure" }

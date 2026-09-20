@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// A single OHLCV candle/bar
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
+#[soothfast::export]
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
