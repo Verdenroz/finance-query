@@ -93,8 +93,8 @@ jobs:
         with:
           shared-key: bench-gate
           cache-on-failure: true
-          # Compiles nothing on a master push; saving would overwrite the
-          # baseline job's warm target under the shared key.
+          # The baseline job saves this shared key; a save from here would
+          # race it with a different target.
           save-if: false
       # Unique per commit with the prefix in restore-keys: an exact key is
       # never rewritten once saved, so later commits would all miss.
@@ -106,7 +106,7 @@ jobs:
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
-      - uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+      - uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           packages: finance-query
           features: bench-gate
@@ -136,7 +136,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -147,6 +147,16 @@ jobs:
         with:
           path: .soothfast/baselines/base.json
           key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
+      # Read-only: the gate job is the one writer of .soothfast/runs, since
+      # each save replaces the whole directory for the next restore.
+      - name: Restore measured reference runs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/runs
+          key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            soothfast-runs-${{ github.ref_name }}-
+            soothfast-runs-
       - name: Measure baseline
         run: |
           if [ ! -f .soothfast/baselines/base.json ]; then
@@ -184,7 +194,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -223,7 +233,7 @@ jobs:
           shared-key: docs-capture
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -257,7 +267,7 @@ jobs:
           shared-key: docs-diff
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -291,7 +301,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -342,7 +352,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -381,7 +391,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -413,7 +423,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
@@ -454,7 +464,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@69e2e9250414bd1dcaa1f45529f1e3fe12c593dd # v0.3.2
+        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:
           gate: false
           changelog: false
