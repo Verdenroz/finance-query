@@ -213,6 +213,24 @@ const PROVIDER_BUILD_ATTEMPTS: u32 = 3;
 /// Delay before the first retry, scaled by the attempt number.
 const PROVIDER_BUILD_BACKOFF: Duration = Duration::from_millis(500);
 
+/// Whether a keyed provider's env var counts as configured: present and
+/// non-blank. GitHub Actions renders `${{ secrets.X }}` for an unset secret
+/// as an empty string, which still satisfies `env::var(..).is_ok()`.
+fn key_configured(value: Option<&str>) -> bool {
+    value.is_some_and(|v| !v.trim().is_empty())
+}
+
+/// Reads `var`, warning if it's set but blank rather than routing the
+/// provider in with a singleton that never gets initialized.
+fn keyed_flag(name: &str, var: &str) -> bool {
+    let value = std::env::var(var).ok();
+    let configured = key_configured(value.as_deref());
+    if !configured && value.is_some() {
+        tracing::warn!("{var} is set but empty; {name} is left out of routing");
+    }
+    configured
+}
+
 /// Build the multi-provider routing shared by `AppState`. Each keyed
 /// provider is only routed in when its API key env var is set; a field
 /// backed solely by an unconfigured provider falls through to
@@ -229,10 +247,10 @@ pub async fn build_providers() -> Result<Arc<finance_query::Providers>, FinanceE
         false => tracing::info!("{name} not configured (set {key} to enable)"),
     };
     let flags = ProviderFlags {
-        fmp: std::env::var("FMP_API_KEY").is_ok(),
-        alphavantage: std::env::var("ALPHAVANTAGE_API_KEY").is_ok(),
-        fred: std::env::var("FRED_API_KEY").is_ok(),
-        polygon: std::env::var("POLYGON_API_KEY").is_ok(),
+        fmp: keyed_flag("FMP", "FMP_API_KEY"),
+        alphavantage: keyed_flag("Alpha Vantage", "ALPHAVANTAGE_API_KEY"),
+        fred: keyed_flag("FRED", "FRED_API_KEY"),
+        polygon: keyed_flag("Polygon", "POLYGON_API_KEY"),
     };
     log_routing("Alpha Vantage", "ALPHAVANTAGE_API_KEY", flags.alphavantage);
     log_routing("FMP", "FMP_API_KEY", flags.fmp);
@@ -272,6 +290,14 @@ mod provider_routing_tests {
             .iter()
             .find(|(c, _)| *c == cap)
             .map(|(_, r)| r.as_slice())
+    }
+
+    #[test]
+    fn a_blank_key_is_not_configured() {
+        assert!(!key_configured(None));
+        assert!(!key_configured(Some("")));
+        assert!(!key_configured(Some("   ")));
+        assert!(key_configured(Some("a-real-key")));
     }
 
     #[test]
