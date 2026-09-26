@@ -3,15 +3,7 @@
 # Build Stage: Compile fq-mcp MCP server
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM rust:1-slim-bookworm@sha256:1469a27c125cb5a3aebfa4f4e4665d935b02fb72cc093b2c974b3d740e43f157 AS builder
-
-# translation-offline for published images; dev overrides to translation
-# (dictionary tier only) to skip the from-source CTranslate2 C++ build.
-ARG CARGO_FEATURES=translation-offline
-
-# release: opt-level=3, fat LTO, single codegen unit. Dev overrides to `dev`
-# (docker-compose.override.yml) for much faster builds.
-ARG CARGO_PROFILE=release
+FROM rust:1-slim-bookworm@sha256:1469a27c125cb5a3aebfa4f4e4665d935b02fb72cc093b2c974b3d740e43f157 AS chef
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
@@ -25,53 +17,54 @@ RUN apt-get update && apt-get install -y \
 
 # Install cargo-auditable so the release binary embeds its dependency manifest
 # (scan a pulled image later with `cargo audit bin /app/fq-mcp`).
-RUN cargo install --locked cargo-auditable
+RUN cargo install --locked cargo-auditable cargo-chef@0.1.78
 
 WORKDIR /build
 
-# Copy workspace and all member manifests first (for layer caching)
-COPY Cargo.toml Cargo.lock* ./
-COPY server/Cargo.toml ./server/
-COPY finance-query-derive/Cargo.toml ./finance-query-derive/
-COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
+# ------------------------------------------------------------------------------
+# Planner: reduce the workspace to a dependency recipe. The recipe masks
+# workspace-member versions, so a version bump does not invalidate cooked deps.
+# ------------------------------------------------------------------------------
+FROM chef AS planner
 
-# Create dummy sources to cache dependencies.
-# benches/ stubs are required because [[bench]] targets are declared in Cargo.toml;
-# Cargo validates their source paths during workspace resolution even when not building them.
-RUN mkdir -p src server/src finance-query-derive/src finance-query-mcp/src benches && \
-    echo "pub fn dummy() {}" > src/lib.rs && \
-    echo "pub fn dummy() {}" > server/src/lib.rs && \
-    echo "fn main() {}" > server/src/main.rs && \
-    echo "" > finance-query-derive/src/lib.rs && \
-    echo "pub fn dummy() {}" > finance-query-mcp/src/lib.rs && \
-    echo "fn main() {}" > finance-query-mcp/src/main.rs && \
-    for b in ticker tickers translation soothfast dataframe; do \
-        echo "fn main() {}" > benches/$b.rs; \
-    done
-
-# Cargo registry + target dir are cache mounts (not COPY'd layers), so a
-# trivial Cargo.lock churn (e.g. an internal workspace-member version bump)
-# can't invalidate previously-compiled deps — including translation-offline's
-# from-source CTranslate2 C++ build, by far the most expensive part of this.
-RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,target=/build/target,sharing=locked \
-    cargo build --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
-    rm -rf src server/src finance-query-derive/src finance-query-mcp/src benches
-
-# Copy actual source code
+COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-COPY server/src ./server/src
-COPY finance-query-derive/src ./finance-query-derive/src
-COPY finance-query-mcp/src ./finance-query-mcp/src
 COPY benches ./benches
+COPY server/Cargo.toml ./server/
+COPY server/src ./server/src
+COPY finance-query-derive ./finance-query-derive
+COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
+COPY finance-query-mcp/src ./finance-query-mcp/src
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Build the actual application. The compiled binary is copied out of the
-# target cache mount before it unmounts — mount contents aren't part of the
-# image layer, so a later `COPY --from=builder` can't reach into them.
-RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,target=/build/target,sharing=locked \
-    touch src/lib.rs server/src/lib.rs finance-query-mcp/src/lib.rs finance-query-mcp/src/main.rs && \
-    cargo auditable build --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
+# ------------------------------------------------------------------------------
+# Builder: dependencies compile into an ordinary image layer, which registry
+# and GitHub Actions layer caches persist (BuildKit cache mounts are not).
+# ------------------------------------------------------------------------------
+FROM chef AS builder
+
+# translation-offline for published images; dev overrides to translation
+# (dictionary tier only) to skip the from-source CTranslate2 C++ build.
+ARG CARGO_FEATURES=translation-offline
+
+# release: opt-level=3, fat LTO, single codegen unit. Dev overrides to `dev`
+# (docker-compose.override.yml) for much faster builds.
+ARG CARGO_PROFILE=release
+
+COPY --from=planner /build/recipe.json recipe.json
+RUN cargo chef cook --locked --profile ${CARGO_PROFILE} -p finance-query-mcp \
+    --features ${CARGO_FEATURES} --recipe-path recipe.json
+
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+COPY benches ./benches
+COPY server/Cargo.toml ./server/
+COPY server/src ./server/src
+COPY finance-query-derive ./finance-query-derive
+COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
+COPY finance-query-mcp/src ./finance-query-mcp/src
+
+RUN cargo auditable build --locked --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
     OUT_DIR=$([ "${CARGO_PROFILE}" = "dev" ] && echo debug || echo "${CARGO_PROFILE}") && \
     cp target/${OUT_DIR}/fq-mcp /build/fq-mcp
 
