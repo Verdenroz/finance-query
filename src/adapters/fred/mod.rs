@@ -7,7 +7,8 @@
 //! Access 800k+ macro time series (CPI, Fed Funds Rate, M2, GDP, etc.).
 //! Requires a free API key from <https://fred.stlouisfed.org/docs/api/api_key.html>.
 //!
-//! Call [`init`] once at startup before using [`series`].
+//! Call [`init`] at startup, or set `FRED_API_KEY`: [`series`] and the other
+//! functions here read it on first use.
 //!
 //! # US Treasury Yields
 //!
@@ -38,6 +39,7 @@ pub mod models;
 
 use crate::adapters::singleton::provider_singleton_state;
 use crate::error::{FinanceError, Result};
+use crate::rate_limiter::RateLimiter;
 use client::FredClientBuilder;
 use std::sync::Arc;
 use std::time::Duration;
@@ -60,7 +62,8 @@ provider_singleton_state!(
 
 /// Initialize the global FRED client with an API key.
 ///
-/// Must be called once before [`series`]. Subsequent calls return an error.
+/// Optional if `FRED_API_KEY` is set: [`series`] falls back to that env var
+/// on first use, and a later `init` call still errors as already initialized.
 ///
 /// # Arguments
 ///
@@ -90,7 +93,8 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 ///
 /// # Errors
 ///
-/// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
+/// Returns [`FinanceError::ProviderNotConfigured`] if neither [`init`] nor
+/// `FRED_API_KEY` is set.
 pub async fn series(series_id: &str) -> Result<MacroSeries> {
     build_client()?.series(series_id).await
 }
@@ -102,7 +106,21 @@ fn not_configured() -> FinanceError {
     }
 }
 
+/// Keeps a candidate `FRED_API_KEY` value only if it is non-blank.
+fn usable_key(value: Option<String>) -> Option<String> {
+    value.filter(|key| !key.trim().is_empty())
+}
+
 pub(crate) fn build_client() -> Result<client::FredClient> {
+    if FRED_SINGLETON.get().is_none()
+        && let Some(key) = usable_key(std::env::var("FRED_API_KEY").ok())
+    {
+        let _ = FRED_SINGLETON.set(FredSingleton {
+            api_key: key,
+            timeout: Duration::from_secs(30),
+            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
+        });
+    }
     let s = FRED_SINGLETON.get().ok_or_else(not_configured)?;
     FredClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
@@ -112,11 +130,7 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
 pub(crate) async fn latest_observation(
     series_id: &str,
 ) -> Result<Option<crate::models::economic::MacroObservation>> {
-    let s = FRED_SINGLETON.get().ok_or_else(not_configured)?;
-    let c = FredClientBuilder::new(&s.api_key)
-        .timeout(s.timeout)
-        .build_with_limiter(Arc::clone(&s.limiter))?;
-    c.latest_observation(series_id).await
+    build_client()?.latest_observation(series_id).await
 }
 
 /// Fetch upcoming scheduled economic-data release dates (CPI, NFP, GDP, FOMC, …).
@@ -125,7 +139,8 @@ pub(crate) async fn latest_observation(
 ///
 /// # Errors
 ///
-/// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
+/// Returns [`FinanceError::ProviderNotConfigured`] if neither [`init`] nor
+/// `FRED_API_KEY` is set.
 pub async fn release_dates() -> Result<Vec<ReleaseDate>> {
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
     build_client()?.release_dates(&today, "9999-12-31").await
@@ -384,6 +399,17 @@ mod tests {
             }
             other => panic!("expected Economic detail, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn usable_key_rejects_blank_and_missing_values() {
+        assert_eq!(usable_key(None), None);
+        assert_eq!(usable_key(Some(String::new())), None);
+        assert_eq!(usable_key(Some("   ".to_string())), None);
+        assert_eq!(
+            usable_key(Some("real-key".to_string())),
+            Some("real-key".to_string())
+        );
     }
 
     #[test]
