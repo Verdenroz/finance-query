@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Fall back to FRED_API_KEY when unconfigured
 - Skip retry for non-retriable provider errors
 - Require non-blank keyed provider env vars
 
