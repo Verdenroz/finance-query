@@ -66,7 +66,9 @@ jobs:
   gate:
     name: Gate
     needs: changes
-    if: always() && !endsWith(github.actor, '[bot]') && (github.event_name == 'push' || needs.changes.outputs.soothfast == 'true')
+    # Bot pushes run too: they only record a reference (changelog is off), and a
+    # bot commit is usually the next PR's merge-base.
+    if: always() && (github.event_name == 'push' || (!endsWith(github.actor, '[bot]') && needs.changes.outputs.soothfast == 'true'))
     runs-on: ubuntu-latest
     environment: soothfast-bot
     permissions:
