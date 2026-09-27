@@ -108,7 +108,7 @@ jobs:
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
-      - uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+      - uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           packages: finance-query
           features: bench-gate
@@ -139,7 +139,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -163,9 +163,7 @@ jobs:
       - name: Measure baseline
         run: |
           if [ ! -f .soothfast/baselines/base.json ]; then
-            # --no-reuse: soothfast 0.3.3 drops perfcnt.instructions from a reused
-            # run, which the docs claims read. Remove once soothfast fixes that.
-            cargo soothfast measure -p finance-query --features bench-gate --no-reuse --save-baseline base
+            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
           fi
       - name: Upload baseline
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -199,7 +197,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -238,7 +236,7 @@ jobs:
           shared-key: docs-capture
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -272,7 +270,7 @@ jobs:
           shared-key: docs-diff
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -306,7 +304,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -357,7 +355,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -396,7 +394,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -428,7 +426,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
@@ -471,7 +469,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
           gate: false
           changelog: false
