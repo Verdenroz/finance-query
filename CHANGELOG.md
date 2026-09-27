@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Skip retry for non-retriable provider errors
 - Require non-blank keyed provider env vars
 
+### 📦 Dependencies
+
+- Bump soothfast to v0.3.4
+
 ### 🔧 Internal
 
 - Measure the soothfast baseline in full
