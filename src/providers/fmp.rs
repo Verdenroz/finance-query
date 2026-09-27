@@ -77,6 +77,9 @@ impl ChartProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl FundamentalsProvider for FmpProvider {
+    async fn fetch_company_profile(&self, symbol: &str) -> Result<crate::CompanyProfile> {
+        crate::adapters::fmp::quote::profile::fetch_company_profile(symbol).await
+    }
     async fn fetch_financials(
         &self,
         symbol: &str,

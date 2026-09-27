@@ -15,7 +15,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, OnceLock, RwLock, Weak};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock, RwLock, Weak};
 use std::time::Duration;
 
 use crate::rate_limiter::RateLimiter;
@@ -24,25 +24,55 @@ use crate::rate_limiter::RateLimiter;
 pub(crate) struct ScopedKey {
     pub(crate) api_key: String,
     pub(crate) timeout: Duration,
+    pub(crate) base_url: Option<String>,
+    pub(crate) rpm: Option<u32>,
     limiter: Arc<OnceLock<Arc<RateLimiter>>>,
+    http_clients: Arc<Mutex<RuntimeClients>>,
 }
 
+type RuntimeClients = HashMap<(tokio::runtime::Id, &'static str), reqwest::Client>;
+
 impl ScopedKey {
+    /// Connection pools belong to a runtime, just like the existing Yahoo session cache.
+    pub(crate) fn http_client(
+        &self,
+        kind: &'static str,
+        build: impl FnOnce() -> reqwest::Result<reqwest::Client>,
+    ) -> reqwest::Result<reqwest::Client> {
+        let mut clients = self.http_clients.lock().unwrap_or_else(|e| e.into_inner());
+        let key = (tokio::runtime::Handle::current().id(), kind);
+        if let Some(client) = clients.get(&key) {
+            return Ok(client.clone());
+        }
+        let client = build()?;
+        if clients.len() >= 8 {
+            clients.clear();
+        }
+        clients.insert(key, client.clone());
+        Ok(client)
+    }
+
     pub(crate) fn new(api_key: String, timeout: Duration) -> Self {
         Self {
             api_key,
             timeout,
+            base_url: None,
+            rpm: None,
             limiter: Arc::new(OnceLock::new()),
+            http_clients: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     /// Rate limits are enforced per API key upstream, so each distinct key gets
     /// its own bucket rather than sharing the singleton's.
     pub(crate) fn limiter(&self, provider_key: &'static str, rate: f64) -> Arc<RateLimiter> {
-        Arc::clone(
-            self.limiter
-                .get_or_init(|| shared_limiter(provider_key, &self.api_key, rate)),
-        )
+        Arc::clone(self.limiter.get_or_init(|| {
+            shared_limiter(
+                provider_key,
+                &self.api_key,
+                self.rpm.map_or(rate, |rpm| f64::from(rpm) / 60.0),
+            )
+        }))
     }
 }
 
@@ -66,10 +96,12 @@ fn shared_limiter(provider_key: &'static str, api_key: &str, rate: f64) -> Arc<R
         .get(&id)
         .and_then(Weak::upgrade)
     {
+        limiter.lower_rate(rate);
         return limiter;
     }
     let mut limiters = LIMITERS.write().unwrap_or_else(|e| e.into_inner());
     if let Some(limiter) = limiters.get(&id).and_then(Weak::upgrade) {
+        limiter.lower_rate(rate);
         return limiter;
     }
     limiters.retain(|_, held| held.strong_count() > 0);
@@ -98,6 +130,23 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn stock_ingestion_shared_key_uses_lower_rate() {
+        let a = shared_limiter("polygon", "stock-ingestion-limits", 100.0);
+        let b = shared_limiter("polygon", "stock-ingestion-limits", 1.0);
+        assert!(Arc::ptr_eq(&a, &b));
+        assert!(a.available_estimate().unwrap() <= 1.0);
+        a.acquire().await;
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), b.acquire())
+                .await
+                .is_err()
+        );
+        let c = shared_limiter("polygon", "stock-ingestion-limits", 1000.0);
+        assert!(Arc::ptr_eq(&a, &c));
+        assert!(c.available_estimate().unwrap() <= 1.0);
+    }
 
     fn map(pairs: &[(&'static str, &str)]) -> Arc<KeyMap> {
         Arc::new(

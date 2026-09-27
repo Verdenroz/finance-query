@@ -984,8 +984,7 @@ impl Ticker {
     }
 
     /// Fetch the company's identity/classification profile via the
-    /// configured [`Capability::FUNDAMENTALS`] provider (currently Alpha
-    /// Vantage only).
+    /// configured [`Capability::FUNDAMENTALS`] provider (Yahoo, Alpha Vantage, or FMP).
     pub async fn company_profile(&self) -> Result<crate::models::fundamentals::CompanyProfile> {
         ticker_fetch!(
             self,

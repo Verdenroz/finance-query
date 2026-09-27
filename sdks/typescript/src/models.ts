@@ -290,13 +290,16 @@ export interface GqlCommodityQuote {
 /** Mirrors `finance_query::CompanyProfile`, which has no serde rename of its own — this deserializes snake_case keys while its GraphQL name stays camelCase. */
 export interface GqlCompanyProfile {
   assetType?: string;
+  cik?: string;
   country?: string;
   currency?: string;
   description?: string;
   exchange?: string;
   industry?: string;
+  ipoDate?: string;
   marketCapitalization?: number;
   name?: string;
+  providerId?: string;
   sector?: string;
   symbol?: string;
 }
@@ -1753,8 +1756,11 @@ export interface GqlSymbolChart {
 
 /** Reference detail for one symbol, provider-routed (Capability::DISCOVERY). */
 export interface GqlSymbolDetails {
+  active?: boolean;
   assetType?: string;
   cik?: string;
+  compositeFigi?: string;
+  delistedUtc?: string;
   description?: string;
   employees?: number;
   exchange?: string;
@@ -1762,6 +1768,8 @@ export interface GqlSymbolDetails {
   listDate?: string;
   marketCap?: number;
   name?: string;
+  providerId?: string;
+  shareClassFigi?: string;
   sharesOutstanding?: number;
   sicCode?: string;
   sicDescription?: string;

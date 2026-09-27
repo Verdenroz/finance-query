@@ -7146,6 +7146,8 @@ components:
       properties:
         assetType:
           type: string
+        cik:
+          type: string
         country:
           type: string
         currency:
@@ -7156,10 +7158,14 @@ components:
           type: string
         industry:
           type: string
+        ipoDate:
+          type: string
         marketCapitalization:
           type: number
           format: double
         name:
+          type: string
+        providerId:
           type: string
         sector:
           type: string
@@ -10584,9 +10590,15 @@ components:
       description: "Reference detail for one symbol, provider-routed (Capability::DISCOVERY)."
       type: object
       properties:
+        active:
+          type: boolean
         assetType:
           type: string
         cik:
+          type: string
+        compositeFigi:
+          type: string
+        delistedUtc:
           type: string
         description:
           type: string
@@ -10604,6 +10616,10 @@ components:
           type: number
           format: double
         name:
+          type: string
+        providerId:
+          type: string
+        shareClassFigi:
           type: string
         sharesOutstanding:
           type: number

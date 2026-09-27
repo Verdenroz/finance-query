@@ -1,7 +1,7 @@
 //! Company profile model.
 //!
 //! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
-//! route. Alpha Vantage is currently the only provider. Scoped to identity
+//! route through Yahoo, Alpha Vantage, or FMP. Scoped to identity
 //! and classification fields — valuation ratios and earnings figures live in
 //! [`KeyMetricsTtm`](crate::KeyMetricsTtm), [`RatingConsensus`](crate::RatingConsensus),
 //! and [`EarningsSurprise`](crate::EarningsSurprise) instead of being duplicated here.
@@ -12,6 +12,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyProfile {
+    /// SEC company identifier, preserving leading zeros.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cik: Option<String>,
+    /// Provider-reported IPO date, in YYYY-MM-DD format.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ipo_date: Option<String>,
+    /// Provider that supplied this profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<crate::Provider>,
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Company name.

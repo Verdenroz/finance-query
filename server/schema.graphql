@@ -507,6 +507,9 @@ own — this deserializes snake_case keys while its GraphQL name stays
 camelCase.
 """
 type GqlCompanyProfile {
+	cik: String
+	ipoDate: String
+	providerId: String
 	symbol: String
 	name: String
 	description: String
@@ -3534,6 +3537,11 @@ type GqlSymbolChartEdge {
 Reference detail for one symbol, provider-routed (Capability::DISCOVERY).
 """
 type GqlSymbolDetails {
+	compositeFigi: String
+	shareClassFigi: String
+	active: Boolean
+	delistedUtc: String
+	providerId: String
 	symbol: String!
 	name: String
 	description: String

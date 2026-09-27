@@ -1,5 +1,11 @@
 # Configuration
 
+For Polygon/FMP-only consumers, call `Providers::builder().providers([Provider::Polygon])` or select FMP explicitly before adding routes. This avoids initializing the default Yahoo session. Existing builders retain their default behavior.
+
+`requests_per_minute(provider, limit)` configures Polygon or FMP's shared API-key budget. It requires an explicit key and a positive limit. Instances with the same provider/key share the lowest configured limit until the shared bucket is recreated. Application-level limits can be stricter.
+
+`endpoint(provider, origin)` supports compatible HTTPS services and local HTTP fixtures without changing process-wide settings. It requires an explicit Polygon or FMP key. Credentials, query strings, non-root paths, and non-loopback HTTP origins are rejected. Page continuations must stay on the configured origin and operation path.
+
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — TickerBuilder](https://docs.rs/finance-query/latest/finance_query/struct.TickerBuilder.html)
 

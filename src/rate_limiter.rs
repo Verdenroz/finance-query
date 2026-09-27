@@ -22,6 +22,7 @@ struct TokenState {
 /// When no tokens are available, [`acquire`](Self::acquire) sleeps until one is ready.
 pub(crate) struct RateLimiter {
     state: Mutex<TokenState>,
+    ceiling: std::sync::atomic::AtomicU64,
 }
 
 impl RateLimiter {
@@ -32,6 +33,7 @@ impl RateLimiter {
     pub fn new(max_per_second: f64) -> Self {
         let max_tokens = max_per_second.max(1.0);
         Self {
+            ceiling: std::sync::atomic::AtomicU64::new(max_per_second.to_bits()),
             state: Mutex::new(TokenState {
                 available: max_tokens,
                 last_refill: Instant::now(),
@@ -46,6 +48,11 @@ impl RateLimiter {
         loop {
             let sleep_duration = {
                 let mut state = self.state.lock().await;
+                let ceiling =
+                    f64::from_bits(self.ceiling.load(std::sync::atomic::Ordering::Relaxed));
+                state.refill_rate = state.refill_rate.min(ceiling);
+                state.max_tokens = state.max_tokens.min(ceiling.max(1.0));
+                state.available = state.available.min(state.max_tokens);
                 let now = Instant::now();
                 let elapsed = now.duration_since(state.last_refill).as_secs_f64();
                 state.available =
@@ -79,7 +86,19 @@ impl RateLimiter {
         let elapsed = Instant::now()
             .duration_since(state.last_refill)
             .as_secs_f64();
-        Some((state.available + elapsed * state.refill_rate).min(state.max_tokens))
+        let ceiling = f64::from_bits(self.ceiling.load(std::sync::atomic::Ordering::Relaxed));
+        Some(
+            (state.available + elapsed * state.refill_rate.min(ceiling))
+                .min(state.max_tokens.min(ceiling.max(1.0))),
+        )
+    }
+
+    pub(crate) fn lower_rate(&self, rate: f64) {
+        let _ = self.ceiling.fetch_update(
+            std::sync::atomic::Ordering::Relaxed,
+            std::sync::atomic::Ordering::Relaxed,
+            |old| Some(f64::from_bits(old).min(rate).to_bits()),
+        );
     }
 }
 

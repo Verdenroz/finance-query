@@ -272,6 +272,10 @@ name = "soothfast"
 harness = false
 required-features = ["risk", "backtesting", "translation", "sentiment"]
 
+[[example]]
+name = "stock_ingestion"
+required-features = ["polygon", "fmp"]
+
 [profile.release]
 opt-level = 3
 lto = true

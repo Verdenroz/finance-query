@@ -362,6 +362,9 @@ fn profile_and_price_to_company_profile(
     price: Option<crate::models::quote::price::Price>,
 ) -> crate::models::fundamentals::CompanyProfile {
     crate::models::fundamentals::CompanyProfile {
+        cik: None,
+        ipo_date: None,
+        provider_id: None,
         symbol: Some(symbol.to_string()),
         name: price
             .as_ref()
@@ -392,6 +395,11 @@ fn profile_and_price_to_symbol_details(
     let company_profile =
         profile_and_price_to_company_profile(symbol, profile.clone(), price.clone());
     crate::models::discovery::reference::SymbolDetails {
+        composite_figi: None,
+        share_class_figi: None,
+        active: None,
+        delisted_utc: None,
+        provider_id: None,
         symbol: symbol.to_string(),
         name: company_profile.name,
         description: company_profile.description,

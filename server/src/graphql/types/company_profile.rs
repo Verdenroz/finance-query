@@ -10,6 +10,9 @@ use serde::Deserialize;
 #[graphql(rename_fields = "camelCase")]
 #[serde(default)]
 pub struct GqlCompanyProfile {
+    pub cik: Option<String>,
+    pub ipo_date: Option<String>,
+    pub provider_id: Option<String>,
     pub symbol: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,

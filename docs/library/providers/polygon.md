@@ -61,6 +61,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Filings | ✓ |
 | Sentiment | ✓ |
 
+## Historical stock downloads
+
+Use `discovery().stock_listings_page(&request, cursor)` with a `StockListingRequest` to fetch active or inactive stocks on a chosen date. The result preserves CIK, composite FIGI, share-class FIGI, and listing dates when supplied. `details_at(symbol, date)` returns dated details. `stock_types("us")` returns the provider's stock-type codes.
+
+Use `market().stock_bars_page(&request, cursor)` with a `StockBarsRequest` for one-minute or daily bars. Set `PriceAdjustment::Unadjusted` or `SplitAdjusted` explicitly. The result preserves millisecond timestamps, fractional volume, and optional transaction counts. These calls do not change the existing chart API.
+
+Save each page and its `next` cursor together. Pass that cursor with the same request to continue. A cursor can be serialized and resumed after restarting, but it cannot change provider, symbol, dates, or adjustment. An empty page with a next cursor is not a complete result. Page calls do not cache or collect the full history.
+
+The crate bounds each page response to 32 MiB. The application must also bound concurrent requests and its retained pages. Authentication errors and malformed responses are errors, not empty history. Keep durable storage, retry scheduling, and session filtering in the application.
+
+See [the runnable stock example](../../../examples/stock_ingestion.rs) and [the public-API tests](../../../tests/stock_ingestion_api.rs). The example performs six read-only requests using Polygon and FMP keys. Pass `--directory-only` for two small Polygon directory pages, with a serialized cursor between them.
+
 ## See Also
 
 - [Multi-Provider Architecture](index.md) — Provider configuration and strategies

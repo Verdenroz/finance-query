@@ -27,6 +27,70 @@ domain_handle! {
 }
 
 impl Discovery {
+    /// Download one dated stock-directory page. Continuations never change providers.
+    pub async fn stock_listings_page(
+        &self,
+        request: &crate::StockListingRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockListing>> {
+        let identity = serde_json::to_string(request)?;
+        if let Some(cursor) = cursor {
+            cursor.validate("stock_listings_page", &identity)?;
+        }
+        let call = |p: &Arc<dyn crate::ProviderAdapter>| {
+            let p = Arc::clone(p);
+            async move {
+                p.as_discovery()
+                    .ok_or_else(|| p.not_supported(crate::Operation::StockListingsPage))?
+                    .fetch_stock_listings_page(request, cursor)
+                    .await
+            }
+        };
+        match cursor {
+            Some(cursor) => {
+                self.providers
+                    .fetch_from(cursor.provider(), Capability::DISCOVERY, call)
+                    .await
+            }
+            None => self.providers.fetch(Capability::DISCOVERY, call).await,
+        }
+    }
+
+    /// Fetch details as of YYYY-MM-DD, independently of undated detail cache entries.
+    pub async fn details_at(&self, symbol: &str, date: &str) -> Result<SymbolDetails> {
+        crate::models::discovery::listings::date(date)?;
+        let key = serde_json::to_string(&("details_at", symbol, date))?;
+        self.details_cache
+            .get_or_try(key, || async {
+                self.providers
+                    .fetch(Capability::DISCOVERY, |p| {
+                        let p = Arc::clone(p);
+                        async move {
+                            p.as_discovery()
+                                .ok_or_else(|| p.not_supported(crate::Operation::SymbolDetailsAt))?
+                                .fetch_symbol_details_at(symbol, date)
+                                .await
+                        }
+                    })
+                    .await
+            })
+            .await
+    }
+
+    /// Fetch open-ended stock-type codes for a market locale, such as us.
+    pub async fn stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
+        self.providers
+            .fetch(Capability::DISCOVERY, |p| {
+                let p = Arc::clone(p);
+                async move {
+                    p.as_discovery()
+                        .ok_or_else(|| p.not_supported(crate::Operation::StockTypes))?
+                        .fetch_stock_types(locale)
+                        .await
+                }
+            })
+            .await
+    }
     /// Search the configured providers' symbol universe.
     ///
     /// Results are cached per `(query, limit)` pair.

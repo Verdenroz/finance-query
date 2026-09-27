@@ -106,6 +106,7 @@ Thumbs.db
 # superpowers workflow artifacts (specs, plans, SDD ledger — local tooling, not docs)
 docs/superpowers/
 .superpowers/
+plans/
 
 # soothfast local measurement state (baselines, worktrees, triage) — except
 # the trend history, which is meant to accumulate across commits. A directory

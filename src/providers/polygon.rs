@@ -40,6 +40,13 @@ impl QuoteProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl ChartProvider for PolygonProvider {
+    async fn fetch_stock_bars_page(
+        &self,
+        request: &crate::StockBarsRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        polygon::stock_ingestion::bars(request, cursor).await
+    }
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -149,6 +156,23 @@ impl OptionsProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl DiscoveryProvider for PolygonProvider {
+    async fn fetch_stock_listings_page(
+        &self,
+        request: &crate::StockListingRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockListing>> {
+        polygon::stock_ingestion::listings(request, cursor).await
+    }
+    async fn fetch_symbol_details_at(
+        &self,
+        symbol: &str,
+        date: &str,
+    ) -> Result<crate::SymbolDetails> {
+        polygon::stock_ingestion::details_at(symbol, date).await
+    }
+    async fn fetch_stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
+        polygon::stock_ingestion::stock_types(locale).await
+    }
     async fn fetch_symbol_search(
         &self,
         query: &str,

@@ -253,6 +253,32 @@ impl ProviderSet {
         }
     }
 
+    pub(crate) async fn fetch_from<T, F, Fut>(
+        &self,
+        provider: super::Provider,
+        cap: Capability,
+        f: F,
+    ) -> Result<T>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        let p = self
+            .candidates_for(cap)
+            .into_iter()
+            .find(|p| p.id() == provider)
+            .ok_or_else(|| FinanceError::InvalidParameter {
+                param: "cursor".into(),
+                reason: "cursor provider is not configured on this route".into(),
+            })?;
+        crate::adapters::keys::scope(Arc::clone(&self.api_keys), async {
+            let result = self.call_with_retry(p, &f).await;
+            self.record_health(p.id(), &result);
+            result
+        })
+        .await
+    }
+
     pub(crate) fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
         self.yahoo_client.as_ref().map(Arc::clone).ok_or_else(|| {
             FinanceError::NoProviderAvailable {

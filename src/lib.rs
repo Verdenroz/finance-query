@@ -60,6 +60,9 @@
 // Public modules
 /// External data source adapters (internal — use the public API modules).
 pub(crate) mod adapters;
+pub use models::chart::{PriceAdjustment, SortOrder, StockBar, StockBarsRequest};
+pub use models::discovery::listings::{StockListing, StockListingRequest, StockType};
+pub use models::pagination::{PageCursor, ProviderPage};
 /// Error types and result definitions.
 pub mod error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).

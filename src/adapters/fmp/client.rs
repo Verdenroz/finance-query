@@ -44,26 +44,51 @@ impl FmpClientBuilder {
     }
 
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<FmpClient> {
-        let http = Client::builder()
-            .timeout(self.timeout)
-            .user_agent(format!(
-                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
-                env!("CARGO_PKG_VERSION")
-            ))
-            .build()?;
+        let scoped = crate::adapters::keys::scoped_key("fmp");
+        let base_url = self
+            .base_url
+            .or_else(|| scoped.as_ref().and_then(|s| s.base_url.clone()))
+            .unwrap_or_else(|| FMP_BASE.to_string());
+        let build_profile = || {
+            Client::builder()
+                .timeout(self.timeout)
+                .connect_timeout(Duration::from_secs(10))
+                .user_agent(concat!("finance-query/", env!("CARGO_PKG_VERSION")))
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+        };
+        let profile_http = match &scoped {
+            Some(key) => key.http_client("fmp_profile", build_profile)?,
+            None => build_profile()?,
+        };
+        let build_http = || {
+            Client::builder()
+                .timeout(self.timeout)
+                .user_agent(format!(
+                    "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+                    env!("CARGO_PKG_VERSION")
+                ))
+                .build()
+        };
+        let http = match &scoped {
+            Some(key) => key.http_client("fmp", build_http)?,
+            None => build_http()?,
+        };
 
         Ok(FmpClient {
+            profile_http,
             api_key: self.api_key,
             http,
             limiter,
             timeout: self.timeout,
-            base_url: self.base_url.unwrap_or_else(|| FMP_BASE.to_string()),
+            base_url,
         })
     }
 }
 
 /// Financial Modeling Prep API client. Constructed per-call via the module singleton.
 pub(crate) struct FmpClient {
+    profile_http: Client,
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
@@ -122,20 +147,35 @@ impl FmpClient {
         query.extend_from_slice(params);
 
         debug!("FMP request: {path}");
-        let resp = self
-            .http
+        let http = if path == "/stable/profile" {
+            &self.profile_http
+        } else {
+            &self.http
+        };
+        let resp = http
             .get(&url)
             .query(&query)
             .send()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
 
+        if resp.status() == StatusCode::TOO_MANY_REQUESTS {
+            return Err(FinanceError::RateLimited {
+                retry_after: crate::adapters::common::keyed::retry_after(resp.headers())
+                    .or(Some(60)),
+            });
+        }
         Self::check_status(resp.status())?;
 
-        let bytes = resp
-            .bytes()
-            .await
-            .map_err(|error| self.map_transport_error(&error))?;
+        let bytes = if path == "/stable/profile" {
+            crate::adapters::common::keyed::bounded_body(resp, 1024 * 1024, "FMP", self.timeout)
+                .await?
+        } else {
+            resp.bytes()
+                .await
+                .map_err(|error| self.map_transport_error(&error))?
+                .to_vec()
+        };
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
         }
@@ -159,7 +199,10 @@ impl FmpClient {
         serde_json::from_slice::<T>(bytes.as_ref()).map_err(|e| {
             FinanceError::ResponseStructureError {
                 field: "response".to_string(),
-                context: format!("Failed to deserialize FMP response: {e}"),
+                context: format!(
+                    "Failed to deserialize FMP response: {}",
+                    redact_key(&e.to_string(), &self.api_key)
+                ),
             }
         })
     }

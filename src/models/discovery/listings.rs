@@ -1,0 +1,107 @@
+//! Historical stock-directory requests and complete listing identity.
+
+use crate::{FinanceError, Result};
+use serde::{Deserialize, Serialize};
+
+pub(crate) fn date(value: &str) -> Result<()> {
+    if chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .is_ok_and(|d| d.format("%Y-%m-%d").to_string() == value)
+    {
+        Ok(())
+    } else {
+        Err(FinanceError::InvalidParameter {
+            param: "date".into(),
+            reason: "expected a valid YYYY-MM-DD date".into(),
+        })
+    }
+}
+
+/// A stock directory snapshot; independent of free-text search.
+#[derive(Debug, Clone, Serialize)]
+pub struct StockListingRequest {
+    pub(crate) date: String,
+    pub(crate) active: bool,
+    pub(crate) stock_type: Option<String>,
+    pub(crate) locale: String,
+    pub(crate) limit: u32,
+}
+
+impl StockListingRequest {
+    /// Request active or inactive stocks on an inclusive calendar date.
+    pub fn new(as_of: &str, active: bool) -> Result<Self> {
+        date(as_of)?;
+        Ok(Self {
+            date: as_of.into(),
+            active,
+            stock_type: None,
+            locale: "us".into(),
+            limit: 1000,
+        })
+    }
+
+    /// Filter by a provider stock-type code, such as CS or ADRC.
+    pub fn stock_type(mut self, code: impl Into<String>) -> Self {
+        self.stock_type = Some(code.into());
+        self
+    }
+
+    /// Select a market locale. Defaults to us.
+    pub fn locale(mut self, locale: impl Into<String>) -> Self {
+        self.locale = locale.into();
+        self
+    }
+
+    /// Limit a page to 1–1000 directory entries.
+    pub fn page_size(mut self, limit: u32) -> Result<Self> {
+        if !(1..=1000).contains(&limit) {
+            return Err(FinanceError::InvalidParameter {
+                param: "page_size".into(),
+                reason: "expected 1..=1000".into(),
+            });
+        }
+        self.limit = limit;
+        Ok(self)
+    }
+}
+
+/// Provider-reported stock identity and listing lifecycle.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StockListing {
+    /// Stock symbol.
+    pub symbol: String,
+    /// Company or security name.
+    pub name: Option<String>,
+    /// Primary exchange code.
+    pub exchange: Option<String>,
+    /// Provider stock-type code.
+    pub stock_type: Option<String>,
+    /// Market locale.
+    pub locale: Option<String>,
+    /// Provider-reported listing status.
+    pub active: Option<bool>,
+    /// Company identifier, preserving leading zeros.
+    pub cik: Option<String>,
+    /// Composite security identifier.
+    pub composite_figi: Option<String>,
+    /// Share-class identifier.
+    pub share_class_figi: Option<String>,
+    /// Provider-reported listing date.
+    pub list_date: Option<String>,
+    /// Provider-reported delisting timestamp.
+    pub delisted_utc: Option<String>,
+}
+
+/// An open-ended provider stock-type code.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StockType {
+    /// Provider code; unknown future codes are retained.
+    pub code: String,
+    /// Human-readable description.
+    pub description: Option<String>,
+    /// Asset class.
+    pub asset_class: Option<String>,
+    /// Market locale.
+    pub locale: Option<String>,
+}

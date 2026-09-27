@@ -35,7 +35,8 @@ mod discovery; // DISCOVERY
 mod economic; // ECONOMIC
 mod filings; // FILINGS
 mod fundamentals; // FUNDAMENTALS
-mod quote; // QUOTE
+mod quote;
+pub(crate) mod stock_ingestion; // QUOTE
 
 // Asset-class subdirectory modules
 mod crypto; // CRYPTO

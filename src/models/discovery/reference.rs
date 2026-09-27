@@ -40,6 +40,21 @@ pub struct SymbolMatch {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SymbolDetails {
+    /// Composite security identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub composite_figi: Option<String>,
+    /// Share-class identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub share_class_figi: Option<String>,
+    /// Provider-reported listing status.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
+    /// Provider-reported delisting timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delisted_utc: Option<String>,
+    /// Provider that supplied these details.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<crate::Provider>,
     /// Ticker symbol.
     pub symbol: String,
     /// Company name.

@@ -42,6 +42,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Capabilities
 
+`Ticker::company_profile()` supports FMP through the FUNDAMENTALS route. It returns the provider symbol, company CIK, and IPO date together. Missing identifiers and dates remain absent; empty, ambiguous or mismatched profiles return errors. The profile is current company information, not a historical listing snapshot.
+
+Pass FMP's symbol spelling, such as `BRK-B`. Applications comparing providers must retain their own canonical symbol and verify the returned identity. The crate does not infer that two symbols represent the same security.
+
+The profile response is bounded to 1 MiB. See [the runnable stock example](../../../examples/stock_ingestion.rs) for a call through the public API.
+
 | Data type | Support |
 |-----------|---------|
 | Quote | ✓ |

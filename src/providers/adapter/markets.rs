@@ -9,6 +9,28 @@ use super::ProviderCore;
 /// screeners.
 #[async_trait::async_trait]
 pub trait DiscoveryProvider: ProviderCore {
+    /// Fetch one dated stock-directory page.
+    async fn fetch_stock_listings_page(
+        &self,
+        _request: &crate::StockListingRequest,
+        _cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockListing>> {
+        Err(self.not_supported(Operation::StockListingsPage))
+    }
+
+    /// Fetch company details as of a calendar date.
+    async fn fetch_symbol_details_at(
+        &self,
+        _symbol: &str,
+        _date: &str,
+    ) -> Result<crate::SymbolDetails> {
+        Err(self.not_supported(Operation::SymbolDetailsAt))
+    }
+
+    /// Fetch the provider's stock-type vocabulary.
+    async fn fetch_stock_types(&self, _locale: &str) -> Result<Vec<crate::StockType>> {
+        Err(self.not_supported(Operation::StockTypes))
+    }
     /// Search the provider's symbol universe by free-text query.
     async fn fetch_symbol_search(
         &self,

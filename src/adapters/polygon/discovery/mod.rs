@@ -44,6 +44,12 @@ pub struct TickerRefDTO {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TickerDetailsDTO {
+    /// Composite security identifier.
+    pub composite_figi: Option<String>,
+    /// Share-class identifier.
+    pub share_class_figi: Option<String>,
+    /// Delisting timestamp.
+    pub delisted_utc: Option<String>,
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Company name.
@@ -276,8 +282,15 @@ pub async fn fetch_symbol_search_response(
 pub async fn fetch_symbol_details_response(
     symbol: &str,
 ) -> Result<crate::models::discovery::reference::SymbolDetails> {
-    use crate::models::discovery::reference::SymbolDetails;
     let resp = ticker_details(symbol).await?;
+    details_to_canonical(symbol, resp)
+}
+
+pub(super) fn details_to_canonical(
+    symbol: &str,
+    resp: TickerDetailsResponseDTO,
+) -> Result<crate::SymbolDetails> {
+    use crate::SymbolDetails;
     let d = resp
         .results
         .ok_or_else(|| crate::error::FinanceError::ResponseStructureError {
@@ -285,6 +298,11 @@ pub async fn fetch_symbol_details_response(
             context: format!("No ticker details returned for {symbol}"),
         })?;
     Ok(SymbolDetails {
+        composite_figi: d.composite_figi,
+        share_class_figi: d.share_class_figi,
+        active: d.active,
+        delisted_utc: d.delisted_utc,
+        provider_id: Some(crate::Provider::Polygon),
         symbol: d.ticker.unwrap_or_else(|| symbol.to_string()),
         name: d.name,
         description: d.description,

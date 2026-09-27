@@ -259,6 +259,8 @@ pub struct ProvidersBuilder {
     routes: Routes,
     retry: Option<RetryPolicy>,
     api_keys: std::collections::HashMap<&'static str, String>,
+    request_limits: std::collections::HashMap<&'static str, u32>,
+    endpoints: std::collections::HashMap<&'static str, String>,
 }
 
 impl std::fmt::Debug for ProvidersBuilder {
@@ -288,11 +290,42 @@ impl Default for ProvidersBuilder {
             routes: Routes::new(Fetch::Sequential),
             retry: None,
             api_keys: std::collections::HashMap::new(),
+            request_limits: std::collections::HashMap::new(),
+            endpoints: std::collections::HashMap::new(),
         }
     }
 }
 
 impl ProvidersBuilder {
+    /// Select initialized providers instead of the default Yahoo provider.
+    /// Providers already named in routes are retained.
+    pub fn providers(mut self, providers: impl IntoIterator<Item = Provider>) -> Self {
+        self.provider_ids = providers.into_iter().collect();
+        for route in self.routes.map.values() {
+            for provider in &route.providers {
+                if !matches!(provider, Provider::Custom(_)) && !self.provider_ids.contains(provider)
+                {
+                    self.provider_ids.push(*provider);
+                }
+            }
+        }
+        self
+    }
+    /// Set the Polygon/FMP request budget. Zero is rejected by build.
+    /// Instances sharing an API key share the lowest configured live budget.
+    /// Requires an explicit api_key for this provider.
+    pub fn requests_per_minute(mut self, provider: Provider, limit: u32) -> Self {
+        self.request_limits.insert(provider.as_str(), limit);
+        self
+    }
+
+    /// Override a Polygon/FMP endpoint for a compatible service or local HTTP fixture.
+    /// Only HTTPS and loopback HTTP origins are accepted; requires an explicit api_key.
+    /// Continuations cannot leave this origin. No global endpoint is modified.
+    pub fn endpoint(mut self, provider: Provider, base_url: impl Into<String>) -> Self {
+        self.endpoints.insert(provider.as_str(), base_url.into());
+        self
+    }
     /// Configure how providers are queried. Default: `Sequential`.
     ///
     /// Use [`Fetch::Sequential`] or [`Fetch::Parallel`].
@@ -439,6 +472,39 @@ impl ProvidersBuilder {
 
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
+        for provider in self.request_limits.keys().chain(self.endpoints.keys()) {
+            if !matches!(*provider, "polygon" | "fmp") || !self.api_keys.contains_key(provider) {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "provider_options".into(),
+                    reason: "options require an explicit Polygon or FMP API key".into(),
+                });
+            }
+        }
+        if self.request_limits.values().any(|limit| *limit == 0) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: "requests_per_minute".into(),
+                reason: "limit must be positive".into(),
+            });
+        }
+        for endpoint in self.endpoints.values() {
+            let valid = reqwest::Url::parse(endpoint).is_ok_and(|url| {
+                (url.scheme() == "https"
+                    || (url.scheme() == "http"
+                        && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))))
+                    && url.host_str().is_some()
+                    && url.username().is_empty()
+                    && url.password().is_none()
+                    && url.query().is_none()
+                    && url.fragment().is_none()
+                    && url.path() == "/"
+            });
+            if !valid {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "endpoint".into(),
+                    reason: "expected an HTTPS or loopback HTTP origin without credentials".into(),
+                });
+            }
+        }
         #[cfg(feature = "translation")]
         crate::translation::Lang::parse(&self.config.lang)?;
         for adapter in &self.adapters {
@@ -476,10 +542,13 @@ impl ProvidersBuilder {
                     reason: "API key must not be empty".to_string(),
                 });
             }
-            keys.insert(
-                provider_key,
-                crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout),
-            );
+            let mut key = crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout);
+            key.rpm = self.request_limits.get(provider_key).copied();
+            key.base_url = self
+                .endpoints
+                .get(provider_key)
+                .map(|s| s.trim_end_matches('/').to_string());
+            keys.insert(provider_key, key);
         }
         // `initialize` builds each keyed client, so the scope has to cover
         // construction as well as dispatch.

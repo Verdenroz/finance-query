@@ -47,19 +47,44 @@ impl PolygonClientBuilder {
 
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<PolygonClient> {
         let timeout = self.timeout;
-        let http = Client::builder()
-            .timeout(timeout)
-            .user_agent(format!(
-                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
-                env!("CARGO_PKG_VERSION")
-            ))
-            .build()?;
+        let scoped = crate::adapters::keys::scoped_key("polygon");
+        let base_url = self
+            .base_url
+            .or_else(|| scoped.as_ref().and_then(|s| s.base_url.clone()))
+            .unwrap_or_else(|| PG_BASE.to_string());
+        let build_page = || {
+            Client::builder()
+                .timeout(timeout)
+                .connect_timeout(Duration::from_secs(10))
+                .read_timeout(Duration::from_secs(30))
+                .user_agent(concat!("finance-query/", env!("CARGO_PKG_VERSION")))
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+        };
+        let page_http = match &scoped {
+            Some(key) => key.http_client("polygon_page", build_page)?,
+            None => build_page()?,
+        };
+        let build_http = || {
+            Client::builder()
+                .timeout(timeout)
+                .user_agent(format!(
+                    "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+                    env!("CARGO_PKG_VERSION")
+                ))
+                .build()
+        };
+        let http = match &scoped {
+            Some(key) => key.http_client("polygon", build_http)?,
+            None => build_http()?,
+        };
 
         Ok(PolygonClient {
+            page_http,
             api_key: self.api_key,
             http,
             limiter,
-            base_url: self.base_url.unwrap_or_else(|| PG_BASE.to_string()),
+            base_url,
             timeout,
         })
     }
@@ -67,6 +92,7 @@ impl PolygonClientBuilder {
 
 /// Massive API client. Constructed per-call via the module singleton.
 pub(crate) struct PolygonClient {
+    page_http: Client,
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
@@ -75,6 +101,138 @@ pub(crate) struct PolygonClient {
 }
 
 impl PolygonClient {
+    pub(super) fn page_url(
+        &self,
+        target: &str,
+        path: &str,
+        params: &[(&str, &str)],
+    ) -> Result<reqwest::Url> {
+        let invalid = || FinanceError::InvalidParameter {
+            param: "cursor".into(),
+            reason: "invalid continuation origin, path or request options".into(),
+        };
+        let base = reqwest::Url::parse(&self.base_url).map_err(|_| invalid())?;
+        let mut url = base.join(target).map_err(|_| invalid())?;
+        let expected = base.join(path).map_err(|_| invalid())?;
+        if url.origin() != base.origin()
+            || url.path() != expected.path()
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.fragment().is_some()
+        {
+            return Err(invalid());
+        }
+        let mut query = Vec::new();
+        for (key, value) in url.query_pairs() {
+            if matches!(
+                key.to_ascii_lowercase().as_str(),
+                "apikey" | "api_key" | "token" | "authorization"
+            ) {
+                continue;
+            }
+            if let Some((_, expected)) = params.iter().find(|(name, _)| *name == key) {
+                if value != *expected {
+                    return Err(invalid());
+                }
+            } else if key == "cursor" {
+                query.push((key.into_owned(), value.into_owned()));
+            } else {
+                return Err(invalid());
+            }
+        }
+        url.set_query(None);
+        url.query_pairs_mut()
+            .extend_pairs(query)
+            .extend_pairs(params.iter().copied());
+        Ok(url)
+    }
+
+    pub(super) async fn page<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+        cursor: Option<&crate::PageCursor>,
+        operation: &str,
+        request: &str,
+    ) -> Result<(T, String)> {
+        if let Some(cursor) = cursor {
+            cursor.validate(operation, request)?;
+            if cursor.provider() != crate::Provider::Polygon {
+                return Err(FinanceError::InvalidParameter {
+                    param: "cursor".into(),
+                    reason: "wrong provider".into(),
+                });
+            }
+        }
+        let url = self.page_url(cursor.map_or(path, |c| c.target.as_str()), path, params)?;
+        self.limiter.acquire().await;
+        let response = self
+            .page_http
+            .get(url.clone())
+            .query(&[("apiKey", self.api_key.as_str())])
+            .send()
+            .await
+            .map_err(|e| self.map_transport_error(&e))?;
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            return Err(FinanceError::RateLimited {
+                retry_after: crate::adapters::common::keyed::retry_after(response.headers()),
+            });
+        }
+        Self::check_status(response.status())?;
+        let bytes = crate::adapters::common::keyed::bounded_body(
+            response,
+            32 * 1024 * 1024,
+            "Polygon",
+            self.timeout,
+        )
+        .await?;
+        let envelope: ErrorEnvelope =
+            serde_json::from_slice(&bytes).map_err(|_| FinanceError::ResponseStructureError {
+                field: "response".into(),
+                context: "invalid Polygon page".into(),
+            })?;
+        Self::check_error_envelope(&envelope, &self.api_key)?;
+        if !matches!(envelope.status.as_deref(), Some("OK" | "DELAYED")) {
+            return Err(FinanceError::ResponseStructureError {
+                field: "status".into(),
+                context: "missing successful Polygon page status".into(),
+            });
+        }
+        let body =
+            serde_json::from_slice(&bytes).map_err(|_| FinanceError::ResponseStructureError {
+                field: "response".into(),
+                context: "invalid Polygon page fields".into(),
+            })?;
+        Ok((body, url.to_string()))
+    }
+
+    pub(super) fn continuation(
+        &self,
+        next: Option<String>,
+        path: &str,
+        params: &[(&str, &str)],
+        operation: &str,
+        request: &str,
+        current: &str,
+    ) -> Result<Option<crate::PageCursor>> {
+        next.map(|target| {
+            let target = self.page_url(&target, path, params)?.to_string();
+            if target == current {
+                return Err(FinanceError::ResponseStructureError {
+                    field: "next_url".into(),
+                    context: "provider repeated its continuation".into(),
+                });
+            }
+            Ok(crate::PageCursor {
+                version: 1,
+                provider: crate::Provider::Polygon,
+                operation: operation.into(),
+                request: request.into(),
+                target,
+            })
+        })
+        .transpose()
+    }
     fn check_status(status: StatusCode) -> Result<()> {
         match status {
             StatusCode::OK => Ok(()),
@@ -155,6 +313,12 @@ impl PolygonClient {
             .await
             .map_err(|error| self.map_transport_error(&error))?;
         let status = resp.status();
+        if status == StatusCode::TOO_MANY_REQUESTS {
+            return Err(FinanceError::RateLimited {
+                retry_after: crate::adapters::common::keyed::retry_after(resp.headers())
+                    .or(Some(60)),
+            });
+        }
         let bytes = resp
             .bytes()
             .await

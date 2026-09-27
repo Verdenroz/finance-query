@@ -37,6 +37,14 @@ pub trait QuoteProvider: ProviderCore {
 /// [`crate::Capability::CHART`] — historical OHLCV candles and sparklines.
 #[async_trait::async_trait]
 pub trait ChartProvider: ProviderCore {
+    /// Download one lossless stock-bar page with an explicit price policy.
+    async fn fetch_stock_bars_page(
+        &self,
+        _request: &crate::StockBarsRequest,
+        _cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        Err(self.not_supported(Operation::StockBarsPage))
+    }
     /// Fetch OHLCV candles at one interval over one range.
     async fn fetch_chart(
         &self,
