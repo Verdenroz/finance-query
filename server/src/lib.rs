@@ -205,13 +205,19 @@ fn route_table(
     routes
 }
 
-/// Attempts at the provider build. Its only fallible step is Yahoo's live
-/// cookie + crumb handshake, which a retry re-runs rather than replaying:
-/// only successful sessions are cached.
+/// Attempts at the provider build. Covers Yahoo's live cookie + crumb
+/// handshake, which a retry re-runs rather than replaying (only successful
+/// sessions are cached), and any other transient failure a route depends on.
+/// A non-retriable error, like a missing provider key, returns immediately.
 const PROVIDER_BUILD_ATTEMPTS: u32 = 3;
 
 /// Delay before the first retry, scaled by the attempt number.
 const PROVIDER_BUILD_BACKOFF: Duration = Duration::from_millis(500);
+
+/// Whether a failed build attempt should be retried rather than returned.
+fn should_retry(err: &FinanceError, attempt: u32) -> bool {
+    attempt < PROVIDER_BUILD_ATTEMPTS && err.is_retriable()
+}
 
 /// Whether a keyed provider's env var counts as configured: present and
 /// non-blank. GitHub Actions renders `${{ secrets.X }}` for an unset secret
@@ -267,7 +273,7 @@ pub async fn build_providers() -> Result<Arc<finance_query::Providers>, FinanceE
         match builder.build().await {
             Ok(providers) => return Ok(Arc::new(providers)),
             Err(e) => {
-                if attempt == PROVIDER_BUILD_ATTEMPTS {
+                if !should_retry(&e, attempt) {
                     return Err(e);
                 }
                 tracing::warn!(
@@ -298,6 +304,23 @@ mod provider_routing_tests {
         assert!(!key_configured(Some("")));
         assert!(!key_configured(Some("   ")));
         assert!(key_configured(Some("a-real-key")));
+    }
+
+    #[test]
+    fn retriable_errors_retry_until_the_last_attempt() {
+        let err = FinanceError::Timeout { timeout_ms: 5000 };
+        assert!(should_retry(&err, 1));
+        assert!(should_retry(&err, PROVIDER_BUILD_ATTEMPTS - 1));
+        assert!(!should_retry(&err, PROVIDER_BUILD_ATTEMPTS));
+    }
+
+    #[test]
+    fn a_config_error_never_retries() {
+        let err = FinanceError::ProviderNotConfigured {
+            provider: "FMP".into(),
+            env_var: "FMP_API_KEY".into(),
+        };
+        assert!(!should_retry(&err, 1));
     }
 
     #[test]
