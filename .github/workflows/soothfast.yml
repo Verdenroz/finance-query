@@ -163,7 +163,9 @@ jobs:
       - name: Measure baseline
         run: |
           if [ ! -f .soothfast/baselines/base.json ]; then
-            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
+            # --no-reuse: soothfast 0.3.3 drops perfcnt.instructions from a reused
+            # run, which the docs claims read. Remove once soothfast fixes that.
+            cargo soothfast measure -p finance-query --features bench-gate --no-reuse --save-baseline base
           fi
       - name: Upload baseline
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
