@@ -131,6 +131,7 @@ jobs:
           shared-key: bench-gate
           # A failing measured run must not cost the retry its warm cache.
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install valgrind
         run: |
           sudo apt-get update
@@ -463,6 +464,8 @@ jobs:
       - name: Install nightly (rustdoc JSON)
         run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@888ff57c1d86240ddf37a619f0c912b5ab259753 # v0.3.3
         with:

@@ -114,6 +114,7 @@ jobs:
           # check-only artifacts; sharing test-suite let this job's save
           # starve the test jobs, which then recompiled everything
           shared-key: clippy
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # `full` excludes translation-offline (native CTranslate2 build,
       # covered by the Docker jobs instead).
       - name: Run clippy
@@ -136,6 +137,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: test-suite
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
           tool: nextest
@@ -162,6 +164,7 @@ jobs:
         with:
           # default features, unlike the full-features test-suite key
           shared-key: test-network
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
           tool: nextest
@@ -185,6 +188,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: test-suite
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # `full` excludes translation-offline (native CTranslate2 build,
       # covered by the Docker jobs instead).
       - name: Run doctests
@@ -223,6 +227,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: check
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Check server
         run: cargo check -p finance-query-server --verbose
 
@@ -241,6 +246,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: check
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       # mcp path-deps on server for its in-process GraphQL schema.
       - name: Check mcp
         run: cargo check -p finance-query-mcp --verbose
@@ -261,6 +267,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: check-lib-default
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Check lib (default features)
         run: cargo check -p finance-query --verbose
       # Deliberately not --workspace/--all-targets: those unify the server's and
@@ -313,6 +320,7 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           shared-key: check-lib-features-${{ matrix.shard }}
+          save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Check lib (each feature alone)
         env:
           FEATURES: ${{ matrix.features }}
@@ -411,7 +419,8 @@ jobs:
           load: true
           tags: financequery:v2-ci
           cache-from: type=gha,scope=docker-server
-          cache-to: type=gha,mode=max,scope=docker-server
+          # A PR's cache scope is invisible to other PRs; exporting there only evicts master's.
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=docker-server' || '' }}
       - name: Test Docker image
         run: |
           docker run -d --name test-container -p 8000:8000 financequery:v2-ci
@@ -468,7 +477,8 @@ jobs:
           load: true
           tags: financequery:mcp-ci
           cache-from: type=gha,scope=docker-mcp
-          cache-to: type=gha,mode=max,scope=docker-mcp
+          # A PR's cache scope is invisible to other PRs; exporting there only evicts master's.
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=docker-mcp' || '' }}
       - name: Test MCP Docker image
         run: |
           docker run -d --name test-mcp -p 3000:3000 -e MCP_TRANSPORT=http financequery:mcp-ci
