@@ -17,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Skip retry for non-retriable provider errors
 - Require non-blank keyed provider env vars
 
 ### 🔧 Internal
 
+- Record gate references on bot pushes
+- Stop PR runs from evicting master caches
 - Adopt soothfast 0.3.3 run reuse (#509)
 - Speed up PR builds and Docker caching
 
