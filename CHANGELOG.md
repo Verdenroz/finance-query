@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### 🐛 Fixes
+
+- Require non-blank keyed provider env vars
+
+### 🔧 Internal
+
+- Adopt soothfast 0.3.3 run reuse (#509)
+- Speed up PR builds and Docker caching
 
 
 ## [3.1.0] - 2026-09-12
