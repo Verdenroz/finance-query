@@ -9,6 +9,9 @@ use crate::models::corporate::recommendation::SimilarSymbol;
 use super::build_client;
 use super::models::PaginatedResponseDTO;
 
+mod listings;
+pub(crate) use listings::{fetch_stock_listings_page, fetch_stock_types, fetch_symbol_details_at};
+
 /// Ticker reference entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -38,6 +41,10 @@ pub struct TickerRefDTO {
     pub share_class_figi: Option<String>,
     /// Last updated date.
     pub last_updated_utc: Option<String>,
+    /// Listing date.
+    pub list_date: Option<String>,
+    /// Delisting timestamp.
+    pub delisted_utc: Option<String>,
 }
 
 /// Detailed ticker overview.

@@ -76,6 +76,47 @@ async fn stock_ingestion_directory_resumes_after_rebuilding_client() {
 }
 
 #[tokio::test]
+async fn stock_ingestion_listings_keep_rows_whose_current_status_differs() {
+    let mut server = Server::new_async().await;
+    let body = json!({
+        "status": "OK",
+        "results": [
+            {"ticker": "AAPL", "active": true, "locale": "us", "type": "CS"},
+            {
+                "ticker": "TWTR",
+                "active": false,
+                "locale": "us",
+                "type": "ADRC",
+                "delisted_utc": "2022-11-08T00:00:00Z"
+            }
+        ]
+    });
+    let fixture = server
+        .mock("GET", "/v3/reference/tickers")
+        .match_query(Matcher::UrlEncoded("active".into(), "true".into()))
+        .with_body(body.to_string())
+        .create_async()
+        .await;
+    let client = providers(&server, Provider::Polygon).await;
+    let request = StockListingRequest::new("2020-01-02", true)
+        .unwrap()
+        .stock_type("CS");
+    let page = client
+        .discovery()
+        .stock_listings_page(&request, None)
+        .await
+        .unwrap();
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[1].active, Some(false));
+    assert_eq!(page.items[1].stock_type.as_deref(), Some("ADRC"));
+    assert_eq!(
+        page.items[1].delisted_utc.as_deref(),
+        Some("2022-11-08T00:00:00Z")
+    );
+    fixture.assert_async().await;
+}
+
+#[tokio::test]
 async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() {
     let mut server = Server::new_async().await;
     let path = "/v2/aggs/ticker/AAPL/range/1/minute/2020-01-02/2020-01-02";

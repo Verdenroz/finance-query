@@ -35,8 +35,7 @@ mod discovery; // DISCOVERY
 mod economic; // ECONOMIC
 mod filings; // FILINGS
 mod fundamentals; // FUNDAMENTALS
-mod quote;
-pub(crate) mod stock_ingestion; // QUOTE
+mod quote; // QUOTE
 
 // Asset-class subdirectory modules
 mod crypto; // CRYPTO
@@ -50,6 +49,13 @@ pub(crate) mod websocket;
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::{FinanceError, Result};
 use std::time::Duration;
+
+fn invalid_page(field: &str) -> FinanceError {
+    FinanceError::ResponseStructureError {
+        field: field.into(),
+        context: "invalid stock provider response".into(),
+    }
+}
 
 // Capability modules
 pub use chart::*;

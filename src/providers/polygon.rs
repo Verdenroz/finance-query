@@ -45,7 +45,7 @@ impl ChartProvider for PolygonProvider {
         request: &crate::StockBarsRequest,
         cursor: Option<&crate::PageCursor>,
     ) -> Result<crate::ProviderPage<crate::StockBar>> {
-        polygon::stock_ingestion::bars(request, cursor).await
+        polygon::fetch_stock_bars_page(request, cursor).await
     }
     async fn fetch_chart(
         &self,
@@ -161,17 +161,17 @@ impl DiscoveryProvider for PolygonProvider {
         request: &crate::StockListingRequest,
         cursor: Option<&crate::PageCursor>,
     ) -> Result<crate::ProviderPage<crate::StockListing>> {
-        polygon::stock_ingestion::listings(request, cursor).await
+        polygon::fetch_stock_listings_page(request, cursor).await
     }
     async fn fetch_symbol_details_at(
         &self,
         symbol: &str,
         date: &str,
     ) -> Result<crate::SymbolDetails> {
-        polygon::stock_ingestion::details_at(symbol, date).await
+        polygon::fetch_symbol_details_at(symbol, date).await
     }
     async fn fetch_stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
-        polygon::stock_ingestion::stock_types(locale).await
+        polygon::fetch_stock_types(locale).await
     }
     async fn fetch_symbol_search(
         &self,
