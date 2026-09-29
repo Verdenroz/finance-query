@@ -25,6 +25,17 @@ const PAGE_BYTE_LIMIT: usize = 32 * 1024 * 1024;
 const ERROR_BODY_BYTE_LIMIT: usize = 64 * 1024;
 const MISSING_KEY: &str = "Polygon API key invalid or missing. Call polygon::init(key) first.";
 
+/// A refusal naming the plan or entitlement comes from a valid key that lacks
+/// access, such as minute bars older than the plan's history window.
+fn refusal(message: String) -> FinanceError {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("entitled") || lower.contains("plan") {
+        FinanceError::NotEntitled { context: message }
+    } else {
+        FinanceError::AuthenticationFailed { context: message }
+    }
+}
+
 pub(crate) struct PolygonClientBuilder {
     api_key: String,
     timeout: Duration,
@@ -203,8 +214,11 @@ impl PolygonClient {
             let message = serde_json::from_slice::<ErrorEnvelope>(&body)
                 .ok()
                 .and_then(|env| env.text().map(|text| redact_key(text, &self.api_key)));
-            return Err(FinanceError::AuthenticationFailed {
-                context: message.unwrap_or_else(|| MISSING_KEY.to_string()),
+            return Err(match message {
+                Some(message) => refusal(message),
+                None => FinanceError::AuthenticationFailed {
+                    context: MISSING_KEY.to_string(),
+                },
             });
         }
         Self::check_status(status, response.headers())?;
@@ -251,7 +265,7 @@ impl PolygonClient {
             || normalized.contains("not entitled")
             || normalized.contains("upgrade your plan")
         {
-            return Err(FinanceError::AuthenticationFailed { context: msg });
+            return Err(refusal(msg));
         }
         Err(FinanceError::ExternalApiError {
             api: "Polygon".to_string(),
@@ -423,6 +437,7 @@ mod tests {
             NotFound(&'static str),
             External,
             Auth,
+            NotEntitled,
         }
 
         let cases = [
@@ -451,11 +466,11 @@ mod tests {
             ),
             (
                 r#"{"status":"ERROR","error":"You are not entitled to this data. Please upgrade your plan"}"#,
-                Want::Auth,
+                Want::NotEntitled,
             ),
             (
                 r#"{"status":"NOT_AUTHORIZED","message":"plan restriction"}"#,
-                Want::Auth,
+                Want::NotEntitled,
             ),
             (r#"{"status":"OK"}"#, Want::Ok),
             (r#"[{"ticker":"AAPL"}]"#, Want::Ok),
@@ -478,6 +493,7 @@ mod tests {
                     assert_eq!(status, 400, "body {body}");
                 }
                 (Want::Auth, Err(FinanceError::AuthenticationFailed { .. })) => {}
+                (Want::NotEntitled, Err(FinanceError::NotEntitled { .. })) => {}
                 (_, got) => panic!("body {body}: unexpected {got:?}"),
             }
         }
@@ -576,7 +592,8 @@ mod tests {
             let client = &client;
             async move {
                 match client.get_raw(path, &[]).await.unwrap_err() {
-                    FinanceError::AuthenticationFailed { context } => context,
+                    FinanceError::AuthenticationFailed { context }
+                    | FinanceError::NotEntitled { context } => context,
                     other => panic!("{path}: unexpected {other:?}"),
                 }
             }
