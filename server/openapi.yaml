@@ -7144,6 +7144,8 @@ components:
       description: "Mirrors `finance_query::CompanyProfile`, which has no serde rename of its\nown — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
       type: object
       properties:
+        active:
+          type: boolean
         assetType:
           type: string
         cik:
@@ -7152,6 +7154,8 @@ components:
           type: string
         currency:
           type: string
+        cusip:
+          type: string
         description:
           type: string
         exchange:
@@ -7159,6 +7163,14 @@ components:
         industry:
           type: string
         ipoDate:
+          type: string
+        isAdr:
+          type: boolean
+        isEtf:
+          type: boolean
+        isFund:
+          type: boolean
+        isin:
           type: string
         marketCapitalization:
           type: number
@@ -10679,11 +10691,15 @@ components:
           type: string
         currency:
           type: string
+        delistedDate:
+          type: string
         exchange:
           type: string
         id:
           type: string
         image:
+          type: string
+        ipoDate:
           type: string
         marketCapRank:
           type: integer

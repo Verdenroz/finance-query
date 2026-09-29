@@ -47,6 +47,8 @@ pub struct GqlTrendingCoin {
 #[graphql(rename_fields = "camelCase")]
 #[serde(default)]
 pub struct GqlSymbolMatch {
+    pub ipo_date: Option<String>,
+    pub delisted_date: Option<String>,
     pub symbol: String,
     pub id: Option<String>,
     pub name: Option<String>,

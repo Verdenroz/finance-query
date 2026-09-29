@@ -1,0 +1,40 @@
+{
+  "concurrency": 1,
+  "data": {
+    "error": "other_request_error",
+    "part": 0
+  },
+  "dataset": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "GOOG",
+    "AMZN",
+    "META",
+    "NVDA",
+    "TSLA",
+    "JPM",
+    "V",
+    "XOM",
+    "JNJ",
+    "WMT",
+    "KO",
+    "DIS",
+    "BRK-B",
+    "BABA",
+    "TSM",
+    "ASML",
+    "ABNB",
+    "SNOW",
+    "UBER",
+    "TWTR",
+    "LEH"
+  ],
+  "elapsed_ms": 180004,
+  "mode": "bulk",
+  "recorded_at": "2026-09-28T12:39:16.915975+00:00",
+  "requests": 1,
+  "requests_per_minute": 300,
+  "retries": 0,
+  "timeout_seconds": 180
+}

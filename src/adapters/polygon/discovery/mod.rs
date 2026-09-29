@@ -263,6 +263,8 @@ pub async fn fetch_symbol_search_response(
         .into_iter()
         .filter_map(|t| {
             Some(SymbolMatch {
+                ipo_date: None,
+                delisted_date: None,
                 symbol: t.ticker?,
                 id: None,
                 name: t.name,

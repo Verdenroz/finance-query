@@ -180,7 +180,7 @@ alphavantage = []
 # Enable Polygon.io financial data API
 polygon = []
 # Enable Financial Modeling Prep (FMP) financial data API
-fmp = []
+fmp = ["dep:csv"]
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
 risk = ["indicators"]
 # Enable translation of human-readable response fields: built-in dictionary
@@ -274,6 +274,10 @@ required-features = ["risk", "backtesting", "translation", "sentiment"]
 
 [[example]]
 name = "stock_ingestion"
+required-features = ["polygon", "fmp"]
+
+[[example]]
+name = "fmp_catalog_benchmark"
 required-features = ["polygon", "fmp"]
 
 [profile.release]

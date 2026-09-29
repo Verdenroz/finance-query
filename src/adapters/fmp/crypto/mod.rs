@@ -1,7 +1,5 @@
 //! Cryptocurrency endpoints for Financial Modeling Prep.
 
-use serde::{Deserialize, Serialize};
-
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -39,24 +37,6 @@ pub async fn fetch_canonical_crypto_quote(
     let pair = format!("{}{}", id.to_uppercase(), vs_currency.to_uppercase());
     let quotes = crypto_quote(&pair).await?;
     Ok(crypto_quote_to_canonical(id, vs_currency, &quotes))
-}
-
-/// An available cryptocurrency or forex/commodity symbol.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct AvailableSymbolDTO {
-    /// Ticker symbol (e.g., `"BTCUSD"`).
-    pub symbol: Option<String>,
-    /// Display name.
-    pub name: Option<String>,
-    /// Currency.
-    pub currency: Option<String>,
-    /// Exchange name.
-    #[serde(rename = "stockExchange")]
-    pub stock_exchange: Option<String>,
-    /// Short exchange name.
-    #[serde(rename = "exchangeShortName")]
-    pub exchange_short_name: Option<String>,
 }
 
 /// Fetch a real-time crypto quote.

@@ -5,6 +5,12 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 struct Profile {
     symbol: String,
+    isin: Option<String>,
+    cusip: Option<String>,
+    is_actively_trading: Option<bool>,
+    is_etf: Option<bool>,
+    is_adr: Option<bool>,
+    is_fund: Option<bool>,
     cik: Option<String>,
     ipo_date: Option<String>,
     company_name: Option<String>,
@@ -39,6 +45,75 @@ pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile
             field: "profile".into(),
             context: "FMP profile is absent".into(),
         })?;
+    into_profile(row)
+}
+
+pub(crate) async fn fetch_company_profiles_bulk(part: u32) -> Result<Vec<CompanyProfile>> {
+    let client = crate::adapters::fmp::build_client()?;
+    let bytes = client
+        .get_bytes("/stable/profile-bulk", &[("part", &part.to_string())])
+        .await?;
+    tokio::task::spawn_blocking(move || parse_bulk(&bytes))
+        .await
+        .map_err(|_| FinanceError::ResponseStructureError {
+            field: "profile_bulk".into(),
+            context: "FMP bulk-profile parser did not finish".into(),
+        })?
+}
+
+fn parse_bulk(bytes: &[u8]) -> Result<Vec<CompanyProfile>> {
+    let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(bytes);
+    let first = bytes
+        .iter()
+        .copied()
+        .find(|byte| !byte.is_ascii_whitespace());
+    if first.is_none() {
+        return Err(FinanceError::ResponseStructureError {
+            field: "profile_bulk".into(),
+            context: "empty FMP bulk-profile response".into(),
+        });
+    }
+    if first == Some(b'[') {
+        let rows: Vec<Profile> =
+            serde_json::from_slice(bytes).map_err(|_| FinanceError::ResponseStructureError {
+                field: "profile_bulk".into(),
+                context: "invalid FMP bulk-profile JSON".into(),
+            })?;
+        return rows.into_iter().map(into_profile).collect();
+    }
+    let mut reader = csv::ReaderBuilder::new().from_reader(bytes);
+    let header = reader
+        .headers()
+        .map_err(|_| FinanceError::ResponseStructureError {
+            field: "profile_bulk".into(),
+            context: "invalid FMP bulk-profile CSV header".into(),
+        })?;
+    if !header.iter().any(|name| name == "symbol") {
+        return Err(FinanceError::ResponseStructureError {
+            field: "symbol".into(),
+            context: "FMP bulk-profile CSV has no symbol column".into(),
+        });
+    }
+    reader
+        .deserialize::<Profile>()
+        .enumerate()
+        .map(|(index, row)| {
+            let row = row.map_err(|_| FinanceError::ResponseStructureError {
+                field: "profile_bulk".into(),
+                context: format!("invalid FMP bulk-profile CSV record {}", index + 1),
+            })?;
+            into_profile(row)
+        })
+        .collect()
+}
+
+fn into_profile(row: Profile) -> Result<CompanyProfile> {
+    if row.symbol.trim().is_empty() {
+        return Err(FinanceError::ResponseStructureError {
+            field: "symbol".into(),
+            context: "FMP profile has a blank symbol".into(),
+        });
+    }
     if let Some(date) = &row.ipo_date {
         crate::models::discovery::listings::date(date).map_err(|_| {
             FinanceError::ResponseStructureError {
@@ -48,6 +123,12 @@ pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile
         })?;
     }
     Ok(CompanyProfile {
+        isin: row.isin,
+        cusip: row.cusip,
+        active: row.is_actively_trading,
+        is_etf: row.is_etf,
+        is_adr: row.is_adr,
+        is_fund: row.is_fund,
         symbol: Some(row.symbol),
         cik: row.cik,
         ipo_date: row.ipo_date,

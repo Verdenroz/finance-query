@@ -12,6 +12,24 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyProfile {
+    /// Provider-reported ISIN, preserving its exact text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isin: Option<String>,
+    /// Provider-reported CUSIP, when supplied by this provider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cusip: Option<String>,
+    /// Provider-reported current trading status.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
+    /// Whether the provider classifies this instrument as an ETF.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_etf: Option<bool>,
+    /// Whether the provider classifies this instrument as an ADR.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_adr: Option<bool>,
+    /// Whether the provider classifies this instrument as a fund.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_fund: Option<bool>,
     /// SEC company identifier, preserving leading zeros.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cik: Option<String>,

@@ -11,6 +11,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SymbolMatch {
+    /// Provider-reported IPO date, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ipo_date: Option<String>,
+    /// Provider-reported delisting date, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delisted_date: Option<String>,
     /// Ticker symbol, uppercased.
     pub symbol: String,
     /// Provider-native identifier, when the provider uses one distinct from
@@ -131,6 +137,8 @@ pub struct ScreenerMatch {
     pub country: Option<String>,
     /// Whether the symbol is an ETF.
     pub is_etf: Option<bool>,
+    /// Whether the symbol is a fund.
+    pub is_fund: Option<bool>,
     /// Whether the symbol is actively trading.
     pub is_actively_trading: Option<bool>,
 }
@@ -166,6 +174,10 @@ pub struct ScreenerFilters {
     pub country: Option<String>,
     /// Restrict to actively trading symbols.
     pub actively_trading: Option<bool>,
+    /// Restrict to ETFs or exclude them.
+    pub is_etf: Option<bool>,
+    /// Restrict to funds or exclude them.
+    pub is_fund: Option<bool>,
     /// Maximum number of results.
     pub limit: Option<u32>,
 }
@@ -270,6 +282,12 @@ impl ScreenerFilters {
         }
         if let Some(v) = self.actively_trading {
             q.push(("isActivelyTrading", v.to_string()));
+        }
+        if let Some(v) = self.is_etf {
+            q.push(("isEtf", v.to_string()));
+        }
+        if let Some(v) = self.is_fund {
+            q.push(("isFund", v.to_string()));
         }
         if let Some(v) = self.limit {
             q.push(("limit", v.to_string()));

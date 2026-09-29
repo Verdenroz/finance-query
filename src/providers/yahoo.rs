@@ -362,6 +362,12 @@ fn profile_and_price_to_company_profile(
     price: Option<crate::models::quote::price::Price>,
 ) -> crate::models::fundamentals::CompanyProfile {
     crate::models::fundamentals::CompanyProfile {
+        isin: None,
+        cusip: None,
+        active: None,
+        is_etf: None,
+        is_adr: None,
+        is_fund: None,
         cik: None,
         ipo_date: None,
         provider_id: None,
@@ -1005,6 +1011,8 @@ fn search_quotes_to_symbol_matches(
     quotes
         .into_iter()
         .map(|q| crate::models::discovery::reference::SymbolMatch {
+            ipo_date: None,
+            delisted_date: None,
             symbol: q.symbol,
             id: None,
             name: q.short_name.or(q.long_name),
@@ -1039,6 +1047,7 @@ fn screener_quotes_to_screener_matches(
             exchange: Some(q.exchange),
             country: None,
             is_etf: Some(q.quote_type == "ETF"),
+            is_fund: Some(q.quote_type == "MUTUALFUND"),
             is_actively_trading: None,
         })
         .collect()

@@ -1,0 +1,55 @@
+{
+  "concurrency": 1,
+  "data": {
+    "date": "2026-09-28",
+    "pages": [
+      {
+        "active": true,
+        "figi": 6,
+        "has_more": true,
+        "names": 10,
+        "rows": 10
+      },
+      {
+        "active": false,
+        "figi": 5,
+        "has_more": true,
+        "names": 10,
+        "rows": 10
+      }
+    ]
+  },
+  "dataset": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "GOOG",
+    "AMZN",
+    "META",
+    "NVDA",
+    "TSLA",
+    "JPM",
+    "V",
+    "XOM",
+    "JNJ",
+    "WMT",
+    "KO",
+    "DIS",
+    "BRK-B",
+    "BABA",
+    "TSM",
+    "ASML",
+    "ABNB",
+    "SNOW",
+    "UBER",
+    "TWTR",
+    "LEH"
+  ],
+  "elapsed_ms": 1167,
+  "mode": "polygon",
+  "recorded_at": "2026-09-28T12:39:10.325180+00:00",
+  "requests": 2,
+  "requests_per_minute": 300,
+  "retries": 0,
+  "timeout_seconds": 180
+}

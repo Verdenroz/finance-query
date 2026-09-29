@@ -27,6 +27,89 @@ domain_handle! {
 }
 
 impl Discovery {
+    /// Fetch one independently addressable FMP delisted page (zero-based).
+    ///
+    /// Supports page 0..10_000 and limit 1..=100. Callers fetching pages in parallel
+    /// must check contiguous coverage, repeated records and the empty terminal page.
+    /// Unlike `delisted_stocks_page`, this does not carry scan-progress validation.
+    pub async fn delisted_stocks_page_at(&self, page: u32, limit: u32) -> Result<Vec<SymbolMatch>> {
+        if page >= 10_000 || !(1..=100).contains(&limit) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: "page/limit".into(),
+                reason: "page must be 0..10000 and limit 1..=100".into(),
+            });
+        }
+        dispatch_via!(
+            self,
+            DISCOVERY,
+            as_discovery,
+            DelistedStocksPageAt,
+            fetch_delisted_stocks_page_at,
+            [],
+            page,
+            limit
+        )
+    }
+
+    /// Fetch one delisted-stock page. Persist the returned cursor with the records.
+    pub async fn delisted_stocks_page(
+        &self,
+        limit: u32,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<SymbolMatch>> {
+        if !(1..=1000).contains(&limit) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: "limit".into(),
+                reason: "expected 1..=1000".into(),
+            });
+        }
+        if let Some(cursor) = cursor {
+            cursor.validate("delisted_stocks_page", &limit.to_string())?;
+        }
+        let call = |p: &Arc<dyn crate::ProviderAdapter>| {
+            let p = Arc::clone(p);
+            async move {
+                p.as_discovery()
+                    .ok_or_else(|| p.not_supported(crate::Operation::DelistedStocksPage))?
+                    .fetch_delisted_stocks_page(limit, cursor)
+                    .await
+            }
+        };
+        match cursor {
+            Some(c) => {
+                self.providers
+                    .fetch_from(c.provider(), Capability::DISCOVERY, call)
+                    .await
+            }
+            None => self.providers.fetch(Capability::DISCOVERY, call).await,
+        }
+    }
+    /// Fetch the current provider-wide symbol directory. Active status can be unknown.
+    pub async fn stock_list(&self) -> Result<Vec<SymbolMatch>> {
+        dispatch_via!(
+            self,
+            DISCOVERY,
+            as_discovery,
+            StockList,
+            fetch_stock_list,
+            []
+        )
+    }
+
+    /// Fetch one numbered bulk-profile part. No additional parts are downloaded or cached.
+    /// An empty part is returned as empty; access and transport failures remain errors.
+    pub async fn company_profiles_bulk(&self, part: u32) -> Result<Vec<crate::CompanyProfile>> {
+        dispatch_via!(
+            self,
+            DISCOVERY,
+            as_discovery,
+            CompanyProfilesBulk,
+            fetch_company_profiles_bulk,
+            [],
+            part
+        )
+    }
+
     /// Download one dated stock-directory page. Continuations never change providers.
     pub async fn stock_listings_page(
         &self,
@@ -162,7 +245,10 @@ impl Discovery {
     /// [`search`](Self::search) when you have a query. Cached per `active`.
     /// EDGAR serves `active = true` keylessly from SEC's bulk ticker files
     /// (no exchange-listing history, so `active = false` isn't supported
-    /// there); Alpha Vantage and FMP serve both.
+    /// there). Alpha Vantage and FMP serve both. FMP's active list includes
+    /// global instruments; callers must filter their intended stock universe.
+    /// FMP delisted listings include all pages and preserve IPO/delisting dates.
+    /// A failed page fails the call; partial results are not returned or cached.
     pub async fn listing_status(&self, active: bool) -> Result<Vec<SymbolMatch>> {
         let providers = Arc::clone(&self.providers);
         self.cache

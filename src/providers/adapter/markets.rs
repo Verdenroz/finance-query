@@ -9,6 +9,32 @@ use super::ProviderCore;
 /// screeners.
 #[async_trait::async_trait]
 pub trait DiscoveryProvider: ProviderCore {
+    /// Fetch an independently numbered delisted page; callers validate scan progress.
+    async fn fetch_delisted_stocks_page_at(
+        &self,
+        _page: u32,
+        _limit: u32,
+    ) -> Result<Vec<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::DelistedStocksPageAt))
+    }
+    /// Fetch one delisted-stock page, bound to this provider and page size.
+    async fn fetch_delisted_stocks_page(
+        &self,
+        _limit: u32,
+        _cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::DelistedStocksPage))
+    }
+    /// Fetch the current full directory, without assuming active status.
+    async fn fetch_stock_list(&self) -> Result<Vec<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::StockList))
+    }
+
+    /// Fetch one provider-defined bulk-profile part, not the entire directory.
+    async fn fetch_company_profiles_bulk(&self, _part: u32) -> Result<Vec<crate::CompanyProfile>> {
+        Err(self.not_supported(Operation::CompanyProfilesBulk))
+    }
+
     /// Fetch one dated stock-directory page.
     async fn fetch_stock_listings_page(
         &self,

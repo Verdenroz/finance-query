@@ -107,6 +107,8 @@ pub async fn fetch_symbol_search_response(
         .into_iter()
         .filter_map(|r| {
             Some(SymbolMatch {
+                ipo_date: None,
+                delisted_date: None,
                 symbol: r.symbol?,
                 id: None,
                 name: r.name,
@@ -146,6 +148,7 @@ pub async fn fetch_screener_response(
                 exchange: r.exchange_short_name.or(r.exchange),
                 country: r.country,
                 is_etf: r.is_etf,
+                is_fund: r.is_fund,
                 is_actively_trading: r.is_actively_trading,
             })
         })
@@ -211,6 +214,8 @@ mod tests {
             .into_iter()
             .filter_map(|r| {
                 Some(crate::models::discovery::reference::SymbolMatch {
+                    ipo_date: None,
+                    delisted_date: None,
                     symbol: r.symbol?,
                     id: None,
                     name: r.name,

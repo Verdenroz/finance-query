@@ -86,6 +86,12 @@ pub(crate) async fn fetch_company_profile_response(
 ) -> Result<crate::models::fundamentals::CompanyProfile> {
     let dto = company_overview(symbol).await?;
     Ok(crate::models::fundamentals::CompanyProfile {
+        isin: None,
+        cusip: None,
+        active: None,
+        is_etf: None,
+        is_adr: None,
+        is_fund: None,
         cik: None,
         ipo_date: None,
         provider_id: None,

@@ -16,6 +16,8 @@ use super::models::SearchCoinDTO;
 /// `exchange`/`currency` stay `None`; a returned coin is presumed tradable.
 fn to_symbol_match(dto: SearchCoinDTO) -> SymbolMatch {
     SymbolMatch {
+        ipo_date: None,
+        delisted_date: None,
         // Fall back to the id only when CoinGecko omits the ticker outright —
         // `symbol` is non-optional and an empty string would be worse.
         symbol: dto

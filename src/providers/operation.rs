@@ -12,6 +12,14 @@ use crate::error::FinanceError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Operation {
+    /// One resumable page of delisted stocks.
+    DelistedStocksPage,
+    /// One independently numbered delisted-stock page.
+    DelistedStocksPageAt,
+    /// Current provider-wide symbol directory.
+    StockList,
+    /// One numbered part of bulk company profiles.
+    CompanyProfilesBulk,
     /// One historical stock-directory page.
     StockListingsPage,
     /// Company details on a specified date.
@@ -181,6 +189,10 @@ impl Operation {
     /// Short lowercase identifier (e.g. `"chart_range"`, `"crypto_quote"`).
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::DelistedStocksPage => "delisted_stocks_page",
+            Self::DelistedStocksPageAt => "delisted_stocks_page_at",
+            Self::StockList => "stock_list",
+            Self::CompanyProfilesBulk => "company_profiles_bulk",
             Self::StockListingsPage => "stock_listings_page",
             Self::SymbolDetailsAt => "symbol_details_at",
             Self::StockTypes => "stock_types",
@@ -272,9 +284,13 @@ impl Operation {
     /// The coarser [`Capability`] bit this operation falls under.
     pub fn capability(self) -> Capability {
         match self {
-            Self::StockListingsPage | Self::SymbolDetailsAt | Self::StockTypes => {
-                Capability::DISCOVERY
-            }
+            Self::DelistedStocksPage
+            | Self::DelistedStocksPageAt
+            | Self::StockList
+            | Self::CompanyProfilesBulk
+            | Self::StockListingsPage
+            | Self::SymbolDetailsAt
+            | Self::StockTypes => Capability::DISCOVERY,
             Self::StockBarsPage => Capability::CHART,
             Self::Quote | Self::QuotesBatch | Self::UnifiedSnapshot => Capability::QUOTE,
             Self::Chart

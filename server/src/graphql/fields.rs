@@ -769,6 +769,12 @@ pub const GQL_EARNINGS_HISTORY_COMPOSITE: &str =
 
 /// `companyProfile` (`GqlCompanyProfile`) — flat, no composite fields.
 pub const GQL_COMPANY_PROFILE_VALID_FIELDS: &[&str] = &[
+    "isin",
+    "cusip",
+    "active",
+    "isEtf",
+    "isAdr",
+    "isFund",
     "cik",
     "ipoDate",
     "providerId",

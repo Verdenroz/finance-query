@@ -100,12 +100,12 @@ impl FmpClient {
     fn check_status(status: StatusCode) -> Result<()> {
         match status {
             StatusCode::OK => Ok(()),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(FinanceError::AuthenticationFailed {
-                    context: "FMP API key invalid or missing. Call fmp::init(key) first."
-                        .to_string(),
-                })
-            }
+            StatusCode::UNAUTHORIZED => Err(FinanceError::AuthenticationFailed {
+                context: "FMP API key invalid or missing. Call fmp::init(key) first.".to_string(),
+            }),
+            StatusCode::FORBIDDEN => Err(FinanceError::AuthenticationFailed {
+                context: "FMP access denied for this endpoint (HTTP 403)".into(),
+            }),
             StatusCode::NOT_FOUND => Err(FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "Resource not found on FMP".to_string(),
@@ -139,7 +139,7 @@ impl FmpClient {
     }
 
     /// Execute a GET request to an FMP REST path and return the raw response bytes.
-    async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<impl AsRef<[u8]>> {
+    pub(super) async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<Vec<u8>> {
         self.limiter.acquire().await;
 
         let url = format!("{}{}", self.base_url, path);
@@ -147,7 +147,14 @@ impl FmpClient {
         query.extend_from_slice(params);
 
         debug!("FMP request: {path}");
-        let http = if path == "/stable/profile" {
+        let byte_limit = match path {
+            "/stable/profile" => Some(1024 * 1024),
+            "/stable/delisted-companies" => Some(8 * 1024 * 1024),
+            "/stable/profile-bulk" => Some(128 * 1024 * 1024),
+            "/stable/stock-list" | "/stable/actively-trading-list" => Some(32 * 1024 * 1024),
+            _ => None,
+        };
+        let http = if byte_limit.is_some() {
             &self.profile_http
         } else {
             &self.http
@@ -167,9 +174,8 @@ impl FmpClient {
         }
         Self::check_status(resp.status())?;
 
-        let bytes = if path == "/stable/profile" {
-            crate::adapters::common::keyed::bounded_body(resp, 1024 * 1024, "FMP", self.timeout)
-                .await?
+        let bytes = if let Some(limit) = byte_limit {
+            crate::adapters::common::keyed::bounded_body(resp, limit, "FMP", self.timeout).await?
         } else {
             resp.bytes()
                 .await

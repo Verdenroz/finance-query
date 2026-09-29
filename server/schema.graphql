@@ -507,6 +507,12 @@ own — this deserializes snake_case keys while its GraphQL name stays
 camelCase.
 """
 type GqlCompanyProfile {
+	isin: String
+	cusip: String
+	active: Boolean
+	isEtf: Boolean
+	isAdr: Boolean
+	isFund: Boolean
 	cik: String
 	ipoDate: String
 	providerId: String
@@ -3648,6 +3654,8 @@ Mirrors `finance_query::crypto::SymbolMatch` — the provider-neutral
 discovery shape, here populated from CoinGecko's coin universe.
 """
 type GqlSymbolMatch {
+	ipoDate: String
+	delistedDate: String
 	symbol: String!
 	id: String
 	name: String
@@ -3813,8 +3821,7 @@ type GqlTicker {
 	earningsEstimate: GqlEarningsTrend!
 	earningsHistory: GqlEarningsHistory!
 	"""
-	Company identity/classification profile (currently Alpha Vantage
-	only, requires `ALPHAVANTAGE_API_KEY`).
+	Company identity/classification profile from the configured fundamentals provider.
 	"""
 	companyProfile: GqlCompanyProfile!
 	"""
