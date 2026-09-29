@@ -106,6 +106,7 @@ impl PolygonClient {
         target: &str,
         path: &str,
         params: &[(&str, &str)],
+        rule: PathRule,
     ) -> Result<reqwest::Url> {
         let invalid = || FinanceError::InvalidParameter {
             param: "cursor".into(),
@@ -115,7 +116,7 @@ impl PolygonClient {
         let mut url = base.join(target).map_err(|_| invalid())?;
         let expected = base.join(path).map_err(|_| invalid())?;
         if url.origin() != base.origin()
-            || url.path() != expected.path()
+            || !rule.allows(url.path(), expected.path())
             || !url.username().is_empty()
             || url.password().is_some()
             || url.fragment().is_some()
@@ -151,6 +152,7 @@ impl PolygonClient {
         &self,
         path: &str,
         params: &[(&str, &str)],
+        rule: PathRule,
         cursor: Option<&crate::PageCursor>,
         operation: &str,
         request: &str,
@@ -164,7 +166,12 @@ impl PolygonClient {
                 });
             }
         }
-        let url = self.page_url(cursor.map_or(path, |c| c.target.as_str()), path, params)?;
+        let url = self.page_url(
+            cursor.map_or(path, |c| c.target.as_str()),
+            path,
+            params,
+            rule,
+        )?;
         self.limiter.acquire().await;
         let response = self
             .page_http
@@ -206,18 +213,20 @@ impl PolygonClient {
         Ok((body, url.to_string()))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn continuation(
         &self,
         next: Option<String>,
         path: &str,
         params: &[(&str, &str)],
+        rule: PathRule,
         operation: &str,
         request: &str,
         current: &str,
     ) -> Result<Option<crate::PageCursor>> {
         next.map(|target| {
-            let target = self.page_url(&target, path, params)?.to_string();
-            if target == current {
+            let target = self.page_url(&target, path, params, rule)?.to_string();
+            if target == current || !rule.advances(&target, current) {
                 return Err(FinanceError::ResponseStructureError {
                     field: "next_url".into(),
                     context: "provider repeated its continuation".into(),
@@ -373,6 +382,66 @@ impl PolygonClient {
     }
 }
 
+const DAY_MS: i64 = 86_400_000;
+
+/// How far a continuation's path may differ from the request path.
+#[derive(Clone, Copy)]
+pub(super) enum PathRule {
+    Exact,
+    /// Aggregates advance their trailing `from`/`to` segments to bar timestamps.
+    AggregateWindow,
+}
+
+impl PathRule {
+    fn allows(self, actual: &str, expected: &str) -> bool {
+        match self {
+            Self::Exact => actual == expected,
+            Self::AggregateWindow => {
+                let (Some((prefix, from, to)), Some((want_prefix, want_from, want_to))) =
+                    (aggregate_window(actual), aggregate_window(expected))
+                else {
+                    return false;
+                };
+                // Date bounds are UTC midnights but bars follow exchange time, which
+                // can run into the next UTC day.
+                let within = |bound| (want_from..want_to + 2 * DAY_MS).contains(&bound);
+                prefix == want_prefix && within(from) && within(to)
+            }
+        }
+    }
+
+    fn advances(self, next: &str, current: &str) -> bool {
+        let window = |url: &str| {
+            reqwest::Url::parse(url)
+                .ok()
+                .and_then(|url| aggregate_window(url.path()).map(|(_, from, to)| (from, to)))
+        };
+        match self {
+            Self::Exact => true,
+            Self::AggregateWindow => matches!(
+                (window(next), window(current)),
+                (Some((from, to)), Some((current_from, current_to)))
+                    if from >= current_from && to <= current_to
+            ),
+        }
+    }
+}
+
+/// Splits `.../{from}/{to}` into the fixed prefix and the window in Unix milliseconds.
+fn aggregate_window(path: &str) -> Option<(&str, i64, i64)> {
+    let (rest, to) = path.rsplit_once('/')?;
+    let (prefix, from) = rest.rsplit_once('/')?;
+    Some((prefix, window_bound(from)?, window_bound(to)?))
+}
+
+fn window_bound(segment: &str) -> Option<i64> {
+    if !segment.is_empty() && segment.bytes().all(|b| b.is_ascii_digit()) {
+        return segment.parse().ok();
+    }
+    let date = chrono::NaiveDate::parse_from_str(segment, "%Y-%m-%d").ok()?;
+    Some(date.and_hms_opt(0, 0, 0)?.and_utc().timestamp_millis())
+}
+
 /// Cheap-to-parse subset of a Polygon response used to detect the
 /// `status: "ERROR" | "NOT_FOUND"` envelope without touching the full body.
 #[derive(Deserialize)]
@@ -456,6 +525,46 @@ mod tests {
                 (_, got) => panic!("body {body}: unexpected {got:?}"),
             }
         }
+    }
+
+    #[test]
+    fn aggregate_continuations_may_only_narrow_the_requested_window() {
+        let path = "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/2020-01-10";
+        let rule = PathRule::AggregateWindow;
+        let url = |from: &str, to: &str| {
+            format!("https://api.massive.com/v2/aggs/ticker/AAPL/range/1/day/{from}/{to}")
+        };
+        assert!(rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+        assert!(rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/1578459600000",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1577836800000/2020-01-10",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/2020-01-31",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/MSFT/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+        assert!(!PathRule::Exact.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+
+        let current = url("1578114000000", "2020-01-10");
+        assert!(rule.advances(&url("1578286800000", "2020-01-10"), &current));
+        assert!(!rule.advances(&url("2020-01-02", "2020-01-10"), &current));
+        let descending = url("2020-01-02", "1578459600000");
+        assert!(rule.advances(&url("2020-01-02", "1578373200000"), &descending));
+        assert!(!rule.advances(&url("2020-01-02", "2020-01-10"), &descending));
     }
 
     fn client(api_key: &str, base_url: &str) -> PolygonClient {

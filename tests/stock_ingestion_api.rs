@@ -79,8 +79,45 @@ async fn stock_ingestion_directory_resumes_after_rebuilding_client() {
 async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() {
     let mut server = Server::new_async().await;
     let path = "/v2/aggs/ticker/AAPL/range/1/minute/2020-01-02/2020-01-02";
-    let fixture = server.mock("GET", path).match_query(Matcher::UrlEncoded("adjusted".into(), "false".into()))
-        .with_body(json!({"status":"OK","ticker":"AAPL","adjusted":false,"resultsCount":2,"results":[{"t":1577973600123_i64,"o":1.1,"h":2.2,"l":1.0,"c":2.0,"v":123.75},{"t":1577973660123_i64,"o":2.0,"h":2.5,"l":1.5,"c":2.25,"v":18.5,"n":17,"vw":2.125}],"next_url":format!("{}{path}?cursor=two", server.url())}).to_string()).expect(1).create_async().await;
+    // Polygon's next_url moves `from` to the next bar's timestamp and keeps `to`.
+    let next_path = "/v2/aggs/ticker/AAPL/range/1/minute/1577973720123/2020-01-02";
+    let first_body = json!({
+        "status": "OK",
+        "ticker": "AAPL",
+        "adjusted": false,
+        "resultsCount": 2,
+        "results": [
+            {"t": 1577973600123_i64, "o": 1.1, "h": 2.2, "l": 1.0, "c": 2.0, "v": 123.75},
+            {"t": 1577973660123_i64, "o": 2.0, "h": 2.5, "l": 1.5, "c": 2.25, "v": 18.5, "n": 17, "vw": 2.125}
+        ],
+        "next_url": format!("{}{next_path}?cursor=bGltaXQ9MiZzb3J0PWFzYw", server.url()),
+    });
+    let second_body = json!({
+        "status": "OK",
+        "ticker": "AAPL",
+        "adjusted": false,
+        "resultsCount": 1,
+        "results": [
+            {"t": 1577973720123_i64, "o": 2.25, "h": 2.5, "l": 2.0, "c": 2.4, "v": 7.0}
+        ],
+    });
+    let first = server
+        .mock("GET", path)
+        .match_query(Matcher::UrlEncoded("adjusted".into(), "false".into()))
+        .with_body(first_body.to_string())
+        .expect(1)
+        .create_async()
+        .await;
+    let second = server
+        .mock("GET", next_path)
+        .match_query(Matcher::AllOf(vec![
+            Matcher::UrlEncoded("cursor".into(), "bGltaXQ9MiZzb3J0PWFzYw".into()),
+            Matcher::UrlEncoded("adjusted".into(), "false".into()),
+        ]))
+        .with_body(second_body.to_string())
+        .expect(1)
+        .create_async()
+        .await;
     let client = providers(&server, Provider::Polygon).await;
     let unset =
         StockBarsRequest::new("AAPL", "2020-01-02", "2020-01-02", Interval::OneMinute).unwrap();
@@ -99,10 +136,45 @@ async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() 
     assert_eq!(page.items[1].vwap, Some(2.125));
     assert_eq!(page.provider_id, Provider::Polygon);
     let cursor = page.next.unwrap();
+    let saved = serde_json::to_string(&cursor).unwrap();
+    let restored: PageCursor = serde_json::from_str(&saved).unwrap();
+    let last = client
+        .market()
+        .stock_bars_page(&request, Some(&restored))
+        .await
+        .unwrap();
+    assert_eq!(last.items[0].timestamp_ms, 1577973720123);
+    assert!(last.next.is_none());
+
+    let aggs = |from: &str, to: &str| format!("/v2/aggs/ticker/AAPL/range/1/minute/{from}/{to}");
     for target in [
-        format!("https://other.example{path}?cursor=x"),
+        format!("https://other.example{next_path}?cursor=x"),
         format!("{}/v3/reference/tickers?cursor=x", server.url()),
-        format!("{}{path}?adjusted=true", server.url()),
+        format!("{}{next_path}?adjusted=true", server.url()),
+        format!(
+            "{}/v2/aggs/ticker/MSFT/range/1/minute/1577973720123/2020-01-02?cursor=x",
+            server.url()
+        ),
+        format!(
+            "{}/v2/aggs/ticker/AAPL/range/1/day/1577973720123/2020-01-02?cursor=x",
+            server.url()
+        ),
+        format!(
+            "{}{}?cursor=x",
+            server.url(),
+            aggs("1577836800000", "2020-01-02")
+        ),
+        format!(
+            "{}{}?cursor=x",
+            server.url(),
+            aggs("1578268800000", "2020-01-02")
+        ),
+        format!(
+            "{}{}?cursor=x",
+            server.url(),
+            aggs("2020-01-02", "2020-01-09")
+        ),
+        format!("{}{}?cursor=x", server.url(), aggs("soon", "2020-01-02")),
     ] {
         let mut value = serde_json::to_value(&cursor).unwrap();
         value["target"] = json!(target);
@@ -112,10 +184,12 @@ async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() 
                 .market()
                 .stock_bars_page(&request, Some(&bad))
                 .await
-                .is_err()
+                .is_err(),
+            "{target}"
         );
     }
-    fixture.assert_async().await;
+    first.assert_async().await;
+    second.assert_async().await;
 }
 
 #[tokio::test]
@@ -182,6 +256,39 @@ async fn stock_ingestion_fmp_profile_preserves_identity_and_rejects_mismatches()
     );
     good.assert_async().await;
     bad.assert_async().await;
+}
+
+#[tokio::test]
+async fn stock_ingestion_fmp_profile_accepts_blank_fields_and_symbol_case() {
+    let mut server = Server::new_async().await;
+    let body = json!([{
+        "symbol": "AAPL",
+        "cik": "",
+        "ipoDate": "",
+        "isin": "",
+        "companyName": "Apple Inc."
+    }]);
+    let fixture = server
+        .mock("GET", "/stable/profile")
+        .match_query(Matcher::UrlEncoded("symbol".into(), "aapl".into()))
+        .with_body(body.to_string())
+        .create_async()
+        .await;
+    let client = providers(&server, Provider::Fmp).await;
+    let row = client
+        .ticker("aapl")
+        .build()
+        .await
+        .unwrap()
+        .company_profile()
+        .await
+        .unwrap();
+    assert_eq!(row.symbol.as_deref(), Some("AAPL"));
+    assert_eq!(row.cik, None);
+    assert_eq!(row.ipo_date, None);
+    assert_eq!(row.isin, None);
+    assert_eq!(row.name.as_deref(), Some("Apple Inc."));
+    fixture.assert_async().await;
 }
 
 #[tokio::test]

@@ -1,3 +1,4 @@
+use crate::adapters::fmp::blank_as_none;
 use crate::{CompanyProfile, FinanceError, Provider, Result};
 use serde::Deserialize;
 
@@ -5,20 +6,31 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 struct Profile {
     symbol: String,
+    #[serde(default, deserialize_with = "blank_as_none")]
     isin: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     cusip: Option<String>,
     is_actively_trading: Option<bool>,
     is_etf: Option<bool>,
     is_adr: Option<bool>,
     is_fund: Option<bool>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     cik: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     ipo_date: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     company_name: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     description: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     exchange: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     currency: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     country: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     sector: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     industry: Option<String>,
     market_cap: Option<f64>,
 }
@@ -26,25 +38,21 @@ struct Profile {
 pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile> {
     let client = crate::adapters::fmp::build_client()?;
     let rows: Vec<Profile> = client.get("/stable/profile", &[("symbol", symbol)]).await?;
-    if rows.is_empty() {
-        return Err(FinanceError::SymbolNotFound {
-            symbol: Some(symbol.into()),
-            context: "FMP profile is empty".into(),
-        });
-    }
-    if rows.len() != 1 || rows[0].symbol != symbol {
-        return Err(FinanceError::ResponseStructureError {
-            field: "symbol".into(),
-            context: "FMP profile is ambiguous or mismatched".into(),
-        });
-    }
-    let row = rows
-        .into_iter()
-        .next()
-        .ok_or_else(|| FinanceError::ResponseStructureError {
-            field: "profile".into(),
-            context: "FMP profile is absent".into(),
-        })?;
+    let row = match <[Profile; 1]>::try_from(rows) {
+        Ok([row]) if row.symbol.eq_ignore_ascii_case(symbol) => row,
+        Err(rows) if rows.is_empty() => {
+            return Err(FinanceError::SymbolNotFound {
+                symbol: Some(symbol.into()),
+                context: "FMP profile is empty".into(),
+            });
+        }
+        _ => {
+            return Err(FinanceError::ResponseStructureError {
+                field: "symbol".into(),
+                context: "FMP profile is ambiguous or mismatched".into(),
+            });
+        }
+    };
     into_profile(row)
 }
 

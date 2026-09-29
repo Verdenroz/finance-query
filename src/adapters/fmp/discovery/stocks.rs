@@ -1,13 +1,15 @@
+use crate::adapters::fmp::blank_as_none;
 use crate::{FinanceError, Result, SymbolMatch};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct DirectoryRow {
     symbol: String,
-    #[serde(alias = "companyName")]
+    #[serde(alias = "companyName", default, deserialize_with = "blank_as_none")]
     name: Option<String>,
+    #[serde(default, deserialize_with = "blank_as_none")]
     exchange: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", default, deserialize_with = "blank_as_none")]
     stock_type: Option<String>,
 }
 

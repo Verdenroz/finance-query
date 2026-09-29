@@ -26,17 +26,31 @@ pub struct StockPeersDTO {
 #[non_exhaustive]
 pub struct DelistedCompanyDTO {
     /// Ticker symbol.
+    #[serde(default, deserialize_with = "crate::adapters::fmp::blank_as_none")]
     pub symbol: Option<String>,
     /// Company name.
-    #[serde(rename = "companyName")]
+    #[serde(
+        rename = "companyName",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub company_name: Option<String>,
     /// Exchange.
+    #[serde(default, deserialize_with = "crate::adapters::fmp::blank_as_none")]
     pub exchange: Option<String>,
     /// IPO date.
-    #[serde(rename = "ipoDate")]
+    #[serde(
+        rename = "ipoDate",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub ipo_date: Option<String>,
     /// Delisted date.
-    #[serde(rename = "delistedDate")]
+    #[serde(
+        rename = "delistedDate",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub delisted_date: Option<String>,
 }
 

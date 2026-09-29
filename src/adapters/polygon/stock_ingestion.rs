@@ -2,6 +2,7 @@
 
 use super::{
     build_client,
+    client::PathRule,
     discovery::{TickerDetailsResponseDTO, details_to_canonical},
     models::AggregateResponseDTO,
 };
@@ -72,7 +73,14 @@ pub(crate) async fn listings(
     }
     let path = "/v3/reference/tickers";
     let (body, current): (super::models::PaginatedResponseDTO<Listing>, _) = client
-        .page(path, &params, cursor, "stock_listings_page", &identity)
+        .page(
+            path,
+            &params,
+            PathRule::Exact,
+            cursor,
+            "stock_listings_page",
+            &identity,
+        )
         .await?;
     let rows = body.results.ok_or_else(|| invalid("results"))?;
     let items = rows
@@ -116,6 +124,7 @@ pub(crate) async fn listings(
         body.next_url,
         path,
         &params,
+        PathRule::Exact,
         "stock_listings_page",
         &identity,
         &current,
@@ -146,9 +155,21 @@ pub(crate) async fn details_at(symbol: &str, date: &str) -> Result<SymbolDetails
         crate::adapters::common::encode_path_segment(symbol)
     );
     let (body, _): (TickerDetailsResponseDTO, _) = client
-        .page(&path, &[("date", date)], None, "symbol_details_at", "")
+        .page(
+            &path,
+            &[("date", date)],
+            PathRule::Exact,
+            None,
+            "symbol_details_at",
+            "",
+        )
         .await?;
-    if body.results.as_ref().and_then(|r| r.ticker.as_deref()) != Some(symbol) {
+    if !body
+        .results
+        .as_ref()
+        .and_then(|r| r.ticker.as_deref())
+        .is_some_and(|ticker| ticker.eq_ignore_ascii_case(symbol))
+    {
         return Err(invalid("ticker"));
     }
     let details = details_to_canonical(symbol, body)?;
@@ -165,6 +186,7 @@ pub(crate) async fn stock_types(locale: &str) -> Result<Vec<StockType>> {
         .page(
             "/v3/reference/tickers/types",
             &[("asset_class", "stocks"), ("locale", locale)],
+            PathRule::Exact,
             None,
             "stock_types",
             "",
@@ -206,12 +228,19 @@ pub(crate) async fn bars(
         request.to
     );
     let (body, current): (AggregateResponseDTO, _) = client
-        .page(&path, &params, cursor, "stock_bars_page", &identity)
+        .page(
+            &path,
+            &params,
+            PathRule::AggregateWindow,
+            cursor,
+            "stock_bars_page",
+            &identity,
+        )
         .await?;
     if body
         .ticker
         .as_ref()
-        .is_some_and(|symbol| symbol != &request.symbol)
+        .is_some_and(|symbol| !symbol.eq_ignore_ascii_case(&request.symbol))
         || body.adjusted.is_some_and(|value| value != adjusted)
     {
         return Err(invalid("ticker/adjusted"));
@@ -252,6 +281,7 @@ pub(crate) async fn bars(
         body.next_url,
         &path,
         &params,
+        PathRule::AggregateWindow,
         "stock_bars_page",
         &identity,
         &current,
