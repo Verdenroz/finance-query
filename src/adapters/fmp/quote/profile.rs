@@ -5,9 +5,9 @@ use serde::Deserialize;
 use std::time::Duration;
 
 const PROFILE_LIMITS: ResponseLimits = ResponseLimits::bytes(1024 * 1024);
-/// A bulk part is tens of megabytes and takes minutes to stream.
+/// A bulk part is about 30 MB, uncompressed, streamed at roughly 80 KB/s.
 const BULK_PART_LIMITS: ResponseLimits =
-    ResponseLimits::slow(128 * 1024 * 1024, Duration::from_secs(180));
+    ResponseLimits::slow(128 * 1024 * 1024, Duration::from_secs(600));
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

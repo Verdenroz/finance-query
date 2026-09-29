@@ -137,8 +137,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 Directories and bulk parts are slow downloads, so these calls wait at least two
-and three minutes respectively, or longer if `Providers::builder().timeout(...)`
-is set higher. Large CSV parts parse off the async worker threads. Blank bodies, malformed rows, denied access, rate limits, server and
+and ten minutes respectively, or longer if `Providers::builder().timeout(...)`
+is set higher. A bulk part is about 30 MB and FMP sends it uncompressed. Large CSV parts parse off the async worker threads. Blank bodies, malformed rows, denied access, rate limits, server and
 transport failures are errors, never empty parts. A header-only CSV or `[]` is an
 empty part. Bulk results are not cached, no further parts are fetched implicitly,
 and an empty part does not prove the dataset is complete.
