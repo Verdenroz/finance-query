@@ -176,40 +176,21 @@ fn url_names_accession(url: &str, accession_number: &str) -> bool {
     url.contains(accession_number) || url.contains(&accession_number.replace('-', ""))
 }
 
-/// Scan a filer's year of section rows for one accession number.
-///
-/// Massive has no accession filter and silently ignores unknown parameters, so
-/// rows are narrowed by filer CIK and year and matched here.
-async fn rows_for_accession<T: DeserializeOwned>(
+/// Collect the rows matching one accession number across an issuer's pages.
+async fn scan_pages<T: DeserializeOwned>(
     path: &str,
-    accession_number: &str,
-    matches: impl Fn(&T) -> bool,
+    params: &[(&str, &str)],
+    matches: &impl Fn(&T) -> bool,
 ) -> Result<Vec<T>> {
-    let (cik, from, to) =
-        accession_window(accession_number).ok_or_else(|| FinanceError::InvalidParameter {
-            param: "accession_number".into(),
-            reason: "expected ##########-YY-######".into(),
-        })?;
-    let params = [
-        ("cik", cik),
-        ("filing_date.gte", from.as_str()),
-        ("filing_date.lte", to.as_str()),
-        ("limit", "100"),
-    ];
     let client = build_client()?;
     let mut found = Vec::new();
     let mut cursor = None;
     for _ in 0..MAX_SECTION_PAGES {
         let (page, current): (PaginatedResponseDTO<T>, _) = client
-            .page(path, &params, PathRule::Exact, cursor.as_ref())
+            .page(path, params, PathRule::Exact, cursor.as_ref())
             .await?;
-        found.extend(
-            page.results
-                .unwrap_or_default()
-                .into_iter()
-                .filter(&matches),
-        );
-        cursor = client.continuation(page.next_url, path, &params, PathRule::Exact, &current)?;
+        found.extend(page.results.unwrap_or_default().into_iter().filter(matches));
+        cursor = client.continuation(page.next_url, path, params, PathRule::Exact, &current)?;
         if cursor.is_none() {
             break;
         }
@@ -217,17 +198,53 @@ async fn rows_for_accession<T: DeserializeOwned>(
     Ok(found)
 }
 
-/// Fetch canonical sectioned text for one filing.
+/// Find one accession number's rows in the filing year it encodes.
 ///
-/// Massive indexes filings under the issuer's CIK, so an accession number
-/// assigned to a filing agent rather than the issuer is not found.
+/// Massive has no accession filter and silently ignores unknown parameters, so
+/// rows are narrowed by issuer and year and matched here. The issuer is the
+/// caller's ticker when known, then the filer CIK in the accession number,
+/// which names a filing agent rather than the issuer for agent-filed documents.
+async fn rows_for_accession<T: DeserializeOwned>(
+    path: &str,
+    ticker: Option<&str>,
+    accession_number: &str,
+    matches: impl Fn(&T) -> bool,
+) -> Result<Vec<T>> {
+    let (filer_cik, from, to) =
+        accession_window(accession_number).ok_or_else(|| FinanceError::InvalidParameter {
+            param: "accession_number".into(),
+            reason: "expected ##########-YY-######".into(),
+        })?;
+    let issuers = ticker
+        .map(|ticker| ("ticker", ticker))
+        .into_iter()
+        .chain([("cik", filer_cik)]);
+    for issuer in issuers {
+        let params = [
+            issuer,
+            ("filing_date.gte", from.as_str()),
+            ("filing_date.lte", to.as_str()),
+            ("limit", "100"),
+        ];
+        let found = scan_pages(path, &params, &matches).await?;
+        if !found.is_empty() {
+            return Ok(found);
+        }
+    }
+    Ok(Vec::new())
+}
+
+/// Fetch canonical sectioned text for one filing, searching under `ticker`
+/// first when the issuer is known.
 pub async fn fetch_filing_sections_response(
+    ticker: Option<&str>,
     accession_number: &str,
     form: FilingSectionForm,
 ) -> Result<Vec<FilingSection>> {
     let sections: Vec<FilingSection> = match form {
         FilingSectionForm::TenK => rows_for_accession(
             TEN_K_SECTIONS_PATH,
+            ticker,
             accession_number,
             |row: &TenKSectionDTO| {
                 row.filing_url
@@ -244,6 +261,7 @@ pub async fn fetch_filing_sections_response(
         .collect(),
         FilingSectionForm::EightK => rows_for_accession(
             EIGHT_K_TEXT_PATH,
+            ticker,
             accession_number,
             |row: &EightKTextDTO| row.accession_number.as_deref() == Some(accession_number),
         )

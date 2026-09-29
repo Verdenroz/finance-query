@@ -315,6 +315,20 @@ pub trait FilingsProvider: ProviderCore {
         Err(self.not_supported(Operation::FilingSections))
     }
 
+    /// Fetch the sectioned text of one filing, given the issuer it belongs to.
+    ///
+    /// For providers that index filing text by issuer rather than by accession
+    /// number. Defaults to [`fetch_filing_sections`](Self::fetch_filing_sections),
+    /// ignoring `symbol`.
+    async fn fetch_filing_sections_for(
+        &self,
+        _symbol: &str,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        self.fetch_filing_sections(accession_number, form).await
+    }
+
     /// Fetch risk factors extracted from a symbol's SEC filings.
     async fn fetch_risk_factors(
         &self,

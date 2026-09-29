@@ -237,7 +237,16 @@ impl FilingsProvider for PolygonProvider {
         accession_number: &str,
         form: crate::models::filings::FilingSectionForm,
     ) -> Result<Vec<crate::models::filings::FilingSection>> {
-        polygon::fetch_filing_sections_response(accession_number, form).await
+        polygon::fetch_filing_sections_response(None, accession_number, form).await
+    }
+
+    async fn fetch_filing_sections_for(
+        &self,
+        symbol: &str,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        polygon::fetch_filing_sections_response(Some(symbol), accession_number, form).await
     }
 
     async fn fetch_risk_factors(

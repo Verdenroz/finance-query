@@ -736,7 +736,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
             Some(accession) => {
                 m.check(
                     name,
-                    filings::fetch_filing_sections_response(&accession, form),
+                    filings::fetch_filing_sections_response(Some("AAPL"), &accession, form),
                     |sections| {
                         let s = first(sections, "filing section")?;
                         text(s.section.as_deref(), "section")?;
@@ -747,6 +747,35 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
             }
             None => m.skip(name, "no accession number to look up"),
         }
+    }
+
+    let agent_filed = async {
+        filings::filing_index(&[
+            ("form_type", "10-K"),
+            ("sort", "filing_date.desc"),
+            ("limit", "100"),
+        ])
+        .await
+        .map(|page| {
+            page.results.unwrap_or_default().into_iter().find_map(|e| {
+                let (accession, cik, ticker) = (e.accession_number?, e.cik?, e.ticker?);
+                (!accession.starts_with(cik.as_str())).then_some((ticker, accession))
+            })
+        })
+    };
+    if let Some((ticker, accession)) =
+        m.discovered("filing_index_agent_filed_10k", agent_filed.await)
+    {
+        m.check(
+            "fetch_filing_sections_response_agent_filed",
+            filings::fetch_filing_sections_response(
+                Some(&ticker),
+                &accession,
+                crate::models::filings::FilingSectionForm::TenK,
+            ),
+            |sections| non_empty(sections, "agent-filed 10-K sections"),
+        )
+        .await;
     }
 
     // ---- FOREX -------------------------------------------------------------

@@ -145,7 +145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 This is served by keyless EDGAR (best-effort heading detection over the filing's own HTML — see the module's [recall caveat](#recall-caveat) below) or Polygon, whichever the `FILINGS` route resolves to first; the default route already puts EDGAR ahead of nothing else, so no explicit `.route()` call is required.
 
-Polygon returns Massive's parsed 10-K sections (such as `risk_factors`, `business` and `mda`) or an 8-K's Items text as a single `items` section. Massive indexes this text under the issuer's CIK, so an accession number assigned to a filing agent is not found there.
+Polygon returns Massive's parsed 10-K sections (such as `risk_factors`, `business` and `mda`) or an 8-K's Items text as a single `items` section. Massive indexes this text by issuer rather than accession number, so Polygon searches the handle's symbol first and then the CIK in the accession number, which covers filings submitted by a filing agent as long as the handle names the issuer.
 
 <!-- soothfast:bind finance_query::models::filings::sections::FilingSection -->
 

@@ -16,9 +16,9 @@ async fn providers(server: &Server) -> Providers {
         .unwrap()
 }
 
-fn filer_year(cik: &str, from: &str, to: &str) -> Vec<Matcher> {
+fn issuer_year(issuer: (&str, &str), from: &str, to: &str) -> Vec<Matcher> {
     vec![
-        Matcher::UrlEncoded("cik".into(), cik.into()),
+        Matcher::UrlEncoded(issuer.0.into(), issuer.1.into()),
         Matcher::UrlEncoded("filing_date.gte".into(), from.into()),
         Matcher::UrlEncoded("filing_date.lte".into(), to.into()),
     ]
@@ -63,7 +63,7 @@ async fn filings_come_from_the_ticker_filtered_index() {
 }
 
 #[tokio::test]
-async fn ten_k_sections_scan_the_filers_year_for_the_accession() {
+async fn ten_k_sections_scan_the_issuers_year_for_the_accession() {
     let mut server = Server::new_async().await;
     let path = "/stocks/filings/10-K/vX/sections";
     let section = |accession: &str, name: &str| {
@@ -90,8 +90,8 @@ async fn ten_k_sections_scan_the_filers_year_for_the_accession() {
     });
     let first = server
         .mock("GET", path)
-        .match_query(Matcher::AllOf(filer_year(
-            "0000320193",
+        .match_query(Matcher::AllOf(issuer_year(
+            ("ticker", "AAPL"),
             "2025-01-01",
             "2026-01-15",
         )))
@@ -132,16 +132,18 @@ async fn eight_k_text_matches_the_accession_or_reports_it_missing() {
             {"accession_number": "0000320193-26-000018", "form_type": "8-K", "items_text": "Item 2.02"}
         ]
     });
-    server
-        .mock("GET", "/stocks/filings/8-K/vX/text")
-        .match_query(Matcher::AllOf(filer_year(
-            "0000320193",
-            "2026-01-01",
-            "2027-01-15",
-        )))
-        .with_body(body.to_string())
-        .create_async()
-        .await;
+    for issuer in [("ticker", "AAPL"), ("cik", "0000320193")] {
+        server
+            .mock("GET", "/stocks/filings/8-K/vX/text")
+            .match_query(Matcher::AllOf(issuer_year(
+                issuer,
+                "2026-01-01",
+                "2027-01-15",
+            )))
+            .with_body(body.to_string())
+            .create_async()
+            .await;
+    }
     let filings = providers(&server).await.filings("AAPL");
     let sections = filings
         .sections("0000320193-26-000018", FilingSectionForm::EightK)
@@ -162,6 +164,70 @@ async fn eight_k_text_matches_the_accession_or_reports_it_missing() {
         malformed,
         Err(FinanceError::InvalidParameter { .. })
     ));
+}
+
+#[tokio::test]
+async fn agent_filed_sections_are_found_by_ticker_before_the_filer_cik() {
+    let mut server = Server::new_async().await;
+    let path = "/stocks/filings/10-K/vX/sections";
+    let row = |ticker: &str, accession: &str| {
+        json!({
+            "ticker": ticker,
+            "section": "business",
+            "filing_url": format!("https://www.sec.gov/Archives/edgar/data/1/{accession}.txt"),
+            "text": "business text"
+        })
+    };
+    // The accession prefix names the filing agent, whose CIK indexes nothing.
+    let agent = "0001999371-26-007357";
+    let by_ticker = json!({"status": "OK", "results": [row("CVU", agent)]});
+    let by_agent_cik = server
+        .mock("GET", path)
+        .match_query(Matcher::UrlEncoded("cik".into(), "0001999371".into()))
+        .expect(0)
+        .create_async()
+        .await;
+    server
+        .mock("GET", path)
+        .match_query(Matcher::AllOf(issuer_year(
+            ("ticker", "CVU"),
+            "2026-01-01",
+            "2027-01-15",
+        )))
+        .with_body(by_ticker.to_string())
+        .create_async()
+        .await;
+    // A renamed issuer has no rows under the handle's ticker; the self-filed
+    // accession still names its CIK.
+    let renamed = "0000320193-25-000079";
+    server
+        .mock("GET", path)
+        .match_query(Matcher::UrlEncoded("ticker".into(), "OLD".into()))
+        .with_body(r#"{"status":"OK","results":[]}"#)
+        .create_async()
+        .await;
+    let by_cik = json!({"status": "OK", "results": [row("AAPL", renamed)]});
+    server
+        .mock("GET", path)
+        .match_query(Matcher::UrlEncoded("cik".into(), "0000320193".into()))
+        .with_body(by_cik.to_string())
+        .create_async()
+        .await;
+    let client = providers(&server).await;
+
+    let agent_sections = client
+        .filings("CVU")
+        .sections(agent, FilingSectionForm::TenK)
+        .await
+        .unwrap();
+    assert_eq!(agent_sections[0].section.as_deref(), Some("business"));
+    let renamed_sections = client
+        .filings("OLD")
+        .sections(renamed, FilingSectionForm::TenK)
+        .await
+        .unwrap();
+    assert_eq!(renamed_sections.len(), 1);
+    by_agent_cik.assert_async().await;
 }
 
 #[tokio::test]
