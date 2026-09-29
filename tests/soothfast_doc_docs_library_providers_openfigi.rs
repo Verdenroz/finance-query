@@ -52,3 +52,23 @@ fn doc_block_line_50() {
         Ok(())
     }
 }
+
+// line 74: compile-only (no_run)
+#[cfg(feature = "openfigi")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_74() {
+    use finance_query::openfigi::{self, MappingFilter, SecurityIdKind};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let filter = MappingFilter::default()
+            .exchange_code("US")
+            .include_unlisted(true);
+        let results = openfigi::resolve_many_with(SecurityIdKind::Ticker, &["HNT"], &filter).await?;
+        for listing in &results[0] {
+            println!("{:?} {:?}", listing.composite_figi, listing.name);
+        }
+        Ok(())
+    }
+}

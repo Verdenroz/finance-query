@@ -36,6 +36,33 @@ pub struct SecurityMapping {
     pub market_sector: Option<String>,
 }
 
+/// Narrows which instruments a mapping returns.
+///
+/// The default matches every venue and only currently listed equities.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct MappingFilter {
+    /// Keep only instruments on this exchange code, e.g. `"US"` for the
+    /// country composite.
+    pub exchange_code: Option<String>,
+    /// Also match equities that are no longer listed, such as delisted stocks.
+    pub include_unlisted: bool,
+}
+
+impl MappingFilter {
+    /// Match only this exchange code, e.g. `"US"`.
+    pub fn exchange_code(mut self, code: impl Into<String>) -> Self {
+        self.exchange_code = Some(code.into());
+        self
+    }
+
+    /// Also match delisted and otherwise unlisted equities.
+    pub fn include_unlisted(mut self, include: bool) -> Self {
+        self.include_unlisted = include;
+        self
+    }
+}
+
 /// The kind of identifier being resolved.
 ///
 /// Maps onto OpenFIGI's `idType` values.

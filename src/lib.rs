@@ -198,7 +198,7 @@ pub mod openfigi {
     //! ```
 
     use crate::error::Result;
-    pub use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+    pub use crate::models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
 
     /// Resolve a CUSIP to every instrument carrying it.
     ///
@@ -233,6 +233,17 @@ pub mod openfigi {
         ids: &[&str],
     ) -> Result<Vec<Vec<SecurityMapping>>> {
         crate::adapters::openfigi::resolve_many(kind, ids).await
+    }
+
+    /// [`resolve_many`] narrowed to one exchange code, optionally including
+    /// delisted equities. A ticker resolves to its current holder, so check a
+    /// returned name before trusting it for a delisted company.
+    pub async fn resolve_many_with(
+        kind: SecurityIdKind,
+        ids: &[&str],
+        filter: &MappingFilter,
+    ) -> Result<Vec<Vec<SecurityMapping>>> {
+        crate::adapters::openfigi::resolve_many_with(kind, ids, filter).await
     }
 }
 

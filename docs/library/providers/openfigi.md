@@ -67,6 +67,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The result is **positional**: element `i` answers `ids[i]`, with an empty list where nothing matched. The adapter validates that OpenFIGI returned exactly as many results as jobs sent, and errors rather than risk pairing answers to the wrong identifiers.
 
+## Filtering to One Market
+
+`resolve_many_with` narrows each lookup with a `MappingFilter`: an exchange code such as `"US"` for the country composite, and whether to include equities that are no longer listed.
+
+```rust no_run feature=openfigi
+use finance_query::openfigi::{self, MappingFilter, SecurityIdKind};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let filter = MappingFilter::default()
+        .exchange_code("US")
+        .include_unlisted(true);
+    let results = openfigi::resolve_many_with(SecurityIdKind::Ticker, &["HNT"], &filter).await?;
+    for listing in &results[0] {
+        println!("{:?} {:?}", listing.composite_figi, listing.name);
+    }
+    Ok(())
+}
+```
+
+A ticker resolves to the instrument that holds it now. For a delisted company whose ticker was later reused, the result is the new holder, so compare the returned name and `security_type` before trusting the FIGI.
+
 ## `SecurityMapping` Fields
 
 | Field | Description |
