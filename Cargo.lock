@@ -1521,6 +1521,7 @@ dependencies = [
  "base64 0.22.1",
  "chromiumoxide",
  "chrono",
+ "chrono-tz",
  "const_format",
  "criterion",
  "csv",
