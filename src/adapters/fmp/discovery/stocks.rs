@@ -1,8 +1,12 @@
 use crate::adapters::fmp::blank_as_none;
+use crate::adapters::fmp::client::ResponseLimits;
 use crate::{FinanceError, Result, SymbolMatch};
 use serde::Deserialize;
+use std::time::Duration;
 
-const DIRECTORY_BYTES: usize = 32 * 1024 * 1024;
+/// Directories take about 20 s to arrive even compressed, beyond the default timeout.
+const DIRECTORY_LIMITS: ResponseLimits =
+    ResponseLimits::slow(32 * 1024 * 1024, Duration::from_secs(120));
 
 #[derive(Deserialize)]
 struct DirectoryRow {
@@ -22,7 +26,9 @@ pub(crate) async fn fetch_stock_list(active_only: bool) -> Result<Vec<SymbolMatc
     } else {
         "/stable/stock-list"
     };
-    let rows: Vec<DirectoryRow> = client.get_limited(path, &[], Some(DIRECTORY_BYTES)).await?;
+    let rows: Vec<DirectoryRow> = client
+        .get_limited(path, &[], Some(DIRECTORY_LIMITS))
+        .await?;
     rows.into_iter()
         .map(|row| {
             if row.symbol.trim().is_empty() {

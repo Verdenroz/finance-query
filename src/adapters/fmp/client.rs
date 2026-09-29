@@ -64,6 +64,31 @@ impl FmpClientBuilder {
     }
 }
 
+/// Bounds for one response whose size depends on the account's data.
+#[derive(Clone, Copy)]
+pub(crate) struct ResponseLimits {
+    pub(crate) bytes: usize,
+    /// Floor for this request's timeout, for endpoints that are slow whatever
+    /// the configured timeout; a longer configured timeout still applies.
+    pub(crate) min_timeout: Option<Duration>,
+}
+
+impl ResponseLimits {
+    pub(crate) const fn bytes(bytes: usize) -> Self {
+        Self {
+            bytes,
+            min_timeout: None,
+        }
+    }
+
+    pub(crate) const fn slow(bytes: usize, min_timeout: Duration) -> Self {
+        Self {
+            bytes,
+            min_timeout: Some(min_timeout),
+        }
+    }
+}
+
 /// Financial Modeling Prep API client. Constructed per-call via the module singleton.
 pub(crate) struct FmpClient {
     api_key: String,
@@ -114,46 +139,44 @@ impl FmpClient {
     }
 
     /// Execute a GET request to an FMP REST path and return the raw response bytes.
-    ///
-    /// `byte_limit` bounds the body for endpoints whose size depends on the account's data.
     pub(super) async fn get_bytes(
         &self,
         path: &str,
         params: &[(&str, &str)],
-        byte_limit: Option<usize>,
+        limits: Option<ResponseLimits>,
     ) -> Result<Vec<u8>> {
         self.limiter.acquire().await;
 
         let url = format!("{}{}", self.base_url, path);
         let mut query: Vec<(&str, &str)> = vec![("apikey", &self.api_key)];
         query.extend_from_slice(params);
+        let timeout = limits
+            .and_then(|l| l.min_timeout)
+            .map_or(self.timeout, |min| min.max(self.timeout));
 
         debug!("FMP request: {path}");
         let resp = self
             .http
             .get(&url)
             .query(&query)
+            .timeout(timeout)
             .send()
             .await
-            .map_err(|error| self.map_transport_error(&error))?;
+            .map_err(|error| transport_error("FMP", timeout, &error))?;
         Self::check_status(resp.status(), resp.headers())?;
 
-        let bytes = match byte_limit {
-            Some(limit) => bounded_body(resp, limit, "FMP", self.timeout).await?,
+        let bytes = match limits {
+            Some(limits) => bounded_body(resp, limits.bytes, "FMP", timeout).await?,
             None => resp
                 .bytes()
                 .await
-                .map_err(|error| self.map_transport_error(&error))?
+                .map_err(|error| transport_error("FMP", timeout, &error))?
                 .to_vec(),
         };
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
         }
         Ok(bytes)
-    }
-
-    fn map_transport_error(&self, error: &reqwest::Error) -> FinanceError {
-        transport_error("FMP", self.timeout, error)
     }
 
     /// Execute a GET request to an FMP REST path and return raw JSON.
@@ -168,14 +191,14 @@ impl FmpClient {
         self.get_limited(path, params, None).await
     }
 
-    /// [`get`](Self::get) with the response body bounded to `byte_limit` bytes.
+    /// [`get`](Self::get) with per-call response [`ResponseLimits`].
     pub(crate) async fn get_limited<T: DeserializeOwned>(
         &self,
         path: &str,
         params: &[(&str, &str)],
-        byte_limit: Option<usize>,
+        limits: Option<ResponseLimits>,
     ) -> Result<T> {
-        let bytes = self.get_bytes(path, params, byte_limit).await?;
+        let bytes = self.get_bytes(path, params, limits).await?;
         serde_json::from_slice::<T>(bytes.as_ref()).map_err(|e| {
             FinanceError::ResponseStructureError {
                 field: "response".to_string(),
@@ -199,6 +222,41 @@ struct ErrorEnvelope {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn slow_limits_extend_the_configured_timeout() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/stable/stock-list")
+            .match_query(mockito::Matcher::Any)
+            .with_chunked_body(|w| {
+                std::thread::sleep(Duration::from_millis(600));
+                std::io::Write::write_all(w, b"[]")
+            })
+            .expect(2)
+            .create_async()
+            .await;
+        let client = FmpClientBuilder::new("test-key")
+            .base_url(server.url())
+            .timeout(Duration::from_millis(200))
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap();
+
+        let plain = client
+            .get_limited::<Vec<Value>>("/stable/stock-list", &[], Some(ResponseLimits::bytes(64)))
+            .await;
+        assert!(matches!(
+            plain,
+            Err(FinanceError::Timeout { timeout_ms: 200 })
+        ));
+
+        let slow = ResponseLimits::slow(64, Duration::from_secs(5));
+        let rows = client
+            .get_limited::<Vec<Value>>("/stable/stock-list", &[], Some(slow))
+            .await
+            .unwrap();
+        assert!(rows.is_empty());
+    }
 
     #[test]
     fn error_envelope_maps_bodies_to_errors() {

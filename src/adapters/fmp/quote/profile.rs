@@ -1,9 +1,13 @@
 use crate::adapters::fmp::blank_as_none;
+use crate::adapters::fmp::client::ResponseLimits;
 use crate::{CompanyProfile, FinanceError, Provider, Result};
 use serde::Deserialize;
+use std::time::Duration;
 
-const PROFILE_BYTES: usize = 1024 * 1024;
-const BULK_PART_BYTES: usize = 128 * 1024 * 1024;
+const PROFILE_LIMITS: ResponseLimits = ResponseLimits::bytes(1024 * 1024);
+/// A bulk part is tens of megabytes and takes minutes to stream.
+const BULK_PART_LIMITS: ResponseLimits =
+    ResponseLimits::slow(128 * 1024 * 1024, Duration::from_secs(180));
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,7 +48,7 @@ pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile
         .get_limited(
             "/stable/profile",
             &[("symbol", symbol)],
-            Some(PROFILE_BYTES),
+            Some(PROFILE_LIMITS),
         )
         .await?;
     let row = match <[Profile; 1]>::try_from(rows) {
@@ -71,7 +75,7 @@ pub(crate) async fn fetch_company_profiles_bulk(part: u32) -> Result<Vec<Company
         .get_bytes(
             "/stable/profile-bulk",
             &[("part", &part.to_string())],
-            Some(BULK_PART_BYTES),
+            Some(BULK_PART_LIMITS),
         )
         .await?;
     tokio::task::spawn_blocking(move || parse_bulk(&bytes))

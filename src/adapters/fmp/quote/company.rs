@@ -135,7 +135,8 @@ fn cursor_fingerprint(bytes: &[u8]) -> u64 {
     })
 }
 
-const DELISTED_PAGE_BYTES: usize = 8 * 1024 * 1024;
+const DELISTED_PAGE_LIMITS: crate::adapters::fmp::client::ResponseLimits =
+    crate::adapters::fmp::client::ResponseLimits::bytes(8 * 1024 * 1024);
 /// FMP returns at most 100 delisted rows per page, so larger sizes are rejected
 /// rather than silently capped.
 const MAX_DELISTED_PAGE_SIZE: u32 = 100;
@@ -161,7 +162,7 @@ async fn delisted_rows(
         .get_limited(
             "/stable/delisted-companies",
             &[("page", &page.to_string()), ("limit", &limit.to_string())],
-            Some(DELISTED_PAGE_BYTES),
+            Some(DELISTED_PAGE_LIMITS),
         )
         .await
 }
