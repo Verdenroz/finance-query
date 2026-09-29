@@ -460,34 +460,20 @@ class GqlCompanyProfile:
 own — this deserializes snake_case keys while its GraphQL name stays
 camelCase."""
 
-    active: bool | None = None
     asset_type: str | None = None
-    cik: str | None = None
     country: str | None = None
     currency: str | None = None
-    cusip: str | None = None
     description: str | None = None
     exchange: str | None = None
     industry: str | None = None
-    ipo_date: str | None = None
-    is_adr: bool | None = None
-    is_etf: bool | None = None
-    is_fund: bool | None = None
-    isin: str | None = None
     market_capitalization: float | None = None
     name: str | None = None
-    provider_id: str | None = None
     sector: str | None = None
     symbol: str | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "asset_type": "assetType",
-        "ipo_date": "ipoDate",
-        "is_adr": "isAdr",
-        "is_etf": "isEtf",
-        "is_fund": "isFund",
         "market_capitalization": "marketCapitalization",
-        "provider_id": "providerId",
     }
 
 
@@ -2944,11 +2930,8 @@ class GqlSymbolDetails:
     """Reference detail for one symbol, provider-routed (Capability::DISCOVERY)."""
 
     symbol: str
-    active: bool | None = None
     asset_type: str | None = None
     cik: str | None = None
-    composite_figi: str | None = None
-    delisted_utc: str | None = None
     description: str | None = None
     employees: int | None = None
     exchange: str | None = None
@@ -2956,21 +2939,15 @@ class GqlSymbolDetails:
     list_date: str | None = None
     market_cap: float | None = None
     name: str | None = None
-    provider_id: str | None = None
-    share_class_figi: str | None = None
     shares_outstanding: float | None = None
     sic_code: str | None = None
     sic_description: str | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "asset_type": "assetType",
-        "composite_figi": "compositeFigi",
-        "delisted_utc": "delistedUtc",
         "homepage_url": "homepageUrl",
         "list_date": "listDate",
         "market_cap": "marketCap",
-        "provider_id": "providerId",
-        "share_class_figi": "shareClassFigi",
         "shares_outstanding": "sharesOutstanding",
         "sic_code": "sicCode",
         "sic_description": "sicDescription",
@@ -3014,19 +2991,15 @@ discovery shape, here populated from CoinGecko's coin universe."""
     active: bool | None = None
     asset_type: str | None = None
     currency: str | None = None
-    delisted_date: str | None = None
     exchange: str | None = None
     id: str | None = None
     image: str | None = None
-    ipo_date: str | None = None
     market_cap_rank: int | None = None
     name: str | None = None
     thumbnail: str | None = None
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
         "asset_type": "assetType",
-        "delisted_date": "delistedDate",
-        "ipo_date": "ipoDate",
         "market_cap_rank": "marketCapRank",
     }
 

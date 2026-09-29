@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased (draft vs v3.1.0)
 
-### Added
-
-- Polygon dated stock-directory pages, dated company details, stock types, and lossless minute/day bar pages through the existing provider routes. Serializable continuations remain bound to their original request and provider.
-- FMP company profiles through `Ticker::company_profile()`, including company CIK and IPO date. Optional listing identity fields extend `SymbolDetails`; existing `Candle` and chart APIs are unchanged.
-- Explicit provider initialization, scoped Polygon/FMP endpoint overrides, and shared per-key request budgets. New downloads enforce response-size limits and read provider retry hints.
-
 <!-- soothfast:notes -->
 <!-- ### Overview -->
 <!-- What this release means for someone using it. One paragraph. -->
