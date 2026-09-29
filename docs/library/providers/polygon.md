@@ -63,15 +63,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Historical stock downloads
 
-Use `discovery().stock_listings_page(&request, cursor)` with a `StockListingRequest` to fetch active or inactive stocks on a chosen date. The result preserves CIK, composite FIGI, share-class FIGI, and listing dates when supplied. `details_at(symbol, date)` returns dated details. `stock_types("us")` returns the provider's stock-type codes.
+These operations are library-only; the REST, GraphQL and MCP servers do not expose them.
 
-Use `market().stock_bars_page(&request, cursor)` with a `StockBarsRequest` for one-minute or daily bars. Set `PriceAdjustment::Unadjusted` or `SplitAdjusted` explicitly. The result preserves millisecond timestamps, fractional volume, and optional transaction counts. These calls do not change the existing chart API.
+`discovery().stock_listings_page(&request, cursor)` returns one page of the stock directory as of a date, active or inactive. Rows keep the CIK, composite FIGI, share-class FIGI and listing dates when Polygon supplies them, along with Polygon's reported status, locale and type. `details_at(symbol, date)` returns dated ticker details, and `stock_types("us")` lists Polygon's stock-type codes.
 
-Save each page and its `next` cursor together. Pass that cursor with the same request to continue. A cursor can be serialized and resumed after restarting, but it cannot change provider, symbol, dates, or adjustment. An empty page with a next cursor is not a complete result. Page calls do not cache or collect the full history.
+`market().stock_bars_page(&request, cursor)` returns one page of minute or daily bars. `StockBarsRequest::new` takes an explicit `PriceAdjustment`. Bars keep millisecond timestamps, fractional volume and optional transaction counts.
 
-The crate bounds each page response to 32 MiB. The application must also bound concurrent requests and its retained pages. Authentication errors and malformed responses are errors, not empty history. Keep durable storage, retry scheduling, and session filtering in the application.
+Store each page's items and its `next` cursor together, then pass the cursor back with the same request to continue. Cursors serialize with serde, so a download can resume after a restart, but a cursor cannot switch provider or change the request. An empty page with a `next` cursor is not the end. Pages are not cached; the application bounds concurrency, retries and storage.
 
-See [the runnable stock example](../../../examples/stock_ingestion.rs) and [the public-API tests](../../../tests/stock_ingestion_api.rs). The example performs six read-only requests using Polygon and FMP keys. Pass `--directory-only` for two small Polygon directory pages, with a serialized cursor between them.
+```rust no_run feature=polygon
+use finance_query::{
+    Capability, Interval, PageCursor, PriceAdjustment, Provider, Providers, StockBarsRequest,
+    StockListingRequest,
+};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .providers([Provider::Polygon])
+        .route(Capability::DISCOVERY, [Provider::Polygon])
+        .route(Capability::CHART, [Provider::Polygon])
+        .build()
+        .await?;
+
+    let listings = StockListingRequest::new("2020-01-02", false)?.stock_type("CS");
+    let mut cursor: Option<PageCursor> = None;
+    loop {
+        let page = providers
+            .discovery()
+            .stock_listings_page(&listings, cursor.as_ref())
+            .await?;
+        // Persist page.items with the serialized cursor before continuing.
+        let saved = serde_json::to_string(&page.next)?;
+        cursor = serde_json::from_str(&saved)?;
+        if cursor.is_none() {
+            break;
+        }
+    }
+
+    let bars = StockBarsRequest::new(
+        "AAPL",
+        "2020-01-02",
+        "2020-01-02",
+        Interval::OneMinute,
+        PriceAdjustment::Unadjusted,
+    )?;
+    let page = providers.market().stock_bars_page(&bars, None).await?;
+    println!("{} bars, more pages: {}", page.items.len(), page.next.is_some());
+
+    let details = providers.discovery().details_at("AAPL", "2020-01-02").await?;
+    let types = providers.discovery().stock_types("us").await?;
+    println!("CIK {:?}, {} stock types", details.cik, types.len());
+    Ok(())
+}
+```
 
 ## See Also
 

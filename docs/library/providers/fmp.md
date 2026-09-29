@@ -42,11 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Capabilities
 
-`Ticker::company_profile()` supports FMP through the FUNDAMENTALS route. It returns the provider symbol, company CIK, and IPO date together. Missing identifiers and dates remain absent; empty, ambiguous or mismatched profiles return errors. The profile is current company information, not a historical listing snapshot.
+`Ticker::company_profile()` supports FMP through the FUNDAMENTALS route. It returns the provider symbol, company CIK, and IPO date together. Missing identifiers and dates, including FMP's empty strings, remain absent; empty, ambiguous or mismatched profiles return errors. The profile is current company information, not a historical listing snapshot.
 
 Pass FMP's symbol spelling, such as `BRK-B`. Applications comparing providers must retain their own canonical symbol and verify the returned identity. The crate does not infer that two symbols represent the same security.
-
-The profile response is bounded to 1 MiB. See [the runnable stock example](../../../examples/stock_ingestion.rs) for a call through the public API.
 
 ### Delisted companies
 
@@ -63,93 +61,94 @@ complete result is held in memory and cached on the discovery handle.
 ```rust no_run feature=fmp
 use finance_query::{Capability, Provider, Providers};
 
-# async fn example() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder()
-    .providers([Provider::Fmp])
-    .route(Capability::DISCOVERY, [Provider::Fmp])
-    .build().await?;
-let delisted = providers.discovery().listing_status(false).await?;
-for stock in delisted {
-    println!("{}: IPO {:?}, delisted {:?}", stock.symbol, stock.ipo_date, stock.delisted_date);
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .providers([Provider::Fmp])
+        .route(Capability::DISCOVERY, [Provider::Fmp])
+        .build()
+        .await?;
+    let delisted = providers.discovery().listing_status(false).await?;
+    for stock in delisted {
+        println!(
+            "{}: IPO {:?}, delisted {:?}",
+            stock.symbol, stock.ipo_date, stock.delisted_date
+        );
+    }
+    Ok(())
 }
-# Ok(())
-# }
 ```
 
 ### Resumable delisted pages
 
-`Discovery::delisted_stocks_page_at(page, limit)` fetches an independent numbered
-page through the same configured provider transport and account limiter. Page
-numbers are zero-based and below 10,000; limits are 1–100. This method makes one
-request and preserves IPO/delisting dates. It rejects malformed rows and responses
-larger than the requested limit. Use it for bounded concurrent scans; callers must
-track every page, reject repeated/nonadvancing records, and verify the empty end
-page. It does not provide the sequential cursor's scan-progress checks.
+These page operations, the directories and bulk profiles below are library-only;
+the REST, GraphQL and MCP servers do not expose them.
 
-`Discovery::delisted_stocks_page(limit, cursor)` returns one `ProviderPage<SymbolMatch>`.
-Use a page size of 1–1000. Persist its records and cursor together, then supply
-the cursor unchanged to the next call. The cursor binds the provider, operation
-and page size and contains no credentials. The aggregate `listing_status(false)`
-uses the same paging primitive and remains compatible.
+`Discovery::delisted_stocks_page(limit, cursor)` returns one `ProviderPage<SymbolMatch>`
+of 1–100 rows. Persist its records and cursor together, then pass the cursor back
+unchanged with the same `limit`. The cursor is bound to FMP, the operation and the
+page size, contains no credentials, and resumes after a restart. Continue until
+an empty page rather than treating a short page as the end. A repeated page or a
+page with no new records is an error, distinct from the empty terminal page.
+`listing_status(false)` pages through the same primitive.
 
-FMP can cap the requested page size: the bounded account probe returned 100
-records even for `limit=1000`. Continue until an empty terminal page rather than
-assuming a short response is the end.
+`Discovery::delisted_stocks_page_at(page, limit)` fetches one independent
+zero-based page, below page 10,000 with 1–100 rows, and preserves IPO and
+delisting dates. Use it for bounded concurrent scans. It has none of the cursor's
+progress checks, so callers must track every page, reject repeated records and
+confirm the empty end page.
 
-Empty terminal pages, failures and repeated/nonadvancing pages are distinct.
-Each response is bounded to 8 MiB; traversal is bounded to 10,000 nonempty pages
-and a 16 MiB cursor. Exceeding a bound returns an error, never a truncated
-successful list. Record fingerprints use a fixed algorithm so continuations
-survive process reconstruction. Mutable provider lists are not historical
-snapshots; retain coverage and source observations in the consuming application.
+Responses and traversal are bounded, and exceeding a bound returns an error
+rather than a truncated list. Provider lists change over time and are not
+historical snapshots; keep coverage and source observations in the application.
 
 ### Stock directories and bulk profiles
 
 `Discovery::stock_list()` fetches `/stable/stock-list`, the global directory,
-including records whose trading status is unknown. `listing_status(true)` now
-uses `/stable/actively-trading-list` instead of combining ETF and mutual-fund
-lists. Both endpoints can include non-US instruments and funds. They commonly
-provide only symbol and name; missing exchange/type/identity fields stay absent.
-Use profile or Polygon reference data to classify the intended stock universe.
+including records whose trading status is unknown. `listing_status(true)` reads
+`/stable/actively-trading-list`. Both can include non-US instruments and funds,
+and they commonly provide only the symbol and name, so missing exchange, type and
+identity fields stay absent. Use profiles or Polygon reference data to classify
+the intended stock universe.
 
-`Discovery::company_profiles_bulk(part)` fetches exactly one explicit numbered
-`/stable/profile-bulk` part. It accepts CSV (including quoted commas/newlines and
-UTF-8 BOM) or JSON arrays and returns `Vec<CompanyProfile>`. The same profile
-mapping serves individual requests: CIK, CUSIP, ISIN, IPO date, exchange and
-active/ETF/ADR/fund flags are preserved when supplied. CIK identifies a company,
-not a distinct share class. These are current profiles, not dated history.
+`Discovery::company_profiles_bulk(part)` fetches exactly one numbered
+`/stable/profile-bulk` part. It accepts CSV (including quoted commas, newlines and
+a UTF-8 BOM) or a JSON array and returns `Vec<CompanyProfile>`, mapped like
+individual profiles: CIK, CUSIP, ISIN, IPO date, exchange and the active, ETF,
+ADR and fund flags are kept when supplied. CIK identifies a company, not a share
+class, and these are current profiles, not dated history.
 
 ```rust no_run feature=fmp
-# async fn example(providers: &finance_query::Providers) -> finance_query::Result<()> {
-let directory = providers.discovery().stock_list().await?;
-let active = providers.discovery().listing_status(true).await?;
-let profiles = providers.discovery().company_profiles_bulk(0).await?;
-# Ok(())
-# }
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .providers([Provider::Fmp])
+        .route(Capability::DISCOVERY, [Provider::Fmp])
+        .build()
+        .await?;
+    let directory = providers.discovery().stock_list().await?;
+    let active = providers.discovery().listing_status(true).await?;
+    let profiles = providers.discovery().company_profiles_bulk(0).await?;
+    println!("{} listed, {} active, {} profiles", directory.len(), active.len(), profiles.len());
+    Ok(())
+}
 ```
 
-Directory responses are bounded to 32 MiB and bulk parts to 128 MiB (decoded
-bytes). Parsing large CSV files runs off the async worker threads. Configure
-`Providers::builder().timeout(...)` for large transfers; the default is 30 seconds.
-Blank bodies, malformed rows, denied access, rate limits, server and transport
-failures are errors, never successful empty parts. Header-only CSV or JSON `[]`
-is an empty part. Bulk results are uncached and no further parts are fetched
-implicitly; an empty part alone is not a guarantee of provider-wide completeness.
+Large CSV parts parse off the async worker threads; raise
+`Providers::builder().timeout(...)` for large transfers (the default is 30
+seconds). Blank bodies, malformed rows, denied access, rate limits, server and
+transport failures are errors, never empty parts. A header-only CSV or `[]` is an
+empty part. Bulk results are not cached, no further parts are fetched implicitly,
+and an empty part does not prove the dataset is complete.
 
-The crate applies the configured shared account rate; callers must additionally
-space profile-bulk calls at least 60 seconds apart, as specified in the
-[FMP FAQ](https://site.financialmodelingprep.com/faqs). Its
+FMP asks callers to space profile-bulk calls at least 60 seconds apart
+([FMP FAQ](https://site.financialmodelingprep.com/faqs)); the crate applies only
+the configured account rate. The
 [part documentation](https://site.financialmodelingprep.com/it/faqs?code=marketPerformance)
-currently describes four parts (0 through 3). Retrieve each required part
-explicitly; part 0 alone is not the whole dataset. Verify account access and
-field coverage independently.
-
-For a fixed 24-symbol comparison, run the `fmp_catalog_benchmark` example with
-`--features 'polygon fmp'`. Modes are `single`, `directories`, `bulk <part>`, and
-`polygon <YYYY-MM-DD>`. Export the relevant key before starting. It reports
-request count (no retries), elapsed time, returned fields and missing symbols;
-the bulk mode makes only one request with a 180-second timeout. The two delisted
-symbols in its fixture intentionally test missing-current-profile behavior.
+currently describes four parts (0 through 3), so retrieve each part you need
+explicitly.
 
 | Data type | Support |
 |-----------|---------|

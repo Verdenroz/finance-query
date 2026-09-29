@@ -23,3 +23,54 @@ fn doc_block_line_25() {
         Ok(())
     }
 }
+
+// line 74: compile-only (no_run)
+#[cfg(feature = "polygon")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_74() {
+    use finance_query::{
+        Capability, Interval, PageCursor, PriceAdjustment, Provider, Providers, StockBarsRequest,
+        StockListingRequest,
+    };
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .providers([Provider::Polygon])
+            .route(Capability::DISCOVERY, [Provider::Polygon])
+            .route(Capability::CHART, [Provider::Polygon])
+            .build()
+            .await?;
+
+        let listings = StockListingRequest::new("2020-01-02", false)?.stock_type("CS");
+        let mut cursor: Option<PageCursor> = None;
+        loop {
+            let page = providers
+                .discovery()
+                .stock_listings_page(&listings, cursor.as_ref())
+                .await?;
+            // Persist page.items with the serialized cursor before continuing.
+            let saved = serde_json::to_string(&page.next)?;
+            cursor = serde_json::from_str(&saved)?;
+            if cursor.is_none() {
+                break;
+            }
+        }
+
+        let bars = StockBarsRequest::new(
+            "AAPL",
+            "2020-01-02",
+            "2020-01-02",
+            Interval::OneMinute,
+            PriceAdjustment::Unadjusted,
+        )?;
+        let page = providers.market().stock_bars_page(&bars, None).await?;
+        println!("{} bars, more pages: {}", page.items.len(), page.next.is_some());
+
+        let details = providers.discovery().details_at("AAPL", "2020-01-02").await?;
+        let types = providers.discovery().stock_types("us").await?;
+        println!("CIK {:?}, {} stock types", details.cik, types.len());
+        Ok(())
+    }
+}

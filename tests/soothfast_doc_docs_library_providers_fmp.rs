@@ -23,3 +23,50 @@ fn doc_block_line_25() {
         Ok(())
     }
 }
+
+// line 61: compile-only (no_run)
+#[cfg(feature = "fmp")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_61() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .providers([Provider::Fmp])
+            .route(Capability::DISCOVERY, [Provider::Fmp])
+            .build()
+            .await?;
+        let delisted = providers.discovery().listing_status(false).await?;
+        for stock in delisted {
+            println!(
+                "{}: IPO {:?}, delisted {:?}",
+                stock.symbol, stock.ipo_date, stock.delisted_date
+            );
+        }
+        Ok(())
+    }
+}
+
+// line 121: compile-only (no_run)
+#[cfg(feature = "fmp")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_121() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .providers([Provider::Fmp])
+            .route(Capability::DISCOVERY, [Provider::Fmp])
+            .build()
+            .await?;
+        let directory = providers.discovery().stock_list().await?;
+        let active = providers.discovery().listing_status(true).await?;
+        let profiles = providers.discovery().company_profiles_bulk(0).await?;
+        println!("{} listed, {} active, {} profiles", directory.len(), active.len(), profiles.len());
+        Ok(())
+    }
+}
