@@ -4,8 +4,24 @@ use mockito::{Matcher, Server};
 use serde_json::json;
 use std::sync::Arc;
 
-#[tokio::test]
-async fn graphql_profile_preserves_identifiers_and_classification() {
+// The ticker resolver needs more than the 2 MiB default test-thread stack in debug builds.
+#[test]
+fn graphql_profile_preserves_identifiers_and_classification() {
+    std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024)
+        .spawn(|| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(profile_round_trip())
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+async fn profile_round_trip() {
     let mut server = Server::new_async().await;
     let fixture = server.mock("GET", "/stable/profile")
         .match_query(Matcher::UrlEncoded("symbol".into(), "AAPL".into()))
