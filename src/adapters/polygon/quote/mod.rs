@@ -24,10 +24,19 @@ pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
 /// Build a canonical quote response from one ticker snapshot.
 ///
 /// Shared by the single-ticker and batch paths so both surface identical fields.
+/// Before the regular session Massive reports an all-zero day bar, so the price
+/// falls back to the previous close and the day's range stays empty.
 fn snapshot_to_canonical(symbol: &str, snap: Option<&TickerSnapshotDTO>) -> QuoteSummaryResponse {
-    let day = snap.and_then(|t| t.day.as_ref());
+    let day = snap
+        .and_then(|t| t.day.as_ref())
+        .filter(|d| d.close.is_some_and(|close| close > 0.0));
+    let close = day.and_then(|d| d.close).or_else(|| {
+        snap.and_then(|t| t.prev_day.as_ref())
+            .and_then(|d| d.close)
+            .filter(|close| *close > 0.0)
+    });
     let price = Price {
-        regular_market_price: day.and_then(|d| d.close).map(|v| FormattedValue {
+        regular_market_price: close.map(|v| FormattedValue {
             raw: Some(v),
             fmt: None,
             long_fmt: None,
@@ -152,6 +161,21 @@ mod tests {
 
         let day = snap.day.unwrap();
         assert!((day.open.unwrap() - 185.09).abs() < 0.01);
+    }
+
+    #[test]
+    fn a_zeroed_pre_market_day_bar_falls_back_to_the_previous_close() {
+        let snap: TickerSnapshotDTO = serde_json::from_value(serde_json::json!({
+            "ticker": "AAPL",
+            "day": { "o": 0, "h": 0, "l": 0, "c": 0, "v": 0, "vw": 0 },
+            "prevDay": { "o": 340.37, "h": 342.99, "l": 338.04, "c": 338.4, "v": 32820848.0 }
+        }))
+        .unwrap();
+        let price = snapshot_to_canonical("AAPL", Some(&snap)).price.unwrap();
+        assert_eq!(price.regular_market_price.and_then(|v| v.raw), Some(338.4));
+        assert!(price.regular_market_open.is_none());
+        assert!(price.regular_market_day_high.is_none());
+        assert!(price.regular_market_volume.is_none());
     }
 
     #[tokio::test]
