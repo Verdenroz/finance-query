@@ -51,6 +51,18 @@ impl StockListingRequest {
         self
     }
 
+    /// The fields a continuation must match. Changing them requires a new cursor version.
+    pub(crate) fn cursor_identity(&self) -> String {
+        serde_json::json!([
+            self.date,
+            self.active,
+            self.stock_type,
+            self.locale,
+            self.limit
+        ])
+        .to_string()
+    }
+
     /// Limit a page to 1–1000 directory entries.
     pub fn page_size(mut self, limit: u32) -> Result<Self> {
         if !(1..=1000).contains(&limit) {
@@ -104,4 +116,22 @@ pub struct StockType {
     pub asset_class: Option<String>,
     /// Market locale.
     pub locale: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_identity_is_pinned_to_the_query_fields() {
+        let request = StockListingRequest::new("2020-01-02", false)
+            .unwrap()
+            .stock_type("CS")
+            .page_size(2)
+            .unwrap();
+        assert_eq!(
+            request.cursor_identity(),
+            r#"["2020-01-02",false,"CS","us",2]"#
+        );
+    }
 }

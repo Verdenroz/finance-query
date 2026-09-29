@@ -130,20 +130,9 @@ impl PolygonClient {
         params: &[(&str, &str)],
         rule: PathRule,
         cursor: Option<&crate::PageCursor>,
-        operation: &str,
-        request: &str,
     ) -> Result<(T, String)> {
-        if let Some(cursor) = cursor {
-            cursor.validate(operation, request)?;
-            if cursor.provider() != crate::Provider::Polygon {
-                return Err(FinanceError::InvalidParameter {
-                    param: "cursor".into(),
-                    reason: "wrong provider".into(),
-                });
-            }
-        }
         let url = self.page_url(
-            cursor.map_or(path, |c| c.target.as_str()),
+            cursor.map_or(path, crate::PageCursor::target),
             path,
             params,
             rule,
@@ -178,15 +167,12 @@ impl PolygonClient {
         Ok((body, url.to_string()))
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn continuation(
         &self,
         next: Option<String>,
         path: &str,
         params: &[(&str, &str)],
         rule: PathRule,
-        operation: &str,
-        request: &str,
         current: &str,
     ) -> Result<Option<crate::PageCursor>> {
         next.map(|target| {
@@ -197,13 +183,10 @@ impl PolygonClient {
                     context: "provider repeated its continuation".into(),
                 });
             }
-            Ok(crate::PageCursor {
-                version: 1,
-                provider: crate::Provider::Polygon,
-                operation: operation.into(),
-                request: request.into(),
+            Ok(crate::PageCursor::continuation(
+                crate::Provider::Polygon,
                 target,
-            })
+            ))
         })
         .transpose()
     }

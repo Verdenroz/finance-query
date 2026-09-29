@@ -1,24 +1,16 @@
 //! Lossless stock-bar downloads, separate from chart presentation.
 
-use crate::{FinanceError, Interval, Result};
+use crate::{FinanceError, Interval, Result, SortType};
 use serde::{Deserialize, Serialize};
 
 /// Price adjustment policy. There is no implicit provider default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum PriceAdjustment {
     /// Preserve historical, unadjusted prices.
     Unadjusted,
     /// Ask the provider to adjust prices for splits.
     SplitAdjusted,
-}
-
-/// Order of bars within a download.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SortOrder {
-    /// Oldest first.
-    Ascending,
-    /// Newest first.
-    Descending,
 }
 
 /// A bounded minute or daily bar request.
@@ -28,14 +20,21 @@ pub struct StockBarsRequest {
     pub(crate) from: String,
     pub(crate) to: String,
     pub(crate) timespan: String,
-    pub(crate) adjustment: Option<PriceAdjustment>,
-    pub(crate) sort: SortOrder,
+    pub(crate) adjustment: PriceAdjustment,
+    pub(crate) sort: SortType,
     pub(crate) limit: u32,
 }
 
 impl StockBarsRequest {
-    /// Set inclusive date bounds. Currently supports OneMinute and OneDay.
-    pub fn new(symbol: &str, from: &str, to: &str, interval: Interval) -> Result<Self> {
+    /// Set inclusive date bounds and the adjustment policy. Currently supports
+    /// OneMinute and OneDay. Bars are oldest first unless [`sort`](Self::sort) says otherwise.
+    pub fn new(
+        symbol: &str,
+        from: &str,
+        to: &str,
+        interval: Interval,
+        adjustment: PriceAdjustment,
+    ) -> Result<Self> {
         crate::models::discovery::listings::date(from)?;
         crate::models::discovery::listings::date(to)?;
         if symbol.trim().is_empty() || symbol == "." || symbol == ".." || from > to {
@@ -59,19 +58,14 @@ impl StockBarsRequest {
             from: from.into(),
             to: to.into(),
             timespan: timespan.into(),
-            adjustment: None,
-            sort: SortOrder::Ascending,
+            adjustment,
+            sort: SortType::Asc,
             limit: 50_000,
         })
     }
 
-    /// Select the adjustment policy. Required before execution.
-    pub fn adjustment(mut self, policy: PriceAdjustment) -> Self {
-        self.adjustment = Some(policy);
-        self
-    }
-    /// Select oldest-first or newest-first order.
-    pub fn sort(mut self, order: SortOrder) -> Self {
+    /// Select oldest-first ([`SortType::Asc`]) or newest-first order.
+    pub fn sort(mut self, order: SortType) -> Self {
         self.sort = order;
         self
     }
@@ -87,13 +81,34 @@ impl StockBarsRequest {
         Ok(self)
     }
 
-    pub(crate) fn adjusted(&self) -> Result<bool> {
-        self.adjustment
-            .map(|p| p == PriceAdjustment::SplitAdjusted)
-            .ok_or_else(|| FinanceError::InvalidParameter {
-                param: "adjustment".into(),
-                reason: "choose an explicit price adjustment policy".into(),
-            })
+    #[cfg(feature = "polygon")]
+    pub(crate) fn split_adjusted(&self) -> bool {
+        self.adjustment == PriceAdjustment::SplitAdjusted
+    }
+
+    pub(crate) fn sort_param(&self) -> &'static str {
+        match self.sort {
+            SortType::Asc => "asc",
+            SortType::Desc => "desc",
+        }
+    }
+
+    /// The fields a continuation must match. Changing them requires a new cursor version.
+    pub(crate) fn cursor_identity(&self) -> String {
+        let adjustment = match self.adjustment {
+            PriceAdjustment::Unadjusted => "unadjusted",
+            PriceAdjustment::SplitAdjusted => "split",
+        };
+        serde_json::json!([
+            self.symbol,
+            self.from,
+            self.to,
+            self.timespan,
+            adjustment,
+            self.sort_param(),
+            self.limit
+        ])
+        .to_string()
     }
 }
 
@@ -117,4 +132,30 @@ pub struct StockBar {
     pub transactions: Option<u64>,
     /// Volume-weighted average price, when supplied.
     pub vwap: Option<f64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_identity_is_pinned_to_the_query_fields() {
+        let request = StockBarsRequest::new(
+            "AAPL",
+            "2020-01-02",
+            "2020-01-03",
+            Interval::OneDay,
+            PriceAdjustment::Unadjusted,
+        )
+        .unwrap();
+        assert_eq!(
+            request.cursor_identity(),
+            r#"["AAPL","2020-01-02","2020-01-03","day","unadjusted","asc",50000]"#
+        );
+        let changed = request.sort(SortType::Desc).page_size(10).unwrap();
+        assert_eq!(
+            changed.cursor_identity(),
+            r#"["AAPL","2020-01-02","2020-01-03","day","unadjusted","desc",10]"#
+        );
+    }
 }

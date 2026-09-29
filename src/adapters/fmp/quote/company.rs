@@ -96,13 +96,8 @@ pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
 
 /// Fetch all delisted-company pages. `limit` controls the page size.
 pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompanyDTO>> {
-    let limit = limit.unwrap_or(100);
-    if !(1..=1000).contains(&limit) {
-        return Err(FinanceError::InvalidParameter {
-            param: "limit".into(),
-            reason: "page size must be 1..=1000".into(),
-        });
-    }
+    let limit = limit.unwrap_or(MAX_DELISTED_PAGE_SIZE);
+    check_delisted_page(0, limit)?;
     let client = crate::adapters::fmp::build_client()?;
     let mut cursor = None;
     let mut records = Vec::new();
@@ -141,6 +136,21 @@ fn cursor_fingerprint(bytes: &[u8]) -> u64 {
 }
 
 const DELISTED_PAGE_BYTES: usize = 8 * 1024 * 1024;
+/// FMP returns at most 100 delisted rows per page, so larger sizes are rejected
+/// rather than silently capped.
+const MAX_DELISTED_PAGE_SIZE: u32 = 100;
+const MAX_DELISTED_PAGES: u32 = 10_000;
+const MAX_DELISTED_CURSOR_BYTES: usize = 16 * 1024 * 1024;
+
+fn check_delisted_page(page: u32, limit: u32) -> Result<()> {
+    if page >= MAX_DELISTED_PAGES || !(1..=MAX_DELISTED_PAGE_SIZE).contains(&limit) {
+        return Err(FinanceError::InvalidParameter {
+            param: "page/limit".into(),
+            reason: "page must be below 10000 and limit 1..=100".into(),
+        });
+    }
+    Ok(())
+}
 
 async fn delisted_rows(
     client: &crate::adapters::fmp::client::FmpClient,
@@ -165,21 +175,17 @@ async fn delisted_page(
         param: "cursor".into(),
         reason: "invalid FMP delisted continuation".into(),
     };
-    if !(1..=1000).contains(&limit) {
-        return Err(invalid());
-    }
-    let mut state = if let Some(cursor) = cursor {
-        cursor.validate("delisted_stocks_page", &limit.to_string())?;
-        if cursor.provider != crate::Provider::Fmp || cursor.target.len() > 16 * 1024 * 1024 {
-            return Err(invalid());
+    let mut state = match cursor {
+        Some(cursor) if cursor.target().len() <= MAX_DELISTED_CURSOR_BYTES => {
+            serde_json::from_str::<DelistedCursor>(cursor.target()).map_err(|_| invalid())?
         }
-        serde_json::from_str::<DelistedCursor>(&cursor.target).map_err(|_| invalid())?
-    } else {
-        DelistedCursor::default()
+        Some(_) => return Err(invalid()),
+        None => DelistedCursor::default(),
     };
-    if state.page as usize != state.seen.len() || state.page >= 10_000 {
+    if state.page as usize != state.seen.len() {
         return Err(invalid());
     }
+    check_delisted_page(state.page, limit)?;
     let rows = delisted_rows(client, state.page, limit).await?;
     if rows.is_empty() {
         return Ok((rows, None));
@@ -204,17 +210,16 @@ async fn delisted_page(
     state.seen.push(hash);
     state.page += 1;
     let target = serde_json::to_string(&state)?;
-    if target.len() > 16 * 1024 * 1024 {
+    if target.len() > MAX_DELISTED_CURSOR_BYTES {
         return Err(invalid());
     }
-    let next = crate::PageCursor {
-        version: 1,
-        provider: crate::Provider::Fmp,
-        operation: "delisted_stocks_page".into(),
-        request: limit.to_string(),
-        target,
-    };
-    Ok((rows, Some(next)))
+    Ok((
+        rows,
+        Some(crate::PageCursor::continuation(
+            crate::Provider::Fmp,
+            target,
+        )),
+    ))
 }
 
 pub(crate) async fn fetch_delisted_stocks_page(
@@ -241,12 +246,7 @@ pub(crate) async fn fetch_delisted_stocks_page_at(
     page: u32,
     limit: u32,
 ) -> Result<Vec<SymbolMatch>> {
-    if page >= 10_000 || !(1..=100).contains(&limit) {
-        return Err(FinanceError::InvalidParameter {
-            param: "page/limit".into(),
-            reason: "page must be 0..10000 and limit 1..=100".into(),
-        });
-    }
+    check_delisted_page(page, limit)?;
     let client = crate::adapters::fmp::build_client()?;
     let rows = delisted_rows(&client, page, limit).await?;
     if rows.len() > limit as usize {

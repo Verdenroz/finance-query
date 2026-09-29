@@ -69,7 +69,6 @@ pub(crate) async fn fetch_stock_listings_page(
         });
     }
     let client = build_client()?;
-    let identity = serde_json::to_string(request)?;
     let active = request.active.to_string();
     let limit = request.limit.to_string();
     let mut params = vec![
@@ -85,31 +84,15 @@ pub(crate) async fn fetch_stock_listings_page(
         params.push(("type", kind.as_str()));
     }
     let path = "/v3/reference/tickers";
-    let (body, current): (PaginatedResponseDTO<TickerRefDTO>, _) = client
-        .page(
-            path,
-            &params,
-            PathRule::Exact,
-            cursor,
-            "stock_listings_page",
-            &identity,
-        )
-        .await?;
+    let (body, current): (PaginatedResponseDTO<TickerRefDTO>, _) =
+        client.page(path, &params, PathRule::Exact, cursor).await?;
     let items = body
         .results
         .ok_or_else(|| invalid_page("results"))?
         .into_iter()
         .map(listing_to_canonical)
         .collect::<Result<Vec<_>>>()?;
-    let next = client.continuation(
-        body.next_url,
-        path,
-        &params,
-        PathRule::Exact,
-        "stock_listings_page",
-        &identity,
-        &current,
-    )?;
+    let next = client.continuation(body.next_url, path, &params, PathRule::Exact, &current)?;
     Ok(ProviderPage {
         items,
         next,
@@ -136,14 +119,7 @@ pub(crate) async fn fetch_symbol_details_at(symbol: &str, as_of: &str) -> Result
         crate::adapters::common::encode_path_segment(symbol)
     );
     let (body, _): (TickerDetailsResponseDTO, _) = client
-        .page(
-            &path,
-            &[("date", as_of)],
-            PathRule::Exact,
-            None,
-            "symbol_details_at",
-            "",
-        )
+        .page(&path, &[("date", as_of)], PathRule::Exact, None)
         .await?;
     if !body
         .results
@@ -169,8 +145,6 @@ pub(crate) async fn fetch_stock_types(locale: &str) -> Result<Vec<StockType>> {
             &[("asset_class", "stocks"), ("locale", locale)],
             PathRule::Exact,
             None,
-            "stock_types",
-            "",
         )
         .await?;
     if body.next_url.is_some() {

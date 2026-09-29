@@ -1,6 +1,9 @@
 //! Resumable provider pages. Cursors contain no credentials.
 
-use crate::{FinanceError, Provider, Result};
+use crate::{FinanceError, Operation, Provider, Result};
+
+/// Bump whenever a request's cursor identity changes meaning, so older cursors are rejected.
+const CURSOR_VERSION: u8 = 1;
 use serde::{Deserialize, Serialize};
 
 /// One provider response, without collecting subsequent pages.
@@ -52,8 +55,33 @@ impl PageCursor {
         self.provider
     }
 
-    pub(crate) fn validate(&self, operation: &str, request: &str) -> Result<()> {
-        if self.version != 1 || self.operation != operation || self.request != request {
+    /// A provider's continuation target, bound to its request by [`bind`](Self::bind).
+    #[cfg(any(feature = "polygon", feature = "fmp"))]
+    pub(crate) fn continuation(provider: Provider, target: String) -> Self {
+        Self {
+            version: CURSOR_VERSION,
+            provider,
+            operation: String::new(),
+            request: String::new(),
+            target,
+        }
+    }
+
+    #[cfg(any(feature = "polygon", feature = "fmp"))]
+    pub(crate) fn target(&self) -> &str {
+        &self.target
+    }
+
+    pub(crate) fn bind(&mut self, operation: Operation, request: &str) {
+        self.operation = operation.as_str().into();
+        self.request = request.into();
+    }
+
+    pub(crate) fn validate(&self, operation: Operation, request: &str) -> Result<()> {
+        if self.version != CURSOR_VERSION
+            || self.operation != operation.as_str()
+            || self.request != request
+        {
             return Err(FinanceError::InvalidParameter {
                 param: "cursor".into(),
                 reason: "cursor version, operation or request does not match".into(),

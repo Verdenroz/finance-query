@@ -3,7 +3,7 @@
 use crate::adapters::polygon::client::PathRule;
 use crate::adapters::polygon::models::{AggBarDTO, AggregateResponseDTO};
 use crate::adapters::polygon::{build_client, invalid_page};
-use crate::{PageCursor, Provider, ProviderPage, Result, SortOrder, StockBar, StockBarsRequest};
+use crate::{PageCursor, Provider, ProviderPage, Result, StockBar, StockBarsRequest};
 
 fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
     if chrono::DateTime::from_timestamp_millis(row.timestamp).is_none()
@@ -32,17 +32,12 @@ pub(crate) async fn fetch_stock_bars_page(
     cursor: Option<&PageCursor>,
 ) -> Result<ProviderPage<StockBar>> {
     let client = build_client()?;
-    let identity = serde_json::to_string(request)?;
-    let adjusted = request.adjusted()?;
+    let adjusted = request.split_adjusted();
     let adjustment = adjusted.to_string();
     let limit = request.limit.to_string();
-    let sort = match request.sort {
-        SortOrder::Ascending => "asc",
-        SortOrder::Descending => "desc",
-    };
     let params = [
         ("adjusted", adjustment.as_str()),
-        ("sort", sort),
+        ("sort", request.sort_param()),
         ("limit", limit.as_str()),
     ];
     let path = format!(
@@ -53,14 +48,7 @@ pub(crate) async fn fetch_stock_bars_page(
         request.to
     );
     let (body, current): (AggregateResponseDTO, _) = client
-        .page(
-            &path,
-            &params,
-            PathRule::AggregateWindow,
-            cursor,
-            "stock_bars_page",
-            &identity,
-        )
+        .page(&path, &params, PathRule::AggregateWindow, cursor)
         .await?;
     if body
         .ticker
@@ -87,8 +75,6 @@ pub(crate) async fn fetch_stock_bars_page(
         &path,
         &params,
         PathRule::AggregateWindow,
-        "stock_bars_page",
-        &identity,
         &current,
     )?;
     Ok(ProviderPage {

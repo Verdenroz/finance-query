@@ -114,29 +114,25 @@ impl Market {
         request: &crate::StockBarsRequest,
         cursor: Option<&crate::PageCursor>,
     ) -> Result<crate::ProviderPage<crate::StockBar>> {
-        request.adjusted()?;
-        let identity = serde_json::to_string(request)?;
-        if let Some(cursor) = cursor {
-            cursor.validate("stock_bars_page", &identity)?;
-        }
-        let call = |p: &std::sync::Arc<dyn crate::ProviderAdapter>| {
-            let p = std::sync::Arc::clone(p);
-            async move {
-                p.as_chart()
-                    .ok_or_else(|| p.not_supported(crate::Operation::StockBarsPage))?
-                    .fetch_stock_bars_page(request, cursor)
-                    .await
-            }
-        };
-        match cursor {
-            Some(cursor) => {
-                self.providers
-                    .fetch_from(cursor.provider(), crate::Capability::CHART, call)
-                    .await
-            }
-            None => self.providers.fetch(crate::Capability::CHART, call).await,
-        }
+        self.providers
+            .fetch_paged(
+                crate::Capability::CHART,
+                crate::Operation::StockBarsPage,
+                &request.cursor_identity(),
+                cursor,
+                |p| {
+                    let p = Arc::clone(p);
+                    async move {
+                        p.as_chart()
+                            .ok_or_else(|| p.not_supported(crate::Operation::StockBarsPage))?
+                            .fetch_stock_bars_page(request, cursor)
+                            .await
+                    }
+                },
+            )
+            .await
     }
+
     pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
         Self { providers }
     }

@@ -160,10 +160,14 @@ async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() 
         .create_async()
         .await;
     let client = providers(&server, Provider::Polygon).await;
-    let unset =
-        StockBarsRequest::new("AAPL", "2020-01-02", "2020-01-02", Interval::OneMinute).unwrap();
-    assert!(client.market().stock_bars_page(&unset, None).await.is_err());
-    let request = unset.adjustment(PriceAdjustment::Unadjusted);
+    let request = StockBarsRequest::new(
+        "AAPL",
+        "2020-01-02",
+        "2020-01-02",
+        Interval::OneMinute,
+        PriceAdjustment::Unadjusted,
+    )
+    .unwrap();
     let page = client
         .market()
         .stock_bars_page(&request, None)
@@ -346,9 +350,14 @@ async fn stock_ingestion_empty_and_retry_responses_remain_distinct() {
             .create_async()
             .await;
         let client = providers(&server, Provider::Polygon).await;
-        let request = StockBarsRequest::new("AAPL", "2020-01-02", "2020-01-02", Interval::OneDay)
-            .unwrap()
-            .adjustment(PriceAdjustment::Unadjusted);
+        let request = StockBarsRequest::new(
+            "AAPL",
+            "2020-01-02",
+            "2020-01-02",
+            Interval::OneDay,
+            PriceAdjustment::Unadjusted,
+        )
+        .unwrap();
         assert!(
             client
                 .market()
@@ -388,9 +397,14 @@ async fn stock_ingestion_final_empty_page_and_optional_profile_fields() {
         .create_async()
         .await;
     let client = providers(&server, Provider::Polygon).await;
-    let request = StockBarsRequest::new("NEW", "2020-01-01", "2020-01-02", Interval::OneDay)
-        .unwrap()
-        .adjustment(PriceAdjustment::Unadjusted);
+    let request = StockBarsRequest::new(
+        "NEW",
+        "2020-01-01",
+        "2020-01-02",
+        Interval::OneDay,
+        PriceAdjustment::Unadjusted,
+    )
+    .unwrap();
     let page = client
         .market()
         .stock_bars_page(&request, None)
@@ -539,7 +553,16 @@ fn stock_ingestion_compatibility_with_older_serialized_models() {
             .is_none()
     );
     assert!(StockListingRequest::new("2020-02-30", true).is_err());
-    assert!(StockBarsRequest::new("AAPL", "2020-01-02", "2020-01-01", Interval::OneDay).is_err());
+    assert!(
+        StockBarsRequest::new(
+            "AAPL",
+            "2020-01-02",
+            "2020-01-01",
+            Interval::OneDay,
+            PriceAdjustment::Unadjusted
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -623,9 +646,14 @@ async fn stock_ingestion_continuation_never_falls_back_even_with_parallel_routes
         .with_status(403)
         .create_async()
         .await;
-    let request = StockBarsRequest::new("NEW", "2020-01-01", "2020-01-02", Interval::OneDay)
-        .unwrap()
-        .adjustment(PriceAdjustment::Unadjusted);
+    let request = StockBarsRequest::new(
+        "NEW",
+        "2020-01-01",
+        "2020-01-02",
+        Interval::OneDay,
+        PriceAdjustment::Unadjusted,
+    )
+    .unwrap();
     let cursor = providers(&server, Provider::Polygon)
         .await
         .market()

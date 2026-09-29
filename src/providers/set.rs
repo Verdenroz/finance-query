@@ -253,7 +253,40 @@ impl ProviderSet {
         }
     }
 
-    pub(crate) async fn fetch_from<T, F, Fut>(
+    /// Fetch one page. A continuation stays on the provider that issued it and must
+    /// match `operation` and `identity`; the returned continuation is bound to both.
+    pub(crate) async fn fetch_paged<T, F, Fut>(
+        &self,
+        cap: Capability,
+        operation: super::Operation,
+        identity: &str,
+        cursor: Option<&crate::PageCursor>,
+        f: F,
+    ) -> Result<crate::ProviderPage<T>>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<crate::ProviderPage<T>>>,
+    {
+        let mut page = match cursor {
+            Some(cursor) => {
+                cursor.validate(operation, identity)?;
+                self.fetch_from(cursor.provider(), cap, f).await?
+            }
+            None => self.fetch(cap, f).await?,
+        };
+        if let Some(next) = &mut page.next {
+            if next.provider() != page.provider_id {
+                return Err(FinanceError::ResponseStructureError {
+                    field: "next".into(),
+                    context: "continuation belongs to another provider".into(),
+                });
+            }
+            next.bind(operation, identity);
+        }
+        Ok(page)
+    }
+
+    async fn fetch_from<T, F, Fut>(
         &self,
         provider: super::Provider,
         cap: Capability,

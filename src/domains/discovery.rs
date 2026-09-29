@@ -27,18 +27,15 @@ domain_handle! {
 }
 
 impl Discovery {
-    /// Fetch one independently addressable FMP delisted page (zero-based).
+    /// Fetch one independently addressable delisted page (zero-based).
     ///
-    /// Supports page 0..10_000 and limit 1..=100. Callers fetching pages in parallel
-    /// must check contiguous coverage, repeated records and the empty terminal page.
-    /// Unlike `delisted_stocks_page`, this does not carry scan-progress validation.
+    /// `page` must be below 10,000 and `limit` in 1–100.
+    ///
+    /// Callers fetching pages in parallel must check contiguous coverage,
+    /// repeated records and the empty terminal page. Unlike
+    /// [`delisted_stocks_page`](Self::delisted_stocks_page), this does not carry
+    /// scan-progress validation.
     pub async fn delisted_stocks_page_at(&self, page: u32, limit: u32) -> Result<Vec<SymbolMatch>> {
-        if page >= 10_000 || !(1..=100).contains(&limit) {
-            return Err(crate::FinanceError::InvalidParameter {
-                param: "page/limit".into(),
-                reason: "page must be 0..10000 and limit 1..=100".into(),
-            });
-        }
         dispatch_via!(
             self,
             DISCOVERY,
@@ -51,39 +48,32 @@ impl Discovery {
         )
     }
 
-    /// Fetch one delisted-stock page. Persist the returned cursor with the records.
+    /// Fetch one delisted-stock page of 1–100 rows. Persist the returned cursor
+    /// with the records and pass it back with the same `limit`.
     pub async fn delisted_stocks_page(
         &self,
         limit: u32,
         cursor: Option<&crate::PageCursor>,
     ) -> Result<crate::ProviderPage<SymbolMatch>> {
-        if !(1..=1000).contains(&limit) {
-            return Err(crate::FinanceError::InvalidParameter {
-                param: "limit".into(),
-                reason: "expected 1..=1000".into(),
-            });
-        }
-        if let Some(cursor) = cursor {
-            cursor.validate("delisted_stocks_page", &limit.to_string())?;
-        }
-        let call = |p: &Arc<dyn crate::ProviderAdapter>| {
-            let p = Arc::clone(p);
-            async move {
-                p.as_discovery()
-                    .ok_or_else(|| p.not_supported(crate::Operation::DelistedStocksPage))?
-                    .fetch_delisted_stocks_page(limit, cursor)
-                    .await
-            }
-        };
-        match cursor {
-            Some(c) => {
-                self.providers
-                    .fetch_from(c.provider(), Capability::DISCOVERY, call)
-                    .await
-            }
-            None => self.providers.fetch(Capability::DISCOVERY, call).await,
-        }
+        self.providers
+            .fetch_paged(
+                Capability::DISCOVERY,
+                crate::Operation::DelistedStocksPage,
+                &limit.to_string(),
+                cursor,
+                |p| {
+                    let p = Arc::clone(p);
+                    async move {
+                        p.as_discovery()
+                            .ok_or_else(|| p.not_supported(crate::Operation::DelistedStocksPage))?
+                            .fetch_delisted_stocks_page(limit, cursor)
+                            .await
+                    }
+                },
+            )
+            .await
     }
+
     /// Fetch the current provider-wide symbol directory. Active status can be unknown.
     pub async fn stock_list(&self) -> Result<Vec<SymbolMatch>> {
         dispatch_via!(
@@ -116,27 +106,23 @@ impl Discovery {
         request: &crate::StockListingRequest,
         cursor: Option<&crate::PageCursor>,
     ) -> Result<crate::ProviderPage<crate::StockListing>> {
-        let identity = serde_json::to_string(request)?;
-        if let Some(cursor) = cursor {
-            cursor.validate("stock_listings_page", &identity)?;
-        }
-        let call = |p: &Arc<dyn crate::ProviderAdapter>| {
-            let p = Arc::clone(p);
-            async move {
-                p.as_discovery()
-                    .ok_or_else(|| p.not_supported(crate::Operation::StockListingsPage))?
-                    .fetch_stock_listings_page(request, cursor)
-                    .await
-            }
-        };
-        match cursor {
-            Some(cursor) => {
-                self.providers
-                    .fetch_from(cursor.provider(), Capability::DISCOVERY, call)
-                    .await
-            }
-            None => self.providers.fetch(Capability::DISCOVERY, call).await,
-        }
+        self.providers
+            .fetch_paged(
+                Capability::DISCOVERY,
+                crate::Operation::StockListingsPage,
+                &request.cursor_identity(),
+                cursor,
+                |p| {
+                    let p = Arc::clone(p);
+                    async move {
+                        p.as_discovery()
+                            .ok_or_else(|| p.not_supported(crate::Operation::StockListingsPage))?
+                            .fetch_stock_listings_page(request, cursor)
+                            .await
+                    }
+                },
+            )
+            .await
     }
 
     /// Fetch details as of YYYY-MM-DD, independently of undated detail cache entries.

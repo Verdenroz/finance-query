@@ -4,7 +4,7 @@
 
 mod candle;
 mod stock_bars;
-pub use stock_bars::{PriceAdjustment, SortOrder, StockBar, StockBarsRequest};
+pub use stock_bars::{PriceAdjustment, StockBar, StockBarsRequest};
 mod data;
 pub mod dividend_analytics;
 pub mod events;
