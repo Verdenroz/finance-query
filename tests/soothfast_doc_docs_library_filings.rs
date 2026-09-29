@@ -89,10 +89,10 @@ fn doc_block_line_119() {
     }
 }
 
-// line 161: compile-only (no_run)
+// line 163: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_161() {
+fn doc_block_line_163() {
     use finance_query::Providers;
 
     #[tokio::main]
@@ -107,11 +107,11 @@ fn doc_block_line_161() {
     }
 }
 
-// line 194: compile-only (no_run)
+// line 198: compile-only (no_run)
 #[cfg(feature = "secftd")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_194() {
+fn doc_block_line_198() {
     use finance_query::{Providers, edgar};
 
     #[tokio::main]
