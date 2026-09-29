@@ -81,7 +81,7 @@ impl StockBarsRequest {
         Ok(self)
     }
 
-    #[cfg(feature = "polygon")]
+    #[cfg(any(feature = "polygon", feature = "fmp"))]
     pub(crate) fn split_adjusted(&self) -> bool {
         self.adjustment == PriceAdjustment::SplitAdjusted
     }

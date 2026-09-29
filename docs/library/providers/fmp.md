@@ -102,6 +102,22 @@ Responses and traversal are bounded, and exceeding a bound returns an error
 rather than a truncated list. Provider lists change over time and are not
 historical snapshots; keep coverage and source observations in the application.
 
+### Minute and daily stock bars
+
+`Market::stock_bars_page(&request, cursor)` also reads FMP's minute
+(`/stable/historical-chart/1min`) and daily (`/stable/historical-price-eod/full`)
+history, back to 2004. FMP only serves split-adjusted bars, so requests must use
+`PriceAdjustment::SplitAdjusted`. Minute bars cover regular trading hours only.
+
+FMP answers a minute request with just the last three calendar days of its range
+and caps daily history at 5,000 rows, so each page requests one window that comes
+back whole: three calendar days for minutes, starting and ending on weekdays (two
+requests per week), and about 19 years for days. The `next` cursor carries the
+following window. FMP reports minutes in New York time; bars carry the matching
+UTC timestamp, and daily bars are stamped at midnight New York time, as Polygon's
+are. FMP has no bars for long-delisted tickers, and it files history under today's
+ticker (`META` returns 2012 bars, `FB` returns none).
+
 ### Stock directories and bulk profiles
 
 `Discovery::stock_list()` fetches `/stable/stock-list`, the global directory,

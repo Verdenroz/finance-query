@@ -34,6 +34,14 @@ impl QuoteProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl ChartProvider for FmpProvider {
+    async fn fetch_stock_bars_page(
+        &self,
+        request: &crate::StockBarsRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        crate::adapters::fmp::quote::bars::fetch_stock_bars_page(request, cursor).await
+    }
+
     async fn fetch_chart(
         &self,
         symbol: &str,
