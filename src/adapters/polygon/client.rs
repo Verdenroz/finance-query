@@ -22,6 +22,8 @@ use super::models::PaginatedResponseDTO;
 const PG_BASE: &str = "https://api.massive.com";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const PAGE_BYTE_LIMIT: usize = 32 * 1024 * 1024;
+const ERROR_BODY_BYTE_LIMIT: usize = 64 * 1024;
+const MISSING_KEY: &str = "Polygon API key invalid or missing. Call polygon::init(key) first.";
 
 pub(crate) struct PolygonClientBuilder {
     api_key: String,
@@ -145,7 +147,7 @@ impl PolygonClient {
             .send()
             .await
             .map_err(|e| self.map_transport_error(&e))?;
-        Self::check_status(response.status(), response.headers())?;
+        let response = self.check_response(response).await?;
         let bytes = bounded_body(response, PAGE_BYTE_LIMIT, "Polygon", self.timeout).await?;
         let envelope: ErrorEnvelope =
             serde_json::from_slice(&bytes).map_err(|_| FinanceError::ResponseStructureError {
@@ -190,15 +192,28 @@ impl PolygonClient {
         })
         .transpose()
     }
+    /// Plan refusals arrive as 401/403 with an explanatory body, so an
+    /// authentication error keeps the provider's message.
+    async fn check_response(&self, response: reqwest::Response) -> Result<reqwest::Response> {
+        let status = response.status();
+        if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+            let body = bounded_body(response, ERROR_BODY_BYTE_LIMIT, "Polygon", self.timeout)
+                .await
+                .unwrap_or_default();
+            let message = serde_json::from_slice::<ErrorEnvelope>(&body)
+                .ok()
+                .and_then(|env| env.text().map(|text| redact_key(text, &self.api_key)));
+            return Err(FinanceError::AuthenticationFailed {
+                context: message.unwrap_or_else(|| MISSING_KEY.to_string()),
+            });
+        }
+        Self::check_status(status, response.headers())?;
+        Ok(response)
+    }
+
     fn check_status(status: StatusCode, headers: &HeaderMap) -> Result<()> {
         match status {
             StatusCode::OK => Ok(()),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(FinanceError::AuthenticationFailed {
-                    context: "Polygon API key invalid or missing. Call polygon::init(key) first."
-                        .to_string(),
-                })
-            }
             StatusCode::NOT_FOUND => Err(FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "Resource not found on Polygon".to_string(),
@@ -222,14 +237,7 @@ impl PolygonClient {
         if status != "ERROR" && status != "NOT_FOUND" && status != "NOT_AUTHORIZED" {
             return Ok(());
         }
-        let msg = redact_key(
-            env.error
-                .as_ref()
-                .and_then(|v| v.as_str())
-                .or_else(|| env.message.as_ref().and_then(|v| v.as_str()))
-                .unwrap_or("Unknown error"),
-            api_key,
-        );
+        let msg = redact_key(env.text().unwrap_or("Unknown error"), api_key);
         if status == "NOT_FOUND" {
             return Err(FinanceError::SymbolNotFound {
                 symbol: None,
@@ -267,7 +275,7 @@ impl PolygonClient {
             .send()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
-        Self::check_status(resp.status(), resp.headers())?;
+        let resp = self.check_response(resp).await?;
         let bytes = resp
             .bytes()
             .await
@@ -391,6 +399,15 @@ struct ErrorEnvelope {
     /// skip the status check entirely, turning an error body into a success.
     error: Option<serde_json::Value>,
     message: Option<serde_json::Value>,
+}
+
+impl ErrorEnvelope {
+    fn text(&self) -> Option<&str> {
+        self.error
+            .as_ref()
+            .and_then(|v| v.as_str())
+            .or_else(|| self.message.as_ref().and_then(|v| v.as_str()))
+    }
 }
 
 #[cfg(test)]
@@ -534,6 +551,39 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn auth_errors_keep_the_provider_message_without_the_key() {
+        let mut server = mockito::Server::new_async().await;
+        let plan = r#"{"status":"NOT_AUTHORIZED","message":"You are not entitled to this data. Please upgrade your plan"}"#;
+        let echoed = r#"{"status":"ERROR","error":"API Key test-key is invalid"}"#;
+        for (path, status, body) in [
+            ("/plan", 403, plan),
+            ("/echo", 401, echoed),
+            ("/empty", 401, ""),
+        ] {
+            server
+                .mock("GET", path)
+                .match_query(mockito::Matcher::Any)
+                .with_status(status)
+                .with_body(body)
+                .create_async()
+                .await;
+        }
+        let client = client("test-key", &server.url());
+        let context = |path: &'static str| {
+            let client = &client;
+            async move {
+                match client.get_raw(path, &[]).await.unwrap_err() {
+                    FinanceError::AuthenticationFailed { context } => context,
+                    other => panic!("{path}: unexpected {other:?}"),
+                }
+            }
+        };
+        assert!(context("/plan").await.contains("not entitled"));
+        assert_eq!(context("/echo").await, "API Key [redacted] is invalid");
+        assert_eq!(context("/empty").await, MISSING_KEY);
     }
 
     #[tokio::test]
