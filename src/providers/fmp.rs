@@ -435,6 +435,14 @@ impl CryptoProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for FmpProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
+    fn accepts_request_budget(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> Result<()> {
         let _ = crate::adapters::fmp::build_client()?;
         Ok(())

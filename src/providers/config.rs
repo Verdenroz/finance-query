@@ -1,7 +1,8 @@
 use crate::adapters::yahoo::client::ClientConfig;
 use crate::error::Result;
 use crate::providers::{
-    Fetch, Provider, ProviderHealth, ProviderSet, RetryPolicy, Routes, build_providers,
+    Fetch, Provider, ProviderAdapter, ProviderHealth, ProviderSet, RetryPolicy, Routes,
+    build_providers,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -296,6 +297,25 @@ impl Default for ProvidersBuilder {
     }
 }
 
+/// Reject a builder option set for a provider that is not configured or would ignore it.
+fn check_scoped_options(
+    set: &ProviderSet,
+    option: &str,
+    providers: &[&str],
+    accepts: impl Fn(&dyn ProviderAdapter) -> bool,
+) -> Result<()> {
+    for key in providers {
+        let adapter = Provider::from_id_str(key).and_then(|id| set.adapter(id));
+        if !adapter.is_some_and(|p| accepts(p.as_ref())) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: option.into(),
+                reason: format!("provider `{key}` is not configured or does not support {option}"),
+            });
+        }
+    }
+    Ok(())
+}
+
 impl ProvidersBuilder {
     /// Select initialized providers instead of the default Yahoo provider.
     /// Providers already named in routes are retained.
@@ -311,17 +331,23 @@ impl ProvidersBuilder {
         }
         self
     }
-    /// Set the Polygon/FMP request budget. Zero is rejected by build.
-    /// Instances sharing an API key share the lowest configured live budget.
-    /// Requires an explicit api_key for this provider.
+    /// Set the request budget for this provider's API key. Zero is rejected by build.
+    ///
+    /// Instances using the same key share one bucket: the most recently built
+    /// explicit budget sets its rate, and instances without one never change it.
+    /// Requires an explicit [`api_key`](Self::api_key) and a provider whose
+    /// adapter [accepts a budget](crate::ProviderAdapter::accepts_request_budget).
     pub fn requests_per_minute(mut self, provider: Provider, limit: u32) -> Self {
         self.request_limits.insert(provider.as_str(), limit);
         self
     }
 
-    /// Override a Polygon/FMP endpoint for a compatible service or local HTTP fixture.
-    /// Only HTTPS and loopback HTTP origins are accepted; requires an explicit api_key.
-    /// Continuations cannot leave this origin. No global endpoint is modified.
+    /// Send this provider's requests to a compatible service or local HTTP fixture.
+    ///
+    /// Only HTTPS and loopback HTTP origins are accepted, and continuations cannot
+    /// leave the origin. No global endpoint is modified. Requires an explicit
+    /// [`api_key`](Self::api_key) and a provider whose adapter
+    /// [accepts an endpoint](crate::ProviderAdapter::accepts_endpoint).
     pub fn endpoint(mut self, provider: Provider, base_url: impl Into<String>) -> Self {
         self.endpoints.insert(provider.as_str(), base_url.into());
         self
@@ -473,13 +499,15 @@ impl ProvidersBuilder {
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
         for provider in self.request_limits.keys().chain(self.endpoints.keys()) {
-            if !matches!(*provider, "polygon" | "fmp") || !self.api_keys.contains_key(provider) {
+            if !self.api_keys.contains_key(provider) {
                 return Err(crate::FinanceError::InvalidParameter {
                     param: "provider_options".into(),
-                    reason: "options require an explicit Polygon or FMP API key".into(),
+                    reason: format!("options for `{provider}` require an explicit API key"),
                 });
             }
         }
+        let budgets: Vec<&'static str> = self.request_limits.keys().copied().collect();
+        let endpoints: Vec<&'static str> = self.endpoints.keys().copied().collect();
         if self.request_limits.values().any(|limit| *limit == 0) {
             return Err(crate::FinanceError::InvalidParameter {
                 param: "requests_per_minute".into(),
@@ -559,6 +587,10 @@ impl ProvidersBuilder {
         .await?
         .with_api_keys(keys)
         .with_retry_policy(self.retry);
+        check_scoped_options(&set, "requests_per_minute", &budgets, |p| {
+            p.accepts_request_budget()
+        })?;
+        check_scoped_options(&set, "endpoint", &endpoints, |p| p.accepts_endpoint())?;
         Ok(Providers {
             set: Arc::new(set),
             lang,

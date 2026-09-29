@@ -32,6 +32,24 @@ pub trait ProviderAdapter: ProviderCore {
         None
     }
 
+    /// Whether requests go to an origin set with
+    /// [`ProvidersBuilder::endpoint`](crate::ProvidersBuilder::endpoint).
+    ///
+    /// `false` by default, and the builder rejects an endpoint for a provider
+    /// that would ignore it.
+    fn accepts_endpoint(&self) -> bool {
+        false
+    }
+
+    /// Whether this provider's API-key budget follows
+    /// [`ProvidersBuilder::requests_per_minute`](crate::ProvidersBuilder::requests_per_minute).
+    ///
+    /// `false` by default, and the builder rejects a budget for a provider that
+    /// would ignore it.
+    fn accepts_request_budget(&self) -> bool {
+        false
+    }
+
     /// Override to `Some(self)` to serve [`crate::Capability::QUOTE`].
     fn as_quote(&self) -> Option<&dyn QuoteProvider> {
         None

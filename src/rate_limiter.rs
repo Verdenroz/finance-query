@@ -5,6 +5,7 @@
 //! is consumed per request. When the bucket is empty, [`RateLimiter::acquire`]
 //! sleeps until a token becomes available.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::Instant;
@@ -12,8 +13,6 @@ use tokio::time::Instant;
 struct TokenState {
     available: f64,
     last_refill: Instant,
-    max_tokens: f64,
-    refill_rate: f64, // tokens per second
 }
 
 /// A token bucket rate limiter.
@@ -22,7 +21,8 @@ struct TokenState {
 /// When no tokens are available, [`acquire`](Self::acquire) sleeps until one is ready.
 pub(crate) struct RateLimiter {
     state: Mutex<TokenState>,
-    ceiling: std::sync::atomic::AtomicU64,
+    /// Tokens per second as `f64` bits, so [`set_rate`](Self::set_rate) needs no lock.
+    rate: AtomicU64,
 }
 
 impl RateLimiter {
@@ -31,16 +31,21 @@ impl RateLimiter {
     /// The bucket capacity is at least 1 token so that [`acquire`](Self::acquire)
     /// always makes progress, even for sub-1/sec rates (e.g. 0.5 req/sec).
     pub fn new(max_per_second: f64) -> Self {
-        let max_tokens = max_per_second.max(1.0);
         Self {
-            ceiling: std::sync::atomic::AtomicU64::new(max_per_second.to_bits()),
+            rate: AtomicU64::new(max_per_second.to_bits()),
             state: Mutex::new(TokenState {
-                available: max_tokens,
+                available: Self::capacity(max_per_second),
                 last_refill: Instant::now(),
-                max_tokens,
-                refill_rate: max_per_second,
             }),
         }
+    }
+
+    fn capacity(rate: f64) -> f64 {
+        rate.max(1.0)
+    }
+
+    fn rate(&self) -> f64 {
+        f64::from_bits(self.rate.load(Ordering::Relaxed))
     }
 
     /// Acquire a token, sleeping if necessary to respect the rate limit.
@@ -48,15 +53,10 @@ impl RateLimiter {
         loop {
             let sleep_duration = {
                 let mut state = self.state.lock().await;
-                let ceiling =
-                    f64::from_bits(self.ceiling.load(std::sync::atomic::Ordering::Relaxed));
-                state.refill_rate = state.refill_rate.min(ceiling);
-                state.max_tokens = state.max_tokens.min(ceiling.max(1.0));
-                state.available = state.available.min(state.max_tokens);
+                let rate = self.rate();
                 let now = Instant::now();
                 let elapsed = now.duration_since(state.last_refill).as_secs_f64();
-                state.available =
-                    (state.available + elapsed * state.refill_rate).min(state.max_tokens);
+                state.available = (state.available + elapsed * rate).min(Self::capacity(rate));
                 state.last_refill = now;
 
                 if state.available >= 1.0 {
@@ -65,7 +65,7 @@ impl RateLimiter {
                 }
 
                 let deficit = 1.0 - state.available;
-                Duration::from_secs_f64(deficit / state.refill_rate)
+                Duration::from_secs_f64(deficit / rate)
             };
             tokio::time::sleep(sleep_duration).await;
         }
@@ -86,19 +86,14 @@ impl RateLimiter {
         let elapsed = Instant::now()
             .duration_since(state.last_refill)
             .as_secs_f64();
-        let ceiling = f64::from_bits(self.ceiling.load(std::sync::atomic::Ordering::Relaxed));
-        Some(
-            (state.available + elapsed * state.refill_rate.min(ceiling))
-                .min(state.max_tokens.min(ceiling.max(1.0))),
-        )
+        let rate = self.rate();
+        Some((state.available + elapsed * rate).min(Self::capacity(rate)))
     }
 
-    pub(crate) fn lower_rate(&self, rate: f64) {
-        let _ = self.ceiling.fetch_update(
-            std::sync::atomic::Ordering::Relaxed,
-            std::sync::atomic::Ordering::Relaxed,
-            |old| Some(f64::from_bits(old).min(rate).to_bits()),
-        );
+    /// Replace the refill rate; takes effect on the next acquire.
+    #[allow(dead_code)] // used by the keyed adapters' shared per-key buckets
+    pub(crate) fn set_rate(&self, max_per_second: f64) {
+        self.rate.store(max_per_second.to_bits(), Ordering::Relaxed);
     }
 }
 

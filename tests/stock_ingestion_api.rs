@@ -687,3 +687,38 @@ async fn stock_ingestion_continuation_never_falls_back_even_with_parallel_routes
     first.assert_async().await;
     blocked.assert_async().await;
 }
+
+#[tokio::test]
+async fn stock_ingestion_builder_rejects_options_a_provider_would_ignore() {
+    struct Plain;
+    impl finance_query::ProviderCore for Plain {
+        fn id(&self) -> Provider {
+            Provider::custom("plain-endpoint")
+        }
+    }
+    #[finance_query::async_trait]
+    impl finance_query::ProviderAdapter for Plain {}
+
+    let unconfigured = Providers::builder()
+        .providers([Provider::Fmp])
+        .api_key(Provider::Fmp, "fixture")
+        .api_key(Provider::Polygon, "fixture")
+        .endpoint(Provider::Polygon, "https://example.test")
+        .build()
+        .await;
+    let keyless = Providers::builder()
+        .providers([Provider::Fmp])
+        .requests_per_minute(Provider::Fmp, 10)
+        .build()
+        .await;
+    let ignored = Providers::builder()
+        .providers([Provider::Fmp])
+        .with_adapter(std::sync::Arc::new(Plain))
+        .api_key(Provider::custom("plain-endpoint"), "fixture")
+        .endpoint(Provider::custom("plain-endpoint"), "https://example.test")
+        .build()
+        .await;
+    for result in [unconfigured, keyless, ignored] {
+        assert!(matches!(result, Err(FinanceError::InvalidParameter { .. })));
+    }
+}

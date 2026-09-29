@@ -289,6 +289,14 @@ impl EconomicProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for PolygonProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
+    fn accepts_request_budget(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> Result<()> {
         let _ = polygon::build_client()?;
         Ok(())

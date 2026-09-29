@@ -312,6 +312,10 @@ impl ProviderSet {
         .await
     }
 
+    pub(crate) fn adapter(&self, id: super::Provider) -> Option<&Arc<dyn ProviderAdapter>> {
+        self.providers.iter().find(|p| p.id() == id)
+    }
+
     pub(crate) fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
         self.yahoo_client.as_ref().map(Arc::clone).ok_or_else(|| {
             FinanceError::NoProviderAvailable {

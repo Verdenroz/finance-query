@@ -33,7 +33,7 @@ pub(crate) struct ScopedKey {
 type RuntimeClients = HashMap<(tokio::runtime::Id, &'static str), reqwest::Client>;
 
 impl ScopedKey {
-    /// Connection pools belong to a runtime, just like the existing Yahoo session cache.
+    /// Connection pools are bound to the runtime that created them.
     pub(crate) fn http_client(
         &self,
         kind: &'static str,
@@ -65,13 +65,14 @@ impl ScopedKey {
 
     /// Rate limits are enforced per API key upstream, so each distinct key gets
     /// its own bucket rather than sharing the singleton's.
-    pub(crate) fn limiter(&self, provider_key: &'static str, rate: f64) -> Arc<RateLimiter> {
+    pub(crate) fn limiter(
+        &self,
+        provider_key: &'static str,
+        default_rate: f64,
+    ) -> Arc<RateLimiter> {
         Arc::clone(self.limiter.get_or_init(|| {
-            shared_limiter(
-                provider_key,
-                &self.api_key,
-                self.rpm.map_or(rate, |rpm| f64::from(rpm) / 60.0),
-            )
+            let explicit = self.rpm.map(|rpm| f64::from(rpm) / 60.0);
+            shared_limiter(provider_key, &self.api_key, default_rate, explicit)
         }))
     }
 }
@@ -88,24 +89,35 @@ type LimiterMap = HashMap<(&'static str, String), Weak<RateLimiter>>;
 /// it. The strong reference lives in that instance's [`ScopedKey`].
 static LIMITERS: LazyLock<RwLock<LimiterMap>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 
-fn shared_limiter(provider_key: &'static str, api_key: &str, rate: f64) -> Arc<RateLimiter> {
+/// Instances sharing a key share one bucket. An explicit budget sets its rate,
+/// the latest one winning; the provider default never changes an existing bucket.
+fn shared_limiter(
+    provider_key: &'static str,
+    api_key: &str,
+    default_rate: f64,
+    explicit: Option<f64>,
+) -> Arc<RateLimiter> {
     let id = (provider_key, api_key.to_string());
+    let reuse = |limiter: Arc<RateLimiter>| {
+        if let Some(rate) = explicit {
+            limiter.set_rate(rate);
+        }
+        limiter
+    };
     if let Some(limiter) = LIMITERS
         .read()
         .unwrap_or_else(|e| e.into_inner())
         .get(&id)
         .and_then(Weak::upgrade)
     {
-        limiter.lower_rate(rate);
-        return limiter;
+        return reuse(limiter);
     }
     let mut limiters = LIMITERS.write().unwrap_or_else(|e| e.into_inner());
     if let Some(limiter) = limiters.get(&id).and_then(Weak::upgrade) {
-        limiter.lower_rate(rate);
-        return limiter;
+        return reuse(limiter);
     }
     limiters.retain(|_, held| held.strong_count() > 0);
-    let limiter = Arc::new(RateLimiter::new(rate));
+    let limiter = Arc::new(RateLimiter::new(explicit.unwrap_or(default_rate)));
     limiters.insert(id, Arc::downgrade(&limiter));
     limiter
 }
@@ -132,20 +144,26 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn stock_ingestion_shared_key_uses_lower_rate() {
-        let a = shared_limiter("polygon", "stock-ingestion-limits", 100.0);
-        let b = shared_limiter("polygon", "stock-ingestion-limits", 1.0);
-        assert!(Arc::ptr_eq(&a, &b));
-        assert!(a.available_estimate().unwrap() <= 1.0);
-        a.acquire().await;
+    async fn an_explicit_budget_sets_the_shared_rate_and_the_default_never_lowers_it() {
+        let paid = shared_limiter("polygon", "explicit-budget", 0.1, Some(100.0));
+        let unset = shared_limiter("polygon", "explicit-budget", 0.1, None);
+        assert!(Arc::ptr_eq(&paid, &unset));
+        assert!(unset.available_estimate().unwrap() > 50.0);
+
+        let lowered = shared_limiter("polygon", "explicit-budget", 0.1, Some(1.0));
+        assert!(Arc::ptr_eq(&paid, &lowered));
+        assert!(paid.available_estimate().unwrap() <= 1.0);
+        paid.acquire().await;
         assert!(
-            tokio::time::timeout(Duration::from_millis(20), b.acquire())
+            tokio::time::timeout(Duration::from_millis(20), unset.acquire())
                 .await
                 .is_err()
         );
-        let c = shared_limiter("polygon", "stock-ingestion-limits", 1000.0);
-        assert!(Arc::ptr_eq(&a, &c));
-        assert!(c.available_estimate().unwrap() <= 1.0);
+
+        shared_limiter("polygon", "explicit-budget", 0.1, Some(1000.0));
+        tokio::time::timeout(Duration::from_millis(50), unset.acquire())
+            .await
+            .unwrap();
     }
 
     fn map(pairs: &[(&'static str, &str)]) -> Arc<KeyMap> {
