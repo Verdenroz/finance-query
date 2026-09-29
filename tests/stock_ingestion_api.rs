@@ -28,9 +28,29 @@ async fn stock_ingestion_directory_resumes_after_rebuilding_client() {
         "{}/v3/reference/tickers?cursor=next&apiKey=do-not-persist",
         server.url()
     );
-    let first = server.mock("GET", "/v3/reference/tickers")
-        .match_query(Matcher::AllOf(vec![Matcher::UrlEncoded("date".into(), "2020-01-02".into()), Matcher::UrlEncoded("active".into(), "false".into()), Matcher::UrlEncoded("type".into(), "CS".into()), Matcher::Regex("^market=stocks&".into())]))
-        .with_body(json!({"status":"OK","results":[{"ticker":"OLD","active":false,"cik":"00042","composite_figi":"SECURITY","share_class_figi":"CLASS","delisted_utc":"2021-01-01T00:00:00Z"}],"next_url":next}).to_string()).create_async().await;
+    let first_body = json!({
+        "status": "OK",
+        "results": [{
+            "ticker": "OLD",
+            "active": false,
+            "cik": "00042",
+            "composite_figi": "SECURITY",
+            "share_class_figi": "CLASS",
+            "delisted_utc": "2021-01-01T00:00:00Z"
+        }],
+        "next_url": next,
+    });
+    let first = server
+        .mock("GET", "/v3/reference/tickers")
+        .match_query(Matcher::AllOf(vec![
+            Matcher::UrlEncoded("date".into(), "2020-01-02".into()),
+            Matcher::UrlEncoded("active".into(), "false".into()),
+            Matcher::UrlEncoded("type".into(), "CS".into()),
+            Matcher::Regex("^market=stocks&".into()),
+        ]))
+        .with_body(first_body.to_string())
+        .create_async()
+        .await;
     let second = server
         .mock("GET", "/v3/reference/tickers")
         .match_query(Matcher::UrlEncoded("cursor".into(), "next".into()))
@@ -129,7 +149,10 @@ async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() 
         "resultsCount": 2,
         "results": [
             {"t": 1577973600123_i64, "o": 1.1, "h": 2.2, "l": 1.0, "c": 2.0, "v": 123.75},
-            {"t": 1577973660123_i64, "o": 2.0, "h": 2.5, "l": 1.5, "c": 2.25, "v": 18.5, "n": 17, "vw": 2.125}
+            {
+                "t": 1577973660123_i64, "o": 2.0, "h": 2.5, "l": 1.5, "c": 2.25,
+                "v": 18.5, "n": 17, "vw": 2.125
+            }
         ],
         "next_url": format!("{}{next_path}?cursor=bGltaXQ9MiZzb3J0PWFzYw", server.url()),
     });
@@ -240,8 +263,24 @@ async fn stock_ingestion_bars_preserve_values_and_reject_unsafe_continuations() 
 #[tokio::test]
 async fn stock_ingestion_details_and_types_use_real_public_routes() {
     let mut server = Server::new_async().await;
-    let details = server.mock("GET", "/v3/reference/tickers/BRK.B").match_query(Matcher::UrlEncoded("date".into(), "2020-01-02".into()))
-        .with_body(r#"{"status":"OK","results":{"ticker":"BRK.B","cik":"0001","composite_figi":"F1","share_class_figi":"F2","active":false,"list_date":"1996-05-09","delisted_utc":"2025-01-01T00:00:00Z"}}"#).create_async().await;
+    let details_body = json!({
+        "status": "OK",
+        "results": {
+            "ticker": "BRK.B",
+            "cik": "0001",
+            "composite_figi": "F1",
+            "share_class_figi": "F2",
+            "active": false,
+            "list_date": "1996-05-09",
+            "delisted_utc": "2025-01-01T00:00:00Z"
+        }
+    });
+    let details = server
+        .mock("GET", "/v3/reference/tickers/BRK.B")
+        .match_query(Matcher::UrlEncoded("date".into(), "2020-01-02".into()))
+        .with_body(details_body.to_string())
+        .create_async()
+        .await;
     let types = server
         .mock("GET", "/v3/reference/tickers/types")
         .match_query(Matcher::UrlEncoded("asset_class".into(), "stocks".into()))
@@ -269,8 +308,19 @@ async fn stock_ingestion_details_and_types_use_real_public_routes() {
 #[tokio::test]
 async fn stock_ingestion_fmp_profile_preserves_identity_and_rejects_mismatches() {
     let mut server = Server::new_async().await;
-    let good = server.mock("GET", "/stable/profile").match_query(Matcher::UrlEncoded("symbol".into(), "BRK-B".into()))
-        .with_body(r#"[{"symbol":"BRK-B","cik":"00042","ipoDate":"1996-05-09","companyName":"Berkshire","marketCap":123.5}]"#).create_async().await;
+    let good_body = json!([{
+        "symbol": "BRK-B",
+        "cik": "00042",
+        "ipoDate": "1996-05-09",
+        "companyName": "Berkshire",
+        "marketCap": 123.5
+    }]);
+    let good = server
+        .mock("GET", "/stable/profile")
+        .match_query(Matcher::UrlEncoded("symbol".into(), "BRK-B".into()))
+        .with_body(good_body.to_string())
+        .create_async()
+        .await;
     let bad = server
         .mock("GET", "/stable/profile")
         .match_query(Matcher::UrlEncoded("symbol".into(), "WRONG".into()))
@@ -638,8 +688,17 @@ async fn stock_ingestion_continuation_never_falls_back_even_with_parallel_routes
     }
     let mut server = Server::new_async().await;
     let path = "/v2/aggs/ticker/NEW/range/1/day/2020-01-01/2020-01-02";
-    let first = server.mock("GET", path).match_query(Matcher::Regex("^adjusted=".into()))
-        .with_body(json!({"status":"OK","resultsCount":0,"next_url":format!("{}{path}?cursor=blocked", server.url())}).to_string()).create_async().await;
+    let first_body = json!({
+        "status": "OK",
+        "resultsCount": 0,
+        "next_url": format!("{}{path}?cursor=blocked", server.url()),
+    });
+    let first = server
+        .mock("GET", path)
+        .match_query(Matcher::Regex("^adjusted=".into()))
+        .with_body(first_body.to_string())
+        .create_async()
+        .await;
     let blocked = server
         .mock("GET", path)
         .match_query(Matcher::UrlEncoded("cursor".into(), "blocked".into()))

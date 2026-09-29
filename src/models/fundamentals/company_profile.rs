@@ -12,6 +12,26 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyProfile {
+    /// Ticker symbol.
+    pub symbol: Option<String>,
+    /// Company name.
+    pub name: Option<String>,
+    /// Business description.
+    pub description: Option<String>,
+    /// Asset type as reported by the provider (e.g. `"Common Stock"`).
+    pub asset_type: Option<String>,
+    /// Listing exchange.
+    pub exchange: Option<String>,
+    /// Trading currency.
+    pub currency: Option<String>,
+    /// Country of incorporation or primary listing.
+    pub country: Option<String>,
+    /// GICS sector.
+    pub sector: Option<String>,
+    /// GICS industry.
+    pub industry: Option<String>,
+    /// Market capitalization.
+    pub market_capitalization: Option<f64>,
     /// Provider-reported ISIN, preserving its exact text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub isin: Option<String>,
@@ -39,24 +59,4 @@ pub struct CompanyProfile {
     /// Provider that supplied this profile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_id: Option<crate::Provider>,
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Company name.
-    pub name: Option<String>,
-    /// Business description.
-    pub description: Option<String>,
-    /// Asset type as reported by the provider (e.g. `"Common Stock"`).
-    pub asset_type: Option<String>,
-    /// Listing exchange.
-    pub exchange: Option<String>,
-    /// Trading currency.
-    pub currency: Option<String>,
-    /// Country of incorporation or primary listing.
-    pub country: Option<String>,
-    /// GICS sector.
-    pub sector: Option<String>,
-    /// GICS industry.
-    pub industry: Option<String>,
-    /// Market capitalization.
-    pub market_capitalization: Option<f64>,
 }

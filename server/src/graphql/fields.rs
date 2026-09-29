@@ -769,15 +769,6 @@ pub const GQL_EARNINGS_HISTORY_COMPOSITE: &str =
 
 /// `companyProfile` (`GqlCompanyProfile`) — flat, no composite fields.
 pub const GQL_COMPANY_PROFILE_VALID_FIELDS: &[&str] = &[
-    "isin",
-    "cusip",
-    "active",
-    "isEtf",
-    "isAdr",
-    "isFund",
-    "cik",
-    "ipoDate",
-    "providerId",
     "symbol",
     "name",
     "description",
@@ -788,6 +779,15 @@ pub const GQL_COMPANY_PROFILE_VALID_FIELDS: &[&str] = &[
     "sector",
     "industry",
     "marketCapitalization",
+    "isin",
+    "cusip",
+    "active",
+    "isEtf",
+    "isAdr",
+    "isFund",
+    "cik",
+    "ipoDate",
+    "providerId",
 ];
 
 /// `earningsSurprises` (`GqlEarningsSurpriseHistory`) — `surprises` is
@@ -1361,11 +1361,6 @@ pub const GQL_TVL_POINT_VALID_FIELDS: &[&str] = &["timestamp", "tvl"];
 
 /// Valid GraphQL field names for `GqlSymbolDetails`.
 pub const GQL_SYMBOL_DETAILS_VALID_FIELDS: &[&str] = &[
-    "compositeFigi",
-    "shareClassFigi",
-    "active",
-    "delistedUtc",
-    "providerId",
     "symbol",
     "name",
     "description",
@@ -1379,6 +1374,11 @@ pub const GQL_SYMBOL_DETAILS_VALID_FIELDS: &[&str] = &[
     "marketCap",
     "listDate",
     "sharesOutstanding",
+    "compositeFigi",
+    "shareClassFigi",
+    "active",
+    "delistedUtc",
+    "providerId",
 ];
 
 /// Valid GraphQL field names for `GqlIndexConstituentChange`.

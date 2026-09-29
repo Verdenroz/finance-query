@@ -270,8 +270,6 @@ pub async fn fetch_symbol_search_response(
         .into_iter()
         .filter_map(|t| {
             Some(SymbolMatch {
-                ipo_date: None,
-                delisted_date: None,
                 symbol: t.ticker?,
                 id: None,
                 name: t.name,
@@ -282,6 +280,8 @@ pub async fn fetch_symbol_search_response(
                 market_cap_rank: None,
                 thumbnail: None,
                 image: None,
+                ipo_date: None,
+                delisted_date: None,
             })
         })
         .collect())
@@ -307,11 +307,6 @@ pub(super) fn details_to_canonical(
             context: format!("No ticker details returned for {symbol}"),
         })?;
     Ok(SymbolDetails {
-        composite_figi: d.composite_figi,
-        share_class_figi: d.share_class_figi,
-        active: d.active,
-        delisted_utc: d.delisted_utc,
-        provider_id: Some(crate::Provider::Polygon),
         symbol: d.ticker.unwrap_or_else(|| symbol.to_string()),
         name: d.name,
         description: d.description,
@@ -327,6 +322,11 @@ pub(super) fn details_to_canonical(
         shares_outstanding: d
             .weighted_shares_outstanding
             .or(d.share_class_shares_outstanding),
+        composite_figi: d.composite_figi,
+        share_class_figi: d.share_class_figi,
+        active: d.active,
+        delisted_utc: d.delisted_utc,
+        provider_id: Some(crate::Provider::Polygon),
     })
 }
 

@@ -53,10 +53,20 @@ async fn directories_use_stock_routes_and_preserve_unknown_classification() {
 #[tokio::test]
 async fn bulk_csv_handles_bom_quotes_newlines_optional_cells_and_exact_identifiers() {
     let mut server = Server::new_async().await;
-    let fixture = server.mock("GET", "/stable/profile-bulk")
+    let csv = concat!(
+        "\u{feff}symbol,companyName,description,cik,cusip,isin,ipoDate,",
+        "isActivelyTrading,isEtf,isAdr,isFund,marketCap,exchange\r\n",
+        "AAPL,\"Apple, Inc.\",\"Line one\nLine two\",0000320193,037833100,US0378331005,",
+        "1980-12-12,true,false,false,false,100.5,NASDAQ\r\n",
+        "OLD,,,,,,,,,,,,\r\n",
+    );
+    let fixture = server
+        .mock("GET", "/stable/profile-bulk")
         .match_query(Matcher::UrlEncoded("part".into(), "3".into()))
-        .with_body("\u{feff}symbol,companyName,description,cik,cusip,isin,ipoDate,isActivelyTrading,isEtf,isAdr,isFund,marketCap,exchange\r\nAAPL,\"Apple, Inc.\",\"Line one\nLine two\",0000320193,037833100,US0378331005,1980-12-12,true,false,false,false,100.5,NASDAQ\r\nOLD,,,,,,,,,,,,\r\n")
-        .expect(1).create_async().await;
+        .with_body(csv)
+        .expect(1)
+        .create_async()
+        .await;
     let rows = providers(&server)
         .await
         .discovery()
@@ -83,11 +93,23 @@ async fn bulk_csv_handles_bom_quotes_newlines_optional_cells_and_exact_identifie
 #[tokio::test]
 async fn bulk_json_and_individual_profiles_preserve_the_same_fields() {
     let mut server = Server::new_async().await;
-    let body = r#"[{"symbol":"AAPL","companyName":"Apple","cik":"0000320193","cusip":"037833100","isin":"US0378331005","ipoDate":"1980-12-12","isActivelyTrading":true,"isEtf":false,"isAdr":false,"isFund":false}]"#;
+    let body = serde_json::json!([{
+        "symbol": "AAPL",
+        "companyName": "Apple",
+        "cik": "0000320193",
+        "cusip": "037833100",
+        "isin": "US0378331005",
+        "ipoDate": "1980-12-12",
+        "isActivelyTrading": true,
+        "isEtf": false,
+        "isAdr": false,
+        "isFund": false
+    }])
+    .to_string();
     let bulk = server
         .mock("GET", "/stable/profile-bulk")
         .match_query(Matcher::Any)
-        .with_body(body)
+        .with_body(&body)
         .create_async()
         .await;
     let single = server

@@ -8,8 +8,6 @@ use crate::models::discovery::reference::{ExchangeInfo, SymbolMatch};
 
 pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
     SymbolMatch {
-        ipo_date: None,
-        delisted_date: None,
         symbol: dto.symbol,
         id: None,
         name: Some(dto.name),
@@ -21,6 +19,8 @@ pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: None,
+        delisted_date: None,
     }
 }
 
@@ -40,8 +40,6 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         .as_deref()
         .map(|s| s.eq_ignore_ascii_case("active"));
     SymbolMatch {
-        ipo_date: dto.ipo_date,
-        delisted_date: dto.delisting_date,
         symbol: dto.symbol,
         id: None,
         name: dto.name,
@@ -52,6 +50,8 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: dto.ipo_date,
+        delisted_date: dto.delisting_date,
     }
 }
 

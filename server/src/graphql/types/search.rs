@@ -120,11 +120,6 @@ pub struct GqlLookupResults {
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlSymbolDetails {
-    pub composite_figi: Option<String>,
-    pub share_class_figi: Option<String>,
-    pub active: Option<bool>,
-    pub delisted_utc: Option<String>,
-    pub provider_id: Option<String>,
     pub symbol: String,
     pub name: Option<String>,
     pub description: Option<String>,
@@ -138,4 +133,9 @@ pub struct GqlSymbolDetails {
     pub market_cap: Option<f64>,
     pub list_date: Option<String>,
     pub shares_outstanding: Option<f64>,
+    pub composite_figi: Option<String>,
+    pub share_class_figi: Option<String>,
+    pub active: Option<bool>,
+    pub delisted_utc: Option<String>,
+    pub provider_id: Option<String>,
 }

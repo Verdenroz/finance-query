@@ -362,15 +362,6 @@ fn profile_and_price_to_company_profile(
     price: Option<crate::models::quote::price::Price>,
 ) -> crate::models::fundamentals::CompanyProfile {
     crate::models::fundamentals::CompanyProfile {
-        isin: None,
-        cusip: None,
-        active: None,
-        is_etf: None,
-        is_adr: None,
-        is_fund: None,
-        cik: None,
-        ipo_date: None,
-        provider_id: None,
         symbol: Some(symbol.to_string()),
         name: price
             .as_ref()
@@ -389,6 +380,15 @@ fn profile_and_price_to_company_profile(
             .and_then(|p| p.market_cap.as_ref())
             .and_then(|v| v.raw)
             .map(|v| v as f64),
+        isin: None,
+        cusip: None,
+        active: None,
+        is_etf: None,
+        is_adr: None,
+        is_fund: None,
+        cik: None,
+        ipo_date: None,
+        provider_id: Some(crate::Provider::Yahoo),
     }
 }
 
@@ -401,11 +401,6 @@ fn profile_and_price_to_symbol_details(
     let company_profile =
         profile_and_price_to_company_profile(symbol, profile.clone(), price.clone());
     crate::models::discovery::reference::SymbolDetails {
-        composite_figi: None,
-        share_class_figi: None,
-        active: None,
-        delisted_utc: None,
-        provider_id: None,
         symbol: symbol.to_string(),
         name: company_profile.name,
         description: company_profile.description,
@@ -426,6 +421,11 @@ fn profile_and_price_to_symbol_details(
             .and_then(|k| k.shares_outstanding.as_ref())
             .and_then(|v| v.raw)
             .map(|v| v as f64),
+        composite_figi: None,
+        share_class_figi: None,
+        active: None,
+        delisted_utc: None,
+        provider_id: Some(crate::Provider::Yahoo),
     }
 }
 
@@ -1011,8 +1011,6 @@ fn search_quotes_to_symbol_matches(
     quotes
         .into_iter()
         .map(|q| crate::models::discovery::reference::SymbolMatch {
-            ipo_date: None,
-            delisted_date: None,
             symbol: q.symbol,
             id: None,
             name: q.short_name.or(q.long_name),
@@ -1023,6 +1021,8 @@ fn search_quotes_to_symbol_matches(
             market_cap_rank: None,
             thumbnail: q.logo_url.clone(),
             image: q.logo_url,
+            ipo_date: None,
+            delisted_date: None,
         })
         .collect()
 }
@@ -1047,8 +1047,8 @@ fn screener_quotes_to_screener_matches(
             exchange: Some(q.exchange),
             country: None,
             is_etf: Some(q.quote_type == "ETF"),
-            is_fund: Some(q.quote_type == "MUTUALFUND"),
             is_actively_trading: None,
+            is_fund: Some(q.quote_type == "MUTUALFUND"),
         })
         .collect()
 }

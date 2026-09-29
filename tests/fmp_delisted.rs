@@ -42,7 +42,21 @@ async fn fmp_delisted_reads_all_pages_and_preserves_dates_and_reused_symbols() {
         .expect(1)
         .create_async()
         .await;
-    let second = page(&mut server, 1).with_body(r#"[{"symbol":"T0","companyName":"Different lifetime","exchange":"NASDAQ","ipoDate":"2009-02-03","delistedDate":"2025-06-07"},{"symbol":"UNKNOWN_DATES","ipoDate":null,"delistedDate":null}]"#).expect(1).create_async().await;
+    let second_rows = json!([
+        {
+            "symbol": "T0",
+            "companyName": "Different lifetime",
+            "exchange": "NASDAQ",
+            "ipoDate": "2009-02-03",
+            "delistedDate": "2025-06-07"
+        },
+        {"symbol": "UNKNOWN_DATES", "ipoDate": null, "delistedDate": null}
+    ]);
+    let second = page(&mut server, 1)
+        .with_body(second_rows.to_string())
+        .expect(1)
+        .create_async()
+        .await;
     let end = page(&mut server, 2)
         .with_body("[]")
         .expect(1)

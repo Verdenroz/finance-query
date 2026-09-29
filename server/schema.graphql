@@ -507,15 +507,6 @@ own — this deserializes snake_case keys while its GraphQL name stays
 camelCase.
 """
 type GqlCompanyProfile {
-	isin: String
-	cusip: String
-	active: Boolean
-	isEtf: Boolean
-	isAdr: Boolean
-	isFund: Boolean
-	cik: String
-	ipoDate: String
-	providerId: String
 	symbol: String
 	name: String
 	description: String
@@ -526,6 +517,15 @@ type GqlCompanyProfile {
 	sector: String
 	industry: String
 	marketCapitalization: Float
+	isin: String
+	cusip: String
+	active: Boolean
+	isEtf: Boolean
+	isAdr: Boolean
+	isFund: Boolean
+	cik: String
+	ipoDate: String
+	providerId: String
 }
 
 """
@@ -3543,11 +3543,6 @@ type GqlSymbolChartEdge {
 Reference detail for one symbol, provider-routed (Capability::DISCOVERY).
 """
 type GqlSymbolDetails {
-	compositeFigi: String
-	shareClassFigi: String
-	active: Boolean
-	delistedUtc: String
-	providerId: String
 	symbol: String!
 	name: String
 	description: String
@@ -3561,6 +3556,11 @@ type GqlSymbolDetails {
 	marketCap: Float
 	listDate: String
 	sharesOutstanding: Float
+	compositeFigi: String
+	shareClassFigi: String
+	active: Boolean
+	delistedUtc: String
+	providerId: String
 }
 
 """
@@ -3654,8 +3654,6 @@ Mirrors `finance_query::crypto::SymbolMatch` — the provider-neutral
 discovery shape, here populated from CoinGecko's coin universe.
 """
 type GqlSymbolMatch {
-	ipoDate: String
-	delistedDate: String
 	symbol: String!
 	id: String
 	name: String
@@ -3666,6 +3664,8 @@ type GqlSymbolMatch {
 	marketCapRank: Int
 	thumbnail: String
 	image: String
+	ipoDate: String
+	delistedDate: String
 }
 
 type GqlSymbolMatchConnection {

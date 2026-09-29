@@ -60,9 +60,6 @@
 // Public modules
 /// External data source adapters (internal — use the public API modules).
 pub(crate) mod adapters;
-pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
-pub use models::discovery::listings::{StockListing, StockListingRequest, StockType};
-pub use models::pagination::{PageCursor, ProviderPage};
 /// Error types and result definitions.
 pub mod error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
@@ -377,14 +374,17 @@ pub use tickers::BatchIndicatorsResponse;
 // ============================================================================
 // Error types and results
 // ============================================================================
-// Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
+// Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
+pub use models::discovery::listings::{StockListing, StockListingRequest, StockType};
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
 pub use models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
+pub use models::pagination::{PageCursor, ProviderPage};
 
 pub use error::{ErrorCategory, FinanceError, Result};
 

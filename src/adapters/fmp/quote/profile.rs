@@ -144,16 +144,7 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
         })?;
     }
     Ok(CompanyProfile {
-        isin: row.isin,
-        cusip: row.cusip,
-        active: row.is_actively_trading,
-        is_etf: row.is_etf,
-        is_adr: row.is_adr,
-        is_fund: row.is_fund,
         symbol: Some(row.symbol),
-        cik: row.cik,
-        ipo_date: row.ipo_date,
-        provider_id: Some(Provider::Fmp),
         name: row.company_name,
         description: row.description,
         exchange: row.exchange,
@@ -163,5 +154,14 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
         industry: row.industry,
         market_capitalization: row.market_cap,
         asset_type: None,
+        isin: row.isin,
+        cusip: row.cusip,
+        active: row.is_actively_trading,
+        is_etf: row.is_etf,
+        is_adr: row.is_adr,
+        is_fund: row.is_fund,
+        cik: row.cik,
+        ipo_date: row.ipo_date,
+        provider_id: Some(Provider::Fmp),
     })
 }

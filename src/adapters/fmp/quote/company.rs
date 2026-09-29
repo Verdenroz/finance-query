@@ -276,8 +276,6 @@ fn delisted_symbols(rows: Vec<DelistedCompanyDTO>) -> Result<Vec<SymbolMatch>> {
 /// dropping entries without a symbol.
 fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
     Some(SymbolMatch {
-        ipo_date: dto.ipo_date,
-        delisted_date: dto.delisted_date,
         symbol: dto.symbol?,
         id: None,
         name: dto.company_name,
@@ -288,6 +286,8 @@ fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: dto.ipo_date,
+        delisted_date: dto.delisted_date,
     })
 }
 

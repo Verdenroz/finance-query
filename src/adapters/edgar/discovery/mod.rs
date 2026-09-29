@@ -11,8 +11,6 @@ use crate::providers::{Operation, Provider};
 
 fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> SymbolMatch {
     SymbolMatch {
-        ipo_date: None,
-        delisted_date: None,
         symbol: entry.ticker,
         id: Some(entry.cik.to_string()),
         name: Some(entry.title),
@@ -23,6 +21,8 @@ fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> Symb
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: None,
+        delisted_date: None,
     }
 }
 

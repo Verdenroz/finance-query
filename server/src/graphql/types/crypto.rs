@@ -47,8 +47,6 @@ pub struct GqlTrendingCoin {
 #[graphql(rename_fields = "camelCase")]
 #[serde(default)]
 pub struct GqlSymbolMatch {
-    pub ipo_date: Option<String>,
-    pub delisted_date: Option<String>,
     pub symbol: String,
     pub id: Option<String>,
     pub name: Option<String>,
@@ -59,6 +57,8 @@ pub struct GqlSymbolMatch {
     pub market_cap_rank: Option<u32>,
     pub thumbnail: Option<String>,
     pub image: Option<String>,
+    pub ipo_date: Option<String>,
+    pub delisted_date: Option<String>,
 }
 
 /// Mirrors `finance_query::crypto::GlobalCryptoStats`.
