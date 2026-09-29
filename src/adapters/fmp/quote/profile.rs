@@ -2,6 +2,9 @@ use crate::adapters::fmp::blank_as_none;
 use crate::{CompanyProfile, FinanceError, Provider, Result};
 use serde::Deserialize;
 
+const PROFILE_BYTES: usize = 1024 * 1024;
+const BULK_PART_BYTES: usize = 128 * 1024 * 1024;
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Profile {
@@ -37,7 +40,13 @@ struct Profile {
 
 pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile> {
     let client = crate::adapters::fmp::build_client()?;
-    let rows: Vec<Profile> = client.get("/stable/profile", &[("symbol", symbol)]).await?;
+    let rows: Vec<Profile> = client
+        .get_limited(
+            "/stable/profile",
+            &[("symbol", symbol)],
+            Some(PROFILE_BYTES),
+        )
+        .await?;
     let row = match <[Profile; 1]>::try_from(rows) {
         Ok([row]) if row.symbol.eq_ignore_ascii_case(symbol) => row,
         Err(rows) if rows.is_empty() => {
@@ -59,7 +68,11 @@ pub(crate) async fn fetch_company_profile(symbol: &str) -> Result<CompanyProfile
 pub(crate) async fn fetch_company_profiles_bulk(part: u32) -> Result<Vec<CompanyProfile>> {
     let client = crate::adapters::fmp::build_client()?;
     let bytes = client
-        .get_bytes("/stable/profile-bulk", &[("part", &part.to_string())])
+        .get_bytes(
+            "/stable/profile-bulk",
+            &[("part", &part.to_string())],
+            Some(BULK_PART_BYTES),
+        )
         .await?;
     tokio::task::spawn_blocking(move || parse_bulk(&bytes))
         .await

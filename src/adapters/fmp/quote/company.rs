@@ -140,6 +140,22 @@ fn cursor_fingerprint(bytes: &[u8]) -> u64 {
     })
 }
 
+const DELISTED_PAGE_BYTES: usize = 8 * 1024 * 1024;
+
+async fn delisted_rows(
+    client: &crate::adapters::fmp::client::FmpClient,
+    page: u32,
+    limit: u32,
+) -> Result<Vec<DelistedCompanyDTO>> {
+    client
+        .get_limited(
+            "/stable/delisted-companies",
+            &[("page", &page.to_string()), ("limit", &limit.to_string())],
+            Some(DELISTED_PAGE_BYTES),
+        )
+        .await
+}
+
 async fn delisted_page(
     client: &crate::adapters::fmp::client::FmpClient,
     limit: u32,
@@ -164,15 +180,7 @@ async fn delisted_page(
     if state.page as usize != state.seen.len() || state.page >= 10_000 {
         return Err(invalid());
     }
-    let rows: Vec<DelistedCompanyDTO> = client
-        .get(
-            "/stable/delisted-companies",
-            &[
-                ("page", &state.page.to_string()),
-                ("limit", &limit.to_string()),
-            ],
-        )
-        .await?;
+    let rows = delisted_rows(client, state.page, limit).await?;
     if rows.is_empty() {
         return Ok((rows, None));
     }
@@ -240,12 +248,7 @@ pub(crate) async fn fetch_delisted_stocks_page_at(
         });
     }
     let client = crate::adapters::fmp::build_client()?;
-    let rows: Vec<DelistedCompanyDTO> = client
-        .get(
-            "/stable/delisted-companies",
-            &[("page", &page.to_string()), ("limit", &limit.to_string())],
-        )
-        .await?;
+    let rows = delisted_rows(&client, page, limit).await?;
     if rows.len() > limit as usize {
         return Err(FinanceError::ResponseStructureError {
             field: "pagination".into(),

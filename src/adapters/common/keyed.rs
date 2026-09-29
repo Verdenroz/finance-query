@@ -1,8 +1,38 @@
 //! Error hygiene for the adapters that carry an API key.
 
+/// Build the adapter's HTTP client, reused per runtime when a scoped key is set.
+///
+/// Redirects are refused so a key carried in the query string never follows a
+/// redirect to another origin.
 #[cfg(any(feature = "polygon", feature = "fmp"))]
-pub(crate) fn retry_after(headers: &reqwest::header::HeaderMap) -> Option<u64> {
-    retry_after_at(headers, chrono::Utc::now())
+pub(crate) fn http_client(
+    scoped: Option<&crate::adapters::keys::ScopedKey>,
+    provider: &'static str,
+    timeout: std::time::Duration,
+) -> reqwest::Result<reqwest::Client> {
+    let build = || {
+        reqwest::Client::builder()
+            .timeout(timeout)
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .user_agent(format!(
+                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+                env!("CARGO_PKG_VERSION")
+            ))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+    };
+    match scoped {
+        Some(key) => key.http_client(provider, build),
+        None => build(),
+    }
+}
+
+/// HTTP 429, honouring the provider's `Retry-After` and defaulting to a minute.
+#[cfg(any(feature = "polygon", feature = "fmp"))]
+pub(crate) fn rate_limited(headers: &reqwest::header::HeaderMap) -> crate::FinanceError {
+    crate::FinanceError::RateLimited {
+        retry_after: retry_after_at(headers, chrono::Utc::now()).or(Some(60)),
+    }
 }
 
 #[cfg(any(feature = "polygon", feature = "fmp"))]
@@ -108,15 +138,20 @@ mod tests {
 
     #[cfg(any(feature = "polygon", feature = "fmp"))]
     #[test]
-    fn stock_ingestion_retry_after_accepts_seconds_and_http_dates() {
+    fn rate_limited_reads_retry_after_seconds_and_http_dates() {
+        let delay = |headers: &reqwest::header::HeaderMap| match rate_limited(headers) {
+            crate::FinanceError::RateLimited { retry_after } => retry_after,
+            other => panic!("unexpected {other:?}"),
+        };
         let mut headers = reqwest::header::HeaderMap::new();
+        assert_eq!(delay(&headers), Some(60));
         headers.insert("retry-after", "12".parse().unwrap());
-        assert_eq!(retry_after(&headers), Some(12));
+        assert_eq!(delay(&headers), Some(12));
         headers.insert(
             "retry-after",
             "Wed, 21 Oct 2015 07:28:00 GMT".parse().unwrap(),
         );
-        assert_eq!(retry_after(&headers), Some(0));
+        assert_eq!(delay(&headers), Some(0));
         headers.insert(
             "retry-after",
             "Wed, 21 Oct 2015 07:28:01 GMT".parse().unwrap(),

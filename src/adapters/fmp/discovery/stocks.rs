@@ -2,6 +2,8 @@ use crate::adapters::fmp::blank_as_none;
 use crate::{FinanceError, Result, SymbolMatch};
 use serde::Deserialize;
 
+const DIRECTORY_BYTES: usize = 32 * 1024 * 1024;
+
 #[derive(Deserialize)]
 struct DirectoryRow {
     symbol: String,
@@ -20,7 +22,7 @@ pub(crate) async fn fetch_stock_list(active_only: bool) -> Result<Vec<SymbolMatc
     } else {
         "/stable/stock-list"
     };
-    let rows: Vec<DirectoryRow> = client.get(path, &[]).await?;
+    let rows: Vec<DirectoryRow> = client.get_limited(path, &[], Some(DIRECTORY_BYTES)).await?;
     rows.into_iter()
         .map(|row| {
             if row.symbol.trim().is_empty() {

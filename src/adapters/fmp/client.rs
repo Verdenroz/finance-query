@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use reqwest::header::HeaderMap;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -10,7 +11,9 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
+use crate::adapters::common::keyed::{
+    bounded_body, http_client, is_auth_error, rate_limited, redact_key, transport_error,
+};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -49,34 +52,9 @@ impl FmpClientBuilder {
             .base_url
             .or_else(|| scoped.as_ref().and_then(|s| s.base_url.clone()))
             .unwrap_or_else(|| FMP_BASE.to_string());
-        let build_profile = || {
-            Client::builder()
-                .timeout(self.timeout)
-                .connect_timeout(Duration::from_secs(10))
-                .user_agent(concat!("finance-query/", env!("CARGO_PKG_VERSION")))
-                .redirect(reqwest::redirect::Policy::none())
-                .build()
-        };
-        let profile_http = match &scoped {
-            Some(key) => key.http_client("fmp_profile", build_profile)?,
-            None => build_profile()?,
-        };
-        let build_http = || {
-            Client::builder()
-                .timeout(self.timeout)
-                .user_agent(format!(
-                    "finance-query/{} (https://github.com/Verdenroz/finance-query)",
-                    env!("CARGO_PKG_VERSION")
-                ))
-                .build()
-        };
-        let http = match &scoped {
-            Some(key) => key.http_client("fmp", build_http)?,
-            None => build_http()?,
-        };
+        let http = http_client(scoped.as_ref(), "fmp", self.timeout)?;
 
         Ok(FmpClient {
-            profile_http,
             api_key: self.api_key,
             http,
             limiter,
@@ -88,7 +66,6 @@ impl FmpClientBuilder {
 
 /// Financial Modeling Prep API client. Constructed per-call via the module singleton.
 pub(crate) struct FmpClient {
-    profile_http: Client,
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
@@ -97,7 +74,7 @@ pub(crate) struct FmpClient {
 }
 
 impl FmpClient {
-    fn check_status(status: StatusCode) -> Result<()> {
+    fn check_status(status: StatusCode, headers: &HeaderMap) -> Result<()> {
         match status {
             StatusCode::OK => Ok(()),
             StatusCode::UNAUTHORIZED => Err(FinanceError::AuthenticationFailed {
@@ -110,9 +87,7 @@ impl FmpClient {
                 symbol: None,
                 context: "Resource not found on FMP".to_string(),
             }),
-            StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited {
-                retry_after: Some(60),
-            }),
+            StatusCode::TOO_MANY_REQUESTS => Err(rate_limited(headers)),
             s if s.is_server_error() => Err(FinanceError::ServerError {
                 status: s.as_u16(),
                 context: "FMP server error".to_string(),
@@ -139,7 +114,14 @@ impl FmpClient {
     }
 
     /// Execute a GET request to an FMP REST path and return the raw response bytes.
-    pub(super) async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<Vec<u8>> {
+    ///
+    /// `byte_limit` bounds the body for endpoints whose size depends on the account's data.
+    pub(super) async fn get_bytes(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+        byte_limit: Option<usize>,
+    ) -> Result<Vec<u8>> {
         self.limiter.acquire().await;
 
         let url = format!("{}{}", self.base_url, path);
@@ -147,40 +129,22 @@ impl FmpClient {
         query.extend_from_slice(params);
 
         debug!("FMP request: {path}");
-        let byte_limit = match path {
-            "/stable/profile" => Some(1024 * 1024),
-            "/stable/delisted-companies" => Some(8 * 1024 * 1024),
-            "/stable/profile-bulk" => Some(128 * 1024 * 1024),
-            "/stable/stock-list" | "/stable/actively-trading-list" => Some(32 * 1024 * 1024),
-            _ => None,
-        };
-        let http = if byte_limit.is_some() {
-            &self.profile_http
-        } else {
-            &self.http
-        };
-        let resp = http
+        let resp = self
+            .http
             .get(&url)
             .query(&query)
             .send()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
+        Self::check_status(resp.status(), resp.headers())?;
 
-        if resp.status() == StatusCode::TOO_MANY_REQUESTS {
-            return Err(FinanceError::RateLimited {
-                retry_after: crate::adapters::common::keyed::retry_after(resp.headers())
-                    .or(Some(60)),
-            });
-        }
-        Self::check_status(resp.status())?;
-
-        let bytes = if let Some(limit) = byte_limit {
-            crate::adapters::common::keyed::bounded_body(resp, limit, "FMP", self.timeout).await?
-        } else {
-            resp.bytes()
+        let bytes = match byte_limit {
+            Some(limit) => bounded_body(resp, limit, "FMP", self.timeout).await?,
+            None => resp
+                .bytes()
                 .await
                 .map_err(|error| self.map_transport_error(&error))?
-                .to_vec()
+                .to_vec(),
         };
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
@@ -195,13 +159,23 @@ impl FmpClient {
     /// Execute a GET request to an FMP REST path and return raw JSON.
     #[cfg(test)]
     pub(crate) async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
-        let bytes = self.get_bytes(path, params).await?;
+        let bytes = self.get_bytes(path, params, None).await?;
         Ok(serde_json::from_slice(bytes.as_ref())?)
     }
 
     /// GET and deserialize into `T` directly, parsing the response bytes once.
     pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
-        let bytes = self.get_bytes(path, params).await?;
+        self.get_limited(path, params, None).await
+    }
+
+    /// [`get`](Self::get) with the response body bounded to `byte_limit` bytes.
+    pub(crate) async fn get_limited<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+        byte_limit: Option<usize>,
+    ) -> Result<T> {
+        let bytes = self.get_bytes(path, params, byte_limit).await?;
         serde_json::from_slice::<T>(bytes.as_ref()).map_err(|e| {
             FinanceError::ResponseStructureError {
                 field: "response".to_string(),
