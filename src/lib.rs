@@ -388,7 +388,7 @@ pub use tickers::BatchIndicatorsResponse;
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
-pub use models::discovery::listings::{StockListing, StockListingRequest, StockType};
+pub use models::discovery::listings::{StockListing, StockListingRequest, StockType, TickerChange};
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };

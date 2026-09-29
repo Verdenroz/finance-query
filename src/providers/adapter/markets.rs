@@ -53,6 +53,11 @@ pub trait DiscoveryProvider: ProviderCore {
         Err(self.not_supported(Operation::SymbolDetailsAt))
     }
 
+    /// Fetch the dated ticker changes of one security, oldest first.
+    async fn fetch_ticker_changes(&self, _id: &str) -> Result<Vec<crate::TickerChange>> {
+        Err(self.not_supported(Operation::TickerChanges))
+    }
+
     /// Fetch the provider's stock-type vocabulary.
     async fn fetch_stock_types(&self, _locale: &str) -> Result<Vec<crate::StockType>> {
         Err(self.not_supported(Operation::StockTypes))

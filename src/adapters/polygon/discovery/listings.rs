@@ -1,4 +1,5 @@
-//! Dated stock-directory pages, dated ticker details and stock-type codes.
+//! Dated stock-directory pages, dated ticker details, ticker changes and
+//! stock-type codes.
 
 use super::{TickerDetailsResponseDTO, TickerRefDTO, details_to_canonical};
 use crate::adapters::polygon::client::PathRule;
@@ -7,7 +8,7 @@ use crate::adapters::polygon::{build_client, invalid_page};
 use crate::models::discovery::listings::date;
 use crate::{
     FinanceError, PageCursor, Provider, ProviderPage, Result, StockListing, StockListingRequest,
-    StockType, SymbolDetails,
+    StockType, SymbolDetails, TickerChange,
 };
 
 fn validate_delisting(value: Option<&str>) -> Result<()> {
@@ -135,6 +136,64 @@ pub(crate) async fn fetch_symbol_details_at(symbol: &str, as_of: &str) -> Result
         date(list_date).map_err(|_| invalid_page("list_date"))?;
     }
     Ok(details)
+}
+
+#[derive(serde::Deserialize)]
+struct TickerEventsDTO {
+    results: Option<TickerEventsResultDTO>,
+}
+#[derive(serde::Deserialize)]
+struct TickerEventsResultDTO {
+    #[serde(default)]
+    events: Vec<TickerEventDTO>,
+}
+#[derive(serde::Deserialize)]
+struct TickerEventDTO {
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    date: Option<String>,
+    ticker_change: Option<TickerChangeDTO>,
+}
+#[derive(serde::Deserialize)]
+struct TickerChangeDTO {
+    ticker: Option<String>,
+}
+
+pub(crate) async fn fetch_ticker_changes(id: &str) -> Result<Vec<TickerChange>> {
+    if id.is_empty() || id == "." || id == ".." {
+        return Err(FinanceError::InvalidParameter {
+            param: "id".into(),
+            reason: "a ticker or composite FIGI is required".into(),
+        });
+    }
+    let client = build_client()?;
+    let path = format!(
+        "/vX/reference/tickers/{}/events",
+        crate::adapters::common::encode_path_segment(id)
+    );
+    let (body, _): (TickerEventsDTO, _) = client
+        .page(&path, &[("types", "ticker_change")], PathRule::Exact, None)
+        .await?;
+    let mut changes = body
+        .results
+        .ok_or_else(|| invalid_page("results"))?
+        .events
+        .into_iter()
+        .filter(|event| event.kind.as_deref() == Some("ticker_change"))
+        .map(|event| {
+            let date = event.date.filter(|d| date(d).is_ok());
+            let ticker = event
+                .ticker_change
+                .and_then(|change| change.ticker)
+                .filter(|t| !t.is_empty());
+            match (date, ticker) {
+                (Some(date), Some(ticker)) => Ok(TickerChange { date, ticker }),
+                _ => Err(invalid_page("ticker_change")),
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+    changes.sort_by(|a, b| a.date.cmp(&b.date));
+    Ok(changes)
 }
 
 pub(crate) async fn fetch_stock_types(locale: &str) -> Result<Vec<StockType>> {

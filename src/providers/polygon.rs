@@ -170,6 +170,9 @@ impl DiscoveryProvider for PolygonProvider {
     ) -> Result<crate::SymbolDetails> {
         polygon::fetch_symbol_details_at(symbol, date).await
     }
+    async fn fetch_ticker_changes(&self, id: &str) -> Result<Vec<crate::TickerChange>> {
+        polygon::fetch_ticker_changes(id).await
+    }
     async fn fetch_stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
         polygon::fetch_stock_types(locale).await
     }

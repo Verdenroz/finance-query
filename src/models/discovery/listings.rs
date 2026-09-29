@@ -104,6 +104,16 @@ pub struct StockListing {
     pub delisted_utc: Option<String>,
 }
 
+/// A ticker a security started trading under on a date.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct TickerChange {
+    /// First day under this ticker (`YYYY-MM-DD`).
+    pub date: String,
+    /// The ticker from that day.
+    pub ticker: String,
+}
+
 /// An open-ended provider stock-type code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

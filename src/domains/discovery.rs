@@ -146,6 +146,23 @@ impl Discovery {
             .await
     }
 
+    /// Every ticker a security has traded under, oldest first. `id` is a ticker
+    /// or a composite FIGI; a FIGI follows the security through renames, such
+    /// as FB (from 2012-05-18) becoming META (from 2022-06-09).
+    pub async fn ticker_changes(&self, id: &str) -> Result<Vec<crate::TickerChange>> {
+        self.providers
+            .fetch(Capability::DISCOVERY, |p| {
+                let p = Arc::clone(p);
+                async move {
+                    p.as_discovery()
+                        .ok_or_else(|| p.not_supported(crate::Operation::TickerChanges))?
+                        .fetch_ticker_changes(id)
+                        .await
+                }
+            })
+            .await
+    }
+
     /// Fetch open-ended stock-type codes for a market locale, such as us.
     pub async fn stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
         self.providers

@@ -65,9 +65,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 These operations are library-only; the REST, GraphQL and MCP servers do not expose them.
 
-`discovery().stock_listings_page(&request, cursor)` returns one page of the stock directory as of a date, active or inactive. Rows keep the CIK, composite FIGI, share-class FIGI and listing dates when Polygon supplies them, along with Polygon's reported status, locale and type. `details_at(symbol, date)` returns dated ticker details, and `stock_types("us")` lists Polygon's stock-type codes.
+`discovery().stock_listings_page(&request, cursor)` returns one page of the stock directory as of a date, active or inactive. Rows keep the CIK, composite FIGI, share-class FIGI and listing dates when Polygon supplies them, along with Polygon's reported status, locale and type. `details_at(symbol, date)` returns dated ticker details, and `stock_types("us")` lists Polygon's stock-type codes. `ticker_changes(id)` lists every ticker a security has traded under, oldest first; pass a composite FIGI to follow it through renames (FB from 2012-05-18, then META from 2022-06-09). Bars are filed under the ticker in use at the time, so a download before a rename needs the old ticker.
 
-`market().stock_bars_page(&request, cursor)` returns one page of minute or daily bars. `StockBarsRequest::new` takes an explicit `PriceAdjustment`. Bars keep millisecond timestamps, fractional volume and optional transaction counts.
+`market().stock_bars_page(&request, cursor)` returns one page of minute or daily bars. `StockBarsRequest::new` takes an explicit `PriceAdjustment`. Bars keep millisecond timestamps, fractional volume and optional transaction counts. Minute bars include pre-market and after-hours trading. How far back they go depends on the plan; older requests fail with `FinanceError::NotEntitled` rather than `AuthenticationFailed`.
 
 Store each page's items and its `next` cursor together, then pass the cursor back with the same request to continue. Cursors serialize with serde, so a download can resume after a restart, but a cursor cannot switch provider or change the request. An empty page with a `next` cursor is not the end. Pages are not cached; the application bounds concurrency, retries and storage.
 

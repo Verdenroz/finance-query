@@ -26,6 +26,8 @@ pub enum Operation {
     SymbolDetailsAt,
     /// Provider stock-type vocabulary.
     StockTypes,
+    /// Dated ticker changes of one security.
+    TickerChanges,
     /// One lossless stock-bar page.
     StockBarsPage,
     /// Single-symbol quote.
@@ -196,6 +198,7 @@ impl Operation {
             Self::StockListingsPage => "stock_listings_page",
             Self::SymbolDetailsAt => "symbol_details_at",
             Self::StockTypes => "stock_types",
+            Self::TickerChanges => "ticker_changes",
             Self::StockBarsPage => "stock_bars_page",
             Self::Quote => "quote",
             Self::Chart => "chart",
@@ -290,7 +293,8 @@ impl Operation {
             | Self::CompanyProfilesBulk
             | Self::StockListingsPage
             | Self::SymbolDetailsAt
-            | Self::StockTypes => Capability::DISCOVERY,
+            | Self::StockTypes
+            | Self::TickerChanges => Capability::DISCOVERY,
             Self::StockBarsPage => Capability::CHART,
             Self::Quote | Self::QuotesBatch | Self::UnifiedSnapshot => Capability::QUOTE,
             Self::Chart

@@ -10,7 +10,9 @@ use super::build_client;
 use super::models::PaginatedResponseDTO;
 
 mod listings;
-pub(crate) use listings::{fetch_stock_listings_page, fetch_stock_types, fetch_symbol_details_at};
+pub(crate) use listings::{
+    fetch_stock_listings_page, fetch_stock_types, fetch_symbol_details_at, fetch_ticker_changes,
+};
 
 /// Ticker reference entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
