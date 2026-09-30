@@ -163,7 +163,6 @@ async fn only_well_formed_empty_parts_are_empty_results() {
         "  ",
         "<html>Failure</html>",
         "name\nApple\n",
-        "symbol,ipoDate\nAAPL,2020-02-30\n",
         "symbol,isEtf\nAAPL,unknown\n",
         "symbol,name\nAAPL,Apple,extra\n",
         "symbol\n\" \"\n",
@@ -186,6 +185,34 @@ async fn only_well_formed_empty_parts_are_empty_results() {
                 .is_err(),
             "accepted malformed fixture {body:?}"
         );
+        fixture.assert_async().await;
+    }
+}
+
+#[tokio::test]
+async fn an_invalid_ipo_date_is_dropped_without_losing_the_row() {
+    for body in [
+        "symbol,ipoDate\nAAPL,2020-02-30\nMSFT,1986-03-13\n",
+        r#"[{"symbol":"AAPL","ipoDate":"2020-02-30"},{"symbol":"MSFT","ipoDate":"1986-03-13"}]"#,
+    ] {
+        let mut server = Server::new_async().await;
+        let fixture = server
+            .mock("GET", "/stable/profile-bulk")
+            .match_query(Matcher::Any)
+            .with_body(body)
+            .expect(1)
+            .create_async()
+            .await;
+        let rows = providers(&server)
+            .await
+            .discovery()
+            .company_profiles_bulk(0)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 2, "{body:?}");
+        assert_eq!(rows[0].symbol.as_deref(), Some("AAPL"));
+        assert_eq!(rows[0].ipo_date, None);
+        assert_eq!(rows[1].ipo_date.as_deref(), Some("1986-03-13"));
         fixture.assert_async().await;
     }
 }

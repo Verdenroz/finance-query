@@ -139,14 +139,9 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
             context: "FMP profile has a blank symbol".into(),
         });
     }
-    if let Some(date) = &row.ipo_date {
-        crate::models::discovery::listings::date(date).map_err(|_| {
-            FinanceError::ResponseStructureError {
-                field: "ipoDate".into(),
-                context: "invalid FMP IPO date".into(),
-            }
-        })?;
-    }
+    let ipo_date = row
+        .ipo_date
+        .filter(|date| crate::models::discovery::listings::date(date).is_ok());
     Ok(CompanyProfile {
         symbol: Some(row.symbol),
         name: row.company_name,
@@ -165,7 +160,7 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
         is_adr: row.is_adr,
         is_fund: row.is_fund,
         cik: row.cik,
-        ipo_date: row.ipo_date,
+        ipo_date,
         provider_id: Some(Provider::Fmp),
     })
 }
