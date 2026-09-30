@@ -798,3 +798,42 @@ async fn parallel_dispatch_publishes_the_scope_to_every_provider() {
     assert_eq!(first.seen(), Some("scoped-key".into()));
     assert_eq!(second.seen(), Some("scoped-key".into()));
 }
+
+// Holds because `initialize` builds the keyed client, joining the shared bucket
+// during `build`.
+#[cfg(feature = "fmp")]
+#[tokio::test]
+async fn the_latest_built_budget_wins_whichever_instance_calls_first() {
+    async fn build(rpm: u32) -> crate::Providers {
+        crate::Providers::builder()
+            .providers([Provider::Fmp])
+            .api_key(Provider::Fmp, "budget-at-build")
+            .requests_per_minute(Provider::Fmp, rpm)
+            .route(Capability::CHART, [Provider::Fmp])
+            .build()
+            .await
+            .unwrap()
+    }
+    async fn bucket(providers: &crate::Providers) -> Arc<crate::rate_limiter::RateLimiter> {
+        providers
+            .set
+            .fetch(Capability::CHART, |_| async {
+                Ok(crate::adapters::keys::scoped_key("fmp")
+                    .unwrap()
+                    .limiter("fmp", 0.1))
+            })
+            .await
+            .unwrap()
+    }
+
+    let fast = build(6000).await;
+    let slow = build(60).await;
+    let limiter = bucket(&slow).await;
+    assert!(Arc::ptr_eq(&limiter, &bucket(&fast).await));
+    limiter.acquire().await;
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(200), limiter.acquire())
+            .await
+            .is_err()
+    );
+}
