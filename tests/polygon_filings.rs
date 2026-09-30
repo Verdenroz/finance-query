@@ -273,7 +273,7 @@ async fn risk_factors_map_the_taxonomy_and_plan_refusals_keep_their_message() {
     assert_eq!(risks[0].filing_date.as_deref(), Some("2024-11-01"));
 
     match client.filings("MSFT").risk_factors().await {
-        Err(FinanceError::AuthenticationFailed { context }) => {
+        Err(FinanceError::NotEntitled { context }) => {
             assert!(context.contains("not entitled"), "{context}");
         }
         other => panic!("unexpected {other:?}"),
