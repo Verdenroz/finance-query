@@ -2684,6 +2684,7 @@
         "[].auctionDate": "always",
         "[].cusip": "always",
         "[].issueDate": "always",
+        "[].offeringAmt": "always",
         "[].recordDate": "always",
         "[].reopening": "always",
         "[].securityTerm": "always",
