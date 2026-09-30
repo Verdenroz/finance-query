@@ -250,8 +250,9 @@ impl Discovery {
     /// (no exchange-listing history, so `active = false` isn't supported
     /// there). Alpha Vantage and FMP serve both. FMP's active list includes
     /// global instruments; callers must filter their intended stock universe.
-    /// FMP delisted listings include all pages and preserve IPO/delisting dates.
-    /// A failed page fails the call; partial results are not returned or cached.
+    /// FMP delisted listings are the first 100 rows, with IPO and delisting
+    /// dates; page through the rest with
+    /// [`delisted_stocks_page`](Self::delisted_stocks_page).
     pub async fn listing_status(&self, active: bool) -> Result<Vec<SymbolMatch>> {
         let providers = Arc::clone(&self.providers);
         self.cache

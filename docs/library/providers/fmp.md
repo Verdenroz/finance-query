@@ -48,15 +48,15 @@ Pass FMP's symbol spelling, such as `BRK-B`. Applications comparing providers mu
 
 ### Delisted companies
 
-`Discovery::listing_status(false)` reads every FMP `/stable/delisted-companies`
-page until an empty page. It returns `SymbolMatch` records with `ipo_date` and
-`delisted_date` preserved. Missing dates stay `None`; reused ticker symbols can
-have separate records with different dates. The endpoint does not provide a
-stable security identifier, so `id` remains `None`.
+`Discovery::listing_status(false)` reads the first 100 rows of FMP's
+`/stable/delisted-companies` list in one request. It returns `SymbolMatch`
+records with `ipo_date` and `delisted_date` preserved. Missing dates stay `None`;
+reused ticker symbols can have separate records with different dates. The
+endpoint does not provide a stable security identifier, so `id` remains `None`.
+To read the whole list, use the [resumable pages](#resumable-delisted-pages).
 
-A failed request fails the whole call instead of returning or caching a partial
-list. Repeated pages that provide no new records also return an error. The
-complete result is held in memory and cached on the discovery handle.
+A failed request returns an error and is not cached. A successful result is
+cached on the discovery handle.
 
 ```rust no_run feature=fmp
 use finance_query::{Capability, Provider, Providers};
@@ -90,7 +90,6 @@ unchanged with the same `limit`. The cursor is bound to FMP, the operation and t
 page size, contains no credentials, and resumes after a restart. Continue until
 an empty page rather than treating a short page as the end. A repeated page or a
 page with no new records is an error, distinct from the empty terminal page.
-`listing_status(false)` pages through the same primitive.
 
 `Discovery::delisted_stocks_page_at(page, limit)` fetches one independent
 zero-based page, below page 10,000 with 1–100 rows, and preserves IPO and

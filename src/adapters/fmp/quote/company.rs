@@ -1,7 +1,7 @@
 //! FMP company information endpoints.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 
 use crate::error::{FinanceError, Result};
 use crate::models::discovery::reference::SymbolMatch;
@@ -94,32 +94,12 @@ pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
         .await
 }
 
-/// Fetch all delisted-company pages. `limit` controls the page size.
+/// Fetch the first page of delisted companies. `limit` controls the page size.
 pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompanyDTO>> {
     let limit = limit.unwrap_or(MAX_DELISTED_PAGE_SIZE);
     check_delisted_page(0, limit)?;
     let client = crate::adapters::fmp::build_client()?;
-    let mut cursor = None;
-    let mut records = Vec::new();
-    let mut seen = HashSet::new();
-    loop {
-        let (rows, next) = delisted_page(&client, limit, cursor.as_ref()).await?;
-        if rows.is_empty() {
-            return Ok(records);
-        }
-        let mut advanced = false;
-        for row in &rows {
-            advanced |= seen.insert(row.clone());
-        }
-        if !advanced {
-            return Err(FinanceError::ResponseStructureError {
-                field: "pagination".into(),
-                context: "FMP delisted-company page contains no new records".into(),
-            });
-        }
-        records.extend(rows);
-        cursor = next;
-    }
+    delisted_rows(&client, 0, limit).await
 }
 
 #[derive(Default, Serialize, Deserialize)]
