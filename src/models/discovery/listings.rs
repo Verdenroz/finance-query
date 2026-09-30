@@ -51,6 +51,31 @@ impl StockListingRequest {
         self
     }
 
+    /// Snapshot date (`YYYY-MM-DD`).
+    pub fn as_of(&self) -> &str {
+        &self.date
+    }
+
+    /// Whether active or inactive stocks are requested.
+    pub fn active(&self) -> bool {
+        self.active
+    }
+
+    /// Stock-type filter, if any.
+    pub fn stock_type_code(&self) -> Option<&str> {
+        self.stock_type.as_deref()
+    }
+
+    /// Requested market locale.
+    pub fn market_locale(&self) -> &str {
+        &self.locale
+    }
+
+    /// Maximum entries per provider page.
+    pub fn page_limit(&self) -> u32 {
+        self.limit
+    }
+
     /// The fields a continuation must match. Changing them requires a new cursor version.
     pub(crate) fn cursor_identity(&self) -> String {
         serde_json::json!([
@@ -105,7 +130,7 @@ pub struct StockListing {
 }
 
 /// A ticker a security started trading under on a date.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TickerChange {
     /// First day under this ticker (`YYYY-MM-DD`).
@@ -115,7 +140,7 @@ pub struct TickerChange {
 }
 
 /// An open-ended provider stock-type code.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StockType {
     /// Provider code; unknown future codes are retained.

@@ -28,6 +28,23 @@ pub struct ProviderPage<T> {
     pub adjusted: Option<bool>,
 }
 
+impl<T> ProviderPage<T> {
+    /// A page from `provider_id`, with no response metadata. `next` is `None` on
+    /// the last page; otherwise build it with [`PageCursor::continuation`].
+    pub fn new(items: Vec<T>, provider_id: Provider, next: Option<PageCursor>) -> Self {
+        Self {
+            items,
+            next,
+            provider_id,
+            request_id: None,
+            results_count: None,
+            query_count: None,
+            reported_symbol: None,
+            adjusted: None,
+        }
+    }
+}
+
 /// A serializable continuation bound to the original operation and request.
 ///
 /// Treat persisted cursors as opaque values. Validation runs again when used.
@@ -55,9 +72,12 @@ impl PageCursor {
         self.provider
     }
 
-    /// A provider's continuation target, bound to its request by [`bind`](Self::bind).
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
-    pub(crate) fn continuation(provider: Provider, target: String) -> Self {
+    /// A continuation for an adapter to return in [`ProviderPage::next`].
+    ///
+    /// `provider` must be the adapter's own id and `target` is whatever state the
+    /// adapter needs to fetch the next page. The routing layer binds the cursor to
+    /// the operation and request, and checks both before handing it back.
+    pub fn continuation(provider: Provider, target: String) -> Self {
         Self {
             version: CURSOR_VERSION,
             provider,
@@ -67,8 +87,8 @@ impl PageCursor {
         }
     }
 
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
-    pub(crate) fn target(&self) -> &str {
+    /// The adapter state passed to [`continuation`](Self::continuation).
+    pub fn target(&self) -> &str {
         &self.target
     }
 

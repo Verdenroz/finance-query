@@ -81,6 +81,45 @@ impl StockBarsRequest {
         Ok(self)
     }
 
+    /// Requested symbol.
+    pub fn symbol(&self) -> &str {
+        &self.symbol
+    }
+
+    /// First date of the range (`YYYY-MM-DD`), inclusive.
+    pub fn from(&self) -> &str {
+        &self.from
+    }
+
+    /// Last date of the range (`YYYY-MM-DD`), inclusive.
+    pub fn to(&self) -> &str {
+        &self.to
+    }
+
+    /// Bar interval: [`Interval::OneMinute`] or [`Interval::OneDay`].
+    pub fn interval(&self) -> Interval {
+        if self.timespan == "minute" {
+            Interval::OneMinute
+        } else {
+            Interval::OneDay
+        }
+    }
+
+    /// Requested price adjustment.
+    pub fn adjustment(&self) -> PriceAdjustment {
+        self.adjustment
+    }
+
+    /// Requested bar order.
+    pub fn sort_order(&self) -> SortType {
+        self.sort
+    }
+
+    /// Maximum bars per provider page.
+    pub fn page_limit(&self) -> u32 {
+        self.limit
+    }
+
     #[cfg(any(feature = "polygon", feature = "fmp"))]
     pub(crate) fn split_adjusted(&self) -> bool {
         self.adjustment == PriceAdjustment::SplitAdjusted
@@ -113,7 +152,7 @@ impl StockBarsRequest {
 }
 
 /// A provider price bar with exact timestamp units and fractional volume.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StockBar {
     /// UTC Unix milliseconds, without rounding or timezone conversion.
