@@ -70,7 +70,8 @@ pub mod edgar {
     //!
     //! Requires a one-time [`init`] call with a contact email address.
     pub use crate::adapters::edgar::{
-        company_facts, filing_index, init, init_with_config, resolve_cik, search, submissions,
+        archive, company_facts, filing_index, init, init_with_config, init_with_rate, resolve_cik,
+        search, submissions,
     };
 }
 
