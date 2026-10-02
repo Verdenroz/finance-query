@@ -124,8 +124,12 @@ impl finance_query::DiscoveryProvider for Mislabeled {
         _: &StockListingRequest,
         _: Option<&PageCursor>,
     ) -> finance_query::Result<ProviderPage<StockListing>> {
-        let next = PageCursor::continuation(Provider::Fmp, "elsewhere".into());
-        Ok(ProviderPage::new(Vec::new(), Provider::Fmp, Some(next)))
+        let next = PageCursor::continuation(Provider::custom("elsewhere"), "elsewhere".into());
+        Ok(ProviderPage::new(
+            Vec::new(),
+            Provider::custom("elsewhere"),
+            Some(next),
+        ))
     }
 }
 
