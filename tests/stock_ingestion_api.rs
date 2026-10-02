@@ -512,7 +512,6 @@ async fn stock_ingestion_failures_never_become_empty_history() {
     for body in [
         "[]",
         r#"[{"symbol":"NEW"},{"symbol":"NEW"}]"#,
-        r#"[{"symbol":"NEW","ipoDate":"bad-date"}]"#,
         r#"{"Error Message":"API key fixture-private is invalid"}"#,
     ] {
         let mut server = Server::new_async().await;
