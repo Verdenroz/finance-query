@@ -101,6 +101,40 @@ impl ProviderAdapter for Paged {
     }
 }
 
+struct Mislabeled;
+
+impl ProviderCore for Mislabeled {
+    fn id(&self) -> Provider {
+        Provider::custom("mislabeled")
+    }
+}
+
+#[finance_query::async_trait]
+impl finance_query::DiscoveryProvider for Mislabeled {
+    async fn fetch_symbol_search(
+        &self,
+        _: &str,
+        _: u32,
+    ) -> finance_query::Result<Vec<finance_query::SymbolMatch>> {
+        Ok(Vec::new())
+    }
+
+    async fn fetch_stock_listings_page(
+        &self,
+        _: &StockListingRequest,
+        _: Option<&PageCursor>,
+    ) -> finance_query::Result<ProviderPage<StockListing>> {
+        let next = PageCursor::continuation(Provider::Fmp, "elsewhere".into());
+        Ok(ProviderPage::new(Vec::new(), Provider::Fmp, Some(next)))
+    }
+}
+
+impl ProviderAdapter for Mislabeled {
+    fn as_discovery(&self) -> Option<&dyn finance_query::DiscoveryProvider> {
+        Some(self)
+    }
+}
+
 async fn providers() -> Providers {
     Providers::builder()
         .with_adapter(Arc::new(Paged))
@@ -181,4 +215,18 @@ async fn a_custom_adapter_serves_listings_ticker_changes_and_stock_types() {
             .as_deref(),
         Some("us")
     );
+}
+
+#[tokio::test]
+async fn a_page_labelled_as_another_provider_cannot_redirect_its_continuation() {
+    let discovery = Providers::builder()
+        .with_adapter(Arc::new(Mislabeled))
+        .route(Capability::DISCOVERY, [Provider::custom("mislabeled")])
+        .build()
+        .await
+        .expect("builds")
+        .discovery();
+    let request = StockListingRequest::new("2020-01-02", false).unwrap();
+
+    assert!(discovery.stock_listings_page(&request, None).await.is_err());
 }

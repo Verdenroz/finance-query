@@ -267,12 +267,23 @@ impl ProviderSet {
         F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
         Fut: std::future::Future<Output = Result<crate::ProviderPage<T>>>,
     {
+        // A custom adapter builds its own `ProviderPage`, so its `provider_id` can't be
+        // trusted to name the adapter that answered.
+        let answered_by = |p: &Arc<dyn ProviderAdapter>| {
+            let id = p.id();
+            let page = f(p);
+            async move {
+                let mut page = page.await?;
+                page.provider_id = id;
+                Ok(page)
+            }
+        };
         let mut page = match cursor {
             Some(cursor) => {
                 cursor.validate(operation, identity)?;
-                self.fetch_from(cursor.provider(), cap, f).await?
+                self.fetch_from(cursor.provider(), cap, answered_by).await?
             }
-            None => self.fetch(cap, f).await?,
+            None => self.fetch(cap, answered_by).await?,
         };
         if let Some(next) = &mut page.next {
             if next.provider() != page.provider_id {
