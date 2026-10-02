@@ -349,10 +349,13 @@ const ARCHIVE_PREFIXES: &[&str] = &[
     "https://taxonomies.xbrl.us/",
 ];
 
+/// Checks the parsed form, since the request resolves `..` segments before it is sent.
 fn is_archive_url(url: &str) -> bool {
-    ARCHIVE_PREFIXES
-        .iter()
-        .any(|prefix| url.starts_with(prefix))
+    reqwest::Url::parse(url).is_ok_and(|parsed| {
+        ARCHIVE_PREFIXES
+            .iter()
+            .any(|prefix| parsed.as_str().starts_with(prefix))
+    })
 }
 
 /// Fetch the filing index for a specific accession number.
@@ -553,6 +556,12 @@ mod tests {
             "http://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
         ));
         assert!(!is_archive_url("https://www.sec.gov/cgi-bin/browse-edgar"));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/../cgi-bin/browse-edgar"
+        ));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/%2e%2e/cgi-bin/browse-edgar"
+        ));
         assert!(!is_archive_url(
             "http://www.sec.gov/Archives/edgar/data/1/2/x.htm"
         ));
