@@ -169,9 +169,10 @@ impl Matrix {
                 }
                 Err(problem) => self.fail(name, &problem),
             },
-            Err(FinanceError::AuthenticationFailed { ref context })
-                if allow_plan_gap && is_plan_gap(context) =>
-            {
+            Err(
+                FinanceError::AuthenticationFailed { ref context }
+                | FinanceError::NotEntitled { ref context },
+            ) if allow_plan_gap && is_plan_gap(context) => {
                 self.plan_limited += 1;
                 println!("plan-limited: {name}");
             }
