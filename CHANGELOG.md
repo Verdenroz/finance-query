@@ -27,11 +27,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Bump step-security/harden-runner from 2.21.0 to 2.21.1 (#536)
 - Measure the soothfast baseline in full
 - Record gate references on bot pushes
 - Stop PR runs from evicting master caches
 - Adopt soothfast 0.3.3 run reuse (#509)
 - Speed up PR builds and Docker caching
+
+---
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::ind_balance_of_power` | instructions | 27342.0 | 23362.0 | -14.6% |
+| `finance_query::ind_last_value` | instructions | 20.0 | 23.0 | +15.0% |
+| `finance_query::ind_true_range` | instructions | 17091.0 | 18089.0 | +5.8% |
+| `finance_query::ind_vwma` | instructions | 43618.0 | 49541.0 | +13.6% |
+| `finance_query::ind_zigzag` | instructions | 18363.0 | 19859.0 | +8.1% |
+| `finance_query::ser_currencies` | instructions | 202363.0 | 223104.0 | +10.2% |
+| `finance_query::stream_serialize` | instructions | 10463.0 | 11077.0 | +5.9% |
 
 
 ## [3.1.0] - 2026-09-12
