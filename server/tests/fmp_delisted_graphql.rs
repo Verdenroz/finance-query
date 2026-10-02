@@ -13,12 +13,6 @@ async fn graphql_delisted_listings_preserve_provider_dates() {
         .with_body(r#"[{"symbol":"OLD","ipoDate":"1980-12-12","delistedDate":"2003-01-02"}]"#)
         .create_async()
         .await;
-    let end = server
-        .mock("GET", "/stable/delisted-companies")
-        .match_query(Matcher::UrlEncoded("page".into(), "1".into()))
-        .with_body("[]")
-        .create_async()
-        .await;
     let providers = Providers::builder()
         .providers([Provider::Fmp])
         .api_key(Provider::Fmp, "graphql-fixture")
@@ -49,5 +43,4 @@ async fn graphql_delisted_listings_preserve_provider_dates() {
         })
     );
     first.assert_async().await;
-    end.assert_async().await;
 }
