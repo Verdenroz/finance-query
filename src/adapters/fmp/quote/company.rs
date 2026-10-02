@@ -239,18 +239,13 @@ pub(crate) async fn fetch_delisted_stocks_page_at(
     delisted_symbols(rows)
 }
 
+/// Rows without a symbol are skipped: failing on one would stall a paged scan on that page.
 fn delisted_symbols(rows: Vec<DelistedCompanyDTO>) -> Result<Vec<SymbolMatch>> {
-    let mut items = Vec::with_capacity(rows.len());
-    for row in rows {
-        let item = to_delisted_symbol_match(row)
-            .filter(|r| !r.symbol.trim().is_empty())
-            .ok_or_else(|| FinanceError::ResponseStructureError {
-                field: "symbol".into(),
-                context: "FMP delisted row has no symbol".into(),
-            })?;
-        items.push(item);
-    }
-    Ok(items)
+    Ok(rows
+        .into_iter()
+        .filter_map(to_delisted_symbol_match)
+        .filter(|r| !r.symbol.trim().is_empty())
+        .collect())
 }
 
 /// Convert a delisted-company record into a canonical [`SymbolMatch`],
@@ -285,6 +280,19 @@ pub async fn fetch_delisted_listing_status_response() -> Result<Vec<SymbolMatch>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn delisted_rows_without_a_symbol_are_skipped() {
+        let rows: Vec<DelistedCompanyDTO> = serde_json::from_value(serde_json::json!([
+            {"symbol": "OLD", "delistedDate": "2003-01-02"},
+            {"symbol": "  ", "delistedDate": "2004-01-02"},
+            {"delistedDate": "2005-01-02"}
+        ]))
+        .unwrap();
+        let items = delisted_symbols(rows).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].symbol, "OLD");
+    }
 
     #[test]
     fn maps_delisted_company_to_symbol_match() {
