@@ -40,13 +40,13 @@ impl StockListingRequest {
     }
 
     /// Filter by a provider stock-type code, such as CS or ADRC.
-    pub fn stock_type(mut self, code: impl Into<String>) -> Self {
+    pub fn with_stock_type(mut self, code: impl Into<String>) -> Self {
         self.stock_type = Some(code.into());
         self
     }
 
     /// Select a market locale. Defaults to us.
-    pub fn locale(mut self, locale: impl Into<String>) -> Self {
+    pub fn with_locale(mut self, locale: impl Into<String>) -> Self {
         self.locale = locale.into();
         self
     }
@@ -62,17 +62,17 @@ impl StockListingRequest {
     }
 
     /// Stock-type filter, if any.
-    pub fn stock_type_code(&self) -> Option<&str> {
+    pub fn stock_type(&self) -> Option<&str> {
         self.stock_type.as_deref()
     }
 
     /// Requested market locale.
-    pub fn market_locale(&self) -> &str {
+    pub fn locale(&self) -> &str {
         &self.locale
     }
 
     /// Maximum entries per provider page.
-    pub fn page_limit(&self) -> u32 {
+    pub fn page_size(&self) -> u32 {
         self.limit
     }
 
@@ -89,7 +89,7 @@ impl StockListingRequest {
     }
 
     /// Limit a page to 1–1000 directory entries.
-    pub fn page_size(mut self, limit: u32) -> Result<Self> {
+    pub fn with_page_size(mut self, limit: u32) -> Result<Self> {
         if !(1..=1000).contains(&limit) {
             return Err(FinanceError::InvalidParameter {
                 param: "page_size".into(),
@@ -161,8 +161,8 @@ mod tests {
     fn cursor_identity_is_pinned_to_the_query_fields() {
         let request = StockListingRequest::new("2020-01-02", false)
             .unwrap()
-            .stock_type("CS")
-            .page_size(2)
+            .with_stock_type("CS")
+            .with_page_size(2)
             .unwrap();
         assert_eq!(
             request.cursor_identity(),

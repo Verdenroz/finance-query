@@ -43,7 +43,7 @@ fn doc_block_line_74() {
             .build()
             .await?;
 
-        let listings = StockListingRequest::new("2020-01-02", false)?.stock_type("CS");
+        let listings = StockListingRequest::new("2020-01-02", false)?.with_stock_type("CS");
         let mut cursor: Option<PageCursor> = None;
         loop {
             let page = providers

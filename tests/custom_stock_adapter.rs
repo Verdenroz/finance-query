@@ -38,8 +38,8 @@ impl finance_query::ChartProvider for Paged {
         assert_eq!(request.to(), "2020-01-03");
         assert_eq!(request.interval(), Interval::OneDay);
         assert_eq!(request.adjustment(), PriceAdjustment::Unadjusted);
-        assert_eq!(request.sort_order(), SortType::Asc);
-        assert_eq!(request.page_limit(), 1);
+        assert_eq!(request.sort(), SortType::Asc);
+        assert_eq!(request.page_size(), 1);
         let day: i64 = cursor.map_or(0, |c| c.target().parse().unwrap());
         let mut bar = StockBar::default();
         bar.timestamp_ms = 1_577_923_200_000 + day * 86_400_000;
@@ -68,9 +68,9 @@ impl finance_query::DiscoveryProvider for Paged {
     ) -> finance_query::Result<ProviderPage<StockListing>> {
         assert_eq!(request.as_of(), "2020-01-02");
         assert!(!request.active());
-        assert_eq!(request.stock_type_code(), Some("CS"));
-        assert_eq!(request.market_locale(), "us");
-        assert_eq!(request.page_limit(), 1000);
+        assert_eq!(request.stock_type(), Some("CS"));
+        assert_eq!(request.locale(), "us");
+        assert_eq!(request.page_size(), 1000);
         let mut listing = StockListing::default();
         listing.symbol = "OLD".into();
         Ok(ProviderPage::new(vec![listing], self.id(), None))
@@ -122,7 +122,7 @@ async fn a_custom_adapter_pages_stock_bars_through_a_persisted_cursor() {
         PriceAdjustment::Unadjusted,
     )
     .unwrap()
-    .page_size(1)
+    .with_page_size(1)
     .unwrap();
 
     let first = providers
@@ -151,7 +151,7 @@ async fn a_custom_adapter_pages_stock_bars_through_a_persisted_cursor() {
         PriceAdjustment::Unadjusted,
     )
     .unwrap()
-    .page_size(1)
+    .with_page_size(1)
     .unwrap();
     assert!(
         providers
@@ -167,7 +167,7 @@ async fn a_custom_adapter_serves_listings_ticker_changes_and_stock_types() {
     let discovery = providers().await.discovery();
     let request = StockListingRequest::new("2020-01-02", false)
         .unwrap()
-        .stock_type("CS");
+        .with_stock_type("CS");
 
     let listings = discovery.stock_listings_page(&request, None).await.unwrap();
     assert_eq!(listings.items[0].symbol, "OLD");

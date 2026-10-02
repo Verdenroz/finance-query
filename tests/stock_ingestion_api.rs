@@ -59,7 +59,7 @@ async fn stock_ingestion_directory_resumes_after_rebuilding_client() {
         .await;
     let request = StockListingRequest::new("2020-01-02", false)
         .unwrap()
-        .stock_type("CS");
+        .with_stock_type("CS");
     let client = providers(&server, Provider::Polygon).await;
     let page = client
         .discovery()
@@ -83,7 +83,7 @@ async fn stock_ingestion_directory_resumes_after_rebuilding_client() {
     assert!(page.next.is_none());
     let changed = StockListingRequest::new("2020-01-03", false)
         .unwrap()
-        .stock_type("CS");
+        .with_stock_type("CS");
     assert!(
         client
             .discovery()
@@ -120,7 +120,7 @@ async fn stock_ingestion_listings_keep_rows_whose_current_status_differs() {
     let client = providers(&server, Provider::Polygon).await;
     let request = StockListingRequest::new("2020-01-02", true)
         .unwrap()
-        .stock_type("CS");
+        .with_stock_type("CS");
     let page = client
         .discovery()
         .stock_listings_page(&request, None)

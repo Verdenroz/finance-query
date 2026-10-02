@@ -27,7 +27,7 @@ pub struct StockBarsRequest {
 
 impl StockBarsRequest {
     /// Set inclusive date bounds and the adjustment policy. Currently supports
-    /// OneMinute and OneDay. Bars are oldest first unless [`sort`](Self::sort) says otherwise.
+    /// OneMinute and OneDay. Bars are oldest first unless [`with_sort`](Self::with_sort) says otherwise.
     pub fn new(
         symbol: &str,
         from: &str,
@@ -65,12 +65,12 @@ impl StockBarsRequest {
     }
 
     /// Select oldest-first ([`SortType::Asc`]) or newest-first order.
-    pub fn sort(mut self, order: SortType) -> Self {
+    pub fn with_sort(mut self, order: SortType) -> Self {
         self.sort = order;
         self
     }
     /// Set the provider page size in 1–50000.
-    pub fn page_size(mut self, limit: u32) -> Result<Self> {
+    pub fn with_page_size(mut self, limit: u32) -> Result<Self> {
         if !(1..=50_000).contains(&limit) {
             return Err(FinanceError::InvalidParameter {
                 param: "page_size".into(),
@@ -111,12 +111,12 @@ impl StockBarsRequest {
     }
 
     /// Requested bar order.
-    pub fn sort_order(&self) -> SortType {
+    pub fn sort(&self) -> SortType {
         self.sort
     }
 
     /// Maximum bars per provider page.
-    pub fn page_limit(&self) -> u32 {
+    pub fn page_size(&self) -> u32 {
         self.limit
     }
 
@@ -191,7 +191,10 @@ mod tests {
             request.cursor_identity(),
             r#"["AAPL","2020-01-02","2020-01-03","day","unadjusted","asc",50000]"#
         );
-        let changed = request.sort(SortType::Desc).page_size(10).unwrap();
+        let changed = request
+            .with_sort(SortType::Desc)
+            .with_page_size(10)
+            .unwrap();
         assert_eq!(
             changed.cursor_identity(),
             r#"["AAPL","2020-01-02","2020-01-03","day","unadjusted","desc",10]"#
