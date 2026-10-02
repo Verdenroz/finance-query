@@ -59,6 +59,20 @@ fn stock_type_to_canonical(row: StockTypeDTO) -> Result<StockType> {
     })
 }
 
+/// Polygon omits `results` on an empty page, so absence is only valid when a
+/// count says zero.
+fn page_rows<T>(
+    results: Option<Vec<T>>,
+    results_count: Option<usize>,
+    count: Option<usize>,
+) -> Result<Vec<T>> {
+    match results {
+        Some(rows) => Ok(rows),
+        None if results_count == Some(0) || count == Some(0) => Ok(Vec::new()),
+        None => Err(invalid_page("results")),
+    }
+}
+
 pub(crate) async fn fetch_stock_listings_page(
     request: &StockListingRequest,
     cursor: Option<&PageCursor>,
@@ -87,9 +101,7 @@ pub(crate) async fn fetch_stock_listings_page(
     let path = "/v3/reference/tickers";
     let (body, current): (PaginatedResponseDTO<TickerRefDTO>, _) =
         client.page(path, &params, PathRule::Exact, cursor).await?;
-    let items = body
-        .results
-        .ok_or_else(|| invalid_page("results"))?
+    let items = page_rows(body.results, body.results_count, body.count)?
         .into_iter()
         .map(listing_to_canonical)
         .collect::<Result<Vec<_>>>()?;
@@ -209,8 +221,7 @@ pub(crate) async fn fetch_stock_types(locale: &str) -> Result<Vec<StockType>> {
     if body.next_url.is_some() {
         return Err(invalid_page("next_url"));
     }
-    body.results
-        .ok_or_else(|| invalid_page("results"))?
+    page_rows(body.results, body.results_count, body.count)?
         .into_iter()
         .map(stock_type_to_canonical)
         .collect()

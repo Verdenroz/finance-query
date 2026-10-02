@@ -387,6 +387,33 @@ async fn stock_ingestion_fmp_profile_accepts_blank_fields_and_symbol_case() {
 }
 
 #[tokio::test]
+async fn stock_ingestion_counted_empty_listings_are_an_empty_page() {
+    for (body, empty) in [
+        (r#"{"status":"OK","count":0}"#, true),
+        (r#"{"status":"OK","resultsCount":0}"#, true),
+        (r#"{"status":"OK"}"#, false),
+    ] {
+        let mut server = Server::new_async().await;
+        let fixture = server
+            .mock("GET", "/v3/reference/tickers")
+            .match_query(Matcher::Any)
+            .with_body(body)
+            .create_async()
+            .await;
+        let client = providers(&server, Provider::Polygon).await;
+        let request = StockListingRequest::new("2020-01-02", false).unwrap();
+        let page = client.discovery().stock_listings_page(&request, None).await;
+        if empty {
+            let page = page.unwrap();
+            assert!(page.items.is_empty() && page.next.is_none(), "{body}");
+        } else {
+            assert!(page.is_err(), "{body}");
+        }
+        fixture.assert_async().await;
+    }
+}
+
+#[tokio::test]
 async fn stock_ingestion_empty_and_retry_responses_remain_distinct() {
     for body in [
         r#"{"status":"OK"}"#,
