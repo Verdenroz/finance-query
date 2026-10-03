@@ -84,6 +84,74 @@ trait operations default to `NotSupported`. Three behavior changes to check:
   (GHSA-vxq7-64xx-v4gw, high) and a chunked Deflate infinite loop
   (GHSA-gh4c-6fx4-qh6g, medium).
 
+---
+
+### 🔍 API surface
+
+```
+ADDED    finance_query::PageCursor
+ADDED    finance_query::PriceAdjustment
+ADDED    finance_query::ProviderPage
+ADDED    finance_query::StockBar
+ADDED    finance_query::StockBarsRequest
+ADDED    finance_query::StockListing
+ADDED    finance_query::StockListingRequest
+ADDED    finance_query::StockType
+ADDED    finance_query::TickerChange
+ADDED    finance_query::adapters::edgar::archive
+ADDED    finance_query::adapters::edgar::init_with_rate
+ADDED    finance_query::domains::discovery::Discovery::delisted_stocks_page
+ADDED    finance_query::edgar::archive
+ADDED    finance_query::edgar::init_with_rate
+ADDED    finance_query::models::chart::stock_bars::PriceAdjustment
+ADDED    finance_query::models::chart::stock_bars::StockBar
+ADDED    finance_query::models::chart::stock_bars::StockBarsRequest
+ADDED    finance_query::models::chart::stock_bars::StockBarsRequest::with_sort
+ADDED    finance_query::models::discovery::figi::MappingFilter
+ADDED    finance_query::models::discovery::listings::StockListing
+ADDED    finance_query::models::discovery::listings::StockListingRequest
+ADDED    finance_query::models::discovery::listings::StockType
+ADDED    finance_query::models::discovery::listings::TickerChange
+ADDED    finance_query::models::pagination::PageCursor
+ADDED    finance_query::models::pagination::PageCursor::continuation
+ADDED    finance_query::models::pagination::ProviderPage
+ADDED    finance_query::openfigi::MappingFilter
+ADDED    finance_query::openfigi::resolve_many_with
+ADDED    finance_query::providers::config::ProvidersBuilder::api_key
+ADDED    finance_query::providers::config::ProvidersBuilder::endpoint
+ADDED    finance_query::providers::config::ProvidersBuilder::requests_per_minute
+CHANGED  finance_query::CompanyProfile (signature)
+CHANGED  finance_query::FinanceError (signature)
+CHANGED  finance_query::Operation (signature)
+CHANGED  finance_query::ProvidersBuilder (body)
+CHANGED  finance_query::ScreenerFilters (signature)
+CHANGED  finance_query::ScreenerMatch (signature)
+CHANGED  finance_query::SymbolDetails (signature)
+CHANGED  finance_query::SymbolMatch (signature)
+CHANGED  finance_query::adapters::edgar::init_with_config (body)
+CHANGED  finance_query::crypto::SymbolMatch (signature)
+CHANGED  finance_query::edgar::init_with_config (body)
+CHANGED  finance_query::error::FinanceError (signature)
+CHANGED  finance_query::models::discovery::reference::ScreenerFilters (signature)
+CHANGED  finance_query::models::discovery::reference::ScreenerMatch (signature)
+CHANGED  finance_query::models::discovery::reference::SymbolDetails (signature)
+CHANGED  finance_query::models::discovery::reference::SymbolMatch (signature)
+CHANGED  finance_query::models::fundamentals::company_profile::CompanyProfile (signature)
+CHANGED  finance_query::providers::adapter::dispatch::ProviderAdapter (body)
+CHANGED  finance_query::providers::adapter::equity::ChartProvider (body)
+CHANGED  finance_query::providers::adapter::equity::FilingsProvider (body)
+CHANGED  finance_query::providers::adapter::markets::DiscoveryProvider (body)
+CHANGED  finance_query::providers::config::ProvidersBuilder (body)
+CHANGED  finance_query::providers::operation::Operation (signature)
+CHANGED  finance_query::providers::operation::Operation::capability (body)
+```
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::score_news` | instructions | 899786.0 | 952514.0 | +5.9% |
+
 
 ## [3.1.0] - 2026-09-12
 
