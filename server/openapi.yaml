@@ -7144,11 +7144,17 @@ components:
       description: "Mirrors `finance_query::CompanyProfile`, which has no serde rename of its\nown — this deserializes snake_case keys while its GraphQL name stays\ncamelCase."
       type: object
       properties:
+        active:
+          type: boolean
         assetType:
+          type: string
+        cik:
           type: string
         country:
           type: string
         currency:
+          type: string
+        cusip:
           type: string
         description:
           type: string
@@ -7156,10 +7162,22 @@ components:
           type: string
         industry:
           type: string
+        ipoDate:
+          type: string
+        isAdr:
+          type: boolean
+        isEtf:
+          type: boolean
+        isFund:
+          type: boolean
+        isin:
+          type: string
         marketCapitalization:
           type: number
           format: double
         name:
+          type: string
+        providerId:
           type: string
         sector:
           type: string
@@ -10584,9 +10602,15 @@ components:
       description: "Reference detail for one symbol, provider-routed (Capability::DISCOVERY)."
       type: object
       properties:
+        active:
+          type: boolean
         assetType:
           type: string
         cik:
+          type: string
+        compositeFigi:
+          type: string
+        delistedUtc:
           type: string
         description:
           type: string
@@ -10604,6 +10628,10 @@ components:
           type: number
           format: double
         name:
+          type: string
+        providerId:
+          type: string
+        shareClassFigi:
           type: string
         sharesOutstanding:
           type: number
@@ -10663,11 +10691,15 @@ components:
           type: string
         currency:
           type: string
+        delistedDate:
+          type: string
         exchange:
           type: string
         id:
           type: string
         image:
+          type: string
+        ipoDate:
           type: string
         marketCapRank:
           type: integer
