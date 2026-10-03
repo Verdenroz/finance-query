@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump the uv group across 1 directory with 3 updates (#537)
 - Bump rust from `1469a27` to `ff52144` in /finance-query-mcp (#501)
 - Bump rust from `1469a27` to `ff52144` in /server (#502)
 - Bump debian from `8820086` to `3783cc0` in /finance-query-mcp (#528)
