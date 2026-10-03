@@ -50,6 +50,13 @@ use crate::adapters::singleton::{provider_build_client, provider_singleton_state
 use crate::error::{FinanceError, Result};
 use std::time::Duration;
 
+fn invalid_page(field: &str) -> FinanceError {
+    FinanceError::ResponseStructureError {
+        field: field.into(),
+        context: "invalid stock provider response".into(),
+    }
+}
+
 // Capability modules
 pub use chart::*;
 pub use corporate::*;

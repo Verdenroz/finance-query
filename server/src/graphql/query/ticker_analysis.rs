@@ -59,8 +59,7 @@ impl TickerAnalysisQuery {
         .await
     }
 
-    /// Company identity/classification profile (currently Alpha Vantage
-    /// only, requires `ALPHAVANTAGE_API_KEY`).
+    /// Company identity/classification profile from the configured fundamentals provider.
     async fn company_profile(&self, ctx: &Context<'_>) -> Result<GqlCompanyProfile> {
         let state = ctx.data::<AppState>()?;
         exec_gql(crate::services::analysis::get_company_profile(

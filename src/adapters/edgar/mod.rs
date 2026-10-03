@@ -132,12 +132,49 @@ pub fn init_with_config(
     app_name: impl Into<String>,
     timeout: Duration,
 ) -> Result<()> {
+    init_with_rate(email, app_name, timeout, EDGAR_RATE_PER_SEC)
+}
+
+/// Initialize the global EDGAR client with a request rate below SEC's limit.
+///
+/// Long bulk downloads may prefer a margin under the 10 requests a second SEC
+/// allows. Rates above that limit are capped to it.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::edgar;
+/// use std::time::Duration;
+///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// edgar::init_with_rate("user@example.com", "my-app", Duration::from_secs(60), 8.0)?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if EDGAR has already been initialized or the rate isn't positive.
+pub fn init_with_rate(
+    email: impl Into<String>,
+    app_name: impl Into<String>,
+    timeout: Duration,
+    requests_per_second: f64,
+) -> Result<()> {
+    if requests_per_second.is_nan() || requests_per_second <= 0.0 {
+        return Err(FinanceError::InvalidParameter {
+            param: "requests_per_second".to_string(),
+            reason: "must be positive".to_string(),
+        });
+    }
     EDGAR_SINGLETON
         .set(EdgarSingleton {
             email: email.into(),
             app_name: app_name.into(),
             timeout,
-            rate_limiter: Arc::new(RateLimiter::new(EDGAR_RATE_PER_SEC)),
+            rate_limiter: Arc::new(RateLimiter::new(
+                requests_per_second.min(EDGAR_RATE_PER_SEC),
+            )),
             cik_cache: Arc::new(RwLock::new(None)),
         })
         .map_err(|_| FinanceError::InvalidParameter {
@@ -265,6 +302,60 @@ pub async fn submissions(cik: u64) -> Result<EdgarSubmissions> {
 /// ```
 pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
     build_client()?.company_facts(cik).await
+}
+
+/// Fetch any EDGAR file as bytes, within the shared rate limit.
+///
+/// Covers what the typed functions don't: filing documents and archives under
+/// `https://www.sec.gov/Archives/` (index pages, XBRL zips, instance documents,
+/// primary documents, the quarterly and daily indexes) and the JSON under
+/// `https://data.sec.gov/` (including older submissions pages), and the standard
+/// taxonomy schemas filings import (`xbrl.sec.gov`, `xbrl.fasb.org`,
+/// `taxonomies.xbrl.us`). Other hosts are refused, so the SEC User-Agent and
+/// rate limit aren't spent elsewhere.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::edgar;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// edgar::init("user@example.com")?;
+/// let index = edgar::archive("https://www.sec.gov/Archives/edgar/full-index/2025/QTR1/xbrl.idx").await?;
+/// println!("{} bytes", index.len());
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Errors
+///
+/// Returns an error for a URL outside those locations, a missing file
+/// (`SymbolNotFound`), rate limiting (`RateLimited`) or a server error.
+pub async fn archive(url: &str) -> Result<Vec<u8>> {
+    if !is_archive_url(url) {
+        return Err(FinanceError::InvalidParameter {
+            param: "url".to_string(),
+            reason: "must be an EDGAR archive, data.sec.gov or standard taxonomy URL".to_string(),
+        });
+    }
+    build_client()?.get_document(url).await
+}
+
+const ARCHIVE_PREFIXES: &[&str] = &[
+    "https://www.sec.gov/Archives/",
+    "https://data.sec.gov/",
+    "https://xbrl.sec.gov/",
+    "https://xbrl.fasb.org/",
+    "https://taxonomies.xbrl.us/",
+];
+
+/// Checks the parsed form, since the request resolves `..` segments before it is sent.
+fn is_archive_url(url: &str) -> bool {
+    reqwest::Url::parse(url).is_ok_and(|parsed| {
+        ARCHIVE_PREFIXES
+            .iter()
+            .any(|prefix| parsed.as_str().starts_with(prefix))
+    })
 }
 
 /// Fetch the filing index for a specific accession number.
@@ -437,5 +528,51 @@ mod tests {
     fn test_singleton_is_set_after_init() {
         let _ = init("test@example.com");
         assert!(EDGAR_SINGLETON.get().is_some());
+    }
+
+    #[test]
+    fn test_init_with_rate_rejects_non_positive_rates() {
+        for rate in [0.0, -1.0, f64::NAN] {
+            assert!(matches!(
+                init_with_rate("test@example.com", "test", Duration::from_secs(1), rate),
+                Err(FinanceError::InvalidParameter { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn test_archive_urls_stay_on_sec_hosts() {
+        assert!(is_archive_url(
+            "https://www.sec.gov/Archives/edgar/full-index/2025/QTR1/xbrl.idx"
+        ));
+        assert!(is_archive_url(
+            "https://data.sec.gov/submissions/CIK0000320193-submissions-001.json"
+        ));
+        assert!(is_archive_url(
+            "https://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
+        ));
+        assert!(is_archive_url("https://xbrl.sec.gov/dei/2026/dei-2026.xsd"));
+        assert!(!is_archive_url(
+            "http://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
+        ));
+        assert!(!is_archive_url("https://www.sec.gov/cgi-bin/browse-edgar"));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/../cgi-bin/browse-edgar"
+        ));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/%2e%2e/cgi-bin/browse-edgar"
+        ));
+        assert!(!is_archive_url(
+            "http://www.sec.gov/Archives/edgar/data/1/2/x.htm"
+        ));
+        assert!(!is_archive_url("https://example.com/Archives/"));
+    }
+
+    #[tokio::test]
+    async fn test_archive_refuses_other_hosts_without_a_request() {
+        assert!(matches!(
+            archive("https://example.com/file").await,
+            Err(FinanceError::InvalidParameter { .. })
+        ));
     }
 }

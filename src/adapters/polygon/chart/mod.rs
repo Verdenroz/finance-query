@@ -10,6 +10,9 @@ use chrono::Datelike;
 use super::build_client;
 use super::models::*;
 
+mod bars;
+pub(crate) use bars::fetch_stock_bars_page;
+
 /// Fetch aggregate bars (OHLCV) for a stock ticker over a date range.
 ///
 /// # Arguments

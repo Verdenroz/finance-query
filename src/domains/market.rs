@@ -107,6 +107,32 @@ pub struct Market {
 }
 
 impl Market {
+    /// Download one minute or daily stock-bar page with an explicit adjustment policy.
+    /// Pages bypass the response cache so applications can bound and checkpoint downloads.
+    pub async fn stock_bars_page(
+        &self,
+        request: &crate::StockBarsRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        self.providers
+            .fetch_paged(
+                crate::Capability::CHART,
+                crate::Operation::StockBarsPage,
+                &request.cursor_identity(),
+                cursor,
+                |p| {
+                    let p = Arc::clone(p);
+                    async move {
+                        p.as_chart()
+                            .ok_or_else(|| p.not_supported(crate::Operation::StockBarsPage))?
+                            .fetch_stock_bars_page(request, cursor)
+                            .await
+                    }
+                },
+            )
+            .await
+    }
+
     pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
         Self { providers }
     }

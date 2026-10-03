@@ -5,6 +5,8 @@
 /// Security-identifier mapping (CUSIP/ISIN/SEDOL/FIGI → instruments).
 #[cfg(feature = "openfigi")]
 pub mod figi;
+/// Historical stock directories and listing identities.
+pub mod listings;
 /// Type-filtered symbol lookup.
 pub mod lookup;
 /// Provider-routed symbol reference data (search, details, exchanges, screener).

@@ -9,6 +9,59 @@ use super::ProviderCore;
 /// screeners.
 #[async_trait::async_trait]
 pub trait DiscoveryProvider: ProviderCore {
+    /// Fetch an independently numbered delisted page; callers validate scan progress.
+    async fn fetch_delisted_stocks_page_at(
+        &self,
+        _page: u32,
+        _limit: u32,
+    ) -> Result<Vec<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::DelistedStocksPageAt))
+    }
+    /// Fetch one delisted-stock page, bound to this provider and page size.
+    async fn fetch_delisted_stocks_page(
+        &self,
+        _limit: u32,
+        _cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::DelistedStocksPage))
+    }
+    /// Fetch the current full directory, without assuming active status.
+    async fn fetch_stock_list(&self) -> Result<Vec<crate::SymbolMatch>> {
+        Err(self.not_supported(Operation::StockList))
+    }
+
+    /// Fetch one provider-defined bulk-profile part, not the entire directory.
+    async fn fetch_company_profiles_bulk(&self, _part: u32) -> Result<Vec<crate::CompanyProfile>> {
+        Err(self.not_supported(Operation::CompanyProfilesBulk))
+    }
+
+    /// Fetch one dated stock-directory page.
+    async fn fetch_stock_listings_page(
+        &self,
+        _request: &crate::StockListingRequest,
+        _cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockListing>> {
+        Err(self.not_supported(Operation::StockListingsPage))
+    }
+
+    /// Fetch company details as of a calendar date.
+    async fn fetch_symbol_details_at(
+        &self,
+        _symbol: &str,
+        _date: &str,
+    ) -> Result<crate::SymbolDetails> {
+        Err(self.not_supported(Operation::SymbolDetailsAt))
+    }
+
+    /// Fetch the dated ticker changes of one security, oldest first.
+    async fn fetch_ticker_changes(&self, _id: &str) -> Result<Vec<crate::TickerChange>> {
+        Err(self.not_supported(Operation::TickerChanges))
+    }
+
+    /// Fetch the provider's stock-type vocabulary.
+    async fn fetch_stock_types(&self, _locale: &str) -> Result<Vec<crate::StockType>> {
+        Err(self.not_supported(Operation::StockTypes))
+    }
     /// Search the provider's symbol universe by free-text query.
     async fn fetch_symbol_search(
         &self,

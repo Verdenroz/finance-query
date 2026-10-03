@@ -19,6 +19,8 @@ pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: None,
+        delisted_date: None,
     }
 }
 
@@ -48,6 +50,8 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: dto.ipo_date,
+        delisted_date: dto.delisting_date,
     }
 }
 

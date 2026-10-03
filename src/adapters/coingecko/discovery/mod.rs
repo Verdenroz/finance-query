@@ -31,6 +31,8 @@ fn to_symbol_match(dto: SearchCoinDTO) -> SymbolMatch {
         market_cap_rank: dto.market_cap_rank,
         thumbnail: dto.thumb,
         image: dto.large,
+        ipo_date: None,
+        delisted_date: None,
     }
 }
 

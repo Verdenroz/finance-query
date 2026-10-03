@@ -118,6 +118,8 @@ pub async fn fetch_symbol_search_response(
                 market_cap_rank: None,
                 thumbnail: None,
                 image: None,
+                ipo_date: None,
+                delisted_date: None,
             })
         })
         .collect())
@@ -147,6 +149,7 @@ pub async fn fetch_screener_response(
                 country: r.country,
                 is_etf: r.is_etf,
                 is_actively_trading: r.is_actively_trading,
+                is_fund: r.is_fund,
             })
         })
         .collect())
@@ -221,6 +224,8 @@ mod tests {
                     market_cap_rank: None,
                     thumbnail: None,
                     image: None,
+                    ipo_date: None,
+                    delisted_date: None,
                 })
             })
             .collect();

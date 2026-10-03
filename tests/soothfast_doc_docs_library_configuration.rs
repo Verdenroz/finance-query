@@ -193,10 +193,30 @@ fn doc_block_line_350() {
     }
 }
 
-// line 382: compile-only (no_run)
+// line 384: compile-only (no_run)
+#[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_382() {
+fn doc_block_line_384() {
+    use finance_query::{Capability, Provider, Providers};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .providers([Provider::Polygon])
+            .api_key(Provider::Polygon, std::env::var("POLYGON_API_KEY")?)
+            .requests_per_minute(Provider::Polygon, 300)
+            .route(Capability::CHART, [Provider::Polygon])
+            .build()
+            .await?;
+        Ok(())
+    }
+}
+
+// line 409: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_409() {
         use finance_query::{Region, Ticker, format::Raw};
 
         #[tokio::main]
@@ -233,10 +253,10 @@ fn doc_block_line_382() {
         }
 }
 
-// line 427: compile-only (no_run)
+// line 454: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_427() {
+fn doc_block_line_454() {
         use finance_query::Ticker;
         use std::time::Duration;
 

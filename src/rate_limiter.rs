@@ -5,6 +5,7 @@
 //! is consumed per request. When the bucket is empty, [`RateLimiter::acquire`]
 //! sleeps until a token becomes available.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::Instant;
@@ -12,8 +13,6 @@ use tokio::time::Instant;
 struct TokenState {
     available: f64,
     last_refill: Instant,
-    max_tokens: f64,
-    refill_rate: f64, // tokens per second
 }
 
 /// A token bucket rate limiter.
@@ -22,6 +21,8 @@ struct TokenState {
 /// When no tokens are available, [`acquire`](Self::acquire) sleeps until one is ready.
 pub(crate) struct RateLimiter {
     state: Mutex<TokenState>,
+    /// Tokens per second as `f64` bits, so [`set_rate`](Self::set_rate) needs no lock.
+    rate: AtomicU64,
 }
 
 impl RateLimiter {
@@ -30,15 +31,21 @@ impl RateLimiter {
     /// The bucket capacity is at least 1 token so that [`acquire`](Self::acquire)
     /// always makes progress, even for sub-1/sec rates (e.g. 0.5 req/sec).
     pub fn new(max_per_second: f64) -> Self {
-        let max_tokens = max_per_second.max(1.0);
         Self {
+            rate: AtomicU64::new(max_per_second.to_bits()),
             state: Mutex::new(TokenState {
-                available: max_tokens,
+                available: Self::capacity(max_per_second),
                 last_refill: Instant::now(),
-                max_tokens,
-                refill_rate: max_per_second,
             }),
         }
+    }
+
+    fn capacity(rate: f64) -> f64 {
+        rate.max(1.0)
+    }
+
+    fn rate(&self) -> f64 {
+        f64::from_bits(self.rate.load(Ordering::Relaxed))
     }
 
     /// Acquire a token, sleeping if necessary to respect the rate limit.
@@ -46,10 +53,10 @@ impl RateLimiter {
         loop {
             let sleep_duration = {
                 let mut state = self.state.lock().await;
+                let rate = self.rate();
                 let now = Instant::now();
                 let elapsed = now.duration_since(state.last_refill).as_secs_f64();
-                state.available =
-                    (state.available + elapsed * state.refill_rate).min(state.max_tokens);
+                state.available = (state.available + elapsed * rate).min(Self::capacity(rate));
                 state.last_refill = now;
 
                 if state.available >= 1.0 {
@@ -58,7 +65,7 @@ impl RateLimiter {
                 }
 
                 let deficit = 1.0 - state.available;
-                Duration::from_secs_f64(deficit / state.refill_rate)
+                Duration::from_secs_f64(deficit / rate)
             };
             tokio::time::sleep(sleep_duration).await;
         }
@@ -79,7 +86,14 @@ impl RateLimiter {
         let elapsed = Instant::now()
             .duration_since(state.last_refill)
             .as_secs_f64();
-        Some((state.available + elapsed * state.refill_rate).min(state.max_tokens))
+        let rate = self.rate();
+        Some((state.available + elapsed * rate).min(Self::capacity(rate)))
+    }
+
+    /// Replace the refill rate; takes effect on the next acquire.
+    #[allow(dead_code)] // used by the keyed adapters' shared per-key buckets
+    pub(crate) fn set_rate(&self, max_per_second: f64) {
+        self.rate.store(max_per_second.to_bits(), Ordering::Relaxed);
     }
 }
 

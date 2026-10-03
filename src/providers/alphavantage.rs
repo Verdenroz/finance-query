@@ -247,6 +247,10 @@ impl FilingsProvider for AlphaVantageProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for AlphaVantageProvider {
+    fn accepts_request_budget(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> Result<()> {
         let _ = av::build_client()?;
         Ok(())

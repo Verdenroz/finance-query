@@ -40,6 +40,13 @@ impl QuoteProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl ChartProvider for PolygonProvider {
+    async fn fetch_stock_bars_page(
+        &self,
+        request: &crate::StockBarsRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        polygon::fetch_stock_bars_page(request, cursor).await
+    }
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -149,6 +156,26 @@ impl OptionsProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl DiscoveryProvider for PolygonProvider {
+    async fn fetch_stock_listings_page(
+        &self,
+        request: &crate::StockListingRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockListing>> {
+        polygon::fetch_stock_listings_page(request, cursor).await
+    }
+    async fn fetch_symbol_details_at(
+        &self,
+        symbol: &str,
+        date: &str,
+    ) -> Result<crate::SymbolDetails> {
+        polygon::fetch_symbol_details_at(symbol, date).await
+    }
+    async fn fetch_ticker_changes(&self, id: &str) -> Result<Vec<crate::TickerChange>> {
+        polygon::fetch_ticker_changes(id).await
+    }
+    async fn fetch_stock_types(&self, locale: &str) -> Result<Vec<crate::StockType>> {
+        polygon::fetch_stock_types(locale).await
+    }
     async fn fetch_symbol_search(
         &self,
         query: &str,
@@ -213,7 +240,16 @@ impl FilingsProvider for PolygonProvider {
         accession_number: &str,
         form: crate::models::filings::FilingSectionForm,
     ) -> Result<Vec<crate::models::filings::FilingSection>> {
-        polygon::fetch_filing_sections_response(accession_number, form).await
+        polygon::fetch_filing_sections_response(None, accession_number, form).await
+    }
+
+    async fn fetch_filing_sections_for(
+        &self,
+        symbol: &str,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        polygon::fetch_filing_sections_response(Some(symbol), accession_number, form).await
     }
 
     async fn fetch_risk_factors(
@@ -265,6 +301,14 @@ impl EconomicProvider for PolygonProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for PolygonProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
+    fn accepts_request_budget(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> Result<()> {
         let _ = polygon::build_client()?;
         Ok(())

@@ -96,6 +96,15 @@ pub(crate) async fn fetch_company_profile_response(
         sector: dto.sector,
         industry: dto.industry,
         market_capitalization: dto.market_capitalization,
+        isin: None,
+        cusip: None,
+        active: None,
+        is_etf: None,
+        is_adr: None,
+        is_fund: None,
+        cik: None,
+        ipo_date: None,
+        provider_id: Some(crate::Provider::AlphaVantage),
     })
 }
 

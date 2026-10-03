@@ -20,7 +20,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use crate::error::{FinanceError, Result};
-use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+use crate::models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
 use crate::rate_limiter::RateLimiter;
 use client::OpenFigiClient;
 use models::{FigiRecord, MappingJob};
@@ -92,6 +92,15 @@ pub(crate) async fn resolve_many(
     kind: SecurityIdKind,
     ids: &[&str],
 ) -> Result<Vec<Vec<SecurityMapping>>> {
+    resolve_many_with(kind, ids, &MappingFilter::default()).await
+}
+
+/// [`resolve_many`] narrowed by a [`MappingFilter`].
+pub(crate) async fn resolve_many_with(
+    kind: SecurityIdKind,
+    ids: &[&str],
+    filter: &MappingFilter,
+) -> Result<Vec<Vec<SecurityMapping>>> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -106,6 +115,8 @@ pub(crate) async fn resolve_many(
             .map(|id| MappingJob {
                 id_type: kind.as_str(),
                 id_value: id,
+                exch_code: filter.exchange_code.as_deref(),
+                include_unlisted_equities: filter.include_unlisted,
             })
             .collect();
 
@@ -183,6 +194,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn filters_are_sent_only_when_set() {
+        let mut server = mockito::Server::new_async().await;
+        let filtered = server
+            .mock("POST", "/mapping")
+            .match_body(mockito::Matcher::Json(serde_json::json!([{
+                "idType": "TICKER",
+                "idValue": "HNT",
+                "exchCode": "US",
+                "includeUnlistedEquities": true
+            }])))
+            .with_body(r#"[{"data":[{"figi":"BBG000CYNBV7","exchCode":"US","compositeFIGI":"BBG000CYNBV7","name":"HEALTH NET INC/OLD","securityType":"Common Stock"}]}]"#)
+            .create_async()
+            .await;
+        let plain = server
+            .mock("POST", "/mapping")
+            .match_body(mockito::Matcher::Json(serde_json::json!([{
+                "idType": "TICKER",
+                "idValue": "AAPL"
+            }])))
+            .with_body(r#"[{"warning":"No identifier found."}]"#)
+            .create_async()
+            .await;
+        let client = test_client(&server.url());
+        let us_unlisted = MappingFilter::default()
+            .exchange_code("US")
+            .include_unlisted(true);
+        let jobs = [MappingJob {
+            id_type: "TICKER",
+            id_value: "HNT",
+            exch_code: us_unlisted.exchange_code.as_deref(),
+            include_unlisted_equities: us_unlisted.include_unlisted,
+        }];
+        let results = client.map(&jobs).await.unwrap();
+        let record = &results[0].data.as_ref().unwrap()[0];
+        assert_eq!(record.composite_figi.as_deref(), Some("BBG000CYNBV7"));
+        let jobs = [MappingJob {
+            id_type: "TICKER",
+            id_value: "AAPL",
+            exch_code: None,
+            include_unlisted_equities: false,
+        }];
+        client.map(&jobs).await.unwrap();
+        filtered.assert_async().await;
+        plain.assert_async().await;
+    }
+
+    #[tokio::test]
     async fn api_key_is_sent_in_the_documented_header() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
@@ -196,6 +254,8 @@ mod tests {
         let jobs = [MappingJob {
             id_type: "TICKER",
             id_value: "UNKNOWN",
+            exch_code: None,
+            include_unlisted_equities: false,
         }];
 
         keyed_test_client(&server.url()).map(&jobs).await.unwrap();
@@ -248,6 +308,8 @@ mod tests {
         let jobs = vec![MappingJob {
             id_type: "ID_CUSIP",
             id_value: "037833100",
+            exch_code: None,
+            include_unlisted_equities: false,
         }];
         let results = test_client(&server.url()).map(&jobs).await.unwrap();
         let mappings: Vec<_> = results[0]
@@ -294,10 +356,14 @@ mod tests {
             MappingJob {
                 id_type: "ID_CUSIP",
                 id_value: "037833100",
+                exch_code: None,
+                include_unlisted_equities: false,
             },
             MappingJob {
                 id_type: "ID_CUSIP",
                 id_value: "594918104",
+                exch_code: None,
+                include_unlisted_equities: false,
             },
         ];
         let err = test_client(&server.url()).map(&jobs).await.unwrap_err();
@@ -319,6 +385,8 @@ mod tests {
         let jobs = vec![MappingJob {
             id_type: "ID_CUSIP",
             id_value: "037833100",
+            exch_code: None,
+            include_unlisted_equities: false,
         }];
         let err = test_client(&server.url()).map(&jobs).await.unwrap_err();
         match err {
@@ -341,6 +409,8 @@ mod tests {
         let jobs = vec![MappingJob {
             id_type: "ID_CUSIP",
             id_value: "037833100",
+            exch_code: None,
+            include_unlisted_equities: false,
         }];
         let err = test_client(&server.url()).map(&jobs).await.unwrap_err();
         assert!(matches!(err, FinanceError::RateLimited { .. }), "{err:?}");

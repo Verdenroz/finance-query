@@ -70,7 +70,8 @@ pub mod edgar {
     //!
     //! Requires a one-time [`init`] call with a contact email address.
     pub use crate::adapters::edgar::{
-        company_facts, filing_index, init, init_with_config, resolve_cik, search, submissions,
+        archive, company_facts, filing_index, init, init_with_config, init_with_rate, resolve_cik,
+        search, submissions,
     };
 }
 
@@ -198,7 +199,7 @@ pub mod openfigi {
     //! ```
 
     use crate::error::Result;
-    pub use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+    pub use crate::models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
 
     /// Resolve a CUSIP to every instrument carrying it.
     ///
@@ -233,6 +234,17 @@ pub mod openfigi {
         ids: &[&str],
     ) -> Result<Vec<Vec<SecurityMapping>>> {
         crate::adapters::openfigi::resolve_many(kind, ids).await
+    }
+
+    /// [`resolve_many`] narrowed to one exchange code, optionally including
+    /// delisted equities. A ticker resolves to its current holder, so check a
+    /// returned name before trusting it for a delisted company.
+    pub async fn resolve_many_with(
+        kind: SecurityIdKind,
+        ids: &[&str],
+        filter: &MappingFilter,
+    ) -> Result<Vec<Vec<SecurityMapping>>> {
+        crate::adapters::openfigi::resolve_many_with(kind, ids, filter).await
     }
 }
 
@@ -374,14 +386,17 @@ pub use tickers::BatchIndicatorsResponse;
 // ============================================================================
 // Error types and results
 // ============================================================================
-// Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
+// Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
+pub use models::discovery::listings::{StockListing, StockListingRequest, StockType, TickerChange};
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
 pub use models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
+pub use models::pagination::{PageCursor, ProviderPage};
 
 pub use error::{ErrorCategory, FinanceError, Result};
 

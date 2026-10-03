@@ -21,6 +21,8 @@ fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> Symb
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: None,
+        delisted_date: None,
     }
 }
 

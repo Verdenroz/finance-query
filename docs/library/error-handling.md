@@ -12,6 +12,7 @@ Finance Query uses a single `FinanceError` enum for all error cases. Every libra
 | Variant | When it occurs | Retriable |
 |---------|---------------|-----------|
 | `AuthenticationFailed` | Yahoo crumb/cookie auth failure, EDGAR init rejected | ✓ |
+| `NotEntitled` | The key is valid, but the plan doesn't include the data, such as Polygon minute bars older than the plan's history | ✗ |
 | `ProviderNotConfigured` | Provider is compiled in but has no credentials configured (e.g. `FRED_API_KEY` unset) | ✗ |
 | `SymbolNotFound` | Ticker symbol doesn't exist or returned no data | ✗ |
 | `RateLimited` | Provider rate limit exceeded | ✓ |

@@ -42,6 +42,129 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Capabilities
 
+`Ticker::company_profile()` supports FMP through the FUNDAMENTALS route. It returns the provider symbol, company CIK, and IPO date together. Missing identifiers and dates, including FMP's empty strings, remain absent, and an IPO date that isn't a valid `YYYY-MM-DD` date is dropped; empty, ambiguous or mismatched profiles return errors. The profile is current company information, not a historical listing snapshot.
+
+Pass FMP's symbol spelling, such as `BRK-B`. Applications comparing providers must retain their own canonical symbol and verify the returned identity. The crate does not infer that two symbols represent the same security.
+
+### Delisted companies
+
+`Discovery::listing_status(false)` reads the first 100 rows of FMP's
+`/stable/delisted-companies` list in one request. It returns `SymbolMatch`
+records with `ipo_date` and `delisted_date` preserved. Missing dates stay `None`;
+reused ticker symbols can have separate records with different dates. The
+endpoint does not provide a stable security identifier, so `id` remains `None`.
+To read the whole list, use the [resumable pages](#resumable-delisted-pages).
+
+A failed request returns an error and is not cached. A successful result is
+cached on the discovery handle.
+
+```rust no_run feature=fmp
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .providers([Provider::Fmp])
+        .route(Capability::DISCOVERY, [Provider::Fmp])
+        .build()
+        .await?;
+    let delisted = providers.discovery().listing_status(false).await?;
+    for stock in delisted {
+        println!(
+            "{}: IPO {:?}, delisted {:?}",
+            stock.symbol, stock.ipo_date, stock.delisted_date
+        );
+    }
+    Ok(())
+}
+```
+
+### Resumable delisted pages
+
+These page operations, the directories and bulk profiles below are library-only;
+the REST, GraphQL and MCP servers do not expose them.
+
+`Discovery::delisted_stocks_page(limit, cursor)` returns one `ProviderPage<SymbolMatch>`
+of 1–100 rows. Persist its records and cursor together, then pass the cursor back
+unchanged with the same `limit`. The cursor is bound to FMP, the operation and the
+page size, contains no credentials, and resumes after a restart. Continue until
+an empty page rather than treating a short page as the end. A repeated page or a
+page with no new records is an error, distinct from the empty terminal page.
+
+`Discovery::delisted_stocks_page_at(page, limit)` fetches one independent
+zero-based page, below page 10,000 with 1–100 rows, and preserves IPO and
+delisting dates. Use it for bounded concurrent scans. It has none of the cursor's
+progress checks, so callers must track every page, reject repeated records and
+confirm the empty end page.
+
+Responses and traversal are bounded, and exceeding a bound returns an error
+rather than a truncated list. Provider lists change over time and are not
+historical snapshots; keep coverage and source observations in the application.
+
+### Minute and daily stock bars
+
+`Market::stock_bars_page(&request, cursor)` also reads FMP's minute
+(`/stable/historical-chart/1min`) and daily (`/stable/historical-price-eod/full`)
+history, back to 2004. FMP only serves split-adjusted bars, so requests must use
+`PriceAdjustment::SplitAdjusted`. Minute bars cover regular trading hours only.
+
+FMP answers a minute request with just the last three calendar days of its range
+and caps daily history at 5,000 rows, so each page requests one window that comes
+back whole: three calendar days for minutes, starting and ending on weekdays (two
+requests per week), and about 19 years for days. The `next` cursor carries the
+following window. FMP reports minutes in New York time; bars carry the matching
+UTC timestamp, and daily bars are stamped at midnight New York time, as Polygon's
+are. FMP has no bars for long-delisted tickers, and it files history under today's
+ticker (`META` returns 2012 bars, `FB` returns none).
+
+### Stock directories and bulk profiles
+
+`Discovery::stock_list()` fetches `/stable/stock-list`, the global directory,
+including records whose trading status is unknown. `listing_status(true)` reads
+`/stable/actively-trading-list`. Both can include non-US instruments and funds,
+and they commonly provide only the symbol and name, so missing exchange, type and
+identity fields stay absent. Use profiles or Polygon reference data to classify
+the intended stock universe.
+
+`Discovery::company_profiles_bulk(part)` fetches exactly one numbered
+`/stable/profile-bulk` part. It accepts CSV (including quoted commas, newlines and
+a UTF-8 BOM) or a JSON array and returns `Vec<CompanyProfile>`, mapped like
+individual profiles: CIK, CUSIP, ISIN, IPO date, exchange and the active, ETF,
+ADR and fund flags are kept when supplied. CIK identifies a company, not a share
+class, and these are current profiles, not dated history.
+
+```rust no_run feature=fmp
+use finance_query::{Capability, Provider, Providers};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .providers([Provider::Fmp])
+        .route(Capability::DISCOVERY, [Provider::Fmp])
+        .build()
+        .await?;
+    let directory = providers.discovery().stock_list().await?;
+    let active = providers.discovery().listing_status(true).await?;
+    let profiles = providers.discovery().company_profiles_bulk(0).await?;
+    println!("{} listed, {} active, {} profiles", directory.len(), active.len(), profiles.len());
+    Ok(())
+}
+```
+
+Directories and bulk parts are slow downloads, so these calls wait at least two
+and ten minutes respectively, or longer if `Providers::builder().timeout(...)`
+is set higher. A bulk part is about 30 MB and FMP sends it uncompressed. Large CSV parts parse off the async worker threads. Blank bodies, malformed rows, denied access, rate limits, server and
+transport failures are errors, never empty parts. A header-only CSV or `[]` is an
+empty part. Bulk results are not cached, no further parts are fetched implicitly,
+and an empty part does not prove the dataset is complete.
+
+FMP asks callers to space profile-bulk calls at least 60 seconds apart
+([FMP FAQ](https://site.financialmodelingprep.com/faqs)); the crate applies only
+the configured account rate. The
+[part documentation](https://site.financialmodelingprep.com/it/faqs?code=marketPerformance)
+currently describes four parts (0 through 3), so retrieve each part you need
+explicitly.
+
 | Data type | Support |
 |-----------|---------|
 | Quote | ✓ |

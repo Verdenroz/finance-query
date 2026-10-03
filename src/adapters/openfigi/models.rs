@@ -9,6 +9,13 @@ pub(crate) struct MappingJob<'a> {
     pub id_type: &'a str,
     #[serde(rename = "idValue")]
     pub id_value: &'a str,
+    #[serde(rename = "exchCode", skip_serializing_if = "Option::is_none")]
+    pub exch_code: Option<&'a str>,
+    #[serde(
+        rename = "includeUnlistedEquities",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    pub include_unlisted_equities: bool,
 }
 
 /// One element of the response array, positionally paired with the job that

@@ -20,6 +20,17 @@ pub enum FinanceError {
         context: String,
     },
 
+    /// The credential is valid, but the account's plan doesn't include the
+    /// requested data, such as history older than the plan allows.
+    ///
+    /// Distinct from [`FinanceError::AuthenticationFailed`], which means the
+    /// credential itself was rejected.
+    #[error("Not entitled: {context}")]
+    NotEntitled {
+        /// The provider's explanation
+        context: String,
+    },
+
     /// A provider is compiled in but has no credentials configured.
     ///
     /// Distinct from [`FinanceError::AuthenticationFailed`], which means a
@@ -261,7 +272,7 @@ impl FinanceError {
     /// Categorize errors for logging/metrics
     pub fn category(&self) -> ErrorCategory {
         match self {
-            Self::AuthenticationFailed { .. } => ErrorCategory::Auth,
+            Self::AuthenticationFailed { .. } | Self::NotEntitled { .. } => ErrorCategory::Auth,
             Self::RateLimited { .. } => ErrorCategory::RateLimit,
             Self::Timeout { .. } => ErrorCategory::Timeout,
             Self::ServerError { .. } => ErrorCategory::Server,

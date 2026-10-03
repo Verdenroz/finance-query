@@ -34,9 +34,11 @@ impl Filings {
         accession_number: &str,
         form: crate::models::filings::FilingSectionForm,
     ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        let symbol = self.symbol().to_string();
         let accession = accession_number.to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
                 let accession = accession.clone();
                 let p = p.clone();
                 async move {
@@ -44,7 +46,7 @@ impl Filings {
                         .ok_or_else(|| {
                             p.not_supported(crate::providers::Operation::FilingSections)
                         })?
-                        .fetch_filing_sections(&accession, form)
+                        .fetch_filing_sections_for(&symbol, &accession, form)
                         .await
                 }
             })

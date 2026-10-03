@@ -7,6 +7,8 @@
 
 // ── Format type parameter ──────────────────────────────────────────────────
 pub mod format;
+/// Bounded provider responses and resumable continuations.
+pub mod pagination;
 
 // ── Capability directories ──────────────────────────────────────────────────
 

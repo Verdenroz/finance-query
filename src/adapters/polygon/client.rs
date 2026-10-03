@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use reqwest::header::HeaderMap;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -10,7 +11,9 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
+use crate::adapters::common::keyed::{
+    bounded_body, http_client, is_auth_error, rate_limited, redact_key, transport_error,
+};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -18,6 +21,20 @@ use super::models::PaginatedResponseDTO;
 
 const PG_BASE: &str = "https://api.massive.com";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+const PAGE_BYTE_LIMIT: usize = 32 * 1024 * 1024;
+const ERROR_BODY_BYTE_LIMIT: usize = 64 * 1024;
+const MISSING_KEY: &str = "Polygon API key invalid or missing. Call polygon::init(key) first.";
+
+/// A refusal naming the plan or entitlement comes from a valid key that lacks
+/// access, such as minute bars older than the plan's history window.
+fn refusal(message: String) -> FinanceError {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("entitled") || lower.contains("plan") {
+        FinanceError::NotEntitled { context: message }
+    } else {
+        FinanceError::AuthenticationFailed { context: message }
+    }
+}
 
 pub(crate) struct PolygonClientBuilder {
     api_key: String,
@@ -46,21 +63,19 @@ impl PolygonClientBuilder {
     }
 
     pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<PolygonClient> {
-        let timeout = self.timeout;
-        let http = Client::builder()
-            .timeout(timeout)
-            .user_agent(format!(
-                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
-                env!("CARGO_PKG_VERSION")
-            ))
-            .build()?;
+        let scoped = crate::adapters::keys::scoped_key("polygon");
+        let base_url = self
+            .base_url
+            .or_else(|| scoped.as_ref().and_then(|s| s.base_url.clone()))
+            .unwrap_or_else(|| PG_BASE.to_string());
+        let http = http_client(scoped.as_ref(), "polygon", self.timeout)?;
 
         Ok(PolygonClient {
             api_key: self.api_key,
             http,
             limiter,
-            base_url: self.base_url.unwrap_or_else(|| PG_BASE.to_string()),
-            timeout,
+            base_url,
+            timeout: self.timeout,
         })
     }
 }
@@ -75,22 +90,149 @@ pub(crate) struct PolygonClient {
 }
 
 impl PolygonClient {
-    fn check_status(status: StatusCode) -> Result<()> {
+    pub(super) fn page_url(
+        &self,
+        target: &str,
+        path: &str,
+        params: &[(&str, &str)],
+        rule: PathRule,
+    ) -> Result<reqwest::Url> {
+        let invalid = || FinanceError::InvalidParameter {
+            param: "cursor".into(),
+            reason: "invalid continuation origin, path or request options".into(),
+        };
+        let base = reqwest::Url::parse(&self.base_url).map_err(|_| invalid())?;
+        let mut url = base.join(target).map_err(|_| invalid())?;
+        let expected = base.join(path).map_err(|_| invalid())?;
+        if url.origin() != base.origin()
+            || !rule.allows(url.path(), expected.path())
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.fragment().is_some()
+        {
+            return Err(invalid());
+        }
+        let mut query = Vec::new();
+        for (key, value) in url.query_pairs() {
+            if matches!(
+                key.to_ascii_lowercase().as_str(),
+                "apikey" | "api_key" | "token" | "authorization"
+            ) {
+                continue;
+            }
+            if let Some((_, expected)) = params.iter().find(|(name, _)| *name == key) {
+                if value != *expected {
+                    return Err(invalid());
+                }
+            } else if key == "cursor" {
+                query.push((key.into_owned(), value.into_owned()));
+            } else {
+                return Err(invalid());
+            }
+        }
+        url.set_query(None);
+        url.query_pairs_mut()
+            .extend_pairs(query)
+            .extend_pairs(params.iter().copied());
+        Ok(url)
+    }
+
+    pub(super) async fn page<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+        rule: PathRule,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<(T, String)> {
+        let url = self.page_url(
+            cursor.map_or(path, crate::PageCursor::target),
+            path,
+            params,
+            rule,
+        )?;
+        self.limiter.acquire().await;
+        let response = self
+            .http
+            .get(url.clone())
+            .query(&[("apiKey", self.api_key.as_str())])
+            .send()
+            .await
+            .map_err(|e| self.map_transport_error(&e))?;
+        let response = self.check_response(response).await?;
+        let bytes = bounded_body(response, PAGE_BYTE_LIMIT, "Polygon", self.timeout).await?;
+        let envelope: ErrorEnvelope =
+            serde_json::from_slice(&bytes).map_err(|_| FinanceError::ResponseStructureError {
+                field: "response".into(),
+                context: "invalid Polygon page".into(),
+            })?;
+        Self::check_error_envelope(&envelope, &self.api_key)?;
+        if !matches!(envelope.status.as_deref(), Some("OK" | "DELAYED")) {
+            return Err(FinanceError::ResponseStructureError {
+                field: "status".into(),
+                context: "missing successful Polygon page status".into(),
+            });
+        }
+        let body =
+            serde_json::from_slice(&bytes).map_err(|_| FinanceError::ResponseStructureError {
+                field: "response".into(),
+                context: "invalid Polygon page fields".into(),
+            })?;
+        Ok((body, url.to_string()))
+    }
+
+    pub(super) fn continuation(
+        &self,
+        next: Option<String>,
+        path: &str,
+        params: &[(&str, &str)],
+        rule: PathRule,
+        current: &str,
+    ) -> Result<Option<crate::PageCursor>> {
+        next.map(|target| {
+            let target = self.page_url(&target, path, params, rule)?.to_string();
+            if target == current || !rule.advances(&target, current) {
+                return Err(FinanceError::ResponseStructureError {
+                    field: "next_url".into(),
+                    context: "provider repeated its continuation".into(),
+                });
+            }
+            Ok(crate::PageCursor::continuation(
+                crate::Provider::Polygon,
+                target,
+            ))
+        })
+        .transpose()
+    }
+    /// Plan refusals arrive as 401/403 with an explanatory body, so an
+    /// authentication error keeps the provider's message.
+    async fn check_response(&self, response: reqwest::Response) -> Result<reqwest::Response> {
+        let status = response.status();
+        if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+            let body = bounded_body(response, ERROR_BODY_BYTE_LIMIT, "Polygon", self.timeout)
+                .await
+                .unwrap_or_default();
+            let message = serde_json::from_slice::<ErrorEnvelope>(&body)
+                .ok()
+                .and_then(|env| env.text().map(|text| redact_key(text, &self.api_key)));
+            return Err(match message {
+                Some(message) => refusal(message),
+                None => FinanceError::AuthenticationFailed {
+                    context: MISSING_KEY.to_string(),
+                },
+            });
+        }
+        Self::check_status(status, response.headers())?;
+        Ok(response)
+    }
+
+    fn check_status(status: StatusCode, headers: &HeaderMap) -> Result<()> {
         match status {
             StatusCode::OK => Ok(()),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                Err(FinanceError::AuthenticationFailed {
-                    context: "Polygon API key invalid or missing. Call polygon::init(key) first."
-                        .to_string(),
-                })
-            }
             StatusCode::NOT_FOUND => Err(FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "Resource not found on Polygon".to_string(),
             }),
-            StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited {
-                retry_after: Some(60),
-            }),
+            StatusCode::TOO_MANY_REQUESTS => Err(rate_limited(headers)),
             s if s.is_server_error() => Err(FinanceError::ServerError {
                 status: s.as_u16(),
                 context: "Polygon server error".to_string(),
@@ -109,14 +251,7 @@ impl PolygonClient {
         if status != "ERROR" && status != "NOT_FOUND" && status != "NOT_AUTHORIZED" {
             return Ok(());
         }
-        let msg = redact_key(
-            env.error
-                .as_ref()
-                .and_then(|v| v.as_str())
-                .or_else(|| env.message.as_ref().and_then(|v| v.as_str()))
-                .unwrap_or("Unknown error"),
-            api_key,
-        );
+        let msg = redact_key(env.text().unwrap_or("Unknown error"), api_key);
         if status == "NOT_FOUND" {
             return Err(FinanceError::SymbolNotFound {
                 symbol: None,
@@ -130,7 +265,7 @@ impl PolygonClient {
             || normalized.contains("not entitled")
             || normalized.contains("upgrade your plan")
         {
-            return Err(FinanceError::AuthenticationFailed { context: msg });
+            return Err(refusal(msg));
         }
         Err(FinanceError::ExternalApiError {
             api: "Polygon".to_string(),
@@ -154,12 +289,11 @@ impl PolygonClient {
             .send()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
-        let status = resp.status();
+        let resp = self.check_response(resp).await?;
         let bytes = resp
             .bytes()
             .await
             .map_err(|error| self.map_transport_error(&error))?;
-        Self::check_status(status)?;
         if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(&bytes) {
             Self::check_error_envelope(&env, &self.api_key)?;
         }
@@ -209,6 +343,66 @@ impl PolygonClient {
     }
 }
 
+const DAY_MS: i64 = 86_400_000;
+
+/// How far a continuation's path may differ from the request path.
+#[derive(Clone, Copy)]
+pub(super) enum PathRule {
+    Exact,
+    /// Aggregates advance their trailing `from`/`to` segments to bar timestamps.
+    AggregateWindow,
+}
+
+impl PathRule {
+    fn allows(self, actual: &str, expected: &str) -> bool {
+        match self {
+            Self::Exact => actual == expected,
+            Self::AggregateWindow => {
+                let (Some((prefix, from, to)), Some((want_prefix, want_from, want_to))) =
+                    (aggregate_window(actual), aggregate_window(expected))
+                else {
+                    return false;
+                };
+                // Date bounds are UTC midnights but bars follow exchange time, which
+                // can run into the next UTC day.
+                let within = |bound| (want_from..want_to + 2 * DAY_MS).contains(&bound);
+                prefix == want_prefix && within(from) && within(to)
+            }
+        }
+    }
+
+    fn advances(self, next: &str, current: &str) -> bool {
+        let window = |url: &str| {
+            reqwest::Url::parse(url)
+                .ok()
+                .and_then(|url| aggregate_window(url.path()).map(|(_, from, to)| (from, to)))
+        };
+        match self {
+            Self::Exact => true,
+            Self::AggregateWindow => matches!(
+                (window(next), window(current)),
+                (Some((from, to)), Some((current_from, current_to)))
+                    if from >= current_from && to <= current_to
+            ),
+        }
+    }
+}
+
+/// Splits `.../{from}/{to}` into the fixed prefix and the window in Unix milliseconds.
+fn aggregate_window(path: &str) -> Option<(&str, i64, i64)> {
+    let (rest, to) = path.rsplit_once('/')?;
+    let (prefix, from) = rest.rsplit_once('/')?;
+    Some((prefix, window_bound(from)?, window_bound(to)?))
+}
+
+fn window_bound(segment: &str) -> Option<i64> {
+    if !segment.is_empty() && segment.bytes().all(|b| b.is_ascii_digit()) {
+        return segment.parse().ok();
+    }
+    let date = chrono::NaiveDate::parse_from_str(segment, "%Y-%m-%d").ok()?;
+    Some(date.and_hms_opt(0, 0, 0)?.and_utc().timestamp_millis())
+}
+
 /// Cheap-to-parse subset of a Polygon response used to detect the
 /// `status: "ERROR" | "NOT_FOUND"` envelope without touching the full body.
 #[derive(Deserialize)]
@@ -219,6 +413,15 @@ struct ErrorEnvelope {
     /// skip the status check entirely, turning an error body into a success.
     error: Option<serde_json::Value>,
     message: Option<serde_json::Value>,
+}
+
+impl ErrorEnvelope {
+    fn text(&self) -> Option<&str> {
+        self.error
+            .as_ref()
+            .and_then(|v| v.as_str())
+            .or_else(|| self.message.as_ref().and_then(|v| v.as_str()))
+    }
 }
 
 #[cfg(test)]
@@ -234,6 +437,7 @@ mod tests {
             NotFound(&'static str),
             External,
             Auth,
+            NotEntitled,
         }
 
         let cases = [
@@ -262,11 +466,11 @@ mod tests {
             ),
             (
                 r#"{"status":"ERROR","error":"You are not entitled to this data. Please upgrade your plan"}"#,
-                Want::Auth,
+                Want::NotEntitled,
             ),
             (
                 r#"{"status":"NOT_AUTHORIZED","message":"plan restriction"}"#,
-                Want::Auth,
+                Want::NotEntitled,
             ),
             (r#"{"status":"OK"}"#, Want::Ok),
             (r#"[{"ticker":"AAPL"}]"#, Want::Ok),
@@ -289,9 +493,50 @@ mod tests {
                     assert_eq!(status, 400, "body {body}");
                 }
                 (Want::Auth, Err(FinanceError::AuthenticationFailed { .. })) => {}
+                (Want::NotEntitled, Err(FinanceError::NotEntitled { .. })) => {}
                 (_, got) => panic!("body {body}: unexpected {got:?}"),
             }
         }
+    }
+
+    #[test]
+    fn aggregate_continuations_may_only_narrow_the_requested_window() {
+        let path = "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/2020-01-10";
+        let rule = PathRule::AggregateWindow;
+        let url = |from: &str, to: &str| {
+            format!("https://api.massive.com/v2/aggs/ticker/AAPL/range/1/day/{from}/{to}")
+        };
+        assert!(rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+        assert!(rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/1578459600000",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1577836800000/2020-01-10",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/2020-01-02/2020-01-31",
+            path
+        ));
+        assert!(!rule.allows(
+            "/v2/aggs/ticker/MSFT/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+        assert!(!PathRule::Exact.allows(
+            "/v2/aggs/ticker/AAPL/range/1/day/1578114000000/2020-01-10",
+            path
+        ));
+
+        let current = url("1578114000000", "2020-01-10");
+        assert!(rule.advances(&url("1578286800000", "2020-01-10"), &current));
+        assert!(!rule.advances(&url("2020-01-02", "2020-01-10"), &current));
+        let descending = url("2020-01-02", "1578459600000");
+        assert!(rule.advances(&url("2020-01-02", "1578373200000"), &descending));
+        assert!(!rule.advances(&url("2020-01-02", "2020-01-10"), &descending));
     }
 
     fn client(api_key: &str, base_url: &str) -> PolygonClient {
@@ -322,6 +567,40 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, FinanceError::AuthenticationFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn auth_errors_keep_the_provider_message_without_the_key() {
+        let mut server = mockito::Server::new_async().await;
+        let plan = r#"{"status":"NOT_AUTHORIZED","message":"You are not entitled to this data. Please upgrade your plan"}"#;
+        let echoed = r#"{"status":"ERROR","error":"API Key test-key is invalid"}"#;
+        for (path, status, body) in [
+            ("/plan", 403, plan),
+            ("/echo", 401, echoed),
+            ("/empty", 401, ""),
+        ] {
+            server
+                .mock("GET", path)
+                .match_query(mockito::Matcher::Any)
+                .with_status(status)
+                .with_body(body)
+                .create_async()
+                .await;
+        }
+        let client = client("test-key", &server.url());
+        let context = |path: &'static str| {
+            let client = &client;
+            async move {
+                match client.get_raw(path, &[]).await.unwrap_err() {
+                    FinanceError::AuthenticationFailed { context }
+                    | FinanceError::NotEntitled { context } => context,
+                    other => panic!("{path}: unexpected {other:?}"),
+                }
+            }
+        };
+        assert!(context("/plan").await.contains("not entitled"));
+        assert_eq!(context("/echo").await, "API Key [redacted] is invalid");
+        assert_eq!(context("/empty").await, MISSING_KEY);
     }
 
     #[tokio::test]

@@ -1,7 +1,6 @@
 pub mod consensus;
 pub mod core;
 pub mod estimates;
-pub mod etf_mutual_funds;
 pub mod float;
 pub mod fund_holdings;
 pub mod ttm;

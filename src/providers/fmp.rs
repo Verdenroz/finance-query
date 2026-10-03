@@ -34,6 +34,14 @@ impl QuoteProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl ChartProvider for FmpProvider {
+    async fn fetch_stock_bars_page(
+        &self,
+        request: &crate::StockBarsRequest,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::StockBar>> {
+        crate::adapters::fmp::quote::bars::fetch_stock_bars_page(request, cursor).await
+    }
+
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -77,6 +85,9 @@ impl ChartProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl FundamentalsProvider for FmpProvider {
+    async fn fetch_company_profile(&self, symbol: &str) -> Result<crate::CompanyProfile> {
+        crate::adapters::fmp::quote::profile::fetch_company_profile(symbol).await
+    }
     async fn fetch_financials(
         &self,
         symbol: &str,
@@ -259,11 +270,30 @@ impl FilingsProvider for FmpProvider {
     }
 }
 
-/// `fetch_listing_status(active: true)` covers only ETF and mutual-fund
-/// listings, not the full equity universe the trait contract describes — FMP
-/// has no keyless all-active-stocks endpoint in this adapter.
 #[async_trait::async_trait]
 impl DiscoveryProvider for FmpProvider {
+    async fn fetch_delisted_stocks_page_at(
+        &self,
+        page: u32,
+        limit: u32,
+    ) -> Result<Vec<crate::SymbolMatch>> {
+        crate::adapters::fmp::quote::company::fetch_delisted_stocks_page_at(page, limit).await
+    }
+    async fn fetch_delisted_stocks_page(
+        &self,
+        limit: u32,
+        cursor: Option<&crate::PageCursor>,
+    ) -> Result<crate::ProviderPage<crate::SymbolMatch>> {
+        crate::adapters::fmp::quote::company::fetch_delisted_stocks_page(limit, cursor).await
+    }
+    async fn fetch_stock_list(&self) -> Result<Vec<crate::SymbolMatch>> {
+        crate::adapters::fmp::discovery::stocks::fetch_stock_list(false).await
+    }
+
+    async fn fetch_company_profiles_bulk(&self, part: u32) -> Result<Vec<crate::CompanyProfile>> {
+        crate::adapters::fmp::quote::profile::fetch_company_profiles_bulk(part).await
+    }
+
     async fn fetch_symbol_search(
         &self,
         query: &str,
@@ -284,8 +314,7 @@ impl DiscoveryProvider for FmpProvider {
         active: bool,
     ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
         if active {
-            crate::adapters::fmp::fundamentals::etf_mutual_funds::fetch_active_listing_status_response()
-                .await
+            crate::adapters::fmp::discovery::stocks::fetch_stock_list(true).await
         } else {
             crate::adapters::fmp::quote::fetch_delisted_listing_status_response().await
         }
@@ -414,6 +443,14 @@ impl CryptoProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for FmpProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
+    fn accepts_request_budget(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> Result<()> {
         let _ = crate::adapters::fmp::build_client()?;
         Ok(())

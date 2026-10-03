@@ -1,8 +1,9 @@
 //! FMP company information endpoints.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 use crate::models::discovery::reference::SymbolMatch;
 
 // ============================================================================
@@ -21,21 +22,35 @@ pub struct StockPeersDTO {
 }
 
 /// Delisted company from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct DelistedCompanyDTO {
     /// Ticker symbol.
+    #[serde(default, deserialize_with = "crate::adapters::fmp::blank_as_none")]
     pub symbol: Option<String>,
     /// Company name.
-    #[serde(rename = "companyName")]
+    #[serde(
+        rename = "companyName",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub company_name: Option<String>,
     /// Exchange.
+    #[serde(default, deserialize_with = "crate::adapters::fmp::blank_as_none")]
     pub exchange: Option<String>,
     /// IPO date.
-    #[serde(rename = "ipoDate")]
+    #[serde(
+        rename = "ipoDate",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub ipo_date: Option<String>,
     /// Delisted date.
-    #[serde(rename = "delistedDate")]
+    #[serde(
+        rename = "delistedDate",
+        default,
+        deserialize_with = "crate::adapters::fmp::blank_as_none"
+    )]
     pub delisted_date: Option<String>,
 }
 
@@ -79,16 +94,158 @@ pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
         .await
 }
 
-/// Fetch delisted companies.
+/// Fetch the first page of delisted companies. `limit` controls the page size.
 pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompanyDTO>> {
+    let limit = limit.unwrap_or(MAX_DELISTED_PAGE_SIZE);
+    check_delisted_page(0, limit)?;
     let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(100).to_string();
+    delisted_rows(&client, 0, limit).await
+}
+
+#[derive(Default, Serialize, Deserialize)]
+struct DelistedCursor {
+    page: u32,
+    seen: Vec<u64>,
+    records: BTreeSet<u64>,
+}
+
+fn cursor_fingerprint(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf29ce484222325_u64, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x100000001b3)
+    })
+}
+
+const DELISTED_PAGE_LIMITS: crate::adapters::fmp::client::ResponseLimits =
+    crate::adapters::fmp::client::ResponseLimits::bytes(8 * 1024 * 1024);
+/// FMP returns at most 100 delisted rows per page, so larger sizes are rejected
+/// rather than silently capped.
+const MAX_DELISTED_PAGE_SIZE: u32 = 100;
+const MAX_DELISTED_PAGES: u32 = 10_000;
+const MAX_DELISTED_CURSOR_BYTES: usize = 16 * 1024 * 1024;
+
+fn check_delisted_page(page: u32, limit: u32) -> Result<()> {
+    if page >= MAX_DELISTED_PAGES || !(1..=MAX_DELISTED_PAGE_SIZE).contains(&limit) {
+        return Err(FinanceError::InvalidParameter {
+            param: "page/limit".into(),
+            reason: "page must be below 10000 and limit 1..=100".into(),
+        });
+    }
+    Ok(())
+}
+
+async fn delisted_rows(
+    client: &crate::adapters::fmp::client::FmpClient,
+    page: u32,
+    limit: u32,
+) -> Result<Vec<DelistedCompanyDTO>> {
     client
-        .get(
+        .get_limited(
             "/stable/delisted-companies",
-            &[("page", "0"), ("limit", &limit_str)],
+            &[("page", &page.to_string()), ("limit", &limit.to_string())],
+            Some(DELISTED_PAGE_LIMITS),
         )
         .await
+}
+
+async fn delisted_page(
+    client: &crate::adapters::fmp::client::FmpClient,
+    limit: u32,
+    cursor: Option<&crate::PageCursor>,
+) -> Result<(Vec<DelistedCompanyDTO>, Option<crate::PageCursor>)> {
+    let invalid = || FinanceError::InvalidParameter {
+        param: "cursor".into(),
+        reason: "invalid FMP delisted continuation".into(),
+    };
+    let mut state = match cursor {
+        Some(cursor) if cursor.target().len() <= MAX_DELISTED_CURSOR_BYTES => {
+            serde_json::from_str::<DelistedCursor>(cursor.target()).map_err(|_| invalid())?
+        }
+        Some(_) => return Err(invalid()),
+        None => DelistedCursor::default(),
+    };
+    if state.page as usize != state.seen.len() {
+        return Err(invalid());
+    }
+    check_delisted_page(state.page, limit)?;
+    let rows = delisted_rows(client, state.page, limit).await?;
+    if rows.is_empty() {
+        return Ok((rows, None));
+    }
+    let mut ordered: Vec<String> = rows
+        .iter()
+        .map(serde_json::to_string)
+        .collect::<std::result::Result<_, _>>()?;
+    ordered.sort();
+    ordered.dedup();
+    let hash = cursor_fingerprint(ordered.join("\n").as_bytes());
+    let mut advanced = false;
+    for row in &ordered {
+        advanced |= state.records.insert(cursor_fingerprint(row.as_bytes()));
+    }
+    if state.seen.contains(&hash) || !advanced {
+        return Err(FinanceError::ResponseStructureError {
+            field: "pagination".into(),
+            context: "FMP repeated a delisted page".into(),
+        });
+    }
+    state.seen.push(hash);
+    state.page += 1;
+    let target = serde_json::to_string(&state)?;
+    if target.len() > MAX_DELISTED_CURSOR_BYTES {
+        return Err(invalid());
+    }
+    Ok((
+        rows,
+        Some(crate::PageCursor::continuation(
+            crate::Provider::Fmp,
+            target,
+        )),
+    ))
+}
+
+pub(crate) async fn fetch_delisted_stocks_page(
+    limit: u32,
+    cursor: Option<&crate::PageCursor>,
+) -> Result<crate::ProviderPage<SymbolMatch>> {
+    let client = crate::adapters::fmp::build_client()?;
+    let (rows, next) = delisted_page(&client, limit, cursor).await?;
+    let count = rows.len();
+    let items = delisted_symbols(rows)?;
+    Ok(crate::ProviderPage {
+        items,
+        next,
+        provider_id: crate::Provider::Fmp,
+        request_id: None,
+        results_count: Some(count),
+        query_count: None,
+        reported_symbol: None,
+        adjusted: None,
+    })
+}
+
+pub(crate) async fn fetch_delisted_stocks_page_at(
+    page: u32,
+    limit: u32,
+) -> Result<Vec<SymbolMatch>> {
+    check_delisted_page(page, limit)?;
+    let client = crate::adapters::fmp::build_client()?;
+    let rows = delisted_rows(&client, page, limit).await?;
+    if rows.len() > limit as usize {
+        return Err(FinanceError::ResponseStructureError {
+            field: "pagination".into(),
+            context: "FMP delisted page exceeds its requested limit".into(),
+        });
+    }
+    delisted_symbols(rows)
+}
+
+/// Rows without a symbol are skipped: failing on one would stall a paged scan on that page.
+fn delisted_symbols(rows: Vec<DelistedCompanyDTO>) -> Result<Vec<SymbolMatch>> {
+    Ok(rows
+        .into_iter()
+        .filter_map(to_delisted_symbol_match)
+        .filter(|r| !r.symbol.trim().is_empty())
+        .collect())
 }
 
 /// Convert a delisted-company record into a canonical [`SymbolMatch`],
@@ -105,6 +262,8 @@ fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
         market_cap_rank: None,
         thumbnail: None,
         image: None,
+        ipo_date: dto.ipo_date,
+        delisted_date: dto.delisted_date,
     })
 }
 
@@ -123,6 +282,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn delisted_rows_without_a_symbol_are_skipped() {
+        let rows: Vec<DelistedCompanyDTO> = serde_json::from_value(serde_json::json!([
+            {"symbol": "OLD", "delistedDate": "2003-01-02"},
+            {"symbol": "  ", "delistedDate": "2004-01-02"},
+            {"delistedDate": "2005-01-02"}
+        ]))
+        .unwrap();
+        let items = delisted_symbols(rows).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].symbol, "OLD");
+    }
+
+    #[test]
     fn maps_delisted_company_to_symbol_match() {
         let dto: DelistedCompanyDTO = serde_json::from_value(serde_json::json!({
             "symbol": "XYZ",
@@ -138,6 +310,8 @@ mod tests {
         assert_eq!(out.name.as_deref(), Some("XYZ Corp"));
         assert_eq!(out.exchange.as_deref(), Some("NYSE"));
         assert_eq!(out.active, Some(false));
+        assert_eq!(out.ipo_date.as_deref(), Some("2001-01-01"));
+        assert_eq!(out.delisted_date.as_deref(), Some("2023-06-01"));
     }
 
     #[test]

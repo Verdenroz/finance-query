@@ -380,6 +380,15 @@ fn profile_and_price_to_company_profile(
             .and_then(|p| p.market_cap.as_ref())
             .and_then(|v| v.raw)
             .map(|v| v as f64),
+        isin: None,
+        cusip: None,
+        active: None,
+        is_etf: None,
+        is_adr: None,
+        is_fund: None,
+        cik: None,
+        ipo_date: None,
+        provider_id: Some(crate::Provider::Yahoo),
     }
 }
 
@@ -412,6 +421,11 @@ fn profile_and_price_to_symbol_details(
             .and_then(|k| k.shares_outstanding.as_ref())
             .and_then(|v| v.raw)
             .map(|v| v as f64),
+        composite_figi: None,
+        share_class_figi: None,
+        active: None,
+        delisted_utc: None,
+        provider_id: Some(crate::Provider::Yahoo),
     }
 }
 
@@ -1007,6 +1021,8 @@ fn search_quotes_to_symbol_matches(
             market_cap_rank: None,
             thumbnail: q.logo_url.clone(),
             image: q.logo_url,
+            ipo_date: None,
+            delisted_date: None,
         })
         .collect()
 }
@@ -1032,6 +1048,7 @@ fn screener_quotes_to_screener_matches(
             country: None,
             is_etf: Some(q.quote_type == "ETF"),
             is_actively_trading: None,
+            is_fund: Some(q.quote_type == "MUTUALFUND"),
         })
         .collect()
 }

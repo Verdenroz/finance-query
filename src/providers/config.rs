@@ -1,7 +1,8 @@
 use crate::adapters::yahoo::client::ClientConfig;
 use crate::error::Result;
 use crate::providers::{
-    Fetch, Provider, ProviderHealth, ProviderSet, RetryPolicy, Routes, build_providers,
+    Fetch, Provider, ProviderAdapter, ProviderHealth, ProviderSet, RetryPolicy, Routes,
+    build_providers,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -259,6 +260,8 @@ pub struct ProvidersBuilder {
     routes: Routes,
     retry: Option<RetryPolicy>,
     api_keys: std::collections::HashMap<&'static str, String>,
+    request_limits: std::collections::HashMap<&'static str, u32>,
+    endpoints: std::collections::HashMap<&'static str, String>,
 }
 
 impl std::fmt::Debug for ProvidersBuilder {
@@ -288,11 +291,67 @@ impl Default for ProvidersBuilder {
             routes: Routes::new(Fetch::Sequential),
             retry: None,
             api_keys: std::collections::HashMap::new(),
+            request_limits: std::collections::HashMap::new(),
+            endpoints: std::collections::HashMap::new(),
         }
     }
 }
 
+/// Reject a builder option set for a provider that is not configured or would ignore it.
+fn check_scoped_options(
+    set: &ProviderSet,
+    option: &str,
+    providers: &[&str],
+    accepts: impl Fn(&dyn ProviderAdapter) -> bool,
+) -> Result<()> {
+    for key in providers {
+        let adapter = Provider::from_id_str(key).and_then(|id| set.adapter(id));
+        if !adapter.is_some_and(|p| accepts(p.as_ref())) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: option.into(),
+                reason: format!("provider `{key}` is not configured or does not support {option}"),
+            });
+        }
+    }
+    Ok(())
+}
+
 impl ProvidersBuilder {
+    /// Select initialized providers instead of the default Yahoo provider.
+    /// Providers already named in routes are retained.
+    pub fn providers(mut self, providers: impl IntoIterator<Item = Provider>) -> Self {
+        self.provider_ids = providers.into_iter().collect();
+        for route in self.routes.map.values() {
+            for provider in &route.providers {
+                if !matches!(provider, Provider::Custom(_)) && !self.provider_ids.contains(provider)
+                {
+                    self.provider_ids.push(*provider);
+                }
+            }
+        }
+        self
+    }
+    /// Set the request budget for this provider's API key. Zero is rejected by build.
+    ///
+    /// Instances using the same key share one bucket: the most recently built
+    /// explicit budget sets its rate, and instances without one never change it.
+    /// Requires an explicit [`api_key`](Self::api_key) and a provider whose
+    /// adapter [accepts a budget](crate::ProviderAdapter::accepts_request_budget).
+    pub fn requests_per_minute(mut self, provider: Provider, limit: u32) -> Self {
+        self.request_limits.insert(provider.as_str(), limit);
+        self
+    }
+
+    /// Send this provider's requests to a compatible service or local HTTP fixture.
+    ///
+    /// Only HTTPS and loopback HTTP origins are accepted, and continuations cannot
+    /// leave the origin. No global endpoint is modified. Requires an explicit
+    /// [`api_key`](Self::api_key) and a provider whose adapter
+    /// [accepts an endpoint](crate::ProviderAdapter::accepts_endpoint).
+    pub fn endpoint(mut self, provider: Provider, base_url: impl Into<String>) -> Self {
+        self.endpoints.insert(provider.as_str(), base_url.into());
+        self
+    }
     /// Configure how providers are queried. Default: `Sequential`.
     ///
     /// Use [`Fetch::Sequential`] or [`Fetch::Parallel`].
@@ -439,6 +498,41 @@ impl ProvidersBuilder {
 
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
+        for provider in self.request_limits.keys().chain(self.endpoints.keys()) {
+            if !self.api_keys.contains_key(provider) {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "provider_options".into(),
+                    reason: format!("options for `{provider}` require an explicit API key"),
+                });
+            }
+        }
+        let budgets: Vec<&'static str> = self.request_limits.keys().copied().collect();
+        let endpoints: Vec<&'static str> = self.endpoints.keys().copied().collect();
+        if self.request_limits.values().any(|limit| *limit == 0) {
+            return Err(crate::FinanceError::InvalidParameter {
+                param: "requests_per_minute".into(),
+                reason: "limit must be positive".into(),
+            });
+        }
+        for endpoint in self.endpoints.values() {
+            let valid = reqwest::Url::parse(endpoint).is_ok_and(|url| {
+                (url.scheme() == "https"
+                    || (url.scheme() == "http"
+                        && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))))
+                    && url.host_str().is_some()
+                    && url.username().is_empty()
+                    && url.password().is_none()
+                    && url.query().is_none()
+                    && url.fragment().is_none()
+                    && url.path() == "/"
+            });
+            if !valid {
+                return Err(crate::FinanceError::InvalidParameter {
+                    param: "endpoint".into(),
+                    reason: "expected an HTTPS or loopback HTTP origin without credentials".into(),
+                });
+            }
+        }
         #[cfg(feature = "translation")]
         crate::translation::Lang::parse(&self.config.lang)?;
         for adapter in &self.adapters {
@@ -476,10 +570,13 @@ impl ProvidersBuilder {
                     reason: "API key must not be empty".to_string(),
                 });
             }
-            keys.insert(
-                provider_key,
-                crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout),
-            );
+            let mut key = crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout);
+            key.rpm = self.request_limits.get(provider_key).copied();
+            key.base_url = self
+                .endpoints
+                .get(provider_key)
+                .map(|s| s.trim_end_matches('/').to_string());
+            keys.insert(provider_key, key);
         }
         // `initialize` builds each keyed client, so the scope has to cover
         // construction as well as dispatch.
@@ -490,6 +587,10 @@ impl ProvidersBuilder {
         .await?
         .with_api_keys(keys)
         .with_retry_policy(self.retry);
+        check_scoped_options(&set, "requests_per_minute", &budgets, |p| {
+            p.accepts_request_budget()
+        })?;
+        check_scoped_options(&set, "endpoint", &endpoints, |p| p.accepts_endpoint())?;
         Ok(Providers {
             set: Arc::new(set),
             lang,

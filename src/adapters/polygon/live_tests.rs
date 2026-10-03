@@ -16,6 +16,7 @@ use std::future::Future;
 use ::futures::StreamExt;
 use chrono::{Days, TimeZone, Utc};
 
+use super::futures::snapshots as futures_snapshots;
 use super::{
     chart, corporate, crypto, discovery, economic, filings, forex, fundamentals, indices, options,
     quote,
@@ -168,13 +169,34 @@ impl Matrix {
                 }
                 Err(problem) => self.fail(name, &problem),
             },
-            Err(FinanceError::AuthenticationFailed { ref context })
-                if allow_plan_gap && is_plan_gap(context) =>
-            {
+            Err(
+                FinanceError::AuthenticationFailed { ref context }
+                | FinanceError::NotEntitled { ref context },
+            ) if allow_plan_gap && is_plan_gap(context) => {
                 self.plan_limited += 1;
                 println!("plan-limited: {name}");
             }
             Err(error) => self.fail(name, &error.to_string()),
+        }
+    }
+
+    /// Record a lookup whose value later checks depend on.
+    fn discovered<T>(&mut self, name: &str, value: Result<Option<T>>) -> Option<T> {
+        self.total += 1;
+        match value {
+            Ok(Some(found)) => {
+                self.passed += 1;
+                println!("ok: {name}");
+                Some(found)
+            }
+            Ok(None) => {
+                self.fail(name, "returned nothing to check against");
+                None
+            }
+            Err(error) => {
+                self.fail(name, &error.to_string());
+                None
+            }
         }
     }
 
@@ -343,7 +365,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     // ---- FUNDAMENTALS ------------------------------------------------------
-    m.check(
+    m.check_plan(
         "income_statements",
         fundamentals::income_statements("AAPL", &[("timeframe", "annual"), ("limit", "2")]),
         |page| {
@@ -358,7 +380,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     )
     .await;
 
-    m.check(
+    m.check_plan(
         "balance_sheets",
         fundamentals::balance_sheets("AAPL", &[("timeframe", "annual"), ("limit", "2")]),
         |page| {
@@ -371,7 +393,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     )
     .await;
 
-    m.check(
+    m.check_plan(
         "cash_flow_statements",
         fundamentals::cash_flow_statements("AAPL", &[("timeframe", "annual"), ("limit", "2")]),
         |page| {
@@ -391,7 +413,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
         StatementType::Balance,
         StatementType::CashFlow,
     ] {
-        m.check(
+        m.check_plan(
             "fetch_financials_response",
             fundamentals::fetch_financials_response("AAPL", statement, Frequency::Annual),
             |stmt| {
@@ -645,40 +667,38 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     }
 
     // ---- FILINGS -----------------------------------------------------------
-    let ten_k_accession = {
-        m.total += 1;
-        match filings::sec_edgar_index(&[("ticker", "AAPL"), ("form_type", "10-K"), ("limit", "1")])
-            .await
-        {
-            Ok(page) => match page
-                .results
+    let latest_accession = |form: &'static str| async move {
+        filings::filing_index(&[
+            ("ticker", "AAPL"),
+            ("form_type", form),
+            ("sort", "filing_date.desc"),
+            ("limit", "1"),
+        ])
+        .await
+        .map(|page| {
+            page.results
                 .unwrap_or_default()
                 .into_iter()
-                .find_map(|item| item.accession_number)
-            {
-                Some(accession) => {
-                    m.passed += 1;
-                    println!("ok: sec_edgar_index_10k");
-                    Some(accession)
-                }
-                None => {
-                    m.fail("sec_edgar_index_10k", "accession_number is null");
-                    None
-                }
-            },
-            Err(error) => {
-                m.fail("sec_edgar_index_10k", &error.to_string());
-                None
-            }
-        }
+                .find_map(|entry| entry.accession_number)
+        })
     };
+    let ten_k = m.discovered("filing_index_10k", latest_accession("10-K").await);
+    let eight_k = m.discovered("filing_index_8k", latest_accession("8-K").await);
 
     m.check(
         "fetch_filings_response",
         filings::fetch_filings_response("AAPL"),
         |f| {
-            text(Some(f.symbol.as_str()), "symbol")?;
-            non_empty(&f.filings, "filings")
+            non_empty(&f.filings, "filings")?;
+            // The retired index ignored `ticker` and returned other issuers.
+            match f
+                .filings
+                .iter()
+                .find(|x| x.cik.as_deref() != Some("0000320193"))
+            {
+                Some(other) => Err(format!("filing from another issuer: {:?}", other.cik)),
+                None => text(f.filings[0].filing_type.as_deref(), "filing_type"),
+            }
         },
     )
     .await;
@@ -688,8 +708,8 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
         filings::risk_factors(&[("ticker", "AAPL"), ("limit", "2")]),
         |page| {
             let r = results(page, "risk factor")?;
-            text(r.category.as_deref(), "category")?;
-            text(r.text.as_deref(), "text")
+            text(r.primary_category.as_deref(), "primary_category")?;
+            text(r.supporting_text.as_deref(), "supporting_text")
         },
     )
     .await;
@@ -701,36 +721,62 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     )
     .await;
 
-    if let Some(accession) = ten_k_accession.as_deref() {
-        m.check(
-            "filing_10k_sections",
-            filings::filing_10k_sections(accession, &[("ticker", "AAPL"), ("limit", "2")]),
-            |page| {
-                let s = first(
-                    page.results.as_deref().unwrap_or_default(),
-                    "filing section",
-                )?;
-                text(s.section.as_deref(), "section")?;
-                text(s.content.as_deref(), "content")
-            },
-        )
-        .await;
+    for (name, accession, form) in [
+        (
+            "fetch_filing_sections_response_10k",
+            ten_k,
+            crate::models::filings::FilingSectionForm::TenK,
+        ),
+        (
+            "fetch_filing_sections_response_8k",
+            eight_k,
+            crate::models::filings::FilingSectionForm::EightK,
+        ),
+    ] {
+        match accession {
+            Some(accession) => {
+                m.check(
+                    name,
+                    filings::fetch_filing_sections_response(Some("AAPL"), &accession, form),
+                    |sections| {
+                        let s = first(sections, "filing section")?;
+                        text(s.section.as_deref(), "section")?;
+                        text(s.content.as_deref(), "content")
+                    },
+                )
+                .await;
+            }
+            None => m.skip(name, "no accession number to look up"),
+        }
+    }
 
+    let agent_filed = async {
+        filings::filing_index(&[
+            ("form_type", "10-K"),
+            ("sort", "filing_date.desc"),
+            ("limit", "100"),
+        ])
+        .await
+        .map(|page| {
+            page.results.unwrap_or_default().into_iter().find_map(|e| {
+                let (accession, cik, ticker) = (e.accession_number?, e.cik?, e.ticker?);
+                (!accession.starts_with(cik.as_str())).then_some((ticker, accession))
+            })
+        })
+    };
+    if let Some((ticker, accession)) =
+        m.discovered("filing_index_agent_filed_10k", agent_filed.await)
+    {
         m.check(
-            "fetch_filing_sections_response",
+            "fetch_filing_sections_response_agent_filed",
             filings::fetch_filing_sections_response(
-                accession,
+                Some(&ticker),
+                &accession,
                 crate::models::filings::FilingSectionForm::TenK,
             ),
-            |sections| non_empty(sections, "filing sections"),
+            |sections| non_empty(sections, "agent-filed 10-K sections"),
         )
         .await;
-    } else {
-        m.skip("filing_10k_sections", "no 10-K accession returned");
-        m.skip(
-            "fetch_filing_sections_response",
-            "no 10-K accession returned",
-        );
     }
 
     // ---- FOREX -------------------------------------------------------------
@@ -792,18 +838,43 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     .await;
 
     // ---- FUTURES -----------------------------------------------------------
-    // futures_contracts/products/exchanges/market_status discovered the live
-    // ticker; removed as dead code, so there is none to snapshot here.
-    for name in [
-        "futures_products",
-        "futures_exchanges",
-        "futures_market_status",
-        "futures_aggregates",
-        "futures_trades",
-        "futures_snapshot",
-        "fetch_futures_quote_response",
-    ] {
-        m.skip(name, "ticker-discovery endpoints were removed as dead code");
+    let front_month = async {
+        let page = super::build_client()?
+            .get_raw(
+                "/futures/v1/contracts",
+                &[("product_code", "ES"), ("active", "true"), ("limit", "100")],
+            )
+            .await?;
+        let today = today.to_string();
+        Ok(page["results"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|c| c["type"] == "single")
+            .filter_map(|c| Some((c["last_trade_date"].as_str()?, c["ticker"].as_str()?)))
+            .filter(|(last_trade, _)| *last_trade >= today.as_str())
+            .min()
+            .map(|(_, ticker)| ticker.to_string()))
+    };
+    if let Some(contract) = m.discovered("futures_front_month_contract", front_month.await) {
+        m.check_plan(
+            "futures_snapshot",
+            futures_snapshots::futures_snapshot(&contract),
+            |page| {
+                let s = results(page, "futures snapshot")?;
+                text(s.ticker.as_deref(), "ticker")
+            },
+        )
+        .await;
+        m.check_plan(
+            "fetch_futures_quote_response",
+            futures_snapshots::fetch_futures_quote_response(&contract),
+            |q| number(q.price, "price"),
+        )
+        .await;
+    } else {
+        m.skip("futures_snapshot", "no active ES contract");
+        m.skip("fetch_futures_quote_response", "no active ES contract");
     }
 
     // ---- OPTIONS -----------------------------------------------------------
@@ -830,8 +901,14 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
     m.check_plan("stock_snapshot", quote::stock_snapshot("AAPL"), |resp| {
         let t = resp.ticker.as_ref().ok_or("ticker is null")?;
         text(t.ticker.as_deref(), "ticker")?;
-        let day = t.day.as_ref().ok_or("day is null")?;
-        number(day.close, "day.close")
+        // The day bar is zero before the regular session opens.
+        let close = t
+            .day
+            .as_ref()
+            .and_then(|d| d.close)
+            .filter(|close| *close > 0.0)
+            .or_else(|| t.prev_day.as_ref().and_then(|d| d.close));
+        number(close, "day.close or prevDay.close")
     })
     .await;
 

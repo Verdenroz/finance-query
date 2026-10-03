@@ -32,6 +32,19 @@ pub struct PaginatedResponseDTO<T> {
     pub query_count: Option<usize>,
 }
 
+/// A stock-type code from `/v3/reference/tickers/types`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct StockTypeDTO {
+    /// Provider code, such as `"CS"`.
+    pub code: String,
+    /// Human-readable description.
+    pub description: Option<String>,
+    /// Asset class.
+    pub asset_class: Option<String>,
+    /// Market locale.
+    pub locale: Option<String>,
+}
+
 // ============================================================================
 // Enums
 // ============================================================================

@@ -34,6 +34,12 @@ pub struct SymbolMatch {
     pub thumbnail: Option<String>,
     /// Full-size logo URL.
     pub image: Option<String>,
+    /// Provider-reported IPO date, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ipo_date: Option<String>,
+    /// Provider-reported delisting date, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delisted_date: Option<String>,
 }
 
 /// Detailed reference data for a single symbol.
@@ -66,6 +72,21 @@ pub struct SymbolDetails {
     pub list_date: Option<String>,
     /// Shares outstanding, weighted across share classes.
     pub shares_outstanding: Option<f64>,
+    /// Composite security identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub composite_figi: Option<String>,
+    /// Share-class identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub share_class_figi: Option<String>,
+    /// Provider-reported listing status.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
+    /// Provider-reported delisting timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delisted_utc: Option<String>,
+    /// Provider that supplied these details.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<crate::Provider>,
 }
 
 /// A tradable exchange.
@@ -118,6 +139,8 @@ pub struct ScreenerMatch {
     pub is_etf: Option<bool>,
     /// Whether the symbol is actively trading.
     pub is_actively_trading: Option<bool>,
+    /// Whether the symbol is a fund.
+    pub is_fund: Option<bool>,
 }
 
 /// Filters for a provider-routed screener query.
@@ -153,6 +176,10 @@ pub struct ScreenerFilters {
     pub actively_trading: Option<bool>,
     /// Maximum number of results.
     pub limit: Option<u32>,
+    /// Restrict to ETFs or exclude them.
+    pub is_etf: Option<bool>,
+    /// Restrict to funds or exclude them.
+    pub is_fund: Option<bool>,
 }
 
 impl ScreenerFilters {
@@ -255,6 +282,12 @@ impl ScreenerFilters {
         }
         if let Some(v) = self.actively_trading {
             q.push(("isActivelyTrading", v.to_string()));
+        }
+        if let Some(v) = self.is_etf {
+            q.push(("isEtf", v.to_string()));
+        }
+        if let Some(v) = self.is_fund {
+            q.push(("isFund", v.to_string()));
         }
         if let Some(v) = self.limit {
             q.push(("limit", v.to_string()));

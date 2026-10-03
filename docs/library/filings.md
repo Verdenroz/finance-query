@@ -145,6 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 This is served by keyless EDGAR (best-effort heading detection over the filing's own HTML — see the module's [recall caveat](#recall-caveat) below) or Polygon, whichever the `FILINGS` route resolves to first; the default route already puts EDGAR ahead of nothing else, so no explicit `.route()` call is required.
 
+Polygon returns Massive's parsed 10-K sections (such as `risk_factors`, `business` and `mda`) or an 8-K's Items text as a single `items` section. Massive indexes this text by issuer rather than accession number, so Polygon searches the handle's symbol first and then the CIK in the accession number, which covers filings submitted by a filing agent as long as the handle names the issuer.
+
 <!-- soothfast:bind finance_query::models::filings::sections::FilingSection -->
 
 | Field | Type | Description |
@@ -183,6 +185,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `filing_date` | `Option<String>` | Date of the filing the factor was extracted from (`YYYY-MM-DD`) |
 
 <!-- /soothfast:bind -->
+
+Polygon classifies each factor with Massive's risk taxonomy: `category` is the broadest category, `title` the most specific one, and `text` the supporting quote from the filing.
 
 !!! note "Recall caveat"
     EDGAR's section and risk-factor extraction is heuristic: it detects `Item N` headings in the filing's raw HTML rather than using a structured index, so malformed or unusually formatted filings can yield partial or empty results. It returns best-effort output rather than erroring on those filings.

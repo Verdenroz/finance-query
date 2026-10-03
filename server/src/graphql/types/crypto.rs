@@ -57,6 +57,8 @@ pub struct GqlSymbolMatch {
     pub market_cap_rank: Option<u32>,
     pub thumbnail: Option<String>,
     pub image: Option<String>,
+    pub ipo_date: Option<String>,
+    pub delisted_date: Option<String>,
 }
 
 /// Mirrors `finance_query::crypto::GlobalCryptoStats`.

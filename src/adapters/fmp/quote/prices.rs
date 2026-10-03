@@ -136,13 +136,16 @@ fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::mode
 /// Convert intraday price DTOs into canonical Chart candles.
 ///
 /// As with the daily series, FMP serves newest-first and callers expect ascending.
+/// FMP reports intraday times in New York local time.
 fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::chart::Candle> {
     let mut candles: Vec<crate::models::chart::Candle> = intraday
         .into_iter()
         .filter_map(|r| {
-            let ts = chrono::NaiveDateTime::parse_from_str(r.date.as_deref()?, "%Y-%m-%d %H:%M:%S")
-                .ok()?
-                .and_utc()
+            let local =
+                chrono::NaiveDateTime::parse_from_str(r.date.as_deref()?, "%Y-%m-%d %H:%M:%S")
+                    .ok()?;
+            let ts = chrono::TimeZone::from_local_datetime(&chrono_tz::America::New_York, &local)
+                .earliest()?
                 .timestamp();
             Some(crate::models::chart::Candle {
                 timestamp: ts,
@@ -543,7 +546,10 @@ mod tests {
 
         let candles = intraday_to_candles(points);
         assert_eq!(candles.len(), 2);
-        assert_eq!(candles[0].timestamp, 1_704_187_800);
+        assert_eq!(
+            candles[0].timestamp, 1_704_205_800,
+            "09:30 New York is 14:30 UTC"
+        );
         assert_eq!(candles[0].volume, 1_234_567);
         // Missing volume → 0 (not dropped, since volume is not a required field).
         assert_eq!(candles[1].volume, 0);

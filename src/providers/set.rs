@@ -253,6 +253,80 @@ impl ProviderSet {
         }
     }
 
+    /// Fetch one page. A continuation stays on the provider that issued it and must
+    /// match `operation` and `identity`; the returned continuation is bound to both.
+    pub(crate) async fn fetch_paged<T, F, Fut>(
+        &self,
+        cap: Capability,
+        operation: super::Operation,
+        identity: &str,
+        cursor: Option<&crate::PageCursor>,
+        f: F,
+    ) -> Result<crate::ProviderPage<T>>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<crate::ProviderPage<T>>>,
+    {
+        // A custom adapter builds its own `ProviderPage`, so its `provider_id` can't be
+        // trusted to name the adapter that answered.
+        let answered_by = |p: &Arc<dyn ProviderAdapter>| {
+            let id = p.id();
+            let page = f(p);
+            async move {
+                let mut page = page.await?;
+                page.provider_id = id;
+                Ok(page)
+            }
+        };
+        let mut page = match cursor {
+            Some(cursor) => {
+                cursor.validate(operation, identity)?;
+                self.fetch_from(cursor.provider(), cap, answered_by).await?
+            }
+            None => self.fetch(cap, answered_by).await?,
+        };
+        if let Some(next) = &mut page.next {
+            if next.provider() != page.provider_id {
+                return Err(FinanceError::ResponseStructureError {
+                    field: "next".into(),
+                    context: "continuation belongs to another provider".into(),
+                });
+            }
+            next.bind(operation, identity);
+        }
+        Ok(page)
+    }
+
+    async fn fetch_from<T, F, Fut>(
+        &self,
+        provider: super::Provider,
+        cap: Capability,
+        f: F,
+    ) -> Result<T>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        let p = self
+            .candidates_for(cap)
+            .into_iter()
+            .find(|p| p.id() == provider)
+            .ok_or_else(|| FinanceError::InvalidParameter {
+                param: "cursor".into(),
+                reason: "cursor provider is not configured on this route".into(),
+            })?;
+        crate::adapters::keys::scope(Arc::clone(&self.api_keys), async {
+            let result = self.call_with_retry(p, &f).await;
+            self.record_health(p.id(), &result);
+            result
+        })
+        .await
+    }
+
+    pub(crate) fn adapter(&self, id: super::Provider) -> Option<&Arc<dyn ProviderAdapter>> {
+        self.providers.iter().find(|p| p.id() == id)
+    }
+
     pub(crate) fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
         self.yahoo_client.as_ref().map(Arc::clone).ok_or_else(|| {
             FinanceError::NoProviderAvailable {

@@ -45,6 +45,17 @@ use std::time::Duration;
 
 pub use models::*;
 
+/// FMP sends `""` for missing text fields, so blank strings deserialize as `None`.
+pub(crate) fn blank_as_none<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = <Option<String> as serde::Deserialize>::deserialize(deserializer)?;
+    Ok(value.filter(|s| !s.trim().is_empty()))
+}
+
 /// Take the first row of a single-row FMP response.
 ///
 /// FMP wraps per-symbol rollups in a single-element array; an empty one means

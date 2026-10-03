@@ -49,6 +49,7 @@ fn finance_error_to_gql(err: &FinanceError) -> Error {
         // URL to withhold — so their timeouts arrive here, not as `Timeout`.
         FinanceError::HttpError(e) if e.is_timeout() => ("TIMEOUT", 408),
         FinanceError::AuthenticationFailed { .. } => ("UNAUTHORIZED", 401),
+        FinanceError::NotEntitled { .. } => ("FORBIDDEN", 403),
         FinanceError::ServerError { status, .. } => ("SERVER_ERROR", *status),
         FinanceError::NotSupported { .. }
         | FinanceError::NoProviderAvailable { .. }

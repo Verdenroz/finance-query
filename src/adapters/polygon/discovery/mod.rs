@@ -9,6 +9,11 @@ use crate::models::corporate::recommendation::SimilarSymbol;
 use super::build_client;
 use super::models::PaginatedResponseDTO;
 
+mod listings;
+pub(crate) use listings::{
+    fetch_stock_listings_page, fetch_stock_types, fetch_symbol_details_at, fetch_ticker_changes,
+};
+
 /// Ticker reference entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -38,12 +43,22 @@ pub struct TickerRefDTO {
     pub share_class_figi: Option<String>,
     /// Last updated date.
     pub last_updated_utc: Option<String>,
+    /// Listing date.
+    pub list_date: Option<String>,
+    /// Delisting timestamp.
+    pub delisted_utc: Option<String>,
 }
 
 /// Detailed ticker overview.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TickerDetailsDTO {
+    /// Composite security identifier.
+    pub composite_figi: Option<String>,
+    /// Share-class identifier.
+    pub share_class_figi: Option<String>,
+    /// Delisting timestamp.
+    pub delisted_utc: Option<String>,
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Company name.
@@ -267,6 +282,8 @@ pub async fn fetch_symbol_search_response(
                 market_cap_rank: None,
                 thumbnail: None,
                 image: None,
+                ipo_date: None,
+                delisted_date: None,
             })
         })
         .collect())
@@ -276,8 +293,15 @@ pub async fn fetch_symbol_search_response(
 pub async fn fetch_symbol_details_response(
     symbol: &str,
 ) -> Result<crate::models::discovery::reference::SymbolDetails> {
-    use crate::models::discovery::reference::SymbolDetails;
     let resp = ticker_details(symbol).await?;
+    details_to_canonical(symbol, resp)
+}
+
+pub(super) fn details_to_canonical(
+    symbol: &str,
+    resp: TickerDetailsResponseDTO,
+) -> Result<crate::SymbolDetails> {
+    use crate::SymbolDetails;
     let d = resp
         .results
         .ok_or_else(|| crate::error::FinanceError::ResponseStructureError {
@@ -300,6 +324,11 @@ pub async fn fetch_symbol_details_response(
         shares_outstanding: d
             .weighted_shares_outstanding
             .or(d.share_class_shares_outstanding),
+        composite_figi: d.composite_figi,
+        share_class_figi: d.share_class_figi,
+        active: d.active,
+        delisted_utc: d.delisted_utc,
+        provider_id: Some(crate::Provider::Polygon),
     })
 }
 
