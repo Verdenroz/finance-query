@@ -474,7 +474,29 @@ export FMP_API_KEY=&quot;your-fmp-key&quot;
     <span class="tok-ty">Ok</span>(())
 }
 </code></pre></figure>
+<p>To skip the default Yahoo session, name the providers to initialize with <code>providers([...])</code>. Providers named in routes are added automatically.</p>
 <p>See <a href="../../library/providers/">Multi-Provider Architecture</a> for the complete provider reference.</p>
+<h3 id="keyed-provider-options">Keyed Provider Options<a class="anchor" href="#keyed-provider-options" aria-label="Link to this section">#</a></h3>
+<p><code>api_key(provider, key)</code> scopes a key to one <code>Providers</code> instance. Two options apply to that key:</p>
+<ul>
+<li><code>requests_per_minute(provider, limit)</code> sets the key's request budget. Instances using the same key share one budget: the most recently built instance that sets it wins, and instances that leave it unset keep the current rate.</li>
+<li><code>endpoint(provider, origin)</code> sends the provider's requests to a compatible HTTPS service or a local HTTP fixture without changing process-wide settings. Credentials, query strings, paths and non-loopback HTTP origins are rejected, and page continuations cannot leave the origin.</li>
+</ul>
+<p>Both need an explicit key, and <code>build()</code> rejects them for a provider that is not configured or does not support them. Polygon and FMP support both; Alpha Vantage supports a request budget.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">providers</span>([<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">api_key</span>(<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, std::env::<span class="tok-fn">var</span>(<span class="tok-str">&quot;POLYGON_API_KEY&quot;</span>)?)
+        .<span class="tok-fn">requests_per_minute</span>(<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>, <span class="tok-num">300</span>)
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">CHART</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
 <h2 id="best-practices">Best Practices<a class="anchor" href="#best-practices" aria-label="Link to this section">#</a></h2>
 <div class="adm adm-tip"><p class="adm-title"><span class="adm-kind">tip</span> · Match Symbols to Regions</p>
 <ul>
@@ -597,6 +619,8 @@ export FMP_API_KEY=&quot;your-fmp-key&quot;
     <li><a class="toc-l3" href="#provider-api-keys">Provider API Keys</a></li>
   
     <li><a class="toc-l3" href="#provider-selection">Provider Selection</a></li>
+  
+    <li><a class="toc-l3" href="#keyed-provider-options">Keyed Provider Options</a></li>
   
     <li><a class="toc-l2" href="#best-practices">Best Practices</a></li>
   

@@ -266,6 +266,107 @@ try { var t = localStorage.getItem("soothfast-theme");
 }
 </code></pre></figure>
 <h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="Link to this section">#</a></h2>
+<p><code>Ticker::company_profile()</code> supports FMP through the FUNDAMENTALS route. It returns the provider symbol, company CIK, and IPO date together. Missing identifiers and dates, including FMP's empty strings, remain absent, and an IPO date that isn't a valid <code>YYYY-MM-DD</code> date is dropped; empty, ambiguous or mismatched profiles return errors. The profile is current company information, not a historical listing snapshot.</p>
+<p>Pass FMP's symbol spelling, such as <code>BRK-B</code>. Applications comparing providers must retain their own canonical symbol and verify the returned identity. The crate does not infer that two symbols represent the same security.</p>
+<h3 id="delisted-companies">Delisted companies<a class="anchor" href="#delisted-companies" aria-label="Link to this section">#</a></h3>
+<p><code>Discovery::listing_status(false)</code> reads the first 100 rows of FMP's
+<code>/stable/delisted-companies</code> list in one request. It returns <code>SymbolMatch</code>
+records with <code>ipo_date</code> and <code>delisted_date</code> preserved. Missing dates stay <code>None</code>;
+reused ticker symbols can have separate records with different dates. The
+endpoint does not provide a stable security identifier, so <code>id</code> remains <code>None</code>.
+To read the whole list, use the <a href="#resumable-delisted-pages">resumable pages</a>.</p>
+<p>A failed request returns an error and is not cached. A successful result is
+cached on the discovery handle.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">providers</span>([<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">DISCOVERY</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> delisted = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">listing_status</span>(<span class="tok-kw">false</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">for</span> stock <span class="tok-kw">in</span> delisted {
+        <span class="tok-mac">println!</span>(
+            <span class="tok-str">&quot;{}: IPO {:?}, delisted {:?}&quot;</span>,
+            stock.symbol, stock.ipo_date, stock.delisted_date
+        );
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<h3 id="resumable-delisted-pages">Resumable delisted pages<a class="anchor" href="#resumable-delisted-pages" aria-label="Link to this section">#</a></h3>
+<p>These page operations, the directories and bulk profiles below are library-only;
+the REST, GraphQL and MCP servers do not expose them.</p>
+<p><code>Discovery::delisted_stocks_page(limit, cursor)</code> returns one <code>ProviderPage&lt;SymbolMatch&gt;</code>
+of 1–100 rows. Persist its records and cursor together, then pass the cursor back
+unchanged with the same <code>limit</code>. The cursor is bound to FMP, the operation and the
+page size, contains no credentials, and resumes after a restart. Continue until
+an empty page rather than treating a short page as the end. A repeated page or a
+page with no new records is an error, distinct from the empty terminal page.</p>
+<p><code>Discovery::delisted_stocks_page_at(page, limit)</code> fetches one independent
+zero-based page, below page 10,000 with 1–100 rows, and preserves IPO and
+delisting dates. Use it for bounded concurrent scans. It has none of the cursor's
+progress checks, so callers must track every page, reject repeated records and
+confirm the empty end page.</p>
+<p>Responses and traversal are bounded, and exceeding a bound returns an error
+rather than a truncated list. Provider lists change over time and are not
+historical snapshots; keep coverage and source observations in the application.</p>
+<h3 id="minute-and-daily-stock-bars">Minute and daily stock bars<a class="anchor" href="#minute-and-daily-stock-bars" aria-label="Link to this section">#</a></h3>
+<p><code>Market::stock_bars_page(&amp;request, cursor)</code> also reads FMP's minute
+(<code>/stable/historical-chart/1min</code>) and daily (<code>/stable/historical-price-eod/full</code>)
+history, back to 2004. FMP only serves split-adjusted bars, so requests must use
+<code>PriceAdjustment::SplitAdjusted</code>. Minute bars cover regular trading hours only.</p>
+<p>FMP answers a minute request with just the last three calendar days of its range
+and caps daily history at 5,000 rows, so each page requests one window that comes
+back whole: three calendar days for minutes, starting and ending on weekdays (two
+requests per week), and about 19 years for days. The <code>next</code> cursor carries the
+following window. FMP reports minutes in New York time; bars carry the matching
+UTC timestamp, and daily bars are stamped at midnight New York time, as Polygon's
+are. FMP has no bars for long-delisted tickers, and it files history under today's
+ticker (<code>META</code> returns 2012 bars, <code>FB</code> returns none).</p>
+<h3 id="stock-directories-and-bulk-profiles">Stock directories and bulk profiles<a class="anchor" href="#stock-directories-and-bulk-profiles" aria-label="Link to this section">#</a></h3>
+<p><code>Discovery::stock_list()</code> fetches <code>/stable/stock-list</code>, the global directory,
+including records whose trading status is unknown. <code>listing_status(true)</code> reads
+<code>/stable/actively-trading-list</code>. Both can include non-US instruments and funds,
+and they commonly provide only the symbol and name, so missing exchange, type and
+identity fields stay absent. Use profiles or Polygon reference data to classify
+the intended stock universe.</p>
+<p><code>Discovery::company_profiles_bulk(part)</code> fetches exactly one numbered
+<code>/stable/profile-bulk</code> part. It accepts CSV (including quoted commas, newlines and
+a UTF-8 BOM) or a JSON array and returns <code>Vec&lt;CompanyProfile&gt;</code>, mapped like
+individual profiles: CIK, CUSIP, ISIN, IPO date, exchange and the active, ETF,
+ADR and fund flags are kept when supplied. CIK identifies a company, not a share
+class, and these are current profiles, not dated history.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=fmp</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{<span class="tok-ty">Capability</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">providers</span>([<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">DISCOVERY</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Fmp</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> directory = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">stock_list</span>().<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> active = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">listing_status</span>(<span class="tok-kw">true</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> profiles = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">company_profiles_bulk</span>(<span class="tok-num">0</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} listed, {} active, {} profiles&quot;</span>, directory.<span class="tok-fn">len</span>(), active.<span class="tok-fn">len</span>(), profiles.<span class="tok-fn">len</span>());
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<p>Directories and bulk parts are slow downloads, so these calls wait at least two
+and ten minutes respectively, or longer if <code>Providers::builder().timeout(...)</code>
+is set higher. A bulk part is about 30 MB and FMP sends it uncompressed. Large CSV parts parse off the async worker threads. Blank bodies, malformed rows, denied access, rate limits, server and
+transport failures are errors, never empty parts. A header-only CSV or <code>[]</code> is an
+empty part. Bulk results are not cached, no further parts are fetched implicitly,
+and an empty part does not prove the dataset is complete.</p>
+<p>FMP asks callers to space profile-bulk calls at least 60 seconds apart
+(<a href="https://site.financialmodelingprep.com/faqs">FMP FAQ</a>); the crate applies only
+the configured account rate. The
+<a href="https://site.financialmodelingprep.com/it/faqs?code=marketPerformance">part documentation</a>
+currently describes four parts (0 through 3), so retrieve each part you need
+explicitly.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Data type</th><th>Support</th></tr></thead>
 <tbody>
@@ -347,6 +448,14 @@ client-side.</p>
     <li><a class="toc-l2" href="#usage">Usage</a></li>
   
     <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+  
+    <li><a class="toc-l3" href="#delisted-companies">Delisted companies</a></li>
+  
+    <li><a class="toc-l3" href="#resumable-delisted-pages">Resumable delisted pages</a></li>
+  
+    <li><a class="toc-l3" href="#minute-and-daily-stock-bars">Minute and daily stock bars</a></li>
+  
+    <li><a class="toc-l3" href="#stock-directories-and-bulk-profiles">Stock directories and bulk profiles</a></li>
   
     <li><a class="toc-l2" href="#fmp-only-ticker-methods">FMP-only Ticker methods</a></li>
   

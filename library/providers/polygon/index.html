@@ -287,6 +287,56 @@ try { var t = localStorage.getItem("soothfast-theme");
 <tr><td>Sentiment</td><td>✓</td></tr>
 </tbody>
 </table></div>
+<h2 id="historical-stock-downloads">Historical stock downloads<a class="anchor" href="#historical-stock-downloads" aria-label="Link to this section">#</a></h2>
+<p>These operations are library-only; the REST, GraphQL and MCP servers do not expose them.</p>
+<p><code>discovery().stock_listings_page(&amp;request, cursor)</code> returns one page of the stock directory as of a date, active or inactive. Rows keep the CIK, composite FIGI, share-class FIGI and listing dates when Polygon supplies them, along with Polygon's reported status, locale and type. <code>details_at(symbol, date)</code> returns dated ticker details, and <code>stock_types(&quot;us&quot;)</code> lists Polygon's stock-type codes. <code>ticker_changes(id)</code> lists every ticker a security has traded under, oldest first; pass a composite FIGI to follow it through renames (FB from 2012-05-18, then META from 2022-06-09). Bars are filed under the ticker in use at the time, so a download before a rename needs the old ticker.</p>
+<p><code>market().stock_bars_page(&amp;request, cursor)</code> returns one page of minute or daily bars. <code>StockBarsRequest::new</code> takes an explicit <code>PriceAdjustment</code>. Bars keep millisecond timestamps, fractional volume and optional transaction counts. Minute bars include pre-market and after-hours trading. How far back they go depends on the plan; older requests fail with <code>FinanceError::NotEntitled</code> rather than <code>AuthenticationFailed</code>.</p>
+<p>Store each page's items and its <code>next</code> cursor together, then pass the cursor back with the same request to continue. Cursors serialize with serde, so a download can resume after a restart, but a cursor cannot switch provider or change the request. An empty page with a <code>next</code> cursor is not the end. Pages are not cached; the application bounds concurrency, retries and storage.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=polygon</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::{
+    <span class="tok-ty">Capability</span>, <span class="tok-ty">Interval</span>, <span class="tok-ty">PageCursor</span>, <span class="tok-ty">PriceAdjustment</span>, <span class="tok-ty">Provider</span>, <span class="tok-ty">Providers</span>, <span class="tok-ty">StockBarsRequest</span>,
+    <span class="tok-ty">StockListingRequest</span>,
+};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> providers = <span class="tok-ty">Providers</span>::<span class="tok-fn">builder</span>()
+        .<span class="tok-fn">providers</span>([<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">DISCOVERY</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">route</span>(<span class="tok-ty">Capability</span>::<span class="tok-ty">CHART</span>, [<span class="tok-ty">Provider</span>::<span class="tok-ty">Polygon</span>])
+        .<span class="tok-fn">build</span>()
+        .<span class="tok-kw">await</span>?;
+
+    <span class="tok-kw">let</span> listings = <span class="tok-ty">StockListingRequest</span>::<span class="tok-fn">new</span>(<span class="tok-str">&quot;2020-01-02&quot;</span>, <span class="tok-kw">false</span>)?.<span class="tok-fn">with_stock_type</span>(<span class="tok-str">&quot;CS&quot;</span>);
+    <span class="tok-kw">let</span> <span class="tok-kw">mut</span> cursor: <span class="tok-ty">Option</span>&lt;<span class="tok-ty">PageCursor</span>&gt; = <span class="tok-ty">None</span>;
+    <span class="tok-kw">loop</span> {
+        <span class="tok-kw">let</span> page = providers
+            .<span class="tok-fn">discovery</span>()
+            .<span class="tok-fn">stock_listings_page</span>(&amp;listings, cursor.<span class="tok-fn">as_ref</span>())
+            .<span class="tok-kw">await</span>?;
+        <span class="tok-com">// Persist page.items with the serialized cursor before continuing.</span>
+        <span class="tok-kw">let</span> saved = serde_json::<span class="tok-fn">to_string</span>(&amp;page.next)?;
+        cursor = serde_json::<span class="tok-fn">from_str</span>(&amp;saved)?;
+        <span class="tok-kw">if</span> cursor.<span class="tok-fn">is_none</span>() {
+            <span class="tok-kw">break</span>;
+        }
+    }
+
+    <span class="tok-kw">let</span> bars = <span class="tok-ty">StockBarsRequest</span>::<span class="tok-fn">new</span>(
+        <span class="tok-str">&quot;AAPL&quot;</span>,
+        <span class="tok-str">&quot;2020-01-02&quot;</span>,
+        <span class="tok-str">&quot;2020-01-02&quot;</span>,
+        <span class="tok-ty">Interval</span>::<span class="tok-ty">OneMinute</span>,
+        <span class="tok-ty">PriceAdjustment</span>::<span class="tok-ty">Unadjusted</span>,
+    )?;
+    <span class="tok-kw">let</span> page = providers.<span class="tok-fn">market</span>().<span class="tok-fn">stock_bars_page</span>(&amp;bars, <span class="tok-ty">None</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{} bars, more pages: {}&quot;</span>, page.items.<span class="tok-fn">len</span>(), page.next.<span class="tok-fn">is_some</span>());
+
+    <span class="tok-kw">let</span> details = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">details_at</span>(<span class="tok-str">&quot;AAPL&quot;</span>, <span class="tok-str">&quot;2020-01-02&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">let</span> types = providers.<span class="tok-fn">discovery</span>().<span class="tok-fn">stock_types</span>(<span class="tok-str">&quot;us&quot;</span>).<span class="tok-kw">await</span>?;
+    <span class="tok-mac">println!</span>(<span class="tok-str">&quot;CIK {:?}, {} stock types&quot;</span>, details.cik, types.<span class="tok-fn">len</span>());
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><a href="../../../library/providers/">Multi-Provider Architecture</a> — Provider configuration and strategies</li>
@@ -309,6 +359,8 @@ try { var t = localStorage.getItem("soothfast-theme");
     <li><a class="toc-l2" href="#usage">Usage</a></li>
   
     <li><a class="toc-l2" href="#capabilities">Capabilities</a></li>
+  
+    <li><a class="toc-l2" href="#historical-stock-downloads">Historical stock downloads</a></li>
   
     <li><a class="toc-l2" href="#see-also">See Also</a></li>
   

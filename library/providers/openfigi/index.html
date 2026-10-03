@@ -285,6 +285,23 @@ try { var t = localStorage.getItem("soothfast-theme");
 }
 </code></pre></figure>
 <p>The result is <strong>positional</strong>: element <code>i</code> answers <code>ids[i]</code>, with an empty list where nothing matched. The adapter validates that OpenFIGI returned exactly as many results as jobs sent, and errors rather than risk pairing answers to the wrong identifiers.</p>
+<h2 id="filtering-to-one-market">Filtering to One Market<a class="anchor" href="#filtering-to-one-market" aria-label="Link to this section">#</a></h2>
+<p><code>resolve_many_with</code> narrows each lookup with a <code>MappingFilter</code>: an exchange code such as <code>&quot;US&quot;</code> for the country composite, and whether to include equities that are no longer listed.</p>
+<figure class="code"><figcaption class="code-bar"><span class="code-lang">rust · no_run feature=openfigi</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code><span class="tok-kw">use</span> finance_query::openfigi::{<span class="tok-kw">self</span>, <span class="tok-ty">MappingFilter</span>, <span class="tok-ty">SecurityIdKind</span>};
+
+<span class="tok-mac">#[tokio::main]</span>
+<span class="tok-kw">async</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() -&gt; <span class="tok-ty">Result</span>&lt;(), <span class="tok-ty">Box</span>&lt;<span class="tok-kw">dyn</span> std::error::<span class="tok-ty">Error</span>&gt;&gt; {
+    <span class="tok-kw">let</span> filter = <span class="tok-ty">MappingFilter</span>::<span class="tok-fn">default</span>()
+        .<span class="tok-fn">exchange_code</span>(<span class="tok-str">&quot;US&quot;</span>)
+        .<span class="tok-fn">include_unlisted</span>(<span class="tok-kw">true</span>);
+    <span class="tok-kw">let</span> results = openfigi::<span class="tok-fn">resolve_many_with</span>(<span class="tok-ty">SecurityIdKind</span>::<span class="tok-ty">Ticker</span>, &amp;[<span class="tok-str">&quot;HNT&quot;</span>], &amp;filter).<span class="tok-kw">await</span>?;
+    <span class="tok-kw">for</span> listing <span class="tok-kw">in</span> &amp;results[<span class="tok-num">0</span>] {
+        <span class="tok-mac">println!</span>(<span class="tok-str">&quot;{:?} {:?}&quot;</span>, listing.composite_figi, listing.name);
+    }
+    <span class="tok-ty">Ok</span>(())
+}
+</code></pre></figure>
+<p>A ticker resolves to the instrument that holds it now. For a delisted company whose ticker was later reused, the result is the new holder, so compare the returned name and <code>security_type</code> before trusting the FIGI.</p>
 <h2 id="securitymapping-fields"><code>SecurityMapping</code> Fields<a class="anchor" href="#securitymapping-fields" aria-label="Link to this section">#</a></h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Field</th><th>Description</th></tr></thead>
@@ -326,6 +343,8 @@ try { var t = localStorage.getItem("soothfast-theme");
     <li><a class="toc-l2" href="#resolving-one-identifier">Resolving One Identifier</a></li>
   
     <li><a class="toc-l2" href="#resolving-many">Resolving Many</a></li>
+  
+    <li><a class="toc-l2" href="#filtering-to-one-market">Filtering to One Market</a></li>
   
     <li><a class="toc-l2" href="#securitymapping-fields">SecurityMapping Fields</a></li>
   
