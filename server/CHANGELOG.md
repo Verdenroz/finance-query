@@ -10,6 +10,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-02
+
+Company profiles and listings carry the identifiers the new FMP and Polygon
+ingestion paths return, and a misconfigured provider no longer takes the
+server down at startup.
+
+### Added
+
+- **Company profile identifiers** — `companyProfile` (and
+  `GET /v2/company-profile/{symbol}`) now returns `isin`, `cusip`, `cik`, `ipoDate`,
+  `active`, the `isEtf`/`isAdr`/`isFund` flags and `providerId`. It is served
+  by whichever fundamentals provider is configured, so FMP now answers it
+  alongside Alpha Vantage.
+- **Symbol details lifecycle** — `symbolDetails` (and
+  `GET /v2/symbol-details/{symbol}`) gains `active`,
+  `delistedUtc`, `compositeFigi`, `shareClassFigi` and `providerId`.
+- **Symbol matches** carry `ipoDate` and `delistedDate`, so delisted listing
+  status results say when each symbol listed and left.
+
+### Changed
+
+- **Plan refusals answer 403.** A provider refusal naming the plan or
+  entitlement (`NotEntitled`) maps to `FORBIDDEN`/403, separate from an
+  invalid key.
+- The `rust` and `debian` base images in `server/Dockerfile` were bumped to
+  current digests. Routine refreshes; no CVE fix is claimed.
+
+### Fixed
+
+- **A blank provider key no longer panics at startup.** An environment
+  variable that was set but empty (a blank GitHub Actions secret, for example)
+  still counted as configured, so FRED was routed with no client. This is what
+  stopped the nightly probe from reaching any endpoint after 3.1.0.
+- **Configuration errors are not retried.** `ProviderNotConfigured` and other
+  non-retriable errors return straight away instead of after the retry
+  backoff and its misleading warnings.
+
+### Security
+
+- Bumped `rustls` 0.23.43 → 0.23.45 (RUSTSEC-2026-0285: TLS 1.3 handshake
+  messages incorrectly accepted across encryption level boundaries, medium
+  severity), which every outbound HTTPS and WebSocket connection uses.
+
 ## [3.1.0] - 2026-09-12
 
 Treasury auctions reach the wire, and a nightly probe run that had been

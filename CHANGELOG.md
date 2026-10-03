@@ -5,14 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.1.0)
+## [3.2.0] - 2026-10-02
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+Bulk stock ingestion arrives. `Discovery::stock_listings_page` and
+`Market::stock_bars_page` download a dated stock directory and daily or
+intraday bars one page at a time, and resume from a `PageCursor` that is pinned
+to the operation, request and provider that issued it, so a continuation can
+never silently change providers or queries. Polygon serves both; FMP adds
+company profiles with CIK, IPO date, CUSIP, ISIN and ETF/ADR/fund flags, the
+actively-trading and full stock directories, resumable delisted-company pages
+and bulk profile downloads. `ProvidersBuilder` gains `providers`, `endpoint`
+and `requests_per_minute`, so a keyed adapter can be pointed at another host or
+given its own rate budget. Three configuration fixes stop a misconfigured
+keyed provider from looking like a transport failure.
+
+### ⬆️ Upgrade notes
+
+There are no signature breaks: new model fields are appended, and the new
+trait operations default to `NotSupported`. Three behavior changes to check:
+
+- FMP intraday candle timestamps now read FMP's local times as New York time,
+  so they shift 4–5 hours later than before.
+- Polygon refusals that name the plan or entitlement now return the new
+  `FinanceError::NotEntitled` instead of `AuthenticationFailed`. The variant
+  is new on a `#[non_exhaustive]` enum, so existing matches keep compiling,
+  but code that treated those refusals as a bad key should match it too.
+  `AuthenticationFailed` now means the key itself was refused.
+- A keyed provider whose environment variable is set but blank now counts as
+  unset, so it is not routed. Before, it was routed with no client, which made
+  the server panic at startup.
 <!-- /soothfast:notes -->
 
 ### ✨ Features
@@ -47,6 +71,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stop PR runs from evicting master caches
 - Adopt soothfast 0.3.3 run reuse (#509)
 - Speed up PR builds and Docker caching
+
+### 🔒 Security
+
+- Bumped `rustls` 0.23.43 → 0.23.45 (RUSTSEC-2026-0285: TLS 1.3 handshake
+  messages incorrectly accepted across encryption level boundaries, medium
+  severity). `rustls` reaches the library through `reqwest` and
+  `tokio-tungstenite`, so every HTTP and streaming connection uses it.
+- Three advisories were cleared in the legacy v1 Python service, which is not
+  part of the published crate: urllib3 2.8.0 fixes HTTPS proxy TLS settings
+  being ignored (GHSA-8988-9cw3-xx77, high), unbounded chunk-size buffering
+  (GHSA-vxq7-64xx-v4gw, high) and a chunked Deflate infinite loop
+  (GHSA-gh4c-6fx4-qh6g, medium).
 
 ---
 
@@ -1416,7 +1452,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/Verdenroz/finance-query/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/Verdenroz/finance-query/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/Verdenroz/finance-query/compare/v2.8.0...v3.0.0
 [2.8.0]: https://github.com/Verdenroz/finance-query/compare/v2.7.1...v2.8.0
