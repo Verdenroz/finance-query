@@ -5,14 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.1.0)
+## [3.2.0] - 2026-10-02
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+Bulk stock ingestion arrives. `Discovery::stock_listings_page` and
+`Market::stock_bars_page` download a dated stock directory and daily or
+intraday bars one page at a time, and resume from a `PageCursor` that is pinned
+to the operation, request and provider that issued it, so a continuation can
+never silently change providers or queries. Polygon serves both; FMP adds
+company profiles with CIK, IPO date, CUSIP, ISIN and ETF/ADR/fund flags, the
+actively-trading and full stock directories, resumable delisted-company pages
+and bulk profile downloads. `ProvidersBuilder` gains `providers`, `endpoint`
+and `requests_per_minute`, so a keyed adapter can be pointed at another host or
+given its own rate budget. Three configuration fixes stop a misconfigured
+keyed provider from looking like a transport failure.
+
+### ⬆️ Upgrade notes
+
+There are no signature breaks: new model fields are appended, and the new
+trait operations default to `NotSupported`. Three behavior changes to check:
+
+- FMP intraday candle timestamps now read FMP's local times as New York time,
+  so they shift 4–5 hours later than before.
+- Polygon refusals that name the plan or entitlement now return the new
+  `FinanceError::NotEntitled` instead of `AuthenticationFailed`. The variant
+  is new on a `#[non_exhaustive]` enum, so existing matches keep compiling,
+  but code that treated those refusals as a bad key should match it too.
+  `AuthenticationFailed` now means the key itself was refused.
+- A keyed provider whose environment variable is set but blank now counts as
+  unset, so it is not routed. Before, it was routed with no client, which made
+  the server panic at startup.
 <!-- /soothfast:notes -->
 
 ### ✨ Features
@@ -48,73 +72,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adopt soothfast 0.3.3 run reuse (#509)
 - Speed up PR builds and Docker caching
 
----
+### 🔒 Security
 
-### 🔍 API surface
-
-```
-ADDED    finance_query::PageCursor
-ADDED    finance_query::PriceAdjustment
-ADDED    finance_query::ProviderPage
-ADDED    finance_query::StockBar
-ADDED    finance_query::StockBarsRequest
-ADDED    finance_query::StockListing
-ADDED    finance_query::StockListingRequest
-ADDED    finance_query::StockType
-ADDED    finance_query::TickerChange
-ADDED    finance_query::adapters::edgar::archive
-ADDED    finance_query::adapters::edgar::init_with_rate
-ADDED    finance_query::domains::discovery::Discovery::delisted_stocks_page
-ADDED    finance_query::edgar::archive
-ADDED    finance_query::edgar::init_with_rate
-ADDED    finance_query::models::chart::stock_bars::PriceAdjustment
-ADDED    finance_query::models::chart::stock_bars::StockBar
-ADDED    finance_query::models::chart::stock_bars::StockBarsRequest
-ADDED    finance_query::models::chart::stock_bars::StockBarsRequest::with_sort
-ADDED    finance_query::models::discovery::figi::MappingFilter
-ADDED    finance_query::models::discovery::listings::StockListing
-ADDED    finance_query::models::discovery::listings::StockListingRequest
-ADDED    finance_query::models::discovery::listings::StockType
-ADDED    finance_query::models::discovery::listings::TickerChange
-ADDED    finance_query::models::pagination::PageCursor
-ADDED    finance_query::models::pagination::PageCursor::continuation
-ADDED    finance_query::models::pagination::ProviderPage
-ADDED    finance_query::openfigi::MappingFilter
-ADDED    finance_query::openfigi::resolve_many_with
-ADDED    finance_query::providers::config::ProvidersBuilder::api_key
-ADDED    finance_query::providers::config::ProvidersBuilder::endpoint
-ADDED    finance_query::providers::config::ProvidersBuilder::requests_per_minute
-CHANGED  finance_query::CompanyProfile (signature)
-CHANGED  finance_query::FinanceError (signature)
-CHANGED  finance_query::Operation (signature)
-CHANGED  finance_query::ProvidersBuilder (body)
-CHANGED  finance_query::ScreenerFilters (signature)
-CHANGED  finance_query::ScreenerMatch (signature)
-CHANGED  finance_query::SymbolDetails (signature)
-CHANGED  finance_query::SymbolMatch (signature)
-CHANGED  finance_query::adapters::edgar::init_with_config (body)
-CHANGED  finance_query::crypto::SymbolMatch (signature)
-CHANGED  finance_query::edgar::init_with_config (body)
-CHANGED  finance_query::error::FinanceError (signature)
-CHANGED  finance_query::models::discovery::reference::ScreenerFilters (signature)
-CHANGED  finance_query::models::discovery::reference::ScreenerMatch (signature)
-CHANGED  finance_query::models::discovery::reference::SymbolDetails (signature)
-CHANGED  finance_query::models::discovery::reference::SymbolMatch (signature)
-CHANGED  finance_query::models::fundamentals::company_profile::CompanyProfile (signature)
-CHANGED  finance_query::providers::adapter::dispatch::ProviderAdapter (body)
-CHANGED  finance_query::providers::adapter::equity::ChartProvider (body)
-CHANGED  finance_query::providers::adapter::equity::FilingsProvider (body)
-CHANGED  finance_query::providers::adapter::markets::DiscoveryProvider (body)
-CHANGED  finance_query::providers::config::ProvidersBuilder (body)
-CHANGED  finance_query::providers::operation::Operation (signature)
-CHANGED  finance_query::providers::operation::Operation::capability (body)
-```
-
-### 📊 Gate movement
-
-| item | metric | was | now | delta |
-|---|---|---:|---:|---:|
-| `finance_query::score_news` | instructions | 899786.0 | 952514.0 | +5.9% |
+- Bumped `rustls` 0.23.43 → 0.23.45 (RUSTSEC-2026-0285: TLS 1.3 handshake
+  messages incorrectly accepted across encryption level boundaries, medium
+  severity). `rustls` reaches the library through `reqwest` and
+  `tokio-tungstenite`, so every HTTP and streaming connection uses it.
+- Three advisories were cleared in the legacy v1 Python service, which is not
+  part of the published crate: urllib3 2.8.0 fixes HTTPS proxy TLS settings
+  being ignored (GHSA-8988-9cw3-xx77, high), unbounded chunk-size buffering
+  (GHSA-vxq7-64xx-v4gw, high) and a chunked Deflate infinite loop
+  (GHSA-gh4c-6fx4-qh6g, medium).
 
 
 ## [3.1.0] - 2026-09-12
@@ -1416,7 +1384,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/Verdenroz/finance-query/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/Verdenroz/finance-query/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/Verdenroz/finance-query/compare/v2.8.0...v3.0.0
 [2.8.0]: https://github.com/Verdenroz/finance-query/compare/v2.7.1...v2.8.0

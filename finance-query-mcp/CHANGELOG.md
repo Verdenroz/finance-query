@@ -12,6 +12,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-02
+
+`get_company_profile` returns the new identifier fields, and a misconfigured
+provider no longer stops the hosted server from starting.
+
+### Changed
+
+- **`get_company_profile`** now returns `isin`, `cusip`, `cik`, `ipoDate`,
+  `active` and the `isEtf`/`isAdr`/`isFund` flags by default, and is answered
+  by FMP as well as Alpha Vantage, depending on which key is configured.
+- **`get_symbol_details`** accepts the new `active`, `delistedUtc`,
+  `compositeFigi`, `shareClassFigi` and `providerId` fields.
+- The `rust` and `debian` base images in `finance-query-mcp/Dockerfile` were
+  bumped to current digests. Routine refreshes; no CVE fix is claimed.
+
+### Fixed
+
+- **A blank provider key no longer panics at startup.** A set-but-empty key
+  variable counted as configured, so the provider was routed with no client.
+
+### Security
+
+- Bumped `rustls` 0.23.43 → 0.23.45 (RUSTSEC-2026-0285: TLS 1.3 handshake
+  messages incorrectly accepted across encryption level boundaries, medium
+  severity), which every outbound HTTPS and WebSocket connection uses.
+
 ## [3.1.0] - 2026-09-12
 
 One new tool, and a fix for a route-table failure that made the hosted server
