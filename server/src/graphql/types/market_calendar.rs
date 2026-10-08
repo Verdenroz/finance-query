@@ -34,16 +34,63 @@ impl From<GqlCalendarKind> for finance_query::CalendarKind {
     }
 }
 
+/// When an earnings release lands relative to the regular trading session.
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug, serde::Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GqlReportTiming {
+    BeforeOpen,
+    DuringMarket,
+    AfterClose,
+    Unknown,
+}
+
+impl From<finance_query::ReportTiming> for GqlReportTiming {
+    fn from(v: finance_query::ReportTiming) -> Self {
+        match v {
+            finance_query::ReportTiming::BeforeOpen => GqlReportTiming::BeforeOpen,
+            finance_query::ReportTiming::DuringMarket => GqlReportTiming::DuringMarket,
+            finance_query::ReportTiming::AfterClose => GqlReportTiming::AfterClose,
+            // `ReportTiming` is `#[non_exhaustive]`; a timing added later reads as unknown.
+            _ => GqlReportTiming::Unknown,
+        }
+    }
+}
+
 #[derive(SimpleObject, Debug, Clone, serde::Serialize)]
 #[graphql(rename_fields = "camelCase")]
 #[serde(rename_all = "camelCase")]
 pub struct GqlMarketEarningsDetail {
+    pub company: Option<String>,
+    pub timing: GqlReportTiming,
+    pub fiscal_date_ending: Option<String>,
     pub eps: Option<f64>,
     pub eps_estimated: Option<f64>,
+    pub estimate_count: Option<u32>,
+    pub surprise_percent: Option<f64>,
     pub revenue: Option<f64>,
     pub revenue_estimated: Option<f64>,
-    pub fiscal_date_ending: Option<String>,
-    pub time: Option<String>,
+    pub previous_eps: Option<f64>,
+    pub previous_report_date: Option<String>,
+    pub market_cap: Option<f64>,
+}
+
+impl From<finance_query::EarningsEvent> for GqlMarketEarningsDetail {
+    fn from(e: finance_query::EarningsEvent) -> Self {
+        GqlMarketEarningsDetail {
+            company: e.company,
+            timing: e.timing.into(),
+            fiscal_date_ending: e.fiscal_date_ending,
+            eps: e.eps,
+            eps_estimated: e.eps_estimated,
+            estimate_count: e.estimate_count,
+            surprise_percent: e.surprise_percent,
+            revenue: e.revenue,
+            revenue_estimated: e.revenue_estimated,
+            previous_eps: e.previous_eps,
+            previous_report_date: e.previous_report_date,
+            market_cap: e.market_cap,
+        }
+    }
 }
 
 #[derive(SimpleObject, Debug, Clone, serde::Serialize)]
@@ -127,21 +174,9 @@ pub enum GqlMarketCalendarDetail {
 impl From<finance_query::CalendarDetail> for GqlMarketCalendarDetail {
     fn from(detail: finance_query::CalendarDetail) -> Self {
         match detail {
-            finance_query::CalendarDetail::Earnings {
-                eps,
-                eps_estimated,
-                revenue,
-                revenue_estimated,
-                fiscal_date_ending,
-                time,
-            } => GqlMarketCalendarDetail::Earnings(GqlMarketEarningsDetail {
-                eps,
-                eps_estimated,
-                revenue,
-                revenue_estimated,
-                fiscal_date_ending,
-                time,
-            }),
+            finance_query::CalendarDetail::Earnings(event) => {
+                GqlMarketCalendarDetail::Earnings(event.into())
+            }
             finance_query::CalendarDetail::Ipo {
                 company,
                 exchange,

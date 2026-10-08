@@ -65,20 +65,7 @@ pub struct MarketCalendarEntry {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CalendarDetail {
     /// An earnings release, with actuals once reported.
-    Earnings {
-        /// Reported EPS, if already released.
-        eps: Option<f64>,
-        /// Consensus EPS estimate.
-        eps_estimated: Option<f64>,
-        /// Reported revenue, if already released.
-        revenue: Option<f64>,
-        /// Consensus revenue estimate.
-        revenue_estimated: Option<f64>,
-        /// End of the fiscal period being reported (`YYYY-MM-DD`).
-        fiscal_date_ending: Option<String>,
-        /// Time of day for the release (e.g. `"amc"`, `"bmo"`).
-        time: Option<String>,
-    },
+    Earnings(EarningsEvent),
     /// An initial public offering.
     Ipo {
         /// Company name.
@@ -146,4 +133,52 @@ pub enum CalendarDetail {
         /// Provider-assigned impact rating (e.g. `"High"`).
         impact: Option<String>,
     },
+}
+
+/// One company's earnings release in a market-wide calendar.
+///
+/// Providers report different subsets; anything a provider lacks is `None`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct EarningsEvent {
+    /// Company name.
+    pub company: Option<String>,
+    /// When the release lands relative to the trading session.
+    pub timing: ReportTiming,
+    /// End of the fiscal period being reported (`YYYY-MM-DD`).
+    pub fiscal_date_ending: Option<String>,
+    /// Reported EPS, if already released.
+    pub eps: Option<f64>,
+    /// Consensus EPS estimate.
+    pub eps_estimated: Option<f64>,
+    /// Number of analyst estimates behind the consensus.
+    pub estimate_count: Option<u32>,
+    /// Reported EPS against the consensus, in percent, once released.
+    pub surprise_percent: Option<f64>,
+    /// Reported revenue, if already released.
+    pub revenue: Option<f64>,
+    /// Consensus revenue estimate.
+    pub revenue_estimated: Option<f64>,
+    /// EPS reported for the same quarter a year earlier.
+    pub previous_eps: Option<f64>,
+    /// Date of the same quarter's release a year earlier (`YYYY-MM-DD`).
+    pub previous_report_date: Option<String>,
+    /// Market capitalisation when the calendar was read.
+    pub market_cap: Option<f64>,
+}
+
+/// When an earnings release lands relative to the regular trading session.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+#[serde(rename_all = "snake_case")]
+pub enum ReportTiming {
+    /// Before the market opens.
+    BeforeOpen,
+    /// During regular trading hours.
+    DuringMarket,
+    /// After the market closes.
+    AfterClose,
+    /// Not reported by the provider.
+    #[default]
+    Unknown,
 }

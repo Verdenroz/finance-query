@@ -8,11 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased (draft vs v3.2.0)
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+Market-calendar earnings now carry everything the providers report. Each
+earnings entry is an `EarningsEvent` with the company name, a typed
+`ReportTiming` (before the open, during the session, after the close), the
+analyst estimate count, the EPS surprise, the same quarter's EPS and report
+date a year earlier, and market capitalisation, alongside EPS and revenue.
+Nasdaq fills all of them; FMP fills EPS and revenue. Nasdaq amounts written
+in parentheses, such as `($0.12)`, now parse as negative.
+
+### Upgrade notes
+
+`CalendarDetail::Earnings` is now a tuple variant holding an `EarningsEvent`:
+replace `CalendarDetail::Earnings { eps, .. }` with
+`CalendarDetail::Earnings(event)` and read `event.eps`. The free-form `time`
+string (`"bmo"`/`"amc"`) is replaced by `event.timing`, a `ReportTiming`. In
+the GraphQL server, `GqlMarketEarningsDetail.time` is replaced by `timing`, a
+`GqlReportTiming` enum, and gains the new fields.
 <!-- /soothfast:notes -->
 
 
