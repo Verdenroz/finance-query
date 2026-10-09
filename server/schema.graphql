@@ -2205,12 +2205,18 @@ type GqlMarketDividendDetail {
 }
 
 type GqlMarketEarningsDetail {
+	company: String
+	timing: GqlReportTiming!
+	fiscalDateEnding: String
 	eps: Float
 	epsEstimated: Float
+	estimateCount: Int
+	surprisePercent: Float
 	revenue: Float
 	revenueEstimated: Float
-	fiscalDateEnding: String
-	time: String
+	previousEps: Float
+	previousReportDate: String
+	marketCap: Float
 }
 
 type GqlMarketEconomicDetail {
@@ -3007,6 +3013,16 @@ type GqlRecommendationsBatch {
 		"""
 		after: String
 	): GqlRecommendationConnection!
+}
+
+"""
+When an earnings release lands relative to the regular trading session.
+"""
+enum GqlReportTiming {
+	BEFORE_OPEN
+	DURING_MARKET
+	AFTER_CLOSE
+	UNKNOWN
 }
 
 """

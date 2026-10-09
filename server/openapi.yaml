@@ -8966,13 +8966,27 @@ components:
     GqlMarketEarningsDetail:
       type: object
       properties:
+        company:
+          type: string
         eps:
           type: number
           format: double
         epsEstimated:
           type: number
           format: double
+        estimateCount:
+          type: integer
+          format: int32
+          minimum: 0
         fiscalDateEnding:
+          type: string
+        marketCap:
+          type: number
+          format: double
+        previousEps:
+          type: number
+          format: double
+        previousReportDate:
           type: string
         revenue:
           type: number
@@ -8980,8 +8994,13 @@ components:
         revenueEstimated:
           type: number
           format: double
-        time:
-          type: string
+        surprisePercent:
+          type: number
+          format: double
+        timing:
+          $ref: "#/components/schemas/GqlReportTiming"
+      required:
+        - timing
     GqlMarketEconomicDetail:
       type: object
       properties:
@@ -9877,6 +9896,14 @@ components:
       required:
         - recommendations
         - errors
+    GqlReportTiming:
+      description: When an earnings release lands relative to the regular trading session.
+      type: string
+      enum:
+        - BEFORE_OPEN
+        - DURING_MARKET
+        - AFTER_CLOSE
+        - UNKNOWN
     GqlResearchReport:
       description: "A research report result from `search`."
       type: object
