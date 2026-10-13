@@ -72,7 +72,7 @@ RUN cargo auditable build --locked --profile ${CARGO_PROFILE} -p finance-query-m
 # Runtime Stage: Minimal runtime image
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 
 # libstdc++6/libgomp1 are required by the CTranslate2 translation backend
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
