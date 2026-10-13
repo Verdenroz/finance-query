@@ -175,9 +175,7 @@ pub async fn fetch_market_calendar_response(
     from: &str,
     to: &str,
 ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-    use crate::models::calendar::market::{
-        CalendarDetail, CalendarKind, EarningsEvent, MarketCalendarEntry,
-    };
+    use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
     let entry = |symbol: Option<String>, date: Option<String>, detail: CalendarDetail| {
         MarketCalendarEntry {
@@ -206,14 +204,21 @@ pub async fn fetch_market_calendar_response(
                     e.symbol,
                     e.date,
                     // FMP's stable earnings calendar reports neither the fiscal
-                    // period end nor the announcement time.
-                    CalendarDetail::Earnings(EarningsEvent {
+                    // period end nor the bmo/amc announcement time.
+                    CalendarDetail::Earnings {
                         eps: e.eps,
                         eps_estimated: e.eps_estimated,
                         revenue: e.revenue,
                         revenue_estimated: e.revenue_estimated,
-                        ..EarningsEvent::default()
-                    }),
+                        fiscal_date_ending: None,
+                        time: None,
+                        company: None,
+                        estimate_count: None,
+                        surprise_percent: None,
+                        previous_eps: None,
+                        previous_report_date: None,
+                        market_cap: None,
+                    },
                 )
             })
             .collect(),

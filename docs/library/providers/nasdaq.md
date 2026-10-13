@@ -21,13 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let calendar = providers.calendar();
     for entry in calendar.earnings("2026-08-24", "2026-08-24").await? {
-        if let CalendarDetail::Earnings(event) = entry.detail {
+        if let CalendarDetail::Earnings { eps_estimated, time, .. } = entry.detail {
             println!(
-                "{}: est. EPS {:?} from {:?} analysts ({:?})",
+                "{}: est. EPS {:?} ({})",
                 entry.symbol.as_deref().unwrap_or("?"),
-                event.eps_estimated,
-                event.estimate_count,
-                event.timing
+                eps_estimated,
+                time.as_deref().unwrap_or("?")
             );
         }
     }
@@ -52,7 +51,7 @@ Nasdaq's calendar endpoints take no date-range parameter — each of `earnings`,
 
 ## Field Mapping Notes
 
-- **Earnings**: `time` maps Nasdaq's `time-pre-market`/`time-after-hours` classes to `"bmo"`/`"amc"`; anything else comes back `None`. `revenue`/`revenue_estimated` are always `None` — Nasdaq's earnings calendar carries no revenue figures.
+- **Earnings**: `time` maps Nasdaq's `time-pre-market`/`time-after-hours` classes to `"bmo"`/`"amc"`; anything else comes back `None`. `revenue`/`revenue_estimated` are always `None` — Nasdaq's earnings calendar carries no revenue figures. `company`, `estimate_count` and `market_cap` come from the row's `name`, `noOfEsts` and `marketCap`. Which other fields are filled depends on the day: past days carry `eps` and `surprise_percent` (from `surprise`), while upcoming days carry `previous_eps` and `previous_report_date` (from `lastYearEPS` and `lastYearRptDt`, the same quarter a year earlier) instead. Amounts in parentheses, such as `($0.12)`, are negative.
 - **Dividends/Splits**: dates arrive as `M/D/YYYY` and are normalized to `YYYY-MM-DD`. Split ratios arrive as `"4 : 1"` and are parsed into separate `numerator`/`denominator` values.
 - **IPOs**: each row is tagged with the deal-status section it came from (`"priced"`, `"expected"`, `"filed"`, `"withdrawn"`) in `actions`. `date` prefers `priced_date`, falling back through `expected_price_date`, `withdraw_date`, and `filed_date` in that order — whichever the row actually carries. `market_cap` is always `None`; Nasdaq's IPO calendar doesn't report it.
 

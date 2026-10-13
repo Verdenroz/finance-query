@@ -387,9 +387,7 @@ pub use tickers::BatchIndicatorsResponse;
 // Error types and results
 // ============================================================================
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
-pub use models::calendar::market::{
-    CalendarDetail, CalendarKind, EarningsEvent, MarketCalendarEntry, ReportTiming,
-};
+pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
 pub use models::discovery::listings::{StockListing, StockListingRequest, StockType, TickerChange};
 pub use models::discovery::reference::{

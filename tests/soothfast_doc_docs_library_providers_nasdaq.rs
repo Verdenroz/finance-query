@@ -18,13 +18,12 @@ fn doc_block_line_12() {
 
         let calendar = providers.calendar();
         for entry in calendar.earnings("2026-08-24", "2026-08-24").await? {
-            if let CalendarDetail::Earnings(event) = entry.detail {
+            if let CalendarDetail::Earnings { eps_estimated, time, .. } = entry.detail {
                 println!(
-                    "{}: est. EPS {:?} from {:?} analysts ({:?})",
+                    "{}: est. EPS {:?} ({})",
                     entry.symbol.as_deref().unwrap_or("?"),
-                    event.eps_estimated,
-                    event.estimate_count,
-                    event.timing
+                    eps_estimated,
+                    time.as_deref().unwrap_or("?")
                 );
             }
         }
