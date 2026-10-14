@@ -212,6 +212,12 @@ pub async fn fetch_market_calendar_response(
                         revenue_estimated: e.revenue_estimated,
                         fiscal_date_ending: None,
                         time: None,
+                        company: None,
+                        estimate_count: None,
+                        surprise_percent: None,
+                        previous_eps: None,
+                        previous_report_date: None,
+                        market_cap: None,
                     },
                 )
             })

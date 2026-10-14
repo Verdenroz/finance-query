@@ -44,6 +44,12 @@ pub struct GqlMarketEarningsDetail {
     pub revenue_estimated: Option<f64>,
     pub fiscal_date_ending: Option<String>,
     pub time: Option<String>,
+    pub company: Option<String>,
+    pub estimate_count: Option<u32>,
+    pub surprise_percent: Option<f64>,
+    pub previous_eps: Option<f64>,
+    pub previous_report_date: Option<String>,
+    pub market_cap: Option<f64>,
 }
 
 #[derive(SimpleObject, Debug, Clone, serde::Serialize)]
@@ -134,6 +140,13 @@ impl From<finance_query::CalendarDetail> for GqlMarketCalendarDetail {
                 revenue_estimated,
                 fiscal_date_ending,
                 time,
+                company,
+                estimate_count,
+                surprise_percent,
+                previous_eps,
+                previous_report_date,
+                market_cap,
+                ..
             } => GqlMarketCalendarDetail::Earnings(GqlMarketEarningsDetail {
                 eps,
                 eps_estimated,
@@ -141,6 +154,12 @@ impl From<finance_query::CalendarDetail> for GqlMarketCalendarDetail {
                 revenue_estimated,
                 fiscal_date_ending,
                 time,
+                company,
+                estimate_count,
+                surprise_percent,
+                previous_eps,
+                previous_report_date,
+                market_cap,
             }),
             finance_query::CalendarDetail::Ipo {
                 company,

@@ -2211,6 +2211,12 @@ type GqlMarketEarningsDetail {
 	revenueEstimated: Float
 	fiscalDateEnding: String
 	time: String
+	company: String
+	estimateCount: Int
+	surprisePercent: Float
+	previousEps: Float
+	previousReportDate: String
+	marketCap: Float
 }
 
 type GqlMarketEconomicDetail {

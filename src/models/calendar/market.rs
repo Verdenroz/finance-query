@@ -65,6 +65,9 @@ pub struct MarketCalendarEntry {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CalendarDetail {
     /// An earnings release, with actuals once reported.
+    ///
+    /// Providers report different subsets; anything a provider lacks is `None`.
+    #[non_exhaustive]
     Earnings {
         /// Reported EPS, if already released.
         eps: Option<f64>,
@@ -78,6 +81,18 @@ pub enum CalendarDetail {
         fiscal_date_ending: Option<String>,
         /// Time of day for the release (e.g. `"amc"`, `"bmo"`).
         time: Option<String>,
+        /// Company name.
+        company: Option<String>,
+        /// Number of analyst estimates behind the consensus.
+        estimate_count: Option<u32>,
+        /// Reported EPS against the consensus, in percent, once released.
+        surprise_percent: Option<f64>,
+        /// EPS reported for the same quarter a year earlier.
+        previous_eps: Option<f64>,
+        /// Date of the same quarter's release a year earlier (`YYYY-MM-DD`).
+        previous_report_date: Option<String>,
+        /// Market capitalisation when the calendar was read.
+        market_cap: Option<f64>,
     },
     /// An initial public offering.
     Ipo {
@@ -146,4 +161,39 @@ pub enum CalendarDetail {
         /// Provider-assigned impact rating (e.g. `"High"`).
         impact: Option<String>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn earnings_json_from_before_the_added_fields_still_deserializes() {
+        let entry: MarketCalendarEntry = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "date": "2026-07-30",
+            "detail": {
+                "type": "earnings",
+                "eps": 1.62,
+                "eps_estimated": 1.5,
+                "revenue": null,
+                "revenue_estimated": null,
+                "fiscal_date_ending": "2026-06-30",
+                "time": "amc"
+            }
+        }))
+        .unwrap();
+        let CalendarDetail::Earnings {
+            eps,
+            time,
+            company,
+            market_cap,
+            ..
+        } = entry.detail
+        else {
+            panic!("expected Earnings detail");
+        };
+        assert_eq!((eps, time.as_deref()), (Some(1.62), Some("amc")));
+        assert_eq!((company, market_cap), (None, None));
+    }
 }

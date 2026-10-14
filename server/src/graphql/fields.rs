@@ -404,7 +404,7 @@ pub const GQL_MARKET_CALENDAR_VALID_FIELDS: &[&str] = &["symbol", "date", "detai
 /// spliced in whenever `detail` is selected.
 pub const MARKET_CALENDAR_DETAIL_UNION_SELECTION: &str = "{ \
     __typename \
-    ... on GqlMarketEarningsDetail { eps epsEstimated revenue revenueEstimated fiscalDateEnding time } \
+    ... on GqlMarketEarningsDetail { eps epsEstimated revenue revenueEstimated fiscalDateEnding time company estimateCount surprisePercent previousEps previousReportDate marketCap } \
     ... on GqlMarketIpoDetail { company exchange actions shares priceRange marketCap } \
     ... on GqlMarketDividendDetail { dividend adjDividend recordDate paymentDate declarationDate } \
     ... on GqlMarketSplitDetail { numerator denominator } \

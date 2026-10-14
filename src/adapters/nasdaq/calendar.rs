@@ -196,16 +196,16 @@ fn parse_month_year_to_last_day(s: &str) -> Option<String> {
         .map(|d| d.format("%Y-%m-%d").to_string())
 }
 
+/// Parses amounts such as `$1.42`, `-$0.12`, `($0.12)` and `$1,234,567`; `N/A` is `None`.
 fn parse_currency(s: &str) -> Option<f64> {
+    let s = s.trim();
+    let negative = s.starts_with('-') || (s.starts_with('(') && s.ends_with(')'));
     let cleaned: String = s
         .chars()
-        .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .filter(|c| c.is_ascii_digit() || *c == '.')
         .collect();
-    if cleaned.is_empty() {
-        None
-    } else {
-        cleaned.parse().ok()
-    }
+    let amount: f64 = cleaned.parse().ok()?;
+    Some(if negative { -amount } else { amount })
 }
 
 fn parse_ratio(s: &str) -> Option<(f64, f64)> {
@@ -219,12 +219,13 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
         Some("time-after-hours") => Some("amc".to_string()),
         _ => None,
     };
+    let amount = |value: &Option<String>| value.as_deref().and_then(parse_currency);
     MarketCalendarEntry {
         symbol: row.symbol,
         date: Some(date.to_string()),
         detail: CalendarDetail::Earnings {
-            eps: row.eps.as_deref().and_then(parse_currency),
-            eps_estimated: row.eps_forecast.as_deref().and_then(parse_currency),
+            eps: amount(&row.eps),
+            eps_estimated: amount(&row.eps_forecast),
             revenue: None,
             revenue_estimated: None,
             fiscal_date_ending: row
@@ -232,6 +233,15 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
                 .as_deref()
                 .and_then(parse_month_year_to_last_day),
             time,
+            company: row.name.filter(|name| !name.trim().is_empty()),
+            estimate_count: row
+                .no_of_ests
+                .as_deref()
+                .and_then(|n| n.trim().parse().ok()),
+            surprise_percent: amount(&row.surprise),
+            previous_eps: amount(&row.last_year_eps),
+            previous_report_date: row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
+            market_cap: amount(&row.market_cap),
         },
     }
 }
@@ -357,34 +367,125 @@ mod tests {
         assert_eq!(months, vec!["2026-11", "2026-12", "2027-01"]);
     }
 
+    fn earnings_detail(date: &str, row: serde_json::Value) -> CalendarDetail {
+        let row: NasdaqEarningsRow = serde_json::from_value(row).unwrap();
+        earnings_entry(date, row).detail
+    }
+
     #[test]
-    fn earnings_row_maps_time_and_fiscal_quarter() {
+    fn a_reported_earnings_row_maps_actuals_and_surprise() {
         let row: NasdaqEarningsRow = serde_json::from_value(serde_json::json!({
             "symbol": "AAPL",
+            "name": "Apple Inc.",
             "time": "time-after-hours",
             "fiscalQuarterEnding": "Jun/2026",
             "epsForecast": "$1.50",
-            "eps": "$1.62"
+            "noOfEsts": "14",
+            "eps": "$1.62",
+            "surprise": "8",
+            "marketCap": "$3,512,034,000,000"
         }))
         .unwrap();
         let entry = earnings_entry("2026-07-30", row);
         assert_eq!(entry.symbol.as_deref(), Some("AAPL"));
         assert_eq!(entry.date.as_deref(), Some("2026-07-30"));
-        match entry.detail {
-            CalendarDetail::Earnings {
-                eps,
-                eps_estimated,
-                fiscal_date_ending,
-                time,
-                ..
-            } => {
-                assert_eq!(eps, Some(1.62));
-                assert_eq!(eps_estimated, Some(1.50));
-                assert_eq!(fiscal_date_ending.as_deref(), Some("2026-06-30"));
-                assert_eq!(time.as_deref(), Some("amc"));
-            }
-            other => panic!("expected Earnings detail, got {other:?}"),
-        }
+        let CalendarDetail::Earnings {
+            eps,
+            eps_estimated,
+            fiscal_date_ending,
+            time,
+            company,
+            estimate_count,
+            surprise_percent,
+            previous_eps,
+            previous_report_date,
+            market_cap,
+            ..
+        } = entry.detail
+        else {
+            panic!("expected Earnings detail");
+        };
+        assert_eq!((eps, eps_estimated), (Some(1.62), Some(1.50)));
+        assert_eq!(fiscal_date_ending.as_deref(), Some("2026-06-30"));
+        assert_eq!(time.as_deref(), Some("amc"));
+        assert_eq!(company.as_deref(), Some("Apple Inc."));
+        assert_eq!(estimate_count, Some(14));
+        assert_eq!(surprise_percent, Some(8.0));
+        assert_eq!(market_cap, Some(3_512_034_000_000.0));
+        assert_eq!((previous_eps, previous_report_date), (None, None));
+    }
+
+    #[test]
+    fn an_upcoming_earnings_row_maps_last_year_and_missing_values() {
+        let CalendarDetail::Earnings {
+            eps,
+            time,
+            surprise_percent,
+            previous_eps,
+            previous_report_date,
+            market_cap,
+            ..
+        } = earnings_detail(
+            "2026-10-14",
+            serde_json::json!({
+                "symbol": "ASML",
+                "name": "ASML Holding N.V.",
+                "time": "time-pre-market",
+                "fiscalQuarterEnding": "Sep/2026",
+                "epsForecast": "$12.47",
+                "noOfEsts": "3",
+                "lastYearRptDt": "10/15/2025",
+                "lastYearEPS": "$6.41",
+                "marketCap": "N/A"
+            }),
+        )
+        else {
+            panic!("expected Earnings detail");
+        };
+        assert_eq!(time.as_deref(), Some("bmo"));
+        assert_eq!((eps, surprise_percent), (None, None));
+        assert_eq!(previous_eps, Some(6.41));
+        assert_eq!(previous_report_date.as_deref(), Some("2025-10-15"));
+        assert_eq!(market_cap, None);
+    }
+
+    #[test]
+    fn a_loss_row_parses_negative_amounts() {
+        let CalendarDetail::Earnings {
+            eps,
+            eps_estimated,
+            time,
+            company,
+            estimate_count,
+            surprise_percent,
+            previous_eps,
+            ..
+        } = earnings_detail(
+            "2026-08-05",
+            serde_json::json!({
+                "symbol": "LOSS",
+                "name": " ",
+                "time": "time-not-supplied",
+                "fiscalQuarterEnding": "Jun/2026",
+                "epsForecast": "($0.12)",
+                "noOfEsts": "N/A",
+                "eps": "($0.15)",
+                "surprise": "-25",
+                "lastYearEPS": "-$0.20"
+            }),
+        )
+        else {
+            panic!("expected Earnings detail");
+        };
+        assert_eq!(time, None);
+        assert_eq!(
+            (eps, eps_estimated),
+            (Some(-0.15), Some(-0.12)),
+            "parentheses mean negative"
+        );
+        assert_eq!(surprise_percent, Some(-25.0));
+        assert_eq!(previous_eps, Some(-0.20));
+        assert_eq!((estimate_count, company), (None, None));
     }
 
     #[test]

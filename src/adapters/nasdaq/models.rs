@@ -22,11 +22,27 @@ pub(super) struct NasdaqEarningsEnvelope {
 #[serde(rename_all = "camelCase")]
 pub(super) struct NasdaqEarningsRow {
     pub(super) symbol: Option<String>,
+    #[serde(default)]
+    pub(super) name: Option<String>,
     pub(super) time: Option<String>,
     pub(super) fiscal_quarter_ending: Option<String>,
     pub(super) eps_forecast: Option<String>,
     #[serde(default)]
+    pub(super) no_of_ests: Option<String>,
+    /// Reported EPS; only past days carry it.
+    #[serde(default)]
     pub(super) eps: Option<String>,
+    /// Only past days carry it.
+    #[serde(default)]
+    pub(super) surprise: Option<String>,
+    /// Only upcoming days carry it.
+    #[serde(default, rename = "lastYearEPS")]
+    pub(super) last_year_eps: Option<String>,
+    /// Only upcoming days carry it.
+    #[serde(default)]
+    pub(super) last_year_rpt_dt: Option<String>,
+    #[serde(default)]
+    pub(super) market_cap: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
