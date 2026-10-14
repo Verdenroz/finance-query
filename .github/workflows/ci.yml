@@ -23,7 +23,7 @@ jobs:
   # Skips downstream jobs a docs-only / single-crate PR can't have broken.
   changes:
     name: Detect Changes
-    if: github.event_name != 'pull_request' || !endsWith(github.actor, '[bot]') || github.actor == 'dependabot[bot]'
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
