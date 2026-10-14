@@ -15,6 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### ✨ Features
+
+- Carry full earnings data in the market calendar (#546)
+
+### 📦 Dependencies
+
+- Bump the all-dependencies group across 1 directory with 6 updates (#547)
+- Bump virtualenv from 20.36.1 to 21.7.13 in /v1 in the uv group across 1 directory (#543)
+- Bump debian from `3783cc0` to `7c7b2c9` in /server (#549)
+- Bump debian from `3783cc0` to `7c7b2c9` in /finance-query-mcp (#548)
+
+### 🔧 Internal
+
+- Run CI and security checks on Dependabot PRs (#550)
+
+---
+
+### 🔍 API surface
+
+```
+CHANGED  finance_query::CalendarDetail (signature)
+CHANGED  finance_query::models::calendar::market::CalendarDetail (signature)
+```
 
 
 ## [3.2.0] - 2026-10-02
