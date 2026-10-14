@@ -8966,18 +8966,35 @@ components:
     GqlMarketEarningsDetail:
       type: object
       properties:
+        company:
+          type: string
         eps:
           type: number
           format: double
         epsEstimated:
           type: number
           format: double
+        estimateCount:
+          type: integer
+          format: int32
+          minimum: 0
         fiscalDateEnding:
+          type: string
+        marketCap:
+          type: number
+          format: double
+        previousEps:
+          type: number
+          format: double
+        previousReportDate:
           type: string
         revenue:
           type: number
           format: double
         revenueEstimated:
+          type: number
+          format: double
+        surprisePercent:
           type: number
           format: double
         time:
