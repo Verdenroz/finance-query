@@ -80,7 +80,7 @@ fn sum_present(values: impl Iterator<Item = Option<f64>>) -> Option<f64> {
         .fold(None, |acc, v| Some(acc.unwrap_or(0.0) + v))
 }
 
-/// Current and prior-period figures for one slug, whether it names a single
+/// Current figures and period changes for one slug, whether it names a single
 /// protocol or a parent grouping.
 struct Resolved {
     name: Option<String>,
@@ -88,58 +88,79 @@ struct Resolved {
     url: Option<String>,
     chains: Vec<String>,
     tvl: Option<f64>,
-    tvl_prev_day: Option<f64>,
-    tvl_prev_week: Option<f64>,
+    change_1d: Option<f64>,
+    change_7d: Option<f64>,
     chain_tvls: HashMap<String, f64>,
     mcap: Option<f64>,
 }
 
-fn resolve(list: &LiteResponse, slug: &str) -> Option<Resolved> {
-    if let Some(parent) = list
-        .parent_protocols
+/// Change of a parent's TVL over one period, measured only across the
+/// children that report both figures so a child missing its prior value does
+/// not read as growth.
+fn matched_change(
+    children: &[&LiteProtocol],
+    previous: impl Fn(&LiteProtocol) -> Option<f64>,
+) -> Option<f64> {
+    let pairs: Vec<(f64, f64)> = children
         .iter()
-        .find(|parent| parent.id.strip_prefix("parent#") == Some(slug))
-    {
-        let children: Vec<&LiteProtocol> = list
-            .protocols
-            .iter()
-            .filter(|p| p.parent_protocol.as_deref() == Some(parent.id.as_str()))
-            .filter(|p| !p.exclude_tvl_from_parent && !p.deprecated)
-            .collect();
-        let mut chain_tvls: HashMap<String, f64> = HashMap::new();
-        for (key, entry) in children.iter().flat_map(|p| &p.chain_tvls) {
-            *chain_tvls.entry(key.clone()).or_default() += entry.tvl;
-        }
-        return Some(Resolved {
-            name: parent.name.clone(),
-            symbol: parent.symbol.clone(),
-            url: parent.url.clone(),
-            chains: parent.chains.clone(),
-            tvl: sum_present(children.iter().map(|p| p.tvl)),
-            tvl_prev_day: sum_present(children.iter().map(|p| p.tvl_prev_day)),
-            tvl_prev_week: sum_present(children.iter().map(|p| p.tvl_prev_week)),
-            chain_tvls,
-            mcap: parent.mcap,
-        });
+        .filter_map(|p| Some((p.tvl?, previous(p)?)))
+        .collect();
+    if pairs.is_empty() {
+        return None;
     }
-    let protocol = list
+    let current = pairs.iter().map(|(now, _)| now).sum();
+    let before = pairs.iter().map(|(_, then)| then).sum();
+    change_percent(Some(current), Some(before))
+}
+
+/// A protocol's own name wins over a parent of the same slug, as it does on
+/// DefiLlama's `/protocol/{slug}`.
+fn resolve(list: &LiteResponse, slug: &str) -> Option<Resolved> {
+    if let Some(protocol) = list
         .protocols
         .iter()
-        .find(|p| derived_slug(&p.name) == slug)?;
+        .find(|p| derived_slug(&p.name) == slug)
+    {
+        return Some(Resolved {
+            name: Some(protocol.name.clone()),
+            symbol: protocol.symbol.clone(),
+            url: protocol.url.clone(),
+            chains: protocol.chains.clone(),
+            tvl: protocol.tvl,
+            change_1d: change_percent(protocol.tvl, protocol.tvl_prev_day),
+            change_7d: change_percent(protocol.tvl, protocol.tvl_prev_week),
+            chain_tvls: protocol
+                .chain_tvls
+                .iter()
+                .map(|(key, entry)| (key.clone(), entry.tvl))
+                .collect(),
+            mcap: protocol.mcap,
+        });
+    }
+    let parent = list
+        .parent_protocols
+        .iter()
+        .find(|parent| parent.id.strip_prefix("parent#") == Some(slug))?;
+    let children: Vec<&LiteProtocol> = list
+        .protocols
+        .iter()
+        .filter(|p| p.parent_protocol.as_deref() == Some(parent.id.as_str()))
+        .filter(|p| !p.exclude_tvl_from_parent && !p.deprecated)
+        .collect();
+    let mut chain_tvls: HashMap<String, f64> = HashMap::new();
+    for (key, entry) in children.iter().flat_map(|p| &p.chain_tvls) {
+        *chain_tvls.entry(key.clone()).or_default() += entry.tvl;
+    }
     Some(Resolved {
-        name: Some(protocol.name.clone()),
-        symbol: protocol.symbol.clone(),
-        url: protocol.url.clone(),
-        chains: protocol.chains.clone(),
-        tvl: protocol.tvl,
-        tvl_prev_day: protocol.tvl_prev_day,
-        tvl_prev_week: protocol.tvl_prev_week,
-        chain_tvls: protocol
-            .chain_tvls
-            .iter()
-            .map(|(key, entry)| (key.clone(), entry.tvl))
-            .collect(),
-        mcap: protocol.mcap,
+        name: parent.name.clone(),
+        symbol: parent.symbol.clone(),
+        url: parent.url.clone(),
+        chains: parent.chains.clone(),
+        tvl: sum_present(children.iter().map(|p| p.tvl)),
+        change_1d: matched_change(&children, |p| p.tvl_prev_day),
+        change_7d: matched_change(&children, |p| p.tvl_prev_week),
+        chain_tvls,
+        mcap: parent.mcap,
     })
 }
 
@@ -180,8 +201,8 @@ pub(super) fn to_protocol_tvl(slug: &str, list: &LiteResponse) -> Result<Protoco
         chains,
         tvl: resolved.tvl,
         tvl_by_chain,
-        change_1d_percent: change_percent(resolved.tvl, resolved.tvl_prev_day),
-        change_7d_percent: change_percent(resolved.tvl, resolved.tvl_prev_week),
+        change_1d_percent: resolved.change_1d,
+        change_7d_percent: resolved.change_7d,
         market_cap: resolved.mcap,
     })
 }

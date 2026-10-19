@@ -323,6 +323,40 @@ mod tests {
     }
 
     #[test]
+    fn a_standalone_protocol_wins_over_a_parent_of_the_same_slug() {
+        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        list.parent_protocols[0].id = "parent#curve-dex".to_string();
+        list.protocols[0].parent_protocol = Some("parent#curve-dex".to_string());
+        let summary = to_protocol_tvl("curve-dex", &list).unwrap();
+
+        assert_eq!(summary.name.as_deref(), Some("Curve DEX"));
+        assert_eq!(summary.tvl, Some(2.0e9));
+    }
+
+    #[test]
+    fn a_parent_change_ignores_children_missing_the_prior_value() {
+        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        list.protocols[1].exclude_tvl_from_parent = false;
+        list.protocols[1].tvl_prev_day = None;
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(11.0e9));
+        // V3 alone: 9 -> 10.
+        assert!((summary.change_1d_percent.unwrap() - (10.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);
+        // Both children report a prior week: 9 -> 11.
+        assert!((summary.change_7d_percent.unwrap() - (11.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_parent_with_no_matched_child_has_no_change() {
+        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        list.protocols[0].tvl_prev_day = None;
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.change_1d_percent, None);
+    }
+
+    #[test]
     fn a_child_resolves_by_its_derived_slug() {
         let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
         let summary = to_protocol_tvl("aave-v3", &list).unwrap();
