@@ -43,7 +43,7 @@ pub(crate) async fn get_protocol_tvl(
         PROTOCOL_TVL_COMPOSITE_FIELDS,
     );
     let query = format!(
-        "query GetTvl {{ cryptoCoin(id: \"{}\") {{ tvl {selection} }} }}",
+        "query GetTvl {{ protocolTvl(id: \"{}\") {selection} }}",
         escape_gql_string(&id)
     );
     info!("Fetching protocol TVL for {}", id);
@@ -51,7 +51,7 @@ pub(crate) async fn get_protocol_tvl(
         Ok(d) => d,
         Err(resp) => return *resp,
     };
-    let result = unwrap_field(unwrap_field(data, "cryptoCoin"), "tvl");
+    let result = unwrap_field(data, "protocolTvl");
     (StatusCode::OK, Json(result)).into_response()
 }
 
@@ -63,21 +63,18 @@ pub(crate) async fn get_protocol_tvl_history(
 ) -> impl IntoResponse {
     let inner = build_rest_selection(params.fields.as_deref(), GQL_TVL_POINT_VALID_FIELDS);
     let selection = build_connection_selection(&inner);
-    let args = conn_args_str(params.limit, params.cursor.as_deref());
-    let query = format!(
-        "query GetTvlHistory {{ cryptoCoin(id: \"{}\") {{ tvlHistory{args} {selection} }} }}",
-        escape_gql_string(&id)
-    );
+    let args = std::iter::once(format!("id: \"{}\"", escape_gql_string(&id)))
+        .chain(connection_args(params.limit, params.cursor.as_deref()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let query = format!("query GetTvlHistory {{ protocolTvlHistory({args}) {selection} }}");
     info!("Fetching protocol TVL history for {}", id);
     let data = match execute_gql_rest(&schema, &query, Variables::default()).await {
         Ok(d) => d,
         Err(resp) => return *resp,
     };
     let paginated = params.limit.is_some() || params.cursor.is_some();
-    let result = unwrap_connection(
-        unwrap_field(unwrap_field(data, "cryptoCoin"), "tvlHistory"),
-        paginated,
-    );
+    let result = unwrap_connection(unwrap_field(data, "protocolTvlHistory"), paginated);
     (StatusCode::OK, Json(result)).into_response()
 }
 

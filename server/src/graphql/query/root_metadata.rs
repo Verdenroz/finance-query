@@ -9,7 +9,10 @@ use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     auctions::{GqlTreasuryAuction, GqlUpcomingAuction},
     calendar::GqlCalendarEvent,
-    crypto::{GqlCoinQuote, GqlGlobalCryptoStats, GqlSymbolMatch, GqlTrendingCoin},
+    crypto::{
+        GqlCoinQuote, GqlGlobalCryptoStats, GqlProtocolTvl, GqlSymbolMatch, GqlTrendingCoin,
+        GqlTvlPoint,
+    },
     edgar::{GqlEdgarCik, GqlEdgarSearchHit, GqlEdgarSearchResults},
     enums::GqlTimeRange,
     forex::GqlForexQuote,
@@ -59,6 +62,26 @@ impl RootMetadataQuery {
             &vs_currency,
         ))
         .await
+    }
+
+    /// A DeFi protocol's current total value locked by DefiLlama slug (e.g.
+    /// "aave"), provider-routed (DefiLlama, keyless). Unlike `cryptoCoin { tvl }`
+    /// it needs no CoinGecko coin by the same id.
+    async fn protocol_tvl(&self, ctx: &Context<'_>, id: String) -> Result<GqlProtocolTvl> {
+        crate::graphql::types::crypto::protocol_tvl(ctx, &id).await
+    }
+
+    /// A DeFi protocol's TVL history by DefiLlama slug, oldest first.
+    async fn protocol_tvl_history(
+        &self,
+        ctx: &Context<'_>,
+        id: String,
+        #[graphql(desc = "Max points per page; omitted = every fetched point in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlTvlPoint>> {
+        crate::graphql::types::crypto::protocol_tvl_history(ctx, &id, first, after).await
     }
 
     /// Worldwide news mentioning `symbol`, from GDELT DOC 2.0 (keyless).
