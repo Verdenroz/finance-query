@@ -6,7 +6,6 @@ use std::collections::HashMap;
 /// `GET /protocol/{slug}` — the full TVL history.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct ProtocolResponse {
-    /// Chronological TVL snapshots.
     #[serde(default)]
     pub tvl: Vec<TvlSnapshot>,
 }
@@ -21,7 +20,7 @@ pub(crate) struct LiteResponse {
     pub parent_protocols: Vec<LiteParent>,
 }
 
-/// One protocol of the lite list. It carries no slug; the slug is derived
+/// One protocol of the lite list. It carries no slug, so `slug()` derives one
 /// from `name`.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct LiteProtocol {
@@ -52,12 +51,44 @@ pub(crate) struct LiteProtocol {
     pub deprecated: bool,
 }
 
-/// A per-chain entry of `chainTvls`; keys follow the same chain and
-/// breakdown naming as `currentChainTvls` on the full payload.
+/// A per-chain entry of `chainTvls`, keyed by chain or breakdown
+/// (`"Ethereum"`, `"Ethereum-borrowed"`, `"pool2"`).
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct LiteChainTvl {
     #[serde(default)]
     pub tvl: f64,
+    #[serde(default, rename = "tvlPrevDay")]
+    pub tvl_prev_day: Option<f64>,
+    #[serde(default, rename = "tvlPrevWeek")]
+    pub tvl_prev_week: Option<f64>,
+}
+
+/// Which lite-list TVL reading: now, a day ago, or a week ago.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Period {
+    Now,
+    Day,
+    Week,
+}
+
+impl LiteProtocol {
+    pub fn tvl_at(&self, period: Period) -> Option<f64> {
+        match period {
+            Period::Now => self.tvl,
+            Period::Day => self.tvl_prev_day,
+            Period::Week => self.tvl_prev_week,
+        }
+    }
+}
+
+impl LiteChainTvl {
+    pub fn tvl_at(&self, period: Period) -> Option<f64> {
+        match period {
+            Period::Now => Some(self.tvl),
+            Period::Day => self.tvl_prev_day,
+            Period::Week => self.tvl_prev_week,
+        }
+    }
 }
 
 /// A grouping of related protocols. It has no TVL of its own.

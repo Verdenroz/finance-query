@@ -108,7 +108,7 @@ pub(crate) async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
 #[cfg(test)]
 mod tests {
     use super::crypto::{chain_allocations, change_percent, slug, to_history, to_protocol_tvl};
-    use super::models::LiteResponse;
+    use super::models::{LiteChainTvl, LiteResponse};
     use super::*;
     use crate::error::FinanceError;
     use crate::rate_limiter::RateLimiter;
@@ -128,24 +128,11 @@ mod tests {
     /// Shape from api.llama.fi/protocol/{slug}, trimmed to a few snapshots.
     fn protocol_payload() -> String {
         serde_json::json!({
-            "id": "111",
-            "name": "AAVE V3",
-            "symbol": "AAVE",
-            "url": "https://aave.com",
-            "chains": ["Ethereum", "Arbitrum"],
-            "currentChainTvls": {
-                "Ethereum": 9_000_000_000.0_f64,
-                "Arbitrum": 1_000_000_000.0_f64,
-                // Breakdown keys of the same capital — must not be counted.
-                "Ethereum-borrowed": 5_000_000_000.0_f64,
-                "pool2": 12_345.0_f64
-            },
             "tvl": [
                 { "date": 1785110400_i64, "totalLiquidityUSD": 8_000_000_000.0_f64 },
                 { "date": 1785628800_i64, "totalLiquidityUSD": 9_500_000_000.0_f64 },
                 { "date": 1785715200_i64, "totalLiquidityUSD": 10_000_000_000.0_f64 }
-            ],
-            "mcap": 3_500_000_000.0_f64
+            ]
         })
         .to_string()
     }
@@ -207,9 +194,13 @@ mod tests {
         .to_string()
     }
 
+    fn lite_list() -> LiteResponse {
+        serde_json::from_str(&lite_payload()).unwrap()
+    }
+
     #[test]
     fn lite_list_deserialises_parents_children_and_standalones() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
 
         assert_eq!(list.parent_protocols.len(), 1);
         assert_eq!(list.parent_protocols[0].id, "parent#aave");
@@ -279,8 +270,13 @@ mod tests {
                     "Ethereum": { "tvl": 9.0e9 },
                     "Ethereum-borrowed": { "tvl": 5.0e9 },
                     "Ethereum-staking": { "tvl": 1.0e6 },
+                    "Ethereum-doublecounted": { "tvl": 3.0e9 },
+                    "Ethereum-excludeParent": { "tvl": 1.0e9 },
                     "OP Mainnet": { "tvl": 2.0e9 },
                     "borrowed": { "tvl": 7.0e9 },
+                    "dcAndLsOverlap": { "tvl": 4.0e6 },
+                    "liquidstaking": { "tvl": 5.0e6 },
+                    "offers": { "tvl": 6.0e6 },
                     "pool2": { "tvl": 12_345.0_f64 },
                     "staking": { "tvl": 999.0_f64 }
                 }
@@ -296,7 +292,7 @@ mod tests {
 
     #[test]
     fn a_parent_sums_its_included_children() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
         let summary = to_protocol_tvl("aave", &list).unwrap();
 
         assert_eq!(summary.slug, "aave");
@@ -314,7 +310,7 @@ mod tests {
 
     #[test]
     fn a_parent_chain_total_adds_across_children() {
-        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let mut list = lite_list();
         list.protocols[1].exclude_tvl_from_parent = false;
         let summary = to_protocol_tvl("aave", &list).unwrap();
 
@@ -323,8 +319,39 @@ mod tests {
     }
 
     #[test]
+    fn a_parent_leaves_out_the_share_a_child_excludes() {
+        let mut list = lite_list();
+        let excluded: HashMap<String, LiteChainTvl> = serde_json::from_value(serde_json::json!({
+            "excludeParent": { "tvl": 4.0e9, "tvlPrevDay": 3.0e9 },
+            "Ethereum-excludeParent": { "tvl": 4.0e9 }
+        }))
+        .unwrap();
+        list.protocols[0].chain_tvls.extend(excluded);
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(6.0e9));
+        assert_eq!(summary.tvl_by_chain[0].chain, "Ethereum");
+        assert_eq!(summary.tvl_by_chain[0].tvl, 5.0e9);
+        // Net of the excluded share: 6 -> 6.
+        assert_eq!(summary.change_1d_percent, Some(0.0));
+
+        let standalone = to_protocol_tvl("aave-v3", &list).unwrap();
+        assert_eq!(standalone.tvl, Some(10.0e9));
+    }
+
+    #[test]
+    fn a_parent_id_outside_slug_form_still_resolves() {
+        let mut list = lite_list();
+        list.parent_protocols[0].id = "parent#Aave".to_string();
+        list.protocols[0].parent_protocol = Some("parent#Aave".to_string());
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(10.0e9));
+    }
+
+    #[test]
     fn a_standalone_protocol_wins_over_a_parent_of_the_same_slug() {
-        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let mut list = lite_list();
         list.parent_protocols[0].id = "parent#curve-dex".to_string();
         list.protocols[0].parent_protocol = Some("parent#curve-dex".to_string());
         let summary = to_protocol_tvl("curve-dex", &list).unwrap();
@@ -335,7 +362,7 @@ mod tests {
 
     #[test]
     fn a_parent_change_ignores_children_missing_the_prior_value() {
-        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let mut list = lite_list();
         list.protocols[1].exclude_tvl_from_parent = false;
         list.protocols[1].tvl_prev_day = None;
         let summary = to_protocol_tvl("aave", &list).unwrap();
@@ -349,7 +376,7 @@ mod tests {
 
     #[test]
     fn a_parent_with_no_matched_child_has_no_change() {
-        let mut list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let mut list = lite_list();
         list.protocols[0].tvl_prev_day = None;
         let summary = to_protocol_tvl("aave", &list).unwrap();
 
@@ -358,7 +385,7 @@ mod tests {
 
     #[test]
     fn a_child_resolves_by_its_derived_slug() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
         let summary = to_protocol_tvl("aave-v3", &list).unwrap();
 
         assert_eq!(summary.name.as_deref(), Some("Aave V3"));
@@ -367,7 +394,7 @@ mod tests {
 
     #[test]
     fn a_standalone_protocol_resolves_by_its_derived_slug() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
         let summary = to_protocol_tvl("curve-dex", &list).unwrap();
 
         assert_eq!(summary.name.as_deref(), Some("Curve DEX"));
@@ -378,7 +405,7 @@ mod tests {
 
     #[test]
     fn an_unknown_slug_maps_to_symbol_not_found() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
         let err = to_protocol_tvl("not-a-protocol", &list).unwrap_err();
 
         assert!(
@@ -389,7 +416,7 @@ mod tests {
 
     #[test]
     fn changes_compare_against_the_prior_day_and_week() {
-        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+        let list = lite_list();
 
         let aave = to_protocol_tvl("aave", &list).unwrap();
         assert!((aave.change_1d_percent.unwrap() - (10.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);

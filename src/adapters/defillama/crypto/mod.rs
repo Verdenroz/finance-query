@@ -5,26 +5,39 @@ use std::collections::HashMap;
 use crate::error::{FinanceError, Result};
 use crate::models::crypto::defi::{ChainAllocation, ProtocolTvl, TvlPoint};
 
-use super::models::{LiteProtocol, LiteResponse, ProtocolResponse};
+use super::models::{LiteProtocol, LiteResponse, Period, ProtocolResponse};
 
-/// Normalise a handle id into a DefiLlama protocol slug.
+/// Normalise a handle id or a protocol name into a DefiLlama protocol slug.
 ///
 /// DefiLlama slugs are lowercase and hyphenated (`"aave"`, `"uniswap"`,
 /// `"lido"`), which is the same shape as a CoinGecko coin id, so most ids pass
-/// through unchanged.
+/// through unchanged. The lite list carries only names, so the same rule
+/// derives their slugs.
 pub(super) fn slug(id: &str) -> String {
-    id.trim().to_lowercase().replace([' ', '_'], "-")
+    id.trim()
+        .to_lowercase()
+        .replace([' ', '_'], "-")
+        .replace('\'', "")
 }
 
-/// Split `chainTvls` into real per-chain allocations.
-///
-/// DefiLlama mixes genuine chain keys (`"Ethereum"`) with breakdown keys of
-/// the *same* capital (`"Ethereum-borrowed"`, `"pool2"`, `"staking"`).
-/// Summing everything would double-count, so only keys naming a chain the
-/// protocol actually reports are kept.
+/// The `chainTvls` key, bare or chain-suffixed, that holds the share of a child's
+/// TVL its parent does not count.
+const EXCLUDE_PARENT: &str = "excludeParent";
+
 /// Capital breakdowns DefiLlama reports beside chains in the same map, either
 /// bare or suffixed onto a chain name.
-const BREAKDOWN_KEYS: [&str; 5] = ["borrowed", "pool2", "staking", "treasury", "vesting"];
+const BREAKDOWN_KEYS: [&str; 10] = [
+    "borrowed",
+    "dcAndLsOverlap",
+    "doublecounted",
+    EXCLUDE_PARENT,
+    "liquidstaking",
+    "offers",
+    "pool2",
+    "staking",
+    "treasury",
+    "vesting",
+];
 
 fn is_breakdown_key(key: &str) -> bool {
     BREAKDOWN_KEYS.contains(&key)
@@ -33,6 +46,12 @@ fn is_breakdown_key(key: &str) -> bool {
             .is_some_and(|(_, suffix)| BREAKDOWN_KEYS.contains(&suffix))
 }
 
+/// Split `chainTvls` into real per-chain allocations.
+///
+/// DefiLlama mixes genuine chain keys (`"Ethereum"`) with breakdown keys of
+/// the *same* capital (`"Ethereum-borrowed"`, `"pool2"`, `"staking"`).
+/// Summing everything would double-count, so only keys naming a chain the
+/// protocol actually reports are kept.
 pub(super) fn chain_allocations(
     chains: &[String],
     chain_tvls: &HashMap<String, f64>,
@@ -67,12 +86,6 @@ pub(super) fn change_percent(current: Option<f64>, previous: Option<f64>) -> Opt
     Some((current - previous) / previous * 100.0)
 }
 
-/// The slug DefiLlama's own `/protocols` listing gives a lite entry, which
-/// carries only a name.
-fn derived_slug(name: &str) -> String {
-    name.to_lowercase().replace(' ', "-").replace('\'', "")
-}
-
 /// Sum of the values present, `None` when none are.
 fn sum_present(values: impl Iterator<Item = Option<f64>>) -> Option<f64> {
     values
@@ -80,87 +93,107 @@ fn sum_present(values: impl Iterator<Item = Option<f64>>) -> Option<f64> {
         .fold(None, |acc, v| Some(acc.unwrap_or(0.0) + v))
 }
 
-/// Current figures and period changes for one slug, whether it names a single
-/// protocol or a parent grouping.
-struct Resolved {
-    name: Option<String>,
-    symbol: Option<String>,
-    url: Option<String>,
-    chains: Vec<String>,
-    tvl: Option<f64>,
-    change_1d: Option<f64>,
-    change_7d: Option<f64>,
-    chain_tvls: HashMap<String, f64>,
+/// What a slug names: its own metadata plus the protocols whose TVL it sums.
+/// A standalone protocol is a group of one.
+struct Resolved<'a> {
+    name: Option<&'a str>,
+    symbol: Option<&'a str>,
+    url: Option<&'a str>,
+    chains: &'a [String],
     mcap: Option<f64>,
+    members: Vec<&'a LiteProtocol>,
+    in_parent: bool,
 }
 
-/// Change of a parent's TVL over one period, measured only across the
-/// children that report both figures so a child missing its prior value does
-/// not read as growth.
-fn matched_change(
-    children: &[&LiteProtocol],
-    previous: impl Fn(&LiteProtocol) -> Option<f64>,
-) -> Option<f64> {
-    let pairs: Vec<(f64, f64)> = children
-        .iter()
-        .filter_map(|p| Some((p.tvl?, previous(p)?)))
-        .collect();
-    if pairs.is_empty() {
-        return None;
+impl Resolved<'_> {
+    /// The share of `member` under `key` that a parent does not count.
+    fn excluded_share(&self, member: &LiteProtocol, key: &str, period: Period) -> f64 {
+        match self.in_parent {
+            true => member
+                .chain_tvls
+                .get(key)
+                .and_then(|entry| entry.tvl_at(period))
+                .unwrap_or(0.0),
+            false => 0.0,
+        }
     }
-    let current = pairs.iter().map(|(now, _)| now).sum();
-    let before = pairs.iter().map(|(_, then)| then).sum();
-    change_percent(Some(current), Some(before))
+
+    fn member_tvl(&self, member: &LiteProtocol, period: Period) -> Option<f64> {
+        Some(member.tvl_at(period)? - self.excluded_share(member, EXCLUDE_PARENT, period))
+    }
+
+    fn tvl(&self) -> Option<f64> {
+        sum_present(self.members.iter().map(|m| self.member_tvl(m, Period::Now)))
+    }
+
+    /// Change in TVL over one period, across only the members that report both
+    /// figures. A member with no prior value would otherwise read as growth.
+    fn change(&self, period: Period) -> Option<f64> {
+        let (current, before) = self
+            .members
+            .iter()
+            .filter_map(|m| {
+                Some((
+                    self.member_tvl(m, Period::Now)?,
+                    self.member_tvl(m, period)?,
+                ))
+            })
+            .fold(None, |acc, (now, then)| {
+                let (current, before) = acc.unwrap_or((0.0, 0.0));
+                Some((current + now, before + then))
+            })?;
+        change_percent(Some(current), Some(before))
+    }
+
+    fn chain_tvls(&self) -> HashMap<String, f64> {
+        let mut totals: HashMap<String, f64> = HashMap::new();
+        for member in &self.members {
+            for (key, entry) in &member.chain_tvls {
+                if is_breakdown_key(key) {
+                    continue;
+                }
+                let excluded =
+                    self.excluded_share(member, &format!("{key}-{EXCLUDE_PARENT}"), Period::Now);
+                *totals.entry(key.clone()).or_default() += entry.tvl - excluded;
+            }
+        }
+        totals
+    }
 }
 
 /// A protocol's own name wins over a parent of the same slug, as it does on
 /// DefiLlama's `/protocol/{slug}`.
-fn resolve(list: &LiteResponse, slug: &str) -> Option<Resolved> {
-    if let Some(protocol) = list
-        .protocols
-        .iter()
-        .find(|p| derived_slug(&p.name) == slug)
-    {
+fn resolve<'a>(list: &'a LiteResponse, id: &str) -> Option<Resolved<'a>> {
+    if let Some(protocol) = list.protocols.iter().find(|p| slug(&p.name) == id) {
         return Some(Resolved {
-            name: Some(protocol.name.clone()),
-            symbol: protocol.symbol.clone(),
-            url: protocol.url.clone(),
-            chains: protocol.chains.clone(),
-            tvl: protocol.tvl,
-            change_1d: change_percent(protocol.tvl, protocol.tvl_prev_day),
-            change_7d: change_percent(protocol.tvl, protocol.tvl_prev_week),
-            chain_tvls: protocol
-                .chain_tvls
-                .iter()
-                .map(|(key, entry)| (key.clone(), entry.tvl))
-                .collect(),
+            name: Some(&protocol.name),
+            symbol: protocol.symbol.as_deref(),
+            url: protocol.url.as_deref(),
+            chains: &protocol.chains,
             mcap: protocol.mcap,
+            members: vec![protocol],
+            in_parent: false,
         });
     }
-    let parent = list
-        .parent_protocols
-        .iter()
-        .find(|parent| parent.id.strip_prefix("parent#") == Some(slug))?;
-    let children: Vec<&LiteProtocol> = list
-        .protocols
-        .iter()
-        .filter(|p| p.parent_protocol.as_deref() == Some(parent.id.as_str()))
-        .filter(|p| !p.exclude_tvl_from_parent && !p.deprecated)
-        .collect();
-    let mut chain_tvls: HashMap<String, f64> = HashMap::new();
-    for (key, entry) in children.iter().flat_map(|p| &p.chain_tvls) {
-        *chain_tvls.entry(key.clone()).or_default() += entry.tvl;
-    }
+    let parent = list.parent_protocols.iter().find(|parent| {
+        parent
+            .id
+            .strip_prefix("parent#")
+            .is_some_and(|suffix| slug(suffix) == id)
+    })?;
     Some(Resolved {
-        name: parent.name.clone(),
-        symbol: parent.symbol.clone(),
-        url: parent.url.clone(),
-        chains: parent.chains.clone(),
-        tvl: sum_present(children.iter().map(|p| p.tvl)),
-        change_1d: matched_change(&children, |p| p.tvl_prev_day),
-        change_7d: matched_change(&children, |p| p.tvl_prev_week),
-        chain_tvls,
+        name: parent.name.as_deref(),
+        symbol: parent.symbol.as_deref(),
+        url: parent.url.as_deref(),
+        chains: &parent.chains,
         mcap: parent.mcap,
+        members: list
+            .protocols
+            .iter()
+            .filter(|p| p.parent_protocol.as_deref() == Some(parent.id.as_str()))
+            .filter(|p| !p.exclude_tvl_from_parent && !p.deprecated)
+            .collect(),
+        in_parent: true,
     })
 }
 
@@ -174,8 +207,8 @@ pub(super) fn to_history(response: &ProtocolResponse) -> Vec<TvlPoint> {
             tvl: snapshot.total_liquidity_usd,
         })
         .collect();
-    // DefiLlama returns these chronologically, but the changes computed above
-    // depend on it, so the order is enforced rather than assumed.
+    // DefiLlama returns these oldest first, but callers depend on that, so sort
+    // anyway.
     points.sort_by_key(|point| point.timestamp);
     points
 }
@@ -186,23 +219,21 @@ pub(super) fn to_protocol_tvl(slug: &str, list: &LiteResponse) -> Result<Protoco
         symbol: Some(slug.to_string()),
         context: "DefiLlama knows no protocol by this slug".to_string(),
     })?;
-    let tvl_by_chain = chain_allocations(&resolved.chains, &resolved.chain_tvls);
-    // DefiLlama has started returning an empty `chains` for protocols whose
-    // `chainTvls` still names them, so fall back to the chains it allocates to.
+    let tvl_by_chain = chain_allocations(resolved.chains, &resolved.chain_tvls());
     let chains = match resolved.chains.is_empty() {
         true => tvl_by_chain.iter().map(|a| a.chain.clone()).collect(),
-        false => resolved.chains,
+        false => resolved.chains.to_vec(),
     };
     Ok(ProtocolTvl {
         slug: slug.to_string(),
-        name: resolved.name,
-        symbol: resolved.symbol,
-        url: resolved.url,
+        name: resolved.name.map(str::to_string),
+        symbol: resolved.symbol.map(str::to_string),
+        url: resolved.url.map(str::to_string),
         chains,
-        tvl: resolved.tvl,
+        tvl: resolved.tvl(),
         tvl_by_chain,
-        change_1d_percent: resolved.change_1d,
-        change_7d_percent: resolved.change_7d,
+        change_1d_percent: resolved.change(Period::Day),
+        change_7d_percent: resolved.change(Period::Week),
         market_cap: resolved.mcap,
     })
 }
