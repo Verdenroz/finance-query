@@ -108,7 +108,7 @@ pub(crate) async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
 #[cfg(test)]
 mod tests {
     use super::crypto::{chain_allocations, change_percent, slug, to_history, to_protocol_tvl};
-    use super::models::ProtocolResponse;
+    use super::models::{LiteResponse, ProtocolResponse};
     use super::*;
     use crate::error::FinanceError;
     use crate::rate_limiter::RateLimiter;
@@ -147,6 +147,98 @@ mod tests {
             "mcap": 3_500_000_000.0_f64
         })
         .to_string()
+    }
+
+    /// Shape from api.llama.fi/lite/protocols2, trimmed to a parent with two
+    /// children (one excluded from the parent's TVL) and a standalone protocol.
+    fn lite_payload() -> String {
+        serde_json::json!({
+            "chains": ["Ethereum"],
+            "protocolCategories": ["Lending"],
+            "parentProtocols": [{
+                "id": "parent#aave",
+                "name": "Aave",
+                "url": "https://aave.com",
+                "symbol": "AAVE",
+                "chains": ["Ethereum", "Arbitrum"],
+                "mcap": 3_500_000_000.0_f64,
+                "gecko_id": "aave"
+            }],
+            "protocols": [
+                {
+                    "name": "Aave V3",
+                    "symbol": "AAVE",
+                    "chains": ["Ethereum", "Arbitrum"],
+                    "chainTvls": {
+                        "Ethereum": { "tvl": 9.0e9, "tvlPrevDay": 8.0e9 },
+                        "Arbitrum": { "tvl": 1.0e9 },
+                        "Ethereum-borrowed": { "tvl": 5.0e9 }
+                    },
+                    "tvl": 10.0e9,
+                    "tvlPrevDay": 9.0e9,
+                    "tvlPrevWeek": 8.0e9,
+                    "parentProtocol": "parent#aave"
+                },
+                {
+                    "name": "Aave V2",
+                    "chains": ["Ethereum"],
+                    "chainTvls": { "Ethereum": { "tvl": 1.0e9 } },
+                    "tvl": 1.0e9,
+                    "tvlPrevDay": 1.0e9,
+                    "tvlPrevWeek": 1.0e9,
+                    "parentProtocol": "parent#aave",
+                    "excludeTvlFromParent": true
+                },
+                {
+                    "name": "Curve DEX",
+                    "symbol": "CRV",
+                    "url": "https://curve.fi",
+                    "chains": ["Ethereum"],
+                    "chainTvls": { "Ethereum": { "tvl": 2.0e9 } },
+                    "tvl": 2.0e9,
+                    "tvlPrevDay": 2.5e9,
+                    "tvlPrevWeek": 2.0e9,
+                    "mcap": 1.0e9,
+                    "deprecated": false
+                }
+            ]
+        })
+        .to_string()
+    }
+
+    #[test]
+    fn lite_list_deserialises_parents_children_and_standalones() {
+        let list: LiteResponse = serde_json::from_str(&lite_payload()).unwrap();
+
+        assert_eq!(list.parent_protocols.len(), 1);
+        assert_eq!(list.parent_protocols[0].id, "parent#aave");
+        assert_eq!(list.parent_protocols[0].mcap, Some(3_500_000_000.0));
+
+        let v3 = &list.protocols[0];
+        assert_eq!(v3.parent_protocol.as_deref(), Some("parent#aave"));
+        assert!(!v3.exclude_tvl_from_parent);
+        assert_eq!(v3.chain_tvls["Ethereum"].tvl, 9.0e9);
+        assert_eq!(v3.tvl_prev_week, Some(8.0e9));
+        assert!(list.protocols[1].exclude_tvl_from_parent);
+
+        let curve = &list.protocols[2];
+        assert_eq!(curve.parent_protocol, None);
+        assert_eq!(curve.mcap, Some(1.0e9));
+    }
+
+    #[tokio::test]
+    async fn lite_protocols_reads_the_shared_list() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/lite/protocols2")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(lite_payload())
+            .create_async()
+            .await;
+
+        let list = test_client(&server.url()).lite_protocols().await.unwrap();
+        assert_eq!(list.protocols.len(), 3);
     }
 
     #[test]

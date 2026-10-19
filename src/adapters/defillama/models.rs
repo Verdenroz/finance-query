@@ -25,6 +25,71 @@ pub(crate) struct ProtocolResponse {
     pub mcap: Option<f64>,
 }
 
+/// `GET /lite/protocols2` — every protocol's current TVL and its prior-period
+/// values, plus the parent groupings.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteResponse {
+    #[serde(default)]
+    pub protocols: Vec<LiteProtocol>,
+    #[serde(default, rename = "parentProtocols")]
+    pub parent_protocols: Vec<LiteParent>,
+}
+
+/// One protocol of the lite list. It carries no slug; the slug is derived
+/// from `name`.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteProtocol {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub symbol: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub chains: Vec<String>,
+    #[serde(default, rename = "chainTvls")]
+    pub chain_tvls: HashMap<String, LiteChainTvl>,
+    #[serde(default)]
+    pub tvl: Option<f64>,
+    #[serde(default, rename = "tvlPrevDay")]
+    pub tvl_prev_day: Option<f64>,
+    #[serde(default, rename = "tvlPrevWeek")]
+    pub tvl_prev_week: Option<f64>,
+    #[serde(default)]
+    pub mcap: Option<f64>,
+    /// Id of the grouping this protocol belongs to (`"parent#aave"`).
+    #[serde(default, rename = "parentProtocol")]
+    pub parent_protocol: Option<String>,
+    #[serde(default, rename = "excludeTvlFromParent")]
+    pub exclude_tvl_from_parent: bool,
+    #[serde(default)]
+    pub deprecated: bool,
+}
+
+/// A per-chain entry of `chainTvls`; keys follow the same chain and
+/// breakdown naming as `currentChainTvls` on the full payload.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteChainTvl {
+    #[serde(default)]
+    pub tvl: f64,
+}
+
+/// A grouping of related protocols. It has no TVL of its own.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteParent {
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub symbol: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub chains: Vec<String>,
+    #[serde(default)]
+    pub mcap: Option<f64>,
+}
+
 /// One TVL snapshot in a protocol's history.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct TvlSnapshot {
