@@ -3,26 +3,12 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// `GET /protocol/{slug}` — metadata plus the full TVL history.
+/// `GET /protocol/{slug}` — the full TVL history.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct ProtocolResponse {
-    #[serde(default)]
-    pub name: Option<String>,
-    #[serde(default)]
-    pub symbol: Option<String>,
-    #[serde(default)]
-    pub url: Option<String>,
-    #[serde(default)]
-    pub chains: Vec<String>,
-    /// Current TVL per chain. Keys ending in `-borrowed`, `-staking`, … are
-    /// breakdowns of the same capital and are excluded by the caller.
-    #[serde(default, rename = "currentChainTvls")]
-    pub current_chain_tvls: HashMap<String, f64>,
     /// Chronological TVL snapshots.
     #[serde(default)]
     pub tvl: Vec<TvlSnapshot>,
-    #[serde(default)]
-    pub mcap: Option<f64>,
 }
 
 /// `GET /lite/protocols2` — every protocol's current TVL and its prior-period

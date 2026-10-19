@@ -1,12 +1,11 @@
 //! `CRYPTO` capability for DefiLlama — protocol TVL.
 
-use crate::error::Result;
+use std::collections::HashMap;
+
+use crate::error::{FinanceError, Result};
 use crate::models::crypto::defi::{ChainAllocation, ProtocolTvl, TvlPoint};
 
-use super::models::ProtocolResponse;
-
-/// Seconds in a day, for locating the comparison points of a TVL change.
-const DAY: i64 = 86_400;
+use super::models::{LiteProtocol, LiteResponse, ProtocolResponse};
 
 /// Normalise a handle id into a DefiLlama protocol slug.
 ///
@@ -17,7 +16,7 @@ pub(super) fn slug(id: &str) -> String {
     id.trim().to_lowercase().replace([' ', '_'], "-")
 }
 
-/// Split `currentChainTvls` into real per-chain allocations.
+/// Split `chainTvls` into real per-chain allocations.
 ///
 /// DefiLlama mixes genuine chain keys (`"Ethereum"`) with breakdown keys of
 /// the *same* capital (`"Ethereum-borrowed"`, `"pool2"`, `"staking"`).
@@ -34,16 +33,18 @@ fn is_breakdown_key(key: &str) -> bool {
             .is_some_and(|(_, suffix)| BREAKDOWN_KEYS.contains(&suffix))
 }
 
-pub(super) fn chain_allocations(response: &ProtocolResponse) -> Vec<ChainAllocation> {
+pub(super) fn chain_allocations(
+    chains: &[String],
+    chain_tvls: &HashMap<String, f64>,
+) -> Vec<ChainAllocation> {
     // `chains` is the authoritative allow-list when present. Some protocols
     // now come back with it empty while still reporting per-chain TVL, so fall
     // back to every key that is not a breakdown.
-    let named = !response.chains.is_empty();
-    let mut out: Vec<ChainAllocation> = response
-        .current_chain_tvls
+    let named = !chains.is_empty();
+    let mut out: Vec<ChainAllocation> = chain_tvls
         .iter()
         .filter(|(key, _)| match named {
-            true => response.chains.iter().any(|chain| chain == *key),
+            true => chains.iter().any(|chain| chain == *key),
             false => !is_breakdown_key(key),
         })
         .map(|(chain, tvl)| ChainAllocation {
@@ -56,19 +57,90 @@ pub(super) fn chain_allocations(response: &ProtocolResponse) -> Vec<ChainAllocat
     out
 }
 
-/// Percentage change between the latest TVL and the value `days_ago` before
-/// it, using the closest snapshot at or before that instant.
-pub(super) fn change_percent(history: &[TvlPoint], days_ago: i64) -> Option<f64> {
-    let latest = history.last()?;
-    let cutoff = latest.timestamp - days_ago * DAY;
-    let past = history
-        .iter()
-        .rev()
-        .find(|point| point.timestamp <= cutoff)?;
-    if past.tvl == 0.0 {
+/// Percentage change from `previous` to `current`, `None` when either is
+/// missing or the base is zero.
+pub(super) fn change_percent(current: Option<f64>, previous: Option<f64>) -> Option<f64> {
+    let (current, previous) = (current?, previous?);
+    if previous == 0.0 {
         return None;
     }
-    Some((latest.tvl - past.tvl) / past.tvl * 100.0)
+    Some((current - previous) / previous * 100.0)
+}
+
+/// The slug DefiLlama's own `/protocols` listing gives a lite entry, which
+/// carries only a name.
+fn derived_slug(name: &str) -> String {
+    name.to_lowercase().replace(' ', "-").replace('\'', "")
+}
+
+/// Sum of the values present, `None` when none are.
+fn sum_present(values: impl Iterator<Item = Option<f64>>) -> Option<f64> {
+    values
+        .flatten()
+        .fold(None, |acc, v| Some(acc.unwrap_or(0.0) + v))
+}
+
+/// Current and prior-period figures for one slug, whether it names a single
+/// protocol or a parent grouping.
+struct Resolved {
+    name: Option<String>,
+    symbol: Option<String>,
+    url: Option<String>,
+    chains: Vec<String>,
+    tvl: Option<f64>,
+    tvl_prev_day: Option<f64>,
+    tvl_prev_week: Option<f64>,
+    chain_tvls: HashMap<String, f64>,
+    mcap: Option<f64>,
+}
+
+fn resolve(list: &LiteResponse, slug: &str) -> Option<Resolved> {
+    if let Some(parent) = list
+        .parent_protocols
+        .iter()
+        .find(|parent| parent.id.strip_prefix("parent#") == Some(slug))
+    {
+        let children: Vec<&LiteProtocol> = list
+            .protocols
+            .iter()
+            .filter(|p| p.parent_protocol.as_deref() == Some(parent.id.as_str()))
+            .filter(|p| !p.exclude_tvl_from_parent && !p.deprecated)
+            .collect();
+        let mut chain_tvls: HashMap<String, f64> = HashMap::new();
+        for (key, entry) in children.iter().flat_map(|p| &p.chain_tvls) {
+            *chain_tvls.entry(key.clone()).or_default() += entry.tvl;
+        }
+        return Some(Resolved {
+            name: parent.name.clone(),
+            symbol: parent.symbol.clone(),
+            url: parent.url.clone(),
+            chains: parent.chains.clone(),
+            tvl: sum_present(children.iter().map(|p| p.tvl)),
+            tvl_prev_day: sum_present(children.iter().map(|p| p.tvl_prev_day)),
+            tvl_prev_week: sum_present(children.iter().map(|p| p.tvl_prev_week)),
+            chain_tvls,
+            mcap: parent.mcap,
+        });
+    }
+    let protocol = list
+        .protocols
+        .iter()
+        .find(|p| derived_slug(&p.name) == slug)?;
+    Some(Resolved {
+        name: Some(protocol.name.clone()),
+        symbol: protocol.symbol.clone(),
+        url: protocol.url.clone(),
+        chains: protocol.chains.clone(),
+        tvl: protocol.tvl,
+        tvl_prev_day: protocol.tvl_prev_day,
+        tvl_prev_week: protocol.tvl_prev_week,
+        chain_tvls: protocol
+            .chain_tvls
+            .iter()
+            .map(|(key, entry)| (key.clone(), entry.tvl))
+            .collect(),
+        mcap: protocol.mcap,
+    })
 }
 
 /// Convert the raw TVL history into public points, oldest first.
@@ -87,35 +159,38 @@ pub(super) fn to_history(response: &ProtocolResponse) -> Vec<TvlPoint> {
     points
 }
 
-/// Build the public [`ProtocolTvl`] summary.
-pub(super) fn to_protocol_tvl(slug: &str, response: &ProtocolResponse) -> ProtocolTvl {
-    let history = to_history(response);
-    let tvl_by_chain = chain_allocations(response);
+/// Build the public [`ProtocolTvl`] summary for `slug` from the shared list.
+pub(super) fn to_protocol_tvl(slug: &str, list: &LiteResponse) -> Result<ProtocolTvl> {
+    let resolved = resolve(list, slug).ok_or_else(|| FinanceError::SymbolNotFound {
+        symbol: Some(slug.to_string()),
+        context: "DefiLlama knows no protocol by this slug".to_string(),
+    })?;
+    let tvl_by_chain = chain_allocations(&resolved.chains, &resolved.chain_tvls);
     // DefiLlama has started returning an empty `chains` for protocols whose
     // `chainTvls` still names them, so fall back to the chains it allocates to.
-    let chains = match response.chains.is_empty() {
+    let chains = match resolved.chains.is_empty() {
         true => tvl_by_chain.iter().map(|a| a.chain.clone()).collect(),
-        false => response.chains.clone(),
+        false => resolved.chains,
     };
-    ProtocolTvl {
+    Ok(ProtocolTvl {
         slug: slug.to_string(),
-        name: response.name.clone(),
-        symbol: response.symbol.clone(),
-        url: response.url.clone(),
+        name: resolved.name,
+        symbol: resolved.symbol,
+        url: resolved.url,
         chains,
-        tvl: history.last().map(|point| point.tvl),
+        tvl: resolved.tvl,
         tvl_by_chain,
-        change_1d_percent: change_percent(&history, 1),
-        change_7d_percent: change_percent(&history, 7),
-        market_cap: response.mcap,
-    }
+        change_1d_percent: change_percent(resolved.tvl, resolved.tvl_prev_day),
+        change_7d_percent: change_percent(resolved.tvl, resolved.tvl_prev_week),
+        market_cap: resolved.mcap,
+    })
 }
 
 /// Fetch a protocol's current TVL summary.
 pub(crate) async fn fetch_protocol_tvl_response(protocol: &str) -> Result<ProtocolTvl> {
     let slug = slug(protocol);
-    let response = super::client()?.protocol(&slug).await?;
-    Ok(to_protocol_tvl(&slug, &response))
+    let list = super::client()?.lite_protocols().await?;
+    to_protocol_tvl(&slug, &list)
 }
 
 /// Fetch a protocol's full TVL history, oldest first.
