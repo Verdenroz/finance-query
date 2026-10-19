@@ -88,7 +88,7 @@ vader_sentiment = { version = "0.1", optional = true }
 # Optional: fully local machine translation (CTranslate2 + opus-mt bilingual)
 ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers", "sentencepiece"] }
 # Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
-zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
+zip = { version = "9", optional = true, default-features = false, features = ["deflate"] }
 
 # Optional: inflate PDF content streams for House PTR text extraction
 flate2 = { version = "1", optional = true }
