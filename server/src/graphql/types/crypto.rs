@@ -107,18 +107,41 @@ pub struct GqlTvlPoint {
     pub tvl: f64,
 }
 
+/// A protocol's current TVL by DefiLlama slug, shared by `protocolTvl` and
+/// `cryptoCoin { tvl }`.
+pub(crate) async fn protocol_tvl(ctx: &Context<'_>, id: &str) -> Result<GqlProtocolTvl> {
+    let state = ctx.data::<AppState>()?;
+    exec_gql(crate::services::crypto::get_protocol_tvl(
+        &state.cache,
+        &state.providers,
+        id,
+    ))
+    .await
+}
+
+/// A protocol's TVL history by DefiLlama slug, shared by `protocolTvlHistory`
+/// and `cryptoCoin { tvlHistory }`.
+pub(crate) async fn protocol_tvl_history(
+    ctx: &Context<'_>,
+    id: &str,
+    first: Option<i32>,
+    after: Option<String>,
+) -> Result<Page<GqlTvlPoint>> {
+    let state = ctx.data::<AppState>()?;
+    let json =
+        crate::services::crypto::get_protocol_tvl_history(&state.cache, &state.providers, id)
+            .await
+            .map_err(to_gql_error)?;
+    let points: Vec<GqlTvlPoint> = from_gql_json(json)?;
+    pagination::paginate(&points, first, after).await
+}
+
 #[ComplexObject(rename_fields = "camelCase")]
 impl GqlCoinQuote {
     /// Total value locked for this coin's protocol, provider-routed
     /// (DefiLlama, keyless). Resolved only when selected.
     async fn tvl(&self, ctx: &Context<'_>) -> Result<GqlProtocolTvl> {
-        let state = ctx.data::<AppState>()?;
-        exec_gql(crate::services::crypto::get_protocol_tvl(
-            &state.cache,
-            &state.providers,
-            &self.id,
-        ))
-        .await
+        protocol_tvl(ctx, &self.id).await
     }
 
     /// TVL history for this coin's protocol, oldest first.
@@ -130,15 +153,6 @@ impl GqlCoinQuote {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlTvlPoint>> {
-        let state = ctx.data::<AppState>()?;
-        let json = crate::services::crypto::get_protocol_tvl_history(
-            &state.cache,
-            &state.providers,
-            &self.id,
-        )
-        .await
-        .map_err(to_gql_error)?;
-        let points: Vec<GqlTvlPoint> = from_gql_json(json)?;
-        pagination::paginate(&points, first, after).await
+        protocol_tvl_history(ctx, &self.id, first, after).await
     }
 }

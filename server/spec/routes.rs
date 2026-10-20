@@ -1743,6 +1743,26 @@ fn route_gql_root_metadata_crypto_coins() {}
 )]
 fn route_gql_root_metadata_crypto_coin() {}
 
+/// Implements `graphql::query::root_metadata::protocol_tvl` (field `protocolTvl`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "protocolTvl",
+    method = "QUERY",
+    path = "protocolTvl"
+)]
+fn route_gql_root_metadata_protocol_tvl() {}
+
+/// Implements `graphql::query::root_metadata::protocol_tvl_history` (field `protocolTvlHistory`).
+#[allow(dead_code)]
+#[soothfast::route(
+    spec = "schema.graphql",
+    operation = "protocolTvlHistory",
+    method = "QUERY",
+    path = "protocolTvlHistory"
+)]
+fn route_gql_root_metadata_protocol_tvl_history() {}
+
 /// Implements `graphql::query::root_metadata::edgar_cik` (field `edgarCik`).
 #[allow(dead_code)]
 #[soothfast::route(

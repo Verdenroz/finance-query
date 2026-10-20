@@ -3,9 +3,98 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// `GET /protocol/{slug}` — metadata plus the full TVL history.
+/// `GET /protocol/{slug}` — the full TVL history.
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct ProtocolResponse {
+    #[serde(default)]
+    pub tvl: Vec<TvlSnapshot>,
+}
+
+/// `GET /lite/protocols2` — every protocol's current TVL and its prior-period
+/// values, plus the parent groupings.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteResponse {
+    #[serde(default)]
+    pub protocols: Vec<LiteProtocol>,
+    #[serde(default, rename = "parentProtocols")]
+    pub parent_protocols: Vec<LiteParent>,
+}
+
+/// One protocol of the lite list. It carries no slug, so `slug()` derives one
+/// from `name`.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteProtocol {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub symbol: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub chains: Vec<String>,
+    #[serde(default, rename = "chainTvls")]
+    pub chain_tvls: HashMap<String, LiteChainTvl>,
+    #[serde(default)]
+    pub tvl: Option<f64>,
+    #[serde(default, rename = "tvlPrevDay")]
+    pub tvl_prev_day: Option<f64>,
+    #[serde(default, rename = "tvlPrevWeek")]
+    pub tvl_prev_week: Option<f64>,
+    #[serde(default)]
+    pub mcap: Option<f64>,
+    /// Id of the grouping this protocol belongs to (`"parent#aave"`).
+    #[serde(default, rename = "parentProtocol")]
+    pub parent_protocol: Option<String>,
+    #[serde(default, rename = "excludeTvlFromParent")]
+    pub exclude_tvl_from_parent: bool,
+    #[serde(default)]
+    pub deprecated: bool,
+}
+
+/// A per-chain entry of `chainTvls`, keyed by chain or breakdown
+/// (`"Ethereum"`, `"Ethereum-borrowed"`, `"pool2"`).
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteChainTvl {
+    #[serde(default)]
+    pub tvl: f64,
+    #[serde(default, rename = "tvlPrevDay")]
+    pub tvl_prev_day: Option<f64>,
+    #[serde(default, rename = "tvlPrevWeek")]
+    pub tvl_prev_week: Option<f64>,
+}
+
+/// Which lite-list TVL reading: now, a day ago, or a week ago.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Period {
+    Now,
+    Day,
+    Week,
+}
+
+impl LiteProtocol {
+    pub fn tvl_at(&self, period: Period) -> Option<f64> {
+        match period {
+            Period::Now => self.tvl,
+            Period::Day => self.tvl_prev_day,
+            Period::Week => self.tvl_prev_week,
+        }
+    }
+}
+
+impl LiteChainTvl {
+    pub fn tvl_at(&self, period: Period) -> Option<f64> {
+        match period {
+            Period::Now => Some(self.tvl),
+            Period::Day => self.tvl_prev_day,
+            Period::Week => self.tvl_prev_week,
+        }
+    }
+}
+
+/// A grouping of related protocols. It has no TVL of its own.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LiteParent {
+    pub id: String,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
@@ -14,13 +103,6 @@ pub(crate) struct ProtocolResponse {
     pub url: Option<String>,
     #[serde(default)]
     pub chains: Vec<String>,
-    /// Current TVL per chain. Keys ending in `-borrowed`, `-staking`, … are
-    /// breakdowns of the same capital and are excluded by the caller.
-    #[serde(default, rename = "currentChainTvls")]
-    pub current_chain_tvls: HashMap<String, f64>,
-    /// Chronological TVL snapshots.
-    #[serde(default)]
-    pub tvl: Vec<TvlSnapshot>,
     #[serde(default)]
     pub mcap: Option<f64>,
 }

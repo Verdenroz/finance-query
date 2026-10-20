@@ -108,10 +108,11 @@ pub(crate) async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
 #[cfg(test)]
 mod tests {
     use super::crypto::{chain_allocations, change_percent, slug, to_history, to_protocol_tvl};
-    use super::models::ProtocolResponse;
+    use super::models::{LiteChainTvl, LiteResponse};
     use super::*;
     use crate::error::FinanceError;
     use crate::rate_limiter::RateLimiter;
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     fn test_client(base_url: &str) -> DefiLlamaClient {
@@ -127,26 +128,109 @@ mod tests {
     /// Shape from api.llama.fi/protocol/{slug}, trimmed to a few snapshots.
     fn protocol_payload() -> String {
         serde_json::json!({
-            "id": "111",
-            "name": "AAVE V3",
-            "symbol": "AAVE",
-            "url": "https://aave.com",
-            "chains": ["Ethereum", "Arbitrum"],
-            "currentChainTvls": {
-                "Ethereum": 9_000_000_000.0_f64,
-                "Arbitrum": 1_000_000_000.0_f64,
-                // Breakdown keys of the same capital — must not be counted.
-                "Ethereum-borrowed": 5_000_000_000.0_f64,
-                "pool2": 12_345.0_f64
-            },
             "tvl": [
                 { "date": 1785110400_i64, "totalLiquidityUSD": 8_000_000_000.0_f64 },
                 { "date": 1785628800_i64, "totalLiquidityUSD": 9_500_000_000.0_f64 },
                 { "date": 1785715200_i64, "totalLiquidityUSD": 10_000_000_000.0_f64 }
-            ],
-            "mcap": 3_500_000_000.0_f64
+            ]
         })
         .to_string()
+    }
+
+    /// Shape from api.llama.fi/lite/protocols2, trimmed to a parent with two
+    /// children (one excluded from the parent's TVL) and a standalone protocol.
+    fn lite_payload() -> String {
+        serde_json::json!({
+            "chains": ["Ethereum"],
+            "protocolCategories": ["Lending"],
+            "parentProtocols": [{
+                "id": "parent#aave",
+                "name": "Aave",
+                "url": "https://aave.com",
+                "symbol": "AAVE",
+                "chains": ["Ethereum", "Arbitrum"],
+                "mcap": 3_500_000_000.0_f64,
+                "gecko_id": "aave"
+            }],
+            "protocols": [
+                {
+                    "name": "Aave V3",
+                    "symbol": "AAVE",
+                    "chains": ["Ethereum", "Arbitrum"],
+                    "chainTvls": {
+                        "Ethereum": { "tvl": 9.0e9, "tvlPrevDay": 8.0e9 },
+                        "Arbitrum": { "tvl": 1.0e9 },
+                        "Ethereum-borrowed": { "tvl": 5.0e9 }
+                    },
+                    "tvl": 10.0e9,
+                    "tvlPrevDay": 9.0e9,
+                    "tvlPrevWeek": 8.0e9,
+                    "parentProtocol": "parent#aave"
+                },
+                {
+                    "name": "Aave V2",
+                    "chains": ["Ethereum"],
+                    "chainTvls": { "Ethereum": { "tvl": 1.0e9 } },
+                    "tvl": 1.0e9,
+                    "tvlPrevDay": 1.0e9,
+                    "tvlPrevWeek": 1.0e9,
+                    "parentProtocol": "parent#aave",
+                    "excludeTvlFromParent": true
+                },
+                {
+                    "name": "Curve DEX",
+                    "symbol": "CRV",
+                    "url": "https://curve.fi",
+                    "chains": ["Ethereum"],
+                    "chainTvls": { "Ethereum": { "tvl": 2.0e9 } },
+                    "tvl": 2.0e9,
+                    "tvlPrevDay": 2.5e9,
+                    "tvlPrevWeek": 2.0e9,
+                    "mcap": 1.0e9,
+                    "deprecated": false
+                }
+            ]
+        })
+        .to_string()
+    }
+
+    fn lite_list() -> LiteResponse {
+        serde_json::from_str(&lite_payload()).unwrap()
+    }
+
+    #[test]
+    fn lite_list_deserialises_parents_children_and_standalones() {
+        let list = lite_list();
+
+        assert_eq!(list.parent_protocols.len(), 1);
+        assert_eq!(list.parent_protocols[0].id, "parent#aave");
+        assert_eq!(list.parent_protocols[0].mcap, Some(3_500_000_000.0));
+
+        let v3 = &list.protocols[0];
+        assert_eq!(v3.parent_protocol.as_deref(), Some("parent#aave"));
+        assert!(!v3.exclude_tvl_from_parent);
+        assert_eq!(v3.chain_tvls["Ethereum"].tvl, 9.0e9);
+        assert_eq!(v3.tvl_prev_week, Some(8.0e9));
+        assert!(list.protocols[1].exclude_tvl_from_parent);
+
+        let curve = &list.protocols[2];
+        assert_eq!(curve.parent_protocol, None);
+        assert_eq!(curve.mcap, Some(1.0e9));
+    }
+
+    #[tokio::test]
+    async fn lite_protocols_reads_the_shared_list() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/lite/protocols2")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(lite_payload())
+            .create_async()
+            .await;
+
+        let list = test_client(&server.url()).lite_protocols().await.unwrap();
+        assert_eq!(list.protocols.len(), 3);
     }
 
     #[test]
@@ -159,8 +243,14 @@ mod tests {
 
     #[test]
     fn breakdown_keys_are_excluded_from_chain_allocations() {
-        let response: ProtocolResponse = serde_json::from_str(&protocol_payload()).unwrap();
-        let allocations = chain_allocations(&response);
+        let chains = vec!["Ethereum".to_string(), "Arbitrum".to_string()];
+        let tvls = HashMap::from([
+            ("Ethereum".to_string(), 9_000_000_000.0),
+            ("Arbitrum".to_string(), 1_000_000_000.0),
+            ("Ethereum-borrowed".to_string(), 5_000_000_000.0),
+            ("pool2".to_string(), 12_345.0),
+        ]);
+        let allocations = chain_allocations(&chains, &tvls);
 
         // Only the two keys that name a chain the protocol reports.
         assert_eq!(allocations.len(), 2);
@@ -168,79 +258,184 @@ mod tests {
         assert_eq!(allocations[0].chain, "Ethereum");
         assert_eq!(allocations[0].tvl, 9_000_000_000.0);
         assert_eq!(allocations[1].chain, "Arbitrum");
-        assert!(
-            !allocations.iter().any(|a| a.chain.contains("borrowed")),
-            "a borrowed-capital breakdown key leaked into the allocations"
-        );
     }
 
     #[test]
     fn an_empty_chains_list_falls_back_to_the_non_breakdown_keys() {
         let payload = serde_json::json!({
-            "name": "Aave",
-            "chains": [],
-            "currentChainTvls": {
-                "Ethereum": 9_000_000_000.0_f64,
-                "Ethereum-borrowed": 5_000_000_000.0_f64,
-                "Ethereum-staking": 1_000_000.0_f64,
-                "OP Mainnet": 2_000_000_000.0_f64,
-                "borrowed": 7_000_000_000.0_f64,
-                "pool2": 12_345.0_f64,
-                "staking": 999.0_f64
-            },
-            "tvl": []
+            "protocols": [{
+                "name": "Aave",
+                "chains": [],
+                "chainTvls": {
+                    "Ethereum": { "tvl": 9.0e9 },
+                    "Ethereum-borrowed": { "tvl": 5.0e9 },
+                    "Ethereum-staking": { "tvl": 1.0e6 },
+                    "Ethereum-doublecounted": { "tvl": 3.0e9 },
+                    "Ethereum-excludeParent": { "tvl": 1.0e9 },
+                    "OP Mainnet": { "tvl": 2.0e9 },
+                    "borrowed": { "tvl": 7.0e9 },
+                    "dcAndLsOverlap": { "tvl": 4.0e6 },
+                    "liquidstaking": { "tvl": 5.0e6 },
+                    "offers": { "tvl": 6.0e6 },
+                    "pool2": { "tvl": 12_345.0_f64 },
+                    "staking": { "tvl": 999.0_f64 }
+                }
+            }]
         })
         .to_string();
-        let response: ProtocolResponse = serde_json::from_str(&payload).unwrap();
-        let summary = to_protocol_tvl("aave", &response);
+        let list: LiteResponse = serde_json::from_str(&payload).unwrap();
+        let summary = to_protocol_tvl("aave", &list).unwrap();
 
         assert_eq!(summary.chains, vec!["Ethereum", "OP Mainnet"]);
         assert_eq!(summary.tvl_by_chain.len(), 2);
+    }
+
+    #[test]
+    fn a_parent_sums_its_included_children() {
+        let list = lite_list();
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.slug, "aave");
+        assert_eq!(summary.name.as_deref(), Some("Aave"));
+        assert_eq!(summary.url.as_deref(), Some("https://aave.com"));
+        assert_eq!(summary.chains, vec!["Ethereum", "Arbitrum"]);
+        assert_eq!(summary.market_cap, Some(3_500_000_000.0));
+        // V2 is excluded from the parent, so only V3 counts.
+        assert_eq!(summary.tvl, Some(10.0e9));
+        assert_eq!(summary.tvl_by_chain.len(), 2);
+        assert_eq!(summary.tvl_by_chain[0].chain, "Ethereum");
+        assert_eq!(summary.tvl_by_chain[0].tvl, 9.0e9);
+        assert_eq!(summary.tvl_by_chain[1].tvl, 1.0e9);
+    }
+
+    #[test]
+    fn a_parent_chain_total_adds_across_children() {
+        let mut list = lite_list();
+        list.protocols[1].exclude_tvl_from_parent = false;
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(11.0e9));
+        assert_eq!(summary.tvl_by_chain[0].tvl, 10.0e9);
+    }
+
+    #[test]
+    fn a_parent_leaves_out_the_share_a_child_excludes() {
+        let mut list = lite_list();
+        let excluded: HashMap<String, LiteChainTvl> = serde_json::from_value(serde_json::json!({
+            "excludeParent": { "tvl": 4.0e9, "tvlPrevDay": 3.0e9 },
+            "Ethereum-excludeParent": { "tvl": 4.0e9 }
+        }))
+        .unwrap();
+        list.protocols[0].chain_tvls.extend(excluded);
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(6.0e9));
+        assert_eq!(summary.tvl_by_chain[0].chain, "Ethereum");
+        assert_eq!(summary.tvl_by_chain[0].tvl, 5.0e9);
+        // Net of the excluded share: 6 -> 6.
+        assert_eq!(summary.change_1d_percent, Some(0.0));
+
+        let standalone = to_protocol_tvl("aave-v3", &list).unwrap();
+        assert_eq!(standalone.tvl, Some(10.0e9));
+    }
+
+    #[test]
+    fn a_parent_id_outside_slug_form_still_resolves() {
+        let mut list = lite_list();
+        list.parent_protocols[0].id = "parent#Aave".to_string();
+        list.protocols[0].parent_protocol = Some("parent#Aave".to_string());
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(10.0e9));
+    }
+
+    #[test]
+    fn a_standalone_protocol_wins_over_a_parent_of_the_same_slug() {
+        let mut list = lite_list();
+        list.parent_protocols[0].id = "parent#curve-dex".to_string();
+        list.protocols[0].parent_protocol = Some("parent#curve-dex".to_string());
+        let summary = to_protocol_tvl("curve-dex", &list).unwrap();
+
+        assert_eq!(summary.name.as_deref(), Some("Curve DEX"));
+        assert_eq!(summary.tvl, Some(2.0e9));
+    }
+
+    #[test]
+    fn a_parent_change_ignores_children_missing_the_prior_value() {
+        let mut list = lite_list();
+        list.protocols[1].exclude_tvl_from_parent = false;
+        list.protocols[1].tvl_prev_day = None;
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.tvl, Some(11.0e9));
+        // V3 alone: 9 -> 10.
+        assert!((summary.change_1d_percent.unwrap() - (10.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);
+        // Both children report a prior week: 9 -> 11.
+        assert!((summary.change_7d_percent.unwrap() - (11.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_parent_with_no_matched_child_has_no_change() {
+        let mut list = lite_list();
+        list.protocols[0].tvl_prev_day = None;
+        let summary = to_protocol_tvl("aave", &list).unwrap();
+
+        assert_eq!(summary.change_1d_percent, None);
+    }
+
+    #[test]
+    fn a_child_resolves_by_its_derived_slug() {
+        let list = lite_list();
+        let summary = to_protocol_tvl("aave-v3", &list).unwrap();
+
+        assert_eq!(summary.name.as_deref(), Some("Aave V3"));
+        assert_eq!(summary.tvl, Some(10.0e9));
+    }
+
+    #[test]
+    fn a_standalone_protocol_resolves_by_its_derived_slug() {
+        let list = lite_list();
+        let summary = to_protocol_tvl("curve-dex", &list).unwrap();
+
+        assert_eq!(summary.name.as_deref(), Some("Curve DEX"));
+        assert_eq!(summary.chains, vec!["Ethereum"]);
+        assert_eq!(summary.tvl, Some(2.0e9));
+        assert_eq!(summary.market_cap, Some(1.0e9));
+    }
+
+    #[test]
+    fn an_unknown_slug_maps_to_symbol_not_found() {
+        let list = lite_list();
+        let err = to_protocol_tvl("not-a-protocol", &list).unwrap_err();
+
         assert!(
-            summary
-                .tvl_by_chain
-                .iter()
-                .all(|a| summary.chains.contains(&a.chain)),
-            "an allocation named something absent from the chain list"
+            matches!(err, FinanceError::SymbolNotFound { .. }),
+            "{err:?}"
         );
     }
 
     #[test]
-    fn change_is_measured_against_the_closest_earlier_snapshot() {
-        let history = vec![
-            super::super::super::models::crypto::defi::TvlPoint {
-                timestamp: 1785110400,
-                tvl: 8_000_000_000.0,
-            },
-            super::super::super::models::crypto::defi::TvlPoint {
-                timestamp: 1785628800,
-                tvl: 9_500_000_000.0,
-            },
-            super::super::super::models::crypto::defi::TvlPoint {
-                timestamp: 1785715200,
-                tvl: 10_000_000_000.0,
-            },
-        ];
+    fn changes_compare_against_the_prior_day_and_week() {
+        let list = lite_list();
 
-        // One day back from 1785715200 is 1785628800 exactly.
-        let one_day = change_percent(&history, 1).unwrap();
-        assert!(
-            (one_day - (10.0 - 9.5) / 9.5 * 100.0).abs() < 1e-9,
-            "{one_day}"
-        );
+        let aave = to_protocol_tvl("aave", &list).unwrap();
+        assert!((aave.change_1d_percent.unwrap() - (10.0 - 9.0) / 9.0 * 100.0).abs() < 1e-9);
+        assert!((aave.change_7d_percent.unwrap() - 25.0).abs() < 1e-9);
 
-        // Seven days back lands before the oldest snapshot in the 1d window,
-        // so the 1785110400 point is used.
-        let week = change_percent(&history, 7).unwrap();
-        assert!((week - (10.0 - 8.0) / 8.0 * 100.0).abs() < 1e-9, "{week}");
+        let curve = to_protocol_tvl("curve-dex", &list).unwrap();
+        assert!((curve.change_1d_percent.unwrap() - -20.0).abs() < 1e-9);
+        assert_eq!(curve.change_7d_percent, Some(0.0));
+    }
 
-        // Nothing old enough to compare against.
-        assert_eq!(change_percent(&history, 3650), None);
-        assert_eq!(change_percent(&[], 1), None);
+    #[test]
+    fn a_missing_or_zero_base_has_no_change() {
+        assert_eq!(change_percent(Some(10.0), None), None);
+        assert_eq!(change_percent(Some(10.0), Some(0.0)), None);
+        assert_eq!(change_percent(None, Some(10.0)), None);
     }
 
     #[tokio::test]
-    async fn protocol_maps_to_a_tvl_summary_and_history() {
+    async fn protocol_maps_to_a_history_oldest_first() {
         let mut server = mockito::Server::new_async().await;
         let _m = server
             .mock("GET", "/protocol/aave")
@@ -251,17 +446,6 @@ mod tests {
             .await;
 
         let response = test_client(&server.url()).protocol("aave").await.unwrap();
-        let summary = to_protocol_tvl("aave", &response);
-
-        assert_eq!(summary.slug, "aave");
-        assert_eq!(summary.name.as_deref(), Some("AAVE V3"));
-        assert_eq!(summary.symbol.as_deref(), Some("AAVE"));
-        assert_eq!(summary.chains, vec!["Ethereum", "Arbitrum"]);
-        // Latest history point, not the sum of currentChainTvls.
-        assert_eq!(summary.tvl, Some(10_000_000_000.0));
-        assert_eq!(summary.market_cap, Some(3_500_000_000.0));
-        assert_eq!(summary.tvl_by_chain.len(), 2);
-
         let history = to_history(&response);
         assert_eq!(history.len(), 3);
         assert!(history.windows(2).all(|w| w[0].timestamp < w[1].timestamp));

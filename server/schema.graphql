@@ -4752,6 +4752,25 @@ type QueryRoot {
 	"""
 	cryptoCoin(id: String!, vsCurrency: String! = "usd"): GqlCoinQuote!
 	"""
+	A DeFi protocol's current total value locked by DefiLlama slug (e.g.
+	"aave"), provider-routed (DefiLlama, keyless). Unlike `cryptoCoin { tvl }`
+	it needs no CoinGecko coin by the same id.
+	"""
+	protocolTvl(id: String!): GqlProtocolTvl!
+	"""
+	A DeFi protocol's TVL history by DefiLlama slug, oldest first.
+	"""
+	protocolTvlHistory(		id: String!,
+		"""
+		Max points per page; omitted = every fetched point in one page
+		"""
+		first: Int,
+		"""
+		Opaque continuation cursor from a previous page's endCursor
+		"""
+		after: String
+	): GqlTvlPointConnection!
+	"""
 	Worldwide news mentioning `symbol`, from GDELT DOC 2.0 (keyless).
 	
 	Distinct from the Yahoo-sourced `ticker { news }`: GDELT indexes news

@@ -9,7 +9,7 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use tracing::debug;
 
-use super::models::{ChainResponse, ProtocolResponse, StablecoinsResponse};
+use super::models::{ChainResponse, LiteResponse, ProtocolResponse, StablecoinsResponse};
 use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
@@ -47,6 +47,12 @@ impl DefiLlamaClient {
             crate::adapters::common::encode_path_segment(slug)
         );
         self.get(&url, Some(slug)).await
+    }
+
+    /// Fetch the shared list of every protocol's current TVL.
+    pub(super) async fn lite_protocols(&self) -> Result<LiteResponse> {
+        let url = format!("{}/lite/protocols2", self.base_url);
+        self.get(&url, None).await
     }
 
     /// Fetch aggregate TVL for every chain.
