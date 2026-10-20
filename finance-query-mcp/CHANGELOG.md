@@ -12,6 +12,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-19
+
+`get_protocol_tvl` answers for every DefiLlama protocol, and
+`get_market_calendar` returns Nasdaq's full earnings row.
+
+### Changed
+
+- **`get_market_calendar`** earnings entries include `company`,
+  `estimateCount`, `surprisePercent`, `previousEps`, `previousReportDate` and
+  `marketCap`.
+- The `debian` base image in `finance-query-mcp/Dockerfile` was bumped to a
+  current digest. Routine refresh; no CVE fix is claimed.
+
+### Fixed
+
+- **`get_protocol_tvl` and `get_protocol_tvl_history`** no longer fail for
+  protocols CoinGecko doesn't list, and `get_protocol_tvl` no longer times out
+  on large protocols.
+
+### Security
+
+- Bumped `rustls` 0.23.45 → 0.23.46 (RUSTSEC-2026-0346, RUSTSEC-2026-0347,
+  RUSTSEC-2026-0348, RUSTSEC-2026-0349), which every outbound HTTPS and
+  WebSocket connection uses.
+
 ## [3.2.0] - 2026-10-02
 
 `get_company_profile` returns the new identifier fields, and a misconfigured
