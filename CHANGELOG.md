@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Carry full earnings data in the market calendar (#546)
 
+### 🐛 Fixes
+
+- Serve protocol TVL from DefiLlama's lite list (#552)
+
 ### 📦 Dependencies
 
 - Bump the all-dependencies group across 1 directory with 6 updates (#547)
