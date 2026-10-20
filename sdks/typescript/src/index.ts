@@ -28,4 +28,4 @@ export {
 } from "./server.js";
 
 /** The version this client was generated for. */
-export const VERSION = "3.2.0";
+export const VERSION = "3.3.0";
