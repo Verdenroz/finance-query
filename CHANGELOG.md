@@ -5,14 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.2.0)
+## [3.3.0] - 2026-10-19
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+Protocol TVL no longer downloads a protocol's entire history to report its
+current value. `CryptoCoin::tvl` reads DefiLlama's shared protocol list instead
+of the per-protocol payload (10.8 MB for Aave), so it stops running into the
+45-second timeout, and grouped protocols such as Aave or Spark are summed from
+their sub-protocols the way DefiLlama itself reports them. Market-calendar
+earnings entries carry the rest of what Nasdaq publishes: company name,
+estimate count, EPS surprise, last year's EPS and report date, and market cap.
+`rustls` and `zip` move past seven RUSTSEC advisories.
+
+### ⬆️ Upgrade notes
+
+- `CalendarDetail::Earnings` gains six fields and is now `#[non_exhaustive]`.
+  A pattern that names every field without `..`, or code that builds the
+  variant directly, stops compiling. Add `..` to the pattern.
+- Negative EPS figures from the Nasdaq earnings calendar now come back
+  negative. Accounting-style `($0.12)` used to parse as `+0.12`.
+- `CryptoCoin::tvl` figures for grouped protocols change. A group leaves out
+  the share a sub-protocol excludes from its parent (Spark reads 6.85B,
+  matching DefiLlama, instead of 9.50B), and its 1-day and 7-day change only
+  compares sub-protocols that report both values.
 <!-- /soothfast:notes -->
 
 ### ✨ Features
@@ -33,6 +50,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 Internal
 
 - Run CI and security checks on Dependabot PRs (#550)
+
+### 🔒 Security
+
+- Bumped `rustls` 0.23.45 → 0.23.46 (RUSTSEC-2026-0346: `Debug` output of
+  client session values exposed TLS secrets; RUSTSEC-2026-0347: buffered
+  application data sent to the outer server after ECH rejection;
+  RUSTSEC-2026-0348: Brotli certificate decompression could allocate 1 GiB
+  before authentication; RUSTSEC-2026-0349: an unauthenticated ServerHello
+  could downgrade later connections to classical key exchange) (#553).
+  `rustls` reaches the library through `reqwest` and `tokio-tungstenite`, so
+  every HTTP and streaming connection uses it.
+- Bumped the optional `zip` dependency 2.4.2 → 9.0.5 (RUSTSEC-2026-0367,
+  RUSTSEC-2026-0368, RUSTSEC-2026-0369: `ZipArchive::extract` preserved
+  SUID/SGID bits and created or followed symlinks outside the destination)
+  (#553). The library only reads archive entries and never calls `extract`,
+  so it was not exposed; the bump clears the advisories for `secftd`,
+  `housetrades` and `translation-offline` builds.
 
 ---
 

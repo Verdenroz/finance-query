@@ -10,6 +10,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-19
+
+Protocol TVL answers for every DefiLlama protocol, not only the ones that also
+have a CoinGecko coin, and market-calendar earnings carry Nasdaq's full row.
+
+### Added
+
+- **`protocolTvl` and `protocolTvlHistory`** root fields return a DeFi
+  protocol's TVL by DefiLlama slug without needing a CoinGecko coin by the
+  same id. `cryptoCoin { tvl }` and `cryptoCoin { tvlHistory }` still work.
+- **Earnings calendar fields**: market-calendar earnings entries (and
+  `GET /v2/market-calendar`) gain `company`, `estimateCount`,
+  `surprisePercent`, `previousEps`, `previousReportDate` and `marketCap`.
+
+### Changed
+
+- The `debian` base image in `server/Dockerfile` was bumped to a current
+  digest. Routine refresh; no CVE fix is claimed.
+
+### Fixed
+
+- **`GET /v2/crypto/coins/{id}/tvl` and `/tvl-history` no longer 404 for
+  protocols CoinGecko doesn't list** (`spark`, `phase`). Both went through
+  `cryptoCoin`, which fetched a CoinGecko quote first, so every TVL call also
+  spent CoinGecko quota.
+- **`/tvl` no longer times out.** It read the protocol's full TVL history
+  (10.8 MB for `aave`) and could hit the 45-second limit. It now reads
+  DefiLlama's shared protocol list.
+- **Group totals match DefiLlama.** Spark reads 6.85B instead of 9.50B, and
+  Uniswap's 1-day change no longer reads +53.6% because one sub-protocol had
+  no prior-day value.
+
+### Security
+
+- Bumped `rustls` 0.23.45 → 0.23.46 (RUSTSEC-2026-0346, RUSTSEC-2026-0347,
+  RUSTSEC-2026-0348, RUSTSEC-2026-0349), which every outbound HTTPS and
+  WebSocket connection uses.
+
 ## [3.2.0] - 2026-10-02
 
 Company profiles and listings carry the identifiers the new FMP and Polygon
