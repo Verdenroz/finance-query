@@ -141,6 +141,7 @@ impl ProviderAdapter for Mislabeled {
 
 async fn providers() -> Providers {
     Providers::builder()
+        .providers([])
         .with_adapter(Arc::new(Paged))
         .route(Capability::CHART, [Provider::custom("paged")])
         .route(Capability::DISCOVERY, [Provider::custom("paged")])
@@ -224,6 +225,7 @@ async fn a_custom_adapter_serves_listings_ticker_changes_and_stock_types() {
 #[tokio::test]
 async fn a_page_labelled_as_another_provider_cannot_redirect_its_continuation() {
     let discovery = Providers::builder()
+        .providers([])
         .with_adapter(Arc::new(Mislabeled))
         .route(Capability::DISCOVERY, [Provider::custom("mislabeled")])
         .build()

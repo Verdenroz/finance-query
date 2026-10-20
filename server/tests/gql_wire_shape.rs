@@ -12,6 +12,9 @@
 //!   does not error — it silently yields zeroed data. These tests assert real
 //!   values survive, which is the only way that failure mode shows up.
 
+use std::sync::Arc;
+
+use finance_query::Providers;
 use finance_query_server::{
     AppState, FeedHub, StreamHub,
     cache::Cache,
@@ -167,9 +170,13 @@ async fn sdl_field_names_are_the_graphql_spelling_not_the_serde_one() {
         cache: Cache::new(None).await,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
-        providers: finance_query_server::build_providers()
-            .await
-            .expect("provider routing should build"),
+        providers: Arc::new(
+            Providers::builder()
+                .providers([])
+                .build()
+                .await
+                .expect("an empty provider set builds"),
+        ),
     };
     let sdl = graphql::build_schema(state).sdl();
 

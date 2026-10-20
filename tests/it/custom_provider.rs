@@ -47,6 +47,7 @@ fn canned() -> Arc<dyn ProviderAdapter> {
 #[tokio::test]
 async fn a_registered_adapter_serves_its_routed_capability() {
     let providers = Providers::builder()
+        .providers([])
         .with_adapter(canned())
         .route(Capability::FILINGS, [Provider::custom("canned")])
         .build()
@@ -64,6 +65,7 @@ async fn a_registered_adapter_serves_its_routed_capability() {
 #[tokio::test]
 async fn health_reports_the_custom_identity() {
     let providers = Providers::builder()
+        .providers([])
         .with_adapter(canned())
         .route(Capability::FILINGS, [Provider::custom("canned")])
         .build()
@@ -80,6 +82,7 @@ async fn health_reports_the_custom_identity() {
 #[tokio::test]
 async fn routing_to_an_unregistered_id_fails_at_build() {
     let err = Providers::builder()
+        .providers([])
         .route(Capability::FILINGS, [Provider::custom("absent")])
         .build()
         .await
@@ -101,6 +104,7 @@ async fn a_custom_id_may_not_shadow_a_built_in() {
     impl ProviderAdapter for Impostor {}
 
     let err = Providers::builder()
+        .providers([])
         .with_adapter(Arc::new(Impostor))
         .build()
         .await
@@ -114,6 +118,7 @@ async fn a_custom_id_may_not_shadow_a_built_in() {
 #[tokio::test]
 async fn an_unserved_capability_names_the_custom_provider() {
     let providers = Providers::builder()
+        .providers([])
         .with_adapter(canned())
         .route(Capability::CHART, [Provider::custom("canned")])
         .build()
@@ -197,6 +202,7 @@ impl ProviderAdapter for CannedForex {
 #[tokio::test]
 async fn forex_handle_reachable_with_no_builtin_forex_feature() {
     let providers = Providers::builder()
+        .providers([])
         .with_adapter(Arc::new(CannedForex))
         .route(Capability::FOREX, [Provider::custom("canned-forex")])
         .build()

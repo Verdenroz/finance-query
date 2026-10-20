@@ -2,6 +2,9 @@
 //! the live schema. Regenerate with:
 //! `cargo run --example dump_graphql_schema -p finance-query-server > server/schema.graphql`
 
+use std::sync::Arc;
+
+use finance_query::Providers;
 use finance_query_server::{AppState, FeedHub, StreamHub, cache::Cache, graphql};
 
 #[tokio::test]
@@ -10,9 +13,13 @@ async fn schema_graphql_is_up_to_date() {
         cache: Cache::new(None).await,
         stream_hub: StreamHub::new(),
         feed_hub: FeedHub::new(),
-        providers: finance_query_server::build_providers()
-            .await
-            .expect("provider routing should build"),
+        providers: Arc::new(
+            Providers::builder()
+                .providers([])
+                .build()
+                .await
+                .expect("an empty provider set builds"),
+        ),
     };
     let live_sdl = graphql::build_schema(state).sdl();
     let checked_in =
