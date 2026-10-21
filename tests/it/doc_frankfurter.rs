@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/frankfurter.md
 //!
 //! Requires the `frankfurter` feature flag:
-//!   cargo test --test doc_frankfurter --features frankfurter
-//!   cargo test --test doc_frankfurter --features frankfurter -- --ignored
+//!   cargo test --test it doc_frankfurter --features frankfurter
+//!   cargo test --test it doc_frankfurter --features frankfurter -- --ignored
 //!
 //! Offline behaviour (change computation, chronological ordering, the
 //! same-currency short circuit, error mapping) is covered by the mock + unit

@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/defillama.md
 //!
 //! Requires the `defi` feature flag:
-//!   cargo test --test doc_defillama --features defi
-//!   cargo test --test doc_defillama --features defi -- --ignored
+//!   cargo test --test it doc_defillama --features defi
+//!   cargo test --test it doc_defillama --features defi -- --ignored
 //!
 //! Offline behaviour (slug normalisation, breakdown-key exclusion, change
 //! computation, peg-keyed supply maps, error mapping) is covered by the mock +

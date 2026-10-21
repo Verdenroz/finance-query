@@ -4,7 +4,7 @@
 //! default), so these exercise the symbol mapping per asset class against the
 //! live Yahoo chart endpoint.
 //!
-//!   cargo test --test domain_charts --features fmp,polygon,crypto -- --ignored
+//!   cargo test --test it domain_charts --features fmp,polygon,crypto -- --ignored
 
 #![cfg(feature = "fmp")]
 

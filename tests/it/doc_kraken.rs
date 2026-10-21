@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/kraken.md
 //!
 //! Requires the `kraken` feature flag:
-//!   cargo test --test doc_kraken --features kraken
-//!   cargo test --test doc_kraken --features kraken -- --ignored
+//!   cargo test --test it doc_kraken --features kraken
+//!   cargo test --test it doc_kraken --features kraken -- --ignored
 //!
 //! Offline behaviour (XBT/XDG aliasing, X/Z prefix stripping, the HTTP-200
 //! error envelope, the `last` cursor) is covered by the mock + unit tests in

@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/bls.md
 //!
 //! Requires the `bls` feature flag:
-//!   cargo test --test doc_bls --features bls
-//!   cargo test --test doc_bls --features bls -- --ignored   (network tests)
+//!   cargo test --test it doc_bls --features bls
+//!   cargo test --test it doc_bls --features bls -- --ignored   (network tests)
 //!
 //! Offline behaviour (period-code dating, the `"-"` sentinel, annual-aggregate
 //! rows, tier selection, error mapping) is covered by the mock + unit tests in

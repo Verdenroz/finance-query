@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/binance.md
 //!
 //! Requires the `binance` feature flag:
-//!   cargo test --test doc_binance --features binance
-//!   cargo test --test doc_binance --features binance -- --ignored
+//!   cargo test --test it doc_binance --features binance
+//!   cargo test --test it doc_binance --features binance -- --ignored
 //!
 //! Offline behaviour (symbol normalisation, kline parsing, millisecond
 //! conversion, error mapping) is covered by the mock + unit tests in

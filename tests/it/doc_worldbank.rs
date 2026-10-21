@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/worldbank.md
 //!
 //! Requires the `worldbank` feature flag:
-//!   cargo test --test doc_worldbank --features worldbank
-//!   cargo test --test doc_worldbank --features worldbank -- --ignored   (network tests)
+//!   cargo test --test it doc_worldbank --features worldbank
+//!   cargo test --test it doc_worldbank --features worldbank -- --ignored   (network tests)
 //!
 //! Offline behaviour of the series path (envelope parsing, error messages,
 //! period normalisation, chronological ordering) is covered by the mock +

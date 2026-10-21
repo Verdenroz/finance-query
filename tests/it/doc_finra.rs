@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/finra.md
 //!
 //! Requires the `finra` feature flag:
-//!   cargo test --test doc_finra --features finra
-//!   cargo test --test doc_finra --features finra -- --ignored
+//!   cargo test --test it doc_finra --features finra
+//!   cargo test --test it doc_finra --features finra -- --ignored
 //!
 //! Offline behaviour (per-facility consolidation, the 204 empty-series case,
 //! error mapping) is covered by the mock + unit tests in

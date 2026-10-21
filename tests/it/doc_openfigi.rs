@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/openfigi.md
 //!
 //! Requires the `openfigi` feature flag:
-//!   cargo test --test doc_openfigi --features openfigi
-//!   cargo test --test doc_openfigi --features openfigi -- --ignored
+//!   cargo test --test it doc_openfigi --features openfigi
+//!   cargo test --test it doc_openfigi --features openfigi -- --ignored
 //!
 //! Offline behaviour (positional pairing, the capitalised `compositeFIGI`
 //! keys, batch limits, error mapping) is covered by the mock + unit tests in

@@ -1,8 +1,8 @@
 //! Compile and runtime tests for docs/library/providers/fiscaldata.md
 //!
 //! Requires the `fiscaldata` feature flag:
-//!   cargo test --test doc_fiscaldata --features fiscaldata
-//!   cargo test --test doc_fiscaldata --features fiscaldata -- --ignored   (network tests)
+//!   cargo test --test it doc_fiscaldata --features fiscaldata
+//!   cargo test --test it doc_fiscaldata --features fiscaldata -- --ignored   (network tests)
 //!
 //! Offline behaviour (series-id resolution, string-encoded numbers, the
 //! `"null"` sentinel, pagination, API error mapping) is covered by the mock +
