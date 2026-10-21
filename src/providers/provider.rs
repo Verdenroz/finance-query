@@ -252,9 +252,7 @@ impl Provider {
 
     /// Capability bitflags for this provider variant, derived from each
     /// adapter's `as_*` accessor overrides — implementing a capability trait
-    /// and declaring it can no longer drift apart. Yahoo is the one exception:
-    /// constructing `YahooProvider` needs a live auth handshake, so its set is
-    /// a const declared beside its accessor overrides (`yahoo::CAPS`).
+    /// and declaring it can no longer drift apart.
     ///
     /// [`Provider::Custom`] returns [`Capability::NONE`]. An id carries no
     /// adapter, so a custom provider's real set is
@@ -262,7 +260,7 @@ impl Provider {
     /// on the registered instance.
     pub fn capabilities(self) -> Capability {
         match self {
-            Self::Yahoo => yahoo::CAPS,
+            Self::Yahoo => ProviderAdapter::capabilities(&yahoo::YahooProvider::unauthenticated()),
             #[cfg(feature = "polygon")]
             Self::Polygon => ProviderAdapter::capabilities(&polygon::PolygonProvider),
             #[cfg(feature = "fmp")]
