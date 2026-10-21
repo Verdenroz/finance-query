@@ -1,7 +1,8 @@
 //! Symbol-specific data access from multiple providers.
 
 use crate::adapters::edgar;
-use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::client::ClientConfig;
+use crate::adapters::yahoo::session::LazySession;
 #[cfg(feature = "backtesting")]
 use crate::backtesting;
 use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange};
@@ -66,7 +67,7 @@ type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
 /// # }
 /// ```
 #[derive(Clone)]
-pub struct ClientHandle(pub(crate) Arc<YahooClient>);
+pub struct ClientHandle(pub(crate) Arc<LazySession>);
 /// Builder for constructing a [`Ticker`] with optional configuration.
 ///
 /// Construct via [`Ticker::builder`]. All builder methods are optional;
@@ -176,14 +177,13 @@ impl TickerBuilder {
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
-            let yahoo = YahooProvider::from_client(handle.0);
-            let client = yahoo.client_arc();
+            let yahoo = YahooProvider::new(Arc::clone(&handle.0));
             Arc::new(
                 ProviderSet::new(
                     vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
                     Routes::new(Fetch::Sequential),
                 )
-                .with_yahoo_client(Some(client)),
+                .with_yahoo_session(Some(handle.0)),
             )
         } else {
             Arc::new(
@@ -290,7 +290,7 @@ impl Ticker {
     pub fn client_handle(&self) -> ClientHandle {
         ClientHandle(
             self.providers
-                .first_yahoo()
+                .yahoo_session()
                 .expect("client_handle requires a Yahoo session; use Providers::ticker() for multi-provider tickers"),
         )
     }
@@ -347,7 +347,7 @@ impl Ticker {
             {
                 return e.value.clone();
             }
-            let fetched = match self.providers.first_yahoo() {
+            let fetched = match self.providers.first_yahoo().await {
                 Ok(y) => y.get_logo_url(&self.symbol).await,
                 Err(e) => Err(e),
             };

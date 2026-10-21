@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::client::ClientConfig;
+use crate::adapters::yahoo::session::LazySession;
 use crate::error::{FinanceError, Result};
 
 /// Keyed on identity, not `capabilities().contains(FILINGS)`: a provider may
@@ -21,13 +22,13 @@ pub(crate) async fn build_providers(
 ) -> Result<ProviderSet> {
     use yahoo::YahooProvider;
     let mut providers: Vec<Arc<dyn ProviderAdapter>> = Vec::new();
-    let mut yahoo_client: Option<Arc<YahooClient>> = None;
+    let mut yahoo_session: Option<Arc<LazySession>> = None;
     for &id in ids {
         let adapter: Arc<dyn ProviderAdapter> = match id {
             Provider::Yahoo => {
-                let yp = YahooProvider::new(config).await?;
-                yahoo_client = Some(yp.client_arc());
-                Arc::new(yp)
+                let session = Arc::new(LazySession::new(config.clone()));
+                yahoo_session = Some(Arc::clone(&session));
+                Arc::new(YahooProvider::new(session))
             }
             #[cfg(feature = "polygon")]
             Provider::Polygon => Arc::new(polygon::PolygonProvider),
@@ -97,7 +98,7 @@ pub(crate) async fn build_providers(
             }
         }
     }
-    Ok(ProviderSet::new(providers, routes).with_yahoo_client(yahoo_client))
+    Ok(ProviderSet::new(providers, routes).with_yahoo_session(yahoo_session))
 }
 
 #[cfg(test)]

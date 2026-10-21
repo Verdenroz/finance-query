@@ -271,14 +271,13 @@ impl TickersBuilder {
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
-            let yahoo = YahooProvider::from_client(handle.0);
-            let client = yahoo.client_arc();
+            let yahoo = YahooProvider::new(Arc::clone(&handle.0));
             Arc::new(
                 ProviderSet::new(
                     vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
                     Routes::new(Fetch::Sequential),
                 )
-                .with_yahoo_client(Some(client)),
+                .with_yahoo_session(Some(handle.0)),
             )
         } else {
             Arc::new(
@@ -461,7 +460,7 @@ impl Tickers {
     pub fn client_handle(&self) -> ClientHandle {
         ClientHandle(
             self.providers
-                .first_yahoo()
+                .yahoo_session()
                 .expect("client_handle requires a Yahoo session; use Providers::tickers() for multi-provider tickers"),
         )
     }
