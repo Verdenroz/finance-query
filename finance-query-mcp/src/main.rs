@@ -22,8 +22,19 @@ struct Cli {
     allowed_hosts: Vec<String>,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+/// The MCP server executes the same GraphQL schema as the HTTP server, whose
+/// debug-build futures overflow tokio's 2 MiB default worker stack.
+const WORKER_STACK_BYTES: usize = 8 * 1024 * 1024;
+
+fn main() -> Result<()> {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_stack_size(WORKER_STACK_BYTES)
+        .build()?
+        .block_on(serve())
+}
+
+async fn serve() -> Result<()> {
     // When run from workspace root (e.g. `cargo run -p finance-query-mcp`),
     // try the crate-local .env first, then fall back to the standard search.
     dotenvy::from_path("finance-query-mcp/.env").ok();

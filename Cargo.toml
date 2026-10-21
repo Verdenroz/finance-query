@@ -285,10 +285,7 @@ strip = true
 opt-level = 0
 debug = "line-tables-only"
 
-# Un-inlined debug deps make the Axum -> GraphQL -> adapter call chain deep
-# enough to overflow the default worker stack; this workspace's own crates stay at opt-level 0.
 [profile.dev.package."*"]
-opt-level = 2
 debug = false
 
 [profile.debugging]
