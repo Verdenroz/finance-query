@@ -49,14 +49,37 @@ build: ## Build library and server in release mode
 	@echo "$(GREEN)Building in release mode...$(NC)"
 	$(CARGO) build --release --workspace
 
-test: ## Run ALL tests including network integration tests
-	@echo "$(GREEN)Running all tests...$(NC)"
-	@echo "$(YELLOW)Note: Some tests make real API calls$(NC)"
-	$(CARGO) test --workspace -- --nocapture --include-ignored
+# CI always tests `full`. Locally, narrow it to what you touch
+# (`make test FEATURES=fmp,polygon`) and keep it the same between runs, or
+# every change of feature set rebuilds the dependencies it affects.
+FEATURES ?= full
+comma := ,
+TEST_FEATURES := $(addprefix finance-query/,$(subst $(comma), ,$(FEATURES)))
 
-test-fast: ## Run only fast tests (excludes network tests)
-	@echo "$(GREEN)Running fast tests...$(NC)"
-	$(CARGO) test --workspace -- --nocapture
+# The test targets run the cargo-soothfast that Cargo.lock pins, installed
+# under target/ so switching branches never changes the global one.
+TOOLS := target/tools
+SOOTHFAST_PINNED := $(TOOLS)/bin/cargo-soothfast soothfast
+
+test: soothfast-cli ## Test only what changed since master, skipping cached passes (FEATURES=full)
+	$(SOOTHFAST_PINNED) test --features "$(TEST_FEATURES)"
+
+test-all: soothfast-cli ## Test every package, still skipping cached passes (FEATURES=full)
+	$(SOOTHFAST_PINNED) test --all --features "$(TEST_FEATURES)"
+
+test-fast: test ## Alias for `test`
+
+test-network: ## Run only the network integration tests (live APIs, rate limits)
+	@echo "$(YELLOW)Note: these tests make real API calls$(NC)"
+	$(CARGO) test --workspace --features finance-query/full -- --ignored --nocapture
+
+soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into target/tools, if it differs
+	@want=$$(grep -A1 '^name = "soothfast"$$' Cargo.lock | sed -n 's/^version = "\(.*\)"$$/\1/p'); \
+	have=$$($(CARGO) install --root $(TOOLS) --list 2>/dev/null | sed -n 's/^cargo-soothfast v\(.*\):$$/\1/p'); \
+	if [ "$$want" != "$$have" ]; then \
+		echo "$(YELLOW)Installing cargo-soothfast $$want into $(TOOLS) (found: $${have:-none})...$(NC)"; \
+		$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
+	fi
 
 fix: ## Auto-fix formatting and linting issues
 	@echo "$(GREEN)Formatting code...$(NC)"
@@ -65,7 +88,7 @@ fix: ## Auto-fix formatting and linting issues
 	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-ci: fix build test soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
+ci: fix build test-all test-network soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
 	@echo "$(GREEN)Running cargo-deny...$(NC)"
 	@command -v cargo-deny >/dev/null 2>&1 || $(CARGO) install cargo-deny --locked
 	@cargo deny check advisories bans licenses sources
