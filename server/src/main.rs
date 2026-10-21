@@ -35,13 +35,8 @@ const DEFAULT_SERVER_HOST: &str = "0.0.0.0";
 /// costs us no dependency to participate.
 const READY_PREFIX: &str = "soothfast-ready ";
 
-fn main() {
-    finance_query_server::runtime()
-        .expect("Failed to build the tokio runtime")
-        .block_on(serve());
-}
-
-async fn serve() {
+#[tokio::main]
+async fn main() {
     // Load environment variables from .env file
     dotenvy::dotenv().ok();
 

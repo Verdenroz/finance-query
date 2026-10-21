@@ -22,11 +22,8 @@ struct Cli {
     allowed_hosts: Vec<String>,
 }
 
-fn main() -> Result<()> {
-    finance_query_server::runtime()?.block_on(serve())
-}
-
-async fn serve() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // When run from workspace root (e.g. `cargo run -p finance-query-mcp`),
     // try the crate-local .env first, then fall back to the standard search.
     dotenvy::from_path("finance-query-mcp/.env").ok();

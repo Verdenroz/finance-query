@@ -237,17 +237,6 @@ fn keyed_flag(name: &str, var: &str) -> bool {
     configured
 }
 
-/// The multi-threaded runtime both the HTTP and MCP servers run on. A debug
-/// build's Axum -> GraphQL -> adapter futures overflow tokio's 2 MiB default
-/// worker stack on the first holders request; 4 MiB measured enough, and the
-/// workers get twice that.
-pub fn runtime() -> std::io::Result<tokio::runtime::Runtime> {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .thread_stack_size(8 * 1024 * 1024)
-        .build()
-}
-
 /// Build the multi-provider routing shared by `AppState`. Each keyed
 /// provider is only routed in when its API key env var is set; a field
 /// backed solely by an unconfigured provider falls through to

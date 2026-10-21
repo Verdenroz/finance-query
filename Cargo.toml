@@ -288,6 +288,11 @@ debug = "line-tables-only"
 [profile.dev.package."*"]
 debug = false
 
+# async-graphql's resolvers for this crate's schema compile here; unoptimized,
+# their frames overflow tokio's 2 MiB worker stack on a holders request.
+[profile.dev.package.finance-query-server]
+opt-level = 1
+
 [profile.debugging]
 inherits = "dev"
 debug = true
