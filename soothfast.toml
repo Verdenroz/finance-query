@@ -100,15 +100,12 @@ pages = ["development/contributing.md"]
 # `cargo soothfast test`: the root package owns every file outside the member
 # crates, and no test reads these. docs/ stays in, since docs_nav_coverage reads it.
 [test]
-ignore = [
-  "v1/**", "sdks/**", "monitoring/**", "fuzz/**", "proto/**", ".github/**",
-  "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md",
-  "LICENSE", "llms.txt", "Makefile", "Caddyfile", "docker-compose*.yml", ".dockerignore",
-  ".env.template", ".mcp.json", ".pre-commit-config.yaml", "deny.toml", ".config/**",
-  "soothfast.lock", "soothfast-gate.lock",
-]
 env = [
   "FMP_API_KEY", "POLYGON_API_KEY", "ALPHAVANTAGE_API_KEY", "FRED_API_KEY", "BLS_API_KEY",
   "OPENFIGI_API_KEY", "EDGAR_EMAIL", "REDIS_URL", "DEFAULT_INTERVAL", "DEFAULT_RANGE",
   "SEARCH_HITS", "SCREENERS_COUNT", "RECOMMENDATIONS_LIMIT", "RATE_LIMIT_PER_MINUTE",
 ]
+
+# docs_nav_coverage reads docs/ and soothfast.toml at run time.
+[test.packages.finance-query]
+files = ["src/**", "tests/**", "benches/**", "examples/**", "docs/**", "soothfast.toml"]
