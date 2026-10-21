@@ -103,7 +103,10 @@ jobs:
       - name: Restore measured reference runs
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .soothfast/runs
+          path: |
+            .soothfast/runs
+            .soothfast/items
+            .soothfast/maps
           key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
@@ -150,12 +153,15 @@ jobs:
         with:
           path: .soothfast/baselines/base.json
           key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
-      # Read-only: the gate job is the one writer of .soothfast/runs, since
+      # Read-only: the gate job is the one writer of these paths, since
       # each save replaces the whole directory for the next restore.
       - name: Restore measured reference runs
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .soothfast/runs
+          path: |
+            .soothfast/runs
+            .soothfast/items
+            .soothfast/maps
           key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
