@@ -18,6 +18,10 @@ ignore = [
     # optional `translation-offline` feature; no fixed upstream release exists.
     # Revisit when tokenizers migrates off paste.
     "RUSTSEC-2024-0436",
+    # webpki-roots 0.26.11 bundles no roots: it re-exports webpki-roots 1.x,
+    # which the lock holds at the patched 1.0.10. tokio-tungstenite still
+    # requires ^0.26 through 0.30, so the shim stays in the tree.
+    "RUSTSEC-2026-0381",
 ]
 
 [bans]
