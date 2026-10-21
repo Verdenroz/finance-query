@@ -91,8 +91,10 @@ Yahoo Finance and CoinGecko require no keys.
 make help              # list all available targets
 prek                   # fmt + clippy + check (same as CI)
 make fix               # auto-fix formatting and clippy issues
-make test-fast         # unit tests only (no network)
-make test              # all tests including network integration tests
+make test              # test what changed since master, skipping cached passes
+make test FEATURES=fmp # the same, building only the features you touch
+make test-all          # every package, still skipping cached passes
+make test-network      # network integration tests only (live APIs)
 make ci                # everything CI checks, including the cargo-deny audit
 make docs-pages        # regenerate the derived docs pages
 make docs              # serve the docs site (cargo soothfast) at localhost:8080
@@ -135,7 +137,7 @@ All tests must pass before a PR is merged.
    git checkout -b feat/my-feature
    ```
 2. Make your changes, including tests for any new behaviour.
-3. Run `prek` and `make test-fast` locally. Fix any issues.
+3. Run `prek` and `make test` locally. Fix any issues.
 4. Push your branch and open a PR against `master`.
 5. Fill in the PR description: what changed, why, and how you tested it.
 6. Address any review comments. All CI checks must pass before merge.
