@@ -75,7 +75,7 @@ soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into .tools, if it
 	if [ "$$want" != "$$have" ]; then \
 		echo "$(YELLOW)Installing cargo-soothfast $$want into $(TOOLS) (found: $${have:-none})...$(NC)"; \
 		if command -v cargo-binstall >/dev/null 2>&1; then \
-			cargo binstall -y --root $(TOOLS) "cargo-soothfast@$$want"; \
+			cargo binstall -y --disable-strategies quick-install --root $(TOOLS) "cargo-soothfast@$$want"; \
 		else \
 			$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
 		fi; \
