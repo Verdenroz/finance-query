@@ -97,9 +97,8 @@ pages = ["perf/summary.md", "coverage.md"]
 title = "Development"
 pages = ["development/contributing.md"]
 
-# `cargo soothfast test`. The root package owns every file outside the member
-# crates, so a change to a path no test reads would otherwise re-run them all.
-# docs/ stays in: docs_nav_coverage reads it.
+# `cargo soothfast test`: the root package owns every file outside the member
+# crates, and no test reads these. docs/ stays in, since docs_nav_coverage reads it.
 [test]
 ignore = [
   "v1/**", "sdks/**", "monitoring/**", "fuzz/**", "proto/**", ".github/**",

@@ -35,15 +35,8 @@ const DEFAULT_SERVER_HOST: &str = "0.0.0.0";
 /// costs us no dependency to participate.
 const READY_PREFIX: &str = "soothfast-ready ";
 
-/// A debug build's Axum -> GraphQL -> adapter futures overflow tokio's 2 MiB
-/// default worker stack on the first holders request; 4 MiB measured enough.
-const WORKER_STACK_BYTES: usize = 8 * 1024 * 1024;
-
 fn main() {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .thread_stack_size(WORKER_STACK_BYTES)
-        .build()
+    finance_query_server::runtime()
         .expect("Failed to build the tokio runtime")
         .block_on(serve());
 }

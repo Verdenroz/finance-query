@@ -22,16 +22,8 @@ struct Cli {
     allowed_hosts: Vec<String>,
 }
 
-/// The MCP server executes the same GraphQL schema as the HTTP server, whose
-/// debug-build futures overflow tokio's 2 MiB default worker stack.
-const WORKER_STACK_BYTES: usize = 8 * 1024 * 1024;
-
 fn main() -> Result<()> {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .thread_stack_size(WORKER_STACK_BYTES)
-        .build()?
-        .block_on(serve())
+    finance_query_server::runtime()?.block_on(serve())
 }
 
 async fn serve() -> Result<()> {

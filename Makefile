@@ -53,29 +53,32 @@ FEATURES ?= full
 comma := ,
 TEST_FEATURES := $(addprefix finance-query/,$(subst $(comma), ,$(FEATURES)))
 
-# The test targets run the cargo-soothfast that Cargo.lock pins, installed
-# under target/ so switching branches never changes the global one.
-TOOLS := target/tools
-SOOTHFAST_PINNED := $(TOOLS)/bin/cargo-soothfast soothfast
+# Every soothfast target runs the cargo-soothfast that Cargo.lock pins (CI
+# installs that version too), kept in .tools/ so switching branches never
+# changes the global one and `cargo clean` does not remove it.
+TOOLS := .tools
+SOOTHFAST ?= $(TOOLS)/bin/cargo-soothfast soothfast
 
 test: soothfast-cli ## Test only what changed since master, skipping cached passes (FEATURES=full)
-	$(SOOTHFAST_PINNED) test --features "$(TEST_FEATURES)"
+	$(SOOTHFAST) test --features "$(TEST_FEATURES)"
 
 test-all: soothfast-cli ## Test every package, still skipping cached passes (FEATURES=full)
-	$(SOOTHFAST_PINNED) test --all --features "$(TEST_FEATURES)"
-
-test-fast: test ## Alias for `test`
+	$(SOOTHFAST) test --all --features "$(TEST_FEATURES)"
 
 test-network: ## Run only the network integration tests (live APIs, rate limits)
 	@echo "$(YELLOW)Note: these tests make real API calls$(NC)"
-	$(CARGO) test --workspace --features finance-query/full -- --ignored --nocapture
+	$(CARGO) test --workspace --features "$(TEST_FEATURES)" -- --ignored --nocapture
 
-soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into target/tools, if it differs
+soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into .tools, if it differs
 	@want=$$(grep -A1 '^name = "soothfast"$$' Cargo.lock | sed -n 's/^version = "\(.*\)"$$/\1/p'); \
 	have=$$($(CARGO) install --root $(TOOLS) --list 2>/dev/null | sed -n 's/^cargo-soothfast v\(.*\):$$/\1/p'); \
 	if [ "$$want" != "$$have" ]; then \
 		echo "$(YELLOW)Installing cargo-soothfast $$want into $(TOOLS) (found: $${have:-none})...$(NC)"; \
-		$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
+		if command -v cargo-binstall >/dev/null 2>&1; then \
+			cargo binstall -y --root $(TOOLS) "cargo-soothfast@$$want"; \
+		else \
+			$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
+		fi; \
 	fi
 
 fix: ## Auto-fix formatting and linting issues
@@ -92,10 +95,7 @@ ci: fix build test-all test-network soothfast ## Everything CI checks, locally: 
 
 # The measured regression gate (`cargo soothfast`) runs natively: per-iteration
 # instruction counts via perf_event, plus alloc counts and walltime — no
-# valgrind, no container. Install the CLI once with
-# `cargo install cargo-soothfast` (or `cargo install --path <soothfast>/cargo-soothfast`
-# while it is unpublished).
-SOOTHFAST ?= cargo soothfast
+# valgrind, no container.
 BASE ?= origin/master
 
 # =============================================================================
@@ -140,7 +140,7 @@ cp docs/llms.txt llms.txt
 endef
 
 
-sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
+sdk: soothfast-cli ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
 	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes
 	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --features backtesting
 	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes
@@ -151,7 +151,7 @@ sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDK
 # built its soothfast-routes target, instead of rebuilding both here.
 PAGES ?= all
 
-docs-pages: ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
+docs-pages: soothfast-cli ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
 ifneq ($(filter all server,$(PAGES)),)
 	$(call REGEN_DOCS_ROUTES,server)
 endif
@@ -162,7 +162,7 @@ ifneq ($(filter all lib,$(PAGES)),)
 	$(REGEN_DOCS_PAGES_LIB)
 endif
 
-docs: ## Serve the docs site locally with live reload (run `make docs-pages` first)
+docs: soothfast-cli ## Serve the docs site locally with live reload (run `make docs-pages` first)
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
 	$(SOOTHFAST) docs serve --baseline base --addr localhost:8080
 
@@ -173,10 +173,10 @@ docs: ## Serve the docs site locally with live reload (run `make docs-pages` fir
 # are point-in-time and jitter between runs — regression detection is the
 # `gate` step below, not this. Every step stays inline rather than becoming
 # its own target; run one standalone with `cargo soothfast <cmd>` directly.
-docs-capture-check: ## Verify every captured example's output is current
+docs-capture-check: soothfast-cli ## Verify every captured example's output is current
 	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
 
-soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
 	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
 	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
 	@echo "$(GREEN)Measuring baseline...$(NC)"
@@ -213,11 +213,11 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	@rm -rf target/llms-check
 	@echo "llms.txt: up to date"
 
-probe: ## Run data-quality probes (probes.toml) against a locally launched release server
+probe: soothfast-cli ## Run data-quality probes (probes.toml) against a locally launched release server
 	cargo build --release -p finance-query-server
 	$(SOOTHFAST) spec probe -p finance-query-server
 
-probe-accept: ## Re-lock probes.lock after a deliberate response change
+probe-accept: soothfast-cli ## Re-lock probes.lock after a deliberate response change
 	cargo build --release -p finance-query-server
 	$(SOOTHFAST) spec probe -p finance-query-server --accept
 
@@ -237,7 +237,7 @@ prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.ym
 # Version bumping
 # =============================================================================
 
-bump: ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
+bump: soothfast-cli ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif
