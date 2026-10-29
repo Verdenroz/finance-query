@@ -250,8 +250,9 @@ make install-dev  # Installs rustfmt, clippy, prek, sets up pre-commit hooks
 <h2 id="useful-commands">Useful Commands<a class="anchor" href="#useful-commands" aria-label="Link to this section">#</a></h2>
 <p>Run <code>make help</code> to see all available commands:</p>
 <figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>make serve             # Start dev server (PORT=8000 by default)
-make test              # Run ALL tests including network integration tests
-make test-fast         # Run only fast tests (excludes network tests)
+make test              # Test what changed since master, skipping cached passes
+make test-all          # Test every package, still skipping cached passes
+make test-network      # Run only the network integration tests (live APIs)
 make fix               # Auto-fix formatting and clippy issues
 prek                   # Run pre-commit checks (fmt, clippy, check)
 make docs-pages        # Regenerate the derived docs pages
@@ -266,8 +267,9 @@ docker compose up -d   # Start the full stack (v1, v2, Redis, Caddy, monitoring)
 make serve
 
 <span class="tok-com"># Run tests as you work</span>
-make test-fast  # Quick tests only
-make test       # All tests including network calls
+make test                  # What changed since master (FEATURES=full by default)
+make test FEATURES=polygon # Build only the features you touch
+make test-network          # Network integration tests (live APIs)
 </code></pre></figure>
 <h3 id="2-check-your-code">2. Check Your Code<a class="anchor" href="#2-check-your-code" aria-label="Link to this section">#</a></h3>
 <p>Before committing, run the pre-commit checks:</p>
@@ -428,7 +430,7 @@ git commit -m &quot;fix: handle timezone correctly in market hours&quot;
 <p>Check for outdated dependencies:</p>
 <figure class="code"><figcaption class="code-bar"><span class="code-lang">bash</span><button class="code-copy" type="button" data-copy>Copy</button></figcaption><pre><code>cargo outdated
 cargo update
-make test  # Ensure everything still works
+make test-all  # Ensure everything still works
 </code></pre></figure>
 <h2 id="getting-help">Getting Help<a class="anchor" href="#getting-help" aria-label="Link to this section">#</a></h2>
 <ul>
