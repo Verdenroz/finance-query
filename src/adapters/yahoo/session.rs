@@ -70,6 +70,31 @@ pub(crate) async fn get_or_auth(config: &ClientConfig) -> Result<Arc<YahooClient
     ))
 }
 
+/// A Yahoo session that authenticates on first use rather than at construction.
+///
+/// Clones of the owning `Arc` share one handshake: the first caller to need the
+/// client runs [`get_or_auth`], and a failed attempt is retried on the next call.
+pub(crate) struct LazySession {
+    config: ClientConfig,
+    client: tokio::sync::OnceCell<Arc<YahooClient>>,
+}
+
+impl LazySession {
+    pub(crate) fn new(config: ClientConfig) -> Self {
+        Self {
+            config,
+            client: tokio::sync::OnceCell::new(),
+        }
+    }
+
+    pub(crate) async fn client(&self) -> Result<Arc<YahooClient>> {
+        self.client
+            .get_or_try_init(|| get_or_auth(&self.config))
+            .await
+            .map(Arc::clone)
+    }
+}
+
 /// Drop the cached session for this runtime and config.
 #[cfg(test)]
 pub(crate) fn invalidate(config: &ClientConfig) {

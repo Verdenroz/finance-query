@@ -59,7 +59,7 @@ impl Tickers {
             let providers_logo = Arc::clone(&self.providers);
             let syms_logo = symbol_strings.clone();
             let logo_future = async move {
-                if let Ok(client) = providers_logo.first_yahoo() {
+                if let Ok(client) = providers_logo.first_yahoo().await {
                     let syms_ref: Vec<&str> = syms_logo.iter().map(String::as_str).collect();
                     crate::adapters::yahoo::quote::quotes::fetch_with_fields(
                         &client,

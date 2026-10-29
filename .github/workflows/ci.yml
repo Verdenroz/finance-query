@@ -132,19 +132,35 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The PR merge commit's first parent is the base it was built on.
+          fetch-depth: 2
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: test-suite
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
         with:
-          tool: nextest
+          gate: false
+          changelog: false
+      - name: Restore stored test passes
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/tests
+          key: soothfast-tests-${{ github.sha }}
+          restore-keys: soothfast-tests-
       # `full` excludes translation-offline (native CTranslate2 build,
-      # covered by the Docker jobs instead).
+      # covered by the Docker jobs instead). Doc tests have their own job.
       - name: Run unit tests (full features)
-        run: cargo nextest run --workspace --features finance-query/full
+        run: cargo soothfast test ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '--all' }} --no-doc --features finance-query/full
+      - name: Save stored test passes
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .soothfast/tests
+          key: soothfast-tests-${{ github.sha }}
 
   test-network:
     name: Test Suite (network)

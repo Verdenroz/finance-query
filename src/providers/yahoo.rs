@@ -4,49 +4,33 @@
 //! to keep this file focused on routing and lifecycle.
 
 use super::{
-    CalendarProvider, Capability, ChartProvider, CommoditiesProvider, CorporateProvider,
-    DiscoveryProvider, FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider,
-    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+    CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, DiscoveryProvider,
+    FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider, OptionsProvider,
+    ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::session::LazySession;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
 use std::sync::Arc;
 
-/// Yahoo's capability set, declared rather than derived: `Provider::Yahoo`
-/// can't construct a `YahooProvider` for derivation without a live auth
-/// handshake. Keep in lockstep with the `as_*` overrides below — pinned by
-/// `yahoo_caps_const_matches_declared_capabilities` in `super::tests`.
-pub(crate) const CAPS: Capability = Capability::QUOTE
-    .union(Capability::CHART)
-    .union(Capability::FUNDAMENTALS)
-    .union(Capability::CORPORATE)
-    .union(Capability::OPTIONS)
-    .union(Capability::MARKET)
-    .union(Capability::INDICES)
-    .union(Capability::COMMODITIES)
-    .union(Capability::DISCOVERY)
-    .union(Capability::CALENDAR)
-    .union(Capability::FUTURES);
-
 pub(crate) struct YahooProvider {
-    client: Arc<YahooClient>,
+    session: Arc<LazySession>,
 }
 
 impl YahooProvider {
-    pub(crate) async fn new(config: &ClientConfig) -> Result<Self> {
-        Ok(Self {
-            client: crate::adapters::yahoo::session::get_or_auth(config).await?,
-        })
+    pub(crate) fn new(session: Arc<LazySession>) -> Self {
+        Self { session }
     }
 
-    /// Wrap an existing authenticated client — no new auth handshake.
-    pub(crate) fn from_client(client: Arc<YahooClient>) -> Self {
-        Self { client }
+    /// A provider whose session has not authenticated yet, for capability
+    /// introspection; no request is made until a fetch needs the client.
+    pub(crate) fn unauthenticated() -> Self {
+        Self::new(Arc::new(LazySession::new(ClientConfig::default())))
     }
 
-    pub(crate) fn client_arc(&self) -> Arc<YahooClient> {
-        Arc::clone(&self.client)
+    async fn client(&self) -> Result<Arc<YahooClient>> {
+        self.session.client().await
     }
 }
 
@@ -62,14 +46,15 @@ impl QuoteProvider for YahooProvider {
         &self,
         symbol: &str,
     ) -> Result<crate::models::quote::QuoteSummaryResponse> {
-        crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await
+        crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol).await
     }
 
     async fn fetch_quotes_batch(
         &self,
         symbols: &[&str],
     ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
-        crate::adapters::yahoo::quote::quotes::fetch_quotes_batch(&self.client, symbols).await
+        crate::adapters::yahoo::quote::quotes::fetch_quotes_batch(&*self.client().await?, symbols)
+            .await
     }
 }
 
@@ -81,7 +66,8 @@ impl ChartProvider for YahooProvider {
         interval: Interval,
         range: TimeRange,
     ) -> Result<crate::models::chart::Chart> {
-        crate::adapters::yahoo::chart::fetch_chart(&self.client, symbol, interval, range).await
+        crate::adapters::yahoo::chart::fetch_chart(&*self.client().await?, symbol, interval, range)
+            .await
     }
 
     async fn fetch_chart_range(
@@ -92,7 +78,7 @@ impl ChartProvider for YahooProvider {
         end: i64,
     ) -> Result<crate::models::chart::Chart> {
         crate::adapters::yahoo::chart::fetch_chart_with_dates(
-            &self.client,
+            &*self.client().await?,
             symbol,
             interval,
             start,
@@ -110,9 +96,13 @@ impl ChartProvider for YahooProvider {
         use crate::models::chart::spark::Spark;
         use crate::models::chart::spark::response::SparkResponse;
 
-        let json =
-            crate::adapters::yahoo::quote::spark::fetch(&self.client, symbols, interval, range)
-                .await?;
+        let json = crate::adapters::yahoo::quote::spark::fetch(
+            &*self.client().await?,
+            symbols,
+            interval,
+            range,
+        )
+        .await?;
         let spark_response = SparkResponse::from_json(json)?;
 
         let mut out = Vec::new();
@@ -147,7 +137,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         let stats = resp.default_key_statistics.ok_or_else(|| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "defaultKeyStatistics".into(),
@@ -190,7 +181,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::fundamentals::ShareFloat> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         let stats = resp.default_key_statistics.ok_or_else(|| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "defaultKeyStatistics".into(),
@@ -220,9 +212,13 @@ impl FundamentalsProvider for YahooProvider {
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement> {
-        let mut stmt =
-            crate::adapters::yahoo::fundamentals::fetch(&self.client, symbol, stmt_type, frequency)
-                .await?;
+        let mut stmt = crate::adapters::yahoo::fundamentals::fetch(
+            &*self.client().await?,
+            symbol,
+            stmt_type,
+            frequency,
+        )
+        .await?;
         stmt.provider_id = Some(super::Provider::Yahoo);
         Ok(stmt)
     }
@@ -235,7 +231,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::fundamentals::RatingConsensus> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(recommendation_trend_to_rating_consensus(
             symbol,
             resp.recommendation_trend,
@@ -249,7 +246,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::fundamentals::CompanyProfile> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(profile_and_price_to_company_profile(
             symbol,
             resp.asset_profile,
@@ -264,7 +262,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(financial_data_to_price_target_consensus(
             symbol,
             resp.financial_data,
@@ -278,7 +277,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(upgrade_downgrade_history_to_grading_actions(
             symbol,
             resp.upgrade_downgrade_history,
@@ -291,7 +291,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(earnings_history_to_surprises(symbol, resp.earnings_history))
     }
 
@@ -305,7 +306,8 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::fundamentals::EtfProfile> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(fund_modules_to_etf_profile(
             symbol,
             resp.price,
@@ -322,7 +324,7 @@ impl FundamentalsProvider for YahooProvider {
         &self,
         symbol: &str,
     ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
-        super::yahoo_ttm::fetch_key_metrics_ttm(&self.client, symbol).await
+        super::yahoo_ttm::fetch_key_metrics_ttm(&*self.client().await?, symbol).await
     }
 
     /// Computed locally from `fetch_financials`/`fetch_quote` — see
@@ -332,7 +334,7 @@ impl FundamentalsProvider for YahooProvider {
         &self,
         symbol: &str,
     ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
-        super::yahoo_ttm::fetch_ratios_ttm(&self.client, symbol).await
+        super::yahoo_ttm::fetch_ratios_ttm(&*self.client().await?, symbol).await
     }
 }
 
@@ -587,7 +589,8 @@ impl FuturesProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::futures::FuturesQuote> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(price_and_summary_to_futures_quote(
             symbol,
             resp.price,
@@ -637,7 +640,7 @@ impl CorporateProvider for YahooProvider {
         &self,
         symbol: &str,
     ) -> Result<crate::models::chart::events::ChartEvents> {
-        crate::adapters::yahoo::chart::fetch_events(&self.client, symbol).await
+        crate::adapters::yahoo::chart::fetch_events(&*self.client().await?, symbol).await
     }
 
     async fn fetch_similar_symbols(
@@ -645,7 +648,12 @@ impl CorporateProvider for YahooProvider {
         symbol: &str,
         limit: u32,
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
-        crate::adapters::yahoo::corporate::recommendations::fetch(&self.client, symbol, limit).await
+        crate::adapters::yahoo::corporate::recommendations::fetch(
+            &*self.client().await?,
+            symbol,
+            limit,
+        )
+        .await
     }
 
     async fn fetch_earnings_transcript(
@@ -655,7 +663,7 @@ impl CorporateProvider for YahooProvider {
         year: Option<i32>,
     ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
         let transcript = crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(
-            &self.client,
+            &*self.client().await?,
             symbol,
             quarter,
             year,
@@ -690,8 +698,12 @@ impl MarketProvider for YahooProvider {
             MoverDirection::Losers => Screener::DayLosers,
             MoverDirection::MostActive => Screener::MostActives,
         };
-        let results =
-            crate::adapters::yahoo::discovery::screeners::fetch(&self.client, screener, 25).await?;
+        let results = crate::adapters::yahoo::discovery::screeners::fetch(
+            &*self.client().await?,
+            screener,
+            25,
+        )
+        .await?;
         Ok(screener_quotes_to_movers(results))
     }
 
@@ -703,8 +715,10 @@ impl MarketProvider for YahooProvider {
     ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
         use crate::constants::sectors::Sector;
 
+        let client = self.client().await?;
+        let client = &client;
         let fetches = Sector::all().iter().map(|&sector| async move {
-            match crate::adapters::yahoo::market::sectors::fetch(&self.client, sector).await {
+            match crate::adapters::yahoo::market::sectors::fetch(client, sector).await {
                 Ok(data) => Some(sector_data_to_performance(data)),
                 Err(err) => {
                     tracing::warn!("failed to fetch {sector:?} sector performance: {err}");
@@ -724,7 +738,7 @@ impl MarketProvider for YahooProvider {
         limit: u32,
     ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
         crate::adapters::yahoo::market::sector_history::fetch_sector_performance_history(
-            &self.client,
+            &*self.client().await?,
             limit,
         )
         .await
@@ -745,6 +759,8 @@ impl MarketProvider for YahooProvider {
 
         const SAMPLE_SIZE: u32 = 50;
 
+        let client = self.client().await?;
+        let client = &client;
         let fetches = Sector::all().iter().map(|&sector| async move {
             // Unfiltered, market-cap-sorted results skew toward foreign ADR/CDI
             // listings of the same mega-caps (e.g. "AAPL.BA"), which don't carry
@@ -753,9 +769,7 @@ impl MarketProvider for YahooProvider {
                 .add_condition(EquityField::Sector.eq_str(sector))
                 .add_condition(EquityField::Region.eq_str("us"))
                 .size(SAMPLE_SIZE);
-            match crate::adapters::yahoo::discovery::screeners::fetch_custom(&self.client, query)
-                .await
-            {
+            match crate::adapters::yahoo::discovery::screeners::fetch_custom(client, query).await {
                 Ok(results) => median_trailing_pe(&results.quotes).map(|pe| {
                     crate::models::market::performance::SectorPe {
                         sector: sector.display_name().to_string(),
@@ -844,7 +858,8 @@ impl IndicesProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::indices::IndexQuote> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(price_to_index_quote(symbol, resp.price.as_ref()))
     }
 }
@@ -873,7 +888,8 @@ impl CommoditiesProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::commodities::CommodityQuote> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         Ok(price_to_commodity_quote(symbol, resp.price.as_ref()))
     }
 }
@@ -905,7 +921,7 @@ impl DiscoveryProvider for YahooProvider {
     ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
         let options =
             crate::adapters::yahoo::discovery::search::SearchOptions::new().quotes_count(limit);
-        let results = self.client.search(query, &options).await?;
+        let results = self.client().await?.search(query, &options).await?;
         Ok(search_quotes_to_symbol_matches(results.quotes))
     }
 
@@ -920,7 +936,8 @@ impl DiscoveryProvider for YahooProvider {
         symbol: &str,
     ) -> Result<crate::models::discovery::reference::SymbolDetails> {
         let resp =
-            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+            crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
+                .await?;
         let mut details = profile_and_price_to_symbol_details(
             symbol,
             resp.asset_profile,
@@ -983,8 +1000,11 @@ impl DiscoveryProvider for YahooProvider {
             query = query.size(limit);
         }
 
-        let results =
-            crate::adapters::yahoo::discovery::screeners::fetch_custom(&self.client, query).await?;
+        let results = crate::adapters::yahoo::discovery::screeners::fetch_custom(
+            &*self.client().await?,
+            query,
+        )
+        .await?;
         Ok(screener_quotes_to_screener_matches(results.quotes))
     }
 }
@@ -1067,7 +1087,8 @@ impl CalendarProvider for YahooProvider {
         if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
             return Err(self.not_supported(kind.operation()));
         }
-        let hours = crate::adapters::yahoo::market::hours::fetch(&self.client, None).await?;
+        let hours =
+            crate::adapters::yahoo::market::hours::fetch(&*self.client().await?, None).await?;
         Ok(market_times_to_calendar_entries(hours.markets))
     }
 }
@@ -1098,7 +1119,7 @@ impl OptionsProvider for YahooProvider {
         symbol: &str,
         date: Option<i64>,
     ) -> Result<crate::models::options::Options> {
-        crate::adapters::yahoo::options::fetch(&self.client, symbol, date).await
+        crate::adapters::yahoo::options::fetch(&*self.client().await?, symbol, date).await
     }
 }
 
@@ -1144,11 +1165,19 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires network access"]
-    async fn test_live_sector_pe() {
-        let provider = YahooProvider::new(&crate::adapters::yahoo::client::ClientConfig::default())
+    async fn building_a_ticker_defers_auth_until_a_fetch_needs_it() {
+        let ticker = crate::Ticker::builder("AAPL")
+            .proxy("http://127.0.0.1:9")
+            .build()
             .await
             .unwrap();
+        assert!(ticker.client_handle().0.client().await.is_err());
+    }
+
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn test_live_sector_pe() {
+        let provider = YahooProvider::unauthenticated();
         let pes = provider.fetch_sector_pe().await.unwrap();
         assert!(!pes.is_empty());
         assert!(pes.iter().any(|p| p.pe.is_some_and(|pe| pe > 0.0)));
@@ -1208,9 +1237,7 @@ mod tests {
     #[ignore = "requires network access"]
     async fn fetches_symbol_details_composed_with_live_edgar() {
         let _ = crate::adapters::edgar::init("test@example.com");
-        let provider = YahooProvider::new(&crate::adapters::yahoo::client::ClientConfig::default())
-            .await
-            .unwrap();
+        let provider = YahooProvider::unauthenticated();
         let details = provider.fetch_symbol_details("AAPL").await.unwrap();
         assert_eq!(details.name.as_deref(), Some("Apple Inc."));
         assert_eq!(details.cik.as_deref(), Some("0000320193"));

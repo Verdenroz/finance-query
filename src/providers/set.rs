@@ -11,6 +11,7 @@ use super::health::HealthTracker;
 use super::retry::RetryPolicy;
 use super::{Capability, Fetch, Provider, ProviderHealth, Routes};
 use crate::adapters::yahoo::client::YahooClient;
+use crate::adapters::yahoo::session::LazySession;
 use crate::error::{FinanceError, Result};
 
 /// Not part of the stable public API — exposed only so `benches/soothfast.rs`
@@ -19,7 +20,7 @@ use crate::error::{FinanceError, Result};
 #[doc(hidden)]
 pub struct ProviderSet {
     providers: Vec<Arc<dyn ProviderAdapter>>,
-    yahoo_client: Option<Arc<YahooClient>>,
+    yahoo_session: Option<Arc<LazySession>>,
     routes: Routes,
     /// Opt-in retry policy. `None` (the default) preserves the prior
     /// behavior exactly: a `RateLimited` error is treated like any
@@ -40,7 +41,7 @@ impl std::fmt::Debug for ProviderSet {
                 "providers",
                 &self.providers.iter().map(|p| p.id()).collect::<Vec<_>>(),
             )
-            .field("has_yahoo_client", &self.yahoo_client.is_some())
+            .field("has_yahoo_session", &self.yahoo_session.is_some())
             .field("routes", &self.routes)
             .finish()
     }
@@ -53,7 +54,7 @@ impl ProviderSet {
     pub fn new(providers: Vec<Arc<dyn ProviderAdapter>>, routes: Routes) -> Self {
         Self {
             providers,
-            yahoo_client: None,
+            yahoo_session: None,
             routes,
             retry_policy: None,
             api_keys: Arc::new(crate::adapters::keys::KeyMap::new()),
@@ -62,10 +63,10 @@ impl ProviderSet {
     }
 
     /// Attach the shared Yahoo session that `Ticker::client_handle` and logo
-    /// fetching reach for. `YahooClient` is crate-private, so this cannot be
+    /// fetching reach for. `LazySession` is crate-private, so this cannot be
     /// part of the public constructor.
-    pub(crate) fn with_yahoo_client(mut self, client: Option<Arc<YahooClient>>) -> Self {
-        self.yahoo_client = client;
+    pub(crate) fn with_yahoo_session(mut self, session: Option<Arc<LazySession>>) -> Self {
+        self.yahoo_session = session;
         self
     }
 
@@ -327,12 +328,16 @@ impl ProviderSet {
         self.providers.iter().find(|p| p.id() == id)
     }
 
-    pub(crate) fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
-        self.yahoo_client.as_ref().map(Arc::clone).ok_or_else(|| {
+    pub(crate) fn yahoo_session(&self) -> Result<Arc<LazySession>> {
+        self.yahoo_session.as_ref().map(Arc::clone).ok_or_else(|| {
             FinanceError::NoProviderAvailable {
                 operation: Capability::QUOTE,
                 candidates: vec![Provider::Yahoo],
             }
         })
+    }
+
+    pub(crate) async fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
+        self.yahoo_session()?.client().await
     }
 }

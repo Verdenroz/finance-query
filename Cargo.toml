@@ -66,7 +66,7 @@ const_format = "0.2"
 tracing = "0.1"
 
 # WebSocket streaming support
-tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
 tokio-stream = { version = "0.1", features = ["sync", "time"] }
 prost = "0.14.3"
 base64 = "0.22"
@@ -243,7 +243,7 @@ tokio = { version = "1", features = ["full", "test-util"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
 # never compiled into the published `finance-query` crate.
-soothfast = { version = "0.3", features = ["runner"] }
+soothfast = { version = "0.4", features = ["runner"] }
 
 [[bench]]
 name = "ticker"
@@ -279,13 +279,23 @@ lto = true
 codegen-units = 1
 strip = true
 
+# Line tables keep file:line in panics and backtraces. Full debug info made
+# each test binary ~1.2 GB; build with `--profile debugging` for a debugger.
 [profile.dev]
 opt-level = 0
+debug = "line-tables-only"
 
-# Un-inlined debug deps make the Axum -> GraphQL -> adapter call chain deep
-# enough to overflow the default worker stack; this workspace's own crates stay at opt-level 0.
 [profile.dev.package."*"]
-opt-level = 2
+debug = false
+
+# async-graphql's resolvers for this crate's schema compile here; unoptimized,
+# their frames overflow tokio's 2 MiB worker stack on a holders request.
+[profile.dev.package.finance-query-server]
+opt-level = 1
+
+[profile.debugging]
+inherits = "dev"
+debug = true
 
 [profile.bench]
 inherits = "release"

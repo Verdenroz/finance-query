@@ -9,9 +9,6 @@ DOCKER := docker
 DOCKER_COMPOSE := docker compose
 PORT ?= 8000
 
-# Debug builds can overflow tokio's default worker stack
-export RUST_MIN_STACK ?= 33554432
-
 # Colors
 GREEN := $(shell printf '\033[0;32m')
 YELLOW := $(shell printf '\033[0;33m')
@@ -49,14 +46,40 @@ build: ## Build library and server in release mode
 	@echo "$(GREEN)Building in release mode...$(NC)"
 	$(CARGO) build --release --workspace
 
-test: ## Run ALL tests including network integration tests
-	@echo "$(GREEN)Running all tests...$(NC)"
-	@echo "$(YELLOW)Note: Some tests make real API calls$(NC)"
-	$(CARGO) test --workspace -- --nocapture --include-ignored
+# CI always tests `full`. Locally, narrow it to what you touch
+# (`make test FEATURES=fmp,polygon`) and keep it the same between runs, or
+# every change of feature set rebuilds the dependencies it affects.
+FEATURES ?= full
+comma := ,
+TEST_FEATURES := $(addprefix finance-query/,$(subst $(comma), ,$(FEATURES)))
 
-test-fast: ## Run only fast tests (excludes network tests)
-	@echo "$(GREEN)Running fast tests...$(NC)"
-	$(CARGO) test --workspace -- --nocapture
+# Every soothfast target runs the cargo-soothfast that Cargo.lock pins (CI
+# installs that version too), kept in .tools/ so switching branches never
+# changes the global one and `cargo clean` does not remove it.
+TOOLS := .tools
+SOOTHFAST ?= $(TOOLS)/bin/cargo-soothfast soothfast
+
+test: soothfast-cli ## Test only what changed since master, skipping cached passes (FEATURES=full)
+	$(SOOTHFAST) test --features "$(TEST_FEATURES)"
+
+test-all: soothfast-cli ## Test every package, still skipping cached passes (FEATURES=full)
+	$(SOOTHFAST) test --all --features "$(TEST_FEATURES)"
+
+test-network: ## Run only the network integration tests (live APIs, rate limits)
+	@echo "$(YELLOW)Note: these tests make real API calls$(NC)"
+	$(CARGO) test --workspace --features "$(TEST_FEATURES)" -- --ignored --nocapture
+
+soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into .tools, if it differs
+	@want=$$(grep -A1 '^name = "soothfast"$$' Cargo.lock | sed -n 's/^version = "\(.*\)"$$/\1/p'); \
+	have=$$($(CARGO) install --root $(TOOLS) --list 2>/dev/null | sed -n 's/^cargo-soothfast v\(.*\):$$/\1/p'); \
+	if [ "$$want" != "$$have" ]; then \
+		echo "$(YELLOW)Installing cargo-soothfast $$want into $(TOOLS) (found: $${have:-none})...$(NC)"; \
+		if command -v cargo-binstall >/dev/null 2>&1; then \
+			cargo binstall -y --disable-strategies quick-install --root $(TOOLS) "cargo-soothfast@$$want"; \
+		else \
+			$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
+		fi; \
+	fi
 
 fix: ## Auto-fix formatting and linting issues
 	@echo "$(GREEN)Formatting code...$(NC)"
@@ -65,17 +88,14 @@ fix: ## Auto-fix formatting and linting issues
 	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-ci: fix build test soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
+ci: fix build test-all test-network soothfast ## Everything CI checks, locally: fix, build, audit, test, then the full soothfast suite
 	@echo "$(GREEN)Running cargo-deny...$(NC)"
 	@command -v cargo-deny >/dev/null 2>&1 || $(CARGO) install cargo-deny --locked
 	@cargo deny check advisories bans licenses sources
 
 # The measured regression gate (`cargo soothfast`) runs natively: per-iteration
 # instruction counts via perf_event, plus alloc counts and walltime — no
-# valgrind, no container. Install the CLI once with
-# `cargo install cargo-soothfast` (or `cargo install --path <soothfast>/cargo-soothfast`
-# while it is unpublished).
-SOOTHFAST ?= cargo soothfast
+# valgrind, no container.
 BASE ?= origin/master
 
 # =============================================================================
@@ -120,7 +140,7 @@ cp docs/llms.txt llms.txt
 endef
 
 
-sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
+sdk: soothfast-cli ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDKs from the code
 	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes
 	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --features backtesting
 	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes
@@ -131,7 +151,7 @@ sdk: ## Regenerate the OpenAPI/AsyncAPI specs, MCP tool manifest, and client SDK
 # built its soothfast-routes target, instead of rebuilding both here.
 PAGES ?= all
 
-docs-pages: ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
+docs-pages: soothfast-cli ## Regenerate the derived docs pages (PAGES=all|server|mcp|lib)
 ifneq ($(filter all server,$(PAGES)),)
 	$(call REGEN_DOCS_ROUTES,server)
 endif
@@ -142,7 +162,7 @@ ifneq ($(filter all lib,$(PAGES)),)
 	$(REGEN_DOCS_PAGES_LIB)
 endif
 
-docs: ## Serve the docs site locally with live reload (run `make docs-pages` first)
+docs: soothfast-cli ## Serve the docs site locally with live reload (run `make docs-pages` first)
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
 	$(SOOTHFAST) docs serve --baseline base --addr localhost:8080
 
@@ -153,10 +173,10 @@ docs: ## Serve the docs site locally with live reload (run `make docs-pages` fir
 # are point-in-time and jitter between runs — regression detection is the
 # `gate` step below, not this. Every step stays inline rather than becoming
 # its own target; run one standalone with `cargo soothfast <cmd>` directly.
-docs-capture-check: ## Verify every captured example's output is current
+docs-capture-check: soothfast-cli ## Verify every captured example's output is current
 	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
 
-soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
 	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
 	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
 	@echo "$(GREEN)Measuring baseline...$(NC)"
@@ -193,11 +213,11 @@ soothfast: ## Run every soothfast check + refresh: gate, baseline, docs check/ca
 	@rm -rf target/llms-check
 	@echo "llms.txt: up to date"
 
-probe: ## Run data-quality probes (probes.toml) against a locally launched release server
+probe: soothfast-cli ## Run data-quality probes (probes.toml) against a locally launched release server
 	cargo build --release -p finance-query-server
 	$(SOOTHFAST) spec probe -p finance-query-server
 
-probe-accept: ## Re-lock probes.lock after a deliberate response change
+probe-accept: soothfast-cli ## Re-lock probes.lock after a deliberate response change
 	cargo build --release -p finance-query-server
 	$(SOOTHFAST) spec probe -p finance-query-server --accept
 
@@ -217,7 +237,7 @@ prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.ym
 # Version bumping
 # =============================================================================
 
-bump: ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
+bump: soothfast-cli ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif

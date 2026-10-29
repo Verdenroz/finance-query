@@ -24,6 +24,7 @@ flamegraph.svg
 
 # Rust build artifacts
 /target/
+/.tools/
 **/*.rs.bk
 *.pdb
 
