@@ -28,6 +28,9 @@ jobs:
           persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
         with:
+          # The root manifest is also a package, so without --workspace only
+          # finance-query is checked and the server and MCP deps are skipped.
+          arguments: --all-features --workspace
           command: check advisories bans licenses sources
 
   zizmor:
