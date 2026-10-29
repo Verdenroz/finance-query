@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased (draft vs v3.3.0)
+
+<!-- soothfast:notes -->
+<!-- ### Overview -->
+<!-- What this release means for someone using it. One paragraph. -->
+
+<!-- ### Upgrade notes -->
+<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+<!-- /soothfast:notes -->
+
+### ⚡ Performance
+
+- Defer Yahoo auth until the first request (#563)
+- Cut local build and test cost (#561)
+
+---
+
+### 🔍 API surface
+
+```
+CHANGED  finance_query::ClientHandle (signature)
+CHANGED  finance_query::providers::provider::Provider::capabilities (body)
+CHANGED  finance_query::ticker::core::ClientHandle (signature)
+CHANGED  finance_query::ticker::core::Ticker::client_handle (body)
+CHANGED  finance_query::ticker::core::Ticker::quote (body)
+CHANGED  finance_query::ticker::core::TickerBuilder::build (body)
+CHANGED  finance_query::tickers::core::Tickers::client_handle (body)
+```
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::ref_bench_stochastic_rsi` | instructions | 6024833.0 | 5707086.0 | -5.3% |
+
+
 ## [3.3.0] - 2026-10-19
 
 <!-- soothfast:notes -->
