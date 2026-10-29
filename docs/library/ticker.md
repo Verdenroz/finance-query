@@ -602,7 +602,7 @@ Calculate technical indicators with three approaches:
 
 Get all pre-calculated indicators at once:
 
-```rust capture-output
+```rust capture-output feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::{Interval, Ticker, TimeRange};
@@ -657,7 +657,7 @@ Bollinger: Upper=338.35, Lower=272.69
 
 Calculate specific indicators with any period:
 
-```rust capture-output
+```rust capture-output feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::{Interval, Ticker, TimeRange};
@@ -696,7 +696,7 @@ MACD: 8.9736
 
 Use indicator functions directly with custom data:
 
-```rust capture-output
+```rust capture-output feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::indicators::{rsi, sma};
@@ -731,7 +731,7 @@ RSI(10): 81.96
 
 Detect candlestick patterns from chart data (requires `indicators` feature):
 
-```rust capture-output
+```rust capture-output feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::indicators::PatternSentiment;

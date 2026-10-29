@@ -95,6 +95,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_empty_symbols() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, &[], Interval::FiveMinutes, TimeRange::OneDay).await;

@@ -206,7 +206,7 @@ We welcome contributions! See the [Contributing Guide](https://verdenroz.github.
 
 ```bash
 make install-dev  # Set up development environment
-make test-fast    # Run tests
+make test         # Test what changed, skipping cached passes
 make fix          # Auto-fix formatting and linting
 ```
 

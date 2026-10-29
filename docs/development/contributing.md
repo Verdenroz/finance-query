@@ -24,8 +24,9 @@ Run `make help` to see all available commands:
 
 ```bash
 make serve             # Start dev server (PORT=8000 by default)
-make test              # Run ALL tests including network integration tests
-make test-fast         # Run only fast tests (excludes network tests)
+make test              # Test what changed since master, skipping cached passes
+make test-all          # Test every package, still skipping cached passes
+make test-network      # Run only the network integration tests (live APIs)
 make fix               # Auto-fix formatting and clippy issues
 prek                   # Run pre-commit checks (fmt, clippy, check)
 make docs-pages        # Regenerate the derived docs pages
@@ -45,8 +46,9 @@ Work on the library (`src/`) or server (`server/src/`):
 make serve
 
 # Run tests as you work
-make test-fast  # Quick tests only
-make test       # All tests including network calls
+make test                  # What changed since master (FEATURES=full by default)
+make test FEATURES=polygon # Build only the features you touch
+make test-network          # Network integration tests (live APIs)
 ```
 
 ### 2. Check Your Code
@@ -262,7 +264,7 @@ Check for outdated dependencies:
 ```bash
 cargo outdated
 cargo update
-make test  # Ensure everything still works
+make test-all  # Ensure everything still works
 ```
 
 ## Getting Help
