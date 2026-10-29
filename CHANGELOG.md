@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Defer Yahoo auth until the first request (#563)
 - Cut local build and test cost (#561)
 
+### 📦 Dependencies
+
+- Bump certifi and virtualenv in v1 (#566)
+- Bump tokio, schemars, serde_json and uuid (#567)
+
+### 🔧 Internal
+
+- Cache soothfast item store with the runs (#565)
+- Run unit tests through soothfast test (#568)
+
 ---
 
 ### 🔍 API surface
@@ -33,12 +43,6 @@ CHANGED  finance_query::ticker::core::Ticker::quote (body)
 CHANGED  finance_query::ticker::core::TickerBuilder::build (body)
 CHANGED  finance_query::tickers::core::Tickers::client_handle (body)
 ```
-
-### 📊 Gate movement
-
-| item | metric | was | now | delta |
-|---|---|---:|---:|---:|
-| `finance_query::ref_bench_stochastic_rsi` | instructions | 6024833.0 | 5707086.0 | -5.3% |
 
 
 ## [3.3.0] - 2026-10-19
