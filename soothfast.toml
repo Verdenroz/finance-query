@@ -99,7 +99,9 @@ pages = ["development/contributing.md"]
 
 # `cargo soothfast test`: the root package owns every file outside the member
 # crates, and no test reads these. docs/ stays in, since docs_nav_coverage reads it.
+# A change to the CI job that runs this command reruns every package.
 [test]
+inputs = [".github/workflows/ci.yml"]
 env = [
   "FMP_API_KEY", "POLYGON_API_KEY", "ALPHAVANTAGE_API_KEY", "FRED_API_KEY", "BLS_API_KEY",
   "OPENFIGI_API_KEY", "EDGAR_EMAIL", "REDIS_URL", "DEFAULT_INTERVAL", "DEFAULT_RANGE",
