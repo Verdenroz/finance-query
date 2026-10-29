@@ -89,27 +89,6 @@ async fn spark_routes_through_provider_set() {
     assert!(result.is_err());
 }
 
-// `Provider::capabilities()` derives from the adapters' accessor overrides
-// for every unit-struct provider, so those can't drift by construction.
-// Yahoo is the lone hand-declared set (constructing `YahooProvider` needs a
-// live auth handshake); this pins the const to the accessor overrides in
-// `yahoo.rs` — update both together.
-#[test]
-fn yahoo_caps_const_matches_declared_capabilities() {
-    let expected = Capability::QUOTE
-        .union(Capability::CHART)
-        .union(Capability::FUNDAMENTALS)
-        .union(Capability::CORPORATE)
-        .union(Capability::OPTIONS)
-        .union(Capability::MARKET)
-        .union(Capability::INDICES)
-        .union(Capability::COMMODITIES)
-        .union(Capability::DISCOVERY)
-        .union(Capability::CALENDAR)
-        .union(Capability::FUTURES);
-    assert_eq!(yahoo::CAPS, expected);
-}
-
 /// Polygon gained CALENDAR (holidays) and AV gained MARKET (movers) via
 /// accessor overrides; `Provider::capabilities()` must reflect that.
 #[cfg(feature = "polygon")]

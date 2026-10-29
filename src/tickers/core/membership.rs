@@ -185,7 +185,6 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires network access"]
     async fn test_tickers_add_symbols() {
         let mut tickers = Tickers::new(["AAPL"]).await.unwrap();
         assert_eq!(tickers.len(), 1);
