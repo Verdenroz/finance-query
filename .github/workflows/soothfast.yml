@@ -66,6 +66,10 @@ jobs:
   gate:
     name: Gate
     needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
     # Bot pushes run too: they only record a reference (changelog is off), and a
     # bot commit is usually the next PR's merge-base.
     if: always() && (github.event_name == 'push' || (!endsWith(github.actor, '[bot]') && needs.changes.outputs.soothfast == 'true'))
@@ -115,6 +119,7 @@ jobs:
           packages: finance-query
           features: bench-gate
           changelog: false
+          shard: ${{ matrix.shard }}
 
   baseline:
     name: Baseline
