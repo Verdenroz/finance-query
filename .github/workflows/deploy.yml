@@ -128,14 +128,14 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.soothfast-cli
-          key: cargo-soothfast-git-83acd84d7f4868046e52772f69b3757c4b77b8d2
+          key: cargo-soothfast-git-7b3cb59d928643e4f869da6ba0cfb84cd70323be
       - name: Build cargo-soothfast
         if: steps.sf-cli.outputs.cache-hit != 'true'
-        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev 83acd84d7f4868046e52772f69b3757c4b77b8d2 cargo-soothfast
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev 7b3cb59d928643e4f869da6ba0cfb84cd70323be cargo-soothfast
       - name: Add cargo-soothfast to PATH
         run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@83acd84d7f4868046e52772f69b3757c4b77b8d2
+        uses: Verdenroz/soothfast@7b3cb59d928643e4f869da6ba0cfb84cd70323be
         with:
           binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
