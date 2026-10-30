@@ -98,21 +98,20 @@ jobs:
           # The baseline job saves this shared key; a save from here would
           # race it with a different target.
           save-if: false
-      # Unique per commit with the prefix in restore-keys: an exact key is
-      # never rewritten once saved, so later commits would all miss.
-      - name: Restore measured reference runs
+      - name: Restore cargo-soothfast
+        id: sf-cli
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: |
-            .soothfast/runs
-            .soothfast/items
-            .soothfast/maps
-          key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            soothfast-runs-${{ github.ref_name }}-
-            soothfast-runs-
-      - uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
         with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           packages: finance-query
           features: bench-gate
           changelog: false
@@ -141,9 +140,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       # Same key as deploy.yml so master deploys seed PR restores;
@@ -202,9 +213,21 @@ jobs:
         with:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Download measured baseline
@@ -241,9 +264,21 @@ jobs:
         with:
           shared-key: docs-capture
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Check captured example output
@@ -275,9 +310,21 @@ jobs:
         with:
           shared-key: docs-diff
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Public API surface diff vs PR base
@@ -309,9 +356,21 @@ jobs:
         with:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
@@ -360,9 +419,21 @@ jobs:
         with:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Reconcile MCP tool routes against mcp-tools.json
@@ -399,9 +470,21 @@ jobs:
           shared-key: spec
           # near-empty target; saving would poison the shared spec key
           save-if: false
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Reconcile pricing.proto against PricingData
@@ -431,9 +514,21 @@ jobs:
         with:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Download measured baseline
@@ -474,9 +569,21 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
       - name: Download measured baseline

@@ -123,9 +123,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y valgrind
-      - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - name: Restore cargo-soothfast
+        id: sf-cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          path: ~/.soothfast-cli
+          key: cargo-soothfast-git-c82e5e27be01ce00a886b58b450d26b62aa891cc
+      - name: Build cargo-soothfast
+        if: steps.sf-cli.outputs.cache-hit != 'true'
+        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev c82e5e27be01ce00a886b58b450d26b62aa891cc cargo-soothfast
+      - name: Add cargo-soothfast to PATH
+        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-soothfast
+        uses: Verdenroz/soothfast@c82e5e27be01ce00a886b58b450d26b62aa891cc
+        with:
+          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
 
