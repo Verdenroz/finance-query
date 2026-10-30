@@ -1,6 +1,6 @@
 # Contributing
 
-We welcome contributions to FinanceQuery! This guide will help you get started.
+We welcome contributions to FinanceQuery! This guide will help you get started quickly.
 
 !!! warning "V1 (Python) is Not Maintained"
 
