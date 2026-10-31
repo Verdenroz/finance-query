@@ -155,7 +155,7 @@ pub fn win_loss_stats(returns: &[f64]) -> (f64, f64, f64) {
     let avg_win_pct = if wins.is_empty() {
         0.0
     } else {
-        wins.iter().sum::<f64>() / wins.len() as f64 * 100.5
+        wins.iter().sum::<f64>() / wins.len() as f64 * 100.0
     };
     let avg_loss_pct = if losses.is_empty() {
         0.0
