@@ -313,28 +313,14 @@ jobs:
         with:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Restore cargo-soothfast
-        id: sf-cli
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.soothfast-cli
-          key: cargo-soothfast-git-38c504e7872372cff341e2277eff0b4d8d285deb
-      - name: Build cargo-soothfast
-        if: steps.sf-cli.outputs.cache-hit != 'true'
-        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev 38c504e7872372cff341e2277eff0b4d8d285deb cargo-soothfast
-      - name: Add cargo-soothfast to PATH
-        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@38c504e7872372cff341e2277eff0b4d8d285deb
+        uses: Verdenroz/soothfast@f3180ad29fed242cfcac5870cd1a811d034ac2dc # v0.5.1
         with:
-          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
           rustdoc-cache: "true"
           bin-cache: "true"
           cache-suffix: spec-server
-          prebuild: routes
-          prebuild-spec: finance-query-server:soothfast-routes
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       # --from-committed reads the base's committed spec, not a fresh rebuild.
@@ -381,29 +367,14 @@ jobs:
         with:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Restore cargo-soothfast
-        id: sf-cli
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.soothfast-cli
-          key: cargo-soothfast-git-38c504e7872372cff341e2277eff0b4d8d285deb
-      - name: Build cargo-soothfast
-        if: steps.sf-cli.outputs.cache-hit != 'true'
-        run: cargo install --locked --root ~/.soothfast-cli --git https://github.com/Verdenroz/soothfast --rev 38c504e7872372cff341e2277eff0b4d8d285deb cargo-soothfast
-      - name: Add cargo-soothfast to PATH
-        run: echo "$HOME/.soothfast-cli/bin" >> "$GITHUB_PATH"
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@38c504e7872372cff341e2277eff0b4d8d285deb
+        uses: Verdenroz/soothfast@f3180ad29fed242cfcac5870cd1a811d034ac2dc # v0.5.1
         with:
-          binary: /home/runner/.soothfast-cli/bin/cargo-soothfast
           gate: false
           changelog: false
           rustdoc-cache: "true"
           bin-cache: "true"
           cache-suffix: spec-mcp
-          prebuild: routes
-          prebuild-spec: finance-query-mcp:soothfast-routes
-          features: backtesting
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Regenerate MCP route pages
