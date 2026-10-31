@@ -319,6 +319,8 @@ jobs:
           gate: false
           changelog: false
           rustdoc-cache: "true"
+          bin-cache: "true"
+          cache-suffix: spec-server
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       # --from-committed reads the base's committed spec, not a fresh rebuild.
@@ -371,6 +373,8 @@ jobs:
           gate: false
           changelog: false
           rustdoc-cache: "true"
+          bin-cache: "true"
+          cache-suffix: spec-mcp
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Regenerate MCP route pages
