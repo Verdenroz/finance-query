@@ -837,7 +837,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1432,7 +1432,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2194,7 +2194,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3478,7 +3478,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3841,7 +3841,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3898,7 +3898,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4274,9 +4274,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a461bb0740a243eba7aef27a795f9c55a15489fecf89fe241c5af8c4f5aef89"
+checksum = "82d3a1dd9c8ed19787e47493d65edc04b12dba62cb0ff4699f65a5717777d8b2"
 dependencies = [
  "soothfast-macros",
  "soothfast-measure",
@@ -4285,9 +4285,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-macros"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2dba5d3de939469673beb2c7025709ca6d7852f30ae5090ec193ee115cb08f5"
+checksum = "0fd82221b9155d5a3c4905ad822ccd89c2269f2dff50e0172ea77a6721eccbd8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4296,9 +4296,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-measure"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ad75756dab5e4a006f1ed06ca18e93fdbb442c37d82a2b33c808e6f6f208bcf"
+checksum = "7d5fea13f0148f21d0bfaf88d491717dc5efce28563f50799058420302841400"
 dependencies = [
  "libc",
  "soothfast-registry",
@@ -4306,9 +4306,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-registry"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe3b0c95bfa8ceb0dbbe1572174f21c4b399ad69a8c91aec7899dabec73dac4c"
+checksum = "53d6b6ee8ceab0f7bbea552e6815674ef7a9e8a3ab096230307d677fae282144"
 dependencies = [
  "linkme",
 ]
@@ -4499,10 +4499,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5259,7 +5259,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
