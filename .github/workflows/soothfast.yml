@@ -252,7 +252,7 @@ jobs:
       - name: Check captured example output
         # Shares the Makefile's path list so CI and `make soothfast` check the
         # same set; the excluded pages capture live prices and timestamps.
-        run: make docs-capture-check
+        run: make docs-capture-check SOOTHFAST="cargo soothfast"
 
   docs-diff:
     name: Docs API diff
@@ -338,7 +338,7 @@ jobs:
             echo "Merge-base has no soothfast-routes bench yet — nothing to gate against."
           fi
       - name: Regenerate server route pages
-        run: make docs-pages PAGES=server
+        run: make docs-pages PAGES=server SOOTHFAST="cargo soothfast"
       - name: Upload server route pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -381,7 +381,7 @@ jobs:
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Regenerate MCP route pages
-        run: make docs-pages PAGES=mcp
+        run: make docs-pages PAGES=mcp SOOTHFAST="cargo soothfast"
       - name: Upload MCP route pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -456,7 +456,7 @@ jobs:
           name: soothfast-baseline
           path: .soothfast/baselines
       - name: Regenerate library docs pages
-        run: make docs-pages PAGES=lib
+        run: make docs-pages PAGES=lib SOOTHFAST="cargo soothfast"
       - name: Upload library docs pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
