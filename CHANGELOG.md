@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump soothfast to 0.5.2, prebuild the spec jobs (#574)
 - Bump certifi and virtualenv in v1 (#566)
 - Bump tokio, schemars, serde_json and uuid (#567)
 
@@ -49,7 +50,13 @@ CHANGED  finance_query::tickers::core::Tickers::client_handle (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_donchian` | instructions | 5798884.0 | 6092001.0 | +5.1% |
+| `finance_query::capability_name` | instructions | 23.0 | 26.0 | +13.0% |
+| `finance_query::cond_bench_in_loss` | instructions | 4054904.0 | 4323977.0 | +6.6% |
+| `finance_query::ind_last_value` | instructions | 20.0 | 23.0 | +15.0% |
+| `finance_query::ref_bench_awesome_oscillator` | instructions | 3419993.0 | 3217522.0 | -5.9% |
+| `finance_query::ref_bench_htf_region` | instructions | 6111957.0 | 6423835.0 | +5.1% |
+| `finance_query::ref_bench_stochastic_rsi` | instructions | 5739086.0 | 6027834.0 | +5.0% |
+| `finance_query::ref_bench_typical_price` | instructions | 5350300.0 | 5647803.0 | +5.6% |
 
 
 ## [3.3.0] - 2026-10-19
