@@ -106,7 +106,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Verdenroz/soothfast
-          ref: db5df2c43c4861d0734f111fa765c6bf776a6fb1 # v0.5.0
+          ref: f3180ad29fed242cfcac5870cd1a811d034ac2dc # v0.5.1
           path: soothfast-action
           sparse-checkout: action
           persist-credentials: false
@@ -124,7 +124,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@db5df2c43c4861d0734f111fa765c6bf776a6fb1 # v0.5.0
+        uses: Verdenroz/soothfast@f3180ad29fed242cfcac5870cd1a811d034ac2dc # v0.5.1
         with:
           gate: false
           changelog: false
