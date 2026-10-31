@@ -56,6 +56,7 @@ TEST_FEATURES := $(addprefix finance-query/,$(subst $(comma), ,$(FEATURES)))
 # Every soothfast target runs the cargo-soothfast that Cargo.lock pins (CI
 # installs that version too), kept in .tools/ so switching branches never
 # changes the global one and `cargo clean` does not remove it.
+# Setting SOOTHFAST (CI passes the action's `cargo soothfast`) installs nothing.
 TOOLS := .tools
 SOOTHFAST ?= $(TOOLS)/bin/cargo-soothfast soothfast
 
@@ -70,6 +71,7 @@ test-network: ## Run only the network integration tests (live APIs, rate limits)
 	$(CARGO) test --workspace --features "$(TEST_FEATURES)" -- --ignored --nocapture
 
 soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into .tools, if it differs
+ifeq ($(origin SOOTHFAST),file)
 	@want=$$(grep -A1 '^name = "soothfast"$$' Cargo.lock | sed -n 's/^version = "\(.*\)"$$/\1/p'); \
 	have=$$($(CARGO) install --root $(TOOLS) --list 2>/dev/null | sed -n 's/^cargo-soothfast v\(.*\):$$/\1/p'); \
 	if [ "$$want" != "$$have" ]; then \
@@ -80,6 +82,7 @@ soothfast-cli: ## Install the cargo-soothfast Cargo.lock pins into .tools, if it
 			$(CARGO) install --locked --root $(TOOLS) cargo-soothfast --version "$$want"; \
 		fi; \
 	fi
+endif
 
 fix: ## Auto-fix formatting and linting issues
 	@echo "$(GREEN)Formatting code...$(NC)"

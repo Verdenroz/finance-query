@@ -111,11 +111,12 @@ jobs:
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
-      - uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+      - uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           packages: finance-query
           features: bench-gate
           changelog: false
+          bin-cache: "true"
 
   baseline:
     name: Baseline
@@ -142,7 +143,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
@@ -203,10 +204,11 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -242,14 +244,15 @@ jobs:
           shared-key: docs-capture
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Check captured example output
         # Shares the Makefile's path list so CI and `make soothfast` check the
         # same set; the excluded pages capture live prices and timestamps.
-        run: make docs-capture-check
+        run: make docs-capture-check SOOTHFAST="cargo soothfast"
 
   docs-diff:
     name: Docs API diff
@@ -276,10 +279,11 @@ jobs:
           shared-key: docs-diff
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Public API surface diff vs PR base
         # Informational only (exits 0 regardless of diff content)
         run: |
@@ -310,10 +314,14 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
+          bin-cache: "true"
+          cache-suffix: spec-server
+          prebuild-spec: finance-query-server:soothfast-routes
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       # --from-committed reads the base's committed spec, not a fresh rebuild.
@@ -330,7 +338,7 @@ jobs:
             echo "Merge-base has no soothfast-routes bench yet — nothing to gate against."
           fi
       - name: Regenerate server route pages
-        run: make docs-pages PAGES=server
+        run: make docs-pages PAGES=server SOOTHFAST="cargo soothfast"
       - name: Upload server route pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -361,14 +369,19 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
+          bin-cache: "true"
+          cache-suffix: spec-mcp
+          prebuild-spec: finance-query-mcp:soothfast-routes
+          features: backtesting
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Regenerate MCP route pages
-        run: make docs-pages PAGES=mcp
+        run: make docs-pages PAGES=mcp SOOTHFAST="cargo soothfast"
       - name: Upload MCP route pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -400,7 +413,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
@@ -432,17 +445,18 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: soothfast-baseline
           path: .soothfast/baselines
       - name: Regenerate library docs pages
-        run: make docs-pages PAGES=lib
+        run: make docs-pages PAGES=lib SOOTHFAST="cargo soothfast"
       - name: Upload library docs pages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -475,7 +489,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@facad895754090e0446d248f490e70b9b04af4b9 # v0.3.4
+        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
         with:
           gate: false
           changelog: false
