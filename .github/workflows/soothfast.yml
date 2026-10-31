@@ -116,6 +116,7 @@ jobs:
           packages: finance-query
           features: bench-gate
           changelog: false
+          bin-cache: "true"
 
   baseline:
     name: Baseline
@@ -207,6 +208,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -246,6 +248,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Check captured example output
         # Shares the Makefile's path list so CI and `make soothfast` check the
         # same set; the excluded pages capture live prices and timestamps.
@@ -280,6 +283,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Public API surface diff vs PR base
         # Informational only (exits 0 regardless of diff content)
         run: |
@@ -314,6 +318,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Reconcile OpenAPI/AsyncAPI/GraphQL routes against handlers
         run: cargo soothfast spec check -p finance-query-server --target soothfast-routes
       # --from-committed reads the base's committed spec, not a fresh rebuild.
@@ -365,6 +370,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Reconcile MCP tool routes against mcp-tools.json
         run: cargo soothfast spec check -p finance-query-mcp --target soothfast-routes --features backtesting
       - name: Regenerate MCP route pages
@@ -436,6 +442,7 @@ jobs:
         with:
           gate: false
           changelog: false
+          rustdoc-cache: "true"
       - name: Download measured baseline
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
