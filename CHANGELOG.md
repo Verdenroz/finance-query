@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Drop unused tower-http compression-full (#571)
 - Cache soothfast item store with the runs (#565)
 - Run unit tests through soothfast test (#568)
 
@@ -43,6 +44,12 @@ CHANGED  finance_query::ticker::core::Ticker::quote (body)
 CHANGED  finance_query::ticker::core::TickerBuilder::build (body)
 CHANGED  finance_query::tickers::core::Tickers::client_handle (body)
 ```
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::ref_bench_donchian` | instructions | 5798884.0 | 6092001.0 | +5.1% |
 
 
 ## [3.3.0] - 2026-10-19
