@@ -173,7 +173,7 @@ jobs:
             cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
           fi
       - name: Upload baseline
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: soothfast-baseline
           path: .soothfast/baselines/base.json
@@ -340,7 +340,7 @@ jobs:
       - name: Regenerate server route pages
         run: make docs-pages PAGES=server SOOTHFAST="cargo soothfast"
       - name: Upload server route pages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-pages-server
           path: docs/server
@@ -383,7 +383,7 @@ jobs:
       - name: Regenerate MCP route pages
         run: make docs-pages PAGES=mcp SOOTHFAST="cargo soothfast"
       - name: Upload MCP route pages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-pages-mcp
           path: docs/server
@@ -458,7 +458,7 @@ jobs:
       - name: Regenerate library docs pages
         run: make docs-pages PAGES=lib SOOTHFAST="cargo soothfast"
       - name: Upload library docs pages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-pages-lib
           path: |
