@@ -1499,7 +1499,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "finance-query"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -1536,7 +1536,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query-derive"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query-mcp"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -1568,7 +1568,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query-server"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "async-graphql",
  "async-graphql-axum",

@@ -10,6 +10,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-11-07
+
+Building the provider routing at startup no longer contacts Yahoo, and `zstd`
+leaves the build.
+
+### Changed
+
+- **The Yahoo handshake moved to the first request that needs it.** Building
+  the provider routing at startup no longer performs it, and the first Yahoo
+  request carries its latency instead.
+- **`/v2/stream` verifies Yahoo's WebSocket against the OS certificate
+  store**, the one HTTP requests already used. Both Docker images install
+  `ca-certificates`.
+- Dropped `tower-http`'s `compression-full` feature. No layer ever used it,
+  so responses are unchanged.
+
+### Security
+
+- Bumped `rustls-webpki` 0.103.15 → 0.103.16 (RUSTSEC-2026-0382) and removed
+  `webpki-roots` (RUSTSEC-2026-0381) (#562).
+- Moved `zstd` 0.13.3 → 0.14.3 (RUSTSEC-2026-0391, RUSTSEC-2026-0398,
+  RUSTSEC-2026-0403, RUSTSEC-2026-0410, and the `zstd-safe` advisories
+  RUSTSEC-2026-0395 through RUSTSEC-2026-0406) (#569), then removed it with
+  `compression-full` (#571). No request path ever reached it.
+
 ## [3.3.0] - 2026-10-19
 
 Protocol TVL answers for every DefiLlama protocol, not only the ones that also

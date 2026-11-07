@@ -12,6 +12,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-11-07
+
+Building the provider routing at startup no longer contacts Yahoo.
+
+### Changed
+
+- **The Yahoo handshake moved to the first tool call that needs it.**
+  Building the provider routing at startup no longer performs it.
+
+### Security
+
+- Bumped `rustls-webpki` 0.103.15 → 0.103.16 (RUSTSEC-2026-0382), which every
+  outbound HTTPS connection uses (#562).
+
 ## [3.3.0] - 2026-10-19
 
 `get_protocol_tvl` answers for every DefiLlama protocol, and
