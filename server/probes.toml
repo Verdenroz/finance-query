@@ -183,12 +183,13 @@ assert = [
 
 # Yahoo attaches `dispSecIndFlag` to the top-ranked hit alone, and only when
 # that hit is an equity — a futures or ETF best match leaves it unset on every
-# result, so whether `q=apple` populates it depends on Yahoo's ranking.
+# result, so whether `q=apple` populates it depends on Yahoo's ranking. The
+# `sectorDisp` and `industryDisp` display names also come and go between runs.
 [[probe]]
 name = "search"
 shape = false
 path = "/v2/search?q=apple"
-sometimes = ["quotes[].dispSecIndFlag"]
+sometimes = ["quotes[].dispSecIndFlag", "quotes[].industryDisp", "quotes[].sectorDisp"]
 assert = ["quotes#len >= 1"]
 
 [[probe]]
