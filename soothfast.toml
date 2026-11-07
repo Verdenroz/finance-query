@@ -111,3 +111,6 @@ env = [
 # docs_nav_coverage reads docs/ and soothfast.toml at run time.
 [test.packages.finance-query]
 files = ["src/**", "tests/**", "benches/**", "examples/**", "docs/**", "soothfast.toml"]
+
+[bot]
+labels = true

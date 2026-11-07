@@ -30,9 +30,10 @@ jobs:
         with:
           enable-cache: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
+        uses: Verdenroz/soothfast@0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
         with:
           gate: false
+          labels: "false"
           changelog: false
       - name: Publish
         run: cargo soothfast sdk publish -p finance-query-server --target soothfast-routes --only python
