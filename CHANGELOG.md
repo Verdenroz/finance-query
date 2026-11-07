@@ -5,14 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.3.0)
+## [3.3.1] - 2026-11-07
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+Building a `Ticker`, `Tickers` or `Providers` no longer talks to Yahoo. The
+cookie and crumb handshake now happens on the first request that needs it and
+is shared from there, so constructing a handle works offline and costs nothing
+when nothing is fetched. Yahoo's real-time WebSocket stream verifies TLS
+against the operating system's certificate store, the one HTTP requests
+already used, and `rustls-webpki` moves past the emSign distrust advisory.
+
+### ⬆️ Upgrade notes
+
+- A bad proxy setting or a failed Yahoo handshake now surfaces as an error
+  from the first fetch instead of from `build()`. Code that relied on
+  `build()` failing fast should handle it on first use.
+- `PriceStream` needs CA certificates installed on the host, as HTTP requests
+  already did. A host without them now fails the WebSocket connection the
+  same way it fails HTTPS.
 <!-- /soothfast:notes -->
 
 ### 🐛 Fixes
@@ -46,6 +58,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Drop unused tower-http compression-full (#571)
 - Cache soothfast item store with the runs (#565)
 - Run unit tests through soothfast test (#568)
+
+### 🔒 Security
+
+- Bumped `rustls-webpki` 0.103.15 → 0.103.16 (RUSTSEC-2026-0382, the emSign
+  intermediate distrust) (#562). `rustls-webpki` verifies every HTTPS and
+  WebSocket connection the library makes.
+- Removed `webpki-roots` from the dependency tree (RUSTSEC-2026-0381) by
+  switching `tokio-tungstenite` to the OS trust store (#562).
+- Bumped `quinn-proto` 0.11.17 → 0.11.19 in `Cargo.lock` (RUSTSEC-2026-0338,
+  RUSTSEC-2026-0340, RUSTSEC-2026-0343: panics in the QUIC state machine)
+  (#587). It is only reachable through `reqwest`'s `http3` feature, which is
+  off, so no build compiled it.
 
 ---
 
