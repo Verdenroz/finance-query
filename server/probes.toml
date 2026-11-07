@@ -240,7 +240,7 @@ assert = ["[].y10 exists"]
 name = "treasury-auctions"
 shape = false
 path = "/v2/treasury/auctions?from=2025-01-01&to=2025-01-31&count=50"
-sometimes = ["highYield", "intRate", "highDiscntRate", "highInvestmentRate"]
+sometimes = ["[].highYield", "[].intRate", "[].highDiscntRate", "[].highInvestmentRate"]
 assert = [
   "#len >= 1",
   "[].cusip exists",
@@ -253,7 +253,7 @@ assert = [
 name = "treasury-auctions-upcoming"
 shape = false
 path = "/v2/treasury/auctions/upcoming"
-sometimes = ["offeringAmt"]
+sometimes = ["[].offeringAmt"]
 assert = [
   "#len >= 1",
   "[].cusip exists",
@@ -285,6 +285,7 @@ assert = ["quotes#len >= 1"]
 [[probe]]
 name = "sector"
 path = "/v2/sectors/technology"
+sometimes = ["researchReports[].targetPrice"]
 
 [[probe]]
 name = "industry"
@@ -355,9 +356,12 @@ name = "rating-consensus"
 path = "/v2/rating-consensus/AAPL"
 assert = ["symbol == \"AAPL\""]
 
+# The nightly run is keyless, so Yahoo serves this profile; the identifier
+# and classification fields below are filled only by keyed providers.
 [[probe]]
 name = "company-profile"
 path = "/v2/company-profile/AAPL"
+sometimes = ["active", "cik", "cusip", "ipoDate", "isAdr", "isEtf", "isFund", "isin"]
 assert = ["symbol == \"AAPL\""]
 
 [[probe]]
@@ -530,9 +534,11 @@ name = "protocol-tvl-history"
 shape = false
 path = "/v2/crypto/coins/aave/tvl-history"
 
+# FIGIs, listing status and delisting date come only from keyed providers.
 [[probe]]
 name = "symbol-details"
 path = "/v2/symbol-details/AAPL"
+sometimes = ["active", "compositeFigi", "delistedUtc", "shareClassFigi"]
 assert = ["symbol == \"AAPL\""]
 
 [[probe]]
