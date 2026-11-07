@@ -1,0 +1,6 @@
+# Generated artifacts; their sources are indexed already and these crowd
+# search results for hand-written code.
+llms.txt
+sdks/
+spec/
+CHANGELOG.md
