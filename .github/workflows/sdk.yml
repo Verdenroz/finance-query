@@ -17,7 +17,8 @@ jobs:
   # No Rust toolchain: the generated package must stand on its own.
   quality:
     name: Type-check generated SDK
-    if: ${{ !endsWith(github.actor, '[bot]') }}
+    # The bot pushes branch updates to human PRs, so test the PR author.
+    if: ${{ !endsWith(github.event.pull_request.user.login, '[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1

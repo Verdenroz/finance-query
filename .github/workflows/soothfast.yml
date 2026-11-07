@@ -24,7 +24,7 @@ concurrency:
 jobs:
   changes:
     name: Detect Soothfast Changes
-    if: github.event_name == 'pull_request' && !endsWith(github.actor, '[bot]')
+    if: github.event_name == 'pull_request' && !endsWith(github.event.pull_request.user.login, '[bot]')
     runs-on: ubuntu-latest
     outputs:
       soothfast: ${{ steps.filter.outputs.soothfast }}
@@ -68,7 +68,7 @@ jobs:
     needs: changes
     # Bot pushes run too: they only record a reference (changelog is off), and a
     # bot commit is usually the next PR's merge-base.
-    if: always() && (github.event_name == 'push' || (!endsWith(github.actor, '[bot]') && needs.changes.outputs.soothfast == 'true'))
+    if: always() && (github.event_name == 'push' || (!endsWith(github.event.pull_request.user.login, '[bot]') && needs.changes.outputs.soothfast == 'true'))
     runs-on: ubuntu-latest
     environment: soothfast-bot
     permissions:
