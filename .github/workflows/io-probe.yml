@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Verdenroz/soothfast
-          ref: 66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
+          ref: 0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
           path: soothfast-action
           sparse-checkout: action
           persist-credentials: false
@@ -49,9 +49,10 @@ jobs:
           shared-key: io-probe
           cache-on-failure: true
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
+        uses: Verdenroz/soothfast@0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
         with:
           gate: false
+          labels: "false"
           changelog: false
       - name: Build release server
         run: cargo build --release -p finance-query-server

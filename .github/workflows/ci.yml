@@ -141,9 +141,10 @@ jobs:
           shared-key: test-suite
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@66a28504a93922a53d5ba30857c270e7c1e3b88e # v0.5.2
+        uses: Verdenroz/soothfast@0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
         with:
           gate: false
+          labels: "false"
           changelog: false
       - name: Restore stored test passes
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
