@@ -4274,9 +4274,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8936d7b30f888b97152b6fc19cb2a3c7e7f836e31468e4fee3df335d9644a2d0"
+checksum = "06561232a7a4049ee9819886bf255eeb9ef258d34a3dbd839e2c220b34441f22"
 dependencies = [
  "soothfast-macros",
  "soothfast-measure",
@@ -4285,9 +4285,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-macros"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6eda5103d12d14e47891df209b11df7fe29eb459ffcc56a86a570c4f2551824"
+checksum = "1f2b94505b4fa98929cd1de6523e5fb73635d0b2ca3a7e13ae6ebf7cd2e53933"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4296,9 +4296,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-measure"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c60b95a0aa377449b7d9c59ff8e090f349d652f041580e3ffd4a37c33bf4719"
+checksum = "6d20dd157a4efff353204c57cda76cdf6af07bf971c83d873896c2959f28856d"
 dependencies = [
  "libc",
  "soothfast-registry",
@@ -4306,9 +4306,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-registry"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3705eea578deabd802a19f10ae9dfd0532321e886c3bc0d8f2a0042f02c620f1"
+checksum = "79192578adff9034cb9e4017a9dd0b0787a6aabe27f097006684e6879e79392d"
 dependencies = [
  "linkme",
 ]

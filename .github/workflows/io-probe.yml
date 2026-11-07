@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Verdenroz/soothfast
-          ref: 0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
+          ref: 6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
           path: soothfast-action
           sparse-checkout: action
           persist-credentials: false
@@ -49,7 +49,7 @@ jobs:
           shared-key: io-probe
           cache-on-failure: true
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@0c58c56b2ed38bfe137e1f01cb4fd2eff680844d # v0.5.4
+        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
         with:
           gate: false
           labels: "false"
@@ -62,7 +62,12 @@ jobs:
         shell: bash
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: cargo soothfast spec probe -p finance-query-server | tee probe.out
+        run: |
+          status=0
+          cargo soothfast spec probe -p finance-query-server | tee probe.out || status=$?
+          grep '^SKIP  ' probe.out | sed 's/^SKIP  /::notice title=Probe skipped::/' || true
+          grep '^SKIP  ' probe.out >> "$GITHUB_STEP_SUMMARY" || true
+          exit "$status"
       - name: Accept probes whose only drift is new fields
         # `--accept` returns before `baseline.gate` ever runs, so a whole-run
         # accept would demote a regressed field to `sometimes` and land the
