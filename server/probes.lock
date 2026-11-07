@@ -317,9 +317,20 @@
         "industry": "always",
         "marketCapitalization": "always",
         "name": "always",
+        "providerId": "always",
         "sector": "always",
         "symbol": "always"
-      }
+      },
+      "uncovered": [
+        "active",
+        "cik",
+        "cusip",
+        "ipoDate",
+        "isAdr",
+        "isEtf",
+        "isFund",
+        "isin"
+      ]
     },
     "crypto-coin": {
       "fields": {
@@ -2572,13 +2583,18 @@
         "homepageUrl": "always",
         "marketCap": "always",
         "name": "always",
+        "providerId": "always",
         "sharesOutstanding": "always",
         "sicCode": "always",
         "sicDescription": "always",
         "symbol": "always"
       },
       "uncovered": [
-        "listDate"
+        "active",
+        "compositeFigi",
+        "delistedUtc",
+        "listDate",
+        "shareClassFigi"
       ]
     },
     "transcripts": {
