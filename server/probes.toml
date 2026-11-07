@@ -405,14 +405,18 @@ name = "cftc-cot"
 shape = false
 path = "/v2/cftc/cot/GC=F"
 
+# GDELT throttles per IP and shared runners exhaust it, so a 429 here is a
+# skip, not a failure. The nightly annotates each skip.
 [[probe]]
 name = "gdelt-news"
 shape = false
+skip_status = 429
 path = "/v2/gdelt/news/GOOGL"
 
 [[probe]]
 name = "crypto-news"
 shape = false
+skip_status = 429
 path = "/v2/crypto/news"
 
 [[probe]]
@@ -423,6 +427,7 @@ assert = ["symbol == \"USDEUR\"", "price > 0"]
 [[probe]]
 name = "forex-news"
 shape = false
+skip_status = 429
 path = "/v2/forex/news"
 
 [[probe]]

@@ -62,7 +62,12 @@ jobs:
         shell: bash
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: cargo soothfast spec probe -p finance-query-server | tee probe.out
+        run: |
+          status=0
+          cargo soothfast spec probe -p finance-query-server | tee probe.out || status=$?
+          grep '^SKIP  ' probe.out | sed 's/^SKIP  /::notice title=Probe skipped::/' || true
+          grep '^SKIP  ' probe.out >> "$GITHUB_STEP_SUMMARY" || true
+          exit "$status"
       - name: Accept probes whose only drift is new fields
         # `--accept` returns before `baseline.gate` ever runs, so a whole-run
         # accept would demote a regressed field to `sometimes` and land the
