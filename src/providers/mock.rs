@@ -20,16 +20,27 @@ pub(crate) struct CountingProvider {
     news_calls: AtomicUsize,
     events_calls: AtomicUsize,
     options_calls: AtomicUsize,
+    failing_events: Option<&'static str>,
 }
 
 impl CountingProvider {
     pub(crate) fn new() -> Arc<Self> {
+        Self::build(None)
+    }
+
+    /// A provider whose events fetch fails for `symbol` alone.
+    pub(crate) fn failing_events(symbol: &'static str) -> Arc<Self> {
+        Self::build(Some(symbol))
+    }
+
+    fn build(failing_events: Option<&'static str>) -> Arc<Self> {
         Arc::new(Self {
             quote_calls: AtomicUsize::new(0),
             chart_calls: AtomicUsize::new(0),
             news_calls: AtomicUsize::new(0),
             events_calls: AtomicUsize::new(0),
             options_calls: AtomicUsize::new(0),
+            failing_events,
         })
     }
 
@@ -97,11 +108,17 @@ impl CorporateProvider for CountingProvider {
         Ok(Vec::new())
     }
 
-    async fn fetch_events(&self, _: &str) -> Result<ChartEvents> {
+    async fn fetch_events(&self, symbol: &str) -> Result<ChartEvents> {
         self.events_calls.fetch_add(1, Ordering::SeqCst);
         // A real network fetch always suspends; without a yield the mock resolves
         // inline and concurrent callers can never actually interleave.
         tokio::task::yield_now().await;
+        if self.failing_events == Some(symbol) {
+            return Err(crate::error::FinanceError::ServerError {
+                status: 502,
+                context: "events upstream failed".to_string(),
+            });
+        }
         Ok(ChartEvents::default())
     }
 }

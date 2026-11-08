@@ -136,6 +136,10 @@ impl YahooClient {
             401 | 403 => FinanceError::AuthenticationFailed {
                 context: format!("HTTP {status}"),
             },
+            400 => FinanceError::InvalidParameter {
+                param: "request".to_string(),
+                reason: "Yahoo Finance rejected the request (HTTP 400)".to_string(),
+            },
             404 => FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "HTTP 404 Not Found".to_string(),
@@ -1182,6 +1186,14 @@ mod tests {
         assert!(matches!(
             YahooClient::map_http_status(404),
             FinanceError::SymbolNotFound { .. }
+        ));
+    }
+
+    #[test]
+    fn a_rejected_request_maps_to_invalid_parameter() {
+        assert!(matches!(
+            YahooClient::map_http_status(400),
+            FinanceError::InvalidParameter { .. }
         ));
     }
 

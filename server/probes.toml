@@ -280,6 +280,21 @@ sometimes = [
 ]
 assert = ["quotes#len >= 1"]
 
+# A custom screener answers only the columns it was asked for, so the
+# predefined screener's quote fields stay empty here.
+[[probe]]
+name = "screener-custom"
+shape = false
+path = "/v2/screeners/custom"
+method = "POST"
+body = "{\"size\": 5, \"filters\": [{\"field\": \"region\", \"operator\": \"eq\", \"value\": \"us\"}]}"
+assert = [
+  "quotes#len >= 1",
+  "quotes[].shortName exists",
+  "quotes[].marketCap > 0",
+  "quotes[].averageDailyVolume3Month > 0",
+]
+
 [[probe]]
 name = "sector"
 path = "/v2/sectors/technology"
