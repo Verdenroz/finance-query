@@ -111,7 +111,7 @@ jobs:
           restore-keys: |
             soothfast-runs-${{ github.ref_name }}-
             soothfast-runs-
-      - uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+      - uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           packages: finance-query
           features: bench-gate
@@ -143,7 +143,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -205,7 +205,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -246,7 +246,7 @@ jobs:
           shared-key: docs-capture
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -282,7 +282,7 @@ jobs:
           shared-key: docs-diff
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -318,7 +318,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -374,7 +374,7 @@ jobs:
           shared-key: spec
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -419,7 +419,7 @@ jobs:
           # near-empty target; saving would poison the shared spec key
           save-if: false
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -452,7 +452,7 @@ jobs:
           shared-key: docs-binds
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
@@ -497,7 +497,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@6dcb0844a88d6a28b092ac53bfad905a4960769e # v0.5.5
+        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
         with:
           gate: false
           labels: "false"
