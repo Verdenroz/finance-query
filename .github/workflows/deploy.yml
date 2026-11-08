@@ -325,6 +325,13 @@ jobs:
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
+            # up -d ignores bind-mount content changes, and caddy reload would
+            # skip the password substitution the entrypoint does at start.
+            git diff --quiet "$PREV_SHA" ${{ github.sha }} -- Caddyfile || CADDY_CHANGED=1
+            if [ -n "$CADDY_CHANGED" ]; then
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml restart caddy
+            fi
+
             # Verify deployment; roll back to the previous SHA's images on failure.
             sleep 10
             if ! check_health; then
@@ -335,6 +342,9 @@ jobs:
                 docker tag "$IMAGE_BASE/$svc:$PREV_SHA" "$IMAGE_BASE/$svc:latest"
               done
               docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+              if [ -n "$CADDY_CHANGED" ]; then
+                docker compose -f docker-compose.yml -f docker-compose.prod.yml restart caddy
+              fi
               sleep 10
               check_health
               exit 1
