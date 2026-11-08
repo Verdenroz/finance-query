@@ -31,10 +31,7 @@ assert = [
 # excludes. Shape validation stays off until the generated spec models the
 # REST default shape.
 
-# POST routes are not probed and cannot be: `cargo soothfast spec probe`
-# writes a literal `GET {path}` request and its probe entry has no method or
-# body field. That covers `/v2/screeners/custom` and `/v2/backtest/{symbol}`,
-# whose request contracts are covered by unit tests in their handlers instead.
+# POST probes send `body` as application/json.
 
 [[probe]]
 name = "quotes-batch"
@@ -312,6 +309,11 @@ path = "/v2/index-constituents/%5EGSPC"
 assert = ["[].symbol exists", "[].sector exists"]
 
 [[probe]]
+name = "calendar"
+path = "/v2/calendar?symbols=AAPL,MSFT&range=3mo"
+assert = ["#len >= 1", "[].date exists", "[].timestamp > 0"]
+
+[[probe]]
 name = "market-calendar"
 shape = false
 path = "/v2/market-calendar?kind=market-holiday"
@@ -556,3 +558,18 @@ path = "/v2/indices/%5EGSPC/constituent-changes"
 name = "sector-performance-history"
 shape = false
 path = "/v2/sector-performance/history?limit=5"
+
+# REST returns `equityCurve` and `trades` as bare arrays, while the spec
+# declares the GraphQL Connection shape.
+[[probe]]
+name = "backtest"
+shape = false
+path = "/v2/backtest/AAPL"
+method = "POST"
+body = "{\"strategy\": \"sma_crossover\"}"
+assert = [
+  "symbol == \"AAPL\"",
+  "initialCapital > 0",
+  "finalEquity > 0",
+  "equityCurve#len >= 1",
+]
