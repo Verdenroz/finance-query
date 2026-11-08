@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased (draft vs v3.3.1)
+
+<!-- soothfast:notes -->
+<!-- ### Overview -->
+<!-- What this release means for someone using it. One paragraph. -->
+
+<!-- ### Upgrade notes -->
+<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+<!-- /soothfast:notes -->
+
+### 🐛 Fixes
+
+- Screener fields, Yahoo 400s, batch errors (#594)
+
+### ⚡ Performance
+
+- Compress JSON responses at the Caddy edge (#596)
+
+### 🔧 Internal
+
+- Give the deploy config check its inputs (#598)
+- Validate the Caddyfile and compose files (#597)
+- Probe calendar and backtest routes (#595)
+
+
 ## [3.3.1] - 2026-11-07
 
 <!-- soothfast:notes -->
