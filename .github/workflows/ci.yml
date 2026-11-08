@@ -416,6 +416,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.deploy_config == 'true'
+    # Placeholders for the variables the compose files mark required.
+    env:
+      MONITORING_PASSWORD: ci-placeholder
+      GRAFANA_ADMIN_USER: ci-placeholder
+      GRAFANA_ADMIN_PASSWORD: ci-placeholder
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -423,14 +428,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The services' env_file entries are untracked secrets on the VPS.
       - name: Validate compose files
-        env:
-          MONITORING_PASSWORD: ci-placeholder
-        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+        run: |
+          touch server/.env v1/.env
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
       # Same image as production, read from the compose file so the two cannot drift.
       - name: Validate Caddyfile
-        env:
-          MONITORING_PASSWORD: ci-placeholder
         run: |
           image=$(docker compose -f docker-compose.yml -f docker-compose.prod.yml config --format json | jq -r '.services.caddy.image')
           hash=$(docker run --rm "$image" caddy hash-password --plaintext ci-placeholder)
