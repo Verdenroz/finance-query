@@ -31,10 +31,7 @@ assert = [
 # excludes. Shape validation stays off until the generated spec models the
 # REST default shape.
 
-# POST routes are not probed and cannot be: `cargo soothfast spec probe`
-# writes a literal `GET {path}` request and its probe entry has no method or
-# body field. That covers `/v2/screeners/custom` and `/v2/backtest/{symbol}`,
-# whose request contracts are covered by unit tests in their handlers instead.
+# POST probes send `body` as application/json.
 
 [[probe]]
 name = "quotes-batch"
@@ -282,6 +279,21 @@ sometimes = [
   "quotes[].askSize",
 ]
 assert = ["quotes#len >= 1"]
+
+# A custom screener answers only the columns it was asked for, so the
+# predefined screener's quote fields stay empty here.
+[[probe]]
+name = "screener-custom"
+shape = false
+path = "/v2/screeners/custom"
+method = "POST"
+body = "{\"size\": 5, \"filters\": [{\"field\": \"region\", \"operator\": \"eq\", \"value\": \"us\"}]}"
+assert = [
+  "quotes#len >= 1",
+  "quotes[].shortName exists",
+  "quotes[].marketCap > 0",
+  "quotes[].averageDailyVolume3Month > 0",
+]
 
 [[probe]]
 name = "sector"
