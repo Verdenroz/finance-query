@@ -211,6 +211,18 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
         })
     }
 
+    // Yahoo sends some integer columns (market cap, average volume) as floats.
+    fn extract_int(
+        record: &mut serde_json::Map<String, serde_json::Value>,
+        field: &str,
+    ) -> Option<FormattedValue<i64>> {
+        extract_formatted::<f64>(record, field).map(|v| FormattedValue {
+            raw: v.raw.map(|raw| raw.round() as i64),
+            fmt: v.fmt,
+            long_fmt: v.long_fmt,
+        })
+    }
+
     fn extract_string(
         record: &mut serde_json::Map<String, serde_json::Value>,
         field: &str,
@@ -228,6 +240,7 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
 
     let short_name = extract_string(&mut record, "companyshortname")
         .or_else(|| extract_string(&mut record, "shortName"))
+        .or_else(|| extract_string(&mut record, "companyName"))
         .unwrap_or_else(|| symbol.clone());
 
     // Price fields - use intradayprice for custom screener
@@ -261,15 +274,16 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
         regular_market_day_low: extract_formatted(&mut record, "daylow")
             .or_else(|| extract_formatted(&mut record, "regularMarketDayLow")),
         regular_market_previous_close: extract_formatted(&mut record, "regularMarketPreviousClose"),
-        regular_market_time: extract_formatted(&mut record, "regularMarketTime"),
-        regular_market_volume: extract_formatted(&mut record, "dayvolume")
-            .or_else(|| extract_formatted(&mut record, "regularMarketVolume")),
-        average_daily_volume3_month: extract_formatted(&mut record, "avgdailyvol3m")
-            .or_else(|| extract_formatted(&mut record, "averageDailyVolume3Month")),
-        average_daily_volume10_day: extract_formatted(&mut record, "averageDailyVolume10Day"),
-        market_cap: extract_formatted(&mut record, "intradaymarketcap")
-            .or_else(|| extract_formatted(&mut record, "marketCap")),
-        shares_outstanding: extract_formatted(&mut record, "sharesOutstanding"),
+        regular_market_time: extract_int(&mut record, "regularMarketTime"),
+        regular_market_volume: extract_int(&mut record, "dayvolume")
+            .or_else(|| extract_int(&mut record, "regularMarketVolume")),
+        average_daily_volume3_month: extract_int(&mut record, "avgdailyvol3m")
+            .or_else(|| extract_int(&mut record, "avgDailyVol3m"))
+            .or_else(|| extract_int(&mut record, "averageDailyVolume3Month")),
+        average_daily_volume10_day: extract_int(&mut record, "averageDailyVolume10Day"),
+        market_cap: extract_int(&mut record, "intradaymarketcap")
+            .or_else(|| extract_int(&mut record, "marketCap")),
+        shares_outstanding: extract_int(&mut record, "sharesOutstanding"),
         fifty_two_week_high: extract_formatted(&mut record, "fiftytwowkhigh")
             .or_else(|| extract_formatted(&mut record, "fiftyTwoWeekHigh")),
         fifty_two_week_low: extract_formatted(&mut record, "fiftytwowklow")
@@ -307,27 +321,27 @@ fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote
             .or_else(|| extract_formatted(&mut record, "dividendYield")),
         dividend_rate: extract_formatted::<f64>(&mut record, "annual_dividend_rate")
             .or_else(|| extract_formatted(&mut record, "dividendRate")),
-        dividend_date: extract_formatted(&mut record, "dividendDate"),
+        dividend_date: extract_int(&mut record, "dividendDate"),
         trailing_annual_dividend_rate: extract_formatted(&mut record, "trailingAnnualDividendRate"),
         trailing_annual_dividend_yield: extract_formatted(
             &mut record,
             "trailingAnnualDividendYield",
         ),
         bid: extract_formatted(&mut record, "bid"),
-        bid_size: extract_formatted(&mut record, "bidSize"),
+        bid_size: extract_int(&mut record, "bidSize"),
         ask: extract_formatted(&mut record, "ask"),
-        ask_size: extract_formatted(&mut record, "askSize"),
+        ask_size: extract_int(&mut record, "askSize"),
         post_market_price: extract_formatted(&mut record, "postMarketPrice"),
         post_market_change: extract_formatted(&mut record, "postMarketChange"),
         post_market_change_percent: extract_formatted(&mut record, "postMarketChangePercent"),
-        post_market_time: extract_formatted(&mut record, "postMarketTime"),
+        post_market_time: extract_int(&mut record, "postMarketTime"),
         pre_market_price: extract_formatted(&mut record, "preMarketPrice"),
         pre_market_change: extract_formatted(&mut record, "preMarketChange"),
         pre_market_change_percent: extract_formatted(&mut record, "preMarketChangePercent"),
-        pre_market_time: extract_formatted(&mut record, "preMarketTime"),
-        earnings_timestamp: extract_formatted(&mut record, "earningsTimestamp"),
-        earnings_timestamp_start: extract_formatted(&mut record, "earningsTimestampStart"),
-        earnings_timestamp_end: extract_formatted(&mut record, "earningsTimestampEnd"),
+        pre_market_time: extract_int(&mut record, "preMarketTime"),
+        earnings_timestamp: extract_int(&mut record, "earningsTimestamp"),
+        earnings_timestamp_start: extract_int(&mut record, "earningsTimestampStart"),
+        earnings_timestamp_end: extract_int(&mut record, "earningsTimestampEnd"),
         currency: extract_string(&mut record, "quotesCurrency")
             .or_else(|| extract_string(&mut record, "currency")),
     })
@@ -347,5 +361,32 @@ mod tests {
         });
         let quote = map_custom_record_to_quote(record).unwrap();
         assert_eq!(quote.trailing_pe.and_then(|v| v.raw), Some(32.888133));
+    }
+
+    #[test]
+    fn custom_screener_maps_float_raw_values_into_integer_fields() {
+        let record = serde_json::json!({
+            "ticker": "AAPL",
+            "marketCap": {"raw": 4975383080382.08, "fmt": "4.975T"},
+            "avgDailyVol3m": {"raw": 42880493.75, "fmt": "42.88M"},
+            "regularMarketVolume": {"raw": 43750861, "fmt": "43.751M"},
+        });
+        let quote = map_custom_record_to_quote(record).unwrap();
+        assert_eq!(quote.market_cap.and_then(|v| v.raw), Some(4975383080382));
+        assert_eq!(
+            quote.average_daily_volume3_month.and_then(|v| v.raw),
+            Some(42880494)
+        );
+        assert_eq!(
+            quote.regular_market_volume.and_then(|v| v.raw),
+            Some(43750861)
+        );
+    }
+
+    #[test]
+    fn custom_screener_names_the_company_from_company_name() {
+        let record = serde_json::json!({"ticker": "AAPL", "companyName": "Apple Inc."});
+        let quote = map_custom_record_to_quote(record).unwrap();
+        assert_eq!(quote.short_name, "Apple Inc.");
     }
 }
