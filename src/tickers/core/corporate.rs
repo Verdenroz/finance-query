@@ -5,7 +5,15 @@ use crate::models::chart::events::ChartEvents;
 use crate::providers::Capability;
 use crate::utils::{CacheEntry, filter_by_range};
 use futures::stream::{self, StreamExt};
+use std::collections::HashMap;
 use std::sync::Arc;
+
+fn events_error(failures: &HashMap<Arc<str>, String>, symbol: &Arc<str>) -> String {
+    failures
+        .get(symbol)
+        .cloned()
+        .unwrap_or_else(|| "No events data available".to_string())
+}
 
 impl Tickers {
     /// Batch fetch dividends for all symbols
@@ -36,7 +44,7 @@ impl Tickers {
         let mut response = BatchDividendsResponse::with_capacity(self.symbols.len());
 
         // Fetch events efficiently (1-day chart request per symbol)
-        self.ensure_events_loaded().await?;
+        let failures = self.ensure_events_loaded().await?;
 
         let events_cache = self.events_cache.read().await;
 
@@ -48,7 +56,7 @@ impl Tickers {
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), "No events data available".to_string());
+                    .insert(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
@@ -85,7 +93,7 @@ impl Tickers {
         let mut response = BatchSplitsResponse::with_capacity(self.symbols.len());
 
         // Fetch events efficiently (1-day chart request per symbol)
-        self.ensure_events_loaded().await?;
+        let failures = self.ensure_events_loaded().await?;
 
         let events_cache = self.events_cache.read().await;
 
@@ -97,7 +105,7 @@ impl Tickers {
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), "No events data available".to_string());
+                    .insert(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
@@ -133,7 +141,7 @@ impl Tickers {
         let mut response = BatchCapitalGainsResponse::with_capacity(self.symbols.len());
 
         // Fetch events efficiently (1-day chart request per symbol)
-        self.ensure_events_loaded().await?;
+        let failures = self.ensure_events_loaded().await?;
 
         let events_cache = self.events_cache.read().await;
 
@@ -145,7 +153,7 @@ impl Tickers {
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), "No events data available".to_string());
+                    .insert(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
@@ -261,9 +269,10 @@ impl Tickers {
     /// Events are always stored regardless of the cache mode because they are
     /// derived data (not a TTL-bounded cache), so they persist for the lifetime
     /// of the `Tickers` instance even under [`CacheMode::Off`](crate::utils::CacheMode::Off).
-    pub(super) async fn ensure_events_loaded(&self) -> Result<()> {
+    /// Fetches events for every uncached symbol and returns why each failed one failed.
+    pub(super) async fn ensure_events_loaded(&self) -> Result<HashMap<Arc<str>, String>> {
         if self.events_missing().await.is_empty() {
-            return Ok(());
+            return Ok(HashMap::new());
         }
 
         let _fetch_guard = self.events_fetch.lock().await;
@@ -271,7 +280,7 @@ impl Tickers {
         // Double-check: another task may have fetched while we waited
         let symbols_to_fetch = self.events_missing().await;
         if symbols_to_fetch.is_empty() {
-            return Ok(());
+            return Ok(HashMap::new());
         }
 
         // Fetch events concurrently for all symbols that need it via provider dispatch
@@ -307,10 +316,14 @@ impl Tickers {
             .await;
 
         let mut parsed_events: Vec<(Arc<str>, ChartEvents)> = Vec::new();
+        let mut failures = HashMap::new();
 
         for (symbol, result) in results {
-            if let Ok(events_data) = result {
-                parsed_events.push((symbol, events_data));
+            match result {
+                Ok(events_data) => parsed_events.push((symbol, events_data)),
+                Err(e) => {
+                    failures.insert(symbol, e.to_string());
+                }
             }
         }
 
@@ -322,7 +335,7 @@ impl Tickers {
             }
         }
 
-        Ok(())
+        Ok(failures)
     }
 
     /// Symbols with no entry in the events cache (existence check, not TTL-based).
@@ -339,6 +352,24 @@ impl Tickers {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn a_failed_events_fetch_reports_its_own_error() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let provider = CountingProvider::failing_events("AAPL");
+        let tickers = Tickers::builder(["AAPL", "MSFT"])
+            .with_provider_set(provider_set(provider))
+            .build()
+            .await
+            .unwrap();
+
+        let result = tickers.dividends(TimeRange::Max).await.unwrap();
+
+        assert!(result.dividends.contains_key("MSFT"));
+        let error = &result.errors["AAPL"];
+        assert!(error.contains("events upstream failed"), "{error}");
+    }
 
     #[tokio::test]
     #[ignore = "requires network access"]
