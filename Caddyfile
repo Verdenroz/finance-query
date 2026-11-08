@@ -16,6 +16,15 @@
         -Server
     }
 
+    encode {
+        zstd
+        gzip
+        # Default match includes text/*, which would buffer SSE
+        match {
+            header Content-Type application/json*
+        }
+    }
+
     # Health endpoints
     handle /health {
         rewrite * /v2/health
