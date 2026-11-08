@@ -323,6 +323,14 @@ name = "index-constituents"
 path = "/v2/index-constituents/%5EGSPC"
 assert = ["[].symbol exists", "[].sector exists"]
 
+# REST returns each event as a GraphQL union member (`__typename` plus its
+# fields), while the spec declares the library's externally tagged enum.
+[[probe]]
+name = "calendar"
+shape = false
+path = "/v2/calendar?symbols=AAPL,MSFT&range=3mo"
+assert = ["#len >= 1", "[].date exists", "[].timestamp > 0"]
+
 [[probe]]
 name = "market-calendar"
 shape = false
@@ -568,3 +576,18 @@ path = "/v2/indices/%5EGSPC/constituent-changes"
 name = "sector-performance-history"
 shape = false
 path = "/v2/sector-performance/history?limit=5"
+
+# REST returns `equityCurve` and `trades` as bare arrays, while the spec
+# declares the GraphQL Connection shape.
+[[probe]]
+name = "backtest"
+shape = false
+path = "/v2/backtest/AAPL"
+method = "POST"
+body = "{\"strategy\": \"sma_crossover\"}"
+assert = [
+  "symbol == \"AAPL\"",
+  "initialCapital > 0",
+  "finalEquity > 0",
+  "equityCurve#len >= 1",
+]
