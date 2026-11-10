@@ -29,17 +29,20 @@ jobs:
             context: .
             file: server/Dockerfile
             suffix: v2
+            no-cache-filters: runtime
             # translation-offline disabled temporarily
             build-args: CARGO_FEATURES=translation
           - name: V1 (Python)
             context: v1
             file: v1/Dockerfile
             suffix: v1
+            no-cache-filters: ""
             build-args: ""
           - name: MCP
             context: .
             file: finance-query-mcp/Dockerfile
             suffix: mcp
+            no-cache-filters: runtime
             # translation-offline disabled temporarily
             build-args: CARGO_FEATURES=translation
 
@@ -77,6 +80,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.suffix }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.suffix }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image.suffix }}
+          no-cache-filters: ${{ matrix.image.no-cache-filters }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.suffix }}
 
   deploy-docs:
