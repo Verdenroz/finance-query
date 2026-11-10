@@ -46,7 +46,7 @@ macro_rules! paginated_tool {
             variables.insert(async_graphql::Name::new("symbol"), symbol.into());
             let json = execute_query(schema, &query, variables).await?;
             let data = wrap_connection(unwrap_ticker_field(json, $gql_field));
-            Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+            Ok(CallToolResult::success(vec![rmcp::model::ContentBlock::text(
                 serde_json::to_string(&data).map_err(ser_err)?,
             )]))
         }
@@ -71,9 +71,9 @@ macro_rules! scalar_tool {
             variables.insert(async_graphql::Name::new("symbol"), symbol.into());
             let json = execute_query(schema, &query, variables).await?;
             let data = unwrap_ticker_field(json, $gql_field);
-            Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-                serde_json::to_string(&data).map_err(ser_err)?,
-            )]))
+            Ok(CallToolResult::success(vec![
+                rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+            ]))
         }
     };
 }

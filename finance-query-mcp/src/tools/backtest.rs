@@ -174,9 +174,9 @@ pub async fn run_backtest(p: RunBacktestParams) -> Result<CallToolResult, McpErr
         .map_err(lib_err)?;
 
     let response = build_response(&result, &p);
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&response).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&response).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

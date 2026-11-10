@@ -107,9 +107,9 @@ async fn get_one_indicators(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "indicators");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 async fn get_many_indicators(
@@ -138,9 +138,9 @@ async fn get_many_indicators(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_nested_connection(unwrap_field(json, "indicatorsBatch"), "indicators");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

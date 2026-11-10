@@ -29,9 +29,9 @@ pub async fn get_commodity(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_field(json, "commodity");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// A futures contract's current quote, provider-routed (Yahoo, keyless).
@@ -52,9 +52,9 @@ pub async fn get_futures(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_field(json, "futures");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// An index's current constituent list, provider-routed (Wikipedia, S&P 500 only).
@@ -76,7 +76,7 @@ pub async fn get_index_constituents(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_field(json, "indexConstituents");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }

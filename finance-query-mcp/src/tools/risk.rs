@@ -59,9 +59,9 @@ pub async fn get_risk(
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "risk");
     let text = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 #[cfg(test)]
