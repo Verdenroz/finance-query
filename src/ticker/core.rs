@@ -1150,11 +1150,17 @@ impl Ticker {
 
         let calendar_events = calendar_events?;
         let options = options.ok();
+        let dividend_amount = self
+            .key_stats()
+            .await?
+            .as_ref()
+            .and_then(crate::models::calendar::last_dividend_value);
 
         let mut events = crate::models::calendar::build_symbol_events(
             &self.symbol,
             calendar_events.as_ref(),
             options.as_ref(),
+            dividend_amount,
             window,
         );
 

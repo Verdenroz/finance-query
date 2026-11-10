@@ -215,7 +215,7 @@ impl Tickers {
                         })
                         .await
                 };
-                (sym, quote.ok().and_then(|q| q.calendar_events))
+                (sym, quote.ok())
             }
         });
 
@@ -239,11 +239,15 @@ impl Tickers {
 
         let mut events: Vec<crate::models::calendar::CalendarEvent> = per_symbol_quotes
             .into_iter()
-            .flat_map(|(sym, calendar_events)| {
+            .flat_map(|(sym, quote)| {
                 crate::models::calendar::build_symbol_events(
                     &sym,
-                    calendar_events.as_ref(),
+                    quote.as_ref().and_then(|q| q.calendar_events.as_ref()),
                     options_map.get(&sym),
+                    quote
+                        .as_ref()
+                        .and_then(|q| q.default_key_statistics.as_ref())
+                        .and_then(crate::models::calendar::last_dividend_value),
                     window,
                 )
             })

@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::models::options::Options;
-use crate::models::quote::CalendarEvents;
+use crate::models::quote::{CalendarEvents, DefaultKeyStatistics};
 
 /// A single upcoming financial event.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -50,12 +50,12 @@ pub enum EventKind {
     },
     /// Ex-dividend date — shares must be held before this date to receive the dividend.
     ExDividend {
-        /// Dividend amount per share, when known.
+        /// Most recent declared dividend per share. The upcoming amount may differ.
         amount: Option<f64>,
     },
     /// Dividend payment date — cash arrives in the account.
     DividendPayment {
-        /// Dividend amount per share, when known.
+        /// Most recent declared dividend per share. The upcoming amount may differ.
         amount: Option<f64>,
     },
     /// Standard monthly options expiration (3rd Friday) for this ticker.
@@ -97,16 +97,24 @@ pub(crate) fn iso_date(timestamp: i64) -> String {
         .unwrap_or_default()
 }
 
+/// Most recent declared per-share dividend from the quote's key statistics.
+pub(crate) fn last_dividend_value(stats: &DefaultKeyStatistics) -> Option<f64> {
+    stats.last_dividend_value.as_ref()?.raw.filter(|&v| v > 0.0)
+}
+
 /// Build the per-symbol calendar events from already-fetched data.
 ///
 /// Pure and synchronous: callers fetch `calendar` (the `calendarEvents` quote
-/// module) and `options` once, then hand them here. Only events whose timestamp
+/// module) and `options` once, then hand them here. `dividend_amount` is the
+/// most recent declared per-share dividend, reported for the upcoming ex-dividend and
+/// payment dates because Yahoo publishes no forward amount. Only events whose timestamp
 /// falls within `window` (`[start, end]`, inclusive) are emitted. The result is
 /// **not** sorted — callers merge across symbols and sort once.
 pub(crate) fn build_symbol_events(
     symbol: &str,
     calendar: Option<&CalendarEvents>,
     options: Option<&Options>,
+    dividend_amount: Option<f64>,
     window: (i64, i64),
 ) -> Vec<CalendarEvent> {
     let (start, end) = window;
@@ -144,7 +152,9 @@ pub(crate) fn build_symbol_events(
             events.push(CalendarEvent::new(
                 ts,
                 Some(symbol.to_string()),
-                EventKind::ExDividend { amount: None },
+                EventKind::ExDividend {
+                    amount: dividend_amount,
+                },
             ));
         }
 
@@ -152,7 +162,9 @@ pub(crate) fn build_symbol_events(
             events.push(CalendarEvent::new(
                 ts,
                 Some(symbol.to_string()),
-                EventKind::DividendPayment { amount: None },
+                EventKind::DividendPayment {
+                    amount: dividend_amount,
+                },
             ));
         }
     }
@@ -330,7 +342,7 @@ mod tests {
     fn builds_earnings_dividend_events_in_window() {
         let cal = sample_calendar();
         let window = (1_770_000_000, 1_773_000_000);
-        let events = build_symbol_events("AAPL", Some(&cal), None, window);
+        let events = build_symbol_events("AAPL", Some(&cal), None, None, window);
 
         assert_eq!(events.len(), 3);
         let earnings = events
@@ -364,11 +376,45 @@ mod tests {
     }
 
     #[test]
+    fn dividend_events_carry_last_dividend_amount() {
+        let cal = sample_calendar();
+        let window = (1_770_000_000, 1_773_000_000);
+        let events = build_symbol_events("AAPL", Some(&cal), None, Some(0.25), window);
+
+        let amounts: Vec<_> = events
+            .iter()
+            .filter_map(|e| match e.event {
+                EventKind::ExDividend { amount } | EventKind::DividendPayment { amount } => amount,
+                _ => None,
+            })
+            .collect();
+        assert_eq!(amounts, vec![0.25, 0.25]);
+    }
+
+    #[test]
+    fn last_dividend_value_ignores_zero() {
+        let stats: DefaultKeyStatistics = serde_json::from_value(json!({
+            "lastDividendValue": {"fmt": "0.00", "raw": 0.0}
+        }))
+        .unwrap();
+        assert_eq!(last_dividend_value(&stats), None);
+    }
+
+    #[test]
+    fn last_dividend_value_reads_raw() {
+        let stats: DefaultKeyStatistics = serde_json::from_value(json!({
+            "lastDividendValue": {"fmt": "0.25", "raw": 0.25}
+        }))
+        .unwrap();
+        assert_eq!(last_dividend_value(&stats), Some(0.25));
+    }
+
+    #[test]
     fn filters_events_outside_window() {
         let cal = sample_calendar();
         // Window entirely before all sample dates.
         let window = (1_000_000_000, 1_100_000_000);
-        let events = build_symbol_events("AAPL", Some(&cal), None, window);
+        let events = build_symbol_events("AAPL", Some(&cal), None, None, window);
         assert!(events.is_empty());
     }
 
@@ -398,7 +444,7 @@ mod tests {
         .unwrap();
 
         let window = (1_783_000_000, 1_790_000_000);
-        let mut events = build_symbol_events("AAPL", None, Some(&opts), window);
+        let mut events = build_symbol_events("AAPL", None, Some(&opts), None, window);
         sort_events(&mut events);
 
         // Weekly JUL_24 excluded → only the two monthlies remain.
