@@ -280,8 +280,10 @@ impl Cache {
         let value = fetch().await?;
 
         // Cache the result
-        if let Some(ttl_seconds) = write_ttl(&value, ttl, market_open) {
-            self.set(key, &value, ttl_seconds).await;
+        if let Ok(json) = serde_json::to_value(&value)
+            && let Some(ttl_seconds) = write_ttl(&json, ttl, market_open)
+        {
+            self.set(key, &json, ttl_seconds).await;
         }
 
         Ok(value)
@@ -289,8 +291,14 @@ impl Cache {
 }
 
 /// TTL to cache `value` with, or `None` when it must not be cached.
-fn write_ttl<T: Serialize>(_value: &T, ttl: CacheTtl, market_open: bool) -> Option<u64> {
-    Some(ttl.get(market_open))
+/// Batch responses carrying per-symbol errors are skipped so a transient failure is not pinned.
+fn write_ttl(value: &serde_json::Value, ttl: CacheTtl, market_open: bool) -> Option<u64> {
+    let has_errors = match value.get("errors") {
+        Some(serde_json::Value::Object(errors)) => !errors.is_empty(),
+        Some(serde_json::Value::Array(errors)) => !errors.is_empty(),
+        _ => false,
+    };
+    (!has_errors).then(|| ttl.get(market_open))
 }
 
 /// Check if US stock market is currently open (9:30 AM - 4:00 PM ET, Mon-Fri)
@@ -363,6 +371,14 @@ mod tests {
     fn non_batch_value_keeps_ttl() {
         let value = serde_json::json!({ "symbol": "AAPL" });
         assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
+    }
+
+    #[test]
+    fn empty_array_or_null_errors_keep_ttl() {
+        for errors in [serde_json::json!([]), serde_json::Value::Null] {
+            let value = serde_json::json!({ "quotes": {}, "errors": errors });
+            assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
+        }
     }
 
     #[test]
