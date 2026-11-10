@@ -2131,11 +2131,11 @@ export type FilingSectionFormParam = "ten-k" | "eight-k";
 
 export type Frequency = "annual" | "quarterly";
 
-export type GqlEventKind = Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown>;
+export type GqlEventKind = unknown | unknown | unknown | unknown | unknown | unknown;
 
 export type GqlFormattedValue = number | number | string | GqlFormattedObject | unknown;
 
-export type GqlMarketCalendarDetail = Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown> | Record<string, unknown>;
+export type GqlMarketCalendarDetail = unknown | unknown | unknown | unknown | unknown | unknown | unknown;
 
 export type HolderType = "major" | "institutional" | "mutualfund" | "insider-transactions" | "insider-purchases" | "insider-roster";
 
