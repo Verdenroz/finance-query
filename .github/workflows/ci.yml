@@ -473,6 +473,7 @@ jobs:
           load: true
           tags: financequery:v2-ci
           cache-from: type=gha,scope=docker-server
+          no-cache-filters: runtime
           # A PR's cache scope is invisible to other PRs; exporting there only evicts master's.
           cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=docker-server' || '' }}
       - name: Test Docker image
@@ -531,6 +532,7 @@ jobs:
           load: true
           tags: financequery:mcp-ci
           cache-from: type=gha,scope=docker-mcp
+          no-cache-filters: runtime
           # A PR's cache scope is invisible to other PRs; exporting there only evicts master's.
           cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=docker-mcp' || '' }}
       - name: Test MCP Docker image
