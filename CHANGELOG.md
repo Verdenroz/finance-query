@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump rmcp to 3.9 (#608)
 - Bump soothfast to 0.5.6 (#600)
 
 ### 🔧 Internal
