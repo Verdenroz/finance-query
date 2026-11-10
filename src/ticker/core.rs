@@ -1150,11 +1150,29 @@ impl Ticker {
 
         let calendar_events = calendar_events?;
         let options = options.ok();
+        let extra_chains = match &options {
+            Some(opts) => {
+                let dates = crate::models::calendar::uncounted_monthly_expirations(opts, window);
+                futures::future::join_all(dates.into_iter().map(|ts| self.options(Some(ts))))
+                    .await
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        let dividend_amount = self
+            .key_stats()
+            .await?
+            .as_ref()
+            .and_then(crate::models::calendar::last_dividend_value);
 
         let mut events = crate::models::calendar::build_symbol_events(
             &self.symbol,
             calendar_events.as_ref(),
             options.as_ref(),
+            &extra_chains,
+            dividend_amount,
             window,
         );
 
