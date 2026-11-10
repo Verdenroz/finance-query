@@ -323,18 +323,16 @@ name = "index-constituents"
 path = "/v2/index-constituents/%5EGSPC"
 assert = ["[].symbol exists", "[].sector exists"]
 
-# REST returns each event as a GraphQL union member (`__typename` plus its
-# fields), while the spec declares the library's externally tagged enum.
 [[probe]]
 name = "calendar"
-shape = false
 path = "/v2/calendar?symbols=AAPL,MSFT&range=3mo"
 assert = ["#len >= 1", "[].date exists", "[].timestamp > 0"]
 
+# Market holidays are exchange-wide, so no entry carries a symbol.
 [[probe]]
 name = "market-calendar"
-shape = false
 path = "/v2/market-calendar?kind=market-holiday"
+sometimes = ["[].symbol"]
 assert = ["[].date exists", "[].detail exists"]
 
 [[probe]]
