@@ -3573,11 +3573,11 @@ FilingSectionFormParam = typing.Literal["ten-k", "eight-k"]
 
 Frequency = typing.Literal["annual", "quarterly"]
 
-GqlEventKind = dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any]
+GqlEventKind = typing.Any | typing.Any | typing.Any | typing.Any | typing.Any | typing.Any
 
 GqlFormattedValue = int | float | str | GqlFormattedObject | typing.Any
 
-GqlMarketCalendarDetail = dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any] | dict[str, typing.Any]
+GqlMarketCalendarDetail = typing.Any | typing.Any | typing.Any | typing.Any | typing.Any | typing.Any | typing.Any
 
 HolderType = typing.Literal["major", "institutional", "mutualfund", "insider-transactions", "insider-purchases", "insider-roster"]
 
