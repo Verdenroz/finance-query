@@ -7652,48 +7652,42 @@ components:
     GqlEventKind:
       description: "The kind of financial event, with its event-specific payload."
       oneOf:
-        - type: object
-          properties:
-            EARNINGS:
-              $ref: "#/components/schemas/GqlEarningsEvent"
-          required:
-            - EARNINGS
-          additionalProperties: false
-        - type: object
-          properties:
-            EX_DIVIDEND:
-              $ref: "#/components/schemas/GqlExDividendEvent"
-          required:
-            - EX_DIVIDEND
-          additionalProperties: false
-        - type: object
-          properties:
-            DIVIDEND_PAYMENT:
-              $ref: "#/components/schemas/GqlDividendPaymentEvent"
-          required:
-            - DIVIDEND_PAYMENT
-          additionalProperties: false
-        - type: object
-          properties:
-            OPTIONS_EXPIRATION:
-              $ref: "#/components/schemas/GqlOptionsExpirationEvent"
-          required:
-            - OPTIONS_EXPIRATION
-          additionalProperties: false
-        - type: object
-          properties:
-            ECONOMIC_RELEASE:
-              $ref: "#/components/schemas/GqlEconomicReleaseEvent"
-          required:
-            - ECONOMIC_RELEASE
-          additionalProperties: false
-        - type: object
-          properties:
-            UNKNOWN:
-              $ref: "#/components/schemas/GqlUnknownEvent"
-          required:
-            - UNKNOWN
-          additionalProperties: false
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlEarningsEvent
+            - $ref: "#/components/schemas/GqlEarningsEvent"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlExDividendEvent
+            - $ref: "#/components/schemas/GqlExDividendEvent"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlDividendPaymentEvent
+            - $ref: "#/components/schemas/GqlDividendPaymentEvent"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlOptionsExpirationEvent
+            - $ref: "#/components/schemas/GqlOptionsExpirationEvent"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlEconomicReleaseEvent
+            - $ref: "#/components/schemas/GqlEconomicReleaseEvent"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlUnknownEvent
+            - $ref: "#/components/schemas/GqlUnknownEvent"
     GqlExDividendEvent:
       description: Ex-dividend date — shares must be held before this date to receive the dividend.
       type: object
@@ -8887,55 +8881,48 @@ components:
         - observations
     GqlMarketCalendarDetail:
       oneOf:
-        - type: object
-          properties:
-            EARNINGS:
-              $ref: "#/components/schemas/GqlMarketEarningsDetail"
-          required:
-            - EARNINGS
-          additionalProperties: false
-        - type: object
-          properties:
-            IPO:
-              $ref: "#/components/schemas/GqlMarketIpoDetail"
-          required:
-            - IPO
-          additionalProperties: false
-        - type: object
-          properties:
-            DIVIDEND:
-              $ref: "#/components/schemas/GqlMarketDividendDetail"
-          required:
-            - DIVIDEND
-          additionalProperties: false
-        - type: object
-          properties:
-            SPLIT:
-              $ref: "#/components/schemas/GqlMarketSplitDetail"
-          required:
-            - SPLIT
-          additionalProperties: false
-        - type: object
-          properties:
-            MARKET_HOLIDAY:
-              $ref: "#/components/schemas/GqlMarketHolidayDetail"
-          required:
-            - MARKET_HOLIDAY
-          additionalProperties: false
-        - type: object
-          properties:
-            ECONOMIC:
-              $ref: "#/components/schemas/GqlMarketEconomicDetail"
-          required:
-            - ECONOMIC
-          additionalProperties: false
-        - type: object
-          properties:
-            UNKNOWN:
-              $ref: "#/components/schemas/GqlMarketUnknownDetail"
-          required:
-            - UNKNOWN
-          additionalProperties: false
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketEarningsDetail
+            - $ref: "#/components/schemas/GqlMarketEarningsDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketIpoDetail
+            - $ref: "#/components/schemas/GqlMarketIpoDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketDividendDetail
+            - $ref: "#/components/schemas/GqlMarketDividendDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketSplitDetail
+            - $ref: "#/components/schemas/GqlMarketSplitDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketHolidayDetail
+            - $ref: "#/components/schemas/GqlMarketHolidayDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketEconomicDetail
+            - $ref: "#/components/schemas/GqlMarketEconomicDetail"
+        - allOf:
+            - type: object
+              properties:
+                __typename:
+                  const: GqlMarketUnknownDetail
+            - $ref: "#/components/schemas/GqlMarketUnknownDetail"
     GqlMarketCalendarEntry:
       description: A single market-wide calendar entry.
       type: object
