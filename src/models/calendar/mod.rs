@@ -64,8 +64,9 @@ pub enum EventKind {
     /// expirations are omitted to keep the calendar focused on the dates that
     /// carry meaningful open interest.
     OptionsExpiration {
-        /// Number of listed contracts (calls + puts) expiring on this date when
-        /// a chain was loaded. `None` if only the expiration date is known.
+        /// Number of listed contracts (calls + puts) expiring on this date.
+        /// Loaded for monthly expirations inside the requested window only;
+        /// `None` when that chain could not be fetched.
         contract_count: Option<usize>,
     },
     /// Economic data release (requires the `fred` feature).
@@ -102,18 +103,35 @@ pub(crate) fn last_dividend_value(stats: &DefaultKeyStatistics) -> Option<f64> {
     stats.last_dividend_value.as_ref()?.raw.filter(|&v| v > 0.0)
 }
 
+/// Monthly expirations inside `window` whose chain is not yet loaded in `options`.
+pub(crate) fn uncounted_monthly_expirations(options: &Options, window: (i64, i64)) -> Vec<i64> {
+    let counts = options.contract_counts();
+    options
+        .expiration_dates()
+        .into_iter()
+        .filter(|&ts| {
+            ts >= window.0
+                && ts <= window.1
+                && is_monthly_expiration(ts)
+                && !counts.contains_key(&ts)
+        })
+        .collect()
+}
+
 /// Build the per-symbol calendar events from already-fetched data.
 ///
 /// Pure and synchronous: callers fetch `calendar` (the `calendarEvents` quote
 /// module) and `options` once, then hand them here. `dividend_amount` is the
 /// most recent declared per-share dividend, reported for the upcoming ex-dividend and
-/// payment dates because Yahoo publishes no forward amount. Only events whose timestamp
+/// payment dates because Yahoo publishes no forward amount. `extra_chains` are
+/// chains fetched for further expirations, merged into the contract counts. Only events whose timestamp
 /// falls within `window` (`[start, end]`, inclusive) are emitted. The result is
 /// **not** sorted — callers merge across symbols and sort once.
 pub(crate) fn build_symbol_events(
     symbol: &str,
     calendar: Option<&CalendarEvents>,
     options: Option<&Options>,
+    extra_chains: &[Options],
     dividend_amount: Option<f64>,
     window: (i64, i64),
 ) -> Vec<CalendarEvent> {
@@ -170,7 +188,8 @@ pub(crate) fn build_symbol_events(
     }
 
     if let Some(opts) = options {
-        let counts = opts.contract_counts();
+        let mut counts = opts.contract_counts();
+        counts.extend(extra_chains.iter().flat_map(Options::contract_counts));
         for ts in opts
             .expiration_dates()
             .into_iter()
@@ -342,7 +361,7 @@ mod tests {
     fn builds_earnings_dividend_events_in_window() {
         let cal = sample_calendar();
         let window = (1_770_000_000, 1_773_000_000);
-        let events = build_symbol_events("AAPL", Some(&cal), None, None, window);
+        let events = build_symbol_events("AAPL", Some(&cal), None, &[], None, window);
 
         assert_eq!(events.len(), 3);
         let earnings = events
@@ -379,7 +398,7 @@ mod tests {
     fn dividend_events_carry_last_dividend_amount() {
         let cal = sample_calendar();
         let window = (1_770_000_000, 1_773_000_000);
-        let events = build_symbol_events("AAPL", Some(&cal), None, Some(0.25), window);
+        let events = build_symbol_events("AAPL", Some(&cal), None, &[], Some(0.25), window);
 
         let amounts: Vec<_> = events
             .iter()
@@ -414,7 +433,7 @@ mod tests {
         let cal = sample_calendar();
         // Window entirely before all sample dates.
         let window = (1_000_000_000, 1_100_000_000);
-        let events = build_symbol_events("AAPL", Some(&cal), None, None, window);
+        let events = build_symbol_events("AAPL", Some(&cal), None, &[], None, window);
         assert!(events.is_empty());
     }
 
@@ -444,7 +463,7 @@ mod tests {
         .unwrap();
 
         let window = (1_783_000_000, 1_790_000_000);
-        let mut events = build_symbol_events("AAPL", None, Some(&opts), None, window);
+        let mut events = build_symbol_events("AAPL", None, Some(&opts), &[], None, window);
         sort_events(&mut events);
 
         // Weekly JUL_24 excluded → only the two monthlies remain.
@@ -459,6 +478,53 @@ mod tests {
             EventKind::OptionsExpiration { contract_count } => assert_eq!(contract_count, None),
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn extra_chains_fill_other_monthly_contract_counts() {
+        const JUL_17: i64 = 1_784_246_400;
+        const AUG_21: i64 = 1_787_270_400;
+        let chain = |ts: i64, calls: usize| -> Options {
+            let calls: Vec<_> = (0..calls)
+                .map(|i| json!({"contractSymbol": format!("C{i}"), "strike": 100.0}))
+                .collect();
+            serde_json::from_value(json!({
+                "optionChain": {
+                    "result": [{
+                        "underlyingSymbol": "AAPL",
+                        "expirationDates": [JUL_17, AUG_21],
+                        "strikes": [100.0],
+                        "options": [{"expirationDate": ts, "calls": calls, "puts": []}]
+                    }],
+                    "error": null
+                }
+            }))
+            .unwrap()
+        };
+        let nearest = chain(JUL_17, 2);
+        let window = (1_783_000_000, 1_790_000_000);
+        assert_eq!(
+            uncounted_monthly_expirations(&nearest, window),
+            vec![AUG_21]
+        );
+
+        let mut events = build_symbol_events(
+            "AAPL",
+            None,
+            Some(&nearest),
+            &[chain(AUG_21, 5)],
+            None,
+            window,
+        );
+        sort_events(&mut events);
+        let counts: Vec<_> = events
+            .iter()
+            .map(|e| match e.event {
+                EventKind::OptionsExpiration { contract_count } => contract_count,
+                _ => None,
+            })
+            .collect();
+        assert_eq!(counts, vec![Some(2), Some(5)]);
     }
 
     #[test]

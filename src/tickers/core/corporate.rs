@@ -237,6 +237,22 @@ impl Tickers {
 
         let options_map = options_resp.map(|r| r.options).unwrap_or_default();
 
+        let mut extra_dates: Vec<i64> = options_map
+            .values()
+            .flat_map(|o| crate::models::calendar::uncounted_monthly_expirations(o, window))
+            .collect();
+        extra_dates.sort_unstable();
+        extra_dates.dedup();
+        let mut extra_chains: HashMap<String, Vec<crate::models::options::Options>> =
+            HashMap::new();
+        for ts in extra_dates {
+            if let Ok(resp) = self.options(Some(ts)).await {
+                for (sym, opts) in resp.options {
+                    extra_chains.entry(sym).or_default().push(opts);
+                }
+            }
+        }
+
         let mut events: Vec<crate::models::calendar::CalendarEvent> = per_symbol_quotes
             .into_iter()
             .flat_map(|(sym, quote)| {
@@ -244,6 +260,7 @@ impl Tickers {
                     &sym,
                     quote.as_ref().and_then(|q| q.calendar_events.as_ref()),
                     options_map.get(&sym),
+                    extra_chains.get(&sym).map_or(&[], Vec::as_slice),
                     quote
                         .as_ref()
                         .and_then(|q| q.default_key_statistics.as_ref())
