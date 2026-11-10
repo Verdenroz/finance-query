@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Compress JSON responses at the Caddy edge (#596)
 
+### 📦 Dependencies
+
+- Bump soothfast to 0.5.6 (#600)
+
 ### 🔧 Internal
 
 - Give the deploy config check its inputs (#598)
