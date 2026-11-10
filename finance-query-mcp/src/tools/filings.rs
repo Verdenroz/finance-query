@@ -39,9 +39,9 @@ pub async fn get_congressional_trades(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_connection(unwrap_ticker_field(json, "congressionalTrades"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_fails_to_deliver(
@@ -71,9 +71,9 @@ pub async fn get_fails_to_deliver(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_connection(unwrap_ticker_field(json, "failsToDeliver"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_filing_sections(
@@ -105,9 +105,9 @@ pub async fn get_filing_sections(
     );
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "filingSections");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_risk_factors(
@@ -129,7 +129,7 @@ pub async fn get_risk_factors(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "riskFactors");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }

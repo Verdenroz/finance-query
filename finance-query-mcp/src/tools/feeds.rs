@@ -64,9 +64,9 @@ pub async fn get_feeds(
     let result = wrap_connection(unwrap_field(json, "feeds"));
 
     let text = serde_json::to_string(&result).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 #[cfg(test)]

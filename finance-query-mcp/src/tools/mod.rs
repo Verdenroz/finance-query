@@ -39,7 +39,7 @@ use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::tool::{ToolCallContext, ToolRouter},
     handler::server::wrapper::Parameters,
-    model::{CallToolRequestParams, CallToolResult},
+    model::{CallToolRequestParams, CallToolResponse, CallToolResult},
     service::RequestContext,
     tool, tool_handler, tool_router,
 };
@@ -887,12 +887,16 @@ impl ServerHandler for FinanceTools {
         &self,
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> Result<CallToolResponse, McpError> {
         let timer = ToolCallTimer::new(request.name.clone());
         let tcc = ToolCallContext::new(self, request, context);
         let result = self.tool_router.call(tcc).await;
         // A tool-level failure surfaces as Ok(result) with is_error set, not Err.
-        let ok = matches!(&result, Ok(r) if r.is_error != Some(true));
+        let ok = match &result {
+            Ok(CallToolResponse::Complete(r)) => r.is_error != Some(true),
+            Ok(_) => true,
+            Err(_) => false,
+        };
         timer.observe(ok);
         result
     }
