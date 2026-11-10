@@ -280,11 +280,17 @@ impl Cache {
         let value = fetch().await?;
 
         // Cache the result
-        let ttl_seconds = ttl.get(market_open);
-        self.set(key, &value, ttl_seconds).await;
+        if let Some(ttl_seconds) = write_ttl(&value, ttl, market_open) {
+            self.set(key, &value, ttl_seconds).await;
+        }
 
         Ok(value)
     }
+}
+
+/// TTL to cache `value` with, or `None` when it must not be cached.
+fn write_ttl<T: Serialize>(_value: &T, ttl: CacheTtl, market_open: bool) -> Option<u64> {
+    Some(ttl.get(market_open))
 }
 
 /// Check if US stock market is currently open (9:30 AM - 4:00 PM ET, Mon-Fri)
@@ -334,5 +340,34 @@ mod tests {
         let ttl = CacheTtl::new(10, 60);
         assert_eq!(ttl.get(true), 10);
         assert_eq!(ttl.get(false), 60);
+    }
+
+    #[test]
+    fn batch_with_errors_is_not_cached() {
+        let value = serde_json::json!({
+            "quotes": { "AAPL": {} },
+            "errors": { "BADSYM": "not found" },
+        });
+        assert_eq!(write_ttl(&value, ttl::QUOTES, true), None);
+        assert_eq!(write_ttl(&value, ttl::QUOTES, false), None);
+    }
+
+    #[test]
+    fn batch_without_errors_keeps_ttl() {
+        let value = serde_json::json!({ "quotes": { "AAPL": {} }, "errors": {} });
+        assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
+        assert_eq!(write_ttl(&value, ttl::QUOTES, false), Some(60));
+    }
+
+    #[test]
+    fn non_batch_value_keeps_ttl() {
+        let value = serde_json::json!({ "symbol": "AAPL" });
+        assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
+    }
+
+    #[test]
+    fn nested_errors_field_keeps_ttl() {
+        let value = serde_json::json!({ "quote": { "errors": ["x"] } });
+        assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
     }
 }
