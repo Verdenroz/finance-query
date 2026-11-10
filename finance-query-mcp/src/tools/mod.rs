@@ -879,7 +879,7 @@ pub struct FinanceTools {
     schema: FinanceSchema,
 }
 
-#[tool_handler(router = self.tool_router)]
+#[tool_handler(router = self.tool_router, name = "fq-mcp")]
 impl ServerHandler for FinanceTools {
     // Manual replica of the #[tool_handler]-generated call_tool; the macro
     // skips methods that already exist, so this is the one metrics chokepoint.
