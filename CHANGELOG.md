@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Populate null calendar and risk probe fields (#607)
+- Skip caching batch responses with errors (#606)
 - Screener fields, Yahoo 400s, batch errors (#594)
 
 ### ⚡ Performance
@@ -25,14 +27,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump zip to 9.2.2 and redis to 1.8.1 (#602)
+- Bump fuzz and v1 lockfiles for advisories (#603)
 - Bump rmcp to 3.9 (#608)
 - Bump soothfast to 0.5.6 (#600)
 
 ### 🔧 Internal
 
+- Repin rust-toolchain and setup-mold SHAs (#604)
 - Give the deploy config check its inputs (#598)
 - Validate the Caddyfile and compose files (#597)
 - Probe calendar and backtest routes (#595)
+
+---
+
+### 🔍 API surface
+
+```
+CHANGED  finance_query::EventKind (body)
+CHANGED  finance_query::models::calendar::EventKind (body)
+CHANGED  finance_query::ticker::core::Ticker::calendar (body)
+```
 
 
 ## [3.3.1] - 2026-11-07
