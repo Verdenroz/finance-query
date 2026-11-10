@@ -233,6 +233,8 @@
         "[].date": "always",
         "[].event": "always",
         "[].event.__typename": "always",
+        "[].event.amount": "always",
+        "[].event.contractCount": "always",
         "[].event.epsEstimateAvg": "always",
         "[].event.epsEstimateHigh": "always",
         "[].event.epsEstimateLow": "always",
@@ -1658,7 +1660,10 @@
         "[].detail.exchange": "always",
         "[].detail.name": "always",
         "[].detail.status": "always"
-      }
+      },
+      "uncovered": [
+        "[].symbol"
+      ]
     },
     "market-summary": {
       "fields": {
@@ -2384,9 +2389,11 @@
     },
     "risk": {
       "fields": {
+        "beta": "always",
         "calmar": "always",
         "cvar95": "always",
         "cvar99": "always",
+        "informationRatio": "always",
         "kelly": "always",
         "maxDrawdown": "always",
         "maxDrawdownRecoveryPeriods": "always",
@@ -2395,15 +2402,11 @@
         "parametricVar95": "always",
         "sharpe": "always",
         "sortino": "always",
+        "trackingError": "always",
         "ulcerIndex": "always",
         "var95": "always",
         "var99": "always"
-      },
-      "uncovered": [
-        "beta",
-        "informationRatio",
-        "trackingError"
-      ]
+      }
     },
     "screener-custom": {
       "fields": {
