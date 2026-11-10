@@ -85,9 +85,9 @@ pub async fn get_edgar_facts(
             *concept = wrap_nested_connection(concept.take(), "dataPoints");
         }
     }
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&concepts).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&concepts).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_edgar_submissions(
@@ -122,9 +122,9 @@ pub async fn get_edgar_submissions(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_nested_connection(unwrap_ticker_field(json, "edgarSubmissions"), "filings");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_edgar_search(
@@ -157,9 +157,9 @@ pub async fn get_edgar_search(
     }
     let json = execute_query(schema, gql_query, variables).await?;
     let data = unwrap_field(json, "edgarSearch");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

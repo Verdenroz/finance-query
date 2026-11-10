@@ -42,9 +42,9 @@ pub async fn get_calendar(
         format!("query {{ calendar(symbols: [{syms_literal}], range: {gql_range}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "calendar");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Build the `marketCalendar { ... }` selection set, expanding `detail` with
@@ -83,9 +83,9 @@ pub async fn get_market_calendar(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "marketCalendar");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]
