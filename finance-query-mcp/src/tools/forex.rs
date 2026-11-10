@@ -30,9 +30,9 @@ pub async fn get_forex(
     variables.insert(async_graphql::Name::new("to"), to.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_field(json, "forex");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Build the `forexNews(...)` connection args: the upstream-fetch `limit`,
@@ -67,9 +67,9 @@ pub async fn get_forex_news(
     let query = format!("query {{ forexNews({conn_args}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "forexNews"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

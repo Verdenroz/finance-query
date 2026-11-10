@@ -56,9 +56,9 @@ pub async fn get_fred_series(
     variables.insert(async_graphql::Name::new("id"), id.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_nested_connection(unwrap_field(json, "fredSeries"), "observations");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Build the `treasuryYields(...)` field argument list: an optional `year`
@@ -93,9 +93,9 @@ pub async fn get_treasury_yields(
     let query = format!("query {{ treasuryYields({args}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "treasuryYields"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

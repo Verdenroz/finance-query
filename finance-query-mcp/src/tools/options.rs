@@ -80,9 +80,9 @@ pub async fn get_options(
     let mut data = unwrap_ticker_field(json, "options");
     data = wrap_nested_connection(data, "calls");
     data = wrap_nested_connection(data, "puts");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]
