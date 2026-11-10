@@ -64,9 +64,9 @@ pub async fn get_treasury_auctions(
 
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_connection(unwrap_field(json, "treasuryAuctions"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 async fn upcoming_auctions(
@@ -86,9 +86,9 @@ async fn upcoming_auctions(
     let query = format!("query {{ upcomingAuctions({page}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "upcomingAuctions"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

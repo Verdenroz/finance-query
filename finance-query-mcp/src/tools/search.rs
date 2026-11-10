@@ -60,9 +60,9 @@ pub async fn search(
     );
     let json = execute_query(schema, &gql_query, async_graphql::Variables::default()).await?;
     let data = wrap_nested_connection(unwrap_field(json, "search"), "quotes");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn screener(
@@ -83,9 +83,9 @@ pub async fn screener(
     let query = format!("query {{ screener(type: {gql_type}, count: {n}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "screener");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_lookup(
@@ -119,9 +119,9 @@ pub async fn get_lookup(
     );
     let json = execute_query(schema, &gql_query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "lookup");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]
