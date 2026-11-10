@@ -99,9 +99,9 @@ async fn get_one_dividends(
     let json = execute_query(schema, &query, variables).await?;
     let data = wrap_nested_connection(unwrap_ticker_field(json, "dividends"), "dividends");
     let text = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 /// Build the outer `{ symbol [dividends { timestamp amount }] }` selection
@@ -143,9 +143,9 @@ async fn get_many_dividends(
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "dividendsBatch");
     let text = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 #[cfg(test)]

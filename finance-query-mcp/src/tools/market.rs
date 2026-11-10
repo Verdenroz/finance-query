@@ -53,9 +53,9 @@ pub async fn get_market_summary(
     let query = format!("query {{ marketSummary{args_str} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "marketSummary");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_fear_and_greed(
@@ -71,9 +71,9 @@ pub async fn get_fear_and_greed(
     let query = format!("query {{ fearAndGreed {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "fearAndGreed");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_trending(
@@ -98,9 +98,9 @@ pub async fn get_trending(
     let query = format!("query {{ trending{region_arg} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "trending");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Maps an `IndicesRegion` to its `GqlIndicesRegion` enum literal
@@ -135,9 +135,9 @@ pub async fn get_indices(
     let query = format!("query {{ indices{args} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "indices");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_market_hours(
@@ -163,9 +163,9 @@ pub async fn get_market_hours(
     let query = format!("query {{ marketHours{region_arg} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "marketHours");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_sector(
@@ -193,9 +193,9 @@ pub async fn get_sector(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "sector");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_industry(
@@ -223,9 +223,9 @@ pub async fn get_industry(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "industry");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Aggregate performance for every sector, provider-routed (Yahoo screener
@@ -244,9 +244,9 @@ pub async fn get_sector_performance(
     let query = format!("query {{ sectorPerformance {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "sectorPerformance");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Price/earnings ratios by sector, provider-routed (Yahoo screener fan-out,
@@ -264,9 +264,9 @@ pub async fn get_sector_pe(
     let query = format!("query {{ sectorPe {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "sectorPe");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

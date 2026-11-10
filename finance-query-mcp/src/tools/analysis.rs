@@ -111,9 +111,9 @@ pub async fn get_holders(
     if let Some(pf) = paginated_field {
         data = wrap_nested_connection(data, pf);
     }
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 fn analysis_type_to_field(analysis_type: AnalysisType) -> &'static str {
@@ -152,9 +152,9 @@ pub async fn get_analysis(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, gql_field);
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_company_profile(
@@ -176,9 +176,9 @@ pub async fn get_company_profile(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "companyProfile");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_earnings_surprises(
@@ -201,9 +201,9 @@ pub async fn get_earnings_surprises(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "earningsSurprises");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_rating_consensus(
@@ -225,9 +225,9 @@ pub async fn get_rating_consensus(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "ratingConsensus");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_price_target_consensus(
@@ -249,9 +249,9 @@ pub async fn get_price_target_consensus(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "priceTargetConsensus");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_etf_profile(
@@ -278,9 +278,9 @@ pub async fn get_etf_profile(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "etfProfile");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_earnings_transcript(
@@ -312,9 +312,9 @@ pub async fn get_earnings_transcript(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "earningsTranscript");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]
