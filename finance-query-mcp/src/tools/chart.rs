@@ -198,9 +198,9 @@ async fn get_one_chart(
     let chart = wrap_nested_connection(unwrap_ticker_field(json, "chart"), "candles");
 
     let text = serde_json::to_string(&chart).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 /// Build the outer `{ symbol [chart <chart_sel>] }` selection for a batch
@@ -263,9 +263,9 @@ async fn get_many_charts(
     }
 
     let text = serde_json::to_string(&charts).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 /// Build the `spark(...)` selection: `meta` (when requested) is expanded
@@ -323,9 +323,9 @@ pub async fn get_spark(
 
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "spark");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]

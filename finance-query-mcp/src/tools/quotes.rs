@@ -71,9 +71,9 @@ async fn get_one_quote(
     let quote = unwrap_ticker_field(json, "quote");
 
     let text = serde_json::to_string(&quote).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 async fn get_many_quotes(
@@ -125,9 +125,9 @@ async fn get_many_quotes(
     let quotes = wrap_nested_connection(unwrap_field(json, "quotes"), "quotes");
 
     let text = serde_json::to_string(&quotes).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 pub async fn get_recommendations(
@@ -151,9 +151,9 @@ pub async fn get_recommendations(
     variables.insert(async_graphql::Name::new("symbol"), symbol.into());
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "recommendations");
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 pub async fn get_splits(
@@ -180,9 +180,9 @@ pub async fn get_splits(
     let json = execute_query(schema, &query, variables).await?;
     let data = unwrap_ticker_field(json, "splits");
     let text = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        text,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(text),
+    ]))
 }
 
 #[cfg(test)]

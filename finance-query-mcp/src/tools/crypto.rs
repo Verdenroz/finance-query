@@ -41,9 +41,9 @@ pub async fn get_crypto_coins(
     );
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "cryptoCoins"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 /// Build the `cryptoNews(...)` connection args: the upstream-fetch `limit`,
@@ -78,9 +78,9 @@ pub async fn get_crypto_news(
     let query = format!("query {{ cryptoNews({conn_args}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "cryptoNews"));
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
-        serde_json::to_string(&data).map_err(ser_err)?,
-    )]))
+    Ok(CallToolResult::success(vec![
+        rmcp::model::ContentBlock::text(serde_json::to_string(&data).map_err(ser_err)?),
+    ]))
 }
 
 #[cfg(test)]
