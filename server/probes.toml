@@ -156,7 +156,7 @@ path = "/v2/recommendations/AAPL"
 
 [[probe]]
 name = "risk"
-path = "/v2/risk/AAPL"
+path = "/v2/risk/AAPL?benchmark=SPY"
 assert = ["var95 exists", "cvar95 exists", "maxDrawdown >= 0"]
 
 [[probe]]
