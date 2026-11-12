@@ -119,6 +119,10 @@ target = "soothfast-routes"
 target = "soothfast-routes"
 features = "backtesting"
 
+# The site's nav lists pages that are generated, not committed.
+[ci]
+site_run = "make docs-pages SOOTHFAST=\"$SOOTHFAST\""
+
 [[proto]]
 proto = "proto/pricing.proto"
 message = "PricingData"
