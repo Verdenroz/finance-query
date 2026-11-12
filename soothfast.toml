@@ -105,7 +105,6 @@ features = "bench-gate"
 
 [docs]
 package = ["finance-query"]
-paths = ["docs/library", "README.md"]
 
 # The minimum lives here because a released CLI rejects it under [docs].
 [package.finance-query.docs]
@@ -121,7 +120,21 @@ features = "backtesting"
 
 # The site's nav lists pages that are generated, not committed.
 [ci]
-site_run = "make docs-pages SOOTHFAST=\"$SOOTHFAST\""
+site_run = "make docs-pages SOOTHFAST=\"$SOOTHFAST\" DOCS_BASELINE=\"${SOOTHFAST_BASELINE:-base}\""
+# dataframe.md, finance.md, ticker.md and tickers.md capture live market data,
+# so their output differs on every run and is left out.
+capture_paths = [
+  "docs/library/backtesting.md", "docs/library/commodities.md",
+  "docs/library/configuration.md", "docs/library/crypto.md", "docs/library/economic.md",
+  "docs/library/error-handling.md", "docs/library/feeds.md", "docs/library/filings.md",
+  "docs/library/forex.md", "docs/library/futures.md", "docs/library/getting-started.md",
+  "docs/library/indicators.md", "docs/library/indices.md",
+  "docs/library/providers/alphavantage.md", "docs/library/providers/coingecko.md",
+  "docs/library/providers/edgar.md", "docs/library/providers/fmp.md",
+  "docs/library/providers/fred.md", "docs/library/providers/index.md",
+  "docs/library/providers/polygon.md", "docs/library/risk.md", "docs/library/screeners.md",
+  "docs/library/streaming.md", "docs/library/translation.md", "README.md",
+]
 
 [[proto]]
 proto = "proto/pricing.proto"
