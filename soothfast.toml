@@ -146,6 +146,7 @@ struct = "PricingData"
 # crates, and no test reads these. docs/ stays in, since docs_nav_coverage reads it.
 # A change to the CI job that runs this command reruns every package.
 [test]
+ci = false
 inputs = [".github/workflows/ci.yml"]
 env = [
   "FMP_API_KEY", "POLYGON_API_KEY", "ALPHAVANTAGE_API_KEY", "FRED_API_KEY", "BLS_API_KEY",
