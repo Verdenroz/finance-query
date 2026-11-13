@@ -25,10 +25,10 @@ fn doc_block_line_45() {
     }
 }
 
-// line 173: compile-only (no_run)
+// line 170: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_173() {
+fn doc_block_line_170() {
     use finance_query::Tickers;
 
     #[tokio::main]
@@ -50,10 +50,10 @@ fn doc_block_line_173() {
     }
 }
 
-// line 199
+// line 196
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_199() {
+fn doc_block_line_196() {
     use finance_query::{FinanceError, Operation, Provider};
 
     let error = FinanceError::NotSupported {

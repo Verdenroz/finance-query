@@ -4,10 +4,7 @@ pub fn main() {
     use finance_query::FinanceError;
 
     fn should_retry(error: &FinanceError, attempt: u32) -> bool {
-        if !error.is_retriable() || attempt > 3 {
-            return false;
-        }
-        true
+        error.is_retriable() && attempt <= 3
     }
 
     fn retry_delay(error: &FinanceError) -> std::time::Duration {
