@@ -97,10 +97,56 @@ pages = ["perf/summary.md", "coverage.md"]
 title = "Development"
 pages = ["development/contributing.md"]
 
+# What the CI jobs used to carry as flags. `cargo soothfast ci` reads them here.
+# Only the library has this feature, so it is not a repo-wide [gate] default,
+# which the spec commands of the other crates would inherit.
+[package.finance-query.gate]
+features = "bench-gate"
+
+[docs]
+package = ["finance-query"]
+
+# The minimum lives here because a released CLI rejects it under [docs].
+[package.finance-query.docs]
+features = "full"
+coverage = 100
+
+[package.finance-query-server.spec]
+target = "soothfast-routes"
+
+[package.finance-query-mcp.spec]
+target = "soothfast-routes"
+features = "backtesting"
+
+# The site's nav lists pages that are generated, not committed.
+[ci]
+site_run = "make docs-pages SOOTHFAST=\"$SOOTHFAST\" DOCS_BASELINE=\"${SOOTHFAST_BASELINE:-base}\""
+# dataframe.md, finance.md, ticker.md and tickers.md capture live market data,
+# so their output differs on every run and is left out.
+capture_paths = [
+  "docs/library/backtesting.md", "docs/library/commodities.md",
+  "docs/library/configuration.md", "docs/library/crypto.md", "docs/library/economic.md",
+  "docs/library/error-handling.md", "docs/library/feeds.md", "docs/library/filings.md",
+  "docs/library/forex.md", "docs/library/futures.md", "docs/library/getting-started.md",
+  "docs/library/indicators.md", "docs/library/indices.md",
+  "docs/library/providers/alphavantage.md", "docs/library/providers/coingecko.md",
+  "docs/library/providers/edgar.md", "docs/library/providers/fmp.md",
+  "docs/library/providers/fred.md", "docs/library/providers/index.md",
+  "docs/library/providers/polygon.md", "docs/library/risk.md", "docs/library/screeners.md",
+  "docs/library/streaming.md", "docs/library/translation.md", "README.md",
+]
+
+[[proto]]
+proto = "proto/pricing.proto"
+message = "PricingData"
+source = "src/streaming/pricing.rs"
+struct = "PricingData"
+
 # `cargo soothfast test`: the root package owns every file outside the member
 # crates, and no test reads these. docs/ stays in, since docs_nav_coverage reads it.
 # A change to the CI job that runs this command reruns every package.
 [test]
+ci = false
 inputs = [".github/workflows/ci.yml"]
 env = [
   "FMP_API_KEY", "POLYGON_API_KEY", "ALPHAVANTAGE_API_KEY", "FRED_API_KEY", "BLS_API_KEY",
