@@ -70,10 +70,7 @@ Use `is_retriable()` and `retry_after_secs()` to implement exponential backoff:
 use finance_query::FinanceError;
 
 fn should_retry(error: &FinanceError, attempt: u32) -> bool {
-    if !error.is_retriable() || attempt > 3 {
-        return false;
-    }
-    true
+    error.is_retriable() && attempt <= 3
 }
 
 fn retry_delay(error: &FinanceError) -> std::time::Duration {
