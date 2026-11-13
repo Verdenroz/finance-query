@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Simplify the retry example for the new clippy lint (#614)
 - Populate null calendar and risk probe fields (#607)
 - Skip caching batch responses with errors (#606)
 - Screener fields, Yahoo 400s, batch errors (#594)
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Replace the hand-written soothfast workflow (#613)
 - Repin rust-toolchain and setup-mold SHAs (#604)
 - Give the deploy config check its inputs (#598)
 - Validate the Caddyfile and compose files (#597)
@@ -48,6 +50,12 @@ CHANGED  finance_query::EventKind (body)
 CHANGED  finance_query::models::calendar::EventKind (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 ```
+
+### 📊 Gate movement
+
+| item | metric | was | now | delta |
+|---|---|---:|---:|---:|
+| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07
