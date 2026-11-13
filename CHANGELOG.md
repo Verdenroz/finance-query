@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Stop ignoring the tracked trend file (#616)
 - Simplify the retry example for the new clippy lint (#614)
 - Populate null calendar and risk probe fields (#607)
 - Skip caching batch responses with errors (#606)
@@ -55,7 +56,7 @@ CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
+| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029808.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07
