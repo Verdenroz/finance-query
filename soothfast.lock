@@ -51,7 +51,7 @@
     "finance_query::risk::ratios::sharpe_ratio": "25ed949fa65a8abe",
     "finance_query::streaming::news::NewsStream": "f46aacaf8fa4065a",
     "finance_query::streaming::pricing::PriceUpdate": "a8148fe61b9e0749",
-    "finance_query::tickers::core::BatchQuotesResponse": "0aac9488bf266f1d",
+    "finance_query::tickers::core::BatchQuotesResponse": "277f45c290762d77",
     "finance_query::tickers::core::TickersBuilder": "d52af89eba0a1c09",
     "finance_query::translation::backend::TranslationBackend": "9af696e0efb0cbc0",
     "finance_query::translation::lang::Lang": "d59ce7ea855f675b",
