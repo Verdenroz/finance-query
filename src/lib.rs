@@ -615,3 +615,5 @@ pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
 pub fn __fuzz_pdf_unencrypted(bytes: &[u8]) {
     crate::adapters::housetrades::pdf::fuzz_unencrypted(bytes);
 }
+
+// Trial marker so the build stores miss as they do on a source change. Not for merge.
