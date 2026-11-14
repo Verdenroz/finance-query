@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Bump the soothfast workflow pin (#619)
 - Replace the hand-written soothfast workflow (#613)
 - Repin rust-toolchain and setup-mold SHAs (#604)
 - Give the deploy config check its inputs (#598)
@@ -49,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 CHANGED  finance_query::EventKind (body)
 CHANGED  finance_query::models::calendar::EventKind (body)
+CHANGED  finance_query::ticker::core::Ticker::asset_profile (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 ```
 
