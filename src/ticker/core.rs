@@ -1215,31 +1215,57 @@ impl Ticker {
 super::macros::define_quote_accessors! {
     /// Regular, pre- and post-market price, plus the day's range and volume.
     price -> Price, price,
+    /// Trading summary: previous close, bid and ask, market cap, yield and 52-week range.
     summary_detail -> SummaryDetail, summary_detail,
+    /// Analyst targets, margins, cash, debt and other headline financials.
     financial_data -> FinancialData, financial_data,
+    /// Valuation and share statistics such as enterprise value, float and short interest.
     key_stats -> DefaultKeyStatistics, default_key_statistics,
+    /// Company profile: sector, industry, address, business summary and officers.
     asset_profile -> AssetProfile, asset_profile,
+    /// Upcoming earnings and dividend dates.
     calendar_events -> CalendarEvents, calendar_events,
+    /// Reported earnings and revenue by quarter and year.
     earnings -> Earnings, earnings,
+    /// Analyst estimates and revisions for upcoming periods.
     earnings_trend -> EarningsTrend, earnings_trend,
+    /// Reported earnings per share against the estimate for past quarters.
     earnings_history -> EarningsHistory, earnings_history,
+    /// Analyst buy, hold and sell counts by month.
     recommendation_trend -> RecommendationTrend, recommendation_trend,
+    /// Insiders and the shares each holds.
     insider_holders -> InsiderHolders, insider_holders,
+    /// Recent purchases and sales by insiders.
     insider_transactions -> InsiderTransactions, insider_transactions,
+    /// Largest institutional holders.
     institution_ownership -> InstitutionOwnership, institution_ownership,
+    /// Largest mutual fund holders.
     fund_ownership -> FundOwnership, fund_ownership,
+    /// Share of the company held by insiders and institutions.
     major_holders -> MajorHoldersBreakdown, major_holders_breakdown,
+    /// Net insider share purchases over the reporting period.
     share_purchase_activity -> NetSharePurchaseActivity, net_share_purchase_activity,
+    /// Instrument type, exchange and time zone.
     quote_type -> QuoteTypeData, quote_type,
+    /// Short company profile: sector, industry, address and business summary.
     summary_profile -> SummaryProfile, summary_profile,
+    /// Recent SEC filings.
     sec_filings -> SecFilings, sec_filings,
+    /// Analyst upgrades and downgrades.
     grading_history -> UpgradeDowngradeHistory, upgrade_downgrade_history,
+    /// Fund returns over trailing and annual periods.
     fund_performance -> FundPerformance, fund_performance,
+    /// Fund family, category, fees and management.
     fund_profile -> FundProfile, fund_profile,
+    /// A fund's largest holdings and its sector and asset weights.
     top_holdings -> TopHoldings, top_holdings,
+    /// Growth estimates for the instrument's index.
     index_trend -> IndexTrend, index_trend,
+    /// Trend data for the instrument's industry.
     industry_trend -> IndustryTrend, industry_trend,
+    /// Trend data for the instrument's sector.
     sector_trend -> SectorTrend, sector_trend,
+    /// Price performance against a benchmark over standard periods.
     equity_performance -> EquityPerformance, equity_performance,
 }
 
