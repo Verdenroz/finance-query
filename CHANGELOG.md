@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Bump the soothfast workflow pin (#624)
 - Bump the soothfast workflow pin (#619)
 - Replace the hand-written soothfast workflow (#613)
 - Repin rust-toolchain and setup-mold SHAs (#604)
