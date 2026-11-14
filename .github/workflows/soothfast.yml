@@ -23,7 +23,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: Verdenroz/soothfast/.github/workflows/run.yml@2ae46646f150426bb2c18a8c27ff8e75c7e452c5
+    uses: Verdenroz/soothfast/.github/workflows/run.yml@892349b4a1998f7f5753b0f1421d9e90b53cef0e
     with:
-      soothfast_ref: "2ae46646f150426bb2c18a8c27ff8e75c7e452c5"
+      soothfast_ref: "892349b4a1998f7f5753b0f1421d9e90b53cef0e"
       bot: true
