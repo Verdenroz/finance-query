@@ -80,10 +80,12 @@ impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for FormattedValue
 
         #[derive(serde::Deserialize)]
         #[serde(untagged)]
+        // `Null` goes last: an untagged enum pays for every failed variant,
+        // and nearly every value is `Full` or `Bare`.
         enum Helper<T> {
-            Null(()),
             Full(Full<T>),
             Bare(T),
+            Null(()),
         }
 
         match Helper::<T>::deserialize(deserializer)? {
