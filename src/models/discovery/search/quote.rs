@@ -56,10 +56,10 @@ pub struct SearchQuote {
     /// Stock symbol
     pub symbol: String,
     /// Short name
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "shortname", skip_serializing_if = "Option::is_none")]
     pub short_name: Option<String>,
     /// Long name
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "longname", skip_serializing_if = "Option::is_none")]
     pub long_name: Option<String>,
     /// Quote type (EQUITY, ETF, OPTION, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,4 +107,21 @@ pub struct SearchQuote {
     /// Date of name change
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_change_date: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lowercase_upstream_name_keys_populate_the_names() {
+        let quote: SearchQuote = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "shortname": "Apple Inc.",
+            "longname": "Apple Inc."
+        }))
+        .unwrap();
+        assert_eq!(quote.short_name.as_deref(), Some("Apple Inc."));
+        assert_eq!(quote.long_name.as_deref(), Some("Apple Inc."));
+    }
 }

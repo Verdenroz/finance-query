@@ -1397,11 +1397,8 @@ pub const GQL_SECTOR_PERFORMANCE_HISTORY_VALID_FIELDS: &[&str] = &["date", "sect
 /// `tvlByChain` and `sectors` are composite and need their own sub-selection.
 pub const PROTOCOL_TVL_COMPOSITE_FIELDS: &[(&str, &str)] = &[("tvlByChain", "{ chain tvl }")];
 
-pub const SECTOR_PERFORMANCE_HISTORY_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
-    "sectors",
-    "{ ytdChangePercent dayChangePercent oneYearChangePercent \
-       threeYearChangePercent fiveYearChangePercent }",
-)];
+pub const SECTOR_PERFORMANCE_HISTORY_COMPOSITE_FIELDS: &[(&str, &str)] =
+    &[("sectors", "{ sector exchange changePercent }")];
 
 #[cfg(test)]
 mod valid_field_tests {

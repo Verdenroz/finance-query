@@ -3338,7 +3338,7 @@ Sector performance for one date.
 """
 type GqlSectorPerformanceHistory {
 	date: String
-	sectors: [GqlSectorPerformance!]!
+	sectors: [GqlMarketSectorPerformance!]!
 }
 
 type GqlSectorResearchReport {

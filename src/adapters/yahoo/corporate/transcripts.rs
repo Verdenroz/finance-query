@@ -44,9 +44,9 @@ pub(crate) async fn get_quartr_id(client: &YahooClient, symbol: &str) -> Result<
         .into_iter()
         .next()
         .and_then(|r| r.quartr_id)
-        .ok_or_else(|| FinanceError::ResponseStructureError {
-            field: "quartrId".to_string(),
-            context: format!("No quartrId found for symbol {}", symbol),
+        .ok_or_else(|| FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "no earnings-call coverage".to_string(),
         })
 }
 

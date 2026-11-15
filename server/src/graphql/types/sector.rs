@@ -1,6 +1,7 @@
 //! GraphQL type for sector data (market-wide, on QueryRoot).
 
 use super::formatted::GqlFormattedValue;
+use super::market::GqlMarketSectorPerformance;
 use async_graphql::{Json, SimpleObject};
 use serde::Deserialize;
 
@@ -116,5 +117,5 @@ pub struct GqlSectorResearchReport {
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlSectorPerformanceHistory {
     pub date: Option<String>,
-    pub sectors: Vec<GqlSectorPerformance>,
+    pub sectors: Vec<GqlMarketSectorPerformance>,
 }
