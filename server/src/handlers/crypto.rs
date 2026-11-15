@@ -24,7 +24,7 @@ use super::gql_bridge::{
     unwrap_connection,
 };
 
-/// Query: `vs_currency` (str, default "usd"), `count` (u32, default 50)
+/// Query: `vsCurrency` (alias `vs_currency`) (str, default "usd"), `count` (u32, default 50)
 pub(crate) async fn get_crypto_coins(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<CryptoCoinsQuery>,
@@ -58,7 +58,7 @@ pub(crate) async fn get_crypto_coins(
 
 /// GET /v2/crypto/coins/{id}
 ///
-/// Query: `vs_currency` (str, default "usd")
+/// Query: `vsCurrency` (alias `vs_currency`) (str, default "usd")
 pub(crate) async fn get_crypto_coin(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Path(coin_id): Path<String>,
