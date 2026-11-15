@@ -27,7 +27,10 @@ pub(crate) async fn fetch_summary(
         .collect::<Vec<_>>()
         .join(",");
     let url = format!("{base_url}?modules={modules}");
-    let resp = client.request_with_crumb(&url).await?;
+    let resp = client
+        .request_with_crumb(&url)
+        .await
+        .map_err(|e| e.with_symbol(symbol))?;
     let json: serde_json::Value = resp.json().await?;
     QuoteSummaryResponse::from_json(json, symbol)
 }

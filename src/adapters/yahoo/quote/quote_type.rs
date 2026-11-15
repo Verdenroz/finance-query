@@ -30,7 +30,10 @@ pub(crate) async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_js
     info!("Fetching quote type for: {}", symbol);
 
     let url = api::quote_type(symbol);
-    let response = client.request_with_crumb(&url).await?;
+    let response = client
+        .request_with_crumb(&url)
+        .await
+        .map_err(|e| e.with_symbol(symbol))?;
 
     Ok(response.json().await?)
 }
