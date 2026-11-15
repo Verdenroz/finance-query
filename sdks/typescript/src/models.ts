@@ -1653,7 +1653,7 @@ export interface GqlSectorPerformance {
 /** Sector performance for one date. */
 export interface GqlSectorPerformanceHistory {
   date?: string;
-  sectors: GqlSectorPerformance[];
+  sectors: GqlMarketSectorPerformance[];
 }
 
 export interface GqlSectorResearchReport {
