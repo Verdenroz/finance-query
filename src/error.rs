@@ -418,13 +418,13 @@ mod tests {
     #[test]
     fn not_supported_never_lists_supporters() {
         let err = FinanceError::NotSupported {
-            provider: Provider::Finra,
+            provider: Provider::Edgar,
             operation: Operation::PriceTargetSummary,
-            candidates: vec![Provider::Finra, Provider::Fmp],
+            candidates: vec![Provider::Edgar, Provider::Yahoo],
         };
         assert_eq!(
             err.to_string(),
-            "finra does not support price_target_summary; route it to a provider that does via Providers::builder().route(...)"
+            "edgar does not support price_target_summary; route it to a provider that does via Providers::builder().route(...)"
         );
     }
 
@@ -432,10 +432,10 @@ mod tests {
     fn no_provider_supports_names_the_decliners() {
         let err = FinanceError::NoProviderSupports {
             operation: Operation::PriceTargetSummary,
-            tried: vec![Provider::Finra, Provider::Fmp],
+            tried: vec![Provider::Edgar, Provider::Yahoo],
         };
         assert!(err.to_string().starts_with(
-            "no routed provider supports price_target_summary (declined: finra, fmp)"
+            "no routed provider supports price_target_summary (declined: edgar, yahoo)"
         ));
     }
 
