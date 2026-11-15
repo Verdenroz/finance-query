@@ -9,7 +9,7 @@ use finance_query_server::graphql::{
     fields::{
         GQL_COIN_VALID_FIELDS, GQL_CRYPTO_SYMBOL_MATCH_VALID_FIELDS,
         GQL_GLOBAL_CRYPTO_STATS_VALID_FIELDS, GQL_NEWS_VALID_FIELDS,
-        GQL_TRENDING_COIN_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, unwrap_field,
+        GQL_TRENDING_COIN_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, escape_gql_string, unwrap_field,
     },
     pagination::build_connection_selection,
 };
@@ -39,7 +39,10 @@ pub(crate) async fn get_crypto_coins(
     };
     let query = format!(
         "query {{ cryptoCoins(vsCurrency: \"{}\", count: {}{}) {} }}",
-        params.vs_currency, params.count, conn_args_str, selection
+        escape_gql_string(&params.vs_currency),
+        params.count,
+        conn_args_str,
+        selection
     );
 
     info!(
@@ -67,7 +70,8 @@ pub(crate) async fn get_crypto_coin(
     let selection = build_rest_selection(params.fields.as_deref(), GQL_COIN_VALID_FIELDS);
     let query = format!(
         "query GetCoin($id: String!) {{ cryptoCoin(id: $id, vsCurrency: \"{}\") {} }}",
-        params.vs_currency, selection
+        escape_gql_string(&params.vs_currency),
+        selection
     );
     let mut vars = Variables::default();
     vars.insert(Name::new("id"), coin_id.clone().into());
