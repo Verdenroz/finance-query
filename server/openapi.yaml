@@ -4786,7 +4786,7 @@ paths:
           in: query
           required: false
           schema:
-            description: Comma-separated list of fields to include in response
+            description: "Comma-separated list of fields to include in response. Accepts result\nfields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`)"
             type: string
         - name: format
           in: query
@@ -6219,7 +6219,7 @@ components:
       type: object
       properties:
         fields:
-          description: Comma-separated list of fields to include in response
+          description: "Comma-separated list of fields to include in response. Accepts result\nfields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`)"
           type: string
         filters:
           description: Filter conditions
@@ -12522,7 +12522,7 @@ components:
           format: int32
           minimum: 0
         fields:
-          description: Comma-separated list of fields to include in response
+          description: "Comma-separated list of fields to include in response. Accepts result\nfields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`)"
           type: string
         format:
           description: "Value format: raw, pretty, or both (default: raw)"
