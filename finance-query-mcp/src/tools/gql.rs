@@ -379,6 +379,33 @@ pub const GQL_QUOTE_DEFAULT_FIELDS: &[&str] = &[
     "industry",
 ];
 
+/// Default field set for MCP `get_quote` with several symbols. Drops the fields
+/// Yahoo's batch endpoint never carries (`beta`, `sector`, `industry`).
+pub const GQL_QUOTE_BATCH_DEFAULT_FIELDS: &[&str] = &[
+    "symbol",
+    "regularMarketPrice",
+    "regularMarketChange",
+    "regularMarketChangePercent",
+    "regularMarketTime",
+    "shortName",
+    "longName",
+    "exchange",
+    "quoteType",
+    "currency",
+    "marketState",
+    "marketCap",
+    "regularMarketVolume",
+    "regularMarketDayHigh",
+    "regularMarketDayLow",
+    "regularMarketOpen",
+    "regularMarketPreviousClose",
+    "fiftyTwoWeekHigh",
+    "fiftyTwoWeekLow",
+    "forwardPe",
+    "trailingPe",
+    "dividendYield",
+];
+
 // ── EDGAR company facts (GqlFactConcept sub-field selection) ───────────────
 
 pub const GQL_EDGAR_FACTS_DEFAULT_FIELDS: &[&str] = &["concept", "unit", "dataPoints"];
@@ -707,6 +734,16 @@ mod tests {
 
         for f in GQL_TRENDING_DEFAULT_FIELDS {
             assert!(selection.contains(f));
+        }
+    }
+
+    #[test]
+    fn batch_quote_default_fields_are_valid_and_skip_batch_only_nulls() {
+        for f in GQL_QUOTE_BATCH_DEFAULT_FIELDS {
+            assert!(GQL_QUOTE_VALID_FIELDS.contains(f), "{f}");
+        }
+        for f in ["beta", "sector", "industry"] {
+            assert!(!GQL_QUOTE_BATCH_DEFAULT_FIELDS.contains(&f));
         }
     }
 
