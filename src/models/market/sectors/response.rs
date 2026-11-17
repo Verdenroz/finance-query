@@ -218,23 +218,23 @@ pub struct SectorOverview {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorPerformance {
-    /// Year-to-date change percentage
+    /// Year-to-date change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ytd_change_percent: Option<FormattedValue<f64>>,
 
-    /// Regular market change percentage (today)
+    /// Regular market change today in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<FormattedValue<f64>>,
 
-    /// One year change percentage
+    /// One year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub one_year_change_percent: Option<FormattedValue<f64>>,
 
-    /// Three year change percentage
+    /// Three year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_year_change_percent: Option<FormattedValue<f64>>,
 
-    /// Five year change percentage
+    /// Five year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub five_year_change_percent: Option<FormattedValue<f64>>,
 }
@@ -268,7 +268,7 @@ pub struct SectorCompany {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_price: Option<FormattedValue<f64>>,
 
-    /// Day change percentage
+    /// Day change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<FormattedValue<f64>>,
 
@@ -362,7 +362,7 @@ pub struct SectorIndustry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_weight: Option<FormattedValue<f64>>,
 
-    /// Day change percentage
+    /// Day change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<FormattedValue<f64>>,
 
@@ -437,22 +437,42 @@ impl SectorData {
 
         // Convert performance
         let performance = data.performance.map(|p| SectorPerformance {
-            ytd_change_percent: p.ytd_change_percent,
-            day_change_percent: p.reg_market_change_percent,
-            one_year_change_percent: p.one_year_change_percent,
-            three_year_change_percent: p.three_year_change_percent,
-            five_year_change_percent: p.five_year_change_percent,
+            ytd_change_percent: p
+                .ytd_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            day_change_percent: p
+                .reg_market_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            one_year_change_percent: p
+                .one_year_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            three_year_change_percent: p
+                .three_year_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            five_year_change_percent: p
+                .five_year_change_percent
+                .map(FormattedValue::fraction_to_percent),
         });
 
         // Convert benchmark
         let (benchmark, benchmark_name) = match data.performance_overview_benchmark {
             Some(b) => (
                 Some(SectorPerformance {
-                    ytd_change_percent: b.ytd_change_percent,
-                    day_change_percent: b.reg_market_change_percent,
-                    one_year_change_percent: b.one_year_change_percent,
-                    three_year_change_percent: b.three_year_change_percent,
-                    five_year_change_percent: b.five_year_change_percent,
+                    ytd_change_percent: b
+                        .ytd_change_percent
+                        .map(FormattedValue::fraction_to_percent),
+                    day_change_percent: b
+                        .reg_market_change_percent
+                        .map(FormattedValue::fraction_to_percent),
+                    one_year_change_percent: b
+                        .one_year_change_percent
+                        .map(FormattedValue::fraction_to_percent),
+                    three_year_change_percent: b
+                        .three_year_change_percent
+                        .map(FormattedValue::fraction_to_percent),
+                    five_year_change_percent: b
+                        .five_year_change_percent
+                        .map(FormattedValue::fraction_to_percent),
                 }),
                 b.name,
             ),
@@ -470,7 +490,9 @@ impl SectorData {
                 market_weight: c.market_weight,
                 last_price: c.last_price,
                 target_price: c.target_price,
-                day_change_percent: c.reg_market_change_percent,
+                day_change_percent: c
+                    .reg_market_change_percent
+                    .map(FormattedValue::fraction_to_percent),
                 ytd_return: c.ytd_return,
                 rating: c.rating,
             })
@@ -513,7 +535,9 @@ impl SectorData {
                 key: i.key,
                 name: i.name,
                 market_weight: i.market_weight,
-                day_change_percent: i.reg_market_change_percent,
+                day_change_percent: i
+                    .reg_market_change_percent
+                    .map(FormattedValue::fraction_to_percent),
                 ytd_return: i.ytd_return,
             })
             .collect();
@@ -549,5 +573,45 @@ impl SectorData {
             industries,
             research_reports,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn change_percents_are_rescaled_to_percent() {
+        let data = SectorData::from_response(json!({"data": {
+            "name": "Technology",
+            "key": "technology",
+            "performance": {
+                "regMarketChangePercent": {"raw": 0.0123, "fmt": "1.23%"},
+                "ytdChangePercent": {"raw": 0.2, "fmt": "20.00%"}
+            },
+            "performanceOverviewBenchmark": {
+                "regMarketChangePercent": {"raw": -0.004047, "fmt": "-0.40%"}
+            },
+            "topCompanies": [
+                {"symbol": "AAPL", "regMarketChangePercent": {"raw": 0.01, "fmt": "1.00%"}}
+            ],
+            "industries": [
+                {"name": "Software", "regMarketChangePercent": {"raw": -0.02, "fmt": "-2.00%"}}
+            ]
+        }}))
+        .unwrap();
+
+        let performance = data.performance.unwrap();
+        let day = performance.day_change_percent.unwrap();
+        assert!((day.raw.unwrap() - 1.23).abs() < 1e-9);
+        assert_eq!(day.fmt.as_deref(), Some("1.23%"));
+        assert!((performance.ytd_change_percent.unwrap().raw.unwrap() - 20.0).abs() < 1e-9);
+        let benchmark = data.benchmark.unwrap().day_change_percent.unwrap();
+        assert!((benchmark.raw.unwrap() + 0.4047).abs() < 1e-9);
+        let company = data.top_companies[0].day_change_percent.as_ref().unwrap();
+        assert!((company.raw.unwrap() - 1.0).abs() < 1e-9);
+        let industry = data.industries[0].day_change_percent.as_ref().unwrap();
+        assert!((industry.raw.unwrap() + 2.0).abs() < 1e-9);
     }
 }
