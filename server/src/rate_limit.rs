@@ -1,12 +1,18 @@
 //! Per-IP rate limiting middleware.
 //!
-//! Keys a continuously-refilling token bucket on the client's TCP peer
-//! address, so one abusive client can't starve everyone else's shared
-//! `RATE_LIMIT_PER_MINUTE` budget. Deliberately never trusts
-//! `X-Forwarded-For` or similar headers — those are caller-controlled and
-//! trivially spoofed to evade or misattribute rate limiting unless a proxy
-//! in front of this process is known to overwrite them, which this
-//! self-hosted server can't assume. Buckets live in a bounded map: entries
+//! Keys a continuously-refilling token bucket on the client address, so one
+//! abusive client can't starve everyone else's shared
+//! `RATE_LIMIT_PER_MINUTE` budget. By default the client is the TCP peer and
+//! `X-Forwarded-For` is ignored, since callers control that header and can
+//! spoof it to evade or misattribute limiting.
+//!
+//! Behind a reverse proxy the peer is always the proxy, so every client would
+//! share one bucket. Setting `RATE_LIMIT_TRUST_FORWARDED_FOR=true` (or `1`)
+//! keys on the rightmost `X-Forwarded-For` entry instead: the address the
+//! trusted proxy itself observed, while entries to its left are
+//! client-supplied. A missing or unparsable header falls back to the peer.
+//! Only enable it when every request arrives through such a proxy, otherwise
+//! callers can pick their own bucket. Buckets live in a bounded map: entries
 //! idle past `IDLE_EVICTION` are swept once the map hits
 //! `MAX_TRACKED_CLIENTS`, so long-running processes don't accumulate
 //! unbounded per-IP state.
@@ -22,7 +28,7 @@ use axum::{
     Json,
     body::Body,
     extract::{ConnectInfo, State},
-    http::{Request, StatusCode},
+    http::{HeaderMap, Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
@@ -44,6 +50,9 @@ const IDLE_EVICTION: Duration = Duration::from_secs(600);
 pub struct RateLimitConfig {
     /// Requests per minute, applied independently per client IP.
     pub requests_per_minute: u32,
+    /// Key on the rightmost `X-Forwarded-For` entry instead of the TCP peer.
+    /// Only safe behind a proxy that appends the address it observed.
+    pub trust_forwarded_for: bool,
 }
 
 impl Default for RateLimitConfig {
@@ -51,6 +60,7 @@ impl Default for RateLimitConfig {
         Self {
             // Default: 60 requests per minute per IP (1 req/sec)
             requests_per_minute: 60,
+            trust_forwarded_for: false,
         }
     }
 }
@@ -62,9 +72,12 @@ impl RateLimitConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(60);
+        let trust_forwarded_for = std::env::var("RATE_LIMIT_TRUST_FORWARDED_FOR")
+            .is_ok_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "true" | "1"));
 
         Self {
             requests_per_minute,
+            trust_forwarded_for,
         }
     }
 }
@@ -165,6 +178,7 @@ impl PerIpLimiter {
 #[derive(Clone)]
 pub struct RateLimiterState {
     limiter: Arc<Mutex<PerIpLimiter>>,
+    trust_forwarded_for: bool,
 }
 
 impl RateLimiterState {
@@ -174,7 +188,18 @@ impl RateLimiterState {
 
         Self {
             limiter: Arc::new(Mutex::new(PerIpLimiter::new(config.requests_per_minute))),
+            trust_forwarded_for: config.trust_forwarded_for,
         }
+    }
+
+    /// The address to rate-limit this request under.
+    fn client_ip(&self, peer: SocketAddr, headers: &HeaderMap) -> IpAddr {
+        if self.trust_forwarded_for
+            && let Some(ip) = rightmost_forwarded_for(headers)
+        {
+            return ip;
+        }
+        peer.ip()
     }
 
     fn check(&self, ip: IpAddr) -> Result<(), Duration> {
@@ -183,6 +208,20 @@ impl RateLimiterState {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .check(ip)
     }
+}
+
+fn rightmost_forwarded_for(headers: &HeaderMap) -> Option<IpAddr> {
+    headers
+        .get_all("x-forwarded-for")
+        .iter()
+        .next_back()?
+        .to_str()
+        .ok()?
+        .rsplit(',')
+        .next()?
+        .trim()
+        .parse()
+        .ok()
 }
 
 /// Rate limit error body, returned with HTTP 429 and a `Retry-After` header.
@@ -199,7 +238,8 @@ pub struct RateLimitError {
 
 /// Rate limiting middleware
 ///
-/// Applies `RATE_LIMIT_PER_MINUTE` independently per client IP. Requires the
+/// Applies `RATE_LIMIT_PER_MINUTE` independently per client IP (see the module
+/// docs for how the client is identified behind a proxy). Requires the
 /// server to be served via `into_make_service_with_connect_info::<SocketAddr>()`
 /// so `ConnectInfo` is available.
 pub async fn rate_limit_middleware(
@@ -208,7 +248,7 @@ pub async fn rate_limit_middleware(
     request: Request<Body>,
     next: Next,
 ) -> impl IntoResponse {
-    match limiter.check(peer.ip()) {
+    match limiter.check(limiter.client_ip(peer, request.headers())) {
         Ok(()) => {
             crate::metrics::RATE_LIMIT_ALLOWED.inc();
             next.run(request).await.into_response()
@@ -256,6 +296,7 @@ mod tests {
     fn test_rate_limiter_creation() {
         let config = RateLimitConfig {
             requests_per_minute: 100,
+            ..Default::default()
         };
         let state = RateLimiterState::new(config);
         let ip: IpAddr = "127.0.0.1".parse().unwrap();
@@ -268,6 +309,7 @@ mod tests {
     fn different_ips_get_independent_buckets() {
         let config = RateLimitConfig {
             requests_per_minute: 1,
+            ..Default::default()
         };
         let state = RateLimiterState::new(config);
         let a: IpAddr = "10.0.0.1".parse().unwrap();
@@ -279,10 +321,58 @@ mod tests {
         assert!(state.check(b).is_ok());
     }
 
+    fn state(trust_forwarded_for: bool) -> RateLimiterState {
+        RateLimiterState::new(RateLimitConfig {
+            requests_per_minute: 1,
+            trust_forwarded_for,
+        })
+    }
+
+    fn headers(xff: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert("x-forwarded-for", xff.parse().unwrap());
+        h
+    }
+
+    fn peer() -> SocketAddr {
+        "172.18.0.2:4000".parse().unwrap()
+    }
+
+    #[test]
+    fn default_ignores_forwarded_for() {
+        let ip = state(false).client_ip(peer(), &headers("203.0.113.9"));
+        assert_eq!(ip, peer().ip());
+    }
+
+    #[test]
+    fn trusted_uses_rightmost_entry() {
+        let ip = state(true).client_ip(peer(), &headers("6.6.6.6, 198.51.100.7, 203.0.113.9"));
+        assert_eq!(ip, "203.0.113.9".parse::<IpAddr>().unwrap());
+    }
+
+    #[test]
+    fn trusted_falls_back_to_peer_without_usable_header() {
+        let s = state(true);
+        assert_eq!(s.client_ip(peer(), &HeaderMap::new()), peer().ip());
+        assert_eq!(s.client_ip(peer(), &headers("garbage")), peer().ip());
+        assert_eq!(s.client_ip(peer(), &headers("1.2.3.4, nope")), peer().ip());
+    }
+
+    #[test]
+    fn forwarded_clients_get_independent_buckets() {
+        let s = state(true);
+        let a = s.client_ip(peer(), &headers("203.0.113.1"));
+        let b = s.client_ip(peer(), &headers("203.0.113.2"));
+        assert!(s.check(a).is_ok());
+        assert!(s.check(a).is_err());
+        assert!(s.check(b).is_ok());
+    }
+
     #[test]
     fn same_ip_shares_one_bucket_across_calls() {
         let config = RateLimitConfig {
             requests_per_minute: 2,
+            ..Default::default()
         };
         let state = RateLimiterState::new(config);
         let ip: IpAddr = "10.0.0.3".parse().unwrap();
