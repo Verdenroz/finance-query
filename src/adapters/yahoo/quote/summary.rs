@@ -6,6 +6,7 @@ use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
 use crate::models::quote::QuoteSummaryResponse;
+use crate::models::quote::price::Price;
 use tracing::info;
 
 /// Fetch full quote summary for a symbol
@@ -27,7 +28,14 @@ pub(crate) async fn fetch_summary(
         .collect::<Vec<_>>()
         .join(",");
     let url = format!("{base_url}?modules={modules}");
-    let resp = client.request_with_crumb(&url).await?;
+    let resp = client
+        .request_with_crumb(&url)
+        .await
+        .map_err(|e| e.with_symbol(symbol))?;
     let json: serde_json::Value = resp.json().await?;
-    QuoteSummaryResponse::from_json(json, symbol)
+    let response = QuoteSummaryResponse::from_json(json, symbol)?;
+    Ok(QuoteSummaryResponse {
+        price: response.price.map(Price::with_percent_changes),
+        ..response
+    })
 }

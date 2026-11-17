@@ -422,7 +422,10 @@ impl YahooClient {
             ("range", range.as_str()),
             ("events", "div|split|capitalGain"),
         ];
-        let response = self.request_with_params(&url, &params).await?;
+        let response = self
+            .request_with_params(&url, &params)
+            .await
+            .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
         let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
@@ -503,7 +506,10 @@ impl YahooClient {
             ("period2", end_str.as_str()),
             ("events", "div|split|capitalGain"),
         ];
-        let response = self.request_with_params(&url, &params).await?;
+        let response = self
+            .request_with_params(&url, &params)
+            .await
+            .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
         let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
@@ -641,7 +647,10 @@ impl YahooClient {
 
         let url = api::recommendations(symbol);
         let params = [("count", limit.to_string())];
-        let response = self.request_with_params(&url, &params).await?;
+        let response = self
+            .request_with_params(&url, &params)
+            .await
+            .map_err(|e| e.with_symbol(symbol))?;
         let json = response.json().await?;
         let recs: RecommendationResponse = serde_json::from_value(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
@@ -713,7 +722,10 @@ impl YahooClient {
             ("lang", config.lang.as_str()),
             ("region", config.region.as_str()),
         ];
-        let response = self.request_with_params(&url, &params).await?;
+        let response = self
+            .request_with_params(&url, &params)
+            .await
+            .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
         crate::models::fundamentals::FinancialStatement::from_response(
@@ -768,9 +780,13 @@ impl YahooClient {
         let url = super::endpoints::api::options(symbol);
         let response = if let Some(date) = date {
             let params = [("date", date.to_string())];
-            self.request_with_params(&url, &params).await?
+            self.request_with_params(&url, &params)
+                .await
+                .map_err(|e| e.with_symbol(symbol))?
         } else {
-            self.request_with_crumb(&url).await?
+            self.request_with_crumb(&url)
+                .await
+                .map_err(|e| e.with_symbol(symbol))?
         };
         let json: serde_json::Value = response.json().await?;
 
@@ -1187,6 +1203,12 @@ mod tests {
             YahooClient::map_http_status(404),
             FinanceError::SymbolNotFound { .. }
         ));
+    }
+
+    #[test]
+    fn a_not_found_status_names_the_requested_symbol() {
+        let err = YahooClient::map_http_status(404).with_symbol("ZZZZNOTREAL");
+        assert_eq!(err.to_string(), "Symbol not found: ZZZZNOTREAL");
     }
 
     #[test]

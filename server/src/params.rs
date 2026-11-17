@@ -389,7 +389,7 @@ pub struct BatchChartsQuery {
 #[serde(rename_all = "camelCase")]
 pub struct CryptoCoinsQuery {
     /// Currency to compare against (default: "usd")
-    #[serde(default = "default_vs_currency")]
+    #[serde(default = "default_vs_currency", alias = "vs_currency")]
     pub vs_currency: String,
     /// Number of coins to return (default: 50)
     #[serde(default = "default_crypto_count")]
@@ -408,7 +408,7 @@ pub struct CryptoCoinsQuery {
 #[serde(rename_all = "camelCase")]
 pub struct CryptoCoinQuery {
     /// Currency to compare against (default: "usd")
-    #[serde(default = "default_vs_currency")]
+    #[serde(default = "default_vs_currency", alias = "vs_currency")]
     pub vs_currency: String,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
@@ -560,8 +560,10 @@ pub struct EdgarSearchQuery {
     /// Comma-separated form types (e.g., "10-K,10-Q")
     pub forms: Option<String>,
     /// Start date in YYYY-MM-DD format
+    #[serde(alias = "start_date")]
     pub start_date: Option<String>,
     /// End date in YYYY-MM-DD format
+    #[serde(alias = "end_date")]
     pub end_date: Option<String>,
     /// Pagination offset (default: 0)
     pub from: Option<usize>,
@@ -693,6 +695,7 @@ pub struct FeedsQuery {
     /// Comma-separated source slugs (default: federal-reserve, sec, marketwatch, bloomberg)
     pub sources: Option<String>,
     /// SEC form type for sec-filings source (e.g., "10-K", "8-K", default: "10-K")
+    #[serde(alias = "form_type")]
     pub form_type: Option<String>,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
@@ -1128,7 +1131,8 @@ pub struct ScreenersQuery {
     /// Value format: raw, pretty, or both (default: raw)
     #[serde(default, deserialize_with = "lenient_value_format")]
     pub format: Option<ValueFormat>,
-    /// Comma-separated list of fields to include in response
+    /// Comma-separated list of fields to include in response. Accepts result
+    /// fields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`)
     pub fields: Option<String>,
 }
 
@@ -1155,7 +1159,8 @@ pub struct CustomScreenerRequest {
     /// Value format: raw, pretty, or both (default: raw)
     #[serde(default, deserialize_with = "lenient_value_format")]
     pub format: Option<ValueFormat>,
-    /// Comma-separated list of fields to include in response
+    /// Comma-separated list of fields to include in response. Accepts result
+    /// fields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`)
     pub fields: Option<String>,
 }
 

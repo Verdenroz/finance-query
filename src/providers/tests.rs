@@ -176,6 +176,66 @@ async fn all_candidates_unsupported_surfaces_precise_operation() {
     ));
 }
 
+struct NoSparkEdgar;
+
+impl ProviderCore for NoSparkEdgar {
+    fn id(&self) -> Provider {
+        Provider::Edgar
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for NoSparkEdgar {
+    async fn fetch_chart(
+        &self,
+        _: &str,
+        _: crate::Interval,
+        _: crate::TimeRange,
+    ) -> Result<crate::models::chart::Chart> {
+        Err(FinanceError::ApiError("not exercised".into()))
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for NoSparkEdgar {
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+}
+
+#[tokio::test]
+async fn several_decliners_name_every_provider_tried() {
+    let routes =
+        Routes::new(Fetch::Sequential).route(Capability::CHART, [Provider::Yahoo, Provider::Edgar]);
+    let set = ProviderSet::new(
+        vec![Arc::new(NoSparkProvider), Arc::new(NoSparkEdgar)],
+        routes,
+    );
+    let err = set
+        .fetch(Capability::CHART, |p| {
+            let p = p.clone();
+            async move {
+                p.as_chart()
+                    .ok_or_else(|| p.not_supported(Operation::Spark))?
+                    .fetch_spark(
+                        &["AAPL"],
+                        crate::Interval::OneDay,
+                        crate::TimeRange::FiveDays,
+                    )
+                    .await
+            }
+        })
+        .await
+        .unwrap_err();
+    match err {
+        FinanceError::NoProviderSupports { operation, tried } => {
+            assert_eq!(operation, Operation::Spark);
+            assert_eq!(tried, vec![Provider::Yahoo, Provider::Edgar]);
+        }
+        other => panic!("got {other:?}"),
+    }
+}
+
 #[tokio::test]
 async fn real_errors_outrank_not_supported_in_final_error() {
     // Two candidates: one lacking the op (NotSupported), one failing for
