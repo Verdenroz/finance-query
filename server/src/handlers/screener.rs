@@ -7,7 +7,10 @@ use axum::{
 use finance_query::{Screener, ValueFormat};
 use finance_query_server::graphql::{
     self,
-    fields::{GQL_SCREENER_RESULTS_VALID_FIELDS, SCREENER_RESULTS_COMPOSITE_FIELDS, unwrap_field},
+    fields::{
+        GQL_SCREENER_QUOTE_FIELDS, GQL_SCREENER_RESULTS_VALID_FIELDS,
+        SCREENER_RESULTS_COMPOSITE_FIELDS, unwrap_field,
+    },
 };
 use finance_query_server::params::{CustomScreenerRequest, ScreenersQuery};
 use tracing::info;
@@ -23,6 +26,57 @@ fn format_to_gql(format: Option<ValueFormat>) -> &'static str {
         ValueFormat::Pretty => "PRETTY",
         ValueFormat::Both => "BOTH",
     }
+}
+
+/// Names usable in `fields` to narrow each quote, taken from the quote selection.
+fn quote_field_names() -> impl Iterator<Item = &'static str> {
+    GQL_SCREENER_QUOTE_FIELDS
+        .split_whitespace()
+        .filter(|t| *t != "{" && *t != "}")
+}
+
+/// Selection for a screener response. `fields` may name result fields
+/// (`quotes`, `total`) or per-quote fields (`symbol`); per-quote names narrow
+/// the `quotes` objects, and imply `quotes` when no result field is named.
+fn build_screener_selection(fields: Option<&str>) -> String {
+    let requested: Vec<&str> = fields
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|f| !f.is_empty())
+        .collect();
+    let quote_fields: Vec<&str> = requested
+        .iter()
+        .copied()
+        .filter(|f| quote_field_names().any(|q| q == *f))
+        .collect();
+    if quote_fields.is_empty() {
+        return build_rest_composite_selection(
+            fields,
+            GQL_SCREENER_RESULTS_VALID_FIELDS,
+            SCREENER_RESULTS_COMPOSITE_FIELDS,
+        );
+    }
+
+    let mut result_fields: Vec<&str> = requested
+        .iter()
+        .copied()
+        .filter(|f| GQL_SCREENER_RESULTS_VALID_FIELDS.contains(f) && *f != "quotes")
+        .collect();
+    result_fields.insert(0, "quotes");
+    let page_info = SCREENER_RESULTS_COMPOSITE_FIELDS
+        .iter()
+        .find(|(name, _)| *name == "pageInfo")
+        .map_or("", |(_, nested)| *nested);
+    let body: Vec<String> = result_fields
+        .iter()
+        .map(|f| match *f {
+            "quotes" => format!("quotes {{ {} }}", quote_fields.join(" ")),
+            "pageInfo" => format!("pageInfo {page_info}"),
+            other => other.to_string(),
+        })
+        .collect();
+    format!("{{ {} }}", body.join(" "))
 }
 
 /// GET /v2/screeners/{screener}
@@ -43,11 +97,7 @@ pub(crate) async fn get_screeners(
 ) -> impl IntoResponse {
     let gql_type = screener.as_scr_id().to_uppercase();
     let gql_format = format_to_gql(params.format);
-    let selection = build_rest_composite_selection(
-        params.fields.as_deref(),
-        GQL_SCREENER_RESULTS_VALID_FIELDS,
-        SCREENER_RESULTS_COMPOSITE_FIELDS,
-    );
+    let selection = build_screener_selection(params.fields.as_deref());
 
     let query = format!(
         "query {{ screener(type: {}, count: {}, format: {}) {} }}",
@@ -92,11 +142,7 @@ pub(crate) async fn post_custom_screener(
 ) -> impl IntoResponse {
     let sort_ascending = body.sort_type == Some(finance_query::SortType::Asc);
     let gql_format = format_to_gql(body.format);
-    let selection = build_rest_composite_selection(
-        body.fields.as_deref(),
-        GQL_SCREENER_RESULTS_VALID_FIELDS,
-        SCREENER_RESULTS_COMPOSITE_FIELDS,
-    );
+    let selection = build_screener_selection(body.fields.as_deref());
 
     let filter_count = body.filters.len();
     let filters_json: Vec<serde_json::Value> = body
@@ -138,4 +184,45 @@ pub(crate) async fn post_custom_screener(
         Err(resp) => return *resp,
     };
     (StatusCode::OK, Json(unwrap_field(data, "customScreener"))).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn omitted_fields_select_the_whole_result() {
+        let sel = build_screener_selection(None);
+        assert!(sel.contains("quotes {"));
+        assert!(sel.contains("regularMarketPrice"));
+        assert!(sel.contains("total"));
+    }
+
+    #[test]
+    fn per_quote_fields_narrow_the_quotes() {
+        let sel = build_screener_selection(Some("symbol,regularMarketPrice"));
+        assert_eq!(sel, "{ quotes { symbol regularMarketPrice } }");
+    }
+
+    #[test]
+    fn result_fields_ride_along_with_per_quote_fields() {
+        let sel = build_screener_selection(Some("symbol,total,pageInfo"));
+        assert!(sel.starts_with("{ quotes { symbol } total pageInfo { hasNextPage"));
+    }
+
+    #[test]
+    fn result_fields_alone_keep_the_full_quote_selection() {
+        let sel = build_screener_selection(Some("quotes,total"));
+        assert!(sel.contains("shortName"));
+        assert!(sel.contains("total"));
+        assert!(!sel.contains("pageInfo"));
+    }
+
+    #[test]
+    fn unknown_fields_fall_back_to_the_whole_result() {
+        assert_eq!(
+            build_screener_selection(Some("nope")),
+            build_screener_selection(None)
+        );
+    }
 }

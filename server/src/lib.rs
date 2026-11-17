@@ -7,6 +7,7 @@ pub mod lang;
 pub mod metrics;
 pub mod params;
 pub mod rate_limit;
+pub mod rejections;
 pub mod responses;
 pub mod services;
 

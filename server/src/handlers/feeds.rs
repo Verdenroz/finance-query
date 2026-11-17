@@ -16,7 +16,7 @@ use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connectio
 
 /// GET /v2/feeds
 ///
-/// Query: `sources` (csv, default: all built-in), `form_type` (str, for sec-filings source)
+/// Query: `sources` (csv, default: all built-in), `formType` (alias `form_type`) (str, for sec-filings source)
 pub(crate) async fn get_feeds(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<FeedsQuery>,
