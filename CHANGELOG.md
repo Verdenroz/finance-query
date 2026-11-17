@@ -93,7 +93,7 @@ CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029808.0 | -5.2% |
+| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07
