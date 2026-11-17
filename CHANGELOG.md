@@ -15,8 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### ✨ Features
+
+- List fq-mcp on the MCP Registry (#626)
+- Annotate MCP tools with titles and hints (#627)
+
 ### 🐛 Fixes
 
+- Empty, duplicated and mis-statused responses (#628)
+- Load the server env file in the MCP service (#637)
+- Populate batch quote fields (#635)
+- Report change percent in percent everywhere (#634)
+- Name the symbol, use accurate statuses (#633)
+- Honour vs_currency and screener fields (#632)
+- Whole share counts in short volume (#631)
+- Rate limit per client behind a proxy (#630)
+- Return JSON for request validation errors (#629)
 - Stop ignoring the tracked trend file (#616)
 - Simplify the retry example for the new clippy lint (#614)
 - Populate null calendar and risk probe fields (#607)
@@ -29,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump debian from `7c7b2c9` to `734a72b` in /server (#640)
+- Bump quinn-udp to 0.5.16 (#642)
+- Bump debian from `7c7b2c9` to `734a72b` in /finance-query-mcp (#639)
+- Bump the all-dependencies group with 3 updates (#638)
 - Bump zip to 9.2.2 and redis to 1.8.1 (#602)
 - Bump fuzz and v1 lockfiles for advisories (#603)
 - Bump rmcp to 3.9 (#608)
@@ -50,7 +68,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ```
 CHANGED  finance_query::EventKind (body)
+CHANGED  finance_query::FinanceError (signature)
+CHANGED  finance_query::FormattedValue (body)
+CHANGED  finance_query::Quote (body)
+CHANGED  finance_query::SearchQuote (body)
+CHANGED  finance_query::error::FinanceError (signature)
 CHANGED  finance_query::models::calendar::EventKind (body)
+CHANGED  finance_query::models::discovery::search::quote::SearchQuote (body)
+CHANGED  finance_query::models::market::industries::response::BenchmarkPerformance (body)
+CHANGED  finance_query::models::market::industries::response::IndustryCompany (body)
+CHANGED  finance_query::models::market::industries::response::IndustryPerformance (body)
+CHANGED  finance_query::models::market::sectors::response::SectorCompany (body)
+CHANGED  finance_query::models::market::sectors::response::SectorIndustry (body)
+CHANGED  finance_query::models::market::sectors::response::SectorPerformance (body)
+CHANGED  finance_query::models::quote::data::Quote (body)
+CHANGED  finance_query::models::quote::formatted_value::FormattedValue (body)
+CHANGED  finance_query::models::quote::price::Price (body)
+CHANGED  finance_query::quote::Price (body)
 CHANGED  finance_query::ticker::core::Ticker::asset_profile (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 ```
@@ -59,7 +93,7 @@ CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029808.0 | -5.2% |
+| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07
