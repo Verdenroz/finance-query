@@ -927,7 +927,7 @@ export interface GetRiskFactorsOptions {
 export interface GetScreenersOptions {
   /** Number of results (default: 25, max: 250) */
   count?: number;
-  /** Comma-separated list of fields to include in response */
+  /** Comma-separated list of fields to include in response. Accepts result fields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`) */
   fields?: string;
   /** Value format: raw, pretty, or both (default: raw) */
   format?: models.ValueFormat;
