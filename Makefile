@@ -255,6 +255,8 @@ endif
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-mcp/Cargo.toml
 	@# Update derive Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-derive/Cargo.toml
+	@# Update the MCP Registry listing (publish.yml checks it against the tag)
+	@sed -i 's/^  "version": "[^"]*"/  "version": "$(VERSION)"/' server.json
 	@# The API specs version independently of the crates: the spec gate reads
 	@# info.version to acknowledge breaking changes. Bump it in
 	@# server/soothfast.toml instead.
@@ -267,6 +269,7 @@ endif
 	@echo "  - server/Cargo.toml"
 	@echo "  - finance-query-mcp/Cargo.toml"
 	@echo "  - finance-query-derive/Cargo.toml"
+	@echo "  - server.json"
 	@echo "  - docs/server/api/openapi.md"
 	@echo "  - docs/server/api/asyncapi.md"
 	@echo "  - docs/server/api/mcp-tools.md"
