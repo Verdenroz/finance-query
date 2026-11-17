@@ -165,8 +165,7 @@ pub enum FinanceError {
 
     /// The requested operation is not supported by this provider.
     #[error(
-        "{provider} does not support {operation} (supported by: {}; route it via Providers::builder().route(...))",
-        join_providers(candidates)
+        "{provider} does not support {operation}; route it to a provider that does via Providers::builder().route(...)"
     )]
     NotSupported {
         /// Provider identifier
@@ -176,6 +175,18 @@ pub enum FinanceError {
         /// Other providers whose `capabilities()` declare this operation
         /// (informational — may still need a feature flag enabled and/or routing).
         candidates: Vec<Provider>,
+    },
+
+    /// Every provider routed for the operation declined it.
+    #[error(
+        "no routed provider supports {operation} (declined: {}); route it to a provider that does via Providers::builder().route(...)",
+        join_providers(tried)
+    )]
+    NoProviderSupports {
+        /// The operation every routed provider declined
+        operation: Operation,
+        /// Providers that were tried and lack the operation
+        tried: Vec<Provider>,
     },
 
     /// No configured provider supports this operation or all providers failed.
@@ -282,18 +293,20 @@ impl FinanceError {
             | Self::ResponseStructureError { .. }
             | Self::MacroDataError { .. }
             | Self::FeedParseError { .. } => ErrorCategory::Parsing,
-            Self::NotSupported { .. } | Self::NoProviderAvailable { .. } => {
-                ErrorCategory::Validation
-            }
+            Self::NotSupported { .. }
+            | Self::NoProviderSupports { .. }
+            | Self::NoProviderAvailable { .. } => ErrorCategory::Validation,
             Self::ExternalApiError { .. } => ErrorCategory::Server,
             _ => ErrorCategory::Other,
         }
     }
 
-    /// Add symbol context to error (fluent API)
+    /// Name the requested symbol on a [`FinanceError::SymbolNotFound`] that
+    /// does not already carry one (fluent API)
     pub fn with_symbol(mut self, symbol: impl Into<String>) -> Self {
         if let Self::SymbolNotFound {
-            symbol: ref mut s, ..
+            symbol: ref mut s @ None,
+            ..
         } = self
         {
             *s = Some(symbol.into());
@@ -375,6 +388,55 @@ mod tests {
             }
             .is_retriable()
         );
+    }
+
+    #[test]
+    fn with_symbol_names_the_symbol_in_the_message() {
+        let err = FinanceError::SymbolNotFound {
+            symbol: None,
+            context: "HTTP 404 Not Found".to_string(),
+        };
+        assert_eq!(err.to_string(), "Symbol not found: unknown");
+        assert_eq!(
+            err.with_symbol("ZZZZNOTREAL").to_string(),
+            "Symbol not found: ZZZZNOTREAL"
+        );
+    }
+
+    #[test]
+    fn with_symbol_keeps_an_existing_symbol() {
+        let err = FinanceError::SymbolNotFound {
+            symbol: Some("AAPL".to_string()),
+            context: String::new(),
+        };
+        assert_eq!(
+            err.with_symbol("MSFT").to_string(),
+            "Symbol not found: AAPL"
+        );
+    }
+
+    #[test]
+    fn not_supported_never_lists_supporters() {
+        let err = FinanceError::NotSupported {
+            provider: Provider::Edgar,
+            operation: Operation::PriceTargetSummary,
+            candidates: vec![Provider::Edgar, Provider::Yahoo],
+        };
+        assert_eq!(
+            err.to_string(),
+            "edgar does not support price_target_summary; route it to a provider that does via Providers::builder().route(...)"
+        );
+    }
+
+    #[test]
+    fn no_provider_supports_names_the_decliners() {
+        let err = FinanceError::NoProviderSupports {
+            operation: Operation::PriceTargetSummary,
+            tried: vec![Provider::Edgar, Provider::Yahoo],
+        };
+        assert!(err.to_string().starts_with(
+            "no routed provider supports price_target_summary (declined: edgar, yahoo)"
+        ));
     }
 
     #[test]

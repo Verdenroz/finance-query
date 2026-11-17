@@ -116,7 +116,7 @@ pub struct Quote<F: Format = Both> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub regular_market_change: Option<F::Value<f64>>,
 
-    /// Regular market change percentage
+    /// Regular market change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub regular_market_change_percent: Option<F::Value<f64>>,
 
@@ -187,7 +187,7 @@ pub struct Quote<F: Format = Both> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pre_market_change: Option<F::Value<f64>>,
 
-    /// Pre-market change percentage
+    /// Pre-market change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pre_market_change_percent: Option<F::Value<f64>>,
 
@@ -203,7 +203,7 @@ pub struct Quote<F: Format = Both> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_market_change: Option<F::Value<f64>>,
 
-    /// Post-market change percentage
+    /// Post-market change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_market_change_percent: Option<F::Value<f64>>,
 
@@ -284,11 +284,11 @@ pub struct Quote<F: Format = Both> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub two_hundred_day_average: Option<F::Value<f64>>,
 
-    /// 52-week price change percentage
+    /// 52-week price change as a fraction (`0.15` is +15%)
     #[serde(rename = "52WeekChange", skip_serializing_if = "Option::is_none")]
     pub week_52_change: Option<F::Value<f64>>,
 
-    /// S&P 500 52-week change percentage
+    /// S&P 500 52-week change as a fraction (`0.15` is +15%)
     #[serde(rename = "SandP52WeekChange", skip_serializing_if = "Option::is_none")]
     pub sand_p_52_week_change: Option<F::Value<f64>>,
 

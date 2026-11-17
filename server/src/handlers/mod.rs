@@ -79,9 +79,9 @@ pub(crate) fn api_routes() -> Router {
             "/company-profile/{symbol}",
             get(analysis::get_company_profile),
         )
-        // GET /v2/crypto/coins?vs_currency=<str>&count=<u32>
+        // GET /v2/crypto/coins?vsCurrency=<str>&count=<u32>
         .route("/crypto/coins", get(crypto::get_crypto_coins))
-        // GET /v2/crypto/coins/{id}?vs_currency=<str>
+        // GET /v2/crypto/coins/{id}?vsCurrency=<str>
         .route("/crypto/coins/{id}", get(crypto::get_crypto_coin))
         // GET /v2/crypto/trending
         .route("/crypto/trending", get(crypto::get_crypto_trending))
@@ -111,7 +111,7 @@ pub(crate) fn api_routes() -> Router {
         .route("/edgar/cik/{symbol}", get(edgar::get_edgar_cik))
         // GET /v2/edgar/facts/{symbol}
         .route("/edgar/facts/{symbol}", get(edgar::get_edgar_facts))
-        // GET /v2/edgar/search?q=<string>&forms=<csv>&start_date=<date>&end_date=<date>
+        // GET /v2/edgar/search?q=<string>&forms=<csv>&startDate=<date>&endDate=<date>
         .route("/edgar/search", get(edgar::get_edgar_search))
         // GET /v2/edgar/submissions/{symbol}
         .route(
@@ -124,7 +124,7 @@ pub(crate) fn api_routes() -> Router {
         .route("/exchanges", get(metadata::get_exchanges))
         // GET /v2/fear-and-greed
         .route("/fear-and-greed", get(market::get_fear_and_greed))
-        // GET /v2/feeds?sources=<csv>&form_type=<str>
+        // GET /v2/feeds?sources=<csv>&formType=<str>
         .route("/feeds", get(feeds::get_feeds))
         // GET /v2/feeds/stream - WebSocket continuous RSS/Atom feed entries
         .route("/feeds/stream", get(feeds_stream::ws_feeds_stream_handler))

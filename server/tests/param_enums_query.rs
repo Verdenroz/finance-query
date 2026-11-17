@@ -12,8 +12,9 @@ use axum::routing::post;
 use axum::{Json, Router};
 use finance_query::{Frequency, IndicesRegion, Interval, StatementType, TimeRange, ValueFormat};
 use finance_query_server::params::{
-    BatchFinancialsQuery, ChartQuery, CustomScreenerRequest, IndicesQuery, MarketSummaryQuery,
-    QuoteQuery, QuotesQuery, ScreenersQuery, SectorQuery,
+    BatchFinancialsQuery, ChartQuery, CryptoCoinQuery, CryptoCoinsQuery, CustomScreenerRequest,
+    EdgarSearchQuery, FeedsQuery, IndicesQuery, MarketSummaryQuery, QuoteQuery, QuotesQuery,
+    ScreenersQuery, SectorQuery,
 };
 
 use common::{from_query, get_status, post_status, query_route};
@@ -233,5 +234,48 @@ async fn the_custom_screener_body_takes_the_spellings_it_always_did() {
             post_status(custom_screener_route(), "/v2/screeners/custom", body).await;
         assert_eq!(status, StatusCode::OK, "body {body}");
         assert_eq!(got, want, "body {body}");
+    }
+}
+
+// -- snake_case aliases ----------------------------------------------------
+
+#[tokio::test]
+async fn vs_currency_accepts_camel_and_snake_spellings() {
+    for spelling in ["vsCurrency", "vs_currency"] {
+        let coins: CryptoCoinsQuery = from_query(&format!("{spelling}=eur&count=1"))
+            .await
+            .unwrap_or_else(|e| panic!("{spelling}: {e}"));
+        assert_eq!(coins.vs_currency, "eur", "{spelling} on coins");
+        let coin: CryptoCoinQuery = from_query(&format!("{spelling}=eur"))
+            .await
+            .unwrap_or_else(|e| panic!("{spelling}: {e}"));
+        assert_eq!(coin.vs_currency, "eur", "{spelling} on coin");
+    }
+}
+
+#[tokio::test]
+async fn vs_currency_still_defaults_to_usd() {
+    let coins: CryptoCoinsQuery = from_query("count=1").await.expect("CryptoCoinsQuery");
+    assert_eq!(coins.vs_currency, "usd");
+}
+
+#[tokio::test]
+async fn edgar_dates_accept_camel_and_snake_spellings() {
+    for (start, end) in [("startDate", "endDate"), ("start_date", "end_date")] {
+        let q: EdgarSearchQuery = from_query(&format!("q=x&{start}=2026-01-01&{end}=2026-02-01"))
+            .await
+            .unwrap_or_else(|e| panic!("{start}: {e}"));
+        assert_eq!(q.start_date.as_deref(), Some("2026-01-01"), "{start}");
+        assert_eq!(q.end_date.as_deref(), Some("2026-02-01"), "{end}");
+    }
+}
+
+#[tokio::test]
+async fn feeds_form_type_accepts_camel_and_snake_spellings() {
+    for spelling in ["formType", "form_type"] {
+        let q: FeedsQuery = from_query(&format!("{spelling}=8-K"))
+            .await
+            .unwrap_or_else(|e| panic!("{spelling}: {e}"));
+        assert_eq!(q.form_type.as_deref(), Some("8-K"), "{spelling}");
     }
 }

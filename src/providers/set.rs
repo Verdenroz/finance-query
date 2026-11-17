@@ -134,15 +134,35 @@ impl ProviderSet {
 
     /// Real provider failures outrank `NotSupported` (which just means "next
     /// candidate"), but when *every* candidate lacked the operation, surface
-    /// the precise per-operation `NotSupported` instead of collapsing to a
-    /// capability-level `NoProviderAvailable`.
+    /// the per-operation outcome instead of collapsing to a capability-level
+    /// `NoProviderAvailable`: `NotSupported` when one candidate declined,
+    /// `NoProviderSupports` naming every decliner when several did.
     fn finish_err(
         cap: Capability,
         last: Option<FinanceError>,
-        unsupported: Option<FinanceError>,
+        mut unsupported: Vec<FinanceError>,
     ) -> FinanceError {
-        last.or(unsupported)
-            .unwrap_or_else(|| Self::no_provider(cap))
+        if let Some(e) = last {
+            return e;
+        }
+        match unsupported.len() {
+            0 => Self::no_provider(cap),
+            1 => unsupported.remove(0),
+            _ => {
+                let operation = match &unsupported[0] {
+                    FinanceError::NotSupported { operation, .. } => *operation,
+                    _ => return Self::no_provider(cap),
+                };
+                let tried = unsupported
+                    .iter()
+                    .filter_map(|e| match e {
+                        FinanceError::NotSupported { provider, .. } => Some(*provider),
+                        _ => None,
+                    })
+                    .collect();
+                FinanceError::NoProviderSupports { operation, tried }
+            }
+        }
     }
 
     /// Call `f(p)`, retrying in place on `FinanceError::RateLimited` per
@@ -214,13 +234,13 @@ impl ProviderSet {
         match self.routes.fetch_mode_for(cap) {
             Fetch::Sequential => {
                 let mut last = None;
-                let mut unsupported = None;
+                let mut unsupported = Vec::new();
                 for p in &candidates {
                     let result = self.call_with_retry(p, &f).await;
                     self.record_health(p.id(), &result);
                     match result {
                         Ok(v) => return Ok(v),
-                        Err(e @ FinanceError::NotSupported { .. }) => unsupported = Some(e),
+                        Err(e @ FinanceError::NotSupported { .. }) => unsupported.push(e),
                         Err(e) => last = Some(e),
                     }
                 }
@@ -241,11 +261,11 @@ impl ProviderSet {
                     });
                 }
                 let mut last = None;
-                let mut unsupported = None;
+                let mut unsupported = Vec::new();
                 while let Some(r) = futs.next().await {
                     match r {
                         Ok(v) => return Ok(v),
-                        Err(e @ FinanceError::NotSupported { .. }) => unsupported = Some(e),
+                        Err(e @ FinanceError::NotSupported { .. }) => unsupported.push(e),
                         Err(e) => last = Some(e),
                     }
                 }

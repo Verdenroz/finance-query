@@ -58,8 +58,15 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let lib_format = finance_query::ValueFormat::from(format);
-        let mut quotes = Vec::with_capacity(quotes_map.len());
-        for (_, v) in quotes_map {
+        let mut entries: Vec<_> = quotes_map.into_iter().collect();
+        entries.sort_by_key(|(symbol, _)| {
+            symbols
+                .iter()
+                .position(|s| s.eq_ignore_ascii_case(symbol))
+                .unwrap_or(usize::MAX)
+        });
+        let mut quotes = Vec::with_capacity(entries.len());
+        for (_, v) in entries {
             let v = lib_format.transform(v);
             let q: GqlQuote = from_gql_json(v)?;
             quotes.push(q);
