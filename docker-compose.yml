@@ -75,6 +75,7 @@ services:
       - PORT=8000
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
+      - RATE_LIMIT_TRUST_FORWARDED_FOR=true
     depends_on:
       redis:
         condition: service_healthy

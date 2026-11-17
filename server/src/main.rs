@@ -9,6 +9,7 @@ use finance_query_server::{
     cache::Cache,
     graphql, metrics,
     rate_limit::{RateLimitConfig, RateLimiterState, rate_limit_middleware},
+    rejections::json_rejections,
 };
 use std::net::{IpAddr, SocketAddr};
 use tower_http::cors::CorsLayer;
@@ -181,7 +182,10 @@ async fn create_app() -> Router {
     // Build router with routes
     Router::new()
         // Nest all API routes under /v2
-        .nest("/v2", handlers::api_routes())
+        .nest(
+            "/v2",
+            handlers::api_routes().layer(middleware::from_fn(json_rejections)),
+        )
         // GraphQL endpoints at root (not under /v2 — different versioning story)
         .merge(graphql::graphql_routes(schema.clone()))
         .layer(Extension(schema))

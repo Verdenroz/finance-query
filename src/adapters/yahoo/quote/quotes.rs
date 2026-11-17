@@ -6,7 +6,8 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
-use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+use crate::models::fundamentals::{DefaultKeyStatistics, SummaryDetail};
+use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse, QuoteTypeData};
 use tracing::info;
 
 /// Fetch batch quotes for multiple symbols
@@ -310,14 +311,20 @@ struct QuoteRow {
     currency: Option<String>,
     #[serde(deserialize_with = "lenient_string")]
     market_state: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    quote_source_name: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    underlying_symbol: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    exchange_timezone_name: Option<String>,
+    #[serde(deserialize_with = "lenient_string")]
+    exchange_timezone_short_name: Option<String>,
     #[serde(deserialize_with = "lenient_f64")]
     regular_market_price: Option<f64>,
     #[serde(deserialize_with = "lenient_f64")]
     regular_market_change: Option<f64>,
     #[serde(deserialize_with = "lenient_f64")]
     regular_market_change_percent: Option<f64>,
-    #[serde(deserialize_with = "lenient_i64")]
-    regular_market_volume: Option<i64>,
     #[serde(deserialize_with = "lenient_f64")]
     regular_market_previous_close: Option<f64>,
     #[serde(deserialize_with = "lenient_f64")]
@@ -326,61 +333,302 @@ struct QuoteRow {
     regular_market_day_high: Option<f64>,
     #[serde(deserialize_with = "lenient_f64")]
     regular_market_day_low: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    pre_market_price: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    pre_market_change: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    pre_market_change_percent: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    post_market_price: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    post_market_change: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    post_market_change_percent: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    fifty_two_week_high: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    fifty_two_week_low: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    fifty_two_week_change_percent: Option<f64>,
+    #[serde(rename = "trailingPE", deserialize_with = "lenient_f64")]
+    trailing_pe: Option<f64>,
+    #[serde(rename = "forwardPE", deserialize_with = "lenient_f64")]
+    forward_pe: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    fifty_day_average: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    two_hundred_day_average: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    dividend_rate: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    dividend_yield: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    trailing_annual_dividend_rate: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    trailing_annual_dividend_yield: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    bid: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    ask: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    price_to_book: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    book_value: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    eps_trailing_twelve_months: Option<f64>,
+    #[serde(deserialize_with = "lenient_f64")]
+    eps_forward: Option<f64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    regular_market_volume: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    regular_market_time: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    pre_market_time: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    post_market_time: Option<i64>,
     #[serde(deserialize_with = "lenient_i64")]
     market_cap: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    average_daily_volume3_month: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    average_daily_volume10_day: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    exchange_data_delayed_by: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    price_hint: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    bid_size: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    ask_size: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    shares_outstanding: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    implied_shares_outstanding: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    gmt_off_set_milliseconds: Option<i64>,
+    #[serde(deserialize_with = "lenient_i64")]
+    first_trade_date_milliseconds: Option<i64>,
+}
+
+fn formatted<T>(value: Option<T>) -> Option<FormattedValue<T>> {
+    value.map(FormattedValue::new)
+}
+
+fn fraction_from_percent(value: Option<f64>) -> Option<f64> {
+    value.map(|v| v / 100.0)
+}
+
+fn row_to_response(row: QuoteRow) -> (String, QuoteSummaryResponse) {
+    let price = Price {
+        short_name: row.short_name,
+        long_name: row.long_name,
+        exchange_name: row.exchange_name,
+        exchange: row.exchange,
+        quote_type: row.quote_type,
+        underlying_symbol: row.underlying_symbol,
+        quote_source_name: row.quote_source_name,
+        currency: row.currency,
+        market_state: row.market_state,
+        exchange_data_delayed_by: row
+            .exchange_data_delayed_by
+            .and_then(|v| i32::try_from(v).ok()),
+        price_hint: formatted(row.price_hint),
+        regular_market_price: formatted(row.regular_market_price),
+        regular_market_change: formatted(row.regular_market_change),
+        regular_market_change_percent: formatted(row.regular_market_change_percent),
+        regular_market_time: row.regular_market_time,
+        regular_market_volume: formatted(row.regular_market_volume),
+        regular_market_previous_close: formatted(row.regular_market_previous_close),
+        regular_market_open: formatted(row.regular_market_open),
+        regular_market_day_high: formatted(row.regular_market_day_high),
+        regular_market_day_low: formatted(row.regular_market_day_low),
+        pre_market_price: formatted(row.pre_market_price),
+        pre_market_change: formatted(row.pre_market_change),
+        pre_market_change_percent: formatted(row.pre_market_change_percent),
+        pre_market_time: row.pre_market_time,
+        post_market_price: formatted(row.post_market_price),
+        post_market_change: formatted(row.post_market_change),
+        post_market_change_percent: formatted(row.post_market_change_percent),
+        post_market_time: row.post_market_time,
+        average_daily_volume3_month: formatted(row.average_daily_volume3_month),
+        average_daily_volume10_day: formatted(row.average_daily_volume10_day),
+        market_cap: formatted(row.market_cap),
+        ..Default::default()
+    };
+    let summary_detail = SummaryDetail {
+        day_high: formatted(row.regular_market_day_high),
+        day_low: formatted(row.regular_market_day_low),
+        open: formatted(row.regular_market_open),
+        previous_close: formatted(row.regular_market_previous_close),
+        volume: formatted(row.regular_market_volume),
+        bid: formatted(row.bid),
+        bid_size: formatted(row.bid_size),
+        ask: formatted(row.ask),
+        ask_size: formatted(row.ask_size),
+        fifty_two_week_high: formatted(row.fifty_two_week_high),
+        fifty_two_week_low: formatted(row.fifty_two_week_low),
+        fifty_day_average: formatted(row.fifty_day_average),
+        two_hundred_day_average: formatted(row.two_hundred_day_average),
+        trailing_pe: formatted(row.trailing_pe),
+        forward_pe: formatted(row.forward_pe),
+        dividend_rate: formatted(row.dividend_rate),
+        dividend_yield: formatted(fraction_from_percent(row.dividend_yield)),
+        trailing_annual_dividend_rate: formatted(row.trailing_annual_dividend_rate),
+        trailing_annual_dividend_yield: formatted(row.trailing_annual_dividend_yield),
+        ..Default::default()
+    };
+    let key_statistics = DefaultKeyStatistics {
+        price_to_book: formatted(row.price_to_book),
+        book_value: formatted(row.book_value),
+        trailing_eps: formatted(row.eps_trailing_twelve_months),
+        forward_eps: formatted(row.eps_forward),
+        shares_outstanding: formatted(row.shares_outstanding),
+        implied_shares_outstanding: formatted(row.implied_shares_outstanding),
+        week_52_change: formatted(fraction_from_percent(row.fifty_two_week_change_percent)),
+        ..Default::default()
+    };
+    let quote_type = QuoteTypeData {
+        time_zone_full_name: row.exchange_timezone_name,
+        time_zone_short_name: row.exchange_timezone_short_name,
+        gmt_off_set_milliseconds: row.gmt_off_set_milliseconds,
+        first_trade_date_epoch_utc: row.first_trade_date_milliseconds.map(|ms| ms / 1000),
+        ..Default::default()
+    };
+    let response = QuoteSummaryResponse {
+        symbol: row.symbol.clone(),
+        price: Some(price),
+        summary_detail: Some(summary_detail),
+        default_key_statistics: Some(key_statistics),
+        quote_type: Some(quote_type),
+        ..Default::default()
+    };
+    (row.symbol, response)
 }
 
 /// Fetch batch quotes and convert to canonical `(symbol, QuoteSummaryResponse)` pairs.
 ///
-/// The batch endpoint returns basic fields only (price module), not full quoteSummary data.
-/// This function constructs partial `QuoteSummaryResponse` objects from the batch response.
+/// The batch endpoint carries the price, valuation, 52-week and dividend fields but no
+/// profile or risk data. Rows are returned in the order Yahoo sends them; a dividend yield
+/// arrives in percent and a 52-week change in percent, and both are stored as fractions to
+/// match quoteSummary.
 pub(crate) async fn fetch_quotes_batch(
     client: &YahooClient,
     symbols: &[&str],
 ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
     let body = fetch_bytes(client, symbols).await?;
-    let envelope: QuotesEnvelope = serde_json::from_slice(&body)?;
-    let rows = envelope.quote_response.result;
+    parse_quotes_batch(&body)
+}
 
-    let mut quotes = Vec::with_capacity(rows.len());
-    for row in rows {
-        let price = Price {
-            short_name: row.short_name,
-            long_name: row.long_name,
-            exchange_name: row.exchange_name,
-            exchange: row.exchange,
-            quote_type: row.quote_type,
-            currency: row.currency,
-            market_state: row.market_state,
-            regular_market_price: row.regular_market_price.map(FormattedValue::new),
-            regular_market_change: row.regular_market_change.map(FormattedValue::new),
-            regular_market_change_percent: row
-                .regular_market_change_percent
-                .map(FormattedValue::new),
-            regular_market_volume: row.regular_market_volume.map(FormattedValue::new),
-            regular_market_previous_close: row
-                .regular_market_previous_close
-                .map(FormattedValue::new),
-            regular_market_open: row.regular_market_open.map(FormattedValue::new),
-            regular_market_day_high: row.regular_market_day_high.map(FormattedValue::new),
-            regular_market_day_low: row.regular_market_day_low.map(FormattedValue::new),
-            market_cap: row.market_cap.map(FormattedValue::new),
-            ..Default::default()
-        };
-        let response = QuoteSummaryResponse {
-            symbol: row.symbol.clone(),
-            price: Some(price),
-            ..Default::default()
-        };
-        quotes.push((row.symbol, response));
-    }
-    Ok(quotes)
+fn parse_quotes_batch(body: &[u8]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+    let envelope: QuotesEnvelope = serde_json::from_slice(body)?;
+    Ok(envelope
+        .quote_response
+        .result
+        .into_iter()
+        .map(row_to_response)
+        .collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::adapters::yahoo::client::ClientConfig;
+    use crate::models::quote::Quote;
+
+    const BATCH_FIXTURE: &[u8] =
+        include_bytes!("../../../../tests/fixtures/yahoo/batch_quote.json");
+
+    fn fixture_quotes() -> Vec<(String, Quote)> {
+        parse_quotes_batch(BATCH_FIXTURE)
+            .unwrap()
+            .into_iter()
+            .map(|(symbol, response)| (symbol, Quote::from_response(&response, None, None)))
+            .collect()
+    }
+
+    fn raw(value: &Option<FormattedValue<f64>>) -> f64 {
+        value.as_ref().and_then(|v| v.raw).unwrap()
+    }
+
+    #[test]
+    fn batch_rows_keep_yahoo_order() {
+        let symbols: Vec<String> = fixture_quotes().into_iter().map(|(s, _)| s).collect();
+        assert_eq!(symbols, ["AAPL", "SPY", "7203.T"]);
+    }
+
+    #[test]
+    fn batch_quote_populates_price_valuation_and_range_fields() {
+        let quotes = fixture_quotes();
+        let aapl = &quotes[0].1;
+
+        assert_eq!(aapl.regular_market_time, Some(1794603601));
+        assert_eq!(raw(&aapl.fifty_two_week_high), 360.83);
+        assert_eq!(raw(&aapl.fifty_two_week_low), 243.42);
+        assert!((raw(&aapl.trailing_pe) - 39.67372).abs() < 1e-6);
+        assert!((raw(&aapl.forward_pe) - 33.700924).abs() < 1e-6);
+        assert!((raw(&aapl.price_to_book) - 46.190845).abs() < 1e-6);
+        assert_eq!(raw(&aapl.book_value), 7.713);
+        assert_eq!(raw(&aapl.trailing_eps), 8.98);
+        assert_eq!(raw(&aapl.forward_eps), 10.57152);
+        assert_eq!(raw(&aapl.fifty_day_average), 339.0364);
+        assert_eq!(raw(&aapl.two_hundred_day_average), 301.2529);
+        assert_eq!(raw(&aapl.bid), 355.03);
+        assert_eq!(raw(&aapl.dividend_rate), 1.08);
+        assert_eq!(
+            aapl.market_cap.as_ref().and_then(|v| v.raw),
+            Some(5_177_380_175_872)
+        );
+        assert_eq!(
+            aapl.average_daily_volume3_month
+                .as_ref()
+                .and_then(|v| v.raw),
+            Some(42_760_568)
+        );
+        assert_eq!(
+            aapl.shares_outstanding.as_ref().and_then(|v| v.raw),
+            Some(14_532_182_000)
+        );
+        assert_eq!(raw(&aapl.post_market_price), 355.3849);
+        assert_eq!(aapl.exchange_data_delayed_by, Some(15));
+        assert_eq!(
+            aapl.time_zone_full_name.as_deref(),
+            Some("America/New_York")
+        );
+    }
+
+    #[test]
+    fn batch_quote_reports_percent_and_fraction_fields_like_quote_summary() {
+        let quotes = fixture_quotes();
+        let aapl = &quotes[0].1;
+
+        assert!((raw(&aapl.regular_market_change_percent) - 0.3916772).abs() < 1e-9);
+        assert!((raw(&aapl.post_market_change_percent) + 0.24843556).abs() < 1e-9);
+        assert!((raw(&aapl.dividend_yield) - 0.003).abs() < 1e-9);
+        assert!((raw(&aapl.trailing_annual_dividend_yield) - 0.002986925).abs() < 1e-9);
+        assert!((raw(&aapl.week_52_change) - 0.3320496).abs() < 1e-9);
+    }
+
+    #[test]
+    fn batch_quote_leaves_profile_and_risk_fields_empty() {
+        let quotes = fixture_quotes();
+        let aapl = &quotes[0].1;
+
+        assert!(aapl.sector.is_none());
+        assert!(aapl.industry.is_none());
+        assert!(aapl.beta.is_none());
+    }
+
+    #[test]
+    fn batch_quote_handles_symbols_without_equity_fields() {
+        let quotes = fixture_quotes();
+        let spy = &quotes[1].1;
+
+        assert!(spy.market_cap.is_none());
+        assert_eq!(spy.regular_market_time, Some(1794603600));
+        assert!((raw(&spy.trailing_pe) - 23.999777).abs() < 1e-6);
+        assert_eq!(quotes[2].1.currency.as_deref(), Some("JPY"));
+    }
 
     #[test]
     fn typed_rows_reproduce_value_accessor_tolerance() {

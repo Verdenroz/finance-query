@@ -25,7 +25,7 @@ export interface BacktestRequest {
 
 /** Request body for `POST /v2/screeners/custom`. */
 export interface CustomScreenerRequest {
-  /** Comma-separated list of fields to include in response */
+  /** Comma-separated list of fields to include in response. Accepts result fields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`) */
   fields?: string;
   /** Filter conditions */
   filters?: FilterCondition[];

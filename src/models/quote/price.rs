@@ -4,6 +4,7 @@
 //! exchange information, and market state.
 
 use crate::models::format::{Both, Format};
+use crate::models::quote::FormattedValue;
 use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +24,7 @@ pub struct Price<F: Format = Both> {
     #[serde(default)]
     pub max_age: Option<i64>,
 
-    /// Pre-market change percentage
+    /// Pre-market change in percent (`1.23` is 1.23%)
     #[serde(default)]
     pub pre_market_change_percent: Option<F::Value<f64>>,
 
@@ -43,7 +44,7 @@ pub struct Price<F: Format = Both> {
     #[serde(default)]
     pub pre_market_source: Option<String>,
 
-    /// Post-market change percentage
+    /// Post-market change in percent (`1.23` is 1.23%)
     #[serde(default)]
     pub post_market_change_percent: Option<F::Value<f64>>,
 
@@ -63,7 +64,7 @@ pub struct Price<F: Format = Both> {
     #[serde(default)]
     pub post_market_source: Option<String>,
 
-    /// Regular market change percentage
+    /// Regular market change in percent (`1.23` is 1.23%)
     #[serde(default)]
     pub regular_market_change_percent: Option<F::Value<f64>>,
 
@@ -181,6 +182,22 @@ pub struct Price<F: Format = Both> {
 }
 
 impl Price<Both> {
+    /// Rescales the change-percent fields from Yahoo's fractions to percent.
+    pub(crate) fn with_percent_changes(self) -> Self {
+        Self {
+            pre_market_change_percent: self
+                .pre_market_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            post_market_change_percent: self
+                .post_market_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            regular_market_change_percent: self
+                .regular_market_change_percent
+                .map(FormattedValue::fraction_to_percent),
+            ..self
+        }
+    }
+
     /// Returns the current price (regular market price)
     pub fn current_price(&self) -> Option<f64> {
         self.regular_market_price.as_ref()?.raw
@@ -191,7 +208,7 @@ impl Price<Both> {
         self.regular_market_change.as_ref()?.raw
     }
 
-    /// Returns the day's change as a percentage
+    /// Returns the day's change in percent (`1.23` is 1.23%)
     pub fn day_change_percent(&self) -> Option<f64> {
         self.regular_market_change_percent.as_ref()?.raw
     }
@@ -321,5 +338,23 @@ mod tests {
         let raw = price.into_raw();
         assert_eq!(raw.regular_market_price, Some(100.0));
         assert_eq!(raw.market_state.as_deref(), Some("REGULAR"));
+    }
+
+    #[test]
+    fn with_percent_changes_scales_raw_and_keeps_fmt() {
+        let price: Price = serde_json::from_value(json!({
+            "regularMarketChangePercent": {"raw": 0.003916772, "fmt": "0.39%"},
+            "postMarketChangePercent": {"raw": -0.0024843556, "fmt": "-0.25%"},
+            "preMarketChangePercent": {}
+        }))
+        .unwrap();
+
+        let price = price.with_percent_changes();
+        let regular = price.regular_market_change_percent.unwrap();
+        assert!((regular.raw.unwrap() - 0.3916772).abs() < 1e-9);
+        assert_eq!(regular.fmt.as_deref(), Some("0.39%"));
+        let post = price.post_market_change_percent.unwrap();
+        assert!((post.raw.unwrap() + 0.24843556).abs() < 1e-9);
+        assert_eq!(price.pre_market_change_percent.unwrap().raw, None);
     }
 }

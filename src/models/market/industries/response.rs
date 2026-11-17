@@ -186,19 +186,19 @@ pub struct IndustryOverview {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryPerformance {
-    /// Daily change percent
+    /// Daily change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<f64>,
-    /// Year-to-date change percent
+    /// Year-to-date change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ytd_change_percent: Option<f64>,
-    /// 1-year change percent
+    /// 1-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub one_year_change_percent: Option<f64>,
-    /// 3-year change percent
+    /// 3-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_year_change_percent: Option<f64>,
-    /// 5-year change percent
+    /// 5-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub five_year_change_percent: Option<f64>,
 }
@@ -212,19 +212,19 @@ pub struct BenchmarkPerformance {
     /// Benchmark name (e.g., "S&P 500")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    /// Daily change percent
+    /// Daily change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<f64>,
-    /// Year-to-date change percent
+    /// Year-to-date change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ytd_change_percent: Option<f64>,
-    /// 1-year change percent
+    /// 1-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub one_year_change_percent: Option<f64>,
-    /// 3-year change percent
+    /// 3-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_year_change_percent: Option<f64>,
-    /// 5-year change percent
+    /// 5-year change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub five_year_change_percent: Option<f64>,
 }
@@ -249,7 +249,7 @@ pub struct IndustryCompany {
     /// Weight within the industry (0-1)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_weight: Option<f64>,
-    /// Daily change percent
+    /// Daily change in percent (`1.23` is 1.23%)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub day_change_percent: Option<f64>,
     /// Year-to-date return
@@ -364,21 +364,41 @@ impl IndustryData {
                 employee_count: o.employee_count.and_then(|v| v.raw),
             }),
             performance: data.performance.map(|p| IndustryPerformance {
-                day_change_percent: p.reg_market_change_percent.and_then(|v| v.raw),
-                ytd_change_percent: p.ytd_change_percent.and_then(|v| v.raw),
-                one_year_change_percent: p.one_year_change_percent.and_then(|v| v.raw),
-                three_year_change_percent: p.three_year_change_percent.and_then(|v| v.raw),
-                five_year_change_percent: p.five_year_change_percent.and_then(|v| v.raw),
+                day_change_percent: p
+                    .reg_market_change_percent
+                    .and_then(|v| v.fraction_to_percent().raw),
+                ytd_change_percent: p
+                    .ytd_change_percent
+                    .and_then(|v| v.fraction_to_percent().raw),
+                one_year_change_percent: p
+                    .one_year_change_percent
+                    .and_then(|v| v.fraction_to_percent().raw),
+                three_year_change_percent: p
+                    .three_year_change_percent
+                    .and_then(|v| v.fraction_to_percent().raw),
+                five_year_change_percent: p
+                    .five_year_change_percent
+                    .and_then(|v| v.fraction_to_percent().raw),
             }),
             benchmark: data
                 .performance_overview_benchmark
                 .map(|b| BenchmarkPerformance {
                     name: b.name,
-                    day_change_percent: b.reg_market_change_percent.and_then(|v| v.raw),
-                    ytd_change_percent: b.ytd_change_percent.and_then(|v| v.raw),
-                    one_year_change_percent: b.one_year_change_percent.and_then(|v| v.raw),
-                    three_year_change_percent: b.three_year_change_percent.and_then(|v| v.raw),
-                    five_year_change_percent: b.five_year_change_percent.and_then(|v| v.raw),
+                    day_change_percent: b
+                        .reg_market_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
+                    ytd_change_percent: b
+                        .ytd_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
+                    one_year_change_percent: b
+                        .one_year_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
+                    three_year_change_percent: b
+                        .three_year_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
+                    five_year_change_percent: b
+                        .five_year_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
                 }),
             top_companies: data
                 .top_companies
@@ -389,7 +409,9 @@ impl IndustryData {
                     last_price: c.last_price.and_then(|v| v.raw),
                     market_cap: c.market_cap.and_then(|v| v.raw),
                     market_weight: c.market_weight.and_then(|v| v.raw),
-                    day_change_percent: c.day_change_percent.and_then(|v| v.raw),
+                    day_change_percent: c
+                        .day_change_percent
+                        .and_then(|v| v.fraction_to_percent().raw),
                     ytd_return: c.ytd_return.and_then(|v| v.raw),
                     rating: c.rating,
                     target_price: c.target_price.and_then(|v| v.raw),
@@ -432,5 +454,34 @@ impl IndustryData {
                 })
                 .collect(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn change_percents_are_rescaled_to_percent() {
+        let data = IndustryData::from_response(json!({"data": {
+            "name": "Software",
+            "key": "software",
+            "performance": {"regMarketChangePercent": {"raw": 0.0123, "fmt": "1.23%"}},
+            "performanceOverviewBenchmark": {
+                "regMarketChangePercent": {"raw": -0.004047, "fmt": "-0.40%"}
+            },
+            "topCompanies": [
+                {"symbol": "MSFT", "regMarketChangePercent": {"raw": 0.01, "fmt": "1.00%"}}
+            ]
+        }}))
+        .unwrap();
+
+        let day = data.performance.unwrap().day_change_percent.unwrap();
+        assert!((day - 1.23).abs() < 1e-9);
+        let benchmark = data.benchmark.unwrap().day_change_percent.unwrap();
+        assert!((benchmark + 0.4047).abs() < 1e-9);
+        let company = data.top_companies[0].day_change_percent.unwrap();
+        assert!((company - 1.0).abs() < 1e-9);
     }
 }

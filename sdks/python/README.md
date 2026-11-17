@@ -45,6 +45,7 @@ Those values win over the ambient environment; anything left out falls back to w
 | `LOG_FORMAT` | `json` | Options: json, text |
 | `REDIS_URL` | _unset_ | Redis Cache (optional) |
 | `RATE_LIMIT_PER_MINUTE` | `600` | Rate Limiting Requests per minute, applied independently per client IP (default: 600 = 10 req/sec) |
+| `RATE_LIMIT_TRUST_FORWARDED_FOR` | `false` | Key on the rightmost X-Forwarded-For entry instead of the TCP peer. Enable only when every request arrives through a reverse proxy that appends the client address. |
 | `DEFAULT_INTERVAL` | `1d` | API Defaults Options: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo |
 | `DEFAULT_RANGE` | `1mo` | Options: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max |
 | `RECOMMENDATIONS_LIMIT` | `5` | Default Query Limits |
