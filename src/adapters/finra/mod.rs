@@ -114,8 +114,8 @@ mod tests {
         let day = &series[0];
         let expected_short = 71287.391347 + 8101622.503547 + 1433075.91414;
         let expected_total = 139754.385672 + 17193767.649164 + 1756412.25786;
-        assert!((day.short_volume.unwrap() - expected_short).abs() < 1e-6);
-        assert!((day.total_volume.unwrap() - expected_total).abs() < 1e-6);
+        assert_eq!(day.short_volume, Some(f64::round(expected_short)));
+        assert_eq!(day.total_volume, Some(f64::round(expected_total)));
         assert!((day.short_exempt_volume.unwrap() - (2.0 + 41852.0 + 430.0)).abs() < 1e-9);
     }
 

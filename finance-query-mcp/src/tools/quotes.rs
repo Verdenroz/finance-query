@@ -3,11 +3,12 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    DEFAULT_MCP_PAGE_SIZE, GQL_QUOTE_DEFAULT_FIELDS, GQL_QUOTE_VALID_FIELDS,
-    GQL_RECOMMENDATION_VALID_FIELDS, GQL_SPLIT_DEFAULT_FIELDS, GQL_SPLIT_VALID_FIELDS,
-    RECOMMENDATION_COMPOSITE_FIELDS, build_connection_selection, build_selection_or_default,
-    build_type_spec_selection, escape_gql_string, execute_query, gql_string_list_literal,
-    parse_fields, unwrap_field, unwrap_ticker_field, wrap_nested_connection,
+    DEFAULT_MCP_PAGE_SIZE, GQL_QUOTE_BATCH_DEFAULT_FIELDS, GQL_QUOTE_DEFAULT_FIELDS,
+    GQL_QUOTE_VALID_FIELDS, GQL_RECOMMENDATION_VALID_FIELDS, GQL_SPLIT_DEFAULT_FIELDS,
+    GQL_SPLIT_VALID_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS, build_connection_selection,
+    build_selection_or_default, build_type_spec_selection, escape_gql_string, execute_query,
+    gql_string_list_literal, parse_fields, unwrap_field, unwrap_ticker_field,
+    wrap_nested_connection,
 };
 use crate::tools::helpers::range_to_gql;
 
@@ -89,7 +90,7 @@ async fn get_many_quotes(
     let inner_selection = build_selection_or_default(
         field_list.as_deref(),
         GQL_QUOTE_VALID_FIELDS,
-        GQL_QUOTE_DEFAULT_FIELDS,
+        GQL_QUOTE_BATCH_DEFAULT_FIELDS,
     );
     let selection = build_connection_selection(&inner_selection);
 

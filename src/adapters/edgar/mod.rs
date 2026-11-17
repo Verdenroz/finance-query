@@ -213,23 +213,30 @@ fn build_client() -> Result<client::EdgarClient> {
         .build_with_shared_state(Arc::clone(&s.rate_limiter), Arc::clone(&s.cik_cache))
 }
 
+/// Split an accession number (`0000320193-26-000026`, dashes optional) into
+/// its filer CIK and the dash-free form used in archive paths.
 fn accession_parts(accession_number: &str) -> Result<(String, String)> {
-    let cik_part = accession_number
-        .split('-')
-        .next()
-        .unwrap_or("")
-        .trim_start_matches('0')
-        .to_string();
-    let accession_no_dashes = accession_number.replace('-', "");
+    let digits = accession_number.replace('-', "");
+    let well_formed = digits.len() == 18
+        && digits.bytes().all(|b| b.is_ascii_digit())
+        && (accession_number.len() == 18 || is_dashed_accession(accession_number));
+    let cik_part = digits.get(..10).unwrap_or("").trim_start_matches('0');
 
-    if cik_part.is_empty() || accession_no_dashes.is_empty() {
+    if !well_formed || cik_part.is_empty() {
         return Err(FinanceError::InvalidParameter {
             param: "accession_number".to_string(),
-            reason: "Invalid accession number format".to_string(),
+            reason: format!(
+                "'{accession_number}' is not an SEC accession number (expected 0000320193-26-000026)"
+            ),
         });
     }
 
-    Ok((cik_part, accession_no_dashes))
+    Ok((cik_part.to_string(), digits))
+}
+
+fn is_dashed_accession(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 20 && b[10] == b'-' && b[13] == b'-'
 }
 
 /// Resolve a ticker symbol to its SEC CIK number.
@@ -510,6 +517,34 @@ pub async fn fetch_filings_response(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accession_parts_accepts_dashed_and_undashed() {
+        let expected = ("320193".to_string(), "000032019326000026".to_string());
+        assert_eq!(accession_parts("0000320193-26-000026").unwrap(), expected);
+        assert_eq!(accession_parts("000032019326000026").unwrap(), expected);
+    }
+
+    #[test]
+    fn accession_parts_rejects_malformed_input() {
+        for bad in [
+            "bogus",
+            "",
+            "0000320193-26-00002",
+            "0000320193-26-0000266",
+            "0000320193-2600-0026",
+            "0000000000-26-000026",
+            "0000320193-26-00002x",
+        ] {
+            assert!(
+                matches!(
+                    accession_parts(bad),
+                    Err(FinanceError::InvalidParameter { .. })
+                ),
+                "{bad}"
+            );
+        }
+    }
 
     #[test]
     fn test_init_sets_singleton() {

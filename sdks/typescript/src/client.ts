@@ -74,6 +74,14 @@ export interface ServerEnv {
    */
   RATE_LIMIT_PER_MINUTE?: string;
   /**
+   * Key on the rightmost X-Forwarded-For entry instead of the TCP peer. Enable only
+   *
+   * when every request arrives through a reverse proxy that appends the client address.
+   *
+   * Defaults to `false`.
+   */
+  RATE_LIMIT_TRUST_FORWARDED_FOR?: string;
+  /**
    * API Defaults
    *
    * Options: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo
@@ -919,7 +927,7 @@ export interface GetRiskFactorsOptions {
 export interface GetScreenersOptions {
   /** Number of results (default: 25, max: 250) */
   count?: number;
-  /** Comma-separated list of fields to include in response */
+  /** Comma-separated list of fields to include in response. Accepts result fields (`quotes`, `total`) or per-quote fields (`symbol`, `marketCap`) */
   fields?: string;
   /** Value format: raw, pretty, or both (default: raw) */
   format?: models.ValueFormat;

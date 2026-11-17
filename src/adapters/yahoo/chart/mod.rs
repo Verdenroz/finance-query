@@ -131,7 +131,10 @@ async fn fetch_direct(
         ("range", range.as_str()),
         ("events", CHART_EVENTS),
     ];
-    let response = client.request_with_params(&url, &params).await?;
+    let response = client
+        .request_with_params(&url, &params)
+        .await
+        .map_err(|e| e.with_symbol(symbol))?;
 
     Ok(response.json().await?)
 }
@@ -498,7 +501,10 @@ pub async fn fetch_with_dates(
         ("period2", end_str.as_str()),
         ("events", CHART_EVENTS),
     ];
-    let response = client.request_with_params(&url, &params).await?;
+    let response = client
+        .request_with_params(&url, &params)
+        .await
+        .map_err(|e| e.with_symbol(symbol))?;
 
     Ok(response.json().await?)
 }
