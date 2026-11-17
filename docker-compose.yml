@@ -131,12 +131,13 @@ services:
   finance-query-mcp:
     container_name: finance-query-mcp
     restart: unless-stopped
+    # Keys listed under `environment` would override this file with blanks.
+    env_file:
+      - server/.env
     environment:
       - MCP_TRANSPORT=http
       - MCP_ADDR=0.0.0.0:3000
       - MCP_ALLOWED_HOSTS=${SERVER_NAME:-localhost}
-      - EDGAR_EMAIL=${EDGAR_EMAIL:-}
-      - FRED_API_KEY=${FRED_API_KEY:-}
     networks:
       - backend
       - monitoring
