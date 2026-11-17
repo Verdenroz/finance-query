@@ -1,4 +1,5 @@
 pub mod analysis;
+mod annotations;
 #[cfg(feature = "backtesting")]
 pub mod backtest;
 pub mod calendar;
@@ -917,7 +918,7 @@ impl FinanceTools {
             tool_router += Self::backtest_tool_router();
         }
         Self {
-            tool_router,
+            tool_router: annotations::annotate(tool_router),
             schema,
         }
     }
