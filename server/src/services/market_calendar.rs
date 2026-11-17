@@ -1,9 +1,30 @@
 use std::sync::Arc;
 
+use chrono::{Days, NaiveDate, Utc};
+
 use crate::cache::{self, Cache};
 use finance_query::{CalendarKind, Providers};
 
 use super::{ServiceError, ServiceResult};
+
+const DEFAULT_WINDOW_DAYS: u64 = 6;
+
+/// An omitted `from` becomes `today`; an omitted `to` becomes six days after `from`.
+fn window(from: &str, to: &str, today: NaiveDate) -> (String, String) {
+    let from = if from.is_empty() {
+        today.to_string()
+    } else {
+        from.to_string()
+    };
+    let to = if to.is_empty() {
+        NaiveDate::parse_from_str(&from, "%Y-%m-%d")
+            .map(|start| (start + Days::new(DEFAULT_WINDOW_DAYS)).to_string())
+            .unwrap_or_default()
+    } else {
+        to.to_string()
+    };
+    (from, to)
+}
 
 /// Market-wide event calendar of `kind` over `[from, to]`, via
 /// `Capability::CALENDAR` (Yahoo market status; the always-on local holiday
@@ -16,9 +37,9 @@ pub async fn get_market_calendar(
     from: &str,
     to: &str,
 ) -> ServiceResult {
-    let cache_key = Cache::key("market-calendar", &[&format!("{kind:?}"), from, to]);
+    let (from, to) = window(from, to, Utc::now().date_naive());
+    let cache_key = Cache::key("market-calendar", &[&format!("{kind:?}"), &from, &to]);
     let providers = Arc::clone(providers);
-    let (from, to) = (from.to_string(), to.to_string());
 
     cache
         .get_or_fetch(
@@ -31,4 +52,37 @@ pub async fn get_market_calendar(
             },
         )
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn today() -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, 11, 15).unwrap()
+    }
+
+    #[test]
+    fn omitted_dates_default_to_the_week_ahead() {
+        assert_eq!(
+            window("", "", today()),
+            ("2026-11-15".to_string(), "2026-11-21".to_string())
+        );
+    }
+
+    #[test]
+    fn omitted_to_follows_the_given_from() {
+        assert_eq!(
+            window("2026-12-30", "", today()),
+            ("2026-12-30".to_string(), "2027-01-05".to_string())
+        );
+    }
+
+    #[test]
+    fn given_dates_pass_through_unchanged() {
+        assert_eq!(
+            window("2026-01-01", "2026-01-31", today()),
+            ("2026-01-01".to_string(), "2026-01-31".to_string())
+        );
+    }
 }

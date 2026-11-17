@@ -37,7 +37,7 @@ pub(crate) async fn fetch_market_calendar_response(
         CalendarKind::Split => {
             day_range(from, to, MAX_DAYS_PER_RANGE, |date| async move {
                 let rows = super::client()?.splits_for_date(&date).await?;
-                Ok(rows.into_iter().map(split_entry).collect())
+                Ok(splits_on(&date, rows))
             })
             .await
         }
@@ -258,6 +258,15 @@ fn dividend_entry(row: NasdaqDividendRow) -> MarketCalendarEntry {
             declaration_date: row.announcement_date.as_deref().and_then(parse_mdy),
         },
     }
+}
+
+/// Nasdaq answers a split query with every split from `date` onwards, so a
+/// day-by-day walk would repeat each split once per earlier day in the range.
+fn splits_on(date: &str, rows: Vec<NasdaqSplitRow>) -> Vec<MarketCalendarEntry> {
+    rows.into_iter()
+        .map(split_entry)
+        .filter(|entry| entry.date.as_deref() == Some(date))
+        .collect()
 }
 
 fn split_entry(row: NasdaqSplitRow) -> MarketCalendarEntry {
@@ -515,6 +524,18 @@ mod tests {
             }
             other => panic!("expected Dividend detail, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn splits_on_keeps_only_the_requested_day() {
+        let rows: Vec<NasdaqSplitRow> = serde_json::from_value(serde_json::json!([
+            {"symbol": "LARK", "ratio": "5.000%", "executionDate": "11/20/2026"},
+            {"symbol": "CBSH", "ratio": "5.000%", "executionDate": "11/23/2026"}
+        ]))
+        .unwrap();
+        let entries = splits_on("2026-11-20", rows);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].symbol.as_deref(), Some("LARK"));
     }
 
     #[test]
