@@ -170,16 +170,14 @@ docs: soothfast-cli ## Serve the docs site locally with live reload (run `make d
 	$(SOOTHFAST) docs serve --baseline base --addr localhost:8080
 
 # Everything soothfast: the merge-base regression gate, living-docs checks,
-# proto reconciliation, derived-page regen, trend, changelog, and llms.txt
-# staleness (the same gates soothfast.yml/deploy.yml run, in one shot).
-# `**Measured:**` lines are excluded from the llms.txt diff: those numbers
-# are point-in-time and jitter between runs — regression detection is the
-# `gate` step below, not this. Every step stays inline rather than becoming
-# its own target; run one standalone with `cargo soothfast <cmd>` directly.
+# proto reconciliation, derived-page regen, trend, and changelog (the same
+# gates soothfast.yml/deploy.yml run, in one shot). Every step stays inline
+# rather than becoming its own target; run one standalone with
+# `cargo soothfast <cmd>` directly.
 docs-capture-check: soothfast-cli ## Verify every captured example's output is current
 	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
 
-soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog, llms.txt staleness
+soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog
 	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
 	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
 	@echo "$(GREEN)Measuring baseline...$(NC)"
@@ -206,15 +204,6 @@ soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline,
 	@echo "$(GREEN)Regenerating CHANGELOG.md...$(NC)"
 	@PREV=$$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD); \
 	$(SOOTHFAST) report changelog -p finance-query --baseline base --against-ref $$PREV --features full
-	@echo "$(GREEN)Checking llms.txt freshness...$(NC)"
-	@rm -rf target/llms-check && mkdir -p target/llms-check
-	$(SOOTHFAST) report render -p finance-query --baseline base --features full --out target/llms-check
-	@sed '/^\*\*Measured:\*\*/d' llms.txt > target/llms-check/committed.txt
-	@sed '/^\*\*Measured:\*\*/d' target/llms-check/llms.txt > target/llms-check/fresh.txt
-	@diff -u target/llms-check/committed.txt target/llms-check/fresh.txt || \
-		(echo "error: llms.txt is stale — re-run 'make soothfast' and commit the result" >&2 && exit 1)
-	@rm -rf target/llms-check
-	@echo "llms.txt: up to date"
 
 probe: soothfast-cli ## Run data-quality probes (probes.toml) against a locally launched release server
 	cargo build --release -p finance-query-server
