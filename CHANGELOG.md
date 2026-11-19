@@ -56,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Publish docs and trend from the soothfast run (#674)
 - Stop gating captured doc output on PRs (#670)
 - Drop llms.txt and its generation (#667)
 - Bump the soothfast workflow pin (#624)
