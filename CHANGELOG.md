@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Use Wilder smoothing in RSI (#644)
 - Empty, duplicated and mis-statused responses (#628)
 - Load the server env file in the MCP service (#637)
 - Populate batch quote fields (#635)
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump soothfast to 0.6.0 (#669)
 - Bump debian from `7c7b2c9` to `734a72b` in /server (#640)
 - Bump quinn-udp to 0.5.16 (#642)
 - Bump debian from `7c7b2c9` to `734a72b` in /finance-query-mcp (#639)
@@ -54,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Stop gating captured doc output on PRs (#670)
+- Drop llms.txt and its generation (#667)
 - Bump the soothfast workflow pin (#624)
 - Bump the soothfast workflow pin (#619)
 - Replace the hand-written soothfast workflow (#613)
@@ -93,7 +97,8 @@ CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
+| `finance_query::bt_strategy_builder` | allocs | 328.0 | 301.0 | -8.2% |
+| `finance_query::ref_bench_tema` | instructions | 5308185.0 | 5029830.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07
