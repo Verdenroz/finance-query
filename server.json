@@ -3,7 +3,7 @@
   "name": "io.github.Verdenroz/finance-query",
   "title": "FinanceQuery",
   "description": "Stock quotes, charts, financials, options, SEC filings, crypto and macro data. Hosted, no API key.",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "websiteUrl": "https://finance-query.com",
   "repository": {
     "url": "https://github.com/Verdenroz/finance-query",

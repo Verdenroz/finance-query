@@ -5,14 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased (draft vs v3.3.1)
+## [3.4.0] - 2026-11-18
 
 <!-- soothfast:notes -->
-<!-- ### Overview -->
-<!-- What this release means for someone using it. One paragraph. -->
+### 📖 Overview
 
-<!-- ### Upgrade notes -->
-<!-- What a consumer has to do. "Nothing" is a useful answer. -->
+RSI now uses Wilder's smoothing, the one its definition specifies, so `rsi`,
+`stochastic_rsi` and every RSI condition in a backtest match TA-Lib and
+TradingView. Change-percent fields are in percent everywhere: the Yahoo
+sources that sent fractions are scaled where they enter the library. Batch
+quotes carry every field Yahoo's batch endpoint sends instead of a handful,
+search results keep their company names, the split calendar stops repeating
+rows, and calendar dividend amounts and option contract counts are filled in.
+Errors say what went wrong: an unknown symbol is named, and a request Yahoo
+rejects is reported as an invalid parameter. `quinn-udp` moves past a
+RUSTSEC advisory.
+
+### ⬆️ Upgrade notes
+
+- RSI values change. The smoothing weight is `1 / period` instead of
+  `2 / (period + 1)`, so the same period reacts about half as fast and
+  crosses the 30 and 70 levels less often. This reaches `rsi`,
+  `stochastic_rsi`, `Chart::rsi`, the RSI fields of `IndicatorsSummary` and
+  RSI conditions in backtests. A strategy tuned on 3.3 numbers needs
+  retuning; the old `rsi(14)` is close to the new `rsi(7)` or `rsi(8)`.
+- Stop multiplying change-percent values by 100. `Quote`'s
+  `regular_market_change_percent`, `pre_market_change_percent` and
+  `post_market_change_percent`, and the change fields of `SectorData` and
+  `IndustryData`, are now percent (`0.39`) instead of a fraction (`0.0039`).
+  No type changed.
+- `FinanceError` gains `NoProviderSupports`. The enum is `#[non_exhaustive]`,
+  so a `match` already needs a wildcard arm. A 400 from Yahoo is now
+  `FinanceError::InvalidParameter` instead of `UnexpectedResponse`.
+- Batch quotes come back in the order the symbols were requested instead of
+  sorted by symbol.
+- FINRA short-volume counts are whole shares. Rows since 2026-02-23 carried
+  fractions.
 <!-- /soothfast:notes -->
 
 ### ✨ Features
@@ -22,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
-- Use Wilder smoothing in RSI (#644)
+- Use Wilder smoothing in RSI (#644). Thanks to @Mattbusel for the fix and
+  the TA-Lib reference test.
 - Empty, duplicated and mis-statused responses (#628)
 - Load the server env file in the MCP service (#637)
 - Populate batch quote fields (#635)
@@ -66,6 +95,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Give the deploy config check its inputs (#598)
 - Validate the Caddyfile and compose files (#597)
 - Probe calendar and backtest routes (#595)
+
+### 🔒 Security
+
+- Bumped `quinn-udp` 0.5.15 → 0.5.16 in `Cargo.lock` (RUSTSEC-2026-0538: a
+  receive loop that can spin after a truncated datagram) (#642). `reqwest`
+  pulls it in through `quinn`.
+- Accepted RUSTSEC-2026-0543 (`chrono`) and RUSTSEC-2026-0555 (`chrono-tz`)
+  in `deny.toml` (#668). Both mark the crates unmaintained, report no
+  vulnerability and have no fixed release.
+- Bumped the packages named by open Dependabot alerts in the `fuzz/` and
+  `v1/` lockfiles (#603). Neither is part of the published crate.
 
 ---
 

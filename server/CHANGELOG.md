@@ -10,6 +10,82 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-11-18
+
+A data-quality pass across the REST routes: batch quotes are fully populated,
+change percent is in percent everywhere, errors carry the right status and a
+JSON body, and RSI matches TA-Lib.
+
+### Added
+
+- **`RATE_LIMIT_TRUST_FORWARDED_FOR`** keys the rate limiter on the rightmost
+  `X-Forwarded-For` address, so clients behind a reverse proxy get a budget
+  each instead of sharing the proxy's (#630). Off by default, because a
+  server exposed directly must not trust a header any caller can set.
+
+### Changed
+
+- **Change percent is in percent.** Clients that multiplied these by 100
+  must stop (#634):
+
+  | Field | Before | After |
+  |---|---|---|
+  | `/v2/quote/{symbol}` `regularMarketChangePercent`, `preMarketChangePercent`, `postMarketChangePercent` | `0.0039` | `0.39` |
+  | `/v2/futures/{symbol}`, `/v2/commodities/{symbol}` `changePercent` | `-0.0042` | `-0.42` |
+  | `/v2/sectors/{sector}`, `/v2/industries/{industry}` change fields | `-0.0040` | `-0.40` |
+  | `/v2/sector-performance` `changePercent` | `0.0211` | `2.11` |
+
+  The matching GraphQL fields change the same way.
+- **RSI values change.** RSI and stochastic RSI on the indicators routes
+  use Wilder's smoothing and now match TA-Lib and TradingView (#644). The
+  same period reacts about half as fast as before.
+- **Upstream timeouts answer 504 and other transport failures 502**, where
+  they answered 408 or 500, and the message names only the upstream host
+  (#633). A malformed filing accession number is rejected as an invalid
+  parameter before any request, where it answered 401.
+- **Request validation errors are JSON.** A bad query, path or body value
+  returns the `{"error", "status"}` shape every other error uses, with the
+  same status and message as before (#629).
+- **`/v2/sector-performance/history`** items carry `sector`, `exchange` and
+  `changePercent`. They were five fields that were always null (#628).
+- **`/v2/market-calendar?kind=economic`** without dates returns the coming
+  week (#628).
+- A missing formatted value serialises as `null` instead of `{}` (#634).
+- The bundled Caddy config compresses `application/json` responses with zstd
+  or gzip for clients that ask for it (#596).
+
+### Fixed
+
+- `/v2/quotes` fills every field Yahoo's batch endpoint sends, where about
+  150 of 155 were null, and returns quotes in the order requested (#635).
+- A batch response that carries per-symbol `errors` is no longer cached, so
+  one transient upstream failure is not served for the whole TTL (#606).
+- `/v2/search` returns company names again (#628).
+- The split calendar returns each split once. A six-week window came back as
+  905 rows for 71 splits (#628).
+- Calendar ex-dividend and payment `amount` and options-expiration
+  `contractCount` are populated (#607).
+- `/v2/crypto/coins` honours `vs_currency`, and `fields` on the screener
+  routes selects quote fields (#632).
+- The custom screener returns `marketCap`, `averageDailyVolume3Month` and
+  the company name, and a screener Yahoo rejects is a 400, not a 500 (#594).
+- Batch dividends, splits and capital-gains routes report each symbol's
+  fetch error instead of "No events data available" (#594).
+- `/v2/short-volume/{symbol}` returns whole share counts (#631).
+- An unknown symbol is named in the error instead of `unknown`, and
+  `/v2/price-target-summary` no longer names one provider as both supporting
+  and not supporting the operation (#633).
+
+### Security
+
+- The crypto handlers escape the currency value before placing it in their
+  GraphQL query, as every other handler already did (#632).
+- Both Docker images rebuild their runtime stage on every build, so
+  `apt-get upgrade` picks up current Debian packages. The cached layer had
+  kept `libapt-pkg6.0` and `libsasl2-modules-db` at versions Trivy flags
+  (CVE-2026-109518, CVE-2026-107161) (#605).
+- Bumped `quinn-udp` 0.5.15 → 0.5.16 (RUSTSEC-2026-0538) (#642).
+
 ## [3.3.1] - 2026-11-07
 
 Building the provider routing at startup no longer contacts Yahoo, and `zstd`
