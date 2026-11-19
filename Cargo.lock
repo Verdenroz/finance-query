@@ -2428,18 +2428,18 @@ dependencies = [
 
 [[package]]
 name = "linkme"
-version = "0.3.37"
+version = "0.3.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3045e122bd98aef8ec3ad58ce84f0791f64e70163d1a02710af4aa11a4d54cc5"
+checksum = "10a4e12fd3f6b22d5bc28beccac0f53bb35db4a897c6ddb709c4a0161f72eb6e"
 dependencies = [
  "linkme-impl",
 ]
 
 [[package]]
 name = "linkme-impl"
-version = "0.3.37"
+version = "0.3.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77060ebe535362c3da75682cd17b0431017b6e7c5661e714fc69a7ad017d1301"
+checksum = "22cd04c256b1cd686a45898c8fd150c79b801d96a3eb7bae1075f9eb3b4b85c1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4375,9 +4375,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3efc21d397222b85a60eef14cb46f388b5cfb69c4b0946a271ebffb1da461d49"
+checksum = "2b2b7d766b2d1b7b09f01d440290425c77595c547192dfaf23eaf35b3bd77179"
 dependencies = [
  "soothfast-macros",
  "soothfast-measure",
@@ -4386,9 +4386,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-macros"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46664ad7ee32f06d58dd8f2c3f74678a55d2746f36ef9e4aadb031cff29a16b6"
+checksum = "e5e3f5c51c345cae9be00d308b1ba9af61359c29769c33af3cb6c4cd04662c3e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4397,9 +4397,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-measure"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0aaf0ef9eb1b7f12a5e5434c36dbb96b8a8611bc4c4607271e64c15ad0052f06"
+checksum = "0fc239ace4ce28886fffd663190f203c74b22db83dd519f487998654f93c901a"
 dependencies = [
  "libc",
  "soothfast-registry",
@@ -4407,9 +4407,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-registry"
-version = "0.5.6"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd33458e108c80149780b93cdd27c12c7b1d82c42dae99846f8c3a35154c0d10"
+checksum = "bea04d14c3464773590fef828cb08e311bb00ece2c993e8ca690b46f036706a9"
 dependencies = [
  "linkme",
 ]
