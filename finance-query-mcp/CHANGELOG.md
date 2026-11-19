@@ -12,6 +12,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-11-18
+
+Every tool advertises a title and read-only hints, `fq-mcp` is listed on the
+MCP Registry, and `rmcp` moves to 3.9.
+
+### Added
+
+- **Tool titles and hints.** Each of the 65 tools carries a human-readable
+  title plus read-only, non-destructive, idempotent and open-world hints, so
+  a client can tell that none of them changes anything (#627).
+- **MCP Registry listing.** A `server.json` with the hosted endpoint is
+  published to the registry on each tagged release (#626).
+
+### Changed
+
+- **`rmcp` 1.8 → 3.9.** The Streamable HTTP transport rejects POST bodies
+  above 4 MiB with `413 Payload Too Large`, and the server also accepts
+  stateless `2026-07-28` requests. Tool names, parameters and schemas are
+  unchanged (#608).
+- **Change percent is in percent.** `get_quote`, `get_futures`,
+  `get_commodity`, `get_sector`, `get_industry` and
+  `get_sector_performance` report `0.39` where they reported `0.0039`
+  (#634).
+- **RSI values change.** `get_indicators` uses Wilder's smoothing for RSI
+  and stochastic RSI and now matches TA-Lib and TradingView (#644).
+- The Compose service loads `server/.env`, the file the REST server reads.
+  A self-hosted setup that kept `FRED_API_KEY` or `EDGAR_EMAIL` only in the
+  root `.env` must move them (#637).
+
+### Fixed
+
+- Batch quotes fill every field Yahoo's batch endpoint sends and keep the
+  requested order (#635).
+- The hosted server has its FRED key again. It answered `FRED is not
+  configured` while the REST server on the same host served FRED (#637).
+
+### Security
+
+- Bumped `rmcp` 1.8.0 → 3.9.0 (RUSTSEC-2026-0462). `fq-mcp` does not enable
+  the affected client features (#608).
+- Bumped `quinn-udp` 0.5.15 → 0.5.16 (RUSTSEC-2026-0538) (#642).
+- The Docker image rebuilds its runtime stage on every build, which clears
+  CVE-2026-109518 and CVE-2026-107161 in Debian packages (#605).
+
 ## [3.3.1] - 2026-11-07
 
 Building the provider routing at startup no longer contacts Yahoo.
