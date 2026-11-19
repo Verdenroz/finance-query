@@ -147,7 +147,7 @@ jobs:
           shared-key: test-suite
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@2a878f675b2dd4b5118f5440d39a528a038c0950 # v0.5.6
+        uses: Verdenroz/soothfast@0133aac6fa2b234af05df56da04b2a246af6f9a1 # v0.6.0
         with:
           gate: false
           labels: "false"

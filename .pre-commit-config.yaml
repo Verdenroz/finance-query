@@ -26,11 +26,11 @@ repos:
       - id: check-yaml
         args: ['--unsafe']
       - id: end-of-file-fixer
-        exclude: ^(docs/|book/|llms\.txt$)
+        exclude: ^(docs/|book/)
       # schema.graphql is generated and byte-compared by a test; async-graphql
       # indents blank lines inside multi-paragraph descriptions, so stripping
       # them here would make the snapshot permanently unmatchable.
       - id: trailing-whitespace
-        exclude: ^(docs/|book/|llms\.txt$|server/schema\.graphql$)
+        exclude: ^(docs/|book/|server/schema\.graphql$)
       - id: mixed-line-ending
         args: ['--fix=lf']

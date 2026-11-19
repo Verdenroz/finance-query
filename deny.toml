@@ -18,6 +18,12 @@ ignore = [
     # optional `translation-offline` feature; no fixed upstream release exists.
     # Revisit when tokenizers migrates off paste.
     "RUSTSEC-2024-0436",
+    # `chrono` and `chrono-tz` are unmaintained (not vulnerable), with no
+    # fixed release. Both are direct dependencies and polars-arrow pulls them
+    # in too, so only a migration to jiff or time plus a polars release
+    # clears these. Revisit when polars moves off chrono.
+    "RUSTSEC-2026-0543",
+    "RUSTSEC-2026-0555",
 ]
 
 [bans]

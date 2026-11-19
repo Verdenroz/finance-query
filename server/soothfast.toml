@@ -4,7 +4,7 @@
 path = "openapi.yaml"
 mode = "generate"
 title = "Finance Query v2"
-version = "3.2.0"
+version = "4.0.0"
 servers = ["https://finance-query.com", "http://localhost:8000"]
 
 [spec.responses]

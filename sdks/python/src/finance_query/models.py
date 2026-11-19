@@ -2779,7 +2779,7 @@ class GqlSectorPerformance:
 class GqlSectorPerformanceHistory:
     """Sector performance for one date."""
 
-    sectors: list[GqlSectorPerformance]
+    sectors: list[GqlMarketSectorPerformance]
     date: str | None = None
 
 
