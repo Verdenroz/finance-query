@@ -5,7 +5,7 @@ use super::{IndicatorError, Result};
 /// Internal RSI returning only valid values as plain `f64` (no `Option` wrapping, no padding).
 /// Length = `data.len() - period`. Index `k` corresponds to original index `k + period`.
 ///
-/// Inlines EMA of gains/losses to eliminate 4 intermediate `Vec` allocations.
+/// Inlines Wilder's smoothing of gains/losses to eliminate 4 intermediate `Vec` allocations.
 pub(crate) fn rsi_raw(data: &[f64], period: usize) -> Result<Vec<f64>> {
     if period == 0 {
         return Err(IndicatorError::InvalidPeriod(
@@ -19,7 +19,8 @@ pub(crate) fn rsi_raw(data: &[f64], period: usize) -> Result<Vec<f64>> {
         });
     }
 
-    let multiplier = 2.0 / (period as f64 + 1.0);
+    // Wilder's smoothing (alpha = 1 / period), as in TA-Lib's RSI and the ATR / ADX here.
+    let multiplier = 1.0 / period as f64;
     let period_f = period as f64;
 
     // Seed: SMA of first `period` gains/losses
@@ -44,7 +45,7 @@ pub(crate) fn rsi_raw(data: &[f64], period: usize) -> Result<Vec<f64>> {
         100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
     });
 
-    // EMA smoothing on inline gain/loss (no intermediate Vec)
+    // Wilder smoothing on inline gain/loss (no intermediate Vec)
     for i in (period + 1)..data.len() {
         let change = data[i] - data[i - 1];
         let gain = if change > 0.0 { change } else { 0.0 };
@@ -75,7 +76,7 @@ pub(crate) fn rsi_raw(data: &[f64], period: usize) -> Result<Vec<f64>> {
 ///
 /// 1. Calculate price changes (current - previous)
 /// 2. Separate into gains (positive changes) and losses (negative changes, absolute value)
-/// 3. Calculate average gain and average loss using EMA
+/// 3. Calculate average gain and average loss with Wilder's smoothing (SMA seed, then alpha = 1 / period)
 /// 4. RS = Average Gain / Average Loss
 /// 5. RSI = 100 - (100 / (1 + RS))
 ///
@@ -133,6 +134,34 @@ mod tests {
                     rsi_val
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_rsi_matches_talib() {
+        // Wilder's example closes; expected values are TA-Lib RSI(14) on the same data.
+        let data = [
+            44.34, 44.09, 44.15, 43.61, 44.33, 44.83, 45.10, 45.42, 45.84, 46.08, 45.89, 46.03,
+            45.61, 46.28, 46.28, 46.00, 46.03, 46.41, 46.22, 45.64,
+        ];
+        let expected = [
+            70.46413502109704,
+            66.24961855355505,
+            66.48094183471265,
+            69.34685316290864,
+            66.29471265892623,
+            57.91502067008556,
+        ];
+        let result = rsi(&data, 14).unwrap();
+        for (i, want) in expected.iter().enumerate() {
+            let got = result[14 + i].unwrap();
+            assert!(
+                (got - want).abs() < 1e-9,
+                "index {}: {} != {}",
+                14 + i,
+                got,
+                want
+            );
         }
     }
 
