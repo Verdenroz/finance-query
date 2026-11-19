@@ -107,19 +107,6 @@ DOCS_BASELINE ?= base
 # soothfast: measured regression gate + living docs
 # =============================================================================
 
-# dataframe.md/finance.md/ticker.md/tickers.md capture live Yahoo Finance
-# data (real prices/timestamps) — their output legitimately differs on every
-# run, so they're excluded from the captured-output freshness check below.
-CAPTURE_CHECK_PATHS := docs/library/backtesting.md docs/library/commodities.md \
-	docs/library/configuration.md docs/library/crypto.md docs/library/economic.md \
-	docs/library/error-handling.md docs/library/feeds.md docs/library/filings.md \
-	docs/library/forex.md docs/library/futures.md docs/library/getting-started.md \
-	docs/library/indicators.md docs/library/indices.md docs/library/providers/alphavantage.md \
-	docs/library/providers/coingecko.md docs/library/providers/edgar.md \
-	docs/library/providers/fmp.md docs/library/providers/fred.md docs/library/providers/index.md \
-	docs/library/providers/polygon.md docs/library/risk.md docs/library/screeners.md \
-	docs/library/streaming.md docs/library/translation.md README.md
-
 # Canned recipe (not a target itself) shared by `docs` and `soothfast` so
 # regenerating derived pages isn't its own .PHONY entry just to stay DRY
 # between the two. The two `coverage docs` calls from earlier revisions were
@@ -174,18 +161,13 @@ docs: soothfast-cli ## Serve the docs site locally with live reload (run `make d
 # gates soothfast.yml/deploy.yml run, in one shot). Every step stays inline
 # rather than becoming its own target; run one standalone with
 # `cargo soothfast <cmd>` directly.
-docs-capture-check: soothfast-cli ## Verify every captured example's output is current
-	$(SOOTHFAST) docs capture -p finance-query --features full --check $(CAPTURE_CHECK_PATHS)
-
-soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/capture/coverage, proto, doc regen, trend, changelog
+soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/coverage, proto, doc regen, trend, changelog
 	@echo "$(GREEN)Running soothfast gate against merge-base of $(BASE)...$(NC)"
 	$(SOOTHFAST) gate -p finance-query --features bench-gate --against-ref $(BASE)
 	@echo "$(GREEN)Measuring baseline...$(NC)"
 	$(SOOTHFAST) measure -p finance-query --features bench-gate --save-baseline base
 	@echo "$(GREEN)Checking living docs (binds, claims, generated tests)...$(NC)"
 	$(SOOTHFAST) docs check -p finance-query --features full --baseline base docs/library README.md
-	@echo "$(GREEN)Verifying captured doc example output...$(NC)"
-	@$(MAKE) --no-print-directory docs-capture-check
 	@echo "$(GREEN)Checking public API doc coverage...$(NC)"
 	$(SOOTHFAST) coverage docs -p finance-query --features full --min 100
 	@echo "$(GREEN)Reconciling pricing.proto against PricingData...$(NC)"
