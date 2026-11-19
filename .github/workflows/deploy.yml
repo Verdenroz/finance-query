@@ -83,14 +83,10 @@ jobs:
           no-cache-filters: ${{ matrix.image.no-cache-filters }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.suffix }}
 
-  deploy-docs:
-    name: Deploy docs site to GitHub Pages
+  capture-docs:
+    name: Regenerate captured doc output
     if: github.event.head_commit.author.name != 'soothfast-bot[bot]'
     runs-on: ubuntu-latest
-    # Rapid merges would each branch trend.jsonl off their own checkout,
-    # and the second trend PR would conflict on master and hang.
-    concurrency:
-      group: deploy-docs
     environment: soothfast-bot
     permissions:
       contents: read
@@ -104,8 +100,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-          fetch-tags: true
           persist-credentials: false
       - name: Checkout soothfast-bot scripts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -117,106 +111,13 @@ jobs:
           persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - name: Install nightly (rustdoc JSON for the docs engine)
-        run: rustup toolchain install nightly --profile minimal
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          # A failing gate must not lose the warm state the retry would reuse.
-          cache-on-failure: true
-      - name: Install valgrind
-        # Fallback backend when the CI VM exposes no PMU.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y valgrind
       - name: Install cargo-soothfast
         uses: Verdenroz/soothfast@0133aac6fa2b234af05df56da04b2a246af6f9a1 # v0.6.0
         with:
           gate: false
           labels: "false"
           changelog: false
-
-      # No-code commits still reach master (soothfast.yml's paths filter and
-      # [bot] exclusion don't apply here); gating them would only add noise.
-      - name: Detect benchmarkable changes
-        id: bench_changes
-        run: |
-          if git diff --quiet HEAD~1 HEAD -- src benches Cargo.toml Cargo.lock finance-query-derive; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No benchmarked code changed since HEAD~1 — skipping the perf gate."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Identical benchmarked code measures identically, so a hit here lets
-      # the measure step below skip via its [ ! -f ] guard.
-      - name: Restore measured baseline
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .soothfast/baselines/base.json
-          key: soothfast-baseline-${{ hashFiles('src/**', 'benches/**', 'Cargo.toml', 'Cargo.lock', 'finance-query-derive/**') }}
-
-      # Unique per commit with the prefix in restore-keys: an exact key is
-      # never rewritten once saved, so later commits would all miss.
-      - name: Restore measured reference runs
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .soothfast/runs
-            .soothfast/items
-            .soothfast/maps
-          key: soothfast-runs-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            soothfast-runs-${{ github.ref_name }}-
-            soothfast-runs-
-
-      # Writes gate-status.json, which `report render` colors the badge from.
-      # HEAD~1 is well-defined here since master is linear.
-      - name: Gate against previous commit
-        if: steps.bench_changes.outputs.changed == 'true'
-        continue-on-error: true
-        run: |
-          cargo soothfast gate -p finance-query --features bench-gate \
-            --against-ref HEAD~1 --save-baseline base
-
-      # A passing gate already saved the baseline; measure fills in when the
-      # gate was skipped or failed, so docs regen never runs without one.
-      - name: Measure baseline for claims
-        run: |
-          if [ ! -f .soothfast/baselines/base.json ]; then
-            cargo soothfast measure -p finance-query --features bench-gate --save-baseline base
-          fi
-
-      - name: Append performance trend point
-        if: steps.bench_changes.outputs.changed == 'true'
-        run: |
-          git fetch origin master
-          git checkout origin/master -- .soothfast/trend.jsonl
-          cargo soothfast trend append -p finance-query --from-baseline base
-
-      - name: Regenerate endpoint reference pages
-        # A bare `wait` after backgrounding both would mask their exit codes.
-        run: |
-          cargo soothfast docs routes -p finance-query-server --target soothfast-routes --out docs/server &
-          server=$!
-          cargo soothfast docs routes -p finance-query-mcp --target soothfast-routes --out docs/server &
-          mcp=$!
-          status=0
-          wait "$server" || status=1
-          wait "$mcp" || status=1
-          [ "$status" -eq 0 ] || exit "$status"
-          cargo soothfast spec html -p finance-query-server --target soothfast-routes --out docs/server/api
-          cargo soothfast spec html -p finance-query-mcp --target soothfast-routes --out docs/server/api
-
-      - name: Regenerate API reference, perf report, and coverage page
-        run: |
-          cargo soothfast docs reference -p finance-query --baseline base --features full --out docs/reference
-          cargo soothfast report render -p finance-query --baseline base --features full --out docs/perf
-          { echo "# Coverage"; echo; \
-            echo "> Generated by \`cargo soothfast coverage docs\`."; echo; \
-            echo '```text'; \
-            cargo soothfast coverage docs -p finance-query --features full \
-              --badge docs/perf/badges/coverage.json --badge docs/perf/badges/coverage.svg; \
-            echo '```'; } > docs/coverage.md
 
       - name: Regenerate captured doc output
         # dataframe.md/finance.md/ticker.md/tickers.md excluded: they capture
@@ -237,26 +138,14 @@ jobs:
       - name: Mint a soothfast-bot token
         id: bot
         run: soothfast-action/action/bot-token.sh
-      - name: Build and publish docs site
-        env:
-          GH_TOKEN: ${{ steps.bot.outputs.token }}
-          APP_SLUG: ${{ steps.bot.outputs.app_slug }}
-        run: |
-          id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${id}+${APP_SLUG}[bot]@users.noreply.github.com"
-          git config credential.helper '!f() { echo "username=x-access-token"; echo "password=$GH_TOKEN"; }; f'
-          cargo soothfast docs gh-deploy --baseline base
-      # Direct pushes to master are blocked by the branch ruleset, so the bot
-      # opens a PR and squash-merges it itself instead.
-      - name: Land the regenerated artifacts
+      # No BRANCH: the commit joins the soothfast workflow's landing for this
+      # push when that pull request is still open.
+      - name: Land the captured output
         env:
           TOKEN: ${{ steps.bot.outputs.token }}
           APP_SLUG: ${{ steps.bot.outputs.app_slug }}
-          BRANCH: bot/derived-artifacts
-          TITLE: "chore: regenerate derived artifacts"
-          BODY: Automated regeneration of the trend and captured output.
-          PATHS: .soothfast/trend.jsonl docs/library README.md
+          TITLE: "chore: regenerate captured doc output"
+          PATHS: docs/library README.md
         run: soothfast-action/action/land.sh
       - name: Revoke the soothfast-bot token
         if: always() && steps.bot.outputs.token != ''

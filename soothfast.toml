@@ -120,6 +120,8 @@ features = "backtesting"
 
 # The site's nav lists pages that are generated, not committed.
 [ci]
+pages = true
+trend_url = "https://verdenroz.github.io/finance-query"
 site_run = "make docs-pages SOOTHFAST=\"$SOOTHFAST\" DOCS_BASELINE=\"${SOOTHFAST_BASELINE:-base}\""
 # Captured example output is regenerated on master and landed by the bot, so
 # a pull request that changes a printed value is not asked to update it.
@@ -150,3 +152,5 @@ files = ["src/**", "tests/**", "benches/**", "examples/**", "docs/**", "soothfas
 [bot]
 labels = true
 update_all = true
+# Captured example output, which deploy.yml regenerates and lands.
+landing_paths = ["docs/library/**", "README.md"]

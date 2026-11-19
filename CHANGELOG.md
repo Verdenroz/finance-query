@@ -85,6 +85,7 @@ RUSTSEC advisory.
 
 ### 🔧 Internal
 
+- Publish docs and trend from the soothfast run (#674)
 - Stop gating captured doc output on PRs (#670)
 - Drop llms.txt and its generation (#667)
 - Bump the soothfast workflow pin (#624)
@@ -137,7 +138,8 @@ CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 
 | item | metric | was | now | delta |
 |---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308205.0 | 5029830.0 | -5.2% |
+| `finance_query::bt_strategy_builder` | allocs | 328.0 | 301.0 | -8.2% |
+| `finance_query::ref_bench_tema` | instructions | 5308185.0 | 5029830.0 | -5.2% |
 
 
 ## [3.3.1] - 2026-11-07

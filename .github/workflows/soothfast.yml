@@ -27,3 +27,10 @@ jobs:
     with:
       soothfast_ref: "0133aac6fa2b234af05df56da04b2a246af6f9a1"
       bot: true
+  pages:
+    needs: soothfast
+    if: github.event_name == 'push'
+    permissions:
+      pages: write
+      id-token: write
+    uses: Verdenroz/soothfast/.github/workflows/pages.yml@0133aac6fa2b234af05df56da04b2a246af6f9a1 # v0.6.0

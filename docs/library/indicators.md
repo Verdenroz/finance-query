@@ -134,7 +134,7 @@ if let Some(&last_macd) = macd_result.macd_line.last().and_then(|v| v.as_ref()) 
 ```
 
 ```text soothfast-output
-RSI(10): 51.44
+RSI(10): 41.41
 MACD Line: -2.1479
 ```
 
