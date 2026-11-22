@@ -31,3 +31,29 @@ pub struct Candle {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub provider_id: Option<Provider>,
 }
+
+impl Candle {
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn __new(
+        timestamp: i64,
+        open: f64,
+        high: f64,
+        low: f64,
+        close: f64,
+        volume: i64,
+        adj_close: Option<f64>,
+        provider_id: Option<Provider>,
+    ) -> Self {
+        Self {
+            timestamp,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            adj_close,
+            provider_id,
+        }
+    }
+}

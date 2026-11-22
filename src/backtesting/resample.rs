@@ -87,19 +87,19 @@ pub fn base_to_htf_index(base_candles: &[Candle], htf_candles: &[Candle]) -> Vec
 fn aggregate(group: &[Candle]) -> Candle {
     let first = &group[0];
     let last = &group[group.len() - 1];
-    Candle {
-        timestamp: last.timestamp,
-        open: first.open,
-        high: group
+    Candle::__new(
+        last.timestamp,
+        first.open,
+        group
             .iter()
             .map(|c| c.high)
             .fold(f64::NEG_INFINITY, f64::max),
-        low: group.iter().map(|c| c.low).fold(f64::INFINITY, f64::min),
-        close: last.close,
-        volume: group.iter().map(|c| c.volume).sum(),
-        adj_close: last.adj_close,
-        provider_id: None,
-    }
+        group.iter().map(|c| c.low).fold(f64::INFINITY, f64::min),
+        last.close,
+        group.iter().map(|c| c.volume).sum(),
+        last.adj_close,
+        None,
+    )
 }
 
 fn bucket_id(candle: &Candle, interval: Interval, utc_offset_secs: i64) -> i64 {
@@ -156,16 +156,7 @@ mod tests {
     use super::*;
 
     fn candle(ts: i64, o: f64, h: f64, l: f64, c: f64, v: i64) -> Candle {
-        Candle {
-            timestamp: ts,
-            open: o,
-            high: h,
-            low: l,
-            close: c,
-            volume: v,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(ts, o, h, l, c, v, None, None)
     }
 
     #[test]

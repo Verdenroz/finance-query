@@ -8,6 +8,7 @@ pub(crate) mod compute;
 mod stock_bars;
 pub use stock_bars::{PriceAdjustment, StockBar, StockBarsRequest};
 mod data;
+mod dividend;
 pub mod dividend_analytics;
 pub mod events;
 pub use events::ChartEvents;

@@ -559,16 +559,7 @@ mod tests {
 
     // Convenience constructor — valid within this crate despite #[non_exhaustive].
     fn c(o: f64, h: f64, l: f64, close: f64) -> Candle {
-        Candle {
-            timestamp: 0,
-            open: o,
-            high: h,
-            low: l,
-            close,
-            volume: 0,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(0, o, h, l, close, 0, None, None)
     }
 
     // ── Output contract ───────────────────────────────────────────────────────

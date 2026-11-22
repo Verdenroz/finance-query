@@ -65,16 +65,8 @@ fn test_unsorted_dividends_returns_error() {
 
     // Intentionally unsorted
     let dividends = vec![
-        Dividend {
-            timestamp: 20,
-            amount: 1.0,
-            provider_id: None,
-        },
-        Dividend {
-            timestamp: 10,
-            amount: 1.0,
-            provider_id: None,
-        },
+        Dividend::__new(20, 1.0, None),
+        Dividend::__new(10, 1.0, None),
     ];
 
     let engine = BacktestEngine::new(BacktestConfig::default());
@@ -92,11 +84,7 @@ fn test_short_dividend_is_liability() {
     use crate::models::chart::Dividend;
 
     let candles = make_candles(&[100.0, 100.0, 100.0]);
-    let dividends = vec![Dividend {
-        timestamp: candles[1].timestamp,
-        amount: 1.0,
-        provider_id: None,
-    }];
+    let dividends = vec![Dividend::__new(candles[1].timestamp, 1.0, None)];
 
     let config = BacktestConfig::builder()
         .initial_capital(10_000.0)
@@ -121,11 +109,7 @@ fn test_open_position_final_equity_includes_accrued_dividends() {
     use crate::models::chart::Dividend;
 
     let candles = make_candles(&[100.0, 100.0, 100.0]);
-    let dividends = vec![Dividend {
-        timestamp: candles[1].timestamp,
-        amount: 1.0,
-        provider_id: None,
-    }];
+    let dividends = vec![Dividend::__new(candles[1].timestamp, 1.0, None)];
 
     let config = BacktestConfig::builder()
         .initial_capital(10_000.0)
@@ -213,67 +197,13 @@ fn a_limit_entry_counts_its_own_fill_bar_in_the_peak() {
     // peak and moves the trailing-stop exit.
     let candles = vec![
         // bar 0: signal bar, queues the limit order
-        Candle {
-            timestamp: 0,
-            open: 100.0,
-            high: 100.0,
-            low: 100.0,
-            close: 100.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
+        Candle::__new(0, 100.0, 100.0, 100.0, 100.0, 1000, None, None),
         // bar 1: dips to 95 (fills), then spikes to 130 — the peak
-        Candle {
-            timestamp: 1,
-            open: 99.0,
-            high: 130.0,
-            low: 94.0,
-            close: 120.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 2,
-            open: 119.0,
-            high: 121.0,
-            low: 115.0,
-            close: 116.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 3,
-            open: 115.0,
-            high: 116.0,
-            low: 110.0,
-            close: 111.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 4,
-            open: 110.0,
-            high: 111.0,
-            low: 104.0,
-            close: 105.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 5,
-            open: 104.0,
-            high: 105.0,
-            low: 100.0,
-            close: 101.0,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        },
+        Candle::__new(1, 99.0, 130.0, 94.0, 120.0, 1000, None, None),
+        Candle::__new(2, 119.0, 121.0, 115.0, 116.0, 1000, None, None),
+        Candle::__new(3, 115.0, 116.0, 110.0, 111.0, 1000, None, None),
+        Candle::__new(4, 110.0, 111.0, 104.0, 105.0, 1000, None, None),
+        Candle::__new(5, 104.0, 105.0, 100.0, 101.0, 1000, None, None),
     ];
 
     let config = BacktestConfig {
@@ -614,11 +544,7 @@ fn ex_date_bar_curve_point_includes_the_same_bar_dividend() {
     use crate::models::chart::Dividend;
 
     let candles = make_candles(&[100.0; 6]);
-    let dividends = vec![Dividend {
-        timestamp: candles[2].timestamp,
-        amount: 5.0,
-        provider_id: None,
-    }];
+    let dividends = vec![Dividend::__new(candles[2].timestamp, 5.0, None)];
 
     let config = BacktestConfig::builder()
         .initial_capital(10_000.0)
@@ -650,11 +576,7 @@ fn open_position_metrics_include_dividends_and_span() {
     use crate::models::chart::Dividend;
 
     let candles = make_candles(&[100.0; 6]);
-    let dividends = vec![Dividend {
-        timestamp: candles[2].timestamp,
-        amount: 5.0,
-        provider_id: None,
-    }];
+    let dividends = vec![Dividend::__new(candles[2].timestamp, 5.0, None)];
 
     let config = BacktestConfig::builder()
         .initial_capital(10_000.0)

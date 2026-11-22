@@ -107,15 +107,17 @@ pub fn heikin_ashi(candles: &[Candle]) -> Result<Vec<Candle>> {
     Ok(candles
         .iter()
         .enumerate()
-        .map(|(i, c)| Candle {
-            timestamp: c.timestamp,
-            open: series.open[i],
-            high: series.high[i],
-            low: series.low[i],
-            close: series.close[i],
-            volume: c.volume,
-            adj_close: c.adj_close,
-            provider_id: c.provider_id,
+        .map(|(i, c)| {
+            Candle::__new(
+                c.timestamp,
+                series.open[i],
+                series.high[i],
+                series.low[i],
+                series.close[i],
+                c.volume,
+                c.adj_close,
+                c.provider_id,
+            )
         })
         .collect())
 }

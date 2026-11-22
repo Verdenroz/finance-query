@@ -892,16 +892,7 @@ mod tests {
     use crate::models::chart::Candle;
 
     fn make_candle(ts: i64, close: f64) -> Candle {
-        Candle {
-            timestamp: ts,
-            open: close,
-            high: close,
-            low: close,
-            close,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(ts, close, close, close, close, 1000, None, None)
     }
 
     #[test]

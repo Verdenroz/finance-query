@@ -564,15 +564,16 @@ mod tests {
         (0..n)
             .map(|i| {
                 let px = 100.0 + i as f64;
-                crate::models::chart::Candle {
-                    timestamp: 1_600_000_000 + i as i64 * 86400,
-                    open: px,
-                    high: px * 1.02,
-                    low: px * 0.98,
-                    close: px,
-                    volume: 1_000,
-                    ..Default::default()
-                }
+                crate::models::chart::Candle::__new(
+                    1_600_000_000 + i as i64 * 86400,
+                    px,
+                    px * 1.02,
+                    px * 0.98,
+                    px,
+                    1_000,
+                    None,
+                    None,
+                )
             })
             .collect()
     }
@@ -608,15 +609,16 @@ mod tests {
                 } else {
                     100.0 + half as f64 - (i - half) as f64
                 };
-                crate::models::chart::Candle {
-                    timestamp: 1_600_000_000 + i as i64 * 86400,
-                    open: px,
-                    high: px * 1.02,
-                    low: px * 0.98,
-                    close: px,
-                    volume: 1_000,
-                    ..Default::default()
-                }
+                crate::models::chart::Candle::__new(
+                    1_600_000_000 + i as i64 * 86400,
+                    px,
+                    px * 1.02,
+                    px * 0.98,
+                    px,
+                    1_000,
+                    None,
+                    None,
+                )
             })
             .collect()
     }
