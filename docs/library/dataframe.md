@@ -42,7 +42,7 @@ crate.
 
 Convert historical OHLCV data to DataFrame:
 
-```rust capture-output feature=dataframe covers=finance_query::models::chart::candle::Candle
+```rust capture-output feature=dataframe covers=finance_query::Candle
 use finance_query::{Interval, Ticker, TimeRange};
 
 #[tokio::main]
@@ -81,7 +81,7 @@ shape: (23, 7)
 
 **Chart DataFrame Columns:**
 
-<!-- soothfast:bind finance_query::models::chart::candle::Candle -->
+<!-- soothfast:bind finance_query::Candle -->
 
 - `timestamp` (i64) - Unix timestamp
 - `open` (f64) - Opening price
@@ -247,11 +247,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .indicators(Interval::OneDay, TimeRange::ThreeMonths)
         .await?;
 
-    // Convert to single-row DataFrame with all 52 indicators
+    // Convert to a single-row DataFrame. Composite indicators are flattened
+    // into prefixed columns, e.g. `macd` becomes `macd_macd`, `macd_signal`
+    // and `macd_histogram`.
     let df = indicators.to_dataframe()?;
 
-    // Access specific scalar indicators. Nested indicators (e.g. `macd`,
-    // an Option<MacdData>) are skipped by the derive — read them off the struct.
     println!("RSI(14): {:?}", df.column("rsi_14")?);
     println!("ADX(14): {:?}", df.column("adx_14")?);
     Ok(())
@@ -781,12 +781,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 7 rows
 ```
 
-<!-- soothfast:bind finance_query::models::chart::events::Dividend -->
+<!-- soothfast:bind finance_query::Dividend -->
 The conversion itself needs no network. Response types are `#[non_exhaustive]`
 and cannot be constructed literally, but any serde-compatible source works —
 this example runs as a real test on a fixture value:
 
-```rust capture-output feature=dataframe covers=finance_query::models::chart::events::Dividend
+```rust capture-output feature=dataframe covers=finance_query::Dividend
 use finance_query::Dividend;
 
 let dividends: Vec<Dividend> = serde_json::from_str(
@@ -805,7 +805,7 @@ println!("columns = {:?}", df.get_column_names());
 
 ```text soothfast-output
 rows = 2
-columns = ["timestamp", "amount"]
+columns = ["timestamp", "amount", "provider_id"]
 ```
 <!-- /soothfast:bind -->
 

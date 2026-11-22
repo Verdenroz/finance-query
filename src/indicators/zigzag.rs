@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// A single confirmed ZigZag swing point.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct ZigZagPoint {
     /// Index into the original `highs`/`lows` slices where this swing occurred.

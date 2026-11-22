@@ -420,7 +420,7 @@ Found 50 stocks
 
 Get comprehensive sector data:
 
-```rust capture-output covers=finance_query::constants::sectors::Sector
+```rust capture-output covers=finance_query::Sector
 use finance_query::{Sector, finance};
 
 #[tokio::main]
@@ -479,7 +479,7 @@ Industries: 13
 
 **Available `Sector` variants:**
 
-<!-- soothfast:bind finance_query::constants::sectors::Sector -->
+<!-- soothfast:bind finance_query::Sector -->
 
 - `BasicMaterials`
 - `CommunicationServices`
