@@ -329,4 +329,50 @@ mod tests {
             Some(1)
         );
     }
+
+    fn assert_covers_fields(frame: &DataFrame, value: &impl serde::Serialize, skipped: &[&str]) {
+        let mut fields: Vec<String> = serde_json::to_value(value)
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .keys()
+            .filter(|k| !skipped.contains(&k.as_str()))
+            .cloned()
+            .collect();
+        fields.sort();
+        let mut columns = names(frame);
+        columns.sort();
+        assert_eq!(columns, fields);
+    }
+
+    #[test]
+    fn metrics_frame_covers_every_field() {
+        let result = make_result(vec![make_trade(50.0, 5.0, true)], vec![]);
+        let df = result.metrics.to_dataframe().unwrap();
+
+        assert_covers_fields(&df, &result.metrics, &[]);
+    }
+
+    #[test]
+    fn trades_frame_covers_every_scalar_field() {
+        let trade = make_trade(50.0, 5.0, true);
+        let df = make_result(vec![trade.clone()], vec![])
+            .trades_dataframe()
+            .unwrap();
+
+        assert_covers_fields(&df, &trade, &["entry_signal", "exit_signal", "tags"]);
+    }
+
+    #[test]
+    fn signals_frame_covers_every_scalar_field() {
+        let mut result = make_result(vec![], vec![]);
+        result.signals = serde_json::from_value(serde_json::json!([
+            {"timestamp": 1, "price": 10.0, "direction": "Long", "strength": 0.8,
+             "reason": null, "executed": true}
+        ]))
+        .unwrap();
+        let df = result.signals_dataframe().unwrap();
+
+        assert_covers_fields(&df, &result.signals[0], &["tags"]);
+    }
 }
