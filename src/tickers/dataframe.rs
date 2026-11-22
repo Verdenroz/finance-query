@@ -292,4 +292,28 @@ mod tests {
         assert_eq!(df.column("close").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.height(), 0);
     }
+
+    #[test]
+    fn options_stack_onto_the_empty_schema() {
+        let contract =
+            |symbol: &str| serde_json::json!({"contractSymbol": symbol, "strike": 100.0});
+        let batch: BatchOptionsResponse = response(serde_json::json!({
+            "options": {
+                "AAPL": {"optionChain": {"result": [{"options": [{
+                    "expirationDate": 1,
+                    "calls": [contract("AAPL1C")],
+                    "puts": [contract("AAPL1P")]
+                }]}]}}
+            },
+            "errors": {}
+        }));
+        let df = batch.to_dataframe().unwrap();
+
+        let empty: BatchOptionsResponse =
+            response(serde_json::json!({"options": {}, "errors": {}}));
+        assert_eq!(names(&df), names(&empty.to_dataframe().unwrap()));
+        assert_eq!(names(&df)[..2], ["symbol", "contract_symbol"]);
+        assert_eq!(names(&df).last().unwrap(), "option_type");
+        assert_eq!(df.height(), 2);
+    }
 }
