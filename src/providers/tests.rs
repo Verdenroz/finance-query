@@ -523,6 +523,7 @@ fn id_for(provider: Provider) -> &'static str {
         Provider::LocalMarketCalendar => "local_market_calendar",
         Provider::LocalExchange => "local_exchange",
         Provider::Custom(id) => id.as_str(),
+        other => unreachable!("unpinned provider {other}"),
     }
 }
 
@@ -928,6 +929,7 @@ fn adapter_capabilities(provider: Provider) -> Capability {
             ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
         }
         Provider::Custom(_) => Capability::NONE,
+        other => unreachable!("unmapped provider {other}"),
     }
 }
 

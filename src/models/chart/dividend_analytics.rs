@@ -84,11 +84,7 @@ mod tests {
     use super::*;
 
     fn div(timestamp: i64, amount: f64) -> Dividend {
-        Dividend {
-            timestamp,
-            amount,
-            provider_id: None,
-        }
+        Dividend::__new(timestamp, amount, None)
     }
 
     #[test]

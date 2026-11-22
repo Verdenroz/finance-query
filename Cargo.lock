@@ -1682,6 +1682,7 @@ dependencies = [
 name = "finance-query-types"
 version = "3.4.0"
 dependencies = [
+ "finance-query",
  "finance-query-derive",
  "polars",
  "serde",

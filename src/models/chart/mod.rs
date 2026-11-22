@@ -17,8 +17,8 @@ pub(crate) mod result;
 /// Spark / sparkline submodule.
 pub mod spark;
 
-pub use candle::Candle;
 pub use data::Chart;
 pub use dividend_analytics::DividendAnalytics;
 pub use events::{CapitalGain, Dividend, Split};
+pub use finance_query_types::Candle;
 pub use meta::ChartMeta;

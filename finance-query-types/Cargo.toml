@@ -41,3 +41,6 @@ polygon = []
 senatetrades = []
 wikipedia = []
 worldbank = []
+
+[dev-dependencies]
+finance-query = { path = "..", features = ["full"] }

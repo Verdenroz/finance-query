@@ -78,6 +78,12 @@ pub(crate) async fn build_providers(
                     ),
                 });
             }
+            other => {
+                return Err(FinanceError::InvalidParameter {
+                    param: "provider".to_string(),
+                    reason: format!("no adapter registered for provider `{other}`"),
+                });
+            }
         };
         adapter.initialize().await?;
         providers.push(adapter);

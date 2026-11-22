@@ -138,5 +138,10 @@ pub(crate) fn compute_indicator(indicator: Indicator, chart: &Chart) -> Result<I
         Indicator::FibonacciRetracement(period) => IndicatorResult::FibonacciRetracement(
             indicators::fibonacci_retracement(&h, &l, period)?,
         ),
+        _ => {
+            return Err(indicators::IndicatorError::InvalidPeriod(
+                "unsupported indicator".to_string(),
+            ));
+        }
     })
 }

@@ -79,8 +79,10 @@ pub mod edgar {
 
 // Internal modules
 mod backoff;
+use finance_query_types::constants;
 mod models;
 #[cfg(any(feature = "risk", feature = "backtesting"))]
+use finance_query_types::perf_metrics;
 mod providers;
 pub(crate) mod rate_limiter;
 mod scrapers;
@@ -539,12 +541,12 @@ pub mod format {
 // ============================================================================
 // When enabled, structs with #[derive(ToDataFrame)] get to_dataframe() and the ToDataFrame trait.
 #[cfg(feature = "dataframe")]
-pub use dataframe::ToDataFrame;
+mod dataframe;
 #[cfg(feature = "dataframe")]
 #[doc(hidden)]
-pub use dataframe::derive as __dataframe;
+pub use finance_query_types::__dataframe;
 #[cfg(feature = "dataframe")]
-pub use finance_query_derive::ToDataFrame;
+pub use finance_query_types::ToDataFrame;
 
 /// The polars version used in this crate's public signatures.
 ///
@@ -559,6 +561,9 @@ pub use polars;
 // ============================================================================
 // Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
 // When enabled, Chart gets extension methods: chart.sma(), chart.ema(), chart.rsi(), etc.
+#[cfg(feature = "indicators")]
+pub use finance_query_types::indicators;
+
 #[cfg(feature = "indicators")]
 pub use indicators::{
     // Summary types
