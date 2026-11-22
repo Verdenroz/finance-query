@@ -557,7 +557,6 @@ pub fn patterns(candles: &[Candle]) -> Vec<Option<CandlePattern>> {
 mod tests {
     use super::*;
 
-    // Convenience constructor — valid within this crate despite #[non_exhaustive].
     fn c(o: f64, h: f64, l: f64, close: f64) -> Candle {
         Candle::__new(0, o, h, l, close, 0, None, None)
     }

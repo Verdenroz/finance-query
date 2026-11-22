@@ -14,10 +14,15 @@ use crate::Candle;
 /// full [`Candle`]s.
 #[derive(Debug, Clone, PartialEq)]
 #[doc(hidden)]
+#[non_exhaustive]
 pub struct HeikinAshiSeries {
+    /// Heikin-Ashi open prices.
     pub open: Vec<f64>,
+    /// Heikin-Ashi high prices.
     pub high: Vec<f64>,
+    /// Heikin-Ashi low prices.
     pub low: Vec<f64>,
+    /// Heikin-Ashi close prices.
     pub close: Vec<f64>,
 }
 

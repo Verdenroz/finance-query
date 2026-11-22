@@ -33,6 +33,7 @@ pub struct Candle {
 }
 
 impl Candle {
+    /// Builds a candle from every field. Internal support for sibling crates, not public API.
     #[doc(hidden)]
     #[allow(clippy::too_many_arguments)]
     pub fn __new(

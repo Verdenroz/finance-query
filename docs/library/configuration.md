@@ -13,7 +13,7 @@ Yahoo Finance provides different data based on regional settings. Finance Query 
 
 The easiest way to set regional settings is using the `Region` enum, which automatically pairs the correct language and region codes:
 
-```rust no_run covers=finance_query::constants::enums::region::Region
+```rust no_run covers=finance_query::Region
 use finance_query::{Ticker, Region};
 
 #[tokio::main]
@@ -185,7 +185,7 @@ When fetching chart data, choose an appropriate interval. This block runs as a
 real test — every variant below exists on `Interval`:
 <!-- /soothfast:bind -->
 
-```rust capture-output covers=finance_query::constants::enums::interval::Interval
+```rust capture-output covers=finance_query::Interval
 use finance_query::Interval;
 
 // Intraday trading
@@ -217,7 +217,7 @@ Time ranges span from a single day to the full available history — this block
 also runs as a real test against the `TimeRange` enum:
 <!-- /soothfast:bind -->
 
-```rust capture-output covers=finance_query::constants::enums::time_range::TimeRange
+```rust capture-output covers=finance_query::TimeRange
 use finance_query::TimeRange;
 
 // Short term

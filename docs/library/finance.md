@@ -420,7 +420,7 @@ Found 50 stocks
 
 Get comprehensive sector data:
 
-```rust capture-output covers=finance_query::constants::sectors::Sector
+```rust capture-output covers=finance_query::Sector
 use finance_query::{Sector, finance};
 
 #[tokio::main]

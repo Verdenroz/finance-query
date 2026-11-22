@@ -255,10 +255,8 @@ impl Provider {
     /// [`Provider::Custom`] returns [`Capability::NONE`]. An id carries no
     /// adapter, so a custom provider's real set is the capabilities of the
     /// registered `ProviderAdapter` instance.
-    ///
-    /// The table must be updated when an adapter's accessors change;
-    /// `provider_capability_table_matches_adapters` fails on drift.
     pub fn capabilities(self) -> Capability {
+        // Must match each adapter's `as_*` accessors; a providers test fails on drift.
         match self {
             Self::Yahoo => {
                 Capability::QUOTE

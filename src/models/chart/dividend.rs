@@ -19,6 +19,7 @@ pub struct Dividend {
 }
 
 impl Dividend {
+    /// Builds a dividend from every field. Internal support for sibling crates, not public API.
     #[doc(hidden)]
     pub fn __new(timestamp: i64, amount: f64, provider_id: Option<Provider>) -> Self {
         Self {

@@ -42,7 +42,7 @@ crate.
 
 Convert historical OHLCV data to DataFrame:
 
-```rust capture-output feature=dataframe covers=finance_query::models::chart::candle::Candle
+```rust capture-output feature=dataframe covers=finance_query::Candle
 use finance_query::{Interval, Ticker, TimeRange};
 
 #[tokio::main]
@@ -786,7 +786,7 @@ The conversion itself needs no network. Response types are `#[non_exhaustive]`
 and cannot be constructed literally, but any serde-compatible source works —
 this example runs as a real test on a fixture value:
 
-```rust capture-output feature=dataframe covers=finance_query::models::chart::events::Dividend
+```rust capture-output feature=dataframe covers=finance_query::Dividend
 use finance_query::Dividend;
 
 let dividends: Vec<Dividend> = serde_json::from_str(
