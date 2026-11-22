@@ -221,7 +221,7 @@ mod tests {
         );
         let df = news.to_dataframe().unwrap();
         assert_eq!(
-            schema(&df),
+            schema(&df)[..6],
             columns(&[
                 ("title", DataType::String),
                 ("link", DataType::String),
@@ -231,6 +231,28 @@ mod tests {
                 ("provider_id", DataType::String),
             ])
         );
+    }
+
+    #[cfg(feature = "sentiment")]
+    #[test]
+    fn news_frames_flatten_sentiment() {
+        let sentiment = columns(&[
+            ("sentiment_label", DataType::String),
+            ("sentiment_score", DataType::Float64),
+            ("sentiment_confidence", DataType::Float64),
+        ]);
+        let news = News::new(
+            "title".into(),
+            "link".into(),
+            "source".into(),
+            "img".into(),
+            "time".into(),
+        );
+        assert_eq!(schema(&news.to_dataframe().unwrap())[6..], sentiment);
+
+        let search = crate::SearchNews::vec_to_dataframe(&[]).unwrap();
+        let search = schema(&search);
+        assert_eq!(search[search.len() - 3..], sentiment);
     }
 
     #[test]
