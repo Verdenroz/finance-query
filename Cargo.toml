@@ -72,7 +72,7 @@ prost = "0.14.3"
 base64 = "0.22"
 
 # Optional: DataFrame support
-polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-i8", "dtype-i16", "dtype-u8", "dtype-u16"] }
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)

@@ -67,7 +67,8 @@ use syn::{
 /// # Field mappings
 ///
 /// - `String` → `String`
-/// - `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f32`, `f64`, `bool` → the matching dtype
+/// - `i32`, `i64`, `u32`, `u64`, `f32`, `f64`, `bool` → the matching dtype
+/// - `i8`, `i16` → `Int32`; `u8`, `u16` → `UInt32`
 /// - `usize` → `UInt64`
 /// - `FormattedValue<T>` and `F::Value<T>` → `T`, from the `.raw` value
 /// - `Vec<String>` → `List(String)`

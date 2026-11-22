@@ -9,6 +9,8 @@ use syn::{
 enum Mapping {
     Str,
     Copy,
+    WidenSigned,
+    WidenUnsigned,
     Usize,
     Raw,
     StrList,
@@ -136,6 +138,8 @@ fn field_columns(
     let columns = match mapping(inner, format_param) {
         Mapping::Str => series(quote! { |v| v.map(::std::string::String::as_str) }),
         Mapping::Copy => series(quote! { |v| v.copied() }),
+        Mapping::WidenSigned => series(quote! { |v| v.map(|v| i32::from(*v)) }),
+        Mapping::WidenUnsigned => series(quote! { |v| v.map(|v| u32::from(*v)) }),
         Mapping::Usize => series(quote! { |v| v.map(|v| *v as u64) }),
         Mapping::Raw => series(quote! { |v| v.and_then(|v| v.raw) }),
         Mapping::StrList => quote! { [#krate::__dataframe::string_list(#name, #values)] },
@@ -167,9 +171,9 @@ fn mapping(ty: &Type, format_param: Option<&Ident>) -> Mapping {
     };
     match last.ident.to_string().as_str() {
         "String" => Mapping::Str,
-        "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | "f32" | "f64" | "bool" => {
-            Mapping::Copy
-        }
+        "i32" | "i64" | "u32" | "u64" | "f32" | "f64" | "bool" => Mapping::Copy,
+        "i8" | "i16" => Mapping::WidenSigned,
+        "u8" | "u16" => Mapping::WidenUnsigned,
         "usize" => Mapping::Usize,
         "FormattedValue" => Mapping::Raw,
         "Vec" if first_generic(&last.arguments).is_some_and(is_string) => Mapping::StrList,

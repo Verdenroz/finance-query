@@ -133,18 +133,18 @@ fn scalar_fields_map_to_matching_dtypes() {
         columns(&[
             ("name", DataType::String),
             ("maybe_name", DataType::String),
-            ("a", DataType::Int8),
-            ("b", DataType::Int16),
+            ("a", DataType::Int32),
+            ("b", DataType::Int32),
             ("c", DataType::Int32),
             ("d", DataType::Int64),
-            ("e", DataType::UInt8),
-            ("f", DataType::UInt16),
+            ("e", DataType::UInt32),
+            ("f", DataType::UInt32),
             ("g", DataType::UInt32),
             ("h", DataType::UInt64),
             ("i", DataType::Float32),
             ("j", DataType::Float64),
             ("k", DataType::Boolean),
-            ("l", DataType::UInt16),
+            ("l", DataType::UInt32),
             ("m", DataType::UInt64),
         ])
     );
