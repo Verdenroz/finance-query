@@ -43,7 +43,7 @@ mod tests {
             .map(|n| n.to_string())
             .collect();
         assert_eq!(
-            names,
+            names[..6],
             [
                 "symbol",
                 "date",

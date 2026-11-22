@@ -214,7 +214,7 @@ impl FinancialStatement {
     ///
     /// The first column is `date` (string), followed by one nullable f64 column per metric.
     /// Dates are sorted ascending and metric columns are sorted by name. A metric with no
-    /// value on a date is null.
+    /// value on a date is null. A metric named `date` collides with the first column and errors.
     pub fn to_wide_dataframe(
         &self,
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {

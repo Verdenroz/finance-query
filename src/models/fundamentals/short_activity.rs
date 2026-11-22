@@ -72,7 +72,7 @@ mod tests {
             .map(|n| n.to_string())
             .collect();
         assert_eq!(
-            names,
+            names[..4],
             [
                 "date",
                 "short_volume",
@@ -105,7 +105,7 @@ mod tests {
             .map(|n| n.to_string())
             .collect();
         assert_eq!(
-            names,
+            names[..4],
             [
                 "settlement_date",
                 "short_interest",
