@@ -29,13 +29,17 @@ pub trait ToDataFrame {
     /// Converts a slice of values to a single DataFrame.
     ///
     /// The default stacks each item's [`to_dataframe`](Self::to_dataframe)
-    /// output vertically. For an empty slice it returns a frame with no
-    /// columns; derived impls return a zero-row frame with the full schema.
+    /// output vertically, leaving out items whose frame has no columns. When
+    /// no item has columns it returns a frame with no columns; derived impls
+    /// return a zero-row frame with the full schema.
     fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame>
     where
         Self: Sized,
     {
-        let mut frames = items.iter().map(Self::to_dataframe);
+        let mut frames = items
+            .iter()
+            .map(Self::to_dataframe)
+            .filter(|frame| frame.as_ref().map_or(true, |frame| frame.width() > 0));
         match frames.next() {
             None => Ok(DataFrame::default()),
             Some(first) => frames.try_fold(first?, |acc, frame| acc.vstack(&frame?)),
@@ -227,6 +231,20 @@ mod tests {
                 ("provider_id", DataType::String),
             ])
         );
+    }
+
+    #[test]
+    fn default_vec_to_dataframe_skips_items_without_columns() {
+        let concepts: Vec<crate::FactConcept> = serde_json::from_value(serde_json::json!([
+            {"label": "Revenue", "units": {"USD": [{"end": "2024-12-31", "val": 1.0}]}},
+            {"label": "Unitless"},
+        ]))
+        .unwrap();
+        let df = <crate::FactConcept as super::ToDataFrame>::vec_to_dataframe(&concepts).unwrap();
+        assert_eq!(df.height(), 1);
+        let unitless =
+            <crate::FactConcept as super::ToDataFrame>::vec_to_dataframe(&concepts[1..]).unwrap();
+        assert_eq!(unitless.width(), 0);
     }
 
     #[cfg(feature = "indicators")]
