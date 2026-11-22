@@ -40,7 +40,7 @@ Screener responses are large, but cheap to decode — a checked claim, re-verifi
 
 **Available `Screener` variants:**
 
-<!-- soothfast:bind finance_query::constants::screeners::Screener -->
+<!-- soothfast:bind finance_query::Screener -->
 
 | Variant | Description |
 |---------|-------------|

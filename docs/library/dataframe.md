@@ -81,7 +81,7 @@ shape: (23, 7)
 
 **Chart DataFrame Columns:**
 
-<!-- soothfast:bind finance_query::models::chart::candle::Candle -->
+<!-- soothfast:bind finance_query::Candle -->
 
 - `timestamp` (i64) - Unix timestamp
 - `open` (f64) - Opening price
@@ -781,7 +781,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 7 rows
 ```
 
-<!-- soothfast:bind finance_query::models::chart::events::Dividend -->
+<!-- soothfast:bind finance_query::Dividend -->
 The conversion itself needs no network. Response types are `#[non_exhaustive]`
 and cannot be constructed literally, but any serde-compatible source works —
 this example runs as a real test on a fixture value:

@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 **Supported Regions:**
 
-<!-- soothfast:bind finance_query::constants::enums::region::Region -->
+<!-- soothfast:bind finance_query::Region -->
 
 | Region | Language Code | Region Code |
 |---------|---------------|-------------|
@@ -180,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Chart Intervals
 
-<!-- soothfast:bind finance_query::constants::enums::interval::Interval -->
+<!-- soothfast:bind finance_query::Interval -->
 When fetching chart data, choose an appropriate interval. This block runs as a
 real test — every variant below exists on `Interval`:
 <!-- /soothfast:bind -->
@@ -212,7 +212,7 @@ OneDay.as_str()    = "1d"
 
 ### Time Ranges
 
-<!-- soothfast:bind finance_query::constants::enums::time_range::TimeRange -->
+<!-- soothfast:bind finance_query::TimeRange -->
 Time ranges span from a single day to the full available history — this block
 also runs as a real test against the `TimeRange` enum:
 <!-- /soothfast:bind -->

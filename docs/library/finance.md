@@ -479,7 +479,7 @@ Industries: 13
 
 **Available `Sector` variants:**
 
-<!-- soothfast:bind finance_query::constants::sectors::Sector -->
+<!-- soothfast:bind finance_query::Sector -->
 
 - `BasicMaterials`
 - `CommunicationServices`
