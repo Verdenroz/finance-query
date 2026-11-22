@@ -17,6 +17,7 @@ pub enum FilingSectionForm {
 
 /// One section of an SEC filing's text.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FilingSection {
     /// Section key/name (e.g. `"risk_factors"`, `"mdna"`).
@@ -27,6 +28,7 @@ pub struct FilingSection {
 
 /// A risk factor extracted from SEC filings.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct RiskFactor {
     /// Risk factor title.

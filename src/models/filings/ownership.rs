@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 /// One transaction line from a Form 3, 4, or 5.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct InsiderTrade {
     /// Issuer's trading symbol, as filed.
@@ -60,6 +61,7 @@ pub struct InsiderTrade {
 
 /// One position from a 13F-HR information table.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct InstitutionalHolding {
     /// Issuer name, as filed.
@@ -93,6 +95,7 @@ pub struct InstitutionalHolding {
 
 /// One legislator stock-trade disclosure filed under the STOCK Act.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct CongressionalTrade {
     /// Ticker symbol traded.
@@ -121,6 +124,7 @@ pub struct CongressionalTrade {
 
 /// One SEC fails-to-deliver record for a settlement date.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FailToDeliver {
     /// Ticker symbol.

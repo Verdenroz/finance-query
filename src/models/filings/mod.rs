@@ -27,3 +27,6 @@ pub use sections::{FilingSection, FilingSectionForm, RiskFactor};
 pub use submissions::{
     EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSubmissions,
 };
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
