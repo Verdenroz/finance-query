@@ -527,8 +527,8 @@ fn id_for(provider: Provider) -> &'static str {
     }
 }
 
-/// The match in `id_for` catches a variant missing from the pin; this catches
-/// one missing from `all()`, which is a hand-maintained list.
+/// `id_for` panics on a variant missing from the pin, but only for variants
+/// `all()` lists; this catches one missing from that hand-maintained list.
 #[test]
 fn every_variant_has_its_serialized_form_pinned() {
     const EXPECTED: usize = 4

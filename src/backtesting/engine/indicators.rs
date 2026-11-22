@@ -371,10 +371,10 @@ fn compute_one(
                 levels.iter().map(|o| o.map(|l| l.level_78_6)).collect(),
             ));
         }
-        _ => {
-            return Err(indicators::IndicatorError::InvalidPeriod(
-                "unsupported indicator".to_string(),
-            )
+        other => {
+            return Err(indicators::IndicatorError::InvalidPeriod(format!(
+                "unsupported indicator {other:?}"
+            ))
             .into());
         }
     }

@@ -4,7 +4,7 @@
 /// `FundField::Exchange` and
 /// `ScreenerFieldExt::eq_str`.
 ///
-/// For mutual fund queries use [`ExchangeCode::Nas`].
+/// For mutual fund queries use [`ExchangeCode::Nas`](exchange_codes::ExchangeCode::Nas).
 ///
 /// # Example
 ///

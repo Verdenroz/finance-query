@@ -74,6 +74,7 @@ jobs:
               - 'Cargo.lock'
             fuzz:
               - 'src/**'
+              - 'finance-query-types/**'
               - 'fuzz/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -316,7 +317,7 @@ jobs:
       - name: Build rustdoc (deny broken links)
         env:
           RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
-        run: cargo doc -p finance-query --no-deps --features full
+        run: cargo doc -p finance-query -p finance-query-types --no-deps --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe
 
   # Default and full both hide cfg mismatches: a re-export gated on fewer
   # features than the item it exports compiles under either, and fails only
