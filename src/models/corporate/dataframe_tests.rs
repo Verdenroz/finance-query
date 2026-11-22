@@ -6,7 +6,6 @@ use crate::models::corporate::asset_profile::CompanyOfficer;
 use crate::models::corporate::earnings::{
     QuarterlyEarnings, QuarterlyFinancials, YearlyFinancials,
 };
-use crate::models::corporate::earnings_history::EarningsHistoryEntry;
 use crate::models::corporate::earnings_transcript::EarningsTranscript;
 use crate::models::corporate::fund_performance::{AnnualReturn, RiskStatistic};
 use crate::models::corporate::sec_filings::SecExhibit;
