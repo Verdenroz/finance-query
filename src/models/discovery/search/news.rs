@@ -51,7 +51,7 @@ impl SearchNewsList {
 /// A news result from search
 ///
 /// When the `dataframe` feature is enabled, scalar fields can be converted
-/// to a DataFrame. Complex fields (thumbnail, related_tickers) are automatically skipped.
+/// to a DataFrame. `related_tickers` becomes a list column; `thumbnail` is skipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

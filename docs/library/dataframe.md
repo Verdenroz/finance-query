@@ -247,11 +247,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .indicators(Interval::OneDay, TimeRange::ThreeMonths)
         .await?;
 
-    // Convert to single-row DataFrame with all 52 indicators
+    // Convert to a single-row DataFrame. Composite indicators are flattened
+    // into prefixed columns, e.g. `macd` becomes `macd_macd`, `macd_signal`
+    // and `macd_histogram`.
     let df = indicators.to_dataframe()?;
 
-    // Access specific scalar indicators. Nested indicators (e.g. `macd`,
-    // an Option<MacdData>) are skipped by the derive — read them off the struct.
     println!("RSI(14): {:?}", df.column("rsi_14")?);
     println!("ADX(14): {:?}", df.column("adx_14")?);
     Ok(())
@@ -805,7 +805,7 @@ println!("columns = {:?}", df.get_column_names());
 
 ```text soothfast-output
 rows = 2
-columns = ["timestamp", "amount"]
+columns = ["timestamp", "amount", "provider_id"]
 ```
 <!-- /soothfast:bind -->
 
