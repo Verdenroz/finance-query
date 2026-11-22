@@ -15,7 +15,7 @@ Finance Query v3 introduces a provider abstraction layer that lets you route eac
 
 Yahoo Finance is always available with no configuration. All others are opt-in via feature flags:
 
-<!-- soothfast:bind finance_query::providers::provider::Provider -->
+<!-- soothfast:bind finance_query::Provider -->
 
 | Provider | Feature flag | Free tier | Env var |
 |----------|-------------|-----------|---------|
@@ -93,7 +93,7 @@ If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGA
 
 ### Available Capabilities
 
-<!-- soothfast:bind finance_query::providers::capability::Capability -->
+<!-- soothfast:bind finance_query::Capability -->
 
 | Capability | Constant | Description |
 |------------|----------|-------------|

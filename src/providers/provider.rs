@@ -3,7 +3,7 @@
 use serde::de::{Error as DeError, Unexpected};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::*;
+use super::Capability;
 
 /// Typed identifier for a financial data provider.
 ///
@@ -152,7 +152,7 @@ impl Provider {
         Self::Custom(intern(id))
     }
 
-    /// String identifier matching [`ProviderCore::id`].
+    /// String identifier matching `ProviderCore::id`.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Yahoo => "yahoo",
@@ -203,7 +203,7 @@ impl Provider {
     /// not it is configured.
     ///
     /// Custom providers are absent: they exist only once registered, and this
-    /// answers from the enum rather than from a live [`crate::ProviderSet`].
+    /// answers from the enum rather than from a live `ProviderSet`.
     /// Returns a `Vec` rather than an iterator because the variants are
     /// feature-gated and assembled at runtime.
     pub fn all() -> Vec<Self> {
@@ -250,64 +250,107 @@ impl Provider {
         v
     }
 
-    /// Capability bitflags for this provider variant, derived from each
-    /// adapter's `as_*` accessor overrides — implementing a capability trait
-    /// and declaring it can no longer drift apart.
+    /// Capability bitflags for this provider variant.
     ///
     /// [`Provider::Custom`] returns [`Capability::NONE`]. An id carries no
-    /// adapter, so a custom provider's real set is
-    /// [`ProviderAdapter::capabilities`](crate::ProviderAdapter::capabilities)
-    /// on the registered instance.
+    /// adapter, so a custom provider's real set is the capabilities of the
+    /// registered `ProviderAdapter` instance.
     pub fn capabilities(self) -> Capability {
+        // Must match each adapter's `as_*` accessors; a providers test fails on drift.
         match self {
-            Self::Yahoo => ProviderAdapter::capabilities(&yahoo::YahooProvider::unauthenticated()),
+            Self::Yahoo => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+                    | Capability::DISCOVERY
+                    | Capability::CALENDAR
+                    | Capability::MARKET
+                    | Capability::INDICES
+                    | Capability::FUTURES
+                    | Capability::COMMODITIES
+            }
             #[cfg(feature = "polygon")]
-            Self::Polygon => ProviderAdapter::capabilities(&polygon::PolygonProvider),
+            Self::Polygon => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+                    | Capability::DISCOVERY
+                    | Capability::CRYPTO
+                    | Capability::ECONOMIC
+                    | Capability::CALENDAR
+                    | Capability::FOREX
+                    | Capability::INDICES
+                    | Capability::FUTURES
+                    | Capability::FILINGS
+            }
             #[cfg(feature = "fmp")]
-            Self::Fmp => ProviderAdapter::capabilities(&fmp::FmpProvider),
+            Self::Fmp => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::DISCOVERY
+                    | Capability::CRYPTO
+                    | Capability::CALENDAR
+                    | Capability::MARKET
+                    | Capability::FOREX
+                    | Capability::INDICES
+                    | Capability::COMMODITIES
+                    | Capability::FILINGS
+            }
             #[cfg(feature = "alphavantage")]
             Self::AlphaVantage => {
-                ProviderAdapter::capabilities(&alphavantage::AlphaVantageProvider)
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+                    | Capability::DISCOVERY
+                    | Capability::CRYPTO
+                    | Capability::ECONOMIC
+                    | Capability::CALENDAR
+                    | Capability::MARKET
+                    | Capability::FOREX
+                    | Capability::COMMODITIES
+                    | Capability::FILINGS
             }
             #[cfg(feature = "crypto")]
-            Self::CoinGecko => ProviderAdapter::capabilities(&coingecko::CoinGeckoProvider),
+            Self::CoinGecko => Capability::CHART | Capability::DISCOVERY | Capability::CRYPTO,
             #[cfg(feature = "fred")]
-            Self::Fred => ProviderAdapter::capabilities(&fred::FredProvider),
+            Self::Fred => Capability::ECONOMIC | Capability::CALENDAR,
             #[cfg(feature = "worldbank")]
-            Self::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
+            Self::WorldBank => Capability::ECONOMIC,
             #[cfg(feature = "fiscaldata")]
-            Self::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
+            Self::FiscalData => Capability::ECONOMIC,
             #[cfg(feature = "bls")]
-            Self::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
+            Self::Bls => Capability::ECONOMIC,
             #[cfg(feature = "frankfurter")]
-            Self::Frankfurter => ProviderAdapter::capabilities(&frankfurter::FrankfurterProvider),
+            Self::Frankfurter => Capability::FOREX,
             #[cfg(feature = "binance")]
-            Self::Binance => ProviderAdapter::capabilities(&binance::BinanceProvider),
+            Self::Binance => Capability::CHART | Capability::CRYPTO,
             #[cfg(feature = "kraken")]
-            Self::Kraken => ProviderAdapter::capabilities(&kraken::KrakenProvider),
+            Self::Kraken => Capability::CHART | Capability::CRYPTO,
             #[cfg(feature = "finra")]
-            Self::Finra => ProviderAdapter::capabilities(&finra::FinraProvider),
+            Self::Finra => Capability::FUNDAMENTALS,
             #[cfg(feature = "defi")]
-            Self::DefiLlama => ProviderAdapter::capabilities(&defillama::DefiLlamaProvider),
+            Self::DefiLlama => Capability::CRYPTO,
             #[cfg(feature = "gdelt")]
-            Self::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
+            Self::Gdelt => Capability::CORPORATE | Capability::CRYPTO | Capability::FOREX,
             #[cfg(feature = "cftc")]
-            Self::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
+            Self::Cftc => Capability::FUTURES,
             #[cfg(feature = "nasdaq")]
-            Self::Nasdaq => ProviderAdapter::capabilities(&nasdaq::NasdaqProvider),
+            Self::Nasdaq => Capability::CALENDAR,
             #[cfg(feature = "wikipedia")]
-            Self::Wikipedia => ProviderAdapter::capabilities(&wikipedia::WikipediaProvider),
+            Self::Wikipedia => Capability::INDICES,
             #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
-            Self::CongressTrades => {
-                ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
-            }
-            Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
-            Self::LocalMarketCalendar => {
-                ProviderAdapter::capabilities(&market_calendar::LocalMarketCalendarProvider)
-            }
-            Self::LocalExchange => {
-                ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
-            }
+            Self::CongressTrades => Capability::FILINGS,
+            Self::Edgar => Capability::CORPORATE | Capability::DISCOVERY | Capability::FILINGS,
+            Self::LocalMarketCalendar => Capability::CALENDAR,
+            Self::LocalExchange => Capability::DISCOVERY,
             Self::Custom(_) => Capability::NONE,
         }
     }

@@ -1026,7 +1026,9 @@ impl Ticker {
         range: TimeRange,
     ) -> Result<indicators::IndicatorResult> {
         let chart = self.chart(interval, range).await?;
-        Ok(indicators::compute_indicator(indicator, &chart)?)
+        Ok(crate::models::chart::compute::compute_indicator(
+            indicator, &chart,
+        )?)
     }
 
     #[cfg(feature = "backtesting")]

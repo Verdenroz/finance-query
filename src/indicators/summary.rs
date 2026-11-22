@@ -232,16 +232,16 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
             .and_then(|series| {
                 let last = candles.last()?;
                 let i = series.close.len().checked_sub(1)?;
-                Some(Candle {
-                    timestamp: last.timestamp,
-                    open: series.open[i],
-                    high: series.high[i],
-                    low: series.low[i],
-                    close: series.close[i],
-                    volume: last.volume,
-                    adj_close: last.adj_close,
-                    provider_id: last.provider_id,
-                })
+                Some(Candle::__new(
+                    last.timestamp,
+                    series.open[i],
+                    series.high[i],
+                    series.low[i],
+                    series.close[i],
+                    last.volume,
+                    last.adj_close,
+                    last.provider_id,
+                ))
             }),
         zigzag_last_pivot: zigzag(&highs, &lows, 5.0)
             .ok()

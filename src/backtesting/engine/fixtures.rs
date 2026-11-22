@@ -120,16 +120,7 @@ pub(super) fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices
         .iter()
         .enumerate()
-        .map(|(i, &p)| Candle {
-            timestamp: i as i64,
-            open: p,
-            high: p * 1.01,
-            low: p * 0.99,
-            close: p,
-            volume: 1000,
-            adj_close: Some(p),
-            provider_id: None,
-        })
+        .map(|(i, &p)| Candle::__new(i as i64, p, p * 1.01, p * 0.99, p, 1000, Some(p), None))
         .collect()
 }
 
@@ -137,31 +128,13 @@ pub(super) fn make_candles_with_timestamps(prices: &[f64], timestamps: &[i64]) -
     prices
         .iter()
         .zip(timestamps.iter())
-        .map(|(&p, &ts)| Candle {
-            timestamp: ts,
-            open: p,
-            high: p * 1.01,
-            low: p * 0.99,
-            close: p,
-            volume: 1000,
-            adj_close: Some(p),
-            provider_id: None,
-        })
+        .map(|(&p, &ts)| Candle::__new(ts, p, p * 1.01, p * 0.99, p, 1000, Some(p), None))
         .collect()
 }
 
 /// Build a candle with explicit OHLC values (not derived from a single price).
 pub(super) fn make_candle_ohlc(ts: i64, open: f64, high: f64, low: f64, close: f64) -> Candle {
-    Candle {
-        timestamp: ts,
-        open,
-        high,
-        low,
-        close,
-        volume: 1000,
-        adj_close: Some(close),
-        provider_id: None,
-    }
+    Candle::__new(ts, open, high, low, close, 1000, Some(close), None)
 }
 
 /// Flat-close candles whose intrabar range is `range_pct` of price, giving a
@@ -170,15 +143,17 @@ pub(super) fn make_candles_with_range(prices: &[f64], range_pct: f64) -> Vec<Can
     prices
         .iter()
         .enumerate()
-        .map(|(i, &p)| Candle {
-            timestamp: i as i64,
-            open: p,
-            high: p * (1.0 + range_pct),
-            low: p * (1.0 - range_pct),
-            close: p,
-            volume: 1000,
-            adj_close: Some(p),
-            provider_id: None,
+        .map(|(i, &p)| {
+            Candle::__new(
+                i as i64,
+                p,
+                p * (1.0 + range_pct),
+                p * (1.0 - range_pct),
+                p,
+                1000,
+                Some(p),
+                None,
+            )
         })
         .collect()
 }

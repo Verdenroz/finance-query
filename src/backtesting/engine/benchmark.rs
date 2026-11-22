@@ -297,11 +297,7 @@ mod tests {
 
         // A single dividend ex-dated mid-series
         let mid_ts = candles[15].timestamp;
-        let dividends = vec![Dividend {
-            timestamp: mid_ts,
-            amount: 1.0,
-            provider_id: None,
-        }];
+        let dividends = vec![Dividend::__new(mid_ts, 1.0, None)];
 
         let config = BacktestConfig::builder()
             .initial_capital(10_000.0)

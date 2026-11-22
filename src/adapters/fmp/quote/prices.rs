@@ -117,16 +117,16 @@ fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::mode
                 .and_hms_opt(0, 0, 0)?
                 .and_utc()
                 .timestamp();
-            Some(crate::models::chart::Candle {
-                timestamp: ts,
-                open: r.open?,
-                high: r.high?,
-                low: r.low?,
-                close: r.close?,
-                volume: r.volume.map(|v| v as i64).unwrap_or(0),
-                adj_close: None,
-                provider_id: Some(crate::providers::Provider::Fmp),
-            })
+            Some(crate::models::chart::Candle::__new(
+                ts,
+                r.open?,
+                r.high?,
+                r.low?,
+                r.close?,
+                r.volume.map(|v| v as i64).unwrap_or(0),
+                None,
+                Some(crate::providers::Provider::Fmp),
+            ))
         })
         .collect();
     candles.sort_unstable_by_key(|c| c.timestamp);
@@ -147,16 +147,16 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
             let ts = chrono::TimeZone::from_local_datetime(&chrono_tz::America::New_York, &local)
                 .earliest()?
                 .timestamp();
-            Some(crate::models::chart::Candle {
-                timestamp: ts,
-                open: r.open?,
-                high: r.high?,
-                low: r.low?,
-                close: r.close?,
-                volume: r.volume.map(|v| v as i64).unwrap_or(0),
-                adj_close: None,
-                provider_id: Some(crate::providers::Provider::Fmp),
-            })
+            Some(crate::models::chart::Candle::__new(
+                ts,
+                r.open?,
+                r.high?,
+                r.low?,
+                r.close?,
+                r.volume.map(|v| v as i64).unwrap_or(0),
+                None,
+                Some(crate::providers::Provider::Fmp),
+            ))
         })
         .collect();
     candles.sort_unstable_by_key(|c| c.timestamp);

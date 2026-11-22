@@ -1058,11 +1058,40 @@ fn doc_block_line_1242() {
     }
 }
 
-// line 1309: compile-only (no_run)
+// line 1313: compile-only (no_run)
+#[cfg(all(feature = "backtesting", feature = "dataframe"))]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_1313() {
+    use finance_query::backtesting::SmaCrossover;
+    use finance_query::{Interval, Ticker, TimeRange};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let ticker = Ticker::new("AAPL").await?;
+        let result = ticker.backtest(
+            SmaCrossover::new(10, 20),
+            Interval::OneDay,
+            TimeRange::OneYear,
+            None,
+        ).await?;
+
+        let equity = result.equity_dataframe()?;
+        let trades = result.trades_dataframe()?;
+        let signals = result.signals_dataframe()?;
+        let metrics = result.metrics.to_dataframe()?;
+
+        println!("{} bars, {} trades, {} signals", equity.height(), trades.height(), signals.height());
+        println!("{}", metrics);
+        Ok(())
+    }
+}
+
+// line 1347: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1309() {
+fn doc_block_line_1347() {
         use finance_query::backtesting::{BacktestConfig, StrategyBuilder};
         use finance_query::backtesting::refs::*;
         use finance_query::backtesting::condition::*;

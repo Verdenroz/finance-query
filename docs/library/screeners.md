@@ -9,7 +9,7 @@ The screener API lets you filter stocks and mutual funds by hundreds of financia
 
 Yahoo Finance maintains a set of curated screeners. Pass a `Screener` variant and a result count to `finance::screener`:
 
-```rust no_run covers=finance_query::constants::screeners::Screener
+```rust no_run covers=finance_query::Screener
 use finance_query::{finance, Screener};
 
 #[tokio::main]
@@ -40,7 +40,7 @@ Screener responses are large, but cheap to decode — a checked claim, re-verifi
 
 **Available `Screener` variants:**
 
-<!-- soothfast:bind finance_query::constants::screeners::Screener -->
+<!-- soothfast:bind finance_query::Screener -->
 
 | Variant | Description |
 |---------|-------------|
