@@ -79,10 +79,8 @@ pub mod edgar {
 
 // Internal modules
 mod backoff;
-mod constants;
 mod models;
 #[cfg(any(feature = "risk", feature = "backtesting"))]
-mod perf_metrics;
 mod providers;
 pub(crate) mod rate_limiter;
 mod scrapers;
@@ -541,8 +539,6 @@ pub mod format {
 // ============================================================================
 // When enabled, structs with #[derive(ToDataFrame)] get to_dataframe() and the ToDataFrame trait.
 #[cfg(feature = "dataframe")]
-mod dataframe;
-#[cfg(feature = "dataframe")]
 pub use dataframe::ToDataFrame;
 #[cfg(feature = "dataframe")]
 #[doc(hidden)]
@@ -563,9 +559,6 @@ pub use polars;
 // ============================================================================
 // Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
 // When enabled, Chart gets extension methods: chart.sma(), chart.ema(), chart.rsi(), etc.
-#[cfg(feature = "indicators")]
-pub mod indicators;
-
 #[cfg(feature = "indicators")]
 pub use indicators::{
     // Summary types

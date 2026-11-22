@@ -2,13 +2,11 @@
 //!
 //! Contains all data structures and types for Yahoo Finance's chart endpoint.
 
-mod candle;
 #[cfg(feature = "indicators")]
 pub(crate) mod compute;
 mod stock_bars;
 pub use stock_bars::{PriceAdjustment, StockBar, StockBarsRequest};
 mod data;
-mod dividend;
 pub mod dividend_analytics;
 pub mod events;
 pub use events::ChartEvents;

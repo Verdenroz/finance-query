@@ -65,10 +65,8 @@ pub use health::ProviderHealth;
 pub use retry::RetryPolicy;
 
 mod build;
-mod capability;
 mod convert;
 mod operation;
-mod provider;
 mod routes;
 mod set;
 
