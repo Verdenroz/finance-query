@@ -1616,8 +1616,10 @@ dependencies = [
 name = "finance-query-derive"
 version = "3.4.0"
 dependencies = [
+ "finance-query",
  "proc-macro2",
  "quote",
+ "serde_json",
  "syn 2.0.119",
 ]
 

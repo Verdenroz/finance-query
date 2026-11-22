@@ -335,6 +335,7 @@ pub struct IndicatorsSummary {
     pub rsi_14: Option<f64>,
     /// Stochastic Oscillator (14, 3, 3)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub stochastic: Option<StochasticData>,
     /// Commodity Channel Index (20-period)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -344,6 +345,7 @@ pub struct IndicatorsSummary {
     pub williams_r_14: Option<f64>,
     /// Stochastic RSI (14, 14)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub stochastic_rsi: Option<StochasticData>,
     /// Rate of Change (12-period)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -364,41 +366,50 @@ pub struct IndicatorsSummary {
     // === TREND INDICATORS ===
     /// Moving Average Convergence Divergence (12, 26, 9)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub macd: Option<MacdData>,
     /// Average Directional Index (14-period)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adx_14: Option<f64>,
     /// Aroon Indicator (25-period)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub aroon: Option<AroonData>,
     /// SuperTrend Indicator (10, 3.0)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub supertrend: Option<SuperTrendData>,
     /// Ichimoku Cloud (9, 26, 52, 26)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub ichimoku: Option<IchimokuData>,
     /// Parabolic SAR (0.02, 0.2)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parabolic_sar: Option<f64>,
     /// Bull Bear Power (13-period EMA based)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub bull_bear_power: Option<BullBearPowerData>,
     /// Elder Ray Index (13-period EMA based)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub elder_ray_index: Option<ElderRayData>,
 
     // === VOLATILITY INDICATORS ===
     /// Bollinger Bands (20, 2.0)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub bollinger_bands: Option<BollingerBandsData>,
     /// Average True Range (14-period)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub atr_14: Option<f64>,
     /// Keltner Channels (20, 10, 2.0)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub keltner_channels: Option<KeltnerChannelsData>,
     /// Donchian Channels (20-period)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub donchian_channels: Option<DonchianChannelsData>,
     /// True Range (current period)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -433,23 +444,29 @@ pub struct IndicatorsSummary {
     // === PIVOT POINTS, HEIKIN-ASHI, ZIGZAG, FIBONACCI ===
     /// Standard (classic) Pivot Points, derived from the previous bar's high/low/close
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub pivot_points: Option<PivotPoints>,
     /// Fibonacci Pivot Points, derived from the previous bar's high/low/close
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub fibonacci_pivot_points: Option<PivotPoints>,
     /// Latest Heikin-Ashi ("average bar") candle
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub heikin_ashi: Option<Candle>,
     /// Most recent confirmed ZigZag swing point (5% reversal threshold)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub zigzag_last_pivot: Option<ZigZagPoint>,
     /// Fibonacci Retracement levels (50-period rolling window)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub fibonacci_retracement_50: Option<FibonacciLevels>,
 }
 
 /// Stochastic Oscillator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct StochasticData {
     /// %K line value
@@ -462,6 +479,7 @@ pub struct StochasticData {
 
 /// MACD indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct MacdData {
     /// MACD line value
@@ -477,6 +495,7 @@ pub struct MacdData {
 
 /// Aroon indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct AroonData {
     /// Aroon Up value
@@ -489,6 +508,7 @@ pub struct AroonData {
 
 /// Bollinger Bands data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct BollingerBandsData {
     /// Upper band value
@@ -504,6 +524,7 @@ pub struct BollingerBandsData {
 
 /// SuperTrend indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct SuperTrendData {
     /// SuperTrend value
@@ -516,6 +537,7 @@ pub struct SuperTrendData {
 
 /// Ichimoku Cloud data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct IchimokuData {
     /// Conversion line (Tenkan-sen)
@@ -537,6 +559,7 @@ pub struct IchimokuData {
 
 /// Keltner Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct KeltnerChannelsData {
     /// Upper channel value
@@ -552,6 +575,7 @@ pub struct KeltnerChannelsData {
 
 /// Donchian Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct DonchianChannelsData {
     /// Upper channel value
@@ -567,6 +591,7 @@ pub struct DonchianChannelsData {
 
 /// Bull Bear Power indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct BullBearPowerData {
     /// Bull power value
@@ -579,6 +604,7 @@ pub struct BullBearPowerData {
 
 /// Elder Ray Index data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct ElderRayData {
     /// Bull power value
