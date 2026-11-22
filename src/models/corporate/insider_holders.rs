@@ -16,6 +16,7 @@ pub struct InsiderHolders {
 
 /// Individual insider holder information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct InsiderHolder {
     /// Maximum age of this data in seconds
@@ -58,3 +59,6 @@ pub struct InsiderHolder {
     #[serde(default)]
     pub position_indirect_date: Option<crate::models::quote::FormattedValue<i64>>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(InsiderHolders, holders, InsiderHolder);

@@ -4,6 +4,7 @@ use crate::models::quote::FormattedValue;
 
 /// Calendar events including earnings and dividend dates
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CalendarEvents {
@@ -13,6 +14,7 @@ pub struct CalendarEvents {
 
     /// Upcoming earnings date(s)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub earnings: Option<EarningsCalendar>,
 
     /// Ex-dividend date (Unix timestamp)
@@ -26,6 +28,7 @@ pub struct CalendarEvents {
 
 /// Earnings calendar information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsCalendar {
     /// List of earnings dates (usually contains 1-2 dates)

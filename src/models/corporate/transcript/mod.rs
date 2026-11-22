@@ -107,15 +107,18 @@ pub struct TranscriptContent {
 
 /// Mapping of a speaker ID to speaker information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct SpeakerMapping {
     /// Speaker ID (referenced in paragraphs).
     pub speaker: i32,
     /// Speaker details.
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub speaker_data: SpeakerData,
 }
 
 /// Information about a speaker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct SpeakerData {
     /// Company the speaker represents.
     #[serde(default)]
@@ -144,6 +147,7 @@ pub struct TranscriptData {
 
 /// A paragraph (section spoken by one speaker).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Paragraph {
     /// Speaker ID (use speaker_mapping to get name).
     #[serde(default)]
@@ -164,11 +168,13 @@ pub struct Paragraph {
     /// Only present when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub sentiment: Option<crate::models::sentiment::Sentiment>,
 }
 
 /// A sentence within a paragraph.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Sentence {
     /// Start time in seconds.
     #[serde(default)]
@@ -186,6 +192,7 @@ pub struct Sentence {
 
 /// A word with timing and confidence information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Word {
     /// The word (lowercase).
     #[serde(default)]
@@ -206,6 +213,7 @@ pub struct Word {
 
 /// Metadata about the transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptMetadata {
     /// Date of the earnings call (Unix timestamp).
@@ -247,6 +255,7 @@ pub struct TranscriptMetadata {
 ///
 /// Used when fetching multiple transcripts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptWithMeta {
     /// Event ID.

@@ -15,6 +15,7 @@ where
 
 /// Fund holdings including asset allocation, top holdings, and sector weightings
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TopHoldings {
@@ -52,6 +53,7 @@ pub struct TopHoldings {
 
     /// Equity holdings valuation metrics
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub equity_holdings: Option<EquityHoldings>,
 
     /// Bond holdings metrics
@@ -65,11 +67,13 @@ pub struct TopHoldings {
     /// Sector weightings distribution (flattened from Yahoo's array format)
     #[serde(default, deserialize_with = "deserialize_sector_weightings")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub sector_weightings: Option<SectorWeighting>,
 }
 
 /// Individual holding in the fund
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct Holding {
     /// Stock symbol
@@ -87,6 +91,7 @@ pub struct Holding {
 
 /// Equity holdings valuation metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EquityHoldings {
     /// Price to earnings ratio
@@ -108,6 +113,7 @@ pub struct EquityHoldings {
 
 /// Bond rating distribution
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct BondRating {
     /// US Government bonds percentage
     #[serde(default)]
@@ -152,6 +158,7 @@ pub struct BondRating {
 
 /// Sector weighting distribution (single sector from Yahoo's array format)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct SectorWeighting {
     /// Real estate sector percentage
     #[serde(default, skip_serializing_if = "Option::is_none")]

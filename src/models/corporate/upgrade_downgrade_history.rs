@@ -20,6 +20,7 @@ pub struct UpgradeDowngradeHistory {
 
 /// Individual analyst rating change
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct GradeChange {
     /// Timestamp of the grade change (epoch)
@@ -100,3 +101,6 @@ impl GradeChange {
         }
     }
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(UpgradeDowngradeHistory, history, GradeChange);
