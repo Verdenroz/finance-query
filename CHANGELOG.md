@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- DataFrame conversion for backtest results (#685)
+- DataFrame conversion for batch responses (#681)
 - ToDataFrame trait and derive coverage (#684)
 
 ### 📦 Dependencies
@@ -34,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ```
 ADDED    finance_query::ToDataFrame
+ADDED    finance_query::backtesting::result::EquityPoint::to_dataframe
 ADDED    finance_query::dataframe::ToDataFrame
 ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels::to_dataframe
 ADDED    finance_query::indicators::pivot_points::PivotPoints::to_dataframe
