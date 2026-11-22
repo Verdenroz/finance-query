@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- DataFrame conversion for fundamentals (#683)
 - DataFrame conversion for backtest results (#685)
 - DataFrame conversion for batch responses (#681)
 - ToDataFrame trait and derive coverage (#684)
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Bump soothfast to 0.8.0 (#697)
 - Prepare the types crate split (#682)
 - Bump soothfast to 0.7.0 (#679)
 
@@ -69,6 +71,12 @@ ADDED    finance_query::models::discovery::trending::response::TrendingQuote::to
 ADDED    finance_query::models::filings::company_facts::FactUnit::to_dataframe
 ADDED    finance_query::models::filings::search::EdgarSearchSource::to_dataframe
 ADDED    finance_query::models::filings::submissions::EdgarFiling::to_dataframe
+ADDED    finance_query::models::fundamentals::earnings_surprise::EarningsSurprise::to_dataframe
+ADDED    finance_query::models::fundamentals::short_activity::ShareFloat::to_dataframe
+ADDED    finance_query::models::fundamentals::short_activity::ShortInterest::to_dataframe
+ADDED    finance_query::models::fundamentals::short_activity::ShortVolume::to_dataframe
+ADDED    finance_query::models::fundamentals::ttm::FinancialRatiosTtm::to_dataframe
+ADDED    finance_query::models::fundamentals::ttm::KeyMetricsTtm::to_dataframe
 ADDED    finance_query::models::market::currencies::response::Currency::to_dataframe
 ADDED    finance_query::models::market::exchanges::Exchange::to_dataframe
 ADDED    finance_query::models::market::hours::response::MarketTime::to_dataframe
