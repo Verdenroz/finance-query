@@ -61,6 +61,13 @@ struct Composite {
 }
 
 #[derive(ToDataFrame)]
+struct Json {
+    id: i64,
+    json: serde_json::Value,
+    maybe_json: Option<serde_json::Value>,
+}
+
+#[derive(ToDataFrame)]
 struct Attributes {
     #[dataframe(rename = "ticker")]
     symbol: String,
@@ -188,6 +195,18 @@ fn display_enums_string_lists_and_flattened_structs_become_columns() {
             .len(),
         2
     );
+}
+
+#[test]
+fn json_values_are_skipped() {
+    let row = Json {
+        id: 1,
+        json: serde_json::json!({"a": 1}),
+        maybe_json: None,
+    };
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(schema(&df), columns(&[("id", DataType::Int64)]));
+    assert!(row.json.is_object() && row.maybe_json.is_none());
 }
 
 #[test]

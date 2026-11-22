@@ -174,6 +174,15 @@ fn mapping(ty: &Type, format_param: Option<&Ident>) -> Mapping {
         "FormattedValue" => Mapping::Raw,
         "Vec" if first_generic(&last.arguments).is_some_and(is_string) => Mapping::StrList,
         "DateTime" | "NaiveDate" | "NaiveDateTime" | "NaiveTime" => Mapping::Skip,
+        "Value"
+            if type_path
+                .path
+                .segments
+                .iter()
+                .any(|s| s.ident == "serde_json") =>
+        {
+            Mapping::Skip
+        }
         _ => Mapping::Probe,
     }
 }

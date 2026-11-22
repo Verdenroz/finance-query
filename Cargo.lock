@@ -1697,6 +1697,7 @@ dependencies = [
  "finance-query",
  "proc-macro2",
  "quote",
+ "serde_json",
  "syn 2.0.119",
 ]
 
