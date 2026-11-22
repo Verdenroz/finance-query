@@ -149,6 +149,11 @@ fn scalar_fields_map_to_matching_dtypes() {
         ])
     );
     assert_eq!(df.height(), 1);
+    assert!(
+        df.columns()
+            .iter()
+            .all(|column| column.as_scalar_column().is_some())
+    );
 }
 
 #[test]

@@ -127,10 +127,10 @@ fn field_columns(
     let name = quote! { ::std::format!("{}{}", prefix, #column) };
     let series = |convert: TokenStream| {
         quote! {
-            [#pl::Column::new(
+            [#pl::Column::from(<#pl::Series as #pl::NamedFrom<_, _>>::new(
                 #name.into(),
                 #values.map(#convert).collect::<::std::vec::Vec<_>>(),
-            )]
+            ))]
         }
     };
     let columns = match mapping(inner, format_param) {

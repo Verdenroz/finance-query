@@ -77,7 +77,9 @@ pub mod derive {
     use std::fmt::Display;
     use std::marker::PhantomData;
 
-    use polars::prelude::{Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder};
+    use polars::prelude::{
+        Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, Series,
+    };
 
     pub trait Columns {
         fn columns(rows: &[Option<&Self>], prefix: &str) -> Vec<Column>;
@@ -125,7 +127,7 @@ pub mod derive {
             values: impl Iterator<Item = Option<&'a T>>,
         ) -> Option<Column> {
             let values: Vec<Option<String>> = values.map(|v| v.map(T::to_string)).collect();
-            Some(Column::new(name.into(), values))
+            Some(Column::from(Series::new(name.into(), values)))
         }
     }
 
