@@ -316,15 +316,17 @@ mod tests {
         prices
             .iter()
             .enumerate()
-            .map(|(i, &p)| Candle {
-                timestamp: 4 * DAY + i as i64 * DAY,
-                open: p,
-                high: p * 1.01,
-                low: p * 0.99,
-                close: p,
-                volume: 1_000,
-                adj_close: Some(p),
-                provider_id: None,
+            .map(|(i, &p)| {
+                Candle::__new(
+                    4 * DAY + i as i64 * DAY,
+                    p,
+                    p * 1.01,
+                    p * 0.99,
+                    p,
+                    1_000,
+                    Some(p),
+                    None,
+                )
             })
             .collect()
     }

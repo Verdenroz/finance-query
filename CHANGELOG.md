@@ -15,9 +15,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### ✨ Features
+
+- ToDataFrame trait and derive coverage (#684)
+
+### 📦 Dependencies
+
+- Bump url to 2.5.9 for RUSTSEC-2026-0592 (#686)
+
 ### 🔧 Internal
 
+- Prepare the types crate split (#682)
 - Bump soothfast to 0.7.0 (#679)
+
+---
+
+### 🔍 API surface
+
+```
+ADDED    finance_query::ToDataFrame
+ADDED    finance_query::dataframe::ToDataFrame
+ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels::to_dataframe
+ADDED    finance_query::indicators::pivot_points::PivotPoints::to_dataframe
+ADDED    finance_query::indicators::summary::AroonData::to_dataframe
+ADDED    finance_query::indicators::summary::BollingerBandsData::to_dataframe
+ADDED    finance_query::indicators::summary::BullBearPowerData::to_dataframe
+ADDED    finance_query::indicators::summary::DonchianChannelsData::to_dataframe
+ADDED    finance_query::indicators::summary::ElderRayData::to_dataframe
+ADDED    finance_query::indicators::summary::IchimokuData::to_dataframe
+ADDED    finance_query::indicators::summary::IndicatorsSummary::to_dataframe
+ADDED    finance_query::indicators::summary::KeltnerChannelsData::to_dataframe
+ADDED    finance_query::indicators::summary::MacdData::to_dataframe
+ADDED    finance_query::indicators::summary::StochasticData::to_dataframe
+ADDED    finance_query::indicators::summary::SuperTrendData::to_dataframe
+ADDED    finance_query::indicators::zigzag::ZigZagPoint::to_dataframe
+ADDED    finance_query::models::chart::candle::Candle::to_dataframe
+ADDED    finance_query::models::chart::dividend::Dividend
+ADDED    finance_query::models::chart::dividend::Dividend::to_dataframe
+ADDED    finance_query::models::chart::events::CapitalGain::to_dataframe
+ADDED    finance_query::models::chart::events::Split::to_dataframe
+ADDED    finance_query::models::chart::meta::ChartMeta::to_dataframe
+ADDED    finance_query::models::corporate::news::scraped::News::to_dataframe
+ADDED    finance_query::models::corporate::recommendation::symbol::SimilarSymbol::to_dataframe
+ADDED    finance_query::models::discovery::lookup::quote::LookupQuote::to_dataframe
+ADDED    finance_query::models::discovery::screeners::quote::ScreenerQuote::to_dataframe
+ADDED    finance_query::models::discovery::search::news::SearchNews::to_dataframe
+ADDED    finance_query::models::discovery::search::quote::SearchQuote::to_dataframe
+ADDED    finance_query::models::discovery::search::research::ResearchReport::to_dataframe
+ADDED    finance_query::models::discovery::trending::response::TrendingQuote::to_dataframe
+ADDED    finance_query::models::filings::company_facts::FactUnit::to_dataframe
+ADDED    finance_query::models::filings::search::EdgarSearchSource::to_dataframe
+ADDED    finance_query::models::filings::submissions::EdgarFiling::to_dataframe
+ADDED    finance_query::models::market::currencies::response::Currency::to_dataframe
+ADDED    finance_query::models::market::exchanges::Exchange::to_dataframe
+ADDED    finance_query::models::market::hours::response::MarketTime::to_dataframe
+ADDED    finance_query::models::market::market_summary::response::MarketSummaryQuote::to_dataframe
+ADDED    finance_query::models::options::chain::OptionsQuote::to_dataframe
+ADDED    finance_query::models::options::contract::OptionContract::to_dataframe
+ADDED    finance_query::models::quote::data::Quote::to_dataframe
+ADDED    finance_query::models::sentiment::score::Sentiment::to_dataframe
+REMOVED  finance_query::models::chart::events::Dividend
+CHANGED  finance_query::IndicatorsSummary (body)
+CHANGED  finance_query::News (body)
+CHANGED  finance_query::SearchNews (body)
+CHANGED  finance_query::gdelt::News (body)
+CHANGED  finance_query::indicators::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::heikin_ashi (body)
+CHANGED  finance_query::indicators::heikin_ashi::heikin_ashi (body)
+CHANGED  finance_query::indicators::summary::IndicatorsSummary (body)
+CHANGED  finance_query::models::corporate::news::scraped::News (body)
+CHANGED  finance_query::models::discovery::search::news::SearchNews (body)
+CHANGED  finance_query::providers::provider::Provider::capabilities (body)
+```
 
 
 ## [3.4.0] - 2026-11-18

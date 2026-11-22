@@ -30,6 +30,12 @@ impl SentimentLabel {
     }
 }
 
+impl std::fmt::Display for SentimentLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Sentiment score for a news article or transcript segment.
 ///
 /// Only present when the `sentiment` feature is enabled.

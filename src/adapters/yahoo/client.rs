@@ -448,15 +448,17 @@ impl YahooClient {
         let candles: Vec<crate::models::chart::Candle> = result
             .to_candles()
             .into_iter()
-            .map(|c| crate::models::chart::Candle {
-                timestamp: c.timestamp,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume.max(0),
-                adj_close: c.adj_close,
-                provider_id: Some(crate::Provider::Yahoo),
+            .map(|c| {
+                crate::models::chart::Candle::__new(
+                    c.timestamp,
+                    c.open,
+                    c.high,
+                    c.low,
+                    c.close,
+                    c.volume.max(0),
+                    c.adj_close,
+                    Some(crate::Provider::Yahoo),
+                )
             })
             .collect();
 
@@ -532,15 +534,17 @@ impl YahooClient {
         let candles: Vec<crate::models::chart::Candle> = result
             .to_candles()
             .into_iter()
-            .map(|c| crate::models::chart::Candle {
-                timestamp: c.timestamp,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume.max(0),
-                adj_close: c.adj_close,
-                provider_id: Some(crate::Provider::Yahoo),
+            .map(|c| {
+                crate::models::chart::Candle::__new(
+                    c.timestamp,
+                    c.open,
+                    c.high,
+                    c.low,
+                    c.close,
+                    c.volume.max(0),
+                    c.adj_close,
+                    Some(crate::Provider::Yahoo),
+                )
             })
             .collect();
 

@@ -53,15 +53,17 @@ pub(crate) fn split_chart_symbol(symbol: &str) -> Result<(String, String)> {
 
 pub(crate) fn rows_to_candles(rows: Vec<OhlcRowDTO>) -> Vec<Candle> {
     rows.into_iter()
-        .map(|OhlcRowDTO(ts_ms, open, high, low, close)| Candle {
-            timestamp: (ts_ms / 1000.0) as i64,
-            open,
-            high,
-            low,
-            close,
-            volume: 0,
-            adj_close: None,
-            provider_id: Some(Provider::CoinGecko),
+        .map(|OhlcRowDTO(ts_ms, open, high, low, close)| {
+            Candle::__new(
+                (ts_ms / 1000.0) as i64,
+                open,
+                high,
+                low,
+                close,
+                0,
+                None,
+                Some(Provider::CoinGecko),
+            )
         })
         .collect()
 }
