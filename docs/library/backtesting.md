@@ -1304,7 +1304,7 @@ With the `dataframe` feature enabled, a `BacktestResult` converts to Polars Data
 | Method | Rows | Columns |
 |--------|------|---------|
 | `equity_dataframe()` | One per bar | `timestamp`, `equity`, `drawdown_pct` |
-| `trades_dataframe()` | One per trade | `side` (`LONG`/`SHORT`), entry and exit timestamps and prices, `quantity`, costs, `pnl`, `return_pct`, `is_partial` |
+| `trades_dataframe()` | One per trade | `side` (`LONG`/`SHORT`), `entry_timestamp`, `exit_timestamp`, `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`, `transaction_tax`, `pnl`, `return_pct`, `dividend_income`, `unreinvested_dividends`, `financing_cost`, `is_partial`, `scale_sequence` |
 | `signals_dataframe()` | One per signal | `timestamp`, `price`, `direction`, `strength`, `reason`, `executed` |
 | `metrics.to_dataframe()` | One | One column per `PerformanceMetrics` field |
 
