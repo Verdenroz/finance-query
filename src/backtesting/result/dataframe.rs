@@ -10,6 +10,13 @@ where
     Series::new(name.into(), vec![value]).into()
 }
 
+fn series<T, U>(name: &str, items: &[T], get: impl Fn(&T) -> U) -> Column
+where
+    Series: NamedFrom<Vec<U>, [U]>,
+{
+    Series::new(name.into(), items.iter().map(get).collect::<Vec<_>>()).into()
+}
+
 impl PerformanceMetrics {
     /// Converts the metrics to a single-row polars DataFrame.
     ///
@@ -80,51 +87,26 @@ impl BacktestResult {
     /// `financing_cost` (f64), `is_partial` (bool) and `scale_sequence` (u64). Entry and exit
     /// signals and tags are not included.
     pub fn trades_dataframe(&self) -> PolarsResult<DataFrame> {
-        let trades = &self.trades;
-        let floats = |name: &str, get: fn(&crate::backtesting::Trade) -> f64| {
-            Series::new(name.into(), trades.iter().map(get).collect::<Vec<_>>()).into()
-        };
-        let timestamps = |name: &str, get: fn(&crate::backtesting::Trade) -> i64| {
-            Series::new(name.into(), trades.iter().map(get).collect::<Vec<_>>()).into()
-        };
-
+        let t = &self.trades;
         DataFrame::new(
-            trades.len(),
+            t.len(),
             vec![
-                Series::new(
-                    "side".into(),
-                    trades
-                        .iter()
-                        .map(|t| t.side.to_string())
-                        .collect::<Vec<_>>(),
-                )
-                .into(),
-                timestamps("entry_timestamp", |t| t.entry_timestamp),
-                timestamps("exit_timestamp", |t| t.exit_timestamp),
-                floats("entry_price", |t| t.entry_price),
-                floats("exit_price", |t| t.exit_price),
-                floats("quantity", |t| t.quantity),
-                floats("entry_quantity", |t| t.entry_quantity),
-                floats("commission", |t| t.commission),
-                floats("transaction_tax", |t| t.transaction_tax),
-                floats("pnl", |t| t.pnl),
-                floats("return_pct", |t| t.return_pct),
-                floats("dividend_income", |t| t.dividend_income),
-                floats("unreinvested_dividends", |t| t.unreinvested_dividends),
-                floats("financing_cost", |t| t.financing_cost),
-                Series::new(
-                    "is_partial".into(),
-                    trades.iter().map(|t| t.is_partial).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "scale_sequence".into(),
-                    trades
-                        .iter()
-                        .map(|t| t.scale_sequence as u64)
-                        .collect::<Vec<_>>(),
-                )
-                .into(),
+                series("side", t, |x| x.side.to_string()),
+                series("entry_timestamp", t, |x| x.entry_timestamp),
+                series("exit_timestamp", t, |x| x.exit_timestamp),
+                series("entry_price", t, |x| x.entry_price),
+                series("exit_price", t, |x| x.exit_price),
+                series("quantity", t, |x| x.quantity),
+                series("entry_quantity", t, |x| x.entry_quantity),
+                series("commission", t, |x| x.commission),
+                series("transaction_tax", t, |x| x.transaction_tax),
+                series("pnl", t, |x| x.pnl),
+                series("return_pct", t, |x| x.return_pct),
+                series("dividend_income", t, |x| x.dividend_income),
+                series("unreinvested_dividends", t, |x| x.unreinvested_dividends),
+                series("financing_cost", t, |x| x.financing_cost),
+                series("is_partial", t, |x| x.is_partial),
+                series("scale_sequence", t, |x| x.scale_sequence as u64),
             ],
         )
     }
@@ -135,46 +117,16 @@ impl BacktestResult {
     /// `SignalDirection` display name), `strength` (f64), `reason` (nullable string)
     /// and `executed` (bool). Tags are not included.
     pub fn signals_dataframe(&self) -> PolarsResult<DataFrame> {
-        let signals = &self.signals;
+        let s = &self.signals;
         DataFrame::new(
-            signals.len(),
+            s.len(),
             vec![
-                Series::new(
-                    "timestamp".into(),
-                    signals.iter().map(|s| s.timestamp).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "price".into(),
-                    signals.iter().map(|s| s.price).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "direction".into(),
-                    signals
-                        .iter()
-                        .map(|s| s.direction.to_string())
-                        .collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "strength".into(),
-                    signals.iter().map(|s| s.strength).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "reason".into(),
-                    signals
-                        .iter()
-                        .map(|s| s.reason.as_deref())
-                        .collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "executed".into(),
-                    signals.iter().map(|s| s.executed).collect::<Vec<_>>(),
-                )
-                .into(),
+                series("timestamp", s, |x| x.timestamp),
+                series("price", s, |x| x.price),
+                series("direction", s, |x| x.direction.to_string()),
+                series("strength", s, |x| x.strength),
+                series("reason", s, |x| x.reason.clone()),
+                series("executed", s, |x| x.executed),
             ],
         )
     }
