@@ -17,3 +17,6 @@ pub mod screeners;
 pub mod search;
 /// Trending tickers.
 pub mod trending;
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

@@ -24,6 +24,7 @@ pub struct EarningsTrend {
 
 /// Earnings trend for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsTrendPeriod {
     /// End date for this period
@@ -32,23 +33,28 @@ pub struct EarningsTrendPeriod {
 
     /// Earnings estimates
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub earnings_estimate: Option<EarningsEstimate>,
 
     /// Revenue estimates
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub revenue_estimate: Option<RevenueEstimate>,
 
     /// EPS trend over time
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub eps_trend: Option<EpsTrend>,
 
     /// EPS revisions
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub eps_revisions: Option<EpsRevisions>,
 }
 
 /// Earnings estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsEstimate {
     /// Average estimate
@@ -82,6 +88,7 @@ pub struct EarningsEstimate {
 
 /// Revenue estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct RevenueEstimate {
     /// Average estimate
@@ -111,6 +118,7 @@ pub struct RevenueEstimate {
 
 /// EPS trend over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsTrend {
     /// Current EPS
@@ -140,6 +148,7 @@ pub struct EpsTrend {
 
 /// EPS revision data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsRevisions {
     /// Number of upward revisions in last 7 days
@@ -167,3 +176,6 @@ pub struct EpsRevisions {
     #[serde(default)]
     pub eps_revisions_currency: Option<String>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(EarningsTrend, trend, EarningsTrendPeriod);

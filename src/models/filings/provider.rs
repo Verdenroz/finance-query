@@ -20,6 +20,7 @@ pub struct ProviderFilings {
 
 /// A single SEC filing entry from a provider.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct ProviderFiling {
     /// SEC accession number (unique filing ID).
@@ -34,4 +35,19 @@ pub struct ProviderFiling {
     pub company_name: Option<String>,
     /// SEC CIK number.
     pub cik: Option<String>,
+}
+
+#[cfg(feature = "dataframe")]
+impl ProviderFilings {
+    /// Converts the filings to a polars DataFrame, one row per filing.
+    ///
+    /// Columns are `symbol` followed by the columns of `ProviderFiling::to_dataframe`.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        let mut frame = ProviderFiling::vec_to_dataframe(&self.filings)?;
+        let symbol = Series::new("symbol".into(), vec![self.symbol.as_str(); frame.height()]);
+        frame.insert_column(0, symbol.into())?;
+        Ok(frame)
+    }
 }

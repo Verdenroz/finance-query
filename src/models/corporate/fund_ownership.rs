@@ -20,6 +20,7 @@ pub struct FundOwnership {
 
 /// Individual fund owner
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct FundOwner {
     /// Maximum age of this data in seconds
@@ -50,3 +51,6 @@ pub struct FundOwner {
     #[serde(default)]
     pub report_date: Option<crate::models::quote::FormattedValue<i64>>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(FundOwnership, ownership_list, FundOwner);

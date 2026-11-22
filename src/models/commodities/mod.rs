@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Obtain via [`Providers::commodity`](crate::Providers::commodity)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct CommodityQuote {
     /// Commodity symbol (e.g., `"GCUSD"` for gold, `"CLUSD"` for crude oil)
@@ -26,3 +27,6 @@ pub struct CommodityQuote {
     /// Unix timestamp of the last update
     pub timestamp: Option<i64>,
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

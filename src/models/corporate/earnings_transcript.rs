@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// One earnings call transcript.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EarningsTranscript {
     /// Ticker symbol.

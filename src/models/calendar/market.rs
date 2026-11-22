@@ -163,6 +163,68 @@ pub enum CalendarDetail {
     },
 }
 
+#[cfg(feature = "dataframe")]
+impl CalendarDetail {
+    fn type_name(&self) -> &'static str {
+        match self {
+            Self::Earnings { .. } => "earnings",
+            Self::Ipo { .. } => "ipo",
+            Self::Dividend { .. } => "dividend",
+            Self::Split { .. } => "split",
+            Self::MarketHoliday { .. } => "market_holiday",
+            Self::Economic { .. } => "economic",
+        }
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl MarketCalendarEntry {
+    /// Converts the entries to a polars DataFrame, one row per entry.
+    ///
+    /// Columns are `symbol`, `date` and `event_type` (strings). The detail
+    /// payload is not expanded because its fields differ per type.
+    pub fn vec_to_dataframe(
+        entries: &[Self],
+    ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        DataFrame::new(
+            entries.len(),
+            vec![
+                Series::new(
+                    "symbol".into(),
+                    entries
+                        .iter()
+                        .map(|e| e.symbol.as_deref())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "date".into(),
+                    entries
+                        .iter()
+                        .map(|e| e.date.as_deref())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "event_type".into(),
+                    entries
+                        .iter()
+                        .map(|e| e.detail.type_name())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+            ],
+        )
+    }
+
+    /// Converts this entry to a one-row polars DataFrame; see [`vec_to_dataframe`](Self::vec_to_dataframe).
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        Self::vec_to_dataframe(std::slice::from_ref(self))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
