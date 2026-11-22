@@ -33,6 +33,7 @@ pub struct EconomicSeries {
 
 /// A single observation in a FRED data series.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct MacroObservation {
     /// Date of the observation as `YYYY-MM-DD`
@@ -60,6 +61,7 @@ pub struct MacroSeries {
 /// Obtain via [`fred::treasury_yields`](crate::fred::treasury_yields).
 #[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct TreasuryYield {
     /// Date as `MM/DD/YYYY` (Treasury's native format)
@@ -91,3 +93,39 @@ pub struct TreasuryYield {
     /// 30-year Treasury yield (%)
     pub y30: Option<f64>,
 }
+
+#[cfg(feature = "dataframe")]
+fn observations_frame(
+    series_id: &str,
+    observations: &[MacroObservation],
+) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+    use polars::prelude::*;
+
+    let mut frame = MacroObservation::vec_to_dataframe(observations)?;
+    let id = Series::new("series_id".into(), vec![series_id; frame.height()]);
+    frame.insert_column(0, id.into())?;
+    Ok(frame)
+}
+
+#[cfg(feature = "dataframe")]
+impl EconomicSeries {
+    /// Converts the observations to a polars DataFrame, one row per observation.
+    ///
+    /// Columns are `series_id`, `date` (strings) and `value` (f64, null for missing values).
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        observations_frame(&self.series_id, &self.observations)
+    }
+}
+
+#[cfg(all(feature = "dataframe", feature = "fred"))]
+impl MacroSeries {
+    /// Converts the observations to a polars DataFrame, one row per observation.
+    ///
+    /// Columns are `series_id`, `date` (strings) and `value` (f64, null for missing values).
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        observations_frame(&self.id, &self.observations)
+    }
+}
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

@@ -13,6 +13,7 @@ pub mod cot;
 ///
 /// Obtain via [`Providers::futures`](crate::Providers::futures)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FuturesQuote {
     /// Contract ticker symbol (e.g., `"ESM26"` for E-mini S&P June 2026)
@@ -38,3 +39,6 @@ pub struct FuturesQuote {
     /// Unix timestamp of the last update, in **seconds**
     pub timestamp: Option<i64>,
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

@@ -47,3 +47,15 @@ pub mod forex;
 pub mod futures;
 /// Stock market index data models — Yahoo / Polygon / FMP.
 pub mod indices;
+
+#[cfg(all(test, feature = "dataframe"))]
+pub(crate) mod dataframe_test_util {
+    use polars::prelude::DataFrame;
+
+    pub(crate) fn columns(df: &DataFrame) -> Vec<String> {
+        df.schema()
+            .iter()
+            .map(|(name, dtype)| format!("{name}:{dtype}"))
+            .collect()
+    }
+}

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via [`Providers::forex`](crate::Providers::forex) then
 /// [`.quote()`](crate::domains::ForexPair::quote).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct ForexQuote {
     /// Currency pair symbol (e.g., `"EURUSD"`, `"BTCUSD"`)
@@ -31,3 +32,6 @@ pub struct ForexQuote {
     /// Unix timestamp of the last update
     pub timestamp: Option<i64>,
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
