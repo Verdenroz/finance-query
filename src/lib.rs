@@ -56,6 +56,8 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
+extern crate self as finance_query;
+
 // === Modules ===
 // Public modules
 /// External data source adapters (internal — use the public API modules).
@@ -540,7 +542,19 @@ pub mod format {
 // When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.
 // The derive macro auto-generates DataFrame conversion for all scalar fields.
 #[cfg(feature = "dataframe")]
+mod dataframe;
+#[cfg(feature = "dataframe")]
+pub use dataframe::ToDataFrame;
+#[cfg(feature = "dataframe")]
 pub use finance_query_derive::ToDataFrame;
+
+/// The polars version used in this crate's public signatures.
+///
+/// Use this re-export instead of a direct `polars` dependency so the
+/// versions cannot diverge. polars is bumped only in a semver-major release
+/// of finance-query.
+#[cfg(feature = "dataframe")]
+pub use polars;
 
 // ============================================================================
 // Technical Indicators (requires "indicators" feature)
