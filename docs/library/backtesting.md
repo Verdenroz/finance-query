@@ -1297,6 +1297,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## DataFrame Export
+
+With the `dataframe` feature enabled, a `BacktestResult` converts to Polars DataFrames for analysis:
+
+| Method | Rows | Columns |
+|--------|------|---------|
+| `equity_dataframe()` | One per bar | `timestamp`, `equity`, `drawdown_pct` |
+| `trades_dataframe()` | One per trade | `side` (`LONG`/`SHORT`), entry and exit timestamps and prices, `quantity`, costs, `pnl`, `return_pct`, `is_partial` |
+| `signals_dataframe()` | One per signal | `timestamp`, `price`, `direction`, `strength`, `reason`, `executed` |
+| `metrics.to_dataframe()` | One | One column per `PerformanceMetrics` field |
+
+Timestamps stay as Unix `i64` values, and enum fields such as `side` and `direction` become strings.
+
+```rust no_run feature=backtesting,dataframe
+use finance_query::backtesting::SmaCrossover;
+use finance_query::{Interval, Ticker, TimeRange};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let result = ticker.backtest(
+        SmaCrossover::new(10, 20),
+        Interval::OneDay,
+        TimeRange::OneYear,
+        None,
+    ).await?;
+
+    let equity = result.equity_dataframe()?;
+    let trades = result.trades_dataframe()?;
+    let signals = result.signals_dataframe()?;
+    let metrics = result.metrics.to_dataframe()?;
+
+    println!("{} bars, {} trades, {} signals", equity.height(), trades.height(), signals.height());
+    println!("{}", metrics);
+    Ok(())
+}
+```
+
 ## Best Practices
 
 !!! tip "Design Robust Strategies"
