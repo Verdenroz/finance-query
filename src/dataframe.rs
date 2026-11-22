@@ -122,6 +122,7 @@ pub mod derive {
 
     impl<T> ViaSkip for Probe<T> {}
 
+    #[non_exhaustive]
     pub struct DisplayColumn;
 
     impl DisplayColumn {
@@ -135,6 +136,7 @@ pub mod derive {
         }
     }
 
+    #[non_exhaustive]
     pub struct SkipColumn;
 
     impl SkipColumn {

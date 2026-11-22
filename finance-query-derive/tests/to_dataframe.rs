@@ -42,14 +42,18 @@ struct Scalars {
     k: bool,
     l: Option<u16>,
     m: usize,
+    n: isize,
 }
 
 #[derive(ToDataFrame)]
 struct Composite {
     side: Side,
     maybe_side: Option<Side>,
+    #[dataframe(list)]
     tags: Vec<String>,
+    #[dataframe(list)]
     maybe_tags: Option<Vec<String>>,
+    plain_tags: Vec<String>,
     #[dataframe(flatten)]
     inner: Inner,
     #[dataframe(flatten)]
@@ -126,6 +130,7 @@ fn scalar_fields_map_to_matching_dtypes() {
         k: true,
         l: Some(11),
         m: 12,
+        n: -13,
     };
     let df = row.to_dataframe().unwrap();
     assert_eq!(
@@ -146,6 +151,7 @@ fn scalar_fields_map_to_matching_dtypes() {
             ("k", DataType::Boolean),
             ("l", DataType::UInt32),
             ("m", DataType::UInt64),
+            ("n", DataType::Int64),
         ])
     );
     assert_eq!(df.height(), 1);
@@ -157,12 +163,13 @@ fn scalar_fields_map_to_matching_dtypes() {
 }
 
 #[test]
-fn display_enums_string_lists_and_flattened_structs_become_columns() {
+fn display_enums_marked_lists_and_flattened_structs_become_columns() {
     let row = Composite {
         side: Side::Buy,
         maybe_side: None,
         tags: vec!["x".into(), "y".into()],
         maybe_tags: None,
+        plain_tags: vec!["z".into()],
         inner: inner(),
         maybe_inner: None,
         unflattened: inner(),
@@ -170,7 +177,8 @@ fn display_enums_string_lists_and_flattened_structs_become_columns() {
         map: HashMap::new(),
         rows: vec![1.0],
     };
-    let df = Composite::vec_to_dataframe(&[row]).unwrap();
+    let rows = [row];
+    let df = Composite::vec_to_dataframe(&rows).unwrap();
     let list = DataType::List(Box::new(DataType::String));
     assert_eq!(
         schema(&df),
@@ -190,6 +198,7 @@ fn display_enums_string_lists_and_flattened_structs_become_columns() {
         Some("buy")
     );
     assert_eq!(df.column("maybe_inner_price").unwrap().null_count(), 1);
+    assert_eq!(rows[0].plain_tags.len(), 1);
     assert_eq!(
         df.column("tags")
             .unwrap()

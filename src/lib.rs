@@ -539,8 +539,7 @@ pub mod format {
 // ============================================================================
 // DataFrame support (requires "dataframe" feature)
 // ============================================================================
-// When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.
-// The derive macro auto-generates DataFrame conversion for all scalar fields.
+// When enabled, structs with #[derive(ToDataFrame)] get to_dataframe() and the ToDataFrame trait.
 #[cfg(feature = "dataframe")]
 mod dataframe;
 #[cfg(feature = "dataframe")]

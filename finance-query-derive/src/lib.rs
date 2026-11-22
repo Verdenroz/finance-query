@@ -69,11 +69,15 @@ use syn::{
 /// - `String` → `String`
 /// - `i32`, `i64`, `u32`, `u64`, `f32`, `f64`, `bool` → the matching dtype
 /// - `i8`, `i16` → `Int32`; `u8`, `u16` → `UInt32`
-/// - `usize` → `UInt64`
+/// - `usize` → `UInt64`; `isize` → `Int64`
 /// - `FormattedValue<T>` and `F::Value<T>` → `T`, from the `.raw` value
-/// - `Vec<String>` → `List(String)`
+/// - `Vec<String>` → `List(String)` with `#[dataframe(list)]`, otherwise skipped
 /// - any other type implementing `Display` (enums such as `Provider`) → `String`, via `to_string()`
-/// - chrono date/time types, non-`Display` structs, other `Vec`s and maps → skipped
+/// - chrono date/time types, `serde_json::Value`, non-`Display` structs, other `Vec`s and maps → skipped
+///
+/// Types are matched by name, so a numeric type alias or a `Value` imported
+/// with `use serde_json::Value` falls through to the `Display` rule. Give such
+/// fields `#[dataframe(skip)]` or write the full type.
 ///
 /// # Attributes
 ///
@@ -81,6 +85,7 @@ use syn::{
 /// - `#[dataframe(rename = "name")]` sets the column name.
 /// - `#[dataframe(flatten)]` on a field whose type also derives `ToDataFrame`
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
+/// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
 ///   `finance_query` re-exported under another path.
 ///

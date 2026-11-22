@@ -12,6 +12,7 @@ enum Mapping {
     WidenSigned,
     WidenUnsigned,
     Usize,
+    Isize,
     Raw,
     StrList,
     Probe,
@@ -22,6 +23,7 @@ enum Mapping {
 struct FieldAttrs {
     skip: bool,
     flatten: bool,
+    list: bool,
     rename: Option<String>,
 }
 
@@ -141,8 +143,18 @@ fn field_columns(
         Mapping::WidenSigned => series(quote! { |v| v.map(|v| i32::from(*v)) }),
         Mapping::WidenUnsigned => series(quote! { |v| v.map(|v| u32::from(*v)) }),
         Mapping::Usize => series(quote! { |v| v.map(|v| *v as u64) }),
+        Mapping::Isize => series(quote! { |v| v.map(|v| *v as i64) }),
         Mapping::Raw => series(quote! { |v| v.and_then(|v| v.raw) }),
-        Mapping::StrList => quote! { [#krate::__dataframe::string_list(#name, #values)] },
+        Mapping::StrList if attrs.list => {
+            quote! { [#krate::__dataframe::string_list(#name, #values)] }
+        }
+        _ if attrs.list => {
+            return Err(syn::Error::new_spanned(
+                &field.ty,
+                "`list` requires a `Vec<String>` field",
+            ));
+        }
+        Mapping::StrList => return Ok(None),
         Mapping::Probe => quote! {{
             use #krate::__dataframe::{ViaDisplay as _, ViaSkip as _};
             (&&#krate::__dataframe::Probe::<#inner>(::core::marker::PhantomData))
@@ -175,6 +187,7 @@ fn mapping(ty: &Type, format_param: Option<&Ident>) -> Mapping {
         "i8" | "i16" => Mapping::WidenSigned,
         "u8" | "u16" => Mapping::WidenUnsigned,
         "usize" => Mapping::Usize,
+        "isize" => Mapping::Isize,
         "FormattedValue" => Mapping::Raw,
         "Vec" if first_generic(&last.arguments).is_some_and(is_string) => Mapping::StrList,
         "DateTime" | "NaiveDate" | "NaiveDateTime" | "NaiveTime" => Mapping::Skip,
@@ -203,10 +216,12 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.skip = true;
             } else if meta.path.is_ident("flatten") {
                 attrs.flatten = true;
+            } else if meta.path.is_ident("list") {
+                attrs.list = true;
             } else if meta.path.is_ident("rename") {
                 attrs.rename = Some(meta.value()?.parse::<LitStr>()?.value());
             } else {
-                return Err(meta.error("expected `skip`, `flatten` or `rename = \"...\"`"));
+                return Err(meta.error("expected `skip`, `flatten`, `list` or `rename = \"...\"`"));
             }
             Ok(())
         })?;
