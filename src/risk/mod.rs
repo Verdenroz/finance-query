@@ -250,16 +250,7 @@ mod tests {
     use super::*;
 
     fn make_candle(close: f64) -> Candle {
-        Candle {
-            timestamp: 0,
-            open: close,
-            high: close,
-            low: close,
-            close,
-            volume: 1_000_000,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(0, close, close, close, close, 1_000_000, None, None)
     }
 
     #[test]

@@ -876,3 +876,68 @@ async fn the_latest_built_budget_wins_whichever_instance_calls_first() {
             .is_err()
     );
 }
+
+fn adapter_capabilities(provider: Provider) -> Capability {
+    match provider {
+        Provider::Yahoo => ProviderAdapter::capabilities(&yahoo::YahooProvider::unauthenticated()),
+        #[cfg(feature = "polygon")]
+        Provider::Polygon => ProviderAdapter::capabilities(&polygon::PolygonProvider),
+        #[cfg(feature = "fmp")]
+        Provider::Fmp => ProviderAdapter::capabilities(&fmp::FmpProvider),
+        #[cfg(feature = "alphavantage")]
+        Provider::AlphaVantage => {
+            ProviderAdapter::capabilities(&alphavantage::AlphaVantageProvider)
+        }
+        #[cfg(feature = "crypto")]
+        Provider::CoinGecko => ProviderAdapter::capabilities(&coingecko::CoinGeckoProvider),
+        #[cfg(feature = "fred")]
+        Provider::Fred => ProviderAdapter::capabilities(&fred::FredProvider),
+        #[cfg(feature = "worldbank")]
+        Provider::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
+        #[cfg(feature = "fiscaldata")]
+        Provider::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
+        #[cfg(feature = "bls")]
+        Provider::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
+        #[cfg(feature = "frankfurter")]
+        Provider::Frankfurter => ProviderAdapter::capabilities(&frankfurter::FrankfurterProvider),
+        #[cfg(feature = "binance")]
+        Provider::Binance => ProviderAdapter::capabilities(&binance::BinanceProvider),
+        #[cfg(feature = "kraken")]
+        Provider::Kraken => ProviderAdapter::capabilities(&kraken::KrakenProvider),
+        #[cfg(feature = "finra")]
+        Provider::Finra => ProviderAdapter::capabilities(&finra::FinraProvider),
+        #[cfg(feature = "defi")]
+        Provider::DefiLlama => ProviderAdapter::capabilities(&defillama::DefiLlamaProvider),
+        #[cfg(feature = "gdelt")]
+        Provider::Gdelt => ProviderAdapter::capabilities(&gdelt::GdeltProvider),
+        #[cfg(feature = "cftc")]
+        Provider::Cftc => ProviderAdapter::capabilities(&cftc::CftcProvider),
+        #[cfg(feature = "nasdaq")]
+        Provider::Nasdaq => ProviderAdapter::capabilities(&nasdaq::NasdaqProvider),
+        #[cfg(feature = "wikipedia")]
+        Provider::Wikipedia => ProviderAdapter::capabilities(&wikipedia::WikipediaProvider),
+        #[cfg(any(feature = "housetrades", feature = "senatetrades"))]
+        Provider::CongressTrades => {
+            ProviderAdapter::capabilities(&congresstrades::CongressTradesProvider)
+        }
+        Provider::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
+        Provider::LocalMarketCalendar => {
+            ProviderAdapter::capabilities(&market_calendar::LocalMarketCalendarProvider)
+        }
+        Provider::LocalExchange => {
+            ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
+        }
+        Provider::Custom(_) => Capability::NONE,
+    }
+}
+
+#[test]
+fn provider_capability_table_matches_adapters() {
+    for provider in Provider::all() {
+        assert_eq!(
+            provider.capabilities(),
+            adapter_capabilities(provider),
+            "{provider} table drifted from its adapter accessors"
+        );
+    }
+}

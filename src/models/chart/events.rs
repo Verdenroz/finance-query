@@ -2,6 +2,7 @@
 //!
 //! Contains dividend, split, and capital gain data structures.
 
+pub use super::dividend::Dividend;
 use crate::Provider;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -66,23 +67,6 @@ pub(crate) struct CapitalGainEvent {
     pub amount: f64,
     /// Timestamp of the capital gain distribution
     pub date: i64,
-}
-
-/// Public dividend data
-///
-/// Note: This struct cannot be manually constructed - obtain via `Ticker::dividends()`.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
-pub struct Dividend {
-    /// Timestamp (Unix)
-    pub timestamp: i64,
-    /// Dividend amount per share
-    pub amount: f64,
-
-    /// Which data provider served this data (e.g., "yahoo", "polygon").
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub provider_id: Option<Provider>,
 }
 
 /// Public stock split data
