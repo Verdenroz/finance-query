@@ -4,38 +4,39 @@ use super::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse, BatchNewsResponse,
     BatchOptionsResponse, BatchQuotesResponse, BatchRecommendationsResponse, BatchSplitsResponse,
 };
-use crate::models::chart::{CapitalGain, Dividend, Split};
+use crate::models::chart::{Candle, CapitalGain, Dividend, Split};
 use crate::models::corporate::news::News;
+use crate::models::corporate::recommendation::SimilarSymbol;
+use crate::models::options::Contracts;
+use crate::models::quote::Quote;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::HashMap;
 
 fn stack_by_symbol<T>(
     items: &HashMap<String, T>,
     convert: impl Fn(&T) -> PolarsResult<DataFrame>,
+    empty: impl FnOnce() -> PolarsResult<DataFrame>,
 ) -> PolarsResult<DataFrame> {
     let mut symbols: Vec<&String> = items.keys().collect();
     symbols.sort();
 
-    let mut stacked: Option<DataFrame> = None;
+    let mut stacked = with_symbol(empty()?, "")?;
     for symbol in symbols {
-        let mut frame = convert(&items[symbol])?;
-        let column = Series::new("symbol".into(), vec![symbol.as_str(); frame.height()]);
-        frame.insert_column(0, column.into())?;
-        match stacked.as_mut() {
-            Some(all) => {
-                all.vstack_mut(&frame)?;
-            }
-            None => stacked = Some(frame),
-        }
+        stacked.vstack_mut(&with_symbol(convert(&items[symbol])?, symbol)?)?;
     }
+    stacked.rechunk_mut();
+    Ok(stacked)
+}
 
-    match stacked {
-        Some(all) => Ok(all),
-        None => DataFrame::new(
-            0,
-            vec![Series::new("symbol".into(), Vec::<&str>::new()).into()],
-        ),
-    }
+fn with_symbol(mut frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
+    let column = Series::new("symbol".into(), vec![symbol; frame.height()]);
+    frame.insert_column(0, column.into())?;
+    Ok(frame)
+}
+
+fn rename_symbol(mut frame: DataFrame) -> PolarsResult<DataFrame> {
+    frame.rename("symbol", "recommended_symbol".into())?;
+    Ok(frame)
 }
 
 impl BatchQuotesResponse {
@@ -44,7 +45,11 @@ impl BatchQuotesResponse {
     /// Columns are `symbol` followed by the columns of `Quote::to_dataframe`.
     /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.quotes, |quote| quote.to_dataframe()?.drop("symbol"))
+        stack_by_symbol(
+            &self.quotes,
+            |quote| quote.to_dataframe()?.drop("symbol"),
+            || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),
+        )
     }
 }
 
@@ -55,7 +60,11 @@ impl BatchChartsResponse {
     /// Rows are grouped by symbol in ascending order, candles in chart order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.charts, |chart| chart.to_dataframe())
+        stack_by_symbol(
+            &self.charts,
+            |chart| chart.to_dataframe(),
+            || Candle::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -66,7 +75,11 @@ impl BatchDividendsResponse {
     /// Rows are grouped by symbol in ascending order, dividends in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.dividends, |items| Dividend::vec_to_dataframe(items))
+        stack_by_symbol(
+            &self.dividends,
+            |items| Dividend::vec_to_dataframe(items),
+            || Dividend::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -77,7 +90,11 @@ impl BatchSplitsResponse {
     /// Rows are grouped by symbol in ascending order, splits in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.splits, |items| Split::vec_to_dataframe(items))
+        stack_by_symbol(
+            &self.splits,
+            |items| Split::vec_to_dataframe(items),
+            || Split::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -88,9 +105,11 @@ impl BatchCapitalGainsResponse {
     /// Rows are grouped by symbol in ascending order, gains in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.capital_gains, |items| {
-            CapitalGain::vec_to_dataframe(items)
-        })
+        stack_by_symbol(
+            &self.capital_gains,
+            |items| CapitalGain::vec_to_dataframe(items),
+            || CapitalGain::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -101,7 +120,11 @@ impl BatchNewsResponse {
     /// Rows are grouped by symbol in ascending order, articles in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.news, |items| News::vec_to_dataframe(items))
+        stack_by_symbol(
+            &self.news,
+            |items| News::vec_to_dataframe(items),
+            || News::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -112,11 +135,11 @@ impl BatchRecommendationsResponse {
     /// Rows are grouped by queried symbol in ascending order, recommendations in
     /// stored order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.recommendations, |recommendation| {
-            let mut frame = recommendation.to_dataframe()?;
-            frame.rename("symbol", "recommended_symbol".into())?;
-            Ok(frame)
-        })
+        stack_by_symbol(
+            &self.recommendations,
+            |recommendation| rename_symbol(recommendation.to_dataframe()?),
+            || rename_symbol(SimilarSymbol::vec_to_dataframe(&[])?),
+        )
     }
 }
 
@@ -127,7 +150,16 @@ impl BatchOptionsResponse {
     /// including `option_type`. Rows are grouped by symbol in ascending order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.options, |options| options.to_dataframe())
+        stack_by_symbol(
+            &self.options,
+            |options| options.to_dataframe(),
+            || {
+                let mut frame = Contracts(Vec::new()).to_dataframe()?;
+                let option_type = Series::new("option_type".into(), Vec::<&str>::new());
+                frame.with_column(option_type.into())?;
+                Ok(frame)
+            },
+        )
     }
 }
 
@@ -138,7 +170,11 @@ impl super::BatchIndicatorsResponse {
     /// Columns are `symbol` followed by the columns of `IndicatorsSummary::to_dataframe`.
     /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.indicators, |summary| summary.to_dataframe())
+        stack_by_symbol(
+            &self.indicators,
+            |summary| summary.to_dataframe(),
+            || crate::indicators::IndicatorsSummary::vec_to_dataframe(&[]),
+        )
     }
 }
 
@@ -169,7 +205,7 @@ mod tests {
         }));
         let df = batch.to_dataframe().unwrap();
 
-        assert_eq!(names(&df), ["symbol", "timestamp", "amount"]);
+        assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
         assert_eq!(df.column("symbol").unwrap().dtype(), &DataType::String);
         assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
         assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
@@ -202,7 +238,7 @@ mod tests {
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(
-            names(&df),
+            names(&df)[..5],
             ["symbol", "timestamp", "numerator", "denominator", "ratio"]
         );
         assert_eq!(df.column("ratio").unwrap().dtype(), &DataType::String);
@@ -235,11 +271,25 @@ mod tests {
     }
 
     #[test]
-    fn empty_response_has_symbol_column() {
-        let batch: BatchNewsResponse = response(serde_json::json!({"news": {}, "errors": {}}));
+    fn all_errors_keep_typed_empty_schema() {
+        let batch: BatchDividendsResponse = response(serde_json::json!({
+            "dividends": {},
+            "errors": {"AAPL": "boom"}
+        }));
         let df = batch.to_dataframe().unwrap();
 
-        assert_eq!(names(&df), ["symbol"]);
+        assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.height(), 0);
+
+        let charts: BatchChartsResponse = response(serde_json::json!({
+            "charts": {},
+            "errors": {"AAPL": "boom"}
+        }));
+        let df = charts.to_dataframe().unwrap();
+
+        assert_eq!(names(&df)[..2], ["symbol", "timestamp"]);
+        assert_eq!(df.column("close").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.height(), 0);
     }
 }
