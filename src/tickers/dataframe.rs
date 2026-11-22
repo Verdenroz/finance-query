@@ -4,10 +4,10 @@ use super::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse, BatchNewsResponse,
     BatchOptionsResponse, BatchQuotesResponse, BatchRecommendationsResponse, BatchSplitsResponse,
 };
-use crate::models::chart::{Candle, CapitalGain, Dividend, Split};
+use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::SimilarSymbol;
-use crate::models::options::Contracts;
+use crate::models::options::{Contracts, Options};
 use crate::models::quote::Quote;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::HashMap;
@@ -20,9 +20,15 @@ fn stack_by_symbol<T>(
     let mut symbols: Vec<&String> = items.keys().collect();
     symbols.sort();
 
-    let mut stacked = with_symbol(empty()?, "")?;
-    for symbol in symbols {
-        stacked.vstack_mut(&with_symbol(convert(&items[symbol])?, symbol)?)?;
+    let mut frames = symbols
+        .into_iter()
+        .map(|symbol| with_symbol(convert(&items[symbol])?, symbol));
+    let Some(first) = frames.next() else {
+        return with_symbol(empty()?, "");
+    };
+    let mut stacked = first?;
+    for frame in frames {
+        stacked.vstack_mut(&frame?)?;
     }
     stacked.rechunk_mut();
     Ok(stacked)
@@ -60,11 +66,9 @@ impl BatchChartsResponse {
     /// Rows are grouped by symbol in ascending order, candles in chart order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
-            &self.charts,
-            |chart| chart.to_dataframe(),
-            || Candle::vec_to_dataframe(&[]),
-        )
+        stack_by_symbol(&self.charts, Chart::to_dataframe, || {
+            Candle::vec_to_dataframe(&[])
+        })
     }
 }
 
@@ -150,16 +154,12 @@ impl BatchOptionsResponse {
     /// including `option_type`. Rows are grouped by symbol in ascending order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
-            &self.options,
-            |options| options.to_dataframe(),
-            || {
-                let mut frame = Contracts(Vec::new()).to_dataframe()?;
-                let option_type = Series::new("option_type".into(), Vec::<&str>::new());
-                frame.with_column(option_type.into())?;
-                Ok(frame)
-            },
-        )
+        stack_by_symbol(&self.options, Options::to_dataframe, || {
+            let mut frame = Contracts(Vec::new()).to_dataframe()?;
+            let option_type = Series::new("option_type".into(), Vec::<&str>::new());
+            frame.with_column(option_type.into())?;
+            Ok(frame)
+        })
     }
 }
 
@@ -172,7 +172,7 @@ impl super::BatchIndicatorsResponse {
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
             &self.indicators,
-            |summary| summary.to_dataframe(),
+            crate::indicators::IndicatorsSummary::to_dataframe,
             || crate::indicators::IndicatorsSummary::vec_to_dataframe(&[]),
         )
     }
