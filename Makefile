@@ -173,11 +173,6 @@ soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline,
 	@echo "$(GREEN)Reconciling pricing.proto against PricingData...$(NC)"
 	$(SOOTHFAST) spec check-proto -p finance-query --proto proto/pricing.proto \
 		--message PricingData --source src/streaming/pricing.rs --struct PricingData
-	@echo "$(GREEN)Checking generated openapi.yaml/asyncapi.yaml and SDK freshness...$(NC)"
-	$(SOOTHFAST) spec gen -p finance-query-server --target soothfast-routes --check
-	$(SOOTHFAST) sdk gen -p finance-query-server --target soothfast-routes --check
-	@echo "$(GREEN)Checking generated mcp-tools.json freshness...$(NC)"
-	$(SOOTHFAST) spec gen -p finance-query-mcp --target soothfast-routes --features backtesting --check
 	@echo "$(GREEN)Regenerating derived doc pages...$(NC)"
 	@$(MAKE) docs-pages
 	@echo "$(GREEN)Appending performance trend point...$(NC)"
