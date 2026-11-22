@@ -18,3 +18,7 @@ proc-macro = true
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
+
+[dev-dependencies]
+finance-query = { path = "..", features = ["dataframe"] }
+serde_json = "1"
