@@ -97,6 +97,11 @@ pages = ["perf/summary.md", "coverage.md"]
 title = "Development"
 pages = ["development/contributing.md"]
 
+# Callgrind runs with every CPU feature above x86-64-v2 hidden, so a count
+# does not change with the runner's CPU model.
+[gate]
+cpu = "portable"
+
 # What the CI jobs used to carry as flags. `cargo soothfast ci` reads them here.
 # Only the library has this feature, so it is not a repo-wide [gate] default,
 # which the spec commands of the other crates would inherit.
