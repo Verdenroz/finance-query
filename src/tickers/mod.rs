@@ -4,6 +4,8 @@
 //! for multiple symbols with optimized batch operations.
 
 mod core;
+#[cfg(feature = "dataframe")]
+mod dataframe;
 mod macros;
 
 pub use core::{
