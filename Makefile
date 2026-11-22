@@ -158,7 +158,7 @@ docs: soothfast-cli ## Serve the docs site locally with live reload (run `make d
 
 # Everything soothfast: the merge-base regression gate, living-docs checks,
 # proto reconciliation, derived-page regen, trend, and changelog (the same
-# gates soothfast.yml/deploy.yml run, in one shot). Every step stays inline
+# gates soothfast.yml runs, in one shot). Every step stays inline
 # rather than becoming its own target; run one standalone with
 # `cargo soothfast <cmd>` directly.
 soothfast: soothfast-cli ## Run every soothfast check + refresh: gate, baseline, docs check/coverage, proto, doc regen, trend, changelog
