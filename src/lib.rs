@@ -546,6 +546,9 @@ mod dataframe;
 #[cfg(feature = "dataframe")]
 pub use dataframe::ToDataFrame;
 #[cfg(feature = "dataframe")]
+#[doc(hidden)]
+pub use dataframe::derive as __dataframe;
+#[cfg(feature = "dataframe")]
 pub use finance_query_derive::ToDataFrame;
 
 /// The polars version used in this crate's public signatures.

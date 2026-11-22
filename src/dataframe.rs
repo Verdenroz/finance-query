@@ -29,7 +29,8 @@ pub trait ToDataFrame {
     /// Converts a slice of values to a single DataFrame.
     ///
     /// The default stacks each item's [`to_dataframe`](Self::to_dataframe)
-    /// output vertically and returns an empty frame for an empty slice.
+    /// output vertically. For an empty slice it returns a frame with no
+    /// columns; derived impls return a zero-row frame with the full schema.
     fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame>
     where
         Self: Sized,
@@ -69,3 +70,74 @@ delegate_to_inherent!(
     crate::SearchNewsList,
     crate::SearchQuotes,
 );
+
+/// Support code for `#[derive(ToDataFrame)]`. Not public API.
+#[doc(hidden)]
+pub mod derive {
+    use std::fmt::Display;
+    use std::marker::PhantomData;
+
+    use polars::prelude::{Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder};
+
+    pub trait Columns {
+        fn columns(rows: &[Option<&Self>], prefix: &str) -> Vec<Column>;
+    }
+
+    pub fn string_list<'a>(
+        name: String,
+        values: impl Iterator<Item = Option<&'a Vec<String>>>,
+    ) -> Column {
+        let mut builder = ListStringChunkedBuilder::new(name.into(), 0, 0);
+        for value in values {
+            match value {
+                Some(list) => builder.append_values_iter(list.iter().map(String::as_str)),
+                None => builder.append_null(),
+            }
+        }
+        Column::from(builder.finish().into_series())
+    }
+
+    /// Selects a column builder by whether `T: Display`, resolved by autoref at the call site.
+    pub struct Probe<T>(pub PhantomData<T>);
+
+    pub trait ViaDisplay {
+        fn kind(&self) -> DisplayColumn {
+            DisplayColumn
+        }
+    }
+
+    impl<T: Display> ViaDisplay for &Probe<T> {}
+
+    pub trait ViaSkip {
+        fn kind(&self) -> SkipColumn {
+            SkipColumn
+        }
+    }
+
+    impl<T> ViaSkip for Probe<T> {}
+
+    pub struct DisplayColumn;
+
+    impl DisplayColumn {
+        pub fn column<'a, T: Display + 'a>(
+            self,
+            name: String,
+            values: impl Iterator<Item = Option<&'a T>>,
+        ) -> Option<Column> {
+            let values: Vec<Option<String>> = values.map(|v| v.map(T::to_string)).collect();
+            Some(Column::new(name.into(), values))
+        }
+    }
+
+    pub struct SkipColumn;
+
+    impl SkipColumn {
+        pub fn column<'a, T: 'a>(
+            self,
+            _name: String,
+            _values: impl Iterator<Item = Option<&'a T>>,
+        ) -> Option<Column> {
+            None
+        }
+    }
+}
