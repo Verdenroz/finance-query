@@ -15,13 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
----
+### 🔧 Internal
 
-### 📊 Gate movement
-
-| item | metric | was | now | delta |
-|---|---|---:|---:|---:|
-| `finance_query::ref_bench_tema` | instructions | 5308185.0 | 5029806.0 | -5.2% |
+- Bump soothfast to 0.7.0 (#679)
 
 
 ## [3.4.0] - 2026-11-18
