@@ -13,7 +13,8 @@ use crate::Candle;
 /// backtesting engine's custom-strategy indicator dispatch), rather than
 /// full [`Candle`]s.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct HeikinAshiSeries {
+#[doc(hidden)]
+pub struct HeikinAshiSeries {
     pub open: Vec<f64>,
     pub high: Vec<f64>,
     pub low: Vec<f64>,
@@ -28,7 +29,8 @@ pub(crate) struct HeikinAshiSeries {
 /// - `ha_open = (prev_ha_open + prev_ha_close) / 2` (first bar: `(open + close) / 2`)
 /// - `ha_high = max(high, ha_open, ha_close)`
 /// - `ha_low = min(low, ha_open, ha_close)`
-pub(crate) fn heikin_ashi_raw(
+#[doc(hidden)]
+pub fn heikin_ashi_raw(
     opens: &[f64],
     highs: &[f64],
     lows: &[f64],
