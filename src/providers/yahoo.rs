@@ -8,7 +8,9 @@ use super::{
     FundamentalsProvider, FuturesProvider, IndicesProvider, MarketProvider, OptionsProvider,
     ProviderAdapter, ProviderCore, QuoteProvider,
 };
-use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+#[cfg(test)]
+use crate::adapters::yahoo::client::ClientConfig;
+use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::session::LazySession;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
@@ -25,6 +27,7 @@ impl YahooProvider {
 
     /// A provider whose session has not authenticated yet, for capability
     /// introspection; no request is made until a fetch needs the client.
+    #[cfg(test)]
     pub(crate) fn unauthenticated() -> Self {
         Self::new(Arc::new(LazySession::new(ClientConfig::default())))
     }

@@ -28,6 +28,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # polars is re-exported publicly; a 0.x minor bump is a breaking release of this crate.
+      - dependency-name: "polars"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -132,8 +132,8 @@ impl Capability {
     /// Providers whose `capabilities()` declare this capability, regardless of
     /// which providers are actually configured/feature-enabled in this build.
     ///
-    /// Purely informational — used to make [`crate::FinanceError::NotSupported`]/
-    /// [`crate::FinanceError::NoProviderAvailable`] point at what would need to
+    /// Purely informational — used to make `FinanceError::NotSupported`/
+    /// `FinanceError::NoProviderAvailable` point at what would need to
     /// be enabled (feature flag) and/or routed (`Providers::builder().route(...)`).
     ///
     /// Built-ins only. A registered custom provider never appears here, since

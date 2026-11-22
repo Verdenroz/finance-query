@@ -45,16 +45,16 @@ fn grouped_daily_to_candles(aggs: AggregateResponseDTO) -> Vec<(String, Candle)>
             let ticker = r.ticker.clone()?;
             Some((
                 ticker,
-                Candle {
-                    timestamp: r.timestamp,
-                    open: r.open,
-                    high: r.high,
-                    low: r.low,
-                    close: r.close,
-                    volume: r.volume as i64,
-                    adj_close: None,
-                    provider_id: Some(Provider::Polygon),
-                },
+                Candle::__new(
+                    r.timestamp,
+                    r.open,
+                    r.high,
+                    r.low,
+                    r.close,
+                    r.volume as i64,
+                    None,
+                    Some(Provider::Polygon),
+                ),
             ))
         })
         .collect()

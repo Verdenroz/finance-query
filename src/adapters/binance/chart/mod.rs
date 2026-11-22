@@ -51,16 +51,18 @@ pub(super) fn interval_code(interval: Interval) -> Option<&'static str> {
 pub(super) fn to_candles(klines: Vec<Kline>) -> Vec<Candle> {
     klines
         .into_iter()
-        .map(|k| Candle {
-            timestamp: k.open_time / 1_000,
-            open: k.open,
-            high: k.high,
-            low: k.low,
-            close: k.close,
-            volume: k.volume as i64,
+        .map(|k| {
             // Crypto has no corporate actions, so close is already adjusted.
-            adj_close: Some(k.close),
-            provider_id: Some(Provider::Binance),
+            Candle::__new(
+                k.open_time / 1_000,
+                k.open,
+                k.high,
+                k.low,
+                k.close,
+                k.volume as i64,
+                Some(k.close),
+                Some(Provider::Binance),
+            )
         })
         .collect()
 }
