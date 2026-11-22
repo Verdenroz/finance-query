@@ -37,6 +37,7 @@ pub struct ShortVolume {
 
 /// Share float and shares outstanding.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct ShareFloat {
     /// Ticker symbol.
@@ -117,5 +118,31 @@ mod tests {
             df.column("days_to_cover").unwrap().dtype(),
             &DataType::Float64
         );
+    }
+
+    #[test]
+    fn share_float_dataframe_columns() {
+        let df = ShareFloat::default().to_dataframe().unwrap();
+
+        let names: Vec<_> = df
+            .get_column_names()
+            .iter()
+            .map(|n| n.to_string())
+            .collect();
+        assert_eq!(
+            names[..5],
+            [
+                "symbol",
+                "float_shares",
+                "outstanding_shares",
+                "float_percent",
+                "date"
+            ]
+        );
+        assert_eq!(
+            df.column("float_shares").unwrap().dtype(),
+            &DataType::Float64
+        );
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::String);
     }
 }
