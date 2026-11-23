@@ -51,6 +51,7 @@ pub(crate) fn sma_raw(data: &[f64], period: usize) -> Vec<f64> {
 /// // Third value: (10 + 11 + 12) / 3 = 11.0
 /// assert_eq!(result[2], Some(11.0));
 /// ```
+#[inline]
 pub fn sma(data: &[f64], period: usize) -> Vec<Option<f64>> {
     if period == 0 || data.is_empty() {
         return vec![None; data.len()];
