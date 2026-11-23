@@ -1589,6 +1589,7 @@ dependencies = [
  "csv",
  "ct2rs",
  "finance-query-derive",
+ "finance-query-types",
  "flate2",
  "futures",
  "mockito",
@@ -1675,6 +1676,18 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "finance-query-types"
+version = "3.4.0"
+dependencies = [
+ "finance-query",
+ "finance-query-derive",
+ "polars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

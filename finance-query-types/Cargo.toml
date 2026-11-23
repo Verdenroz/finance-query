@@ -1,0 +1,49 @@
+[package]
+name = "finance-query-types"
+version = "3.4.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Shared data types and constants for the finance-query library"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+homepage = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-types"
+keywords = ["finance", "market-data", "types"]
+categories = ["api-bindings", "finance"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2.0.18"
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
+finance-query-derive = { version = "3.4.0", path = "../finance-query-derive", optional = true }
+
+[features]
+default = []
+dataframe = ["dep:polars", "dep:finance-query-derive"]
+indicators = []
+alphavantage = []
+binance = []
+bls = []
+cftc = []
+crypto = []
+defi = []
+finra = []
+fiscaldata = []
+fmp = []
+frankfurter = []
+fred = []
+gdelt = []
+housetrades = []
+kraken = []
+nasdaq = []
+polygon = []
+senatetrades = []
+wikipedia = []
+worldbank = []
+
+[dev-dependencies]
+finance-query = { path = "..", features = ["full"] }
+
+[package.metadata.docs.rs]
+all-features = true

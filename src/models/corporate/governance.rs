@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// One executive's reported compensation for one fiscal year.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct ExecutiveCompensation {
     /// Ticker symbol.
@@ -45,6 +46,7 @@ pub struct ExecutiveCompensation {
 
 /// Employee headcount as reported on one filing.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EmployeeCount {
     /// Ticker symbol.

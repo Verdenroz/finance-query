@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Company asset profile and information
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AssetProfile {
@@ -120,6 +121,7 @@ pub struct AssetProfile {
 
 /// Company officer information
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CompanyOfficer {

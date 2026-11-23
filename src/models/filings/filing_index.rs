@@ -35,6 +35,7 @@ pub struct EdgarFilingIndexDirectory {
 
 /// Single file entry within an EDGAR filing index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarFilingIndexItem {
     /// File name (e.g., "aapl-20240928.htm").
@@ -49,4 +50,14 @@ pub struct EdgarFilingIndexItem {
     /// filing's own index pages).
     #[serde(default, deserialize_with = "deserialize_size")]
     pub size: Option<u64>,
+}
+
+#[cfg(feature = "dataframe")]
+impl EdgarFilingIndex {
+    /// Converts the filing's files to a polars DataFrame, one row per file.
+    ///
+    /// Columns are `name` and `item_type` (strings) and `size` (u64, null when absent).
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        EdgarFilingIndexItem::vec_to_dataframe(&self.directory.item)
+    }
 }

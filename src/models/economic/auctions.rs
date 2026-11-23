@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 /// [`high_yield`](Self::high_yield) unset, while notes and bonds do the
 /// reverse.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct TreasuryAuction {
     /// Date the row was published (`YYYY-MM-DD`).
@@ -78,6 +79,7 @@ pub struct TreasuryAuction {
 /// Treasury announces terms in stages, so [`offering_amt`](Self::offering_amt)
 /// is unset until the formal announcement lands.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct UpcomingAuction {
     /// Date the schedule was published (`YYYY-MM-DD`).

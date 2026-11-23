@@ -2,13 +2,11 @@
 //!
 //! Contains all data structures and types for Yahoo Finance's chart endpoint.
 
-mod candle;
 #[cfg(feature = "indicators")]
 pub(crate) mod compute;
 mod stock_bars;
 pub use stock_bars::{PriceAdjustment, StockBar, StockBarsRequest};
 mod data;
-mod dividend;
 pub mod dividend_analytics;
 pub mod events;
 pub use events::ChartEvents;
@@ -19,8 +17,8 @@ pub(crate) mod result;
 /// Spark / sparkline submodule.
 pub mod spark;
 
-pub use candle::Candle;
 pub use data::Chart;
 pub use dividend_analytics::DividendAnalytics;
 pub use events::{CapitalGain, Dividend, Split};
+pub use finance_query_types::Candle;
 pub use meta::ChartMeta;

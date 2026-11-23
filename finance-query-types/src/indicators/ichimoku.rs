@@ -44,6 +44,7 @@ pub struct IchimokuResult {
 /// let closes = vec![9.0; 100];
 /// let result = ichimoku(&highs, &lows, &closes, 9, 26, 26, 26).unwrap();
 /// ```
+#[inline]
 pub fn ichimoku(
     highs: &[f64],
     lows: &[f64],

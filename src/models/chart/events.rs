@@ -2,8 +2,8 @@
 //!
 //! Contains dividend, split, and capital gain data structures.
 
-pub use super::dividend::Dividend;
 use crate::Provider;
+pub use finance_query_types::Dividend;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -203,11 +203,7 @@ impl ChartEvents {
                 let mut dividends: Vec<Dividend> = self
                     .dividends
                     .values()
-                    .map(|d| Dividend {
-                        timestamp: d.date,
-                        amount: d.amount,
-                        provider_id: None,
-                    })
+                    .map(|d| Dividend::__new(d.date, d.amount, None))
                     .collect();
                 dividends.sort_by_key(|d| d.timestamp);
                 dividends

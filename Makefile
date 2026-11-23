@@ -206,7 +206,7 @@ prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.ym
 # Version bumping
 # =============================================================================
 
-bump: soothfast-cli ## Bump version for core + server + mcp + derive (usage: make bump VERSION=x.y.z)
+bump: soothfast-cli ## Bump version for core + server + mcp + derive + types (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif
@@ -215,12 +215,17 @@ endif
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' Cargo.toml
 	@# Update finance-query-derive dependency version in root Cargo.toml
 	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' Cargo.toml
+	@# Update finance-query-types dependency version in root Cargo.toml
+	@sed -i 's/finance-query-types = { version = "[^"]*"/finance-query-types = { version = "$(VERSION)"/' Cargo.toml
 	@# Update server Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' server/Cargo.toml
 	@# Update MCP Cargo.toml (lockstepped with core/server, not independently versioned)
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-mcp/Cargo.toml
 	@# Update derive Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-derive/Cargo.toml
+	@# Update types Cargo.toml and its derive dependency version
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-types/Cargo.toml
+	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' finance-query-types/Cargo.toml
 	@# Update the MCP Registry listing (publish.yml checks it against the tag)
 	@sed -i 's/^  "version": "[^"]*"/  "version": "$(VERSION)"/' server.json
 	@# The API specs version independently of the crates: the spec gate reads
@@ -235,6 +240,7 @@ endif
 	@echo "  - server/Cargo.toml"
 	@echo "  - finance-query-mcp/Cargo.toml"
 	@echo "  - finance-query-derive/Cargo.toml"
+	@echo "  - finance-query-types/Cargo.toml"
 	@echo "  - server.json"
 	@echo "  - docs/server/api/openapi.md"
 	@echo "  - docs/server/api/asyncapi.md"

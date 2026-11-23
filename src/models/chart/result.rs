@@ -57,16 +57,9 @@ impl ChartResult {
                 let volume = volumes.and_then(|v| v.get(i)).and_then(|v| *v).unwrap_or(0);
                 let adj_close = adj_closes.and_then(|ac| ac.get(i)).and_then(|v| *v);
 
-                Some(Candle {
-                    timestamp: ts,
-                    open,
-                    high,
-                    low,
-                    close,
-                    volume,
-                    adj_close,
-                    provider_id: None,
-                })
+                Some(Candle::__new(
+                    ts, open, high, low, close, volume, adj_close, None,
+                ))
             })
             .collect()
     }

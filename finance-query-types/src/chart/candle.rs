@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 pub struct Candle {
     /// Timestamp (Unix)
     pub timestamp: i64,
