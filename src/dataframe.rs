@@ -13,21 +13,63 @@ macro_rules! delegate_to_inherent {
     };
 }
 
+macro_rules! delegate_rows_to_inherent {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            impl ToDataFrame for $ty {
+                fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+                    <$ty>::to_dataframe(self)
+                }
+
+                fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+                    <$ty>::vec_to_dataframe(items)
+                }
+            }
+        )*
+    };
+}
+
+delegate_rows_to_inherent!(crate::CalendarEvent, crate::MarketCalendarEntry);
+
 delegate_to_inherent!(
+    crate::BatchCapitalGainsResponse,
+    crate::BatchChartsResponse,
+    crate::BatchDividendsResponse,
+    crate::BatchNewsResponse,
+    crate::BatchOptionsResponse,
+    crate::BatchQuotesResponse,
+    crate::BatchRecommendationsResponse,
+    crate::BatchSplitsResponse,
     crate::Chart,
     crate::Contracts,
+    crate::EconomicSeries,
+    crate::EdgarFilingIndex,
     crate::EdgarFilingRecent,
     crate::EdgarSearchResults,
     crate::FactConcept,
+    crate::FinancialStatement,
     crate::LookupResults,
     crate::MarketHours,
     crate::Options,
+    crate::ProviderFilings,
     crate::Recommendation,
     crate::ResearchReports,
     crate::ScreenerResults,
     crate::SearchNewsList,
     crate::SearchQuotes,
 );
+
+#[cfg(feature = "cftc")]
+delegate_to_inherent!(crate::models::futures::cot::CommitmentsOfTraders);
+
+#[cfg(feature = "fred")]
+delegate_to_inherent!(crate::models::economic::MacroSeries);
+
+#[cfg(feature = "indicators")]
+delegate_to_inherent!(crate::BatchIndicatorsResponse);
+
+#[cfg(feature = "backtesting")]
+delegate_to_inherent!(crate::backtesting::PerformanceMetrics);
 
 #[cfg(test)]
 mod tests {
@@ -145,6 +187,32 @@ mod tests {
         let unitless =
             <crate::FactConcept as super::ToDataFrame>::vec_to_dataframe(&concepts[1..]).unwrap();
         assert_eq!(unitless.width(), 0);
+    }
+
+    #[test]
+    fn calendar_rows_keep_schema_through_the_trait() {
+        let events = <crate::CalendarEvent as super::ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+        assert_eq!(
+            schema(&events),
+            schema(&crate::CalendarEvent::vec_to_dataframe(&[]).unwrap())
+        );
+        assert!(events.width() > 0);
+        let entries =
+            <crate::MarketCalendarEntry as super::ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+        assert!(entries.width() > 0);
+    }
+
+    #[test]
+    fn row_wrappers_convert_through_the_trait() {
+        fn frame<T: super::ToDataFrame>(value: &T) -> DataFrame {
+            value.to_dataframe().unwrap()
+        }
+        let history: crate::quote::EarningsHistory =
+            serde_json::from_value(serde_json::json!({"history": []})).unwrap();
+        assert_eq!(
+            schema(&frame(&history)),
+            schema(&history.to_dataframe().unwrap())
+        );
     }
 
     #[cfg(feature = "indicators")]

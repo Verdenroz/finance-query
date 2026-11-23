@@ -16,6 +16,14 @@ macro_rules! rows_to_dataframe {
                 <$row>::vec_to_dataframe(&self.$field)
             }
         }
+
+        impl crate::ToDataFrame for $wrapper {
+            fn to_dataframe(
+                &self,
+            ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+                <$wrapper>::to_dataframe(self)
+            }
+        }
     };
 }
 
