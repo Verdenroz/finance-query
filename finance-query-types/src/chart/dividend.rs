@@ -6,7 +6,11 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::dividends()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 pub struct Dividend {
     /// Timestamp (Unix)
     pub timestamp: i64,

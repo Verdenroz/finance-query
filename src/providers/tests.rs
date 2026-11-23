@@ -523,11 +523,12 @@ fn id_for(provider: Provider) -> &'static str {
         Provider::LocalMarketCalendar => "local_market_calendar",
         Provider::LocalExchange => "local_exchange",
         Provider::Custom(id) => id.as_str(),
+        other => unreachable!("unpinned provider {other}"),
     }
 }
 
-/// The match in `id_for` catches a variant missing from the pin; this catches
-/// one missing from `all()`, which is a hand-maintained list.
+/// `id_for` panics on a variant missing from the pin, but only for variants
+/// `all()` lists; this catches one missing from that hand-maintained list.
 #[test]
 fn every_variant_has_its_serialized_form_pinned() {
     const EXPECTED: usize = 4
@@ -928,6 +929,7 @@ fn adapter_capabilities(provider: Provider) -> Capability {
             ProviderAdapter::capabilities(&local_exchanges::LocalExchangeProvider)
         }
         Provider::Custom(_) => Capability::NONE,
+        other => unreachable!("unmapped provider {other}"),
     }
 }
 

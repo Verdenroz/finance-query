@@ -68,7 +68,6 @@ impl Interval {
     ///
     /// Intraday counts assume a 6.5-hour US session over 252 trading days;
     /// daily and coarser follow the calendar.
-    #[cfg(feature = "backtesting")]
     pub const fn bars_per_year(self) -> f64 {
         match self {
             Interval::OneMinute => 98_280.0,
@@ -90,8 +89,8 @@ impl Interval {
     ///
     /// Calendar approximations match [`TimeRange::approx_duration_secs`](super::TimeRange::approx_duration_secs): a
     /// month is 30 days, so a quarter is 90.
-    #[cfg(any(feature = "backtesting", feature = "binance", feature = "kraken"))]
-    pub(crate) const fn duration_secs(self) -> i64 {
+    #[doc(hidden)]
+    pub const fn duration_secs(self) -> i64 {
         match self {
             Interval::OneMinute => 60,
             Interval::TwoMinutes => 120,
@@ -175,7 +174,6 @@ mod tests {
         assert_eq!("bogus".parse::<Interval>(), Err(()));
     }
 
-    #[cfg(any(feature = "backtesting", feature = "binance", feature = "kraken"))]
     #[test]
     fn test_interval_duration_secs() {
         use super::super::TimeRange;

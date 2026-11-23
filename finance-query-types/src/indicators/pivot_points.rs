@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 
 /// Pivot point support/resistance levels for a single bar.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[non_exhaustive]
 pub struct PivotPoints {
     /// Central pivot point: `(high + low + close) / 3`

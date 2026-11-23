@@ -65,19 +65,17 @@ pub use health::ProviderHealth;
 pub use retry::RetryPolicy;
 
 mod build;
-mod capability;
 mod convert;
 mod operation;
-mod provider;
 mod routes;
 mod set;
 
 pub(crate) use build::build_providers;
-pub use capability::Capability;
 #[allow(unused_imports)] // each is used only by a feature-gated provider bridge
 pub(crate) use convert::{build_financial_statement, build_options, range_to_dates};
+pub use finance_query_types::Capability;
+pub use finance_query_types::{CustomId, Provider};
 pub use operation::Operation;
-pub use provider::{CustomId, Provider};
 pub use routes::{Fetch, Routes};
 pub use set::ProviderSet;
 
