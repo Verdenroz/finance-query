@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-derive", "finance-query-mcp"]
+members = ["server", "finance-query-derive", "finance-query-types", "finance-query-mcp"]
 resolver = "2"
 
 [package]
@@ -74,6 +74,7 @@ base64 = "0.22"
 # Optional: DataFrame support
 polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
+finance-query-types = { version = "3.4.0", path = "finance-query-types" }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
 csv = { version = "1", optional = true }
@@ -130,58 +131,58 @@ full = [
     "senatetrades",
 ]
 # Enable DataFrame conversions with polars
-dataframe = ["dep:polars"]
+dataframe = ["dep:polars", "finance-query-types/dataframe"]
 # Enable technical analysis indicators
-indicators = []
+indicators = ["finance-query-types/indicators"]
 # Enable backtesting engine for strategy simulation (requires indicators)
 backtesting = ["indicators", "dep:rayon"]
 # Enable FRED API and US Treasury yield curve
-fred = ["dep:csv"]
+fred = ["dep:csv", "finance-query-types/fred"]
 # Enable CoinGecko cryptocurrency data
-crypto = []
+crypto = ["finance-query-types/crypto"]
 # Enable World Bank Open Data global macro indicators (keyless)
-worldbank = []
+worldbank = ["finance-query-types/worldbank"]
 # Enable US Treasury FiscalData federal debt/interest statistics (keyless)
-fiscaldata = []
+fiscaldata = ["finance-query-types/fiscaldata"]
 # Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
-bls = []
+bls = ["finance-query-types/bls"]
 # Enable Frankfurter ECB reference exchange rates (keyless forex)
-frankfurter = []
+frankfurter = ["finance-query-types/frankfurter"]
 # Enable Binance public market data (keyless crypto quotes + OHLCV)
-binance = []
+binance = ["finance-query-types/binance"]
 # Enable Kraken public market data (keyless crypto, US-accessible)
-kraken = []
+kraken = ["finance-query-types/kraken"]
 # Enable FINRA daily short-sale volume (free, non-commercial use)
-finra = []
+finra = ["finance-query-types/finra"]
 # Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
 openfigi = []
 # Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
-defi = []
+defi = ["finance-query-types/defi"]
 # Enable GDELT DOC 2.0 global news search (keyless)
-gdelt = []
+gdelt = ["finance-query-types/gdelt"]
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
-cftc = []
+cftc = ["finance-query-types/cftc"]
 # Enable Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless)
-nasdaq = []
+nasdaq = ["finance-query-types/nasdaq"]
 # Enable Wikipedia S&P 500 index-constituent table scraping (keyless)
-wikipedia = []
+wikipedia = ["finance-query-types/wikipedia"]
 # Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
 secftd = ["dep:zip"]
 # Enable House of Representatives Periodic Transaction Report disclosures (keyless)
-housetrades = ["dep:zip", "dep:flate2"]
+housetrades = ["dep:zip", "dep:flate2", "finance-query-types/housetrades"]
 # Enable Senate Periodic Transaction Report disclosures (keyless, headless-Chromium)
-senatetrades = ["dep:chromiumoxide"]
+senatetrades = ["dep:chromiumoxide", "finance-query-types/senatetrades"]
 # Expose internal parsers to `fuzz/` targets. Never enabled by `full` or a
 # normal build: it widens the public surface for fuzzing only.
 fuzzing = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
-alphavantage = []
+alphavantage = ["finance-query-types/alphavantage"]
 # Enable Polygon.io financial data API
-polygon = []
+polygon = ["finance-query-types/polygon"]
 # Enable Financial Modeling Prep (FMP) financial data API
-fmp = ["dep:csv", "dep:chrono-tz"]
+fmp = ["dep:csv", "dep:chrono-tz", "finance-query-types/fmp"]
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
 risk = ["indicators"]
 # Enable translation of human-readable response fields: built-in dictionary
@@ -243,7 +244,7 @@ tokio = { version = "1", features = ["full", "test-util"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
 # never compiled into the published `finance-query` crate.
-soothfast = { version = "0.7.0", features = ["runner"] }
+soothfast = { version = "0.8.0", features = ["runner"] }
 
 [[bench]]
 name = "ticker"

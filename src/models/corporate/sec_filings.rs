@@ -20,6 +20,7 @@ pub struct SecFilings {
 
 /// Individual SEC filing
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct SecFiling {
     /// Maximum age of this data in seconds
@@ -54,6 +55,7 @@ pub struct SecFiling {
 
 /// SEC filing exhibit
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct SecExhibit {
     /// Type/number of exhibit (e.g., "EX-21.1", "10-K")
@@ -65,3 +67,6 @@ pub struct SecExhibit {
     #[serde(default)]
     pub url: Option<String>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(SecFilings, filings, SecFiling);

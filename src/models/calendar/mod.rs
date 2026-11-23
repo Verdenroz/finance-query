@@ -91,6 +91,70 @@ impl CalendarEvent {
     }
 }
 
+#[cfg(feature = "dataframe")]
+impl EventKind {
+    fn type_name(&self) -> &'static str {
+        match self {
+            Self::Earnings { .. } => "earnings",
+            Self::ExDividend { .. } => "ex_dividend",
+            Self::DividendPayment { .. } => "dividend_payment",
+            Self::OptionsExpiration { .. } => "options_expiration",
+            #[cfg(feature = "fred")]
+            Self::EconomicRelease { .. } => "economic_release",
+        }
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl CalendarEvent {
+    /// Converts the events to a polars DataFrame, one row per event.
+    ///
+    /// Columns are `timestamp` (i64), `date`, `symbol` and `event_type` (strings).
+    /// The event payload is not expanded because its fields differ per type.
+    pub fn vec_to_dataframe(
+        events: &[Self],
+    ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        DataFrame::new(
+            events.len(),
+            vec![
+                Series::new(
+                    "timestamp".into(),
+                    events.iter().map(|e| e.timestamp).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "date".into(),
+                    events.iter().map(|e| e.date.as_str()).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "symbol".into(),
+                    events
+                        .iter()
+                        .map(|e| e.symbol.as_deref())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "event_type".into(),
+                    events
+                        .iter()
+                        .map(|e| e.event.type_name())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+            ],
+        )
+    }
+
+    /// Converts this event to a one-row polars DataFrame; see [`vec_to_dataframe`](Self::vec_to_dataframe).
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        Self::vec_to_dataframe(std::slice::from_ref(self))
+    }
+}
+
 /// Format a Unix-second timestamp as an ISO `YYYY-MM-DD` UTC date string.
 pub(crate) fn iso_date(timestamp: i64) -> String {
     DateTime::<Utc>::from_timestamp(timestamp, 0)
@@ -657,3 +721,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

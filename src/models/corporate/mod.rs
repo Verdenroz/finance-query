@@ -2,6 +2,23 @@
 //!
 //! Company profiles, officers, ownership, insider activity, and related data.
 
+#[cfg(feature = "dataframe")]
+macro_rules! rows_to_dataframe {
+    ($wrapper:ty, $field:ident, $row:ty) => {
+        impl $wrapper {
+            /// Converts the rows to a polars DataFrame, one row per entry.
+            ///
+            /// Columns are those of the row type's `to_dataframe`; an empty list
+            /// yields a zero-row frame with the full schema.
+            pub fn to_dataframe(
+                &self,
+            ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+                <$row>::vec_to_dataframe(&self.$field)
+            }
+        }
+    };
+}
+
 // Sub-capability directories
 /// Executive compensation and employee headcount.
 pub mod governance;
@@ -56,3 +73,6 @@ pub use sec_filings::SecFilings;
 pub use summary_profile::SummaryProfile;
 pub use top_holdings::TopHoldings;
 pub use upgrade_downgrade_history::UpgradeDowngradeHistory;
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

@@ -39,16 +39,18 @@ pub(super) fn interval_minutes(interval: Interval) -> Option<u32> {
 /// to an integer to fit `Candle::volume`, so sub-unit volumes round toward zero.
 pub(super) fn to_candles(raw: Vec<KrakenCandle>) -> Vec<Candle> {
     raw.into_iter()
-        .map(|c| Candle {
-            timestamp: c.time,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-            volume: c.volume as i64,
+        .map(|c| {
             // Crypto has no corporate actions, so close is already adjusted.
-            adj_close: Some(c.close),
-            provider_id: Some(Provider::Kraken),
+            Candle::__new(
+                c.time,
+                c.open,
+                c.high,
+                c.low,
+                c.close,
+                c.volume as i64,
+                Some(c.close),
+                Some(Provider::Kraken),
+            )
         })
         .collect()
 }

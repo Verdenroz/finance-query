@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 /// Valuation, capital-efficiency, and working-capital metrics over the
 /// trailing twelve months.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct KeyMetricsTtm {
     /// Ticker symbol.
@@ -154,6 +155,7 @@ pub struct KeyMetricsTtm {
 /// Margin, turnover, liquidity, coverage, valuation, and per-share ratios over
 /// the trailing twelve months.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FinancialRatiosTtm {
     /// Ticker symbol.
@@ -341,4 +343,42 @@ pub struct FinancialRatiosTtm {
     /// Effective tax rate (fraction).
     #[serde(alias = "effectiveTaxRateTTM")]
     pub effective_tax_rate: Option<f64>,
+}
+
+#[cfg(all(test, feature = "dataframe"))]
+mod tests {
+    use super::*;
+    use polars::prelude::DataType;
+
+    #[test]
+    fn key_metrics_dataframe_is_single_row() {
+        let df = KeyMetricsTtm::default().to_dataframe().unwrap();
+
+        let names: Vec<_> = df
+            .get_column_names()
+            .iter()
+            .map(|n| n.to_string())
+            .collect();
+        assert_eq!(names[..3], ["symbol", "market_cap", "enterprise_value"]);
+        assert_eq!(df.column("symbol").unwrap().dtype(), &DataType::String);
+        assert_eq!(df.column("market_cap").unwrap().dtype(), &DataType::Float64);
+        assert_eq!(df.height(), 1);
+    }
+
+    #[test]
+    fn financial_ratios_dataframe_is_single_row() {
+        let df = FinancialRatiosTtm::default().to_dataframe().unwrap();
+
+        let names: Vec<_> = df
+            .get_column_names()
+            .iter()
+            .map(|n| n.to_string())
+            .collect();
+        assert_eq!(names[..2], ["symbol", "gross_profit_margin"]);
+        assert_eq!(
+            df.column("payout_ratio").unwrap().dtype(),
+            &DataType::Float64
+        );
+        assert_eq!(df.height(), 1);
+    }
 }

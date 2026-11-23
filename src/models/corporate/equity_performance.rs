@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Equity performance data comparing stock returns to benchmark
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EquityPerformance {
@@ -16,19 +17,23 @@ pub struct EquityPerformance {
 
     /// Benchmark information
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub benchmark: Option<Benchmark>,
 
     /// Stock performance overview across multiple time periods
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance_overview: Option<PerformanceOverview>,
 
     /// Benchmark performance overview for comparison
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance_overview_benchmark: Option<PerformanceOverview>,
 }
 
 /// Benchmark information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct Benchmark {
     /// Benchmark symbol (e.g., "^GSPC" for S&P 500)
@@ -42,6 +47,7 @@ pub struct Benchmark {
 
 /// Performance metrics across multiple time periods
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverview {
     /// Date the performance data is as of (Unix timestamp)

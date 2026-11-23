@@ -20,6 +20,7 @@ pub struct EarningsHistory {
 
 /// Single historical earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsHistoryEntry {
     /// Maximum age of this data in seconds
@@ -54,3 +55,6 @@ pub struct EarningsHistoryEntry {
     #[serde(default)]
     pub surprise_percent: Option<crate::models::quote::FormattedValue<f64>>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(EarningsHistory, history, EarningsHistoryEntry);

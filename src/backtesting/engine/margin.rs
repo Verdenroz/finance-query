@@ -307,11 +307,7 @@ mod tests {
     #[test]
     fn test_margin_call_accounts_for_the_current_bar_dividend() {
         let candles = make_candles(&[100.0, 100.0, 100.0, 85.0, 85.0]);
-        let dividends = vec![Dividend {
-            timestamp: 3,
-            amount: 20.0,
-            provider_id: None,
-        }];
+        let dividends = vec![Dividend::__new(3, 20.0, None)];
         let engine = BacktestEngine::new(levered_config(3.0));
 
         let without = engine.run("TEST", &candles, EnterLongHold).unwrap();
@@ -432,11 +428,7 @@ mod tests {
     #[test]
     fn test_max_leverage_used_accounts_for_the_current_bar_dividend() {
         let candles = make_candles(&[100.0; 6]);
-        let dividends = vec![Dividend {
-            timestamp: 1,
-            amount: 5.0,
-            provider_id: None,
-        }];
+        let dividends = vec![Dividend::__new(1, 5.0, None)];
         let engine = BacktestEngine::new(levered_config(2.0));
 
         let without = engine.run("TEST", &candles, EnterLongHold).unwrap();

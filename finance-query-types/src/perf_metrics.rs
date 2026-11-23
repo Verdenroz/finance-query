@@ -19,7 +19,8 @@
 /// Returns `f64::MAX` when there are no losses and wins are positive
 /// (unbounded edge), `0.0` for other degenerate inputs (no wins, or a zero
 /// win rate).
-pub(crate) fn kelly_criterion(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
+#[doc(hidden)]
+pub fn kelly_criterion(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
     let abs_loss = avg_loss_pct.abs();
     if abs_loss == 0.0 {
         return if avg_win_pct > 0.0 { f64::MAX } else { 0.0 };
@@ -36,7 +37,8 @@ pub(crate) fn kelly_criterion(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64
 /// More general than Sharpe — considers the full return distribution rather
 /// than only mean and standard deviation. Returns `f64::MAX` when there are
 /// no negative returns, `0.0` when there are also no positive returns.
-pub(crate) fn omega_ratio(returns: &[f64]) -> f64 {
+#[doc(hidden)]
+pub fn omega_ratio(returns: &[f64]) -> f64 {
     let gains: f64 = returns.iter().map(|&r| r.max(0.0)).sum();
     let losses: f64 = returns.iter().map(|&r| (-r).max(0.0)).sum();
     if losses == 0.0 {
@@ -52,7 +54,8 @@ pub(crate) fn omega_ratio(returns: &[f64]) -> f64 {
 ///
 /// Unlike max drawdown, penalises both depth and duration — a long shallow
 /// drawdown scores higher than a brief deep one.
-pub(crate) fn ulcer_index(drawdown_pcts: &[f64]) -> f64 {
+#[doc(hidden)]
+pub fn ulcer_index(drawdown_pcts: &[f64]) -> f64 {
     if drawdown_pcts.is_empty() {
         return 0.0;
     }
@@ -83,7 +86,8 @@ fn excess_stats(strategy_returns: &[f64], benchmark_returns: &[f64]) -> Option<(
 ///
 /// `None` when the series differ in length or fewer than 2 aligned
 /// observations are available.
-pub(crate) fn tracking_error(
+#[doc(hidden)]
+pub fn tracking_error(
     strategy_returns: &[f64],
     benchmark_returns: &[f64],
     periods_per_year: f64,
@@ -96,7 +100,8 @@ pub(crate) fn tracking_error(
 ///
 /// `None` when the series differ in length, fewer than 2 aligned
 /// observations are available, or tracking error is zero.
-pub(crate) fn information_ratio(
+#[doc(hidden)]
+pub fn information_ratio(
     strategy_returns: &[f64],
     benchmark_returns: &[f64],
     periods_per_year: f64,

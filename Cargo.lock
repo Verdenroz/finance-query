@@ -1589,6 +1589,7 @@ dependencies = [
  "csv",
  "ct2rs",
  "finance-query-derive",
+ "finance-query-types",
  "flate2",
  "futures",
  "mockito",
@@ -1675,6 +1676,18 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "finance-query-types"
+version = "3.4.0"
+dependencies = [
+ "finance-query",
+ "finance-query-derive",
+ "polars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4377,9 +4390,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a77d7d1664146c9434146a7b2bfc52c5f8dd6bfa825835a47d4524e8dc8e391"
+checksum = "3b2ee65579853ea5d8b7500dd0a6d9b1a7a438fce82aada068dbe21ed86ad619"
 dependencies = [
  "soothfast-macros",
  "soothfast-measure",
@@ -4388,9 +4401,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-macros"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c755635eaf4c64b185f955858fc01684f1a324e51ed25b720141b5191017cc6"
+checksum = "8a38fc6010729ee64da60b69662e16cfb1ac5c7f282afae9212035ad9bb13244"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4399,9 +4412,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-measure"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "840d67e1461a34da1806139113bbe3bf47b94cfd317a80af1dc01b955939eed2"
+checksum = "a37ffc8c2e3280c32296e418ba1b45ac53a62722f25f68561fcac891613f5624"
 dependencies = [
  "libc",
  "soothfast-registry",
@@ -4409,9 +4422,9 @@ dependencies = [
 
 [[package]]
 name = "soothfast-registry"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e8d22c56370d09b8e7b3e897a42189079d073ef105986258841df8ee6b5c6de"
+checksum = "846f62b5349bbc33c3ad7dfd20abbafff37d6cce4e7ae4ed6fe4d161b9506043"
 dependencies = [
  "linkme",
 ]

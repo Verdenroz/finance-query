@@ -61,6 +61,7 @@ pub struct EarningsChart {
 
 /// Quarterly earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyEarnings {
     /// Date/quarter identifier
@@ -107,6 +108,7 @@ pub struct FinancialsChart {
 
 /// Yearly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct YearlyFinancials {
     /// Date
@@ -124,6 +126,7 @@ pub struct YearlyFinancials {
 
 /// Quarterly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyFinancials {
     /// Date

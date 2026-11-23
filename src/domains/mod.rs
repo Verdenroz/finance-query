@@ -512,7 +512,9 @@ macro_rules! impl_chartable_analytics {
                 range: crate::TimeRange,
             ) -> crate::error::Result<crate::indicators::IndicatorResult> {
                 let chart = self.chart(interval, range).await?;
-                Ok(crate::indicators::compute_indicator(indicator, &chart)?)
+                Ok(crate::models::chart::compute::compute_indicator(
+                    indicator, &chart,
+                )?)
             }
 
             /// Compute a risk summary (VaR, Sharpe/Sortino/Calmar, max drawdown)

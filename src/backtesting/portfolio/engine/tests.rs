@@ -168,36 +168,9 @@ fn test_short_proceeds_do_not_fund_a_same_bar_long_beyond_equity() {
 #[test]
 fn test_trailing_stop_does_not_arm_and_fire_on_the_same_bar() {
     let candles = vec![
-        Candle {
-            timestamp: 0,
-            open: 100.0,
-            high: 100.0,
-            low: 100.0,
-            close: 100.0,
-            volume: 1_000,
-            adj_close: Some(100.0),
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 86_400,
-            open: 100.0,
-            high: 100.0,
-            low: 100.0,
-            close: 100.0,
-            volume: 1_000,
-            adj_close: Some(100.0),
-            provider_id: None,
-        },
-        Candle {
-            timestamp: 172_800,
-            open: 100.0,
-            high: 110.0,
-            low: 99.0,
-            close: 109.0,
-            volume: 1_000,
-            adj_close: Some(109.0),
-            provider_id: None,
-        },
+        Candle::__new(0, 100.0, 100.0, 100.0, 100.0, 1_000, Some(100.0), None),
+        Candle::__new(86_400, 100.0, 100.0, 100.0, 100.0, 1_000, Some(100.0), None),
+        Candle::__new(172_800, 100.0, 110.0, 99.0, 109.0, 1_000, Some(109.0), None),
     ];
     let data = vec![SymbolData::new("A", candles)];
 
@@ -226,15 +199,17 @@ pub(super) fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices
         .iter()
         .enumerate()
-        .map(|(i, &p)| Candle {
-            timestamp: i as i64 * 86400,
-            open: p,
-            high: p * 1.005,
-            low: p * 0.995,
-            close: p,
-            volume: 1_000,
-            adj_close: Some(p),
-            provider_id: None,
+        .map(|(i, &p)| {
+            Candle::__new(
+                i as i64 * 86400,
+                p,
+                p * 1.005,
+                p * 0.995,
+                p,
+                1_000,
+                Some(p),
+                None,
+            )
         })
         .collect()
 }
@@ -243,16 +218,7 @@ fn make_candles_with_timestamps(prices: &[f64], timestamps: &[i64]) -> Vec<Candl
     prices
         .iter()
         .zip(timestamps.iter())
-        .map(|(&p, &ts)| Candle {
-            timestamp: ts,
-            open: p,
-            high: p * 1.005,
-            low: p * 0.995,
-            close: p,
-            volume: 1_000,
-            adj_close: Some(p),
-            provider_id: None,
-        })
+        .map(|(&p, &ts)| Candle::__new(ts, p, p * 1.005, p * 0.995, p, 1_000, Some(p), None))
         .collect()
 }
 
@@ -372,16 +338,8 @@ fn test_equal_weight_allocation() {
 fn test_dividend_credited() {
     let prices = trending_prices(50, 100.0, 0.2);
     let dividends = vec![
-        Dividend {
-            timestamp: 20 * 86400,
-            amount: 1.0,
-            provider_id: None,
-        },
-        Dividend {
-            timestamp: 40 * 86400,
-            amount: 1.0,
-            provider_id: None,
-        },
+        Dividend::__new(20 * 86400, 1.0, None),
+        Dividend::__new(40 * 86400, 1.0, None),
     ];
     let symbol_data = vec![SymbolData::new("DIV", make_candles(&prices)).with_dividends(dividends)];
 
@@ -422,11 +380,7 @@ fn test_empty_symbol_data_fails() {
 fn test_short_dividend_is_liability() {
     let prices = vec![100.0, 100.0, 100.0];
     let candles = make_candles(&prices);
-    let dividends = vec![Dividend {
-        timestamp: candles[1].timestamp,
-        amount: 1.0,
-        provider_id: None,
-    }];
+    let dividends = vec![Dividend::__new(candles[1].timestamp, 1.0, None)];
     let symbol_data = vec![SymbolData::new("DIVS", candles).with_dividends(dividends)];
 
     let config = PortfolioConfig::new(
