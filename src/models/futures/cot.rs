@@ -30,6 +30,7 @@ pub struct CommitmentsOfTraders {
 
 /// One weekly report row, broken down by trader category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct CotObservation {
     /// Report date (`YYYY-MM-DD`) — the Tuesday the report is as of.
@@ -66,4 +67,19 @@ pub struct CotObservation {
     pub nonreportable_long: Option<i64>,
     /// Small traders below CFTC reporting thresholds: short side.
     pub nonreportable_short: Option<i64>,
+}
+
+#[cfg(feature = "dataframe")]
+impl CommitmentsOfTraders {
+    /// Converts the observations to a polars DataFrame, one row per weekly report.
+    ///
+    /// Columns are `symbol` followed by the columns of `CotObservation::to_dataframe`.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        let mut frame = CotObservation::vec_to_dataframe(&self.observations)?;
+        let symbol = Series::new("symbol".into(), vec![self.symbol.as_str(); frame.height()]);
+        frame.insert_column(0, symbol.into())?;
+        Ok(frame)
+    }
 }

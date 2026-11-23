@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// A series matching a catalog search.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EconomicSeriesMatch {
     /// Series identifier (e.g. `"GDPC1"`).
@@ -33,6 +34,7 @@ pub struct EconomicSeriesMatch {
 
 /// A node in the provider's series category tree.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EconomicCategory {
     /// Category identifier.
@@ -45,6 +47,7 @@ pub struct EconomicCategory {
 
 /// A publication that releases economic series on a schedule.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EconomicRelease {
     /// Release identifier.

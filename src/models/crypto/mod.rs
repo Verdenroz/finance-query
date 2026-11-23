@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 /// [`.quote()`](crate::domains::CryptoCoin::quote). Supported providers:
 /// Alpha Vantage, CoinGecko, FMP, Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct CryptoQuote {
     /// Coin identifier (e.g., `"bitcoin"` for CoinGecko, `"BTC"` for others)
@@ -45,6 +46,7 @@ pub struct CryptoQuote {
 /// Obtain via [`crypto::coins`](crate::crypto::coins) or [`crypto::coin`](crate::crypto::coin).
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct CoinQuote {
     /// CoinGecko coin ID (e.g., `"bitcoin"`, `"ethereum"`)
@@ -74,6 +76,7 @@ pub struct CoinQuote {
 /// Obtain via [`Market::crypto_trending`](crate::domains::Market::crypto_trending).
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct TrendingCoin {
     /// CoinGecko coin ID (e.g., `"bitcoin"`)
@@ -95,6 +98,7 @@ pub struct TrendingCoin {
 /// Obtain via [`Market::crypto_global`](crate::domains::Market::crypto_global).
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct GlobalCryptoStats {
     /// Number of active cryptocurrencies tracked
@@ -112,3 +116,6 @@ pub struct GlobalCryptoStats {
     /// 24-hour percentage change in total market cap (USD)
     pub market_cap_change_percentage_24h_usd: Option<f64>,
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

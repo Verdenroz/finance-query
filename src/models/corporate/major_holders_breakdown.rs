@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Breakdown of ownership by different types of holders
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MajorHoldersBreakdown {

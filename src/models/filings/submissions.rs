@@ -108,6 +108,7 @@ pub struct EdgarFilings {
 
 /// Reference to an additional filing history file for older filings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilingFile {

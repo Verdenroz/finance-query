@@ -20,6 +20,7 @@ pub struct InsiderTransactions {
 
 /// Individual insider transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct InsiderTransaction {
     /// Maximum age of this data in seconds
@@ -62,3 +63,6 @@ pub struct InsiderTransaction {
     #[serde(default)]
     pub transaction_text: Option<String>,
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(InsiderTransactions, transactions, InsiderTransaction);
