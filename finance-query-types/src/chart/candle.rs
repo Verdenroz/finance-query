@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 pub struct Candle {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -30,4 +34,31 @@ pub struct Candle {
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub provider_id: Option<Provider>,
+}
+
+impl Candle {
+    /// Builds a candle from every field. Internal support for sibling crates, not public API.
+    #[doc(hidden)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn __new(
+        timestamp: i64,
+        open: f64,
+        high: f64,
+        low: f64,
+        close: f64,
+        volume: i64,
+        adj_close: Option<f64>,
+        provider_id: Option<Provider>,
+    ) -> Self {
+        Self {
+            timestamp,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            adj_close,
+            provider_id,
+        }
+    }
 }

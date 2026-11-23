@@ -20,6 +20,7 @@ pub struct RecommendationTrend {
 
 /// Recommendations for a specific time period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct RecommendationPeriod {
     /// Time period (e.g., "0m", "-1m", "-2m")
@@ -73,3 +74,6 @@ impl RecommendationPeriod {
         Some(score / total as f64)
     }
 }
+
+#[cfg(feature = "dataframe")]
+rows_to_dataframe!(RecommendationTrend, trend, RecommendationPeriod);

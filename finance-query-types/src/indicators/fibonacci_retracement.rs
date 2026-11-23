@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 
 /// Fibonacci retracement levels between a swing high and swing low.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[non_exhaustive]
 pub struct FibonacciLevels {
     /// Swing high over the lookback window (0% retracement level)

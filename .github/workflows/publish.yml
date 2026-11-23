@@ -72,6 +72,14 @@ jobs:
       - name: Wait for crates.io to index
         run: sleep 30
 
+      - name: Publish finance-query-types
+        run: cargo publish -p finance-query-types
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Wait for crates.io to index
+        run: sleep 30
+
       - name: Publish finance-query
         run: cargo publish -p finance-query
         env:

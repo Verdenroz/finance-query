@@ -396,16 +396,7 @@ mod tests {
     use std::collections::HashMap;
 
     fn make_candle(ts: i64, price: f64) -> Candle {
-        Candle {
-            timestamp: ts,
-            open: price,
-            high: price,
-            low: price,
-            close: price,
-            volume: 1000,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(ts, price, price, price, price, 1000, None, None)
     }
 
     fn make_ctx<'a>(

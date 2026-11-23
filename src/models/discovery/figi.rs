@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via [`openfigi::resolve_cusip`](crate::openfigi::resolve_cusip) and
 /// friends.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SecurityMapping {

@@ -98,16 +98,7 @@ mod tests {
     use super::*;
 
     fn candle(timestamp: i64, close: f64) -> Candle {
-        Candle {
-            timestamp,
-            open: close,
-            high: close,
-            low: close,
-            close,
-            volume: 0,
-            adj_close: None,
-            provider_id: None,
-        }
+        Candle::__new(timestamp, close, close, close, close, 0, None, None)
     }
 
     #[test]

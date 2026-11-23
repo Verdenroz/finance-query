@@ -25,6 +25,7 @@ use super::{IndicatorError, Result, sma::sma};
 /// let closes = vec![9.5; 10];
 /// let result = balance_of_power(&opens, &highs, &lows, &closes, Some(3)).unwrap();
 /// ```
+#[inline]
 pub fn balance_of_power(
     opens: &[f64],
     highs: &[f64],

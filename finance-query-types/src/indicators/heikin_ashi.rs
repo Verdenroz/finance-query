@@ -13,10 +13,16 @@ use crate::Candle;
 /// backtesting engine's custom-strategy indicator dispatch), rather than
 /// full [`Candle`]s.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct HeikinAshiSeries {
+#[doc(hidden)]
+#[non_exhaustive]
+pub struct HeikinAshiSeries {
+    /// Heikin-Ashi open prices.
     pub open: Vec<f64>,
+    /// Heikin-Ashi high prices.
     pub high: Vec<f64>,
+    /// Heikin-Ashi low prices.
     pub low: Vec<f64>,
+    /// Heikin-Ashi close prices.
     pub close: Vec<f64>,
 }
 
@@ -28,7 +34,8 @@ pub(crate) struct HeikinAshiSeries {
 /// - `ha_open = (prev_ha_open + prev_ha_close) / 2` (first bar: `(open + close) / 2`)
 /// - `ha_high = max(high, ha_open, ha_close)`
 /// - `ha_low = min(low, ha_open, ha_close)`
-pub(crate) fn heikin_ashi_raw(
+#[doc(hidden)]
+pub fn heikin_ashi_raw(
     opens: &[f64],
     highs: &[f64],
     lows: &[f64],
@@ -105,15 +112,17 @@ pub fn heikin_ashi(candles: &[Candle]) -> Result<Vec<Candle>> {
     Ok(candles
         .iter()
         .enumerate()
-        .map(|(i, c)| Candle {
-            timestamp: c.timestamp,
-            open: series.open[i],
-            high: series.high[i],
-            low: series.low[i],
-            close: series.close[i],
-            volume: c.volume,
-            adj_close: c.adj_close,
-            provider_id: c.provider_id,
+        .map(|(i, c)| {
+            Candle::__new(
+                c.timestamp,
+                series.open[i],
+                series.high[i],
+                series.low[i],
+                series.close[i],
+                c.volume,
+                c.adj_close,
+                c.provider_id,
+            )
         })
         .collect())
 }

@@ -341,16 +341,7 @@ mod tests {
         closes
             .iter()
             .enumerate()
-            .map(|(i, &c)| Candle {
-                timestamp: i as i64 * 86_400,
-                open: c,
-                high: c,
-                low: c,
-                close: c,
-                volume: 1_000,
-                adj_close: Some(c),
-                provider_id: None,
-            })
+            .map(|(i, &c)| Candle::__new(i as i64 * 86_400, c, c, c, c, 1_000, Some(c), None))
             .collect()
     }
 

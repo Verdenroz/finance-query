@@ -4,6 +4,7 @@ use crate::models::quote::FormattedValue;
 
 /// Fund performance data including returns, risk metrics, and historical performance
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct FundPerformance {
@@ -17,22 +18,27 @@ pub struct FundPerformance {
 
     /// Performance overview for this fund
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance_overview: Option<PerformanceOverview>,
 
     /// Performance overview for the fund's category average
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance_overview_cat: Option<PerformanceOverviewCat>,
 
     /// Trailing returns (market price)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub trailing_returns: Option<TrailingReturns>,
 
     /// Trailing returns (NAV - Net Asset Value)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub trailing_returns_nav: Option<TrailingReturnsNav>,
 
     /// Trailing returns for the fund's category average
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub trailing_returns_cat: Option<TrailingReturnsCat>,
 
     /// Annual total returns by year
@@ -54,6 +60,7 @@ pub struct FundPerformance {
 
 /// Performance overview with key return metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverview {
     /// As of date (Unix timestamp)
@@ -79,6 +86,7 @@ pub struct PerformanceOverview {
 
 /// Category average performance overview
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverviewCat {
     /// Year-to-date return percentage (category average)
@@ -100,6 +108,7 @@ pub struct PerformanceOverviewCat {
 
 /// Trailing returns at market price
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturns {
     /// As of date (Unix timestamp)
@@ -145,6 +154,7 @@ pub struct TrailingReturns {
 
 /// Trailing returns at NAV (Net Asset Value)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturnsNav {
     /// Year-to-date return
@@ -178,6 +188,7 @@ pub struct TrailingReturnsNav {
 
 /// Category average trailing returns
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturnsCat {
     /// Year-to-date return (category average)
@@ -232,6 +243,7 @@ pub struct AnnualTotalReturns {
 
 /// Single year's return data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct AnnualReturn {
     /// Year (e.g., "2024")
@@ -272,6 +284,7 @@ pub struct RiskOverviewStatisticsCat {
 
 /// Risk statistics for a specific time period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskStatistic {
     /// Time period (e.g., "3y", "5y", "10y")

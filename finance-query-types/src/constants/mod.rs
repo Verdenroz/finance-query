@@ -1,10 +1,10 @@
 /// Typed exchange codes for screener queries.
 ///
-/// Use with [`EquityField::Exchange`](crate::EquityField::Exchange) or
-/// [`FundField::Exchange`](crate::FundField::Exchange) and
-/// [`ScreenerFieldExt::eq_str`](crate::ScreenerFieldExt::eq_str).
+/// Use with `EquityField::Exchange` or
+/// `FundField::Exchange` and
+/// `ScreenerFieldExt::eq_str`.
 ///
-/// For mutual fund queries use [`ExchangeCode::Nas`].
+/// For mutual fund queries use [`ExchangeCode::Nas`](exchange_codes::ExchangeCode::Nas).
 ///
 /// # Example
 ///
@@ -28,9 +28,9 @@ pub mod indices;
 
 /// Typed industry identifiers shared between the industry endpoint and screener queries.
 ///
-/// Use with [`finance::industry()`](crate::finance::industry) for the data endpoint, and with
-/// [`EquityField::Industry`](crate::EquityField::Industry) +
-/// [`ScreenerFieldExt::eq_str`](crate::ScreenerFieldExt::eq_str) for screener filtering.
+/// Use with `finance::industry()` for the data endpoint, and with
+/// `EquityField::Industry` +
+/// `ScreenerFieldExt::eq_str` for screener filtering.
 ///
 /// - `as_slug()` → lowercase hyphenated key for `finance::industry()` (e.g. `"semiconductors"`)
 /// - `From<Industry> for String` → screener display name (e.g. `"Semiconductors"`)

@@ -130,7 +130,9 @@ impl CryptoCoin {
         range: TimeRange,
     ) -> Result<crate::indicators::IndicatorResult> {
         let chart = self.chart(vs_currency, interval, range).await?;
-        Ok(crate::indicators::compute_indicator(indicator, &chart)?)
+        Ok(crate::models::chart::compute::compute_indicator(
+            indicator, &chart,
+        )?)
     }
 
     /// Fetch market-wide crypto news via `Capability::CRYPTO` (currently FMP

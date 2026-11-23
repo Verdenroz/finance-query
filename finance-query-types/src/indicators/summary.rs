@@ -29,7 +29,8 @@ fn last_from_result(result: crate::indicators::Result<Vec<Option<f64>>>) -> Opti
 ///
 /// Returns the latest values for all implemented indicators.
 /// Reuses the main indicator implementations for consistency.
-pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
+#[doc(hidden)]
+pub fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
     if candles.is_empty() {
         return IndicatorsSummary::default();
     }
@@ -232,16 +233,16 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
             .and_then(|series| {
                 let last = candles.last()?;
                 let i = series.close.len().checked_sub(1)?;
-                Some(Candle {
-                    timestamp: last.timestamp,
-                    open: series.open[i],
-                    high: series.high[i],
-                    low: series.low[i],
-                    close: series.close[i],
-                    volume: last.volume,
-                    adj_close: last.adj_close,
-                    provider_id: last.provider_id,
-                })
+                Some(Candle::__new(
+                    last.timestamp,
+                    series.open[i],
+                    series.high[i],
+                    series.low[i],
+                    series.close[i],
+                    last.volume,
+                    last.adj_close,
+                    last.provider_id,
+                ))
             }),
         zigzag_last_pivot: zigzag(&highs, &lows, 5.0)
             .ok()
@@ -254,7 +255,11 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
 
 /// Summary of all calculated technical indicators
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct IndicatorsSummary {
     // === MOVING AVERAGES ===
@@ -466,7 +471,11 @@ pub struct IndicatorsSummary {
 
 /// Stochastic Oscillator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct StochasticData {
     /// %K line value
@@ -479,7 +488,11 @@ pub struct StochasticData {
 
 /// MACD indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct MacdData {
     /// MACD line value
@@ -495,7 +508,11 @@ pub struct MacdData {
 
 /// Aroon indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct AroonData {
     /// Aroon Up value
@@ -508,7 +525,11 @@ pub struct AroonData {
 
 /// Bollinger Bands data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct BollingerBandsData {
     /// Upper band value
@@ -524,7 +545,11 @@ pub struct BollingerBandsData {
 
 /// SuperTrend indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SuperTrendData {
     /// SuperTrend value
@@ -537,7 +562,11 @@ pub struct SuperTrendData {
 
 /// Ichimoku Cloud data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct IchimokuData {
     /// Conversion line (Tenkan-sen)
@@ -559,7 +588,11 @@ pub struct IchimokuData {
 
 /// Keltner Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct KeltnerChannelsData {
     /// Upper channel value
@@ -575,7 +608,11 @@ pub struct KeltnerChannelsData {
 
 /// Donchian Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DonchianChannelsData {
     /// Upper channel value
@@ -591,7 +628,11 @@ pub struct DonchianChannelsData {
 
 /// Bull Bear Power indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct BullBearPowerData {
     /// Bull power value
@@ -604,7 +645,11 @@ pub struct BullBearPowerData {
 
 /// Elder Ray Index data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ElderRayData {
     /// Bull power value

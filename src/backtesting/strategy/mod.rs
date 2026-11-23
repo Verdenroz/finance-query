@@ -456,26 +456,8 @@ mod tests {
     #[test]
     fn test_context_crossover_detection() {
         let candles = vec![
-            Candle {
-                timestamp: 1,
-                open: 100.0,
-                high: 101.0,
-                low: 99.0,
-                close: 100.0,
-                volume: 1000,
-                adj_close: None,
-                provider_id: None,
-            },
-            Candle {
-                timestamp: 2,
-                open: 100.0,
-                high: 102.0,
-                low: 99.0,
-                close: 101.0,
-                volume: 1000,
-                adj_close: None,
-                provider_id: None,
-            },
+            Candle::__new(1, 100.0, 101.0, 99.0, 100.0, 1000, None, None),
+            Candle::__new(2, 100.0, 102.0, 99.0, 101.0, 1000, None, None),
         ];
 
         let mut indicators = HashMap::new();
@@ -500,26 +482,8 @@ mod tests {
     #[test]
     fn test_crossed_above_fires_on_touch() {
         let candles = vec![
-            Candle {
-                timestamp: 1,
-                open: 100.0,
-                high: 101.0,
-                low: 99.0,
-                close: 100.0,
-                volume: 1000,
-                adj_close: None,
-                provider_id: None,
-            },
-            Candle {
-                timestamp: 2,
-                open: 100.0,
-                high: 102.0,
-                low: 99.0,
-                close: 101.0,
-                volume: 1000,
-                adj_close: None,
-                provider_id: None,
-            },
+            Candle::__new(1, 100.0, 101.0, 99.0, 100.0, 1000, None, None),
+            Candle::__new(2, 100.0, 102.0, 99.0, 101.0, 1000, None, None),
         ];
 
         let mut indicators = HashMap::new();

@@ -620,15 +620,17 @@ fn adjusted_chart(symbol: &str, ts: AdjustedTimeSeriesDTO) -> Chart {
 fn adjusted_entries_to_candles(entries: Vec<AdjustedTimeSeriesEntryDTO>) -> Vec<Candle> {
     let mut candles: Vec<Candle> = entries
         .into_iter()
-        .map(|bar| Candle {
-            timestamp: parse_entry_timestamp(&bar.timestamp),
-            open: bar.open,
-            high: bar.high,
-            low: bar.low,
-            close: bar.close,
-            volume: bar.volume as i64,
-            adj_close: Some(bar.adjusted_close),
-            provider_id: Some(crate::Provider::AlphaVantage),
+        .map(|bar| {
+            Candle::__new(
+                parse_entry_timestamp(&bar.timestamp),
+                bar.open,
+                bar.high,
+                bar.low,
+                bar.close,
+                bar.volume as i64,
+                Some(bar.adjusted_close),
+                Some(crate::Provider::AlphaVantage),
+            )
         })
         .collect();
     candles.sort_unstable_by_key(|c| c.timestamp);
@@ -642,15 +644,17 @@ fn adjusted_entries_to_candles(entries: Vec<AdjustedTimeSeriesEntryDTO>) -> Vec<
 fn entries_to_candles(entries: Vec<TimeSeriesEntryDTO>) -> Vec<Candle> {
     let mut candles: Vec<Candle> = entries
         .into_iter()
-        .map(|bar| Candle {
-            timestamp: parse_entry_timestamp(&bar.timestamp),
-            open: bar.open,
-            high: bar.high,
-            low: bar.low,
-            close: bar.close,
-            volume: bar.volume as i64,
-            adj_close: None,
-            provider_id: Some(crate::Provider::AlphaVantage),
+        .map(|bar| {
+            Candle::__new(
+                parse_entry_timestamp(&bar.timestamp),
+                bar.open,
+                bar.high,
+                bar.low,
+                bar.close,
+                bar.volume as i64,
+                None,
+                Some(crate::Provider::AlphaVantage),
+            )
         })
         .collect();
     candles.sort_unstable_by_key(|c| c.timestamp);

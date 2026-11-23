@@ -4,6 +4,7 @@ use crate::models::quote::FormattedValue;
 
 /// Fund profile information including management, fees, and expenses
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct FundProfile {
@@ -29,14 +30,17 @@ pub struct FundProfile {
 
     /// Fund management information
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub management_info: Option<ManagementInfo>,
 
     /// Fees and expenses for this fund
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub fees_expenses_investment: Option<FeesExpenses>,
 
     /// Average fees and expenses for funds in the same category
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub fees_expenses_investment_cat: Option<FeesExpensesCat>,
 
     /// List of brokerages offering this fund
@@ -46,6 +50,7 @@ pub struct FundProfile {
 
 /// Fund management information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct ManagementInfo {
     /// Name of the fund manager
@@ -59,6 +64,7 @@ pub struct ManagementInfo {
 
 /// Fees and expenses for a fund
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct FeesExpenses {
     /// Annual expense ratio from the latest report
@@ -80,6 +86,7 @@ pub struct FeesExpenses {
 
 /// Average fees and expenses for funds in the same category
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct FeesExpensesCat {
     /// Category average annual expense ratio

@@ -1,6 +1,8 @@
 //! Backtest results and performance metrics.
 
 mod benchmark;
+#[cfg(feature = "dataframe")]
+mod dataframe;
 #[cfg(test)]
 mod fixtures;
 mod metrics;
@@ -21,6 +23,7 @@ use super::signal::SignalDirection;
 /// Point on the equity curve
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct EquityPoint {
     /// Timestamp
     pub timestamp: i64,
