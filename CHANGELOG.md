@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- ToDataFrame trait impls for wrapper frames (#702)
 - DataFrame for economic, markets, filings, corporate models (#700)
 - DataFrame conversion for fundamentals (#683)
 - DataFrame conversion for backtest results (#685)
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Split shared types into a new crate (#699)
 - Bump soothfast to 0.8.0 (#697)
 - Prepare the types crate split (#682)
 - Bump soothfast to 0.7.0 (#679)
@@ -38,9 +40,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔍 API surface
 
 ```
+ADDED    finance_query::AroonData::to_dataframe
+ADDED    finance_query::BollingerBandsData::to_dataframe
+ADDED    finance_query::BullBearPowerData::to_dataframe
+ADDED    finance_query::Candle::to_dataframe
+ADDED    finance_query::Capability::name
+ADDED    finance_query::Dividend::to_dataframe
+ADDED    finance_query::DonchianChannelsData::to_dataframe
+ADDED    finance_query::ElderRayData::to_dataframe
+ADDED    finance_query::IchimokuData::to_dataframe
+ADDED    finance_query::IndicatorsSummary::to_dataframe
+ADDED    finance_query::Industry::as_slug
+ADDED    finance_query::Interval::as_str
+ADDED    finance_query::KeltnerChannelsData::to_dataframe
+ADDED    finance_query::MacdData::to_dataframe
+ADDED    finance_query::Provider::capabilities
+ADDED    finance_query::Provider::custom
+ADDED    finance_query::StochasticData::to_dataframe
+ADDED    finance_query::SuperTrendData::to_dataframe
+ADDED    finance_query::TimeRange::as_str
 ADDED    finance_query::ToDataFrame
 ADDED    finance_query::backtesting::result::EquityPoint::to_dataframe
-ADDED    finance_query::dataframe::ToDataFrame
 ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels::to_dataframe
 ADDED    finance_query::indicators::pivot_points::PivotPoints::to_dataframe
 ADDED    finance_query::indicators::summary::AroonData::to_dataframe
@@ -57,9 +77,6 @@ ADDED    finance_query::indicators::summary::SuperTrendData::to_dataframe
 ADDED    finance_query::indicators::zigzag::ZigZagPoint::to_dataframe
 ADDED    finance_query::models::calendar::CalendarEvent::vec_to_dataframe
 ADDED    finance_query::models::calendar::market::MarketCalendarEntry::vec_to_dataframe
-ADDED    finance_query::models::chart::candle::Candle::to_dataframe
-ADDED    finance_query::models::chart::dividend::Dividend
-ADDED    finance_query::models::chart::dividend::Dividend::to_dataframe
 ADDED    finance_query::models::chart::events::CapitalGain::to_dataframe
 ADDED    finance_query::models::chart::events::Split::to_dataframe
 ADDED    finance_query::models::chart::meta::ChartMeta::to_dataframe
@@ -145,7 +162,31 @@ ADDED    finance_query::models::options::chain::OptionsQuote::to_dataframe
 ADDED    finance_query::models::options::contract::OptionContract::to_dataframe
 ADDED    finance_query::models::quote::data::Quote::to_dataframe
 ADDED    finance_query::models::sentiment::score::Sentiment::to_dataframe
+REMOVED  finance_query::constants::enums::frequency::Frequency
+REMOVED  finance_query::constants::enums::interval::Interval
+REMOVED  finance_query::constants::enums::interval::Interval::as_str
+REMOVED  finance_query::constants::enums::region::Region
+REMOVED  finance_query::constants::enums::region::Region::utc_offset_secs
+REMOVED  finance_query::constants::enums::statement_type::StatementType
+REMOVED  finance_query::constants::enums::time_range::TimeRange
+REMOVED  finance_query::constants::enums::time_range::TimeRange::as_str
+REMOVED  finance_query::constants::enums::time_range::TimeRange::default_interval
+REMOVED  finance_query::constants::enums::value_format::ValueFormat
+REMOVED  finance_query::constants::exchange_codes::ExchangeCode
+REMOVED  finance_query::constants::indices::Region
+REMOVED  finance_query::constants::industries::Industry
+REMOVED  finance_query::constants::industries::Industry::as_slug
+REMOVED  finance_query::constants::screeners::Screener
+REMOVED  finance_query::constants::sectors::Sector
+REMOVED  finance_query::indicators::Indicator::warmup_bars
+REMOVED  finance_query::models::chart::candle::Candle
 REMOVED  finance_query::models::chart::events::Dividend
+REMOVED  finance_query::providers::capability::Capability
+REMOVED  finance_query::providers::capability::Capability::name
+REMOVED  finance_query::providers::provider::CustomId
+REMOVED  finance_query::providers::provider::Provider
+REMOVED  finance_query::providers::provider::Provider::capabilities
+REMOVED  finance_query::providers::provider::Provider::custom
 CHANGED  finance_query::IndicatorsSummary (body)
 CHANGED  finance_query::News (body)
 CHANGED  finance_query::SearchNews (body)
@@ -164,7 +205,6 @@ CHANGED  finance_query::models::corporate::top_holdings::TopHoldings (body)
 CHANGED  finance_query::models::corporate::transcript::Paragraph (body)
 CHANGED  finance_query::models::corporate::transcript::SpeakerMapping (body)
 CHANGED  finance_query::models::discovery::search::news::SearchNews (body)
-CHANGED  finance_query::providers::provider::Provider::capabilities (body)
 CHANGED  finance_query::quote::CalendarEvents (body)
 CHANGED  finance_query::quote::EquityPerformance (body)
 CHANGED  finance_query::quote::FundPerformance (body)
