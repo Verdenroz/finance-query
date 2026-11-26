@@ -176,3 +176,32 @@ fn trend_wrappers_nest_their_estimates() {
         ["max_age:i64", "symbol:str", "pe_ratio:f64", "peg_ratio:f64"]
     );
 }
+
+#[test]
+fn market_summary_spark_columns() {
+    use crate::{MarketSummaryQuote, SparkData};
+
+    let expected = ["timestamp:i64", "close:f64"];
+    let row: SparkData =
+        serde_json::from_value(json!({"timestamp": [1, 2], "close": [1.5, null]})).unwrap();
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 2);
+    assert_eq!(df.column("close").unwrap().null_count(), 1);
+
+    let empty = SparkData::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+
+    let quote: MarketSummaryQuote = serde_json::from_value(json!({
+        "symbol": "^GSPC",
+        "spark": {"timestamp": [1, 2], "close": [1.5, 2.5]}
+    }))
+    .unwrap();
+    let flat = columns(&quote.to_dataframe().unwrap());
+    assert!(!flat.iter().any(|c| c.starts_with("spark")));
+    let nested = quote.to_nested_dataframe().unwrap();
+    assert_eq!(nested.height(), 1);
+    assert!(columns(&nested).iter().any(|c| c.starts_with("spark:list")));
+    assert_eq!(quote.spark_dataframe().unwrap().height(), 2);
+}

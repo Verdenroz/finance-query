@@ -41,6 +41,14 @@ pub(crate) fn stack_rows<T>(
         .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
 }
 
+/// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.
+pub(crate) fn padded<T>(values: impl Iterator<Item = Option<T>>, rows: usize) -> Vec<Option<T>> {
+    values
+        .chain(std::iter::repeat_with(|| None))
+        .take(rows)
+        .collect()
+}
+
 macro_rules! delegate_wrapped_rows {
     ($($ty:ty => $row:ty),* $(,)?) => {
         $(
@@ -65,7 +73,12 @@ macro_rules! delegate_wrapped_rows {
     };
 }
 
-delegate_rows_to_inherent!(crate::CalendarEvent, crate::MarketCalendarEntry);
+delegate_rows_to_inherent!(
+    crate::CalendarEvent,
+    crate::MarketCalendarEntry,
+    crate::models::chart::spark::Spark,
+    crate::SparkData,
+);
 
 delegate_to_inherent!(
     crate::BatchCapitalGainsResponse,
@@ -75,6 +88,7 @@ delegate_to_inherent!(
     crate::BatchOptionsResponse,
     crate::BatchQuotesResponse,
     crate::BatchRecommendationsResponse,
+    crate::BatchSparksResponse,
     crate::BatchSplitsResponse,
     crate::Chart,
     crate::Contracts,

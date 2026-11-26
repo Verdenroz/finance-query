@@ -40,6 +40,7 @@ pub struct MarketSummaryQuote {
     pub regular_market_time: Option<FormattedValue<i64>>,
     /// Spark chart data (if available)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub spark: Option<SparkData>,
 }
 
@@ -85,5 +86,49 @@ impl MarketSummaryQuote {
             .market_summary_response
             .and_then(|r| r.result)
             .unwrap_or_default())
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl SparkData {
+    /// Converts the points to a long-format polars DataFrame, one row per point.
+    ///
+    /// Columns are `timestamp` (i64) and `close` (f64). Missing closes stay null,
+    /// and the shorter series is padded with nulls. A `None` series is empty.
+    pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use crate::dataframe::padded;
+        use polars::prelude::*;
+
+        let timestamps = self.timestamp.as_deref().unwrap_or_default();
+        let closes = self.close.as_deref().unwrap_or_default();
+        let rows = timestamps.len().max(closes.len());
+        DataFrame::new(
+            rows,
+            vec![
+                Series::new(
+                    "timestamp".into(),
+                    padded(timestamps.iter().copied().map(Some), rows),
+                )
+                .into(),
+                Series::new("close".into(), padded(closes.iter().copied(), rows)).into(),
+            ],
+        )
+    }
+
+    /// Converts a slice of sparks to one long-format DataFrame with the columns
+    /// of [`to_dataframe`](Self::to_dataframe).
+    pub fn vec_to_dataframe(
+        items: &[Self],
+    ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        let schema = DataFrame::new(
+            0,
+            vec![
+                Series::new("timestamp".into(), Vec::<i64>::new()).into(),
+                Series::new("close".into(), Vec::<f64>::new()).into(),
+            ],
+        );
+        crate::dataframe::stack_rows(schema, items, Self::to_dataframe)
     }
 }
