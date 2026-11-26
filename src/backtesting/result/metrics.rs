@@ -12,6 +12,7 @@ use crate::backtesting::position::Trade;
 /// Performance metrics summary
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct PerformanceMetrics {
     /// Total return percentage
     pub total_return_pct: f64,

@@ -1,74 +1,13 @@
 //! Polars conversions for backtest results.
 
-use super::{BacktestResult, EquityPoint, PerformanceMetrics};
+use super::{BacktestResult, EquityPoint};
 use polars::prelude::{Column, DataFrame, NamedFrom, PolarsResult, Series};
-
-fn column<T>(name: &str, value: T) -> Column
-where
-    Series: NamedFrom<Vec<T>, [T]>,
-{
-    Series::new(name.into(), vec![value]).into()
-}
 
 fn series<T, U>(name: &str, items: &[T], get: impl Fn(&T) -> U) -> Column
 where
     Series: NamedFrom<Vec<U>, [U]>,
 {
     Series::new(name.into(), items.iter().map(get).collect::<Vec<_>>()).into()
-}
-
-impl PerformanceMetrics {
-    /// Converts the metrics to a single-row polars DataFrame.
-    ///
-    /// Columns follow the field order of [`PerformanceMetrics`], named in snake case.
-    /// Counts are `u64`, `max_drawdown_duration` and `max_idle_period` are `i64`, and
-    /// everything else is `f64`.
-    pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        DataFrame::new(
-            1,
-            vec![
-                column("total_return_pct", self.total_return_pct),
-                column("annualized_return_pct", self.annualized_return_pct),
-                column("sharpe_ratio", self.sharpe_ratio),
-                column("sortino_ratio", self.sortino_ratio),
-                column("max_drawdown_pct", self.max_drawdown_pct),
-                column("max_drawdown_duration", self.max_drawdown_duration),
-                column("win_rate", self.win_rate),
-                column("profit_factor", self.profit_factor),
-                column("avg_trade_return_pct", self.avg_trade_return_pct),
-                column("avg_win_pct", self.avg_win_pct),
-                column("avg_loss_pct", self.avg_loss_pct),
-                column("avg_trade_duration", self.avg_trade_duration),
-                column("total_trades", self.total_trades as u64),
-                column("winning_trades", self.winning_trades as u64),
-                column("losing_trades", self.losing_trades as u64),
-                column("largest_win", self.largest_win),
-                column("largest_loss", self.largest_loss),
-                column("max_consecutive_wins", self.max_consecutive_wins as u64),
-                column("max_consecutive_losses", self.max_consecutive_losses as u64),
-                column("calmar_ratio", self.calmar_ratio),
-                column("total_commission", self.total_commission),
-                column("total_financing_cost", self.total_financing_cost),
-                column("long_trades", self.long_trades as u64),
-                column("short_trades", self.short_trades as u64),
-                column("total_signals", self.total_signals as u64),
-                column("executed_signals", self.executed_signals as u64),
-                column("avg_win_duration", self.avg_win_duration),
-                column("avg_loss_duration", self.avg_loss_duration),
-                column("time_in_market_pct", self.time_in_market_pct),
-                column("max_idle_period", self.max_idle_period),
-                column("total_dividend_income", self.total_dividend_income),
-                column("kelly_criterion", self.kelly_criterion),
-                column("sqn", self.sqn),
-                column("expectancy", self.expectancy),
-                column("omega_ratio", self.omega_ratio),
-                column("tail_ratio", self.tail_ratio),
-                column("recovery_factor", self.recovery_factor),
-                column("ulcer_index", self.ulcer_index),
-                column("serenity_ratio", self.serenity_ratio),
-            ],
-        )
-    }
 }
 
 impl BacktestResult {
@@ -134,6 +73,7 @@ impl BacktestResult {
 
 #[cfg(test)]
 mod tests {
+    use super::super::PerformanceMetrics;
     use super::super::fixtures::{equity_point, make_result, make_trade};
     use super::*;
     use polars::prelude::DataType;
@@ -280,6 +220,20 @@ mod tests {
             df.column("total_trades").unwrap().u64().unwrap().get(0),
             Some(1)
         );
+    }
+
+    #[test]
+    fn metrics_rows_stack_through_the_trait() {
+        let metrics = make_result(vec![make_trade(50.0, 5.0, true)], vec![]).metrics;
+        let single = metrics.to_dataframe().unwrap();
+        let df = <PerformanceMetrics as crate::ToDataFrame>::vec_to_dataframe(&[
+            metrics.clone(),
+            metrics,
+        ])
+        .unwrap();
+
+        assert_eq!(df.height(), 2);
+        assert_eq!(df.schema(), single.schema());
     }
 
     fn assert_covers_fields(frame: &DataFrame, value: &impl serde::Serialize, skipped: &[&str]) {
