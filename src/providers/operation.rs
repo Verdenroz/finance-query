@@ -2,6 +2,7 @@
 
 use super::{Capability, Provider};
 use crate::error::FinanceError;
+use crate::models::calendar::market::CalendarKind;
 
 /// A single provider-adapter operation — finer-grained than [`Capability`]
 /// (e.g. `Chart`, `ChartRange`, and `Spark` all fall under `Capability::CHART`).
@@ -188,6 +189,19 @@ pub enum Operation {
 }
 
 impl Operation {
+    /// The operation a calendar kind dispatches as.
+    pub(crate) fn from_calendar(kind: CalendarKind) -> Self {
+        match kind {
+            CalendarKind::Earnings => Self::EarningsCalendar,
+            CalendarKind::Ipo => Self::IpoCalendar,
+            CalendarKind::Dividend => Self::DividendCalendar,
+            CalendarKind::Split => Self::SplitCalendar,
+            CalendarKind::Economic => Self::EconomicCalendar,
+            CalendarKind::MarketHoliday => Self::HolidayCalendar,
+            CalendarKind::MarketStatus => Self::MarketStatus,
+        }
+    }
+
     /// Short lowercase identifier (e.g. `"chart_range"`, `"crypto_quote"`).
     pub fn as_str(self) -> &'static str {
         match self {

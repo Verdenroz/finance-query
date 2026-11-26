@@ -61,7 +61,7 @@ impl CalendarProvider for FredProvider {
         to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::Economic {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(crate::providers::Operation::from_calendar(kind)));
         }
         crate::adapters::fred::fetch_market_calendar_response(from, to).await
     }

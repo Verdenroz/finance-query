@@ -42,7 +42,10 @@ pub(crate) async fn fetch_market_calendar_response(
             .await
         }
         CalendarKind::Ipo => ipo_calendar(from, to).await,
-        _ => Err(kind.operation().not_supported(crate::Provider::Nasdaq)),
+        _ => {
+            Err(crate::providers::Operation::from_calendar(kind)
+                .not_supported(crate::Provider::Nasdaq))
+        }
     }
 }
 

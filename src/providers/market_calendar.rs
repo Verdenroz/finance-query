@@ -28,7 +28,7 @@ impl CalendarProvider for LocalMarketCalendarProvider {
         to: &str,
     ) -> Result<Vec<MarketCalendarEntry>> {
         if kind != CalendarKind::MarketHoliday {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(crate::providers::Operation::from_calendar(kind)));
         }
         if from.is_empty() || to.is_empty() {
             let today = Utc::now().date_naive();

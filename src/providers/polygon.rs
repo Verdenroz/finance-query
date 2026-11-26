@@ -272,7 +272,7 @@ impl CalendarProvider for PolygonProvider {
         _to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::MarketHoliday {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(crate::providers::Operation::from_calendar(kind)));
         }
         polygon::fetch_market_holidays_response().await
     }

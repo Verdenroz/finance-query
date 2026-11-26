@@ -47,7 +47,11 @@ impl MarketCalendar {
                         let p = p.clone();
                         async move {
                             p.as_calendar()
-                                .ok_or_else(|| p.not_supported(kind.operation()))?
+                                .ok_or_else(|| {
+                                    p.not_supported(crate::providers::Operation::from_calendar(
+                                        kind,
+                                    ))
+                                })?
                                 .fetch_market_calendar(kind, &from, &to)
                                 .await
                         }
