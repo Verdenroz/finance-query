@@ -1,14 +1,15 @@
 //! Polars conversions for the batch response types.
 
 use super::{
-    BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse, BatchNewsResponse,
-    BatchOptionsResponse, BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse,
-    BatchSplitsResponse,
+    BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
+    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
 };
 use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::SimilarSymbol;
+use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::{Contracts, Options};
 use crate::models::quote::Quote;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
@@ -128,6 +129,31 @@ impl BatchCapitalGainsResponse {
             &self.capital_gains,
             |items| CapitalGain::vec_to_dataframe(items),
             || CapitalGain::vec_to_dataframe(&[]),
+        )
+    }
+}
+
+impl BatchFinancialsResponse {
+    /// Converts the statements to a long-format polars DataFrame, one row per symbol, metric and date.
+    ///
+    /// Columns are `symbol` followed by the columns of `FinancialStatement::to_dataframe`.
+    /// Rows are grouped by symbol in ascending order, then sorted by metric and date.
+    /// Failed symbols in `errors` are omitted.
+    pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        stack_by_symbol(
+            &self.financials,
+            |statement| statement.to_dataframe()?.drop("symbol"),
+            || {
+                FinancialStatement {
+                    symbol: String::new(),
+                    statement_type: String::new(),
+                    frequency: String::new(),
+                    statement: HashMap::new(),
+                    provider_id: None,
+                }
+                .to_dataframe()?
+                .drop("symbol")
+            },
         )
     }
 }
@@ -283,6 +309,80 @@ mod tests {
             .into_no_null_iter()
             .collect();
         assert_eq!(recommended, ["Y", "Z", "X"]);
+    }
+
+    #[test]
+    fn financials_stack_statements_by_symbol() {
+        let statement = |symbol: &str, revenue: f64| {
+            serde_json::json!({
+                "symbol": symbol,
+                "statementType": "income",
+                "frequency": "annual",
+                "statement": {
+                    "TotalRevenue": {"2024-09-30": revenue, "2023-09-30": revenue / 2.0},
+                    "NetIncome": {"2024-09-30": revenue / 4.0}
+                }
+            })
+        };
+        let batch: BatchFinancialsResponse = response(serde_json::json!({
+            "financials": {"MSFT": statement("MSFT", 8.0), "AAPL": statement("AAPL", 4.0)},
+            "errors": {"BAD": "boom"}
+        }));
+        let df = batch.to_dataframe().unwrap();
+
+        assert_eq!(
+            names(&df),
+            [
+                "symbol",
+                "statement_type",
+                "frequency",
+                "metric",
+                "date",
+                "value"
+            ]
+        );
+        assert_eq!(df.column("value").unwrap().dtype(), &DataType::Float64);
+        let column = |name: &str| -> Vec<String> {
+            df.column(name)
+                .unwrap()
+                .str()
+                .unwrap()
+                .into_no_null_iter()
+                .map(str::to_string)
+                .collect()
+        };
+        assert_eq!(
+            column("symbol"),
+            ["AAPL", "AAPL", "AAPL", "MSFT", "MSFT", "MSFT"]
+        );
+        assert_eq!(
+            column("metric")[..3],
+            ["NetIncome", "TotalRevenue", "TotalRevenue"]
+        );
+        assert_eq!(column("date")[1..3], ["2023-09-30", "2024-09-30"]);
+    }
+
+    #[test]
+    fn financials_with_only_errors_keep_the_schema() {
+        let batch: BatchFinancialsResponse = response(serde_json::json!({
+            "financials": {},
+            "errors": {"AAPL": "boom"}
+        }));
+        let df = batch.to_dataframe().unwrap();
+
+        assert_eq!(
+            names(&df),
+            [
+                "symbol",
+                "statement_type",
+                "frequency",
+                "metric",
+                "date",
+                "value"
+            ]
+        );
+        assert_eq!(df.column("value").unwrap().dtype(), &DataType::Float64);
+        assert_eq!(df.height(), 0);
     }
 
     #[test]

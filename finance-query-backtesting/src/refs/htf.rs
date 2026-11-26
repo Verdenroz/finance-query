@@ -1,0 +1,494 @@
+//! Higher-timeframe (HTF) condition wrapper.
+//!
+//! [`htf()`] wraps any [`Condition`] to evaluate it on a resampled
+//! higher-timeframe candle series, enabling multi-timeframe confirmation
+//! without look-ahead bias. Use [`htf_region()`] when the underlying instrument
+//! trades on a non-UTC exchange (e.g. Tokyo, Hong Kong) to ensure weekly and
+//! monthly bucket boundaries align with the local calendar.
+//!
+//! # How it works — fast path (engine pre-computation)
+//!
+//! When the strategy is built with [`StrategyBuilder`], the engine pre-computes
+//! all HTF indicator arrays once before the main simulation loop:
+//!
+//! 1. Collects [`HtfIndicatorSpec`]s from `HtfCondition::htf_requirements()`.
+//! 2. Resamples the full candle history to each unique HTF interval **once**.
+//! 3. Computes the inner indicators on the resampled data.
+//! 4. Stretches results back to base-timeframe length via `base_to_htf_index`.
+//! 5. Stores stretched arrays in `StrategyContext::indicators` under `htf_key`.
+//!
+//! On each bar, `evaluate()` does only O(k) work (k = # inner indicators):
+//! it reads the pre-computed values, builds a tiny 2-element indicator map, and
+//! evaluates the inner condition. HTF crossovers work correctly because the map
+//! stores `[prev, current]`. The inner condition keeps the full base candle
+//! history and index, so price-action refs, candle-window refs, and position
+//! conditions all stay on the base timeframe; only indicator refs read HTF
+//! values.
+//!
+//! # Fallback (dynamic resampling)
+//!
+//! If the pre-computed arrays are not found in `ctx.indicators` (e.g. a raw
+//! [`Strategy`] implementation that doesn't forward `htf_requirements()`), the
+//! condition falls back to dynamic resampling — O(n) per bar, O(n²) total —
+//! with the same context shape as the fast path. One divergence is inherent:
+//! the fallback sees only candles up to the current bar, so it counts an HTF
+//! bar as completed one base bar later than the fast path does on the bucket's
+//! final bar. A `tracing::warn!` is emitted once per evaluation so the caller
+//! can diagnose the performance issue.
+//!
+//! # Example
+//!
+//! ```ignore
+//! use finance_query::backtesting::{StrategyBuilder, BacktestConfig, BacktestEngine};
+//! use finance_query::backtesting::refs::*;
+//! use finance_query::Interval;
+//!
+//! // Enter only when daily EMA10 crosses EMA30 AND weekly price > SMA20
+//! let strategy = StrategyBuilder::new("MTF Confirmation")
+//!     .entry(
+//!         ema(10).crosses_above_ref(ema(30))
+//!             .and(htf(Interval::OneWeek, price().above_ref(sma(20))))
+//!     )
+//!     .exit(ema(10).crosses_below_ref(ema(30)))
+//!     .build();
+//! ```
+//!
+//! For a Tokyo Stock Exchange strategy:
+//!
+//! ```ignore
+//! use finance_query::backtesting::refs::*;
+//! use finance_query::{Interval, Region};
+//!
+//! let weekly_trend = htf_region(Interval::OneWeek, Region::Japan, price().above_ref(sma(20)));
+//! ```
+//!
+//! [`StrategyBuilder`]: crate::strategy::StrategyBuilder
+//! [`Strategy`]: crate::strategy::Strategy
+
+use std::collections::HashMap;
+
+use crate::condition::{Condition, HtfIndicatorSpec};
+use crate::engine::compute_for_candles;
+use crate::resample::resample;
+use crate::strategy::StrategyContext;
+use finance_query_types::constants::{Interval, Region};
+use finance_query_types::indicators::Indicator;
+
+/// A condition that evaluates its inner condition on a resampled HTF candle series.
+///
+/// Created by [`htf()`] (UTC-aligned) or [`htf_region()`] (exchange-local calendar).
+#[derive(Clone)]
+pub struct HtfCondition<C: Condition> {
+    interval: Interval,
+    inner: C,
+    /// UTC offset of the exchange. Shifts bucket boundaries so weekly/monthly
+    /// periods align with the exchange's local calendar rather than UTC midnight.
+    utc_offset_secs: i64,
+    /// Derived once at construction from `inner.required_indicators()`. Purely a
+    /// function of `self`, so `evaluate` never has to re-walk the condition tree
+    /// or re-format lookup keys on a per-bar basis.
+    specs: Vec<HtfIndicatorSpec>,
+}
+
+impl<C: Condition> Condition for HtfCondition<C> {
+    fn evaluate(&self, ctx: &StrategyContext) -> bool {
+        // ── Fast path: use pre-computed stretched arrays from the engine ──────
+        // The engine stores stretched HTF values in ctx.indicators under keys of
+        // the form "htf_{interval}_{base_key}" (e.g. "htf_1wk_sma_20"), which is
+        // exactly what `self.specs` holds.
+        //
+        // We build a tiny 2-element indicators map [prev, curr] so that the inner
+        // condition's crossover helpers (indicator_prev / crossed_above etc.) work
+        // correctly, then evaluate with indicator_index pinned to the curr slot.
+        if !self.specs.is_empty() {
+            let mut mini_indicators: HashMap<String, Vec<Option<f64>>> =
+                HashMap::with_capacity(self.specs.len());
+            let mut all_found = true;
+
+            for spec in &self.specs {
+                if let Some(stretched) = ctx.indicators.get(&spec.htf_key) {
+                    let curr = stretched.get(ctx.index).copied().flatten();
+                    let prev = ctx
+                        .index
+                        .checked_sub(1)
+                        .and_then(|pi| stretched.get(pi).copied().flatten());
+                    mini_indicators.insert(spec.base_key.clone(), vec![prev, curr]);
+                } else {
+                    all_found = false;
+                    break;
+                }
+            }
+
+            if all_found {
+                // Full base candle history with indicator_index pinned to the
+                // [prev, curr] map: price refs and position conditions keep
+                // base-bar indexing while indicator refs read the HTF pair.
+                let htf_ctx = StrategyContext {
+                    candles: ctx.candles,
+                    index: ctx.index,
+                    position: ctx.position,
+                    equity: ctx.equity,
+                    indicators: &mini_indicators,
+                    extremes: ctx.extremes,
+                    indicator_index: Some(1),
+                };
+                return self.inner.evaluate(&htf_ctx);
+            }
+        } else {
+            // Pure price condition — no HTF indicators needed.
+            // Evaluate directly so price() reads from the current base bar.
+            return self.inner.evaluate(ctx);
+        }
+
+        // ── Fallback: dynamic resampling (O(n) per bar → O(n²) total) ────────
+        // Reached only when the strategy does not implement htf_requirements()
+        // (e.g. a raw Strategy impl). StrategyBuilder-based strategies never hit
+        // this path because the engine pre-computes the stretched arrays.
+        tracing::warn!(
+            interval = %self.interval,
+            "HtfCondition falling back to O(n²) dynamic resampling — \
+             implement Strategy::htf_requirements() or use StrategyBuilder \
+             to enable O(1) pre-computed HTF lookups"
+        );
+        self.evaluate_dynamic(ctx)
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        // HtfCondition resolves its own indicators on resampled data.
+        // The main engine must NOT pre-compute these on the base-TF candles.
+        vec![]
+    }
+
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        self.specs.clone()
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        self.inner.tracks_position_extremes()
+    }
+
+    fn description(&self) -> String {
+        format!("htf({}, {})", self.interval, self.inner.description())
+    }
+}
+
+impl<C: Condition> HtfCondition<C> {
+    fn new(interval: Interval, inner: C, utc_offset_secs: i64) -> Self {
+        let interval_str = interval.as_str();
+        let specs = inner
+            .required_indicators()
+            .into_iter()
+            .map(|(base_key, indicator)| HtfIndicatorSpec {
+                interval,
+                htf_key: format!("htf_{}_{}", interval_str, base_key),
+                base_key,
+                indicator,
+                utc_offset_secs,
+            })
+            .collect();
+        Self {
+            interval,
+            inner,
+            utc_offset_secs,
+            specs,
+        }
+    }
+
+    /// Dynamic resampling fallback used when pre-computed data is unavailable.
+    ///
+    /// O(n) per bar (O(n²) overall). Mirrors the fast path's context shape:
+    /// indicator refs read a `[prev, curr]` HTF pair while price refs and
+    /// position conditions stay on the base bars. Only candles up to
+    /// `ctx.index` exist here, so an HTF bar counts as completed one base bar
+    /// later than in the fast path (`<` instead of `<=`): the final resampled
+    /// bucket may still be partial and nothing in the slice can prove it closed.
+    fn evaluate_dynamic(&self, ctx: &StrategyContext) -> bool {
+        let htf_candles = resample(ctx.candles, self.interval, self.utc_offset_secs);
+
+        let required = self
+            .specs
+            .iter()
+            .map(|s| (s.base_key.clone(), s.indicator))
+            .collect();
+        let htf_indicators = match compute_for_candles(&htf_candles, required) {
+            Ok(map) => map,
+            Err(e) => {
+                tracing::warn!("HTF indicator computation failed: {}", e);
+                return false;
+            }
+        };
+
+        let last_completed = |ts: i64| htf_candles.iter().rposition(|c| c.timestamp < ts);
+        let curr_idx = last_completed(ctx.current_candle().timestamp);
+        let prev_idx = ctx
+            .index
+            .checked_sub(1)
+            .and_then(|pi| last_completed(ctx.candles[pi].timestamp));
+
+        let mut mini_indicators: HashMap<String, Vec<Option<f64>>> =
+            HashMap::with_capacity(self.specs.len());
+        for spec in &self.specs {
+            let series = htf_indicators.get(&spec.base_key);
+            let at = |idx: Option<usize>| {
+                idx.and_then(|i| series.and_then(|v| v.get(i)).copied().flatten())
+            };
+            mini_indicators.insert(spec.base_key.clone(), vec![at(prev_idx), at(curr_idx)]);
+        }
+
+        let htf_ctx = StrategyContext {
+            candles: ctx.candles,
+            index: ctx.index,
+            position: ctx.position,
+            equity: ctx.equity,
+            indicators: &mini_indicators,
+            extremes: ctx.extremes,
+            indicator_index: Some(1),
+        };
+        self.inner.evaluate(&htf_ctx)
+    }
+}
+
+/// Wrap a condition to be evaluated on a higher-timeframe candle series.
+///
+/// Bucket boundaries are UTC-aligned (offset = 0). For non-UTC exchanges use
+/// [`htf_region()`] instead.
+///
+/// # Arguments
+///
+/// * `interval` – Target higher timeframe (e.g. `Interval::OneWeek`)
+/// * `cond` – Any condition to evaluate on the HTF candles
+///
+/// # Example
+///
+/// ```ignore
+/// use finance_query::backtesting::refs::*;
+/// use finance_query::Interval;
+///
+/// // Entry only when weekly price is above its 20-bar SMA
+/// let weekly_uptrend = htf(Interval::OneWeek, price().above_ref(sma(20)));
+/// let entry = ema(10).crosses_above_ref(ema(30)).and(weekly_uptrend);
+/// ```
+pub fn htf<C: Condition>(interval: Interval, cond: C) -> HtfCondition<C> {
+    HtfCondition::new(interval, cond, 0)
+}
+
+/// Wrap a condition to be evaluated on a higher-timeframe candle series,
+/// with bucket boundaries aligned to the exchange's local calendar.
+///
+/// Weekly and monthly boundaries are shifted by `region.utc_offset_secs()` so
+/// that, for example, a Tokyo-listed stock's "Monday" starts at the correct
+/// local midnight rather than UTC midnight.
+///
+/// # Arguments
+///
+/// * `interval` – Target higher timeframe (e.g. `Interval::OneWeek`)
+/// * `region`   – Exchange region used to derive the UTC offset
+/// * `cond`     – Any condition to evaluate on the HTF candles
+///
+/// # Example
+///
+/// ```ignore
+/// use finance_query::backtesting::refs::*;
+/// use finance_query::{Interval, Region};
+///
+/// let weekly_trend = htf_region(Interval::OneWeek, Region::Japan, price().above_ref(sma(20)));
+/// ```
+pub fn htf_region<C: Condition>(interval: Interval, region: Region, cond: C) -> HtfCondition<C> {
+    HtfCondition::new(interval, cond, region.utc_offset_secs())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::condition::held_for_bars;
+    use crate::config::BacktestConfig;
+    use crate::engine::BacktestEngine;
+    use crate::position::{Position, PositionSide};
+    use crate::refs::{IndicatorRefExt, price, relative_volume, sma};
+    use crate::signal::Signal;
+    use crate::strategy::StrategyBuilder;
+    use finance_query_types::Candle;
+
+    const DAY: i64 = 86_400;
+
+    /// Daily bars starting 1970-01-05 (a Monday) so weekly buckets are aligned.
+    fn daily_candles(prices: &[f64]) -> Vec<Candle> {
+        prices
+            .iter()
+            .enumerate()
+            .map(|(i, &p)| {
+                Candle::__new(
+                    4 * DAY + i as i64 * DAY,
+                    p,
+                    p * 1.01,
+                    p * 0.99,
+                    p,
+                    1_000,
+                    Some(p),
+                    None,
+                )
+            })
+            .collect()
+    }
+
+    /// Rises, falls, then rises again — enough regime changes to produce
+    /// multiple weekly HTF crossings of the SMA.
+    fn zigzag_prices(n: usize) -> Vec<f64> {
+        (0..n)
+            .map(|i| {
+                let t = i as f64;
+                100.0 + 20.0 * (t / 14.0).sin() + t * 0.05
+            })
+            .collect()
+    }
+
+    fn run_htf_backtest() -> Vec<(i64, i64, f64, f64)> {
+        let candles = daily_candles(&zigzag_prices(180));
+        let config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let strategy = StrategyBuilder::new("HTF Characterization")
+            .entry(htf(Interval::OneWeek, price().above_ref(sma(3))))
+            .exit(htf(Interval::OneWeek, price().below_ref(sma(3))))
+            .build();
+
+        let result = BacktestEngine::new(config)
+            .run("TEST", &candles, strategy)
+            .unwrap();
+
+        result
+            .trades
+            .iter()
+            .map(|t| {
+                (
+                    t.entry_timestamp,
+                    t.exit_timestamp,
+                    (t.entry_price * 1e6).round() / 1e6,
+                    (t.exit_price * 1e6).round() / 1e6,
+                )
+            })
+            .collect()
+    }
+
+    /// Golden trade sequence. Precomputing the HTF lookup keys must not change
+    /// a single entry/exit.
+    #[test]
+    fn test_htf_backtest_trade_sequence_is_stable() {
+        let expected = vec![
+            (2_160_000, 2_937_600, 120.9999, 118.315742),
+            (6_739_200, 10_627_200, 86.897962, 121.919742),
+            (14_256_000, 15_811_200, 90.540957, 113.301781),
+        ];
+        assert_eq!(run_htf_backtest(), expected);
+    }
+
+    #[test]
+    fn test_precomputed_keys_match_htf_requirements() {
+        let cond = htf(Interval::OneWeek, price().above_ref(sma(20)));
+        let specs = cond.htf_requirements();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].base_key, "sma_20");
+        assert_eq!(specs[0].htf_key, "htf_1wk_sma_20");
+    }
+
+    #[test]
+    fn test_pure_price_condition_has_no_htf_requirements() {
+        let cond = htf(Interval::OneWeek, price().above(100.0));
+        assert!(cond.htf_requirements().is_empty());
+    }
+
+    #[test]
+    fn test_mixed_condition_keeps_base_candle_history() {
+        let candles = daily_candles(&[100.0; 30]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(1.0); 30]);
+
+        let cond = htf(
+            Interval::OneWeek,
+            sma(3).above(0.0).and(relative_volume(5).above(0.5)),
+        );
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 20,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_position_condition_sees_base_history() {
+        let candles = daily_candles(&[100.0; 30]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(1.0); 30]);
+        let entry_ts = candles[10].timestamp;
+        let pos = Position::new(
+            PositionSide::Long,
+            entry_ts,
+            100.0,
+            10.0,
+            0.0,
+            Signal::long(entry_ts, 100.0),
+        );
+
+        let cond = htf(Interval::OneWeek, sma(3).above(0.0).and(held_for_bars(3)));
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 15,
+            position: Some(&pos),
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_fast_path_reads_curr_slot_at_bar_0() {
+        let candles = daily_candles(&[100.0]);
+        let mut indicators = HashMap::new();
+        indicators.insert("htf_1wk_sma_3".to_string(), vec![Some(5.0)]);
+
+        let cond = htf(Interval::OneWeek, sma(3).above(0.0));
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 0,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+
+    #[test]
+    fn test_dynamic_fallback_price_refs_stay_on_base_bars() {
+        let mut prices = vec![99.0; 14];
+        prices.push(101.0);
+        let candles = daily_candles(&prices);
+        let indicators = HashMap::new();
+
+        let cond = htf(
+            Interval::OneWeek,
+            price().above(100.0).and(sma(1).above(0.0)),
+        );
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 14,
+            position: None,
+            equity: 10_000.0,
+            indicators: &indicators,
+            extremes: None,
+            indicator_index: None,
+        };
+        assert!(cond.evaluate(&ctx));
+    }
+}

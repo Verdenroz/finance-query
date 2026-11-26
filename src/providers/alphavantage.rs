@@ -213,7 +213,7 @@ impl CalendarProvider for AlphaVantageProvider {
         _to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         av::fetch_market_status_response().await
     }

@@ -8,6 +8,7 @@ use super::{
 use crate::adapters::polygon;
 use crate::error::Result;
 use crate::models::quote::QuoteSummaryResponse;
+use crate::providers::Operation;
 
 pub(crate) struct PolygonProvider;
 
@@ -272,7 +273,7 @@ impl CalendarProvider for PolygonProvider {
         _to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::MarketHoliday {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         polygon::fetch_market_holidays_response().await
     }

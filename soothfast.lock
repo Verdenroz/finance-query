@@ -38,7 +38,7 @@
     "finance_query::models::filings::provider::ProviderFilings": "0818196a3a5077ca",
     "finance_query::models::filings::sections::FilingSection": "d0d2fda02a4ba139",
     "finance_query::models::filings::sections::RiskFactor": "93c37af3aec014a3",
-    "finance_query::models::filings::submissions::EdgarSubmissions": "f6dbde02122fbf08",
+    "finance_query::models::filings::submissions::EdgarSubmissions": "28d5bda462c3e86f",
     "finance_query::models::forex::ForexQuote": "109e0da9a1050f1a",
     "finance_query::models::futures::FuturesQuote": "e1aade9ab704792d",
     "finance_query::models::indices::IndexConstituent": "664f2c9cfc6455a1",
