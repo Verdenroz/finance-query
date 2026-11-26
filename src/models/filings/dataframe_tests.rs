@@ -288,3 +288,72 @@ fn missing_recent_filings_keep_the_row_columns() {
         ["accession_number:str", "filing_date:str"]
     );
 }
+
+fn company_facts() -> CompanyFacts {
+    serde_json::from_value(json!({
+        "cik": 1,
+        "facts": {
+            "us-gaap": {
+                "Revenue": {"units": {
+                    "USD": [{"end": "2024-12-31", "val": 2.0}, {"end": "2023-12-31", "val": 1.0}],
+                    "EUR": [{"end": "2024-12-31", "val": 3.0}]
+                }},
+                "Assets": {"units": {"USD": [{"end": "2024-12-31", "val": 4.0}]}}
+            },
+            "dei": {"Shares": {"units": {"shares": [{"end": "2024-12-31", "val": 5.0}]}}}
+        }
+    }))
+    .unwrap()
+}
+
+#[test]
+fn company_facts_long_frame_is_sorted() {
+    let df = company_facts().to_dataframe().unwrap();
+    assert_eq!(
+        columns(&df)[..5],
+        [
+            "taxonomy:str",
+            "concept:str",
+            "unit:str",
+            "start:str",
+            "end:str"
+        ]
+    );
+    assert_eq!(df.column("val").unwrap().dtype().to_string(), "f64");
+    let strings = |name: &str| -> Vec<String> {
+        df.column(name)
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_iter()
+            .map(|value| value.unwrap_or_default().to_string())
+            .collect()
+    };
+    assert_eq!(
+        strings("taxonomy"),
+        ["dei", "us-gaap", "us-gaap", "us-gaap", "us-gaap"]
+    );
+    assert_eq!(
+        strings("concept"),
+        ["Shares", "Assets", "Revenue", "Revenue", "Revenue"]
+    );
+    assert_eq!(strings("unit"), ["shares", "USD", "EUR", "USD", "USD"]);
+    assert_eq!(strings("end")[3..], ["2024-12-31", "2023-12-31"]);
+}
+
+#[test]
+fn facts_by_taxonomy_drops_the_taxonomy_column() {
+    let facts = company_facts();
+    let df = facts.us_gaap().unwrap().to_dataframe().unwrap();
+    assert_eq!(columns(&df)[..3], ["concept:str", "unit:str", "start:str"]);
+    assert_eq!(df.height(), 4);
+}
+
+#[test]
+fn empty_company_facts_keep_the_schema() {
+    let full = company_facts().to_dataframe().unwrap();
+    let empty: CompanyFacts = serde_json::from_value(json!({})).unwrap();
+    let df = empty.to_dataframe().unwrap();
+    assert_eq!(df.height(), 0);
+    assert_eq!(columns(&df), columns(&full));
+}

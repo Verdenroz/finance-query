@@ -196,6 +196,69 @@ impl FactConcept {
     }
 }
 
+#[cfg(feature = "dataframe")]
+fn with_leading_column(
+    mut frame: ::polars::prelude::DataFrame,
+    name: &str,
+    value: &str,
+) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+    use ::polars::prelude::*;
+
+    let column = Series::new(name.into(), vec![value; frame.height()]);
+    frame.insert_column(0, column.into())?;
+    Ok(frame)
+}
+
+#[cfg(feature = "dataframe")]
+fn sorted<'a, V>(map: &'a HashMap<String, V>) -> Vec<(&'a String, &'a V)> {
+    let mut entries: Vec<_> = map.iter().collect();
+    entries.sort_by_key(|(key, _)| *key);
+    entries
+}
+
+#[cfg(feature = "dataframe")]
+impl FactsByTaxonomy {
+    /// Convert every data point of every concept to a long-format polars DataFrame.
+    ///
+    /// Columns are `concept` and `unit` followed by the columns of
+    /// [`FactUnit`]. Rows are sorted by concept, then unit, keeping each
+    /// unit's data points in stored order. With no data points the frame has
+    /// the same columns and no rows.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        let schema = with_leading_column(FactUnit::vec_to_dataframe(&[])?, "unit", "")?;
+        let mut stacked = with_leading_column(schema, "concept", "")?;
+        for (concept, fact) in sorted(&self.0) {
+            for (unit, _) in sorted(&fact.units) {
+                let Some(frame) = fact.to_dataframe_for_unit(unit)? else {
+                    continue;
+                };
+                let frame = with_leading_column(frame, "unit", unit)?;
+                stacked.vstack_mut(&with_leading_column(frame, "concept", concept)?)?;
+            }
+        }
+        Ok(stacked)
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl CompanyFacts {
+    /// Convert every data point of every taxonomy to a long-format polars DataFrame.
+    ///
+    /// Columns are `taxonomy` followed by the columns of
+    /// [`FactsByTaxonomy::to_dataframe`]. Rows are sorted by taxonomy, then as
+    /// there. `cik` and `entity_name` are not in the frame. With no facts the
+    /// frame has the same columns and no rows.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        let schema = FactsByTaxonomy(HashMap::new()).to_dataframe()?;
+        let mut stacked = with_leading_column(schema, "taxonomy", "")?;
+        for (taxonomy, facts) in sorted(&self.facts) {
+            let frame = with_leading_column(facts.to_dataframe()?, "taxonomy", taxonomy)?;
+            stacked.vstack_mut(&frame)?;
+        }
+        Ok(stacked)
+    }
+}
+
 /// A single data point for an XBRL fact.
 ///
 /// Represents one reported value from a specific filing and period.
