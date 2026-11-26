@@ -874,6 +874,67 @@ let df = hit.to_dataframe().unwrap();
 println!("{:?}", df.column("ciks").unwrap().dtype());
 ```
 
+## Series and Streaming Frames
+
+Indicator results hold one series per field, so their frames have one row per bar. Series shorter than the longest are padded with trailing nulls. There is no timestamp column, so `hstack` the frame onto the candle frame it was computed from.
+
+```rust feature=dataframe,indicators
+use finance_query::MacdResult;
+
+let macd = MacdResult {
+    macd_line: vec![None, Some(1.0), Some(1.5)],
+    signal_line: vec![None, None, Some(1.2)],
+    histogram: vec![None, None, Some(0.3)],
+};
+
+let df = macd.to_dataframe().unwrap();
+assert_eq!(df.height(), 3);
+println!("{:?}", df.get_column_names());
+```
+
+Sparks are long format, one row per point. `Spark::meta_dataframe()` returns the chart metadata as one row, and `BatchSparksResponse::to_dataframe()` stacks every symbol with a leading `symbol` column.
+
+Streaming events convert the same way. `PriceUpdate`, `OrderBookUpdate`, `TradeTick`, `OptionContractUpdate` and `AlertEvent` all have `vec_to_dataframe`, so collect a batch of events and convert it once. An `AlertEvent` frame carries the triggering tick as `update_*` columns plus a `condition_kind` column.
+
+```rust feature=dataframe
+use finance_query::streaming::PriceUpdate;
+
+let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
+    .into_iter()
+    .map(|id| {
+        let mut tick = PriceUpdate::default();
+        tick.id = id.to_string();
+        tick
+    })
+    .collect();
+
+let df = PriceUpdate::vec_to_dataframe(&ticks).unwrap();
+assert_eq!(df.height(), 2);
+println!("{}", df.width());
+```
+
+### Company Facts
+
+`CompanyFacts::to_dataframe()` and `FactsByTaxonomy::to_dataframe()` return every data point in long format. Columns are `taxonomy` (company facts only), `concept` and `unit`, followed by the fact columns. Rows are sorted by taxonomy, concept and unit.
+
+```rust feature=dataframe
+use finance_query::CompanyFacts;
+
+let facts: CompanyFacts = serde_json::from_str(
+    r#"{"cik": 320193, "entityName": "Apple Inc.", "facts": {"us-gaap": {
+        "Revenues": {"units": {"USD": [
+            {"end": "2023-09-30", "val": 383285000000.0, "fy": 2023, "fp": "FY", "form": "10-K"},
+            {"end": "2024-09-28", "val": 391035000000.0, "fy": 2024, "fp": "FY", "form": "10-K"}
+        ]}}
+    }}}"#,
+)
+.unwrap();
+
+let df = facts.to_dataframe().unwrap();
+assert_eq!(df.height(), 2);
+println!("{:?}", &df.get_column_names()[..3]);
+```
+
 ## Error Handling
 
 DataFrame conversion can fail due to Polars errors:
