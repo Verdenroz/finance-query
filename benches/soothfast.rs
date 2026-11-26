@@ -73,7 +73,9 @@ use finance_query::risk::{
     max_drawdown, omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio,
     tracking_error, ulcer_index, win_loss_stats,
 };
-use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
+use finance_query::streaming::{
+    AlertCondition, AlertEvaluator, AlertRule, MarketHoursType, OptionType, PriceUpdate, QuoteType,
+};
 use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
@@ -1855,6 +1857,43 @@ fn stream_serialize(update: &PriceUpdate) {
 )]
 fn stream_deserialize(json: &str) {
     keep(serde_json::from_str::<PriceUpdate>(keep(json)).unwrap());
+}
+
+#[fixture]
+fn alert_inputs() -> (Vec<AlertRule>, Vec<PriceUpdate>) {
+    let rules = vec![
+        AlertRule::new("AAPL", AlertCondition::CrossesAbove(176.0)),
+        AlertRule::new("AAPL", AlertCondition::CrossesBelow(174.0)).repeating(),
+        AlertRule::new("AAPL", AlertCondition::PriceAbove(180.0)),
+        AlertRule::new("AAPL", AlertCondition::PercentChangeAbove(1.0)).repeating(),
+        AlertRule::new("MSFT", AlertCondition::VolumeAbove(10_000_000)).repeating(),
+    ];
+    let updates = (0..32)
+        .map(|i| {
+            let mut update = make_price_update();
+            if i % 4 == 3 {
+                update.id = "MSFT".to_string();
+            }
+            update.price = 172.0 + (i % 8) as f32;
+            update.change_percent = if i % 2 == 0 { 1.5 } else { 0.2 };
+            update
+        })
+        .collect();
+    (rules, updates)
+}
+
+#[bench(
+    group = "streaming",
+    setup = alert_inputs,
+    alloc = 99,
+    covers = "finance_query::streaming::AlertEvaluator::evaluate"
+)]
+fn alerts_evaluate(input: &(Vec<AlertRule>, Vec<PriceUpdate>)) {
+    let (rules, updates) = input;
+    let mut evaluator = AlertEvaluator::new(rules.iter().cloned());
+    for update in updates {
+        keep(evaluator.evaluate(keep(update)));
+    }
 }
 
 #[fixture]
