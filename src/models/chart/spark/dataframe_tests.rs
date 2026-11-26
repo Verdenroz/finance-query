@@ -34,10 +34,29 @@ fn spark_columns() {
 }
 
 #[test]
-fn spark_pads_missing_closes_with_nulls() {
-    let df = spark(&[1, 2, 3], &[1.5]).to_dataframe().unwrap();
-    assert_eq!(df.height(), 3);
-    assert_eq!(df.column("close").unwrap().null_count(), 2);
+fn spark_rows_pair_each_timestamp_with_its_close() {
+    let result = serde_json::from_value(json!({
+        "symbol": "AAPL",
+        "response": [{
+            "meta": {"symbol": "AAPL"},
+            "timestamp": [1, 2, 3],
+            "indicators": {"quote": [{"close": [1.5, null, 3.5]}]}
+        }]
+    }))
+    .unwrap();
+    let spark = Spark::from_response(&result, None, None).unwrap();
+    let df = spark.to_dataframe().unwrap();
+    assert_eq!(df.height(), 2);
+    let timestamps = df.column("timestamp").unwrap().i64().unwrap();
+    let closes = df.column("close").unwrap().f64().unwrap();
+    assert_eq!(
+        timestamps.into_iter().collect::<Vec<_>>(),
+        [Some(1), Some(3)]
+    );
+    assert_eq!(
+        closes.into_iter().collect::<Vec<_>>(),
+        [Some(1.5), Some(3.5)]
+    );
 }
 
 #[test]
