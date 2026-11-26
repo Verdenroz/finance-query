@@ -25,13 +25,25 @@ fn assert_schema<T: crate::ToDataFrame>(row: &T, expected: &[&str]) {
 #[test]
 fn display_matches_serde_names() {
     for value in [QuoteType::AltSymbol, QuoteType::EcnQuote, QuoteType::Etf] {
-        assert_eq!(json!(value.to_string()), serde_json::to_value(value).unwrap());
+        assert_eq!(
+            json!(value.to_string()),
+            serde_json::to_value(value).unwrap()
+        );
     }
     for value in [OptionType::Call, OptionType::Put] {
-        assert_eq!(json!(value.to_string()), serde_json::to_value(value).unwrap());
+        assert_eq!(
+            json!(value.to_string()),
+            serde_json::to_value(value).unwrap()
+        );
     }
-    for value in [MarketHoursType::PreMarket, MarketHoursType::ExtendedHoursMarket] {
-        assert_eq!(json!(value.to_string()), serde_json::to_value(value).unwrap());
+    for value in [
+        MarketHoursType::PreMarket,
+        MarketHoursType::ExtendedHoursMarket,
+    ] {
+        assert_eq!(
+            json!(value.to_string()),
+            serde_json::to_value(value).unwrap()
+        );
     }
 }
 
@@ -57,8 +69,14 @@ fn price_update_columns() {
             "change_percent:f32",
         ]
     );
-    assert_eq!(df.column("quote_type").unwrap().str().unwrap().get(0), Some("EQUITY"));
-    assert_eq!(df.column("options_type").unwrap().dtype().to_string(), "str");
+    assert_eq!(
+        df.column("quote_type").unwrap().str().unwrap().get(0),
+        Some("EQUITY")
+    );
+    assert_eq!(
+        df.column("options_type").unwrap().dtype().to_string(),
+        "str"
+    );
     assert_eq!(PriceUpdate::vec_to_dataframe(&[]).unwrap().width(), 33);
 }
 
@@ -123,14 +141,20 @@ fn option_contract_flattens_greeks() {
     let df = update.to_dataframe().unwrap();
     let names = columns(&df);
     assert!(names.contains(&"option_type:str".to_string()));
-    assert_eq!(names[names.len() - 5..names.len() - 1], [
-        "greeks_delta:f64",
-        "greeks_gamma:f64",
-        "greeks_theta:f64",
-        "greeks_vega:f64",
-    ]);
+    assert_eq!(
+        names[names.len() - 5..names.len() - 1],
+        [
+            "greeks_delta:f64",
+            "greeks_gamma:f64",
+            "greeks_theta:f64",
+            "greeks_vega:f64",
+        ]
+    );
     assert_eq!(names.last().unwrap(), "time:i64");
-    assert_eq!(df.column("option_type").unwrap().str().unwrap().get(0), Some("PUT"));
+    assert_eq!(
+        df.column("option_type").unwrap().str().unwrap().get(0),
+        Some("PUT")
+    );
     assert_eq!(
         columns(&OptionContractUpdate::vec_to_dataframe(&[]).unwrap()),
         names

@@ -6,6 +6,9 @@ use crate::{FinanceError, Operation, Provider, Result};
 const CURSOR_VERSION: u8 = 1;
 use serde::{Deserialize, Serialize};
 
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
+
 /// One provider response, without collecting subsequent pages.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

@@ -73,6 +73,28 @@ macro_rules! delegate_wrapped_rows {
     };
 }
 
+impl<T: ToDataFrame> ToDataFrame for crate::ProviderPage<T> {
+    fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_dataframe(&self.items)
+    }
+
+    fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+        stack_rows(T::vec_to_dataframe(&[]), items, Self::to_dataframe)
+    }
+
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_nested_dataframe(&self.items)
+    }
+
+    fn vec_to_nested_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+        stack_rows(
+            T::vec_to_nested_dataframe(&[]),
+            items,
+            Self::to_nested_dataframe,
+        )
+    }
+}
+
 delegate_rows_to_inherent!(
     crate::CalendarEvent,
     crate::MarketCalendarEntry,

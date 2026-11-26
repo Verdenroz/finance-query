@@ -1,4 +1,4 @@
-use super::StockBar;
+use super::{Dividend, DividendAnalytics, StockBar};
 use crate::models::dataframe_test_util::columns;
 use serde_json::json;
 
@@ -20,6 +20,55 @@ fn stock_bar_columns() {
     assert_eq!(df.height(), 1);
 
     let empty = <StockBar>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn dividend_analytics_flattens_both_payments() {
+    let dividend = |timestamp| -> Dividend {
+        serde_json::from_value(json!({"timestamp": timestamp, "amount": 0.5})).unwrap()
+    };
+    let analytics = DividendAnalytics::from_dividends(&[dividend(1), dividend(2)]);
+    let expected = [
+        "total_paid:f64",
+        "payment_count:u64",
+        "average_payment:f64",
+        "cagr:f64",
+        "last_payment_timestamp:i64",
+        "last_payment_amount:f64",
+        "last_payment_provider_id:str",
+        "first_payment_timestamp:i64",
+        "first_payment_amount:f64",
+        "first_payment_provider_id:str",
+    ];
+    let df = analytics.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+    assert_eq!(
+        df.column("last_payment_timestamp")
+            .unwrap()
+            .i64()
+            .unwrap()
+            .get(0),
+        Some(2)
+    );
+    assert_eq!(
+        df.column("first_payment_timestamp")
+            .unwrap()
+            .i64()
+            .unwrap()
+            .get(0),
+        Some(1)
+    );
+
+    let none = DividendAnalytics::from_dividends(&[])
+        .to_dataframe()
+        .unwrap();
+    assert_eq!(columns(&none), expected);
+    assert_eq!(none.column("last_payment_amount").unwrap().null_count(), 1);
+
+    let empty = <DividendAnalytics>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
 }
