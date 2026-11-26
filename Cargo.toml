@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-derive", "finance-query-types", "finance-query-mcp"]
+members = ["server", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
 resolver = "2"
 
 [package]
@@ -75,13 +75,11 @@ base64 = "0.22"
 polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-struct"] }
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 finance-query-types = { version = "3.4.0", path = "finance-query-types" }
+finance-query-backtesting = { version = "3.4.0", path = "finance-query-backtesting", optional = true }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
 csv = { version = "1", optional = true }
 chrono-tz = { version = "0.10", optional = true }
-
-# Optional: parallel iteration for grid-search optimiser
-rayon = { version = "1", optional = true }
 
 # Optional: offline VADER lexicon-based news/text sentiment scoring
 vader_sentiment = { version = "0.1", optional = true }
@@ -131,11 +129,11 @@ full = [
     "senatetrades",
 ]
 # Enable DataFrame conversions with polars
-dataframe = ["dep:polars", "finance-query-types/dataframe"]
+dataframe = ["dep:polars", "finance-query-types/dataframe", "finance-query-backtesting?/dataframe"]
 # Enable technical analysis indicators
 indicators = ["finance-query-types/indicators"]
 # Enable backtesting engine for strategy simulation (requires indicators)
-backtesting = ["indicators", "dep:rayon"]
+backtesting = ["indicators", "dep:finance-query-backtesting"]
 # Enable FRED API and US Treasury yield curve
 fred = ["dep:csv", "finance-query-types/fred"]
 # Enable CoinGecko cryptocurrency data

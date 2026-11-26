@@ -21,7 +21,7 @@ pub struct Recommendation {
     pub recommendations: Vec<SimilarSymbol>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
-    pub provider_id: Option<crate::providers::Provider>,
+    pub provider_id: Option<finance_query_types::Provider>,
 }
 
 impl Recommendation {

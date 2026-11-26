@@ -81,7 +81,7 @@ pub mod edgar {
 mod backoff;
 use finance_query_types::constants;
 mod models;
-#[cfg(any(feature = "risk", feature = "backtesting"))]
+#[cfg(feature = "risk")]
 use finance_query_types::perf_metrics;
 mod providers;
 pub(crate) mod rate_limiter;
@@ -599,7 +599,7 @@ pub use indicators::{
 // stop-loss/take-profit, comprehensive performance metrics, parameter optimization,
 // walk-forward validation, Monte Carlo simulation, and multi-symbol portfolio.
 #[cfg(feature = "backtesting")]
-pub mod backtesting;
+pub use finance_query_backtesting as backtesting;
 
 // ============================================================================
 // Compile-time thread-safety assertions

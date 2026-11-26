@@ -2,6 +2,7 @@
 
 use super::{CalendarProvider, EconomicProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
+use crate::providers::Operation;
 
 pub(crate) struct FredProvider;
 
@@ -61,7 +62,7 @@ impl CalendarProvider for FredProvider {
         to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::Economic {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         crate::adapters::fred::fetch_market_calendar_response(from, to).await
     }

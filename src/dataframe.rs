@@ -71,6 +71,7 @@ delegate_to_inherent!(
     crate::BatchCapitalGainsResponse,
     crate::BatchChartsResponse,
     crate::BatchDividendsResponse,
+    crate::BatchFinancialsResponse,
     crate::BatchNewsResponse,
     crate::BatchOptionsResponse,
     crate::BatchQuotesResponse,
@@ -105,9 +106,6 @@ delegate_to_inherent!(crate::models::economic::MacroSeries);
 
 #[cfg(feature = "indicators")]
 delegate_to_inherent!(crate::BatchIndicatorsResponse);
-
-#[cfg(feature = "backtesting")]
-delegate_to_inherent!(crate::backtesting::PerformanceMetrics);
 
 #[cfg(test)]
 mod tests {

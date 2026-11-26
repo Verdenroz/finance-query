@@ -33,6 +33,7 @@
 //! # }
 //! ```
 
+pub(crate) mod calendar;
 pub(crate) mod client;
 pub(crate) mod economic;
 pub mod models;
@@ -205,15 +206,16 @@ pub async fn fetch_market_calendar_response(
     ))
 }
 
-/// Map FRED release dates to the canonical `Economic` calendar detail.
-/// FRED's release calendar reports when a release happens, not its value, so
-/// every field besides `event`/`country` stays `None`.
+/// Map FRED release dates to the canonical `Economic` calendar detail,
+/// dropping no-data phantom fills first. FRED's release calendar reports when
+/// a release happens, not its value, so every field besides `event`/`country`
+/// stays `None`.
 fn release_dates_to_calendar_entries(
     dates: Vec<ReleaseDate>,
 ) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
     use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 
-    dates
+    calendar::drop_phantom_daily_fills(dates)
         .into_iter()
         .map(|rd| MarketCalendarEntry {
             symbol: None,
@@ -291,6 +293,42 @@ mod tests {
         assert_eq!(canonical.observations.len(), 2);
         assert_eq!(canonical.observations[0].value, Some(26144.956));
         assert_eq!(canonical.observations[1].value, None);
+    }
+
+    #[tokio::test]
+    async fn test_market_calendar_drops_phantom_fills() {
+        let mut server = mockito::Server::new_async().await;
+        let mut dates: Vec<_> = (1..=10)
+            .map(|day| {
+                serde_json::json!({
+                    "release_id": 101,
+                    "release_name": "FOMC Press Release",
+                    "date": format!("2026-07-{day:02}"),
+                })
+            })
+            .collect();
+        dates.push(serde_json::json!({
+            "release_id": 10,
+            "release_name": "Consumer Price Index",
+            "date": "2026-07-15",
+        }));
+        let _mock = server
+            .mock("GET", "/releases/dates")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(serde_json::json!({ "release_dates": dates }).to_string())
+            .create_async()
+            .await;
+
+        let releases = test_client(&server.url())
+            .release_dates("2026-07-01", "2026-07-31")
+            .await
+            .unwrap();
+        let entries = release_dates_to_calendar_entries(releases);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].date.as_deref(), Some("2026-07-15"));
     }
 
     #[tokio::test]
