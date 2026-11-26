@@ -16,7 +16,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::stream::Stream;
-use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 use super::client::{StreamError, StreamResult};
 use super::source::{ReconnectConfig, StreamCommand, StreamSource, run_stream_loop};
@@ -52,6 +52,7 @@ where
         capacity: usize,
     ) -> StreamResult<Self> {
         let (first_tx, first_rx) = oneshot::channel();
+        let (last_error_tx, last_error) = watch::channel(None);
         let stream = Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
             let _ = run_stream_loop(
                 source,
@@ -60,19 +61,28 @@ where
                 command_rx,
                 reconnect,
                 first_tx,
+                last_error_tx,
             )
             .await;
         });
         let timeout = reconnect.start_timeout();
         match tokio::time::timeout(timeout, first_rx).await {
+            Ok(Ok(Ok(()))) => Ok(stream),
             Ok(Ok(Err(e))) => Err(e),
+            Ok(Err(_)) => Err(StreamError::ConnectionFailed(
+                "stream ended before connecting".to_string(),
+            )),
             Err(_) => {
                 stream.close().await;
+                let cause = last_error
+                    .borrow()
+                    .as_ref()
+                    .map(|e| format!(": {e}"))
+                    .unwrap_or_default();
                 Err(StreamError::ConnectionFailed(format!(
-                    "no connection within {timeout:?}"
+                    "no connection within {timeout:?}{cause}"
                 )))
             }
-            _ => Ok(stream),
         }
     }
 

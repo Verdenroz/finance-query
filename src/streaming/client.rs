@@ -109,10 +109,12 @@ impl PriceStream {
     /// # Errors
     ///
     /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
-    /// connection cannot be made, after retrying with the configured backoff
-    /// and attempt cap. Failures a retry cannot fix, such as an invalid
-    /// certificate or rejected credentials, return at once. Drops after the
-    /// stream has started reconnect in the background.
+    /// connection cannot be made: it makes up to 3 attempts within 30
+    /// seconds (fewer if the builder's `max_reconnect_attempts` is lower),
+    /// waiting the configured backoff between them. Failures a retry cannot
+    /// fix, such as an invalid certificate or rejected credentials, return at
+    /// once. Once started, drops reconnect in the background under the
+    /// configured policy.
     pub async fn subscribe<S, I>(symbols: I) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -300,10 +302,12 @@ impl PriceStreamBuilder {
     /// # Errors
     ///
     /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
-    /// connection cannot be made, after retrying with the configured backoff
-    /// and attempt cap. Failures a retry cannot fix, such as an invalid
-    /// certificate or rejected credentials, return at once. Drops after the
-    /// stream has started reconnect in the background.
+    /// connection cannot be made: it makes up to 3 attempts within 30
+    /// seconds (fewer if the builder's `max_reconnect_attempts` is lower),
+    /// waiting the configured backoff between them. Failures a retry cannot
+    /// fix, such as an invalid certificate or rejected credentials, return at
+    /// once. Once started, drops reconnect in the background under the
+    /// configured policy.
     pub async fn build(self) -> StreamResult<PriceStream> {
         let source: Arc<dyn StreamSource<PriceUpdate>> = match self.source {
             PriceSource::Yahoo => Arc::new(YahooStreamSource),

@@ -280,7 +280,7 @@ impl PolygonStreamBuilder {
         let (ws_stream, _) = ws_tls::connect(&url).await.map_err(|e| {
             if ws_tls::is_permanent(&e) {
                 FinanceError::RuntimeError(std::io::Error::other(format!(
-                    "Polygon WebSocket TLS error: {e}"
+                    "Polygon WebSocket connect rejected: {e}"
                 )))
             } else {
                 FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}"))
@@ -471,8 +471,8 @@ where
         ))
     })
     .await
-    .map_err(|_| FinanceError::AuthenticationFailed {
-        context: "Polygon WebSocket authentication timed out".to_string(),
+    .map_err(|_| FinanceError::Timeout {
+        timeout_ms: AUTH_TIMEOUT.as_millis() as u64,
     })?
 }
 

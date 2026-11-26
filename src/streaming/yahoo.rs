@@ -145,7 +145,8 @@ async fn connect_and_stream(
             }
 
             // Handle commands (subscribe/unsubscribe)
-            Some(cmd) = command_rx.recv() => {
+            cmd = command_rx.recv() => {
+                let Some(cmd) = cmd else { return Ok(()) };
                 let Some(changed) = apply_command(&cmd, subscriptions).await else {
                     info!("Received close command");
                     let _ = write.send(Message::Close(None)).await;

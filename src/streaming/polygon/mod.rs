@@ -232,7 +232,8 @@ where
                 }
             }
 
-            Some(cmd) = command_rx.recv() => {
+            cmd = command_rx.recv() => {
+                let Some(cmd) = cmd else { return Ok(()) };
                 let Some(changed) = apply_command(&cmd, subscriptions).await else {
                     return Ok(());
                 };
