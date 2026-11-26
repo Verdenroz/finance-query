@@ -112,12 +112,100 @@ impl<T: ToDataFrame> ToDataFrame for crate::ProviderPage<T> {
     }
 }
 
+/// Long-format frame of untyped Yahoo statement entries: one row per numeric field.
+///
+/// The period comes from `period_key` (a `{raw}` object, a number or a numeric
+/// string); fields that are neither a number nor a `{raw}` number are skipped.
+fn metric_rows(
+    entries: &[serde_json::Value],
+    period_key: &str,
+    period_column: &str,
+) -> PolarsResult<DataFrame> {
+    use polars::prelude::{NamedFrom, Series};
+    use serde_json::Value;
+
+    fn number(value: &Value) -> Option<&serde_json::Number> {
+        match value {
+            Value::Number(n) => Some(n),
+            Value::Object(o) => o.get("raw").and_then(Value::as_number),
+            _ => None,
+        }
+    }
+
+    let mut periods = Vec::new();
+    let mut metrics = Vec::new();
+    let mut values = Vec::new();
+    for entry in entries.iter().filter_map(Value::as_object) {
+        let period = entry.get(period_key).and_then(|value| match value {
+            Value::String(s) => s.parse().ok(),
+            other => number(other).and_then(serde_json::Number::as_i64),
+        });
+        for (key, value) in entry {
+            if key == period_key || key == "maxAge" {
+                continue;
+            }
+            if let Some(n) = number(value).and_then(serde_json::Number::as_f64) {
+                periods.push(period);
+                metrics.push(key.as_str());
+                values.push(n);
+            }
+        }
+    }
+
+    DataFrame::new(
+        values.len(),
+        vec![
+            Series::new(period_column.into(), periods).into(),
+            Series::new("metric".into(), metrics).into(),
+            Series::new("value".into(), values).into(),
+        ],
+    )
+}
+
+macro_rules! impl_metric_rows {
+    ($($ty:ty => $field:ident, $key:literal, $column:literal),* $(,)?) => {
+        $(
+            impl $ty {
+                /// Converts the entries to a long-format polars DataFrame, one row per numeric field.
+                ///
+                /// Columns are the entry's period (i64, null when absent), `metric` (the
+                /// Yahoo field name) and `value` (f64, the `raw` of `{raw, fmt}` fields).
+                /// An empty or missing list yields a zero-row frame with the same columns.
+                pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+                    metric_rows(self.$field.as_deref().unwrap_or_default(), $key, $column)
+                }
+            }
+
+            impl ToDataFrame for $ty {
+                fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+                    <$ty>::to_dataframe(self)
+                }
+
+                fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+                    stack_rows(metric_rows(&[], $key, $column), items, Self::to_dataframe)
+                }
+            }
+        )*
+    };
+}
+
+impl_metric_rows!(
+    crate::models::fundamentals::BalanceSheetHistory => balance_sheet_statements, "endDate", "end_date",
+    crate::models::fundamentals::BalanceSheetHistoryQuarterly => balance_sheet_statements, "endDate", "end_date",
+    crate::models::fundamentals::CashflowStatementHistory => cashflow_statements, "endDate", "end_date",
+    crate::models::fundamentals::CashflowStatementHistoryQuarterly => cashflow_statements, "endDate", "end_date",
+    crate::models::fundamentals::IncomeStatementHistory => income_statement_history, "endDate", "end_date",
+    crate::models::fundamentals::IncomeStatementHistoryQuarterly => income_statement_history, "endDate", "end_date",
+    crate::models::corporate::fund_performance::PastQuarterlyReturns => returns, "year", "year",
+);
+
 delegate_rows_to_inherent!(
     crate::CalendarEvent,
     crate::MarketCalendarEntry,
     crate::models::chart::spark::Spark,
     crate::streaming::AlertEvent,
     crate::SparkData,
+    crate::EdgarSearchHit,
 );
 
 delegate_to_inherent!(
@@ -136,6 +224,7 @@ delegate_to_inherent!(
     crate::Contracts,
     crate::EconomicSeries,
     crate::EdgarFilingIndex,
+    crate::EdgarSearchHitsContainer,
     crate::EdgarSearchResults,
     crate::FactConcept,
     crate::FactsByTaxonomy,
@@ -229,6 +318,62 @@ mod tests {
         let df = empty.to_dataframe().unwrap();
         assert_eq!(df.height(), 0);
         assert_eq!(schema(&df), schema(&Candle::vec_to_dataframe(&[]).unwrap()));
+    }
+
+    #[test]
+    fn statement_entries_convert_to_long_metric_rows() {
+        use crate::models::fundamentals::IncomeStatementHistory;
+
+        let history: IncomeStatementHistory = serde_json::from_value(serde_json::json!({
+            "maxAge": 1,
+            "incomeStatementHistory": [
+                {"maxAge": 1, "endDate": {"raw": 100, "fmt": "x"},
+                 "totalRevenue": {"raw": 5.0, "fmt": "5"}, "netIncome": 2, "label": "skip"},
+                {"totalRevenue": {"raw": 6.0}}
+            ]
+        }))
+        .unwrap();
+        let df = history.to_dataframe().unwrap();
+        assert_eq!(
+            schema(&df),
+            columns(&[
+                ("end_date", DataType::Int64),
+                ("metric", DataType::String),
+                ("value", DataType::Float64),
+            ])
+        );
+        assert_eq!(df.height(), 3);
+        assert_eq!(df.column("end_date").unwrap().null_count(), 1);
+
+        let empty: IncomeStatementHistory = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(schema(&empty.to_dataframe().unwrap()), schema(&df));
+        assert_eq!(
+            <IncomeStatementHistory as super::ToDataFrame>::vec_to_dataframe(&[history])
+                .unwrap()
+                .height(),
+            3
+        );
+    }
+
+    #[test]
+    fn past_quarterly_returns_use_the_year_as_period() {
+        use crate::models::corporate::fund_performance::PastQuarterlyReturns;
+
+        let returns: PastQuarterlyReturns = serde_json::from_value(serde_json::json!({
+            "returns": [{"year": "2024", "q1": {"raw": 0.1, "fmt": "10%"}, "q2": {"raw": 0.2}}]
+        }))
+        .unwrap();
+        let df = returns.to_dataframe().unwrap();
+        assert_eq!(
+            schema(&df),
+            columns(&[
+                ("year", DataType::Int64),
+                ("metric", DataType::String),
+                ("value", DataType::Float64),
+            ])
+        );
+        assert_eq!(df.height(), 2);
+        assert_eq!(df.column("year").unwrap().i64().unwrap().get(0), Some(2024));
     }
 
     #[test]
