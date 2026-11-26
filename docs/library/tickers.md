@@ -240,7 +240,7 @@ AAPL: 20 candles
 
 Fetch lightweight sparkline data for all symbols in a single batch request. Spark provides only timestamps and close prices, optimized for rendering sparklines in dashboards and watchlists.
 
-```rust capture-output covers=finance_query::models::chart::spark::Spark
+```rust capture-output covers=finance_query::Spark
 use finance_query::{Interval, Tickers, TimeRange};
 
 #[tokio::main]
@@ -288,7 +288,7 @@ AAPL: 5 data points
 
 ### Spark Structure
 
-<!-- soothfast:bind finance_query::models::chart::spark::Spark -->
+<!-- soothfast:bind finance_query::Spark -->
 
 Each `Spark` contains:
 

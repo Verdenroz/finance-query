@@ -100,7 +100,7 @@ A CIK is a unique 10-digit identifier assigned by the SEC to companies and indiv
 
 Fetch filing history and company metadata from SEC EDGAR. Returns the most recent ~1000 filings inline, with references to additional history files for older filings.
 
-```rust no_run covers=finance_query::models::filings::submissions::EdgarSubmissions
+```rust no_run covers=finance_query::EdgarSubmissions
 use finance_query::edgar;
 
 #[tokio::main]
@@ -150,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Submission Structure
 
-<!-- soothfast:bind finance_query::models::filings::submissions::EdgarSubmissions -->
+<!-- soothfast:bind finance_query::EdgarSubmissions -->
 
 The `EdgarSubmissions` response contains:
 
@@ -173,7 +173,7 @@ The `EdgarSubmissions` response contains:
 
 Fetch structured XBRL financial data from SEC EDGAR. Returns all extracted XBRL facts organized by taxonomy (us-gaap, ifrs, dei). This can be a large response (several MB for major companies).
 
-```rust no_run covers=finance_query::models::filings::company_facts::CompanyFacts
+```rust no_run covers=finance_query::CompanyFacts
 use finance_query::edgar;
 
 #[tokio::main]
@@ -230,7 +230,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Available Taxonomies
 
-<!-- soothfast:bind finance_query::models::filings::company_facts::CompanyFacts -->
+<!-- soothfast:bind finance_query::CompanyFacts -->
 
 The `CompanyFacts` response maps taxonomy names to their extracted concepts:
 
