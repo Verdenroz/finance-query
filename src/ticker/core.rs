@@ -598,18 +598,18 @@ impl Ticker {
 
     /// Expiration date (Unix timestamp) that `options(None)` resolves to.
     ///
-    /// `None` when the symbol has no listed options. Shares the cache with
-    /// [`options`](Self::options).
+    /// Fetches the chain via [`options`](Self::options), so it is served from
+    /// the cache when caching is on. `None` when the symbol has no listed options.
     pub async fn nearest_expiration(&self) -> Result<Option<i64>> {
         Ok(self.options(None).await?.loaded_expiration())
     }
 
     /// Get the options chain.
     ///
-    /// With `date: None` the chain is for the nearest expiration only; pass a
+    /// With Yahoo, `date: None` loads the nearest expiration only; pass a
     /// timestamp from [`Options::expiration_dates`] for another, or use
     /// [`nearest_expiration`](Self::nearest_expiration) to see which one
-    /// `None` resolves to.
+    /// `None` resolves to. Other providers may load several expirations.
     pub async fn options(&self, date: Option<i64>) -> Result<Options> {
         {
             let cache = self.options_cache.read().await;

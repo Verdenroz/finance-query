@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for options endpoint
 ///
-/// `Ticker::options(None)` returns the chain for the nearest expiration, not
-/// every expiration; [`expiration_dates`](Self::expiration_dates) lists the
-/// others to pass as `Some(timestamp)`.
+/// With Yahoo, `Ticker::options(None)` returns the chain for the nearest
+/// expiration only; [`expiration_dates`](Self::expiration_dates) lists the
+/// others to pass as `Some(timestamp)`. Other providers may load several
+/// expirations at once.
 ///
 /// Note: While this type is public for return values, users should not manually construct it.
 /// Use `Ticker::options()` to obtain options data.
@@ -114,15 +115,19 @@ impl Options {
             .unwrap_or_default()
     }
 
-    /// Expiration date (Unix timestamp) of the first loaded chain.
+    /// Earliest expiration date (Unix timestamp) with a loaded chain.
     ///
-    /// For a chain fetched with `options(None)` this is the nearest expiration.
-    /// `None` when no chain is loaded.
+    /// For a Yahoo chain fetched with `options(None)` this is the nearest
+    /// expiration. Contracts without an expiration are grouped under `0` by
+    /// providers that build chains from flat contract lists; that group is
+    /// skipped. `None` when no dated chain is loaded.
     pub fn loaded_expiration(&self) -> Option<i64> {
         self.first_result()?
             .options
-            .first()
+            .iter()
             .map(|chain| chain.expiration_date)
+            .filter(|&date| date != 0)
+            .min()
     }
 
     /// Borrowing iterator over call contracts across all loaded expirations.
@@ -274,6 +279,31 @@ mod tests {
     #[test]
     fn loaded_expiration_is_the_first_chain() {
         assert_eq!(options().loaded_expiration(), Some(100));
+    }
+
+    #[test]
+    fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
+        let contract =
+            |symbol: &str, expiration: Option<i64>| -> crate::models::options::OptionContract {
+                serde_json::from_value(serde_json::json!({
+                    "contractSymbol": symbol,
+                    "strike": 1.0,
+                    "expiration": expiration,
+                }))
+                .unwrap()
+            };
+        let options = crate::providers::build_options(
+            "X".into(),
+            Provider::Yahoo,
+            vec![],
+            vec![
+                contract("C0", None),
+                contract("C2", Some(200)),
+                contract("C1", Some(100)),
+            ],
+            vec![],
+        );
+        assert_eq!(options.loaded_expiration(), Some(100));
     }
 
     #[test]
