@@ -107,6 +107,14 @@ stream_handle! {
 
 impl DepthStream {
     /// Subscribe to depth updates for the given crypto pairs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn subscribe<S, I>(pairs: I) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -134,6 +142,14 @@ impl DepthStreamBuilder {
     }
 
     /// Build and start the stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn build(self) -> StreamResult<DepthStream> {
         let reconnect =
             ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);

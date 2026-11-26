@@ -77,6 +77,14 @@ stream_handle! {
 
 impl TradeStream {
     /// Subscribe to US equity trade prints for the given symbols.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn subscribe<S, I>(symbols: I) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -119,7 +127,11 @@ impl TradeStreamBuilder {
     /// # Errors
     ///
     /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed)
-    /// when the chosen asset class has no trade feed.
+    /// when the chosen asset class has no trade feed, or when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn build(self) -> StreamResult<TradeStream> {
         let source = Arc::new(PolygonTradeSource::new(self.asset_class)?);
         let reconnect =

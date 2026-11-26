@@ -19,6 +19,8 @@ use tracing::{debug, info, warn};
 
 use crate::adapters::polygon::websocket::{ClusterDTO, PolygonMessage, PolygonStream};
 
+use crate::error::FinanceError;
+
 use super::client::{StreamError, StreamResult};
 use super::source::{Ready, StreamCommand, apply_command};
 
@@ -194,12 +196,23 @@ where
     let channel_refs: Vec<&str> = channels.iter().map(String::as_str).collect();
 
     let mut stream = PolygonStream::from_singleton()
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?
+        .map_err(|e| {
+            ready.permanent();
+            StreamError::ConnectionFailed(e.to_string())
+        })?
         .cluster(class.cluster())
         .subscribe(&channel_refs)
         .build()
         .await
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
+        .map_err(|e| {
+            if matches!(
+                e,
+                FinanceError::AuthenticationFailed { .. } | FinanceError::RuntimeError(_)
+            ) {
+                ready.permanent();
+            }
+            StreamError::ConnectionFailed(e.to_string())
+        })?;
 
     let sender = stream.sender();
     info!("Connected to Polygon {} cluster", class.label());

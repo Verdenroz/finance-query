@@ -173,6 +173,14 @@ stream_handle! {
 
 impl OptionsChainStream {
     /// Subscribe to the chains of the given underlyings.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn subscribe<S, I>(underlyings: I) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -214,6 +222,14 @@ impl OptionsChainStreamBuilder {
     }
 
     /// Build and start the stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn build(self) -> StreamResult<OptionsChainStream> {
         let source = Arc::new(PolygonOptionsSource::new(self.greeks_refresh));
         let reconnect =

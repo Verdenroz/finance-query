@@ -105,6 +105,14 @@ impl PriceStream {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn subscribe<S, I>(symbols: I) -> StreamResult<Self>
     where
         S: Into<String>,
@@ -288,6 +296,14 @@ impl PriceStreamBuilder {
     }
 
     /// Build and start the price stream using the configured source.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::ConnectionFailed`](super::StreamError::ConnectionFailed) when the first
+    /// connection cannot be made, after retrying with the configured backoff
+    /// and attempt cap. Failures a retry cannot fix, such as an invalid
+    /// certificate or rejected credentials, return at once. Drops after the
+    /// stream has started reconnect in the background.
     pub async fn build(self) -> StreamResult<PriceStream> {
         let source: Arc<dyn StreamSource<PriceUpdate>> = match self.source {
             PriceSource::Yahoo => Arc::new(YahooStreamSource),

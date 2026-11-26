@@ -58,9 +58,12 @@ async fn connect_and_stream(
 
     info!("Connecting to Yahoo Finance WebSocket...");
 
-    let (ws_stream, _) = ws_tls::connect(YAHOO_WS_URL)
-        .await
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
+    let (ws_stream, _) = ws_tls::connect(YAHOO_WS_URL).await.map_err(|e| {
+        if ws_tls::is_permanent(&e) {
+            ready.permanent();
+        }
+        StreamError::ConnectionFailed(e.to_string())
+    })?;
 
     info!("Connected to Yahoo Finance WebSocket");
     ready.signal();

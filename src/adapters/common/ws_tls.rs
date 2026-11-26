@@ -27,6 +27,21 @@ pub(crate) fn client_config() -> Result<Arc<ClientConfig>, tungstenite::Error> {
         .map_err(|e| tungstenite::Error::Io(std::io::Error::other(e)))
 }
 
+/// `true` when retrying the same connect cannot succeed: a bad URL, a TLS
+/// setup or certificate failure, or a client-error HTTP upgrade response.
+pub(crate) fn is_permanent(error: &tungstenite::Error) -> bool {
+    match error {
+        tungstenite::Error::Url(_) | tungstenite::Error::Tls(_) => true,
+        tungstenite::Error::Http(response) => {
+            response.status().is_client_error() && response.status() != 429
+        }
+        tungstenite::Error::Io(io) => io
+            .get_ref()
+            .is_some_and(|source| source.is::<rustls::Error>()),
+        _ => false,
+    }
+}
+
 /// Open a WebSocket to `url` over TLS using [`client_config`].
 pub(crate) async fn connect(url: &str) -> Result<(WsStream, Response), tungstenite::Error> {
     let connector = Connector::Rustls(client_config()?);
@@ -41,6 +56,17 @@ mod tests {
     fn client_config_builds_without_a_process_default_provider() {
         assert!(rustls::crypto::CryptoProvider::get_default().is_none());
         assert!(client_config().is_ok());
+    }
+
+    #[test]
+    fn url_and_certificate_errors_are_permanent() {
+        let url = tungstenite::Error::Url(tungstenite::error::UrlError::NoHostName);
+        let cert = tungstenite::Error::Io(std::io::Error::other(
+            rustls::Error::InvalidCertificate(rustls::CertificateError::Expired),
+        ));
+        assert!(is_permanent(&url));
+        assert!(is_permanent(&cert));
+        assert!(!is_permanent(&tungstenite::Error::ConnectionClosed));
     }
 
     #[tokio::test]
