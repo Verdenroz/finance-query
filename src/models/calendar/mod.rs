@@ -511,3 +511,6 @@ mod tests {
         assert_eq!(v["date"], "2026-02-25");
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
