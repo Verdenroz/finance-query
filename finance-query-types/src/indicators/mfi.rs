@@ -57,18 +57,19 @@ pub fn mfi(
         .map(|((h, l), c)| (h + l + c) / 3.0)
         .collect();
 
-    let flows: Vec<(bool, bool, f64)> = typical_prices
-        .windows(2)
-        .zip(&volumes[1..])
-        .map(|(w, &v)| (w[1] > w[0], w[1] < w[0], w[1] * v))
-        .collect();
+    let flows = || {
+        typical_prices
+            .windows(2)
+            .zip(&volumes[1..])
+            .map(|(w, &v)| (w[1] > w[0], w[1] < w[0], w[1] * v))
+    };
 
     let mut result = vec![None; len];
 
     let mut positive_flow = 0.0;
     let mut negative_flow = 0.0;
 
-    for &(up, down, raw) in &flows[..period] {
+    for (up, down, raw) in flows().take(period) {
         if up {
             positive_flow += raw;
         } else if down {
@@ -77,10 +78,10 @@ pub fn mfi(
     }
     result[period] = Some(money_flow_index(positive_flow, negative_flow));
 
-    for ((out, &(old_up, old_down, old_raw)), &(up, down, raw)) in result[period + 1..]
+    for ((out, (old_up, old_down, old_raw)), (up, down, raw)) in result[period + 1..]
         .iter_mut()
-        .zip(&flows)
-        .zip(&flows[period..])
+        .zip(flows())
+        .zip(flows().skip(period))
     {
         if old_up {
             positive_flow -= old_raw;

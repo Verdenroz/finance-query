@@ -606,7 +606,7 @@ fn ind_choppiness_index(s: &Series) {
 #[bench(
     group = "indicators",
     setup = series_1000,
-    alloc = 3,
+    alloc = 2,
     covers = "finance_query::indicators::mfi"
 )]
 fn ind_mfi(s: &Series) {
