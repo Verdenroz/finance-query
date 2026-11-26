@@ -55,6 +55,8 @@ mod choppiness_index;
 mod cmf;
 mod cmo;
 mod coppock_curve;
+#[cfg(feature = "dataframe")]
+mod dataframe;
 mod dema;
 mod donchian_channels;
 mod elder_ray;
