@@ -22,7 +22,8 @@ pub struct EdgarSearchResults {
 impl EdgarSearchResults {
     /// Convert search results to a polars DataFrame.
     ///
-    /// Extracts the `_source` data from each hit and converts to a DataFrame.
+    /// One row per hit with a `_source`: the source columns followed by
+    /// `_index`, `_id` and `_score`.
     ///
     /// # Example
     ///
@@ -67,8 +68,8 @@ impl EdgarSearchHit {
 
     /// Convert hits to a polars DataFrame, one row per hit with a `_source`.
     ///
-    /// Columns are `_index`, `_id` and `_score` followed by the
-    /// [`EdgarSearchSource`] columns.
+    /// Columns are the [`EdgarSearchSource`] columns followed by `_index`,
+    /// `_id` and `_score`.
     pub fn vec_to_dataframe(
         hits: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
@@ -95,9 +96,7 @@ impl EdgarSearchHit {
             )
             .into(),
         ];
-        for (at, column) in hit_columns.into_iter().enumerate() {
-            frame.insert_column(at, column)?;
-        }
+        frame.hstack_mut(&hit_columns)?;
         Ok(frame)
     }
 }
@@ -235,7 +234,7 @@ mod tests {
         assert!(col_names.iter().any(|n| n.as_str() == "form"));
         assert!(col_names.iter().any(|n| n.as_str() == "file_date"));
         assert_eq!(
-            col_names[..3]
+            col_names[col_names.len() - 3..]
                 .iter()
                 .map(|n| n.as_str())
                 .collect::<Vec<_>>(),
@@ -259,7 +258,7 @@ mod tests {
         assert_eq!(empty.schema(), none.to_dataframe().unwrap().schema());
         let sourceless: EdgarSearchHit = serde_json::from_str(r#"{"_id": "1"}"#).unwrap();
         assert_eq!(sourceless.to_dataframe().unwrap().schema(), empty.schema());
-        assert_eq!(empty.get_column_names()[3], "file_date");
+        assert_eq!(empty.get_column_names()[0], "file_date");
     }
 
     #[test]
@@ -303,5 +302,18 @@ mod tests {
         assert_eq!(source.ciks, vec!["320193"]);
         assert_eq!(source.form.as_deref(), Some("10-K"));
         assert!(!source.display_names.is_empty());
+    }
+
+    #[cfg(feature = "dataframe")]
+    #[test]
+    fn empty_hit_containers_keep_the_hit_schema() {
+        use crate::ToDataFrame;
+
+        let empty = <EdgarSearchHitsContainer as ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+        let hits = EdgarSearchHit::vec_to_dataframe(&[]).unwrap();
+        assert_eq!(empty.get_column_names(), hits.get_column_names());
+        assert!(empty.width() > 0);
+        let results = <EdgarSearchResults as ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+        assert_eq!(results.get_column_names(), hits.get_column_names());
     }
 }

@@ -33,6 +33,7 @@ fn metrics_rows(leading: Vec<Column>, metrics: &[&PerformanceMetrics]) -> Polars
     for (at, column) in leading.into_iter().enumerate() {
         frame.insert_column(at, column)?;
     }
+    frame.rechunk_mut();
     Ok(frame)
 }
 
@@ -227,6 +228,7 @@ impl ParetoReport {
     ///
     /// Columns are `point` (u64, 1-based position in the front), `objective` (string, the
     /// `OptimizeMetric` variant name) and `score` (f64), one row per point and objective.
+    /// Scores are the optimizer's maximised values, so `MinDrawdown` is the negated drawdown.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         let (mut points, mut objectives, mut scores) = (Vec::new(), Vec::new(), Vec::new());
         for (point, p) in (1u64..).zip(&self.front) {

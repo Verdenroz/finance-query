@@ -829,7 +829,7 @@ assert_eq!(dividends.to_dataframe().unwrap().height(), 2);
 assert_eq!(dividends[..1].to_dataframe().unwrap().height(), 1);
 ```
 
-An empty list keeps the row type's schema. `Vec` and slice frames stack one row per item, so `candles.to_dataframe()` equals `Candle::vec_to_dataframe(&candles)`.
+An empty list keeps the row type's schema for row types such as `Candle` or `Quote`; types that are already multi-row frames, such as `Chart` or `FinancialStatement`, give an empty frame with no columns. `Vec` and slice frames stack one row per item, so `candles.to_dataframe()` equals `Candle::vec_to_dataframe(&candles)`.
 
 ### Single Item to DataFrame
 

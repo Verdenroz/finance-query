@@ -138,7 +138,9 @@ fn metric_rows(
     for entry in entries.iter().filter_map(Value::as_object) {
         let period = entry.get(period_key).and_then(|value| match value {
             Value::String(s) => s.parse().ok(),
-            other => number(other).and_then(serde_json::Number::as_i64),
+            other => {
+                number(other).and_then(|n| n.as_i64().or_else(|| n.as_f64().map(|f| f as i64)))
+            }
         });
         for (key, value) in entry {
             if key == period_key || key == "maxAge" {
@@ -224,8 +226,6 @@ delegate_to_inherent!(
     crate::Contracts,
     crate::EconomicSeries,
     crate::EdgarFilingIndex,
-    crate::EdgarSearchHitsContainer,
-    crate::EdgarSearchResults,
     crate::FactConcept,
     crate::FactsByTaxonomy,
     crate::FinancialStatement,
@@ -239,6 +239,8 @@ delegate_to_inherent!(
 
 delegate_wrapped_rows!(
     crate::EdgarFilingRecent => crate::EdgarFiling,
+    crate::EdgarSearchHitsContainer => crate::EdgarSearchHit,
+    crate::EdgarSearchResults => crate::EdgarSearchHit,
     crate::ResearchReports => crate::ResearchReport,
     crate::SearchQuotes => crate::SearchQuote,
 );
