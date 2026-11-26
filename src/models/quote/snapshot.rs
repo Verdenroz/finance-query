@@ -38,6 +38,12 @@ impl AssetClass {
     }
 }
 
+impl std::fmt::Display for AssetClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// One symbol's current market state, flattened across asset classes.
 ///
 /// Providers return a row per requested symbol even when the lookup failed, so
@@ -96,6 +102,7 @@ mod tests {
             (AssetClass::Indices, "indices"),
         ] {
             assert_eq!(variant.as_str(), name);
+            assert_eq!(variant.to_string(), name);
             let json = serde_json::to_string(&variant).unwrap();
             assert_eq!(json, format!("\"{name}\""));
             assert_eq!(
