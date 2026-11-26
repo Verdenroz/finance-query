@@ -1106,18 +1106,17 @@ impl Ticker {
                 return Result::Ok(None);
             };
             let bt = Ticker::new(sym).await?;
-            let bench_chart = bt.chart(interval, range).await?;
-            Result::Ok(Some(risk::candles_to_returns(&bench_chart.candles)))
+            Result::Ok(Some(bt.chart(interval, range).await?))
         };
         // `join!`, not `try_join!`: resolving in a fixed order keeps the primary
         // symbol's error as the surfaced one, matching the previous sequential
         // `self.chart(..).await?` ordering.
-        let (chart, bench_returns) = tokio::join!(self.chart(interval, range), bench_fut);
+        let (chart, bench_chart) = tokio::join!(self.chart(interval, range), bench_fut);
         let chart = chart?;
-        let bench_returns = bench_returns?;
-        Ok(risk::compute_risk_summary(
+        let bench_chart = bench_chart?;
+        Ok(risk::RiskSummary::from_candles(
             &chart.candles,
-            bench_returns.as_deref(),
+            bench_chart.as_ref().map(|c| c.candles.as_slice()),
         ))
     }
 

@@ -313,3 +313,37 @@ impl Chart {
         crate::indicators::fibonacci_retracement(&self.high_prices(), &self.low_prices(), period)
     }
 }
+
+#[cfg(feature = "risk")]
+impl Chart {
+    /// Simple close-to-close returns of the candles, one fewer than
+    /// `candles`. See [`risk::returns`](crate::risk::returns).
+    ///
+    /// `close` is not dividend-adjusted, so returns exclude dividends.
+    pub fn returns(&self) -> Vec<f64> {
+        crate::risk::returns(&self.candles)
+    }
+}
+
+#[cfg(all(test, feature = "risk"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn returns_match_risk_returns() {
+        let candles: Vec<Candle> = [100.0, 110.0, 99.0]
+            .into_iter()
+            .map(|c| Candle::__new(0, c, c, c, c, 1, None, None))
+            .collect();
+        let chart = Chart {
+            symbol: "X".into(),
+            meta: ChartMeta::default(),
+            candles,
+            interval: None,
+            range: None,
+            provider_id: None,
+        };
+        assert_eq!(chart.returns(), crate::risk::returns(&chart.candles));
+        assert_eq!(chart.returns().len(), 2);
+    }
+}
