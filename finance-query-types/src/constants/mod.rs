@@ -20,7 +20,6 @@ pub mod exchange_codes;
 ///
 /// These constants represent field names that must be prefixed with frequency ("annual" or "quarterly")
 /// Example: "annualTotalRevenue", "quarterlyTotalRevenue"
-#[allow(missing_docs)]
 pub mod fundamental_types;
 
 /// World market indices

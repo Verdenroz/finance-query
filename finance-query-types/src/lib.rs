@@ -5,6 +5,7 @@
 
 mod capability;
 mod chart;
+/// Enums and string constants shared across providers.
 pub mod constants;
 #[cfg(feature = "dataframe")]
 mod dataframe;
