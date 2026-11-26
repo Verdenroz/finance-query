@@ -520,7 +520,7 @@ pub(crate) async fn fetch_quotes_batch(
     parse_quotes_batch(&body)
 }
 
-fn parse_quotes_batch(body: &[u8]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+pub(crate) fn parse_quotes_batch(body: &[u8]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
     let envelope: QuotesEnvelope = serde_json::from_slice(body)?;
     Ok(envelope
         .quote_response

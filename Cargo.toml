@@ -173,6 +173,9 @@ senatetrades = ["dep:chromiumoxide", "finance-query-types/senatetrades"]
 # Expose internal parsers to `fuzz/` targets. Never enabled by `full` or a
 # normal build: it widens the public surface for fuzzing only.
 fuzzing = []
+# Expose thin wrappers over internal parsers to `benches/`. Enabled by
+# `bench-gate` only.
+bench-internals = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -195,7 +198,7 @@ translation-offline = ["translation", "dep:ct2rs", "dep:zip", "reqwest/blocking"
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; dataframe/translation-offline are too heavy for
 # valgrind (excluded by design — see .claude/rules/benches.md).
-bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment"]
+bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "bench-internals"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the

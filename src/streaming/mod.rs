@@ -54,7 +54,7 @@ mod news;
 mod options;
 #[cfg(feature = "polygon")]
 mod polygon;
-mod pricing;
+pub(crate) mod pricing;
 mod source;
 mod subscription;
 #[cfg(feature = "polygon")]
