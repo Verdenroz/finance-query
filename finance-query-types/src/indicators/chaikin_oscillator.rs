@@ -40,17 +40,21 @@ pub fn chaikin_oscillator(
         return Err(IndicatorError::InsufficientData { need: 10, got: len });
     }
 
-    let mut ad_series = Vec::with_capacity(len);
     let mut ad_cumulative = 0.0;
-
-    for i in 0..len {
-        let high_low = highs[i] - lows[i];
-        if high_low != 0.0 {
-            let mf_multiplier = ((closes[i] - lows[i]) - (highs[i] - closes[i])) / high_low;
-            ad_cumulative += mf_multiplier * volumes[i];
-        }
-        ad_series.push(ad_cumulative);
-    }
+    let ad_series: Vec<f64> = highs
+        .iter()
+        .zip(lows)
+        .zip(closes)
+        .zip(volumes)
+        .map(|(((&high, &low), &close), &volume)| {
+            let high_low = high - low;
+            if high_low != 0.0 {
+                let mf_multiplier = ((close - low) - (high - close)) / high_low;
+                ad_cumulative += mf_multiplier * volume;
+            }
+            ad_cumulative
+        })
+        .collect();
 
     // ema_raw returns only valid values — no Option overhead
     let ema3_raw = ema_raw(&ad_series, 3); // len = N-2, index k → orig k+2
@@ -59,8 +63,8 @@ pub fn chaikin_oscillator(
     let mut result = vec![None; len];
 
     // ema10_raw[k] aligns with orig index k+9; ema3_raw at same orig = ema3_raw[k+7]
-    for (k, &e10) in ema10_raw.iter().enumerate() {
-        result[k + 9] = Some(ema3_raw[k + 7] - e10);
+    for ((out, &e10), &e3) in result[9..].iter_mut().zip(&ema10_raw).zip(&ema3_raw[7..]) {
+        *out = Some(e3 - e10);
     }
 
     Ok(result)
