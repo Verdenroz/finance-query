@@ -879,7 +879,7 @@ fn leveraged_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
 #[bench(
     group = "backtesting",
     setup = leveraged_backtest_inputs,
-    covers = "finance_query::backtesting::BacktestConfigBuilder::max_leverage"
+    covers = "finance_query::backtesting::BacktestEngine::run"
 )]
 fn bt_leveraged_margin(input: &(BacktestConfig, Vec<Candle>)) {
     let (config, candles) = input;
@@ -932,7 +932,7 @@ fn kelly_sizing_backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
 #[bench(
     group = "backtesting",
     setup = kelly_sizing_backtest_inputs,
-    covers = "finance_query::backtesting::BacktestConfigBuilder::position_sizing"
+    covers = "finance_query::backtesting::BacktestEngine::run"
 )]
 fn bt_fractional_kelly_sizing(input: &(BacktestConfig, Vec<Candle>)) {
     let (config, candles) = input;
@@ -1002,7 +1002,7 @@ fn portfolio_inputs_sized(n: usize) -> (PortfolioConfig, Vec<SymbolData>) {
     setup_sized = portfolio_inputs_sized,
     alloc = 78073,
     complexity = "n",
-    covers = "finance_query::backtesting::PortfolioEngine::run"
+    covers = "finance_query::backtesting::portfolio::PortfolioEngine::run"
 )]
 fn bt_portfolio_3_symbols(input: &(PortfolioConfig, Vec<SymbolData>)) {
     let (config, data) = input;
