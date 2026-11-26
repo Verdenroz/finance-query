@@ -4,7 +4,7 @@ mod benchmark;
 #[cfg(feature = "dataframe")]
 mod dataframe;
 #[cfg(test)]
-mod fixtures;
+pub(crate) mod fixtures;
 mod metrics;
 mod periods;
 mod rolling;

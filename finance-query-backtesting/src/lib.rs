@@ -102,6 +102,8 @@
 pub mod comparison;
 pub mod condition;
 mod config;
+#[cfg(feature = "dataframe")]
+mod dataframe;
 mod engine;
 mod error;
 pub mod monte_carlo;
