@@ -98,8 +98,11 @@ pub fn max_drawdown_span(candles: &[Candle]) -> Option<DrawdownSpan> {
     let mut best: Option<(f64, usize, usize)> = None;
 
     for (i, c) in candles.iter().enumerate() {
+        if !(c.close.is_finite() && c.close > 0.0) {
+            continue;
+        }
         let peak = candles[peak_idx].close;
-        if c.close > peak {
+        if !(peak.is_finite() && peak > 0.0) || c.close > peak {
             peak_idx = i;
             continue;
         }
@@ -211,6 +214,14 @@ mod tests {
         assert_eq!((span.peak_timestamp, span.trough_timestamp), (20, 30));
         let from_returns = max_drawdown(&crate::risk::returns(&candles));
         assert!((span.max_drawdown - from_returns.max_drawdown).abs() < 1e-12);
+    }
+
+    #[test]
+    fn span_skips_non_finite_closes() {
+        let candles = [candle(1, f64::NAN), candle(2, 100.0), candle(3, 50.0)];
+        let span = max_drawdown_span(&candles).unwrap();
+        assert!((span.max_drawdown - 0.5).abs() < 1e-12);
+        assert_eq!((span.peak_index, span.trough_index), (1, 2));
     }
 
     #[test]
