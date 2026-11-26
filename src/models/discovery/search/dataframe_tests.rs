@@ -77,3 +77,21 @@ fn search_results_nest_quotes_news_and_reports() {
     assert!(cols[3].starts_with("news:list[struct["));
     assert!(cols[4].starts_with("research_reports:list[struct["));
 }
+
+#[test]
+fn search_results_nested_news_carries_thumbnails() {
+    let results: SearchResults = serde_json::from_value(json!({
+        "news": [{"title": "t", "thumbnail": {"resolutions": [{"tag": "original"}]}}]
+    }))
+    .unwrap();
+    let df = results.to_nested_dataframe().unwrap();
+    let news = df
+        .column("news")
+        .unwrap()
+        .list()
+        .unwrap()
+        .get_as_series(0)
+        .unwrap();
+    assert_eq!(news.len(), 1);
+    assert!(news.struct_().unwrap().field_by_name("thumbnail").is_ok());
+}

@@ -48,6 +48,28 @@ impl SearchNewsList {
     }
 }
 
+#[cfg(feature = "dataframe")]
+impl crate::ToDataFrame for SearchNewsList {
+    fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        Self::to_dataframe(self)
+    }
+
+    fn to_nested_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        SearchNews::vec_to_nested_dataframe(&self.0)
+    }
+
+    fn vec_to_nested_dataframe(
+        items: &[Self],
+    ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        items
+            .iter()
+            .map(Self::to_nested_dataframe)
+            .try_fold(SearchNews::vec_to_nested_dataframe(&[])?, |frame, next| {
+                frame.vstack(&next?)
+            })
+    }
+}
+
 /// A news result from search
 ///
 /// When the `dataframe` feature is enabled, scalar fields can be converted

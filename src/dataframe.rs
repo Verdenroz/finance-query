@@ -55,7 +55,6 @@ delegate_to_inherent!(
     crate::Recommendation,
     crate::ResearchReports,
     crate::ScreenerResults,
-    crate::SearchNewsList,
     crate::SearchQuotes,
 );
 
