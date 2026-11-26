@@ -66,7 +66,7 @@ pub(crate) fn build_economic_events(
 /// of 3+ consecutive calendar days for the same release is a phantom fill and
 /// is discarded. Isolated dates and 2-day adjacencies are kept, so the filter
 /// is independent of the calendar window size.
-fn drop_phantom_daily_fills(releases: Vec<ReleaseDate>) -> Vec<ReleaseDate> {
+pub(super) fn drop_phantom_daily_fills(releases: Vec<ReleaseDate>) -> Vec<ReleaseDate> {
     use std::collections::{HashMap, HashSet};
 
     let day = |r: &ReleaseDate| parse_iso_date(&r.date).map(|ts| ts.div_euclid(86_400));
