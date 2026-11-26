@@ -5,7 +5,7 @@ use super::{TickerDetailsResponseDTO, TickerRefDTO, details_to_canonical};
 use crate::adapters::polygon::client::PathRule;
 use crate::adapters::polygon::models::{PaginatedResponseDTO, StockTypeDTO};
 use crate::adapters::polygon::{build_client, invalid_page};
-use crate::models::discovery::listings::date;
+use crate::providers::stock_listing::date;
 use crate::{
     FinanceError, PageCursor, Provider, ProviderPage, Result, StockListing, StockListingRequest,
     StockType, SymbolDetails, TickerChange,
