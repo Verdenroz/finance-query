@@ -35,10 +35,10 @@ impl SubscriptionRoot {
             .await
             .map_err(|e| Error::new(e.to_string()))?;
 
-        let hub_stream = hub
-            .resubscribe()
-            .await
-            .ok_or_else(|| Error::new("Price stream unavailable"))?;
+        let Some(hub_stream) = hub.resubscribe().await else {
+            hub.unsubscribe_symbols(&symbols).await;
+            return Err(Error::new("Price stream unavailable"));
+        };
 
         let subscribed: HashSet<String> = symbols.iter().cloned().collect();
         let guard = SubscriptionGuard {
@@ -82,10 +82,10 @@ impl SubscriptionRoot {
             .await
             .map_err(|e| Error::new(e.to_string()))?;
 
-        let hub_stream = hub
-            .resubscribe()
-            .await
-            .ok_or_else(|| Error::new("Price stream unavailable"))?;
+        let Some(hub_stream) = hub.resubscribe().await else {
+            hub.unsubscribe_symbols(&symbols).await;
+            return Err(Error::new("Price stream unavailable"));
+        };
 
         // Pre-filter on the rules' symbols: the hub carries every symbol any
         // client anywhere subscribed to.

@@ -569,6 +569,9 @@ impl Stream for TickStream {
 #[derive(Clone, Default)]
 pub struct StreamHub {
     inner: Arc<tokio::sync::Mutex<StreamHubInner>>,
+    /// Serializes upstream creation so concurrent first subscribers share one
+    /// connect, without holding `inner` while it runs.
+    connect_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 #[derive(Default)]
@@ -607,8 +610,6 @@ impl StreamHub {
         .await
     }
 
-    /// `connect` runs without the hub lock held so a slow or failing upstream
-    /// connect never blocks other clients.
     async fn subscribe_symbols_via<F, Fut>(
         &self,
         symbols: &[String],
@@ -627,70 +628,24 @@ impl StreamHub {
             .into_iter()
             .collect();
 
-        if unique.is_empty() {
+        if unique.is_empty() || self.join_upstream(&unique).await {
             return Ok(());
         }
 
-        {
-            let mut inner = self.inner.lock().await;
-
-            let mut newly_needed: Vec<String> = Vec::new();
-            for symbol in &unique {
-                let count = inner.symbol_ref_counts.entry(symbol.clone()).or_insert(0);
-                if *count == 0 {
-                    newly_needed.push(symbol.clone());
-                }
-                *count += 1;
-            }
-            metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
-
-            if let Some(upstream) = inner.upstream.as_ref() {
-                if !newly_needed.is_empty() {
-                    upstream
-                        .add_symbols(newly_needed.iter().map(|s| s.as_str()))
-                        .await;
-                }
-                return Ok(());
-            }
+        let _creating = self.connect_lock.lock().await;
+        if self.join_upstream(&unique).await {
+            return Ok(());
         }
 
-        let connected = connect(unique.clone()).await;
+        // Counts change only at commit, so a failed or cancelled connect
+        // leaves nothing to undo; dropping the stream stops its task.
+        let stream = connect(unique.clone()).await?;
 
         let mut inner = self.inner.lock().await;
-        let stream = match connected {
-            Ok(stream) => stream,
-            Err(e) => {
-                for symbol in &unique {
-                    if let Some(count) = inner.symbol_ref_counts.get_mut(symbol) {
-                        *count = count.saturating_sub(1);
-                        if *count == 0 {
-                            inner.symbol_ref_counts.remove(symbol);
-                        }
-                    }
-                }
-                metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
-                return Err(e.into());
-            }
-        };
-
-        // Another caller finished connecting first: join its upstream.
-        if let Some(upstream) = inner.upstream.as_ref() {
-            upstream
-                .add_symbols(unique.iter().map(|s| s.as_str()))
-                .await;
-            stream.close().await;
-            return Ok(());
+        for symbol in &unique {
+            *inner.symbol_ref_counts.entry(symbol.clone()).or_insert(0) += 1;
         }
-
-        // Symbols unsubscribed while connecting must not stay on the wire.
-        let dropped: Vec<&str> = unique
-            .iter()
-            .filter(|s| !inner.symbol_ref_counts.contains_key(*s))
-            .map(|s| s.as_str())
-            .collect();
-        if !dropped.is_empty() {
-            stream.remove_symbols(dropped).await;
-        }
+        metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
 
         let (fanout, _) = broadcast::channel(FANOUT_CAPACITY);
         inner.pump = Some(tokio::spawn(pump_ticks(
@@ -700,6 +655,32 @@ impl StreamHub {
         inner.fanout = Some(fanout);
         inner.upstream = Some(stream);
         Ok(())
+    }
+
+    /// Count `unique` against the live upstream and add the symbols it was not
+    /// yet carrying. `false` when there is no upstream to join.
+    async fn join_upstream(&self, unique: &[String]) -> bool {
+        let mut inner = self.inner.lock().await;
+        if inner.upstream.is_none() {
+            return false;
+        }
+
+        let mut newly_needed: Vec<&str> = Vec::new();
+        for symbol in unique {
+            let count = inner.symbol_ref_counts.entry(symbol.clone()).or_insert(0);
+            if *count == 0 {
+                newly_needed.push(symbol);
+            }
+            *count += 1;
+        }
+        metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
+
+        if !newly_needed.is_empty()
+            && let Some(upstream) = inner.upstream.as_ref()
+        {
+            upstream.add_symbols(newly_needed).await;
+        }
+        true
     }
 
     pub async fn unsubscribe_symbols(&self, symbols: &[String]) {
@@ -861,13 +842,27 @@ impl FeedHub {
 mod stream_hub_tests {
     use super::*;
     use finance_query::streaming::StreamError;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn symbols(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
     }
 
+    async fn hold_creation(hub: &StreamHub, release: Arc<tokio::sync::Notify>) {
+        let hub = hub.clone();
+        tokio::spawn(async move {
+            let _ = hub
+                .subscribe_symbols_via(&symbols(&["AAPL"]), |_| async move {
+                    release.notified().await;
+                    Err(StreamError::ConnectionFailed("refused".into()))
+                })
+                .await;
+        });
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
     #[tokio::test]
-    async fn failed_upstream_connect_rolls_back_ref_counts() {
+    async fn failed_upstream_connect_counts_nothing() {
         let hub = StreamHub::new();
 
         let result = hub
@@ -881,27 +876,69 @@ mod stream_hub_tests {
     }
 
     #[tokio::test]
-    async fn hub_is_not_locked_while_connecting() {
+    async fn pending_creation_does_not_block_unsubscribe_or_resubscribe() {
         let hub = StreamHub::new();
         let release = Arc::new(tokio::sync::Notify::new());
+        hold_creation(&hub, Arc::clone(&release)).await;
 
-        let connecting = tokio::spawn({
+        let timeout = Duration::from_secs(1);
+        assert!(
+            tokio::time::timeout(timeout, hub.unsubscribe_symbols(&symbols(&["AAPL"])))
+                .await
+                .is_ok()
+        );
+        assert!(
+            tokio::time::timeout(timeout, hub.resubscribe())
+                .await
+                .is_ok()
+        );
+        release.notify_one();
+    }
+
+    #[tokio::test]
+    async fn cancelled_creator_leaves_counts_at_zero() {
+        let hub = StreamHub::new();
+        let wanted = symbols(&["AAPL"]);
+        let pending =
+            hub.subscribe_symbols_via(&wanted, |_| async { std::future::pending().await });
+        assert!(
+            tokio::time::timeout(Duration::from_millis(50), pending)
+                .await
+                .is_err()
+        );
+
+        assert!(hub.inner.lock().await.symbol_ref_counts.is_empty());
+        let next = hub
+            .subscribe_symbols_via(&symbols(&["AAPL"]), |_| async {
+                Err(StreamError::ConnectionFailed("refused".into()))
+            })
+            .await;
+        assert!(next.is_err());
+    }
+
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn concurrent_first_subscribers_share_one_upstream() {
+        let hub = StreamHub::new();
+        let connects = Arc::new(AtomicUsize::new(0));
+        let subscribe = |symbol: &'static str| {
             let hub = hub.clone();
-            let release = Arc::clone(&release);
+            let connects = Arc::clone(&connects);
             async move {
-                hub.subscribe_symbols_via(&symbols(&["AAPL"]), |_| async move {
-                    release.notified().await;
-                    Err(StreamError::ConnectionFailed("refused".into()))
+                hub.subscribe_symbols_via(&symbols(&[symbol]), |unique| async move {
+                    connects.fetch_add(1, Ordering::SeqCst);
+                    PriceStream::subscribe(unique).await
                 })
                 .await
             }
-        });
+        };
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let resubscribed = tokio::time::timeout(Duration::from_secs(1), hub.resubscribe()).await;
-        assert!(resubscribed.is_ok(), "hub lock was held across connect");
+        let (a, b) = tokio::join!(subscribe("BTC-USD"), subscribe("ETH-USD"));
 
-        release.notify_one();
-        assert!(connecting.await.unwrap().is_err());
+        assert!(a.is_ok() && b.is_ok());
+        assert_eq!(connects.load(Ordering::SeqCst), 1);
+        let inner = hub.inner.lock().await;
+        assert!(inner.upstream.is_some());
+        assert_eq!(inner.symbol_ref_counts.len(), 2);
     }
 }
