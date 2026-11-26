@@ -207,6 +207,31 @@ mod tests {
     }
 
     #[test]
+    fn vec_and_slice_convert_with_method_syntax() {
+        use crate::prelude::*;
+
+        let candles: Vec<Candle> = (0..3)
+            .map(|i| Candle::__new(i, 1.0, 2.0, 0.5, 1.5, 10, None, None))
+            .collect();
+        let expected = Candle::vec_to_dataframe(&candles).unwrap();
+        let from_vec = candles.to_dataframe().unwrap();
+        let from_slice = candles[..2].to_dataframe().unwrap();
+        assert_eq!(schema(&from_vec), schema(&expected));
+        assert_eq!(from_vec.height(), 3);
+        assert_eq!(from_slice.height(), 2);
+    }
+
+    #[test]
+    fn empty_vec_keeps_the_row_schema() {
+        use crate::prelude::*;
+
+        let empty: Vec<Candle> = Vec::new();
+        let df = empty.to_dataframe().unwrap();
+        assert_eq!(df.height(), 0);
+        assert_eq!(schema(&df), schema(&Candle::vec_to_dataframe(&[]).unwrap()));
+    }
+
+    #[test]
     fn dividend_frame_adds_provider_id() {
         let dividend: Dividend =
             serde_json::from_value(serde_json::json!({"timestamp": 1, "amount": 0.25})).unwrap();

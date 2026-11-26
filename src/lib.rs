@@ -549,6 +549,16 @@ pub use finance_query_types::__dataframe;
 #[cfg(feature = "dataframe")]
 pub use finance_query_types::ToDataFrame;
 
+/// Traits to import for method syntax on collections.
+///
+/// With the `dataframe` feature, `use finance_query::prelude::*;` brings
+/// [`ToDataFrame`] into scope so `Vec<T>` and `[T]` convert with
+/// `.to_dataframe()`.
+pub mod prelude {
+    #[cfg(feature = "dataframe")]
+    pub use crate::ToDataFrame;
+}
+
 /// The polars version used in this crate's public signatures.
 ///
 /// Use this re-export instead of a direct `polars` dependency so the
