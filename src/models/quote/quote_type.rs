@@ -34,6 +34,7 @@ pub(crate) struct QuoteTypeResult {
 ///
 /// Contains exchange information, company names, timezone data, and other metadata.
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct QuoteTypeData {

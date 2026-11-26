@@ -615,6 +615,8 @@ CsvWriter::new(&mut file)
     .finish(&mut df)?;
 ```
 
+CSV has no list type, so `CsvWriter` returns an error for a frame with a `List(String)` column. Frames from `SearchNews`, `EdgarSearchSource`, `FilingSearchHit`, `ProtocolTvl` and `FundProfile` have such columns (for example `related_tickers`, `ciks`, `chains` and `brokerages`). Drop the column, or cast or join it to a `String`, before writing CSV. Parquet and JSON handle list columns as they are.
+
 ### Parquet Export
 
 ```rust ignore

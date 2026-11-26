@@ -245,3 +245,6 @@ mod tests {
         assert!(all_modules.len() > 30);
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

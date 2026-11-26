@@ -319,7 +319,7 @@ pub mod quote {
         RecommendationTrend, SecFilings, SummaryProfile, TopHoldings, UpgradeDowngradeHistory,
     };
     pub use crate::models::fundamentals::{DefaultKeyStatistics, FinancialData, SummaryDetail};
-    pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+    pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend, TrendEstimate};
     pub use crate::models::quote::price::Price;
     pub use crate::models::quote::quote_type::QuoteTypeData;
 }
@@ -481,6 +481,7 @@ pub use models::{
     discovery::screeners::ScreenerQuote,
     discovery::search::{
         ResearchReport, ResearchReports, SearchNews, SearchNewsList, SearchQuote, SearchQuotes,
+        ThumbnailResolution,
     },
     filings::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
     filings::{

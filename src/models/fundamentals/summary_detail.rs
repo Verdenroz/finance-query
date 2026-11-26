@@ -4,7 +4,6 @@ use finance_query_derive::FormatConvert;
 ///
 /// Contains detailed trading and valuation metrics for the symbol.
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 /// Summary detail trading and valuation metrics
 ///
@@ -18,12 +17,13 @@ use serde_json::Value;
 /// Obtain converted views via [`Quote::as_raw`](crate::Quote::as_raw) or call
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct SummaryDetail<F: Format = Both> {
     /// Algorithm (for crypto/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub algorithm: Option<Value>,
+    pub algorithm: Option<serde_json::Value>,
 
     /// All-time high price
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -67,11 +67,11 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Circulating supply (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub circulating_supply: Option<Value>,
+    pub circulating_supply: Option<serde_json::Value>,
 
     /// CoinMarketCap link (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub coin_market_cap_link: Option<Value>,
+    pub coin_market_cap_link: Option<serde_json::Value>,
 
     /// Currency code
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,7 +99,7 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Expiration date (for options/futures)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expire_date: Option<Value>,
+    pub expire_date: Option<serde_json::Value>,
 
     /// 50-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -139,7 +139,7 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Maximum supply (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_supply: Option<Value>,
+    pub max_supply: Option<serde_json::Value>,
 
     /// Net asset value price (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -151,7 +151,7 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Open interest (for options/futures)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub open_interest: Option<Value>,
+    pub open_interest: Option<serde_json::Value>,
 
     /// Dividend payout ratio
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -171,7 +171,7 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Quarter-to-date return
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub qtd_return: Option<Value>,
+    pub qtd_return: Option<serde_json::Value>,
 
     /// Regular market day high
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -195,11 +195,11 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Start date (for funds/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_date: Option<Value>,
+    pub start_date: Option<serde_json::Value>,
 
     /// Strike price (for options)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub strike_price: Option<Value>,
+    pub strike_price: Option<serde_json::Value>,
 
     /// To currency (for currency pairs)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -235,11 +235,11 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// 24-hour trading volume (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume24_hr: Option<Value>,
+    pub volume24_hr: Option<serde_json::Value>,
 
     /// Volume across all currencies (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume_all_currencies: Option<Value>,
+    pub volume_all_currencies: Option<serde_json::Value>,
 
     /// Yield (for bonds/funds)
     #[serde(rename = "yield", skip_serializing_if = "Option::is_none")]
@@ -247,7 +247,7 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Year-to-date return
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ytd_return: Option<Value>,
+    pub ytd_return: Option<serde_json::Value>,
 }
 
 #[cfg(test)]

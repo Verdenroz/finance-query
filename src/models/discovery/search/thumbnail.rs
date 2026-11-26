@@ -13,6 +13,7 @@ pub struct NewsThumbnail {
 
 /// Individual thumbnail resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct ThumbnailResolution {
     /// Image URL
     pub url: Option<String>,

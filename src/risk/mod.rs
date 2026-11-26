@@ -47,6 +47,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Obtain via [`Ticker::risk`](crate::Ticker::risk).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct RiskSummary {
     /// 1-day historical Value at Risk at 95% confidence (expressed as positive loss fraction)
@@ -411,3 +412,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

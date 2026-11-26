@@ -321,6 +321,7 @@ fn fund_profile_flattens_fee_blocks() {
     assert!(cols.contains(&"fees_expenses_investment_annual_report_expense_ratio:f64".to_string()));
     assert!(cols.contains(&"fees_expenses_investment_cat_total_net_assets:f64".to_string()));
     assert!(!cols.iter().any(|c| c.contains("projection_values")));
+    assert_eq!(cols.last().unwrap(), "brokerages:list[str]");
     assert_eq!(df.height(), 1);
 }
 

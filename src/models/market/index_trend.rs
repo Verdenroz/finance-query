@@ -81,6 +81,7 @@ pub struct SectorTrend {
 
 /// Growth estimate for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct TrendEstimate {
     /// Period (e.g., "0q", "+1q", "0y", "+1y", "LTG")

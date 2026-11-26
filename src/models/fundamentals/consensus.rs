@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// Consensus analyst price target for a symbol.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct PriceTargetConsensus {
     /// Ticker symbol.
@@ -26,6 +27,7 @@ pub struct PriceTargetConsensus {
 /// Price-target activity over trailing windows: how many targets were published
 /// and their average, per window.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct PriceTargetSummary {
     /// Ticker symbol.
@@ -51,6 +53,7 @@ pub struct PriceTargetSummary {
 /// Consensus rating rollup — the analyst panel's grade distribution plus the
 /// provider's headline recommendation.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct RatingConsensus {
     /// Ticker symbol.

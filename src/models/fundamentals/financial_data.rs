@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// - `FinancialData<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `FinancialData<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct FinancialData<F: Format = Both> {
