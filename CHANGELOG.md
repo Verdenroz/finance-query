@@ -30,11 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Point bench covers at the code they run (#725)
 - Yahoo quote and FRED calendar parsing (#710)
 - Skip undated Polygon statement rows (#705)
 
 ### ⚡ Performance
 
+- Gate DataFrame conversions (#716)
 - Iterate chaikin oscillator without indexing (#721)
 - Bench dispatch and backtesting paths (#723)
 - Iterate mfi, cmo and ema loops without indexing (#719)
