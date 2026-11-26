@@ -36,10 +36,8 @@ fn stack_by_symbol<T>(
     Ok(stacked)
 }
 
-fn with_symbol(mut frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
-    let column = Series::new("symbol".into(), vec![symbol; frame.height()]);
-    frame.insert_column(0, column.into())?;
-    Ok(frame)
+fn with_symbol(frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
+    crate::dataframe::with_leading_column(frame, "symbol", symbol)
 }
 
 fn rename_symbol(mut frame: DataFrame) -> PolarsResult<DataFrame> {

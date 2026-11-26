@@ -197,17 +197,7 @@ impl FactConcept {
 }
 
 #[cfg(feature = "dataframe")]
-fn with_leading_column(
-    mut frame: ::polars::prelude::DataFrame,
-    name: &str,
-    value: &str,
-) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-    use ::polars::prelude::*;
-
-    let column = Series::new(name.into(), vec![value; frame.height()]);
-    frame.insert_column(0, column.into())?;
-    Ok(frame)
-}
+use crate::dataframe::with_leading_column;
 
 #[cfg(feature = "dataframe")]
 fn sorted<V>(map: &HashMap<String, V>) -> Vec<(&String, &V)> {

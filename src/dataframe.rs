@@ -39,6 +39,23 @@ pub(crate) fn stack_rows<T>(
         .iter()
         .map(frame)
         .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
+        .map(|mut stacked| {
+            stacked.rechunk_mut();
+            stacked
+        })
+}
+
+/// Prepends a string column that repeats `value` on every row.
+pub(crate) fn with_leading_column(
+    mut frame: DataFrame,
+    name: &str,
+    value: &str,
+) -> PolarsResult<DataFrame> {
+    use polars::prelude::{NamedFrom, Series};
+
+    let column = Series::new(name.into(), vec![value; frame.height()]);
+    frame.insert_column(0, column.into())?;
+    Ok(frame)
 }
 
 /// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.

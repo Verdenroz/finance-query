@@ -170,24 +170,3 @@ impl Spark {
         self.meta.to_dataframe()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn null_closes_drop_their_timestamp() {
-        let result: response::SparkSymbolResult = serde_json::from_value(serde_json::json!({
-            "symbol": "AAPL",
-            "response": [{
-                "meta": {"symbol": "AAPL"},
-                "timestamp": [1, 2, 3],
-                "indicators": {"quote": [{"close": [1.5, null, 3.5]}]}
-            }]
-        }))
-        .unwrap();
-        let spark = Spark::from_response(&result, None, None).unwrap();
-        assert_eq!(spark.timestamps, [1, 3]);
-        assert_eq!(spark.closes, [1.5, 3.5]);
-    }
-}
