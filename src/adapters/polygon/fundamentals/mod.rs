@@ -337,10 +337,9 @@ fn pivot_statements<T: serde::Serialize>(
             continue;
         };
         let field = |key: &str| obj.get(key).and_then(serde_json::Value::as_str);
-        let period = field("period_end")
-            .or_else(|| field("filing_date"))
-            .unwrap_or("unknown")
-            .to_string();
+        let Some(period) = field("period_end").or_else(|| field("filing_date")) else {
+            continue;
+        };
 
         for (metric, value) in &obj {
             if STATEMENT_METADATA.contains(&metric.as_str())
@@ -350,7 +349,7 @@ fn pivot_statements<T: serde::Serialize>(
             }
             data.entry(metric.clone())
                 .or_default()
-                .insert(period.clone(), value.clone());
+                .insert(period.to_string(), value.clone());
         }
     }
 
@@ -574,6 +573,18 @@ mod tests {
             serde_json::from_str(r#"[{"filing_date":"2024-11-01","net_income":93736000000}]"#)
                 .unwrap();
         assert!(pivot_statements(rows)["net_income"].contains_key("2024-11-01"));
+    }
+
+    #[test]
+    fn pivot_skips_rows_without_a_period() {
+        let rows: Vec<CashFlowStatementDTO> = serde_json::from_str(
+            r#"[{"period_end":"2024-09-28","net_income":93736000000},
+                {"fiscal_year":2023,"net_income":96995000000}]"#,
+        )
+        .unwrap();
+        let data = pivot_statements(rows);
+        assert_eq!(data["net_income"].len(), 1);
+        assert!(data["net_income"].contains_key("2024-09-28"));
     }
 
     #[tokio::test]
