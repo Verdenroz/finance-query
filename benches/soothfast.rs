@@ -2326,6 +2326,21 @@ fn df_quote(quote: &Quote) {
     keep(keep(quote).to_dataframe().unwrap());
 }
 
+#[fixture]
+fn parsed_company_facts() -> CompanyFacts {
+    serde_json::from_str(EDGAR_FACTS_JSON).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = parsed_company_facts,
+    alloc = 6474,
+    covers = "finance_query::CompanyFacts::to_dataframe"
+)]
+fn df_company_facts(facts: &CompanyFacts) {
+    keep(keep(facts).to_dataframe().unwrap());
+}
+
 // ── Provider wire parsers (raw upstream bodies, internal entrypoint) ─────────
 
 static YAHOO_BATCH_QUOTE_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/batch_quote.json");
