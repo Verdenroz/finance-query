@@ -196,6 +196,7 @@ impl RiskSummary {
 
 /// Build a [`RiskSummary`] from candle data and an optional benchmark return
 /// series, using the default daily exchange calendar (252 periods/year).
+#[cfg(test)]
 pub(crate) fn compute_risk_summary(
     candles: &[Candle],
     benchmark_returns: Option<&[f64]>,
