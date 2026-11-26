@@ -20,9 +20,9 @@ fn doc_block_line_28() {
             None,
         ).await?;
 
-        println!("Total Return: {:.2}%", result.metrics.total_return_pct);
+        println!("Total Return: {:.2}%", result.metrics.total_return * 100.0);
         println!("Sharpe Ratio: {:.2}", result.metrics.sharpe_ratio);
-        println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown_pct * 100.0);
+        println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown * 100.0);
         Ok(())
     }
 }
@@ -353,15 +353,15 @@ fn doc_block_line_472() {
         let result = ticker.backtest(SmaCrossover::new(10, 20), Interval::OneDay, TimeRange::OneYear, None).await?;
 
         // Returns
-        println!("Total Return:      {:.2}%", result.metrics.total_return_pct);
-        println!("Annualized Return: {:.2}%", result.metrics.annualized_return_pct);
+        println!("Total Return:      {:.2}%", result.metrics.total_return * 100.0);
+        println!("Annualized Return: {:.2}%", result.metrics.annualized_return * 100.0);
         println!("Final Equity:      ${:.2}", result.final_equity);
 
         // Risk-adjusted
         println!("Sharpe Ratio:    {:.2}", result.metrics.sharpe_ratio);
         println!("Sortino Ratio:   {:.2}", result.metrics.sortino_ratio);
         println!("Calmar Ratio:    {:.2}", result.metrics.calmar_ratio);
-        println!("Max Drawdown:    {:.2}%", result.metrics.max_drawdown_pct * 100.0);
+        println!("Max Drawdown:    {:.2}%", result.metrics.max_drawdown * 100.0);
 
         // Trade statistics
         println!("Total Trades:    {}", result.metrics.total_trades);
@@ -369,9 +369,9 @@ fn doc_block_line_472() {
         println!("Losing Trades:   {}", result.metrics.losing_trades);
         println!("Win Rate:        {:.2}%", result.metrics.win_rate * 100.0);
         println!("Profit Factor:   {:.2}", result.metrics.profit_factor);
-        println!("Avg Trade:       {:.2}%", result.metrics.avg_trade_return_pct);
-        println!("Avg Win:         {:.2}%", result.metrics.avg_win_pct);
-        println!("Avg Loss:        {:.2}%", result.metrics.avg_loss_pct);
+        println!("Avg Trade:       {:.2}%", result.metrics.avg_trade_return * 100.0);
+        println!("Avg Win:         {:.2}%", result.metrics.avg_win_return * 100.0);
+        println!("Avg Loss:        {:.2}%", result.metrics.avg_loss_return * 100.0);
         println!("Largest Win:     ${:.2}", result.metrics.largest_win);
         println!("Largest Loss:    ${:.2}", result.metrics.largest_loss);
         println!("Max Consec. Wins:   {}", result.metrics.max_consecutive_wins);
@@ -380,7 +380,7 @@ fn doc_block_line_472() {
         // Position breakdown
         println!("Long Trades:  {}", result.metrics.long_trades);
         println!("Short Trades: {}", result.metrics.short_trades);
-        println!("Time in Market: {:.1}%", result.metrics.time_in_market_pct * 100.0);
+        println!("Time in Market: {:.1}%", result.metrics.time_in_market * 100.0);
 
         // Signal execution
         println!("Total Signals:    {}", result.metrics.total_signals);
@@ -441,7 +441,7 @@ fn doc_block_line_553() {
         let by_dow   = result.by_day_of_week();  // HashMap<Weekday, PerformanceMetrics>
 
         for (year, metrics) in &by_year {
-            println!("{year}: {:.2}%", metrics.total_return_pct);
+            println!("{year}: {:.2}%", metrics.total_return * 100.0);
         }
         Ok(())
     }
@@ -629,10 +629,10 @@ fn doc_block_line_751() {
         ).await?;
 
         if let Some(bench) = &result.benchmark {
-            println!("Strategy return:   {:.2}%", result.metrics.total_return_pct);
-            println!("Benchmark return:  {:.2}%", bench.benchmark_return_pct);
-            println!("Buy & hold return: {:.2}%", bench.buy_and_hold_return_pct);
-            println!("Alpha: {:.4}", bench.alpha);
+            println!("Strategy return:   {:.2}%", result.metrics.total_return * 100.0);
+            println!("Benchmark return:  {:.2}%", bench.benchmark_return * 100.0);
+            println!("Buy & hold return: {:.2}%", bench.buy_and_hold_return * 100.0);
+            println!("Alpha: {:.4}", bench.jensens_alpha);
             println!("Beta:  {:.4}", bench.beta);
             println!("Information Ratio: {:.4}", bench.information_ratio);
         }
@@ -688,7 +688,7 @@ fn doc_block_line_782() {
     for row in report.table() {
         println!(
             "#{} {} — Sharpe {:.2}, Return {:.2}%",
-            row.rank, row.label, row.sharpe_ratio, row.total_return_pct,
+            row.rank, row.label, row.sharpe_ratio, row.total_return * 100.0,
         );
     }
 }
@@ -861,7 +861,7 @@ fn doc_block_line_979() {
         }).unwrap();
 
     assert!(!report.windows.is_empty());
-    println!("OOS Return:      {:.2}%", report.aggregate_metrics.total_return_pct);
+    println!("OOS Return:      {:.2}%", report.aggregate_metrics.total_return * 100.0);
     println!("Consistency:     {:.1}%", report.consistency_ratio * 100.0);
     println!("Windows tested:  {}", report.windows.len());
 
@@ -869,8 +869,8 @@ fn doc_block_line_979() {
         println!(
             "Window {}: IS {:.1}% → OOS {:.1}%",
             w.window,
-            w.in_sample.metrics.total_return_pct,
-            w.out_of_sample.metrics.total_return_pct,
+            w.in_sample.metrics.total_return * 100.0,
+            w.out_of_sample.metrics.total_return * 100.0,
         );
     }
 }
@@ -909,11 +909,11 @@ fn doc_block_line_1041() {
         .method(MonteCarloMethod::IidShuffle)
         .run(&result);
 
-    assert!(mc.total_return.p5 <= mc.total_return.p95);
-    println!("Return p5:  {:.2}%", mc.total_return.p5);
-    println!("Return p50: {:.2}%", mc.total_return.p50);
-    println!("Return p95: {:.2}%", mc.total_return.p95);
-    println!("Drawdown p95: {:.2}%", mc.max_drawdown.p95);
+    assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p95);
+    println!("Return p5:  {:.2}%", mc.total_return_dist.p5 * 100.0);
+    println!("Return p50: {:.2}%", mc.total_return_dist.p50 * 100.0);
+    println!("Return p95: {:.2}%", mc.total_return_dist.p95 * 100.0);
+    println!("Drawdown p95: {:.2}%", mc.max_drawdown.p95 * 100.0);
     println!("Sharpe p50:   {:.2}", mc.sharpe_ratio.p50);
 }
 
@@ -962,11 +962,11 @@ fn doc_block_line_1094() {
         .unwrap();
 
     assert_eq!(result.symbols.len(), 3);
-    println!("Portfolio Return: {:.2}%", result.portfolio_metrics.total_return_pct);
+    println!("Portfolio Return: {:.2}%", result.portfolio_metrics.total_return * 100.0);
     println!("Final Equity:     ${:.2}", result.final_equity);
 
     for (sym, sym_result) in &result.symbols {
-        println!("{}: {:.2}%", sym, sym_result.metrics.total_return_pct);
+        println!("{}: {:.2}%", sym, sym_result.metrics.total_return * 100.0);
     }
 }
 
@@ -1048,21 +1048,21 @@ fn doc_block_line_1241() {
 
         println!("Backtest Results for AAPL");
         println!("=========================");
-        println!("Total Return: {:.2}%",  result.metrics.total_return_pct);
+        println!("Total Return: {:.2}%",  result.metrics.total_return * 100.0);
         println!("Sharpe Ratio: {:.2}",   result.metrics.sharpe_ratio);
         println!("Win Rate:     {:.2}%",  result.metrics.win_rate * 100.0);
         println!("Total Trades: {}",      result.metrics.total_trades);
-        println!("Max Drawdown: {:.2}%",  result.metrics.max_drawdown_pct * 100.0);
+        println!("Max Drawdown: {:.2}%",  result.metrics.max_drawdown * 100.0);
 
         Ok(())
     }
 }
 
-// line 1331: compile-only (no_run)
+// line 1334: compile-only (no_run)
 #[cfg(all(feature = "backtesting", feature = "dataframe"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1331() {
+fn doc_block_line_1334() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -1087,11 +1087,11 @@ fn doc_block_line_1331() {
     }
 }
 
-// line 1365: compile-only (no_run)
+// line 1368: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1365() {
+fn doc_block_line_1368() {
         use finance_query::backtesting::{BacktestConfig, StrategyBuilder};
         use finance_query::backtesting::refs::*;
         use finance_query::backtesting::condition::*;
