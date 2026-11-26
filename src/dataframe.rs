@@ -35,6 +35,7 @@ delegate_to_inherent!(
     crate::BatchCapitalGainsResponse,
     crate::BatchChartsResponse,
     crate::BatchDividendsResponse,
+    crate::BatchFinancialsResponse,
     crate::BatchNewsResponse,
     crate::BatchOptionsResponse,
     crate::BatchQuotesResponse,
