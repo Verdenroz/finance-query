@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// Profile and composition of an exchange-traded fund.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EtfProfile {
     /// Fund ticker symbol.
@@ -30,10 +31,13 @@ pub struct EtfProfile {
     /// Inception date (`YYYY-MM-DD`).
     pub inception_date: Option<String>,
     /// Portfolio holdings, heaviest first.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub holdings: Vec<EtfHolding>,
     /// Portfolio weight by sector.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub sector_weightings: Vec<EtfSectorWeighting>,
     /// Portfolio weight by country.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub country_weightings: Vec<EtfCountryWeighting>,
 }
 

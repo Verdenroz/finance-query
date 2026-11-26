@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Earnings data including charts and forecasts
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Earnings {
@@ -15,19 +16,23 @@ pub struct Earnings {
 
     /// Earnings chart data
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub earnings_chart: Option<EarningsChart>,
 
     /// Financial chart data (revenue/earnings over time)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub financials_chart: Option<FinancialsChart>,
 }
 
 /// Earnings chart showing quarterly data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsChart {
     /// Quarterly earnings data
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub quarterly: Vec<QuarterlyEarnings>,
 
     /// Current quarter estimate
@@ -95,14 +100,17 @@ pub struct QuarterlyEarnings {
 
 /// Financial chart showing revenue and earnings over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialsChart {
     /// Yearly financial data
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub yearly: Vec<YearlyFinancials>,
 
     /// Quarterly financial data
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub quarterly: Vec<QuarterlyFinancials>,
 }
 

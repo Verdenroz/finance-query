@@ -3,11 +3,14 @@ use super::press_release::PressRelease;
 use super::transcript::*;
 use super::*;
 use crate::models::corporate::asset_profile::CompanyOfficer;
+use crate::models::corporate::earnings::Earnings;
 use crate::models::corporate::earnings::{
     QuarterlyEarnings, QuarterlyFinancials, YearlyFinancials,
 };
 use crate::models::corporate::earnings_transcript::EarningsTranscript;
-use crate::models::corporate::fund_performance::{AnnualReturn, AnnualTotalReturns, RiskStatistic};
+use crate::models::corporate::fund_performance::{
+    AnnualReturn, AnnualTotalReturns, RiskOverviewStatisticsCat, RiskStatistic,
+};
 use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
 use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
 use crate::models::dataframe_test_util::columns;
@@ -629,4 +632,103 @@ fn fund_performance_nests_its_row_wrappers() {
             .iter()
             .any(|c| c.starts_with("annual_total_returns"))
     );
+}
+
+#[test]
+fn earnings_wrappers_expose_their_rows() {
+    let earnings: Earnings = parse(json!({
+        "defaultMethodology": "gaap",
+        "earningsChart": {"quarterly": [{"date": "1Q2024", "actual": fv(1.0)}]},
+        "financialsChart": {
+            "yearly": [{"date": 2023, "revenue": fvi(5)}],
+            "quarterly": [{"date": "1Q2024"}, {"date": "2Q2024"}]
+        }
+    }));
+    assert_eq!(
+        columns(&earnings.to_dataframe().unwrap()),
+        ["default_methodology:str"]
+    );
+
+    let chart = earnings.earnings_chart_dataframe().unwrap();
+    assert_eq!(chart.height(), 1);
+    assert_eq!(columns(&chart).last().unwrap(), "quarterly:list[struct[7]]");
+    assert!(
+        !columns(&chart)
+            .iter()
+            .any(|c| c.starts_with("earnings_date"))
+    );
+    let quarterly = earnings
+        .earnings_chart
+        .as_ref()
+        .unwrap()
+        .quarterly_dataframe()
+        .unwrap();
+    assert_eq!(columns(&quarterly)[..2], ["date:str", "actual:f64"]);
+
+    let financials = earnings.financials_chart_dataframe().unwrap();
+    assert_eq!(
+        columns(&financials),
+        ["yearly:list[struct[3]]", "quarterly:list[struct[3]]"]
+    );
+    let chart = earnings.financials_chart.as_ref().unwrap();
+    assert_eq!(chart.yearly_dataframe().unwrap().height(), 1);
+    assert_eq!(chart.quarterly_dataframe().unwrap().height(), 2);
+
+    let none: Earnings = parse(json!({}));
+    assert_eq!(none.earnings_chart_dataframe().unwrap().height(), 0);
+}
+
+#[test]
+fn risk_overview_category_wrapper_exposes_its_rows() {
+    let risk: RiskOverviewStatisticsCat =
+        parse(json!({"riskStatisticsCat": [{"year": "3y"}, {"year": "5y"}]}));
+    let df = risk.risk_statistics_cat_dataframe().unwrap();
+    assert_eq!(df.height(), 2);
+    assert_eq!(columns(&df)[..2], ["year:str", "alpha:f64"]);
+}
+
+#[test]
+fn transcript_wrappers_nest_speakers_and_paragraphs() {
+    let transcript: Transcript = parse(json!({
+        "transcriptContent": {
+            "company_id": 1,
+            "event_id": 2,
+            "speaker_mapping": [{"speaker": 1, "speaker_data": {"name": "Cook"}}],
+            "transcript": {"paragraphs": [{"speaker": 1, "text": "Hi."}, {"speaker": 2, "text": "Bye."}]}
+        },
+        "transcriptMetadata": {
+            "date": 1, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
+            "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 4
+        }
+    }));
+    let flat = columns(&transcript.to_dataframe().unwrap());
+    assert_eq!(flat[0], "transcript_metadata_date:i64");
+    assert_eq!(flat.len(), 11);
+
+    let content = transcript.transcript_content_dataframe().unwrap();
+    assert_eq!(
+        columns(&content),
+        [
+            "company_id:i64",
+            "event_id:i64",
+            "version:str",
+            "speaker_mapping:list[struct[4]]",
+            "transcript:list[struct[3]]",
+        ]
+    );
+    let content = &transcript.transcript_content;
+    let speakers = content.speaker_mapping_dataframe().unwrap();
+    assert_eq!(columns(&speakers)[0], "speaker:i32");
+
+    let data = content.transcript_dataframe().unwrap();
+    let cols = columns(&data);
+    assert_eq!(cols[..2], ["number_of_speakers:i32", "text:str"]);
+    assert!(cols[2].starts_with("paragraphs:list[struct["));
+    let paragraphs = content
+        .transcript
+        .as_ref()
+        .unwrap()
+        .paragraphs_dataframe()
+        .unwrap();
+    assert_eq!(paragraphs.height(), 2);
 }
