@@ -38,6 +38,7 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
     let mut peak_idx = 0_usize;
     let mut max_dd = 0.0_f64;
     let mut trough_idx = 0_usize;
+    let mut dd_peak_idx = 0_usize;
 
     for (i, &val) in equity.iter().enumerate() {
         if val > peak {
@@ -48,12 +49,13 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
         if dd > max_dd {
             max_dd = dd;
             trough_idx = i;
+            dd_peak_idx = peak_idx;
         }
     }
 
     // Find recovery: first index after trough where equity returns to peak level
     let recovery_periods = if max_dd > 0.0 {
-        let peak_val = equity[peak_idx];
+        let peak_val = equity[dd_peak_idx];
         equity[trough_idx..]
             .iter()
             .enumerate()
@@ -174,6 +176,12 @@ mod tests {
             "got {}",
             r.max_drawdown
         );
+    }
+
+    #[test]
+    fn recovery_is_measured_from_the_peak_of_the_max_drawdown() {
+        let r = max_drawdown(&[-0.5, 1.1, 1.1 / 1.05 - 1.0]);
+        assert_eq!(r.recovery_periods, Some(1));
     }
 
     #[test]
