@@ -29,6 +29,7 @@ const POLL_CONCURRENCY: usize = 8;
 
 /// A newly published (or revised) observation for an economic series.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SeriesUpdate {

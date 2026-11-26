@@ -18,6 +18,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 
 /// One price level of an order book.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BookLevel {
@@ -29,14 +30,17 @@ pub struct BookLevel {
 
 /// A depth-of-book update: both sides, best level first.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OrderBookUpdate {
     /// Symbol or pair this book belongs to.
     pub symbol: String,
     /// Bid levels, highest price first.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub bids: Vec<BookLevel>,
     /// Ask levels, lowest price first.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub asks: Vec<BookLevel>,
     /// Exchange identifier, where the venue reports one.
     pub exchange: Option<i32>,

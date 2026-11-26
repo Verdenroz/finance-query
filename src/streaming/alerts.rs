@@ -194,12 +194,14 @@ impl AlertRule {
 
 /// A fired alert, carrying the tick that triggered it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AlertEvent {
     /// Symbol that triggered.
     pub symbol: String,
     /// Condition that fired.
+    #[cfg_attr(feature = "dataframe", dataframe(skip))]
     pub condition: AlertCondition,
     /// Price on the triggering tick.
     pub price: f32,
@@ -210,6 +212,7 @@ pub struct AlertEvent {
     /// Tick timestamp (milliseconds).
     pub time: i64,
     /// The full triggering tick.
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub update: PriceUpdate,
 }
 
