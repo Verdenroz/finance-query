@@ -95,3 +95,16 @@ fn search_results_nested_news_carries_thumbnails() {
     assert_eq!(news.len(), 1);
     assert!(news.struct_().unwrap().field_by_name("thumbnail").is_ok());
 }
+
+#[test]
+fn search_results_nested_schema_does_not_depend_on_the_data() {
+    let results: SearchResults = serde_json::from_value(json!({
+        "quotes": [{"symbol": "AAPL"}],
+        "news": [{"title": "t", "thumbnail": {"resolutions": [{"tag": "original"}]}}],
+        "researchReports": [{"id": "1"}]
+    }))
+    .unwrap();
+    let full = SearchResults::vec_to_nested_dataframe(&[results]).unwrap();
+    let empty = SearchResults::vec_to_nested_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), columns(&full));
+}

@@ -106,30 +106,15 @@ pub mod derive {
         name: &str,
         rows: impl ExactSizeIterator<Item = &'a [T]>,
     ) -> PolarsResult<Column> {
-        let children = rows
-            .map(|items| T::vec_to_nested_dataframe(items))
-            .collect::<PolarsResult<Vec<_>>>()?;
-        let schema = T::vec_to_nested_dataframe(&[])?;
-        // Hand-written impls return a column-less frame for no rows, so the
-        // struct fields come from the first child that has columns.
-        let template = children
-            .iter()
-            .find(|child| child.width() > 0)
-            .unwrap_or(&schema);
-        let dtype = template
-            .clone()
+        let dtype = T::vec_to_nested_dataframe(&[])?
             .into_struct(PlSmallStr::EMPTY)
             .into_series()
             .dtype()
             .clone();
-        let mut builder = get_list_builder(&dtype, children.len(), children.len(), name.into());
-        for child in children {
-            let list = if child.width() == 0 {
-                Series::new_empty(PlSmallStr::EMPTY, &dtype)
-            } else {
-                child.into_struct(PlSmallStr::EMPTY).into_series()
-            };
-            builder.append_series(&list)?;
+        let mut builder = get_list_builder(&dtype, rows.len(), rows.len(), name.into());
+        for items in rows {
+            let child = T::vec_to_nested_dataframe(items)?;
+            builder.append_series(&child.into_struct(PlSmallStr::EMPTY).into_series())?;
         }
         Ok(Column::from(builder.finish().into_series()))
     }

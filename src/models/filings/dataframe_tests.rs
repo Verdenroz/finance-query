@@ -263,3 +263,28 @@ fn filing_index_directory_exposes_its_items() {
         ["item:list[struct[3]]"]
     );
 }
+
+#[test]
+fn submissions_with_and_without_recent_filings_stack() {
+    let with: EdgarSubmissions = serde_json::from_value(json!({
+        "filings": {"recent": {"accessionNumber": ["0001"], "form": ["10-K"]}, "files": []}
+    }))
+    .unwrap();
+    let without: EdgarSubmissions =
+        serde_json::from_value(json!({"filings": {"files": []}})).unwrap();
+    let df = EdgarSubmissions::vec_to_nested_dataframe(&[with, without]).unwrap();
+    assert_eq!(df.height(), 2);
+    let empty = EdgarSubmissions::vec_to_nested_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), columns(&df));
+}
+
+#[test]
+fn missing_recent_filings_keep_the_row_columns() {
+    let filings: EdgarFilings = serde_json::from_value(json!({})).unwrap();
+    let recent = filings.recent_dataframe().unwrap();
+    assert_eq!(recent.height(), 0);
+    assert_eq!(
+        columns(&recent)[..2],
+        ["accession_number:str", "filing_date:str"]
+    );
+}
