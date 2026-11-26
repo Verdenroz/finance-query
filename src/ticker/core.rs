@@ -1130,6 +1130,7 @@ impl Ticker {
         Ok(risk::RiskSummary::from_candles(
             &chart.candles,
             bench_chart.as_ref().map(|c| c.candles.as_slice()),
+            interval,
         ))
     }
 
