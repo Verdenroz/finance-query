@@ -14,6 +14,7 @@ use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::session::LazySession;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
+use crate::providers::Operation;
 use std::sync::Arc;
 
 pub(crate) struct YahooProvider {
@@ -1088,7 +1089,7 @@ impl CalendarProvider for YahooProvider {
         _to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
         if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         let hours =
             crate::adapters::yahoo::market::hours::fetch(&*self.client().await?, None).await?;
