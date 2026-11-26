@@ -51,7 +51,7 @@ impl SearchNewsList {
 /// A news result from search
 ///
 /// When the `dataframe` feature is enabled, scalar fields can be converted
-/// to a DataFrame. Complex fields (thumbnail, related_tickers) are automatically skipped.
+/// to a DataFrame. `related_tickers` becomes a `List(String)` column; the thumbnail is skipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -79,13 +79,14 @@ pub struct SearchNews {
     /// Article thumbnail image (excluded from DataFrame)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<NewsThumbnail>,
-    /// Related stock symbols (excluded from DataFrame)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_tickers: Option<Vec<String>>,
     /// Sentiment score for this article's title (VADER lexicon-based).
     /// Only present when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub sentiment: Option<crate::models::sentiment::Sentiment>,
+    /// Related stock symbols (a `List(String)` column in the DataFrame)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub related_tickers: Option<Vec<String>>,
 }

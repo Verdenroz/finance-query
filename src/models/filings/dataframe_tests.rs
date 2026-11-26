@@ -135,6 +135,8 @@ fn search_hit_and_file_columns() {
             "period_ending:str",
             "score:f64",
             "url:str",
+            "company_names:list[str]",
+            "ciks:list[str]",
         ]
     );
 
@@ -161,6 +163,28 @@ fn edgar_search_total_columns() {
     assert_eq!(df.height(), 1);
 
     let empty = <EdgarSearchTotal>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn edgar_search_source_columns() {
+    let row: EdgarSearchSource = serde_json::from_value(json!({})).unwrap();
+    let expected = [
+        "file_date:str",
+        "form:str",
+        "adsh:str",
+        "period_ending:str",
+        "ciks:list[str]",
+        "display_names:list[str]",
+        "root_forms:list[str]",
+        "sics:list[str]",
+    ];
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+
+    let empty = <EdgarSearchSource>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
 }

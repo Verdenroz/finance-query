@@ -68,12 +68,14 @@ pub struct FilingSearchHit {
     pub filed_date: Option<String>,
     /// Period the filing covers (`YYYY-MM-DD`).
     pub period_ending: Option<String>,
-    /// Filer display names, as the provider spells them.
-    pub company_names: Vec<String>,
-    /// Filer CIKs.
-    pub ciks: Vec<String>,
     /// Relevance score assigned by the provider's search index.
     pub score: Option<f64>,
     /// Direct URL to the matching document, when it can be derived.
     pub url: Option<String>,
+    /// Filer display names, as the provider spells them.
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub company_names: Vec<String>,
+    /// Filer CIKs.
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub ciks: Vec<String>,
 }

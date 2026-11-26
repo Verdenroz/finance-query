@@ -172,7 +172,14 @@ mod tests {
 
         let search = crate::SearchNews::vec_to_dataframe(&[]).unwrap();
         let search = schema(&search);
-        assert_eq!(search[search.len() - 3..], sentiment);
+        assert_eq!(search[search.len() - 4..search.len() - 1], sentiment);
+        assert_eq!(
+            search[search.len() - 1],
+            (
+                "related_tickers".into(),
+                DataType::List(Box::new(DataType::String))
+            )
+        );
     }
 
     #[test]

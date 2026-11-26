@@ -22,8 +22,6 @@ pub struct ProtocolTvl {
     pub symbol: Option<String>,
     /// Project homepage.
     pub url: Option<String>,
-    /// Chains the protocol is deployed on.
-    pub chains: Vec<String>,
     /// Latest total value locked, in USD.
     pub tvl: Option<f64>,
     /// TVL broken down by chain, in USD.
@@ -34,6 +32,9 @@ pub struct ProtocolTvl {
     pub change_7d_percent: Option<f64>,
     /// Market capitalisation of the protocol's token, in USD.
     pub market_cap: Option<f64>,
+    /// Chains the protocol is deployed on.
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub chains: Vec<String>,
 }
 
 /// One chain's share of a protocol's TVL.

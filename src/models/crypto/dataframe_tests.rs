@@ -101,6 +101,7 @@ fn defi_frames() {
             "change_1d_percent:f64",
             "change_7d_percent:f64",
             "market_cap:f64",
+            "chains:list[str]",
         ]
     );
 

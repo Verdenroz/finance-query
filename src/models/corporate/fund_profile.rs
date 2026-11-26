@@ -45,6 +45,7 @@ pub struct FundProfile {
 
     /// List of brokerages offering this fund
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
     pub brokerages: Option<Vec<String>>,
 }
 

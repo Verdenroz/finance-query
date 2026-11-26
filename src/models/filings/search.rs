@@ -107,10 +107,6 @@ pub struct EdgarSearchHit {
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarSearchSource {
-    /// CIK numbers (as strings)
-    #[serde(default)]
-    pub ciks: Vec<String>,
-
     /// Filing date (YYYY-MM-DD)
     #[serde(default)]
     pub file_date: Option<String>,
@@ -123,20 +119,28 @@ pub struct EdgarSearchSource {
     #[serde(default)]
     pub adsh: Option<String>,
 
-    /// Display names (company name with ticker)
-    #[serde(default)]
-    pub display_names: Vec<String>,
-
     /// Period ending date
     #[serde(default)]
     pub period_ending: Option<String>,
 
+    /// CIK numbers (as strings)
+    #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub ciks: Vec<String>,
+
+    /// Display names (company name with ticker)
+    #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
+    pub display_names: Vec<String>,
+
     /// Root form types
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
     pub root_forms: Vec<String>,
 
     /// Standard Industrial Classification codes
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
     pub sics: Vec<String>,
 }
 
