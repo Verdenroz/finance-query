@@ -89,10 +89,10 @@ fn leverage_lifts_gross_return_and_sinks_net_return() {
         gross_pnl(&unlevered),
     );
     assert!(
-        levered.metrics.total_return_pct < unlevered.metrics.total_return_pct,
+        levered.metrics.total_return < unlevered.metrics.total_return,
         "financing should sink net return: {} vs {}",
-        levered.metrics.total_return_pct,
-        unlevered.metrics.total_return_pct,
+        levered.metrics.total_return,
+        unlevered.metrics.total_return,
     );
     assert!(levered.metrics.total_financing_cost > 0.0);
     assert_eq!(unlevered.metrics.total_financing_cost, 0.0);

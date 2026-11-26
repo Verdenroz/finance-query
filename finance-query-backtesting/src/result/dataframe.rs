@@ -13,7 +13,7 @@ where
 impl BacktestResult {
     /// Converts the equity curve to a polars DataFrame, one row per bar.
     ///
-    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown_pct` (f64, a fraction).
+    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown` (f64, a fraction).
     pub fn equity_dataframe(&self) -> PolarsResult<DataFrame> {
         EquityPoint::vec_to_dataframe(&self.equity_curve)
     }
@@ -22,7 +22,7 @@ impl BacktestResult {
     ///
     /// Columns are `side` (string, `LONG` or `SHORT`), `entry_timestamp`, `exit_timestamp`
     /// (i64), `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`,
-    /// `transaction_tax`, `pnl`, `return_pct`, `dividend_income`, `unreinvested_dividends`,
+    /// `transaction_tax`, `pnl`, `net_return`, `dividend_income`, `unreinvested_dividends`,
     /// `financing_cost` (f64), `is_partial` (bool) and `scale_sequence` (u64). Entry and exit
     /// signals and tags are not included.
     pub fn trades_dataframe(&self) -> PolarsResult<DataFrame> {
@@ -40,7 +40,7 @@ impl BacktestResult {
                 series("commission", t, |x| x.commission),
                 series("transaction_tax", t, |x| x.transaction_tax),
                 series("pnl", t, |x| x.pnl),
-                series("return_pct", t, |x| x.return_pct),
+                series("net_return", t, |x| x.net_return),
                 series("dividend_income", t, |x| x.dividend_income),
                 series("unreinvested_dividends", t, |x| x.unreinvested_dividends),
                 series("financing_cost", t, |x| x.financing_cost),
@@ -94,7 +94,7 @@ mod tests {
         ];
         let df = make_result(vec![], curve).equity_dataframe().unwrap();
 
-        assert_eq!(names(&df), ["timestamp", "equity", "drawdown_pct"]);
+        assert_eq!(names(&df), ["timestamp", "equity", "drawdown"]);
         assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
         assert_eq!(df.column("equity").unwrap().dtype(), &DataType::Float64);
         let equity: Vec<_> = df
@@ -125,7 +125,7 @@ mod tests {
                 "commission",
                 "transaction_tax",
                 "pnl",
-                "return_pct",
+                "net_return",
                 "dividend_income",
                 "unreinvested_dividends",
                 "financing_cost",
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(df.width(), 39);
         assert_eq!(
             names(&df)[..3],
-            ["total_return_pct", "annualized_return_pct", "sharpe_ratio"]
+            ["total_return", "annualized_return", "sharpe_ratio"]
         );
         assert_eq!(
             df.column("total_trades").unwrap().dtype(),

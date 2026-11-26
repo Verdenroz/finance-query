@@ -370,8 +370,8 @@ impl Position {
 
         let pnl = gross_pnl - partial_commission - partial_tax + unreinvested - financing_slice;
         let entry_value = self.entry_price * entry_qty_closed;
-        let return_pct = if entry_value > 0.0 {
-            (pnl / entry_value) * 100.0
+        let net_return = if entry_value > 0.0 {
+            pnl / entry_value
         } else {
             0.0
         };
@@ -390,7 +390,7 @@ impl Position {
             commission: partial_commission,
             transaction_tax: partial_tax,
             pnl,
-            return_pct,
+            net_return,
             dividend_income: div_income,
             unreinvested_dividends: unreinvested,
             financing_cost: financing_slice,
@@ -446,8 +446,8 @@ impl Position {
             - self.financing_cost_accrued;
 
         let entry_value = self.entry_price * self.entry_quantity;
-        let return_pct = if entry_value > 0.0 {
-            (pnl / entry_value) * 100.0
+        let net_return = if entry_value > 0.0 {
+            pnl / entry_value
         } else {
             0.0
         };
@@ -463,7 +463,7 @@ impl Position {
             commission: total_commission,
             transaction_tax: total_transaction_tax,
             pnl,
-            return_pct,
+            net_return,
             dividend_income: self.dividend_income,
             unreinvested_dividends: self.unreinvested_dividends,
             financing_cost: self.financing_cost_accrued,
@@ -517,8 +517,8 @@ pub struct Trade {
     /// Realized P&L (after commission and transaction tax, including any unreinvested dividend income)
     pub pnl: f64,
 
-    /// Return in percent of the entry value (`16.52` means +16.52%)
-    pub return_pct: f64,
+    /// Net return as a fraction of the entry value (`0.1652` means +16.52%), after commission and tax
+    pub net_return: f64,
 
     /// Dividend income received while this position was open
     pub dividend_income: f64,
@@ -759,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn test_trade_return_pct() {
+    fn test_trade_net_return() {
         let pos = Position::new(
             PositionSide::Long,
             1000,
@@ -771,8 +771,8 @@ mod tests {
 
         let trade = pos.close(2000, 110.0, 0.0, make_exit_signal());
 
-        // Entry value = 1000, PnL = 100, return = 10%
-        assert!((trade.return_pct - 10.0).abs() < 0.01);
+        // Entry value = 1000, PnL = 100, return = 0.10
+        assert!((trade.net_return - 0.10).abs() < 1e-4);
     }
 
     // ── scale_in ─────────────────────────────────────────────────────────────
@@ -873,11 +873,11 @@ mod tests {
         );
 
         // Close 50% at $120 → closed 5 shares, gross PnL = (120-100)*5 = $100
-        // return_pct = pnl / (entry_price * qty_closed) = 100 / 500 = 20%
+        // net_return = pnl / (entry_price * qty_closed) = 100 / 500 = 0.20
         let trade = pos.partial_close(0.5, 2000, 120.0, 0.0, 0.0, make_exit_signal());
 
         assert!((trade.pnl - 100.0).abs() < 1e-10);
-        assert!((trade.return_pct - 20.0).abs() < 0.01);
+        assert!((trade.net_return - 0.20).abs() < 1e-4);
     }
 
     #[test]

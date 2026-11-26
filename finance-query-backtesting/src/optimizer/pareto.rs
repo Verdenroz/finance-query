@@ -214,7 +214,7 @@ mod tests {
         (0..n).map(|i| 100.0 + i as f64 * 0.5).collect()
     }
 
-    fn opt_result(label: &str, sharpe: f64, max_drawdown_pct: f64) -> OptimizationResult {
+    fn opt_result(label: &str, sharpe: f64, max_drawdown: f64) -> OptimizationResult {
         let mut result = BacktestResult {
             symbol: "TEST".to_string(),
             strategy_name: "Synthetic".to_string(),
@@ -233,7 +233,7 @@ mod tests {
             max_leverage_used: 0.0,
         };
         result.metrics.sharpe_ratio = sharpe;
-        result.metrics.max_drawdown_pct = max_drawdown_pct;
+        result.metrics.max_drawdown = max_drawdown;
 
         let mut params = HashMap::new();
         params.insert("label".to_string(), ParamValue::Int(label.len() as i64));

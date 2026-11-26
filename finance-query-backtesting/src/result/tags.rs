@@ -31,15 +31,15 @@ impl BacktestResult {
     ///
     /// # Capital base
     ///
-    /// All return metrics (`total_return_pct`, `annualized_return_pct`,
+    /// All return metrics (`total_return`, `annualized_return`,
     /// `sharpe_ratio`, `calmar_ratio`) are computed relative to
     /// **`initial_capital`** — the full portfolio starting value — *not* the
     /// capital actually deployed into tagged trades.  A tag that fired 2
-    /// small trades on a $10,000 portfolio will show a lower `total_return_pct`
+    /// small trades on a $10,000 portfolio will show a lower `total_return`
     /// than a tag that deployed the same profit using more capital.
     ///
     /// For capital-independent comparisons across tags prefer:
-    /// `profit_factor`, `win_rate`, `avg_win_pct`, `avg_loss_pct`.
+    /// `profit_factor`, `win_rate`, `avg_win_return`, `avg_loss_return`.
     ///
     /// # Sharpe / Sortino annualisation
     ///
@@ -49,7 +49,7 @@ impl BacktestResult {
     /// annualisation factor.
     ///
     /// Returns a zero-valued `PerformanceMetrics` (all fields zero except
-    /// `total_return_pct`) when no tagged trades exist.
+    /// `total_return`) when no tagged trades exist.
     pub fn metrics_by_tag(&self, tag: &str) -> PerformanceMetrics {
         // Single pass: collect tagged trades and build synthetic equity curve.
         let mut equity = self.initial_capital;
@@ -65,14 +65,14 @@ impl BacktestResult {
                 equity_curve.push(EquityPoint {
                     timestamp: trade.entry_timestamp,
                     equity,
-                    drawdown_pct: 0.0,
+                    drawdown: 0.0,
                 });
             }
             equity += trade.pnl;
             if equity > peak {
                 peak = equity;
             }
-            let drawdown_pct = if peak > 0.0 {
+            let drawdown = if peak > 0.0 {
                 (peak - equity) / peak
             } else {
                 0.0
@@ -80,7 +80,7 @@ impl BacktestResult {
             equity_curve.push(EquityPoint {
                 timestamp: trade.exit_timestamp,
                 equity,
-                drawdown_pct,
+                drawdown,
             });
             trades_vec.push(trade.clone());
         }
@@ -366,12 +366,11 @@ mod tests {
             vec![equity_point(0, 10000.0, 0.0)],
         );
         let metrics = result.metrics_by_tag("breakout");
-        // total_return_pct = (final_equity - initial) / initial * 100
-        // = 300 / 10000 * 100 = 3.0%
+        // total_return = (final_equity - initial) / initial = 300 / 10000 = 0.03
         assert!(
-            (metrics.total_return_pct - 3.0).abs() < 0.01,
-            "expected 3%, got {}",
-            metrics.total_return_pct
+            (metrics.total_return - 0.03).abs() < 1e-4,
+            "expected 0.03, got {}",
+            metrics.total_return
         );
     }
 

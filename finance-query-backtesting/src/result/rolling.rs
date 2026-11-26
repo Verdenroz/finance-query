@@ -47,7 +47,7 @@ impl BacktestResult {
     /// means it is 20% below the highest value seen so far.
     ///
     /// **This is not a sliding-window computation.** Values are read directly
-    /// from the precomputed [`EquityPoint::drawdown_pct`] field, which tracks
+    /// from the precomputed [`EquityPoint::drawdown`] field, which tracks
     /// the running-peak drawdown since the backtest began.  To compute the
     /// *maximum* drawdown within a rolling N-bar window (regime-change
     /// detection), iterate over [`BacktestResult::equity_curve`] manually.
@@ -55,9 +55,9 @@ impl BacktestResult {
     /// The returned vector has the same length as
     /// [`BacktestResult::equity_curve`].
     ///
-    /// [`EquityPoint::drawdown_pct`]: super::EquityPoint::drawdown_pct
+    /// [`EquityPoint::drawdown`]: super::EquityPoint::drawdown
     pub fn drawdown_series(&self) -> Vec<f64> {
-        self.equity_curve.iter().map(|p| p.drawdown_pct).collect()
+        self.equity_curve.iter().map(|p| p.drawdown).collect()
     }
 
     /// Rolling win rate over a sliding window of consecutive closed trades.
@@ -163,9 +163,9 @@ mod tests {
         assert_eq!(dd.len(), pts.len());
         for (got, ep) in dd.iter().zip(pts.iter()) {
             assert!(
-                (got - ep.drawdown_pct).abs() < f64::EPSILON,
+                (got - ep.drawdown).abs() < f64::EPSILON,
                 "expected {}, got {}",
-                ep.drawdown_pct,
+                ep.drawdown,
                 got
             );
         }
