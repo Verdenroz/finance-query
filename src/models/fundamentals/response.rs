@@ -66,7 +66,7 @@ pub struct FinancialStatement {
     pub statement: HashMap<String, HashMap<String, f64>>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
-    pub provider_id: Option<crate::providers::Provider>,
+    pub provider_id: Option<finance_query_types::Provider>,
 }
 
 impl FinancialStatement {
