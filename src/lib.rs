@@ -630,3 +630,75 @@ pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
 pub fn __fuzz_pdf_unencrypted(bytes: &[u8]) {
     crate::adapters::housetrades::pdf::fuzz_unencrypted(bytes);
 }
+
+/// Decode a Yahoo pricing frame from arbitrary bytes, for `fuzz/fuzz_targets`.
+///
+/// Not part of the public API. Requires the `fuzzing` feature.
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub fn __fuzz_pricing(bytes: &[u8]) {
+    use crate::streaming::pricing::PricingData;
+
+    let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes);
+    let _ = PricingData::from_base64(&encoded).map(streaming::PriceUpdate::from);
+    let _ = PricingData::from_base64(&String::from_utf8_lossy(bytes));
+}
+
+/// Wrappers over internal parsers for `benches/`.
+///
+/// Not part of the public API. Requires the `bench-internals` feature.
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub mod __bench {
+    use crate::adapters::yahoo::quote::quotes::parse_quotes_batch;
+    use crate::models::quote::Quote;
+    use crate::streaming::PriceUpdate;
+    use crate::streaming::pricing::{MarketHoursTypeProto, PricingData, QuoteTypeProto};
+
+    /// A base64 pricing frame shaped like a live equity tick.
+    pub fn pricing_frame() -> String {
+        let data = PricingData {
+            id: "AAPL".into(),
+            price: 189.5,
+            time: 1_700_000_000_000,
+            currency: "USD".into(),
+            exchange: "NMS".into(),
+            quote_type: QuoteTypeProto::Equity as i32,
+            market_hours: MarketHoursTypeProto::RegularMarket as i32,
+            change_percent: -0.25,
+            day_volume: 51_234_567,
+            day_high: 190.1,
+            day_low: 188.2,
+            change: -0.48,
+            short_name: "Apple Inc.".into(),
+            open_price: 189.0,
+            previous_close: 189.98,
+            bid: 189.25,
+            bid_size: 4,
+            ask: 189.75,
+            ask_size: 2,
+            price_hint: 2,
+            ..Default::default()
+        };
+        base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            prost::Message::encode_to_vec(&data),
+        )
+    }
+
+    /// Decode a base64 pricing frame into the public update type.
+    pub fn decode_pricing(encoded: &str) -> Option<PriceUpdate> {
+        PricingData::from_base64(encoded)
+            .ok()
+            .map(PriceUpdate::from)
+    }
+
+    /// Parse a Yahoo batch-quote body and convert each row to a [`Quote`].
+    pub fn parse_quote_batch(body: &[u8]) -> Vec<(String, Quote)> {
+        parse_quotes_batch(body)
+            .unwrap()
+            .into_iter()
+            .map(|(symbol, response)| (symbol, Quote::from_response(&response, None, None)))
+            .collect()
+    }
+}

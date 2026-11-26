@@ -458,4 +458,71 @@ mod tests {
         assert_eq!(MarketHoursType::from(1), MarketHoursType::RegularMarket);
         assert_eq!(MarketHoursType::from(2), MarketHoursType::PostMarket);
     }
+
+    fn sample() -> PricingData {
+        PricingData {
+            id: "AAPL".into(),
+            price: 189.5,
+            time: 1_700_000_000_000,
+            currency: "USD".into(),
+            exchange: "NMS".into(),
+            quote_type: QuoteTypeProto::Equity as i32,
+            market_hours: MarketHoursTypeProto::PostMarket as i32,
+            change_percent: -0.25,
+            day_volume: 51_234_567,
+            bid: 189.25,
+            ask: 189.75,
+            options_type: 1,
+            market_cap: 2.9e12,
+            ..Default::default()
+        }
+    }
+
+    fn encode_base64(data: &PricingData) -> String {
+        base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            data.encode_to_vec(),
+        )
+    }
+
+    #[test]
+    fn from_base64_round_trips_every_set_field() {
+        let data = sample();
+        assert_eq!(
+            PricingData::from_base64(&encode_base64(&data)).unwrap(),
+            data
+        );
+    }
+
+    #[test]
+    fn price_update_maps_enums_and_fields() {
+        let update = PriceUpdate::from(sample());
+        assert_eq!(update.id, "AAPL");
+        assert_eq!(update.price, 189.5);
+        assert_eq!(update.quote_type, QuoteType::Equity);
+        assert_eq!(update.market_hours, MarketHoursType::PostMarket);
+        assert_eq!(update.options_type, OptionType::Put);
+        assert_eq!(update.day_volume, 51_234_567);
+        assert_eq!(update.market_cap, 2.9e12);
+    }
+
+    #[test]
+    fn from_base64_rejects_invalid_base64() {
+        assert!(matches!(
+            PricingData::from_base64("not base64!"),
+            Err(PricingDecodeError::Base64(_))
+        ));
+    }
+
+    #[test]
+    fn from_base64_rejects_invalid_protobuf() {
+        let encoded = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            [0x0a, 0xff, 0x01],
+        );
+        assert!(matches!(
+            PricingData::from_base64(&encoded),
+            Err(PricingDecodeError::Protobuf(_))
+        ));
+    }
 }
