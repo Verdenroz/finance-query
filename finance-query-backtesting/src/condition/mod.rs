@@ -28,8 +28,8 @@ pub use comparison::*;
 pub use composite::*;
 pub use threshold::*;
 
-use crate::constants::Interval;
-use crate::indicators::Indicator;
+use finance_query_types::constants::Interval;
+use finance_query_types::indicators::Indicator;
 
 use super::strategy::StrategyContext;
 
@@ -53,8 +53,8 @@ pub struct HtfIndicatorSpec {
     /// the exchange's local calendar rather than UTC. Use
     /// [`Region::utc_offset_secs`] to obtain the correct value, or `0` for UTC.
     ///
-    /// [`resample`]: crate::backtesting::resample::resample
-    /// [`Region::utc_offset_secs`]: crate::constants::Region::utc_offset_secs
+    /// [`resample`]: crate::resample::resample
+    /// [`Region::utc_offset_secs`]: finance_query_types::constants::Region::utc_offset_secs
     pub utc_offset_secs: i64,
 }
 
@@ -90,7 +90,7 @@ pub trait Condition: Clone + Send + Sync + 'static {
     /// The engine resamples candles to each unique interval, computes the
     /// listed indicators on the resampled data, and stores stretched
     /// (base-timeframe-length) arrays in `StrategyContext::indicators`
-    /// under the `htf_key` names.  [`HtfCondition`](crate::backtesting::refs::HtfCondition)
+    /// under the `htf_key` names.  [`HtfCondition`](crate::refs::HtfCondition)
     /// implements this automatically; all other conditions return `vec![]`.
     fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
         vec![]
@@ -104,7 +104,7 @@ pub trait Condition: Clone + Send + Sync + 'static {
     /// gets a correct answer — the read falls back to scanning from the entry
     /// bar — but pays the O(bars²) cost this flag exists to avoid.
     ///
-    /// [`StrategyContext::extremes`]: crate::backtesting::StrategyContext::extremes
+    /// [`StrategyContext::extremes`]: crate::StrategyContext::extremes
     fn tracks_position_extremes(&self) -> bool {
         false
     }

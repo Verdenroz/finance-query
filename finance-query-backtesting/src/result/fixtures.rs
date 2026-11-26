@@ -1,9 +1,9 @@
 use chrono::NaiveDate;
 
 use super::{BacktestResult, EquityPoint, PerformanceMetrics};
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::position::{Position, PositionSide, Trade};
-use crate::backtesting::signal::Signal;
+use crate::config::BacktestConfig;
+use crate::position::{Position, PositionSide, Trade};
+use crate::signal::Signal;
 
 pub(super) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
     Trade {

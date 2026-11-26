@@ -1,9 +1,9 @@
 use super::*;
-use crate::backtesting::{
+use crate::{
     BacktestConfig, SmaCrossover,
     optimizer::{OptimizeMetric, ParamRange},
 };
-use crate::models::chart::Candle;
+use finance_query_types::Candle;
 
 fn make_candles(prices: &[f64]) -> Vec<Candle> {
     prices

@@ -2,12 +2,12 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use crate::backtesting::engine::{BacktestEngine, update_position_extremes, update_trailing_hwm};
-use crate::backtesting::error::{BacktestError, Result};
-use crate::backtesting::result::EquityPoint;
-use crate::backtesting::signal::Signal;
-use crate::backtesting::strategy::Strategy;
-use crate::models::chart::{Candle, Dividend};
+use crate::engine::{BacktestEngine, update_position_extremes, update_trailing_hwm};
+use crate::error::{BacktestError, Result};
+use crate::result::EquityPoint;
+use crate::signal::Signal;
+use crate::strategy::Strategy;
+use finance_query_types::{Candle, Dividend};
 
 use super::config::PortfolioConfig;
 use super::result::{AllocationSnapshot, PortfolioResult};
@@ -512,7 +512,7 @@ use self::exits::execute_forced_exit;
 use self::report::{build_portfolio_result, sync_terminal_equity_point};
 use self::signals::dispatch_bar_signals;
 use self::state::{SymbolState, close_at_or_before, compute_portfolio_equity};
-use crate::backtesting::engine::check_sl_tp;
+use crate::engine::check_sl_tp;
 
 #[cfg(test)]
 mod tests;

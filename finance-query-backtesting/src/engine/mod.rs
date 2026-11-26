@@ -14,7 +14,7 @@ pub(crate) use exits::{check_sl_tp, update_position_extremes, update_trailing_hw
 pub(crate) use indicators::compute_for_candles;
 pub(crate) use sizing::SizingSeries;
 
-use crate::models::chart::{Candle, Dividend};
+use finance_query_types::{Candle, Dividend};
 
 use self::benchmark::compute_benchmark_metrics;
 use super::config::BacktestConfig;
@@ -133,7 +133,7 @@ impl BacktestEngine {
 mod tests {
     use super::fixtures::make_candles;
     use super::*;
-    use crate::backtesting::strategy::SmaCrossover;
+    use crate::strategy::SmaCrossover;
 
     #[test]
     fn test_engine_basic() {

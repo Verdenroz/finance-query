@@ -4,7 +4,7 @@ use chrono::{Datelike, Weekday};
 
 use super::stats::{datetime_from_timestamp, infer_bars_per_year, partial_period_adjust};
 use super::{BacktestResult, EquityPoint, PerformanceMetrics};
-use crate::backtesting::position::Trade;
+use crate::position::Trade;
 
 impl BacktestResult {
     /// Performance metrics broken down by calendar year.

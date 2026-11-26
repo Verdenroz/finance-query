@@ -62,17 +62,17 @@
 //! let weekly_trend = htf_region(Interval::OneWeek, Region::Japan, price().above_ref(sma(20)));
 //! ```
 //!
-//! [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
-//! [`Strategy`]: crate::backtesting::strategy::Strategy
+//! [`StrategyBuilder`]: crate::strategy::StrategyBuilder
+//! [`Strategy`]: crate::strategy::Strategy
 
 use std::collections::HashMap;
 
-use crate::backtesting::condition::{Condition, HtfIndicatorSpec};
-use crate::backtesting::engine::compute_for_candles;
-use crate::backtesting::resample::resample;
-use crate::backtesting::strategy::StrategyContext;
-use crate::constants::{Interval, Region};
-use crate::indicators::Indicator;
+use crate::condition::{Condition, HtfIndicatorSpec};
+use crate::engine::compute_for_candles;
+use crate::resample::resample;
+use crate::strategy::StrategyContext;
+use finance_query_types::constants::{Interval, Region};
+use finance_query_types::indicators::Indicator;
 
 /// A condition that evaluates its inner condition on a resampled HTF candle series.
 ///
@@ -300,14 +300,14 @@ pub fn htf_region<C: Condition>(interval: Interval, region: Region, cond: C) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::condition::held_for_bars;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::BacktestEngine;
-    use crate::backtesting::position::{Position, PositionSide};
-    use crate::backtesting::refs::{IndicatorRefExt, price, relative_volume, sma};
-    use crate::backtesting::signal::Signal;
-    use crate::backtesting::strategy::StrategyBuilder;
-    use crate::models::chart::Candle;
+    use crate::condition::held_for_bars;
+    use crate::config::BacktestConfig;
+    use crate::engine::BacktestEngine;
+    use crate::position::{Position, PositionSide};
+    use crate::refs::{IndicatorRefExt, price, relative_volume, sma};
+    use crate::signal::Signal;
+    use crate::strategy::StrategyBuilder;
+    use finance_query_types::Candle;
 
     const DAY: i64 = 86_400;
 

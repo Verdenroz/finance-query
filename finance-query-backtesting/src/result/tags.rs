@@ -1,13 +1,13 @@
 use super::stats::{infer_bars_per_year, partial_period_adjust};
 use super::{BacktestResult, EquityPoint, PerformanceMetrics};
-use crate::backtesting::position::Trade;
+use crate::position::Trade;
 
 impl BacktestResult {
     // ─── Trade tagging & subgroup analysis ───────────────────────────────────
 
     /// Return all trades that carry the given tag.
     ///
-    /// Tags are attached to a [`Signal`](crate::backtesting::Signal) at strategy time with `.tag("name")`
+    /// Tags are attached to a [`Signal`](crate::Signal) at strategy time with `.tag("name")`
     /// and propagated to [`Trade::tags`] when the position closes.
     ///
     /// Tag comparison is **exact and case-sensitive**: `"Breakout"` and
@@ -123,8 +123,8 @@ impl BacktestResult {
 mod tests {
     use super::super::fixtures::{equity_point, make_result, make_trade};
     use super::*;
-    use crate::backtesting::position::{Position, PositionSide};
-    use crate::backtesting::signal::Signal;
+    use crate::position::{Position, PositionSide};
+    use crate::signal::Signal;
 
     // ─── Trade tagging & subgroup analysis ───────────────────────────────────
 
@@ -189,7 +189,7 @@ mod tests {
     fn position_close_propagates_entry_signal_tags_to_trade() {
         let entry_signal = Signal::long(0, 100.0).tag("breakout").tag("high_volume");
         let pos = Position::new(
-            crate::backtesting::position::PositionSide::Long,
+            crate::position::PositionSide::Long,
             0,
             100.0,
             10.0,
@@ -204,7 +204,7 @@ mod tests {
     fn position_close_propagates_empty_tags_when_none_set() {
         let entry_signal = Signal::long(0, 100.0);
         let pos = Position::new(
-            crate::backtesting::position::PositionSide::Long,
+            crate::position::PositionSide::Long,
             0,
             100.0,
             10.0,

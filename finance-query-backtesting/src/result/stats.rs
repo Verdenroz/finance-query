@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 use super::{EquityPoint, PerformanceMetrics};
-use crate::backtesting::position::Trade;
+use crate::position::Trade;
 
 /// Aggregated trade statistics collected in a single pass over the trade log.
 pub(super) struct TradeStats {
@@ -78,11 +78,11 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
 /// Returns `f64::MAX` when there are no losing trades and wins are positive
 /// (unbounded edge). Returns `0.0` when inputs are degenerate.
 ///
-/// Delegates to `crate::perf_metrics::kelly_criterion`, shared with the
+/// Delegates to `finance_query_types::perf_metrics::kelly_criterion`, shared with the
 /// standalone `risk` module so both compute the same formula without either
 /// feature depending on the other (see that module's doc comment).
 pub(super) fn calculate_kelly(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
-    crate::perf_metrics::kelly_criterion(win_rate, avg_win_pct, avg_loss_pct)
+    finance_query_types::perf_metrics::kelly_criterion(win_rate, avg_win_pct, avg_loss_pct)
 }
 
 /// Van Tharp's System Quality Number.
@@ -108,11 +108,11 @@ pub(super) fn calculate_sqn(returns: &[f64]) -> f64 {
 /// `Σ max(r, 0) / Σ max(-r, 0)`. Returns `f64::MAX` when the denominator
 /// is zero (no negative returns), `0.0` when the numerator is also zero.
 ///
-/// Delegates to `crate::perf_metrics::omega_ratio` (see that module's doc
+/// Delegates to `finance_query_types::perf_metrics::omega_ratio` (see that module's doc
 /// comment for why the shared formula lives outside both `risk` and
 /// `backtesting`).
 pub(super) fn calculate_omega_ratio(returns: &[f64]) -> f64 {
-    crate::perf_metrics::omega_ratio(returns)
+    finance_query_types::perf_metrics::omega_ratio(returns)
 }
 
 /// Tail Ratio: `abs(p95) / abs(p5)` of trade returns.
@@ -142,12 +142,12 @@ pub(super) fn calculate_tail_ratio(returns: &[f64]) -> f64 {
 /// Ulcer Index: `sqrt(mean(drawdown_pct²))` across all equity curve points,
 /// returned in **percentage** units (0–100) to match standard tool output.
 ///
-/// Delegates to `crate::perf_metrics::ulcer_index`, which takes plain
+/// Delegates to `finance_query_types::perf_metrics::ulcer_index`, which takes plain
 /// drawdown fractions rather than `EquityPoint` so it stays usable from the
 /// standalone `risk` module too.
 pub(super) fn calculate_ulcer_index(equity_curve: &[EquityPoint]) -> f64 {
     let drawdowns: Vec<f64> = equity_curve.iter().map(|p| p.drawdown_pct).collect();
-    crate::perf_metrics::ulcer_index(&drawdowns)
+    finance_query_types::perf_metrics::ulcer_index(&drawdowns)
 }
 
 /// Calculate maximum consecutive wins and losses
@@ -681,8 +681,8 @@ mod tests {
 
     #[test]
     fn calculate_time_in_market_ignores_partial_scale_out_overlap() {
-        use crate::backtesting::position::PositionSide;
-        use crate::backtesting::signal::Signal;
+        use crate::position::PositionSide;
+        use crate::signal::Signal;
 
         // Entry at t=0, scale-out at t=5 (partial trade spans 0..5), final
         // exit at t=10 (non-partial trade spans 0..10). Both trades share the
@@ -744,8 +744,8 @@ mod tests {
 
     #[test]
     fn calculate_time_in_market_counts_a_position_with_only_partial_trades() {
-        use crate::backtesting::position::PositionSide;
-        use crate::backtesting::signal::Signal;
+        use crate::position::PositionSide;
+        use crate::signal::Signal;
 
         let partial = Trade {
             side: PositionSide::Long,

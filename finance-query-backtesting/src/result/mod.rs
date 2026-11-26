@@ -23,7 +23,11 @@ use super::signal::SignalDirection;
 /// Point on the equity curve
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(finance_query_types::ToDataFrame),
+    dataframe(crate = "finance_query_types")
+)]
 pub struct EquityPoint {
     /// Timestamp
     pub timestamp: i64,
@@ -52,7 +56,7 @@ pub struct SignalRecord {
     pub reason: Option<String>,
     /// Whether the signal was executed
     pub executed: bool,
-    /// Tags copied from the originating [`Signal`](crate::backtesting::Signal).
+    /// Tags copied from the originating [`Signal`](crate::Signal).
     ///
     /// Enables `BacktestResult::signals` to be filtered by tag so callers
     /// can compare total generated vs. executed signal counts per tag.

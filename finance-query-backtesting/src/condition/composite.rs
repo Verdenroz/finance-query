@@ -2,8 +2,8 @@
 //!
 //! This module provides AND, OR, and NOT operations for combining conditions.
 
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::{Condition, HtfIndicatorSpec};
 
@@ -261,7 +261,7 @@ impl<C: Condition> ConditionBuilder<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::condition::{always_false, always_true};
+    use crate::condition::{always_false, always_true};
 
     #[test]
     fn test_and_description() {

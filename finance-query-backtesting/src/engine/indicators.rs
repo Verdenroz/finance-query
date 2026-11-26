@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::backtesting::error::Result;
-use crate::backtesting::strategy::Strategy;
-use crate::indicators::{self, Indicator};
-use crate::models::chart::Candle;
+use crate::error::Result;
+use crate::strategy::Strategy;
+use finance_query_types::Candle;
+use finance_query_types::indicators::{self, Indicator};
 
 use super::BacktestEngine;
 
@@ -541,9 +541,9 @@ impl BacktestEngine {
     ) -> Result<HashMap<String, Vec<Option<f64>>>> {
         use std::collections::HashSet;
 
-        use crate::backtesting::condition::HtfIndicatorSpec;
-        use crate::backtesting::resample::{base_to_htf_index, resample};
-        use crate::constants::Interval;
+        use crate::condition::HtfIndicatorSpec;
+        use crate::resample::{base_to_htf_index, resample};
+        use finance_query_types::constants::Interval;
 
         let specs = strategy.htf_requirements();
         if specs.is_empty() {
@@ -569,7 +569,8 @@ impl BacktestEngine {
 
             // De-duplicate indicators by base_key to avoid recomputing MACD/Bollinger
             // etc. when multiple output keys (line, signal, histogram) are requested.
-            let mut required: Vec<(String, crate::indicators::Indicator)> = Vec::new();
+            let mut required: Vec<(String, finance_query_types::indicators::Indicator)> =
+                Vec::new();
             let mut seen_base_keys: HashSet<&str> = HashSet::new();
             for spec in &specs {
                 if seen_base_keys.insert(&spec.base_key) {
@@ -598,7 +599,7 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::engine::fixtures::make_candles;
+    use crate::engine::fixtures::make_candles;
 
     #[test]
     fn distinct_keys_for_one_indicator_both_resolve() {

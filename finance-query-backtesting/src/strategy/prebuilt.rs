@@ -4,7 +4,7 @@
 //! Each strategy implements the [`Strategy`] trait and can be customized via builder methods.
 //!
 //! Short signals are always emitted when the condition is met. Whether they are
-//! *executed* is controlled solely by [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig).
+//! *executed* is controlled solely by [`BacktestConfig::allow_short`](crate::BacktestConfig).
 //!
 //! # Available Strategies
 //!
@@ -28,10 +28,10 @@
 
 use std::collections::HashMap;
 
-use crate::indicators::Indicator;
+use finance_query_types::indicators::Indicator;
 
 use super::{Signal, Strategy, StrategyContext};
-use crate::backtesting::signal::SignalStrength;
+use crate::signal::SignalStrength;
 
 // ── Per-key pointer cache ─────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ impl IndicatorSlot {
 /// Goes long when fast SMA crosses above slow SMA.
 /// Exits when fast SMA crosses below slow SMA.
 /// Emits short signals on bearish crossovers (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct SmaCrossover {
     /// Fast SMA period
@@ -202,7 +202,7 @@ impl Strategy for SmaCrossover {
 /// Goes long when RSI crosses above oversold level.
 /// Exits the long when RSI crosses back below the overbought level.
 /// Emits short signals when RSI crosses below overbought (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct RsiReversal {
     /// RSI period
@@ -340,7 +340,7 @@ impl Strategy for RsiReversal {
 /// Goes long when MACD line crosses above signal line.
 /// Exits when MACD line crosses below signal line.
 /// Emits short signals on bearish crossovers (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct MacdSignal {
     /// Fast EMA period
@@ -464,14 +464,14 @@ impl Strategy for MacdSignal {
 /// Goes long when price touches lower band (oversold).
 /// Exits when price reaches middle or upper band.
 /// Emits short signals when price touches upper band (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 ///
 /// # Signal Strength
 ///
 /// All entry signals emit at default strength (`1.0`). Strength is **not** scaled
 /// by how far price has penetrated through the band. This differs from
 /// [`RsiReversal`], which grades strength by RSI extremity. If you are relying
-/// on [`BacktestConfig::min_signal_strength`](crate::backtesting::BacktestConfig::min_signal_strength) to filter signals in a portfolio
+/// on [`BacktestConfig::min_signal_strength`](crate::BacktestConfig::min_signal_strength) to filter signals in a portfolio
 /// context, all Bollinger entries will pass the threshold equally.
 #[derive(Debug, Clone)]
 pub struct BollingerMeanReversion {
@@ -632,7 +632,7 @@ impl Strategy for BollingerMeanReversion {
 ///
 /// Goes long when SuperTrend turns bullish (uptrend).
 /// Emits short signals when SuperTrend turns bearish (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct SuperTrendFollow {
     /// ATR period
@@ -737,7 +737,7 @@ impl Strategy for SuperTrendFollow {
 /// Goes long when price breaks above upper channel (new high).
 /// Exits when price breaks below lower channel (new low).
 /// Emits short signals on downward breakouts (execution gated by
-/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+/// [`BacktestConfig::allow_short`](crate::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct DonchianBreakout {
     /// Channel period
@@ -888,8 +888,8 @@ impl Strategy for DonchianBreakout {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::{Position, PositionSide};
-    use crate::models::chart::Candle;
+    use crate::{Position, PositionSide};
+    use finance_query_types::Candle;
 
     fn make_candle(ts: i64, close: f64) -> Candle {
         Candle::__new(ts, close, close, close, close, 1000, None, None)
@@ -983,7 +983,7 @@ mod tests {
 
     #[test]
     fn test_sma_crossover_fires_on_touch() {
-        use crate::backtesting::signal::SignalDirection;
+        use crate::signal::SignalDirection;
 
         let strategy = SmaCrossover::new(5, 10);
         let candles = vec![make_candle(1, 100.0), make_candle(2, 101.0)];

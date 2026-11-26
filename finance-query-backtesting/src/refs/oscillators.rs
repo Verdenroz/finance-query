@@ -1,5 +1,5 @@
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::IndicatorRef;
 
@@ -694,7 +694,7 @@ impl IndicatorRef for BalanceOfPowerRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::refs::choppiness_index;
+    use crate::refs::choppiness_index;
 
     #[test]
     fn test_oscillator_keys() {

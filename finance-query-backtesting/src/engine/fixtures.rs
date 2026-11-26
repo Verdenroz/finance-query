@@ -1,7 +1,7 @@
-use crate::backtesting::signal::Signal;
-use crate::backtesting::strategy::{Strategy, StrategyContext};
-use crate::indicators::Indicator;
-use crate::models::chart::Candle;
+use crate::signal::Signal;
+use crate::strategy::{Strategy, StrategyContext};
+use finance_query_types::Candle;
+use finance_query_types::indicators::Indicator;
 
 #[derive(Clone)]
 pub(super) struct EnterLongHold;

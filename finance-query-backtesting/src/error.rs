@@ -30,7 +30,7 @@ pub enum BacktestError {
 
     /// Indicator calculation failed
     #[error("Indicator calculation failed: {0}")]
-    IndicatorError(#[from] crate::indicators::IndicatorError),
+    IndicatorError(#[from] finance_query_types::indicators::IndicatorError),
 
     /// Chart data fetch failed
     #[error("Failed to fetch chart data: {0}")]

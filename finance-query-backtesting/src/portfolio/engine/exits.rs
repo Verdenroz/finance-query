@@ -1,9 +1,9 @@
 //! Forced exits: stop/take-profit/trailing checks and liquidation fills.
 
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::result::SignalRecord;
-use crate::backtesting::signal::{Signal, SignalDirection};
-use crate::backtesting::strategy::Strategy;
+use crate::config::BacktestConfig;
+use crate::result::SignalRecord;
+use crate::signal::{Signal, SignalDirection};
+use crate::strategy::Strategy;
 
 use super::state::SymbolState;
 

@@ -9,8 +9,8 @@
 //! - Volume = sum of constituent volumes
 //! - Timestamp = last constituent bar's timestamp (marks bar completion)
 
-use crate::constants::Interval;
-use crate::models::chart::Candle;
+use finance_query_types::Candle;
+use finance_query_types::constants::Interval;
 
 /// Resample `candles` from their base timeframe to `interval`.
 ///
@@ -26,7 +26,7 @@ use crate::models::chart::Candle;
 ///   `utc_offset_secs`. Weekly bars start on the local Monday.
 /// - Sub-daily intervals use fixed-second buckets relative to local midnight.
 ///
-/// [`Region::utc_offset_secs`]: crate::constants::Region::utc_offset_secs
+/// [`Region::utc_offset_secs`]: finance_query_types::constants::Region::utc_offset_secs
 pub fn resample(candles: &[Candle], interval: Interval, utc_offset_secs: i64) -> Vec<Candle> {
     if candles.is_empty() {
         return vec![];

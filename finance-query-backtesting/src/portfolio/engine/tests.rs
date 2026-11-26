@@ -1,9 +1,9 @@
 use super::*;
-use crate::backtesting::portfolio::config::{PortfolioConfig, RebalanceMode};
-use crate::backtesting::signal::SignalDirection;
-use crate::backtesting::strategy::{Strategy, StrategyContext};
-use crate::backtesting::{BacktestConfig, SmaCrossover};
-use crate::indicators::Indicator;
+use crate::portfolio::config::{PortfolioConfig, RebalanceMode};
+use crate::signal::SignalDirection;
+use crate::strategy::{Strategy, StrategyContext};
+use crate::{BacktestConfig, SmaCrossover};
+use finance_query_types::indicators::Indicator;
 
 #[derive(Clone)]
 struct EnterShortHold;

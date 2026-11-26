@@ -84,8 +84,8 @@ pub struct Position {
     /// opened. Takes precedence over [`BacktestConfig::stop_loss_pct`] when
     /// `Some`. `None` means fall back to the config-level default.
     ///
-    /// [`Signal::bracket_stop_loss_pct`]: crate::backtesting::Signal::bracket_stop_loss_pct
-    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    /// [`Signal::bracket_stop_loss_pct`]: crate::Signal::bracket_stop_loss_pct
+    /// [`BacktestConfig::stop_loss_pct`]: crate::BacktestConfig::stop_loss_pct
     #[serde(default)]
     pub bracket_stop_loss_pct: Option<f64>,
 
@@ -95,8 +95,8 @@ pub struct Position {
     /// opened. Takes precedence over [`BacktestConfig::take_profit_pct`] when
     /// `Some`.
     ///
-    /// [`Signal::bracket_take_profit_pct`]: crate::backtesting::Signal::bracket_take_profit_pct
-    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    /// [`Signal::bracket_take_profit_pct`]: crate::Signal::bracket_take_profit_pct
+    /// [`BacktestConfig::take_profit_pct`]: crate::BacktestConfig::take_profit_pct
     #[serde(default)]
     pub bracket_take_profit_pct: Option<f64>,
 
@@ -106,8 +106,8 @@ pub struct Position {
     /// is opened. Takes precedence over [`BacktestConfig::trailing_stop_pct`]
     /// when `Some`.
     ///
-    /// [`Signal::bracket_trailing_stop_pct`]: crate::backtesting::Signal::bracket_trailing_stop_pct
-    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    /// [`Signal::bracket_trailing_stop_pct`]: crate::Signal::bracket_trailing_stop_pct
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::BacktestConfig::trailing_stop_pct
     #[serde(default)]
     pub bracket_trailing_stop_pct: Option<f64>,
 
@@ -313,7 +313,7 @@ impl Position {
     /// dividend balances, and entry cost bases.
     ///
     /// [`Trade::is_partial`] is `true` for all trades returned by this method.
-    /// For a full close prefer [`Position::close`](crate::backtesting::Position::close)
+    /// For a full close prefer [`Position::close`](crate::Position::close)
     /// (or the crate-internal `close_with_tax` for tax-aware exits), which sets
     /// `is_partial = false`. The engine's `scale_out_position` delegates
     /// `fraction >= 1.0` to `close_position` for exactly this reason.
@@ -510,7 +510,7 @@ pub struct Trade {
     /// Non-zero only when [`BacktestConfig::transaction_tax_pct`] is set.
     /// Deducted from P&L along with commission.
     ///
-    /// [`BacktestConfig::transaction_tax_pct`]: crate::backtesting::BacktestConfig::transaction_tax_pct
+    /// [`BacktestConfig::transaction_tax_pct`]: crate::BacktestConfig::transaction_tax_pct
     #[serde(default)]
     pub transaction_tax: f64,
 

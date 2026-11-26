@@ -1,7 +1,7 @@
-use crate::backtesting::config::{PositionSizing, SizingContext};
-use crate::backtesting::position::Trade;
-use crate::indicators;
-use crate::models::chart::Candle;
+use crate::config::{PositionSizing, SizingContext};
+use crate::position::Trade;
+use finance_query_types::Candle;
+use finance_query_types::indicators;
 
 use super::BacktestEngine;
 
@@ -55,7 +55,7 @@ fn rolling_volatility(closes: &[f64], lookback: usize) -> Vec<Option<f64>> {
 /// [`PerformanceMetrics::win_rate`], so both Kelly inputs rest on the same set
 /// of trades.
 ///
-/// [`PerformanceMetrics::win_rate`]: crate::backtesting::PerformanceMetrics::win_rate
+/// [`PerformanceMetrics::win_rate`]: crate::PerformanceMetrics::win_rate
 fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Option<f64>) {
     let mut seen = 0usize;
     let mut wins = 0usize;
@@ -148,12 +148,12 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::fixtures::{
+    use crate::config::BacktestConfig;
+    use crate::engine::fixtures::{
         BuyStopAt, EnterLongAt, make_alternating_candles, make_candles_with_range,
     };
-    use crate::backtesting::position::{PositionSide, Trade};
-    use crate::backtesting::signal::Signal;
+    use crate::position::{PositionSide, Trade};
+    use crate::signal::Signal;
 
     fn make_trade(pnl: f64, return_pct: f64, is_partial: bool) -> Trade {
         Trade {

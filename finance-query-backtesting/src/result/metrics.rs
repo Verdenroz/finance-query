@@ -7,12 +7,16 @@ use super::stats::{
     calculate_risk_ratios, calculate_sqn, calculate_tail_ratio, calculate_time_in_market,
     calculate_ulcer_index, calculate_win_loss_durations,
 };
-use crate::backtesting::position::Trade;
+use crate::position::Trade;
 
 /// Performance metrics summary
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(finance_query_types::ToDataFrame),
+    dataframe(crate = "finance_query_types")
+)]
 pub struct PerformanceMetrics {
     /// Total return percentage
     pub total_return_pct: f64,

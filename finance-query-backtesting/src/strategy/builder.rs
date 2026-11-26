@@ -24,9 +24,9 @@
 
 use std::collections::HashSet;
 
-use crate::backtesting::condition::{Condition, HtfIndicatorSpec};
-use crate::backtesting::signal::Signal;
-use crate::indicators::Indicator;
+use crate::condition::{Condition, HtfIndicatorSpec};
+use crate::signal::Signal;
+use finance_query_types::indicators::Indicator;
 
 use super::{Strategy, StrategyContext};
 
@@ -415,9 +415,9 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::backtesting::condition::{always_false, always_true};
-    use crate::backtesting::signal::SignalDirection;
-    use crate::models::chart::Candle;
+    use crate::condition::{always_false, always_true};
+    use crate::signal::SignalDirection;
+    use finance_query_types::Candle;
 
     fn make_candle(ts: i64, close: f64) -> Candle {
         Candle::__new(ts, close, close, close, close, 1000, None, None)
@@ -463,8 +463,8 @@ mod tests {
 
     #[test]
     fn test_required_indicators_deduplication() {
-        use crate::backtesting::condition::Above;
-        use crate::backtesting::refs::rsi;
+        use crate::condition::Above;
+        use crate::refs::rsi;
 
         // Create two conditions using the same indicator
         let entry = Above::new(rsi(14), 70.0);
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_regime_filter_does_not_block_exit() {
-        use crate::backtesting::position::{Position, PositionSide};
+        use crate::position::{Position, PositionSide};
 
         let strategy = StrategyBuilder::new("Regime Exit Test")
             .regime_filter(always_false()) // regime is off
@@ -564,8 +564,8 @@ mod tests {
 
     #[test]
     fn test_regime_filter_indicators_included_in_required() {
-        use crate::backtesting::refs::{IndicatorRefExt, sma};
-        use crate::indicators::Indicator;
+        use crate::refs::{IndicatorRefExt, sma};
+        use finance_query_types::indicators::Indicator;
 
         let strategy = StrategyBuilder::new("Regime Indicators")
             .regime_filter(sma(200).above_ref(sma(400)))
@@ -604,7 +604,7 @@ mod tests {
 
     #[test]
     fn test_regime_filter_warmup_accounts_for_filter_indicators() {
-        use crate::backtesting::refs::{IndicatorRefExt, sma};
+        use crate::refs::{IndicatorRefExt, sma};
 
         let strategy = StrategyBuilder::new("Warmup Test")
             .regime_filter(sma(400).above_ref(sma(200)))

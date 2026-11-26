@@ -35,7 +35,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rayon::prelude::*;
 
-use crate::models::chart::Candle;
+use finance_query_types::Candle;
 
 use super::super::config::BacktestConfig;
 use super::super::engine::{BacktestEngine, validate_series_order};
@@ -253,8 +253,8 @@ fn cartesian_product(params: &[(&str, Vec<ParamValue>)]) -> Vec<HashMap<String, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::{BacktestConfig, SmaCrossover};
-    use crate::models::chart::Candle;
+    use crate::{BacktestConfig, SmaCrossover};
+    use finance_query_types::Candle;
 
     fn make_candles(prices: &[f64]) -> Vec<Candle> {
         prices

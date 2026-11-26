@@ -2,9 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::backtesting::result::SignalRecord;
-use crate::backtesting::signal::{Signal, SignalDirection};
-use crate::backtesting::strategy::{Strategy, StrategyContext};
+use crate::result::SignalRecord;
+use crate::signal::{Signal, SignalDirection};
+use crate::strategy::{Strategy, StrategyContext};
 
 use super::super::config::PortfolioConfig;
 use super::state::{SymbolState, compute_buying_power, compute_portfolio_equity};

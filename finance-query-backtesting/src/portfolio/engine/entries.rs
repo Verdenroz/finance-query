@@ -3,11 +3,11 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use crate::backtesting::engine::BacktestEngine;
-use crate::backtesting::position::{Position, PositionSide};
-use crate::backtesting::result::SignalRecord;
-use crate::backtesting::signal::{Signal, SignalDirection};
-use crate::backtesting::strategy::Strategy;
+use crate::engine::BacktestEngine;
+use crate::position::{Position, PositionSide};
+use crate::result::SignalRecord;
+use crate::signal::{Signal, SignalDirection};
+use crate::strategy::Strategy;
 
 use super::super::config::PortfolioConfig;
 use super::state::{SymbolState, compute_buying_power};

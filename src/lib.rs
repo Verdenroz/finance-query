@@ -598,7 +598,7 @@ pub use indicators::{
 // stop-loss/take-profit, comprehensive performance metrics, parameter optimization,
 // walk-forward validation, Monte Carlo simulation, and multi-symbol portfolio.
 #[cfg(feature = "backtesting")]
-pub mod backtesting;
+pub use finance_query_backtesting as backtesting;
 
 // ============================================================================
 // Compile-time thread-safety assertions

@@ -3,10 +3,10 @@
 //! This module provides references to OHLCV price data that can be used
 //! in trading conditions without requiring indicator computation.
 
-use crate::indicators::Indicator;
+use finance_query_types::indicators::Indicator;
 
 use super::IndicatorRef;
-use crate::backtesting::strategy::StrategyContext;
+use crate::strategy::StrategyContext;
 
 /// Reference to the close price.
 ///

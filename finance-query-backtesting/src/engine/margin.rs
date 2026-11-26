@@ -1,7 +1,7 @@
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::position::Position;
-use crate::backtesting::signal::Signal;
-use crate::models::chart::Candle;
+use crate::config::BacktestConfig;
+use crate::position::Position;
+use crate::signal::Signal;
+use finance_query_types::Candle;
 
 use super::BacktestEngine;
 
@@ -130,11 +130,9 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::engine::fixtures::{
-        EnterLongHold, EnterShortHold, EnterShortScaleIn, make_candles,
-    };
-    use crate::backtesting::result::BacktestResult;
-    use crate::models::chart::Dividend;
+    use crate::engine::fixtures::{EnterLongHold, EnterShortHold, EnterShortScaleIn, make_candles};
+    use crate::result::BacktestResult;
+    use finance_query_types::Dividend;
 
     fn levered_config(max_leverage: f64) -> BacktestConfig {
         BacktestConfig::builder()
@@ -163,7 +161,7 @@ mod tests {
 
     fn long_position(quantity: f64, entry_price: f64) -> Position {
         Position::new(
-            crate::backtesting::position::PositionSide::Long,
+            crate::position::PositionSide::Long,
             0,
             entry_price,
             quantity,

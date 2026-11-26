@@ -1,5 +1,5 @@
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::IndicatorRef;
 
@@ -528,7 +528,7 @@ impl IndicatorRef for ChoppinessIndexRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::refs::{coppock_curve, true_range};
+    use crate::refs::{coppock_curve, true_range};
 
     #[test]
     fn test_macd_keys() {

@@ -3,9 +3,9 @@
 //! This module provides conditions that compare indicator values
 //! against thresholds or other indicators.
 
-use crate::backtesting::refs::IndicatorRef;
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::refs::IndicatorRef;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::Condition;
 
@@ -432,7 +432,7 @@ impl<R1: IndicatorRef, R2: IndicatorRef> Condition for CrossesBelowRef<R1, R2> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::refs::{rsi, sma};
+    use crate::refs::{rsi, sma};
 
     #[test]
     fn test_above_description() {

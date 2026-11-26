@@ -1,8 +1,8 @@
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::position::Position;
-use crate::backtesting::signal::Signal;
-use crate::backtesting::strategy::PositionExtremes;
-use crate::models::chart::Candle;
+use crate::config::BacktestConfig;
+use crate::position::Position;
+use crate::signal::Signal;
+use crate::strategy::PositionExtremes;
+use finance_query_types::Candle;
 
 // The `#[inline]` markers below are load-bearing: `simulate`'s per-candle loop
 // lives in a sibling module and `[profile.bench]` builds without LTO.
@@ -200,8 +200,8 @@ pub(crate) fn update_trailing_hwm(
 #[cfg(test)]
 mod tests {
     use super::super::BacktestEngine;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::fixtures::*;
+    use crate::config::BacktestConfig;
+    use crate::engine::fixtures::*;
 
     // ── Intrabar stop / take-profit tests ────────────────────────────────────
 

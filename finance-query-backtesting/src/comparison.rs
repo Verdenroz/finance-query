@@ -240,7 +240,7 @@ impl ComparisonReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::{
+    use crate::{
         BacktestConfig,
         optimizer::OptimizeMetric,
         result::{BacktestResult, EquityPoint, PerformanceMetrics},

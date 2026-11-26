@@ -1,9 +1,9 @@
 //! Margin, financing, and sizing parity tests.
 
-use crate::backtesting::signal::{Signal, SignalDirection};
-use crate::backtesting::strategy::{Strategy, StrategyContext};
-use crate::backtesting::{BacktestConfig, PositionSizing};
-use crate::indicators::Indicator;
+use crate::signal::{Signal, SignalDirection};
+use crate::strategy::{Strategy, StrategyContext};
+use crate::{BacktestConfig, PositionSizing};
+use finance_query_types::indicators::Indicator;
 
 use super::super::config::PortfolioConfig;
 use super::tests::{FirstBarDirectionalEntry, FirstBarLongElseHold, make_candles};

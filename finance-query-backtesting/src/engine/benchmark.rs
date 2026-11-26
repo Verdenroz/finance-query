@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::backtesting::result::{BenchmarkMetrics, EquityPoint};
-use crate::models::chart::Candle;
+use crate::result::{BenchmarkMetrics, EquityPoint};
+use finance_query_types::Candle;
 
 use super::BacktestEngine;
 
@@ -127,17 +127,20 @@ pub(super) fn compute_benchmark_metrics(
     let alpha = strategy_ann - rf_ann - beta * (bench_ann - rf_ann);
 
     // Information ratio / tracking error: shared with the standalone `risk`
-    // module via `crate::perf_metrics` (see that module's doc comment for why
+    // module via `finance_query_types::perf_metrics` (see that module's doc comment for why
     // the formula lives outside both `risk` and `backtesting`).
-    let ir = crate::perf_metrics::information_ratio(
+    let ir = finance_query_types::perf_metrics::information_ratio(
         &aligned_strategy,
         &aligned_benchmark,
         bars_per_year,
     )
     .unwrap_or(0.0);
-    let te =
-        crate::perf_metrics::tracking_error(&aligned_strategy, &aligned_benchmark, bars_per_year)
-            .unwrap_or(0.0);
+    let te = finance_query_types::perf_metrics::tracking_error(
+        &aligned_strategy,
+        &aligned_benchmark,
+        bars_per_year,
+    )
+    .unwrap_or(0.0);
 
     BenchmarkMetrics {
         symbol: benchmark_symbol.to_string(),
@@ -212,9 +215,9 @@ fn compute_beta(strategy_returns: &[f64], benchmark_returns: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::fixtures::*;
-    use crate::backtesting::strategy::SmaCrossover;
+    use crate::config::BacktestConfig;
+    use crate::engine::fixtures::*;
+    use crate::strategy::SmaCrossover;
 
     #[test]
     fn test_capm_alpha_with_risk_free_rate() {
@@ -289,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_run_with_benchmark_credits_dividends() {
-        use crate::models::chart::Dividend;
+        use finance_query_types::Dividend;
 
         // Rising price series — long enough for SmaCrossover(3,6) to trade
         let prices: Vec<f64> = (0..30).map(|i| 100.0 + i as f64).collect();

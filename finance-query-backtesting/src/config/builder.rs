@@ -1,7 +1,7 @@
 //! Builder for [`BacktestConfig`].
 
 use super::{BacktestConfig, CommissionFn, PositionSizing};
-use crate::backtesting::error::Result;
+use crate::error::Result;
 
 /// Builder for BacktestConfig
 #[derive(Default)]

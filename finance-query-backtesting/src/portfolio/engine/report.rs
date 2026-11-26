@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::backtesting::position::Trade;
-use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics};
-use crate::backtesting::strategy::Strategy;
+use crate::position::Trade;
+use crate::result::{BacktestResult, EquityPoint, PerformanceMetrics};
+use crate::strategy::Strategy;
 
 use super::super::config::PortfolioConfig;
 use super::super::result::{AllocationSnapshot, PortfolioResult};

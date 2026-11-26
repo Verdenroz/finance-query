@@ -51,7 +51,7 @@ use std::collections::HashMap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::models::chart::Candle;
+use finance_query_types::Candle;
 
 use super::config::BacktestConfig;
 use super::error::{BacktestError, Result};
@@ -170,7 +170,7 @@ impl WalkForwardConfig {
     {
         self.validate(candles.len())?;
         // Checked once for the whole series; every window is a slice of it.
-        crate::backtesting::engine::validate_series_order(candles, &[])?;
+        crate::engine::validate_series_order(candles, &[])?;
 
         let step = self.step_bars.unwrap_or(self.out_of_sample_bars);
         let total_bars = self.in_sample_bars + self.out_of_sample_bars;
@@ -257,7 +257,7 @@ impl WalkForwardConfig {
 
         // Test on the out-of-sample slice using the best parameters
         let oos_strategy = factory(&best_params);
-        let oos_result = crate::backtesting::BacktestEngine::new(self.config.clone())
+        let oos_result = crate::BacktestEngine::new(self.config.clone())
             .simulate(symbol, oos_candles, oos_strategy, &[])
             .map_err(|e| {
                 BacktestError::invalid_param(
@@ -328,7 +328,7 @@ fn aggregate_oos_metrics(
     risk_free_rate: f64,
     bars_per_year: f64,
 ) -> PerformanceMetrics {
-    use crate::backtesting::result::EquityPoint;
+    use crate::result::EquityPoint;
 
     let all_trades: Vec<_> = windows
         .iter()

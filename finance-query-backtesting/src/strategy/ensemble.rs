@@ -16,10 +16,10 @@
 //!     .build();
 //! ```
 
-use crate::indicators::Indicator;
+use finance_query_types::indicators::Indicator;
 
 use super::{Signal, Strategy, StrategyContext};
-use crate::backtesting::signal::{SignalDirection, SignalStrength};
+use crate::signal::{SignalDirection, SignalStrength};
 
 /// Voting mode that determines how sub-strategy signals are combined.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -77,7 +77,7 @@ pub enum EnsembleMode {
 /// Build with the fluent builder methods [`add`](Self::add), [`mode`](Self::mode),
 /// then finalise with [`build`](Self::build).
 ///
-/// All six [`SignalDirection`](crate::backtesting::SignalDirection) variants are
+/// All six [`SignalDirection`](crate::SignalDirection) variants are
 /// fully supported. In [`EnsembleMode::WeightedMajority`], `ScaleIn` and `ScaleOut`
 /// participate in the vote with the same position guard as `Exit` — they are only
 /// tallied when a position is open. In `Unanimous`, `AnySignal`, and
@@ -389,10 +389,10 @@ impl Strategy for EnsembleStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::signal::SignalDirection;
-    use crate::backtesting::strategy::Strategy;
-    use crate::indicators::Indicator;
-    use crate::models::chart::Candle;
+    use crate::signal::SignalDirection;
+    use crate::strategy::Strategy;
+    use finance_query_types::Candle;
+    use finance_query_types::indicators::Indicator;
     use std::collections::HashMap;
 
     fn make_candle(ts: i64, price: f64) -> Candle {
@@ -462,7 +462,7 @@ mod tests {
     fn make_ctx_with_position<'a>(
         candles: &'a [Candle],
         indicators: &'a HashMap<String, Vec<Option<f64>>>,
-        position: &'a crate::backtesting::Position,
+        position: &'a crate::Position,
     ) -> StrategyContext<'a> {
         StrategyContext {
             candles,
@@ -735,7 +735,7 @@ mod tests {
 
     #[test]
     fn test_weighted_majority_scale_in_wins_when_position_open() {
-        use crate::backtesting::{Position, PositionSide};
+        use crate::{Position, PositionSide};
 
         let c = candles();
         let ind = empty_indicators();
@@ -779,7 +779,7 @@ mod tests {
 
     #[test]
     fn test_weighted_majority_scale_fraction_is_conviction_weighted_average() {
-        use crate::backtesting::{Position, PositionSide};
+        use crate::{Position, PositionSide};
 
         let c = candles();
         let ind = empty_indicators();
@@ -896,7 +896,7 @@ mod tests {
 
     #[test]
     fn test_required_indicators_keeps_same_key_different_params() {
-        use crate::backtesting::strategy::MacdSignal;
+        use crate::strategy::MacdSignal;
 
         let ensemble = EnsembleStrategy::new("test")
             .add(MacdSignal::new(12, 26, 9), 1.0)

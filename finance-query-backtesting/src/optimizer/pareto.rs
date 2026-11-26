@@ -8,11 +8,11 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::error::{BacktestError, Result};
-use crate::backtesting::result::BacktestResult;
-use crate::backtesting::strategy::Strategy;
-use crate::models::chart::Candle;
+use crate::config::BacktestConfig;
+use crate::error::{BacktestError, Result};
+use crate::result::BacktestResult;
+use crate::strategy::Strategy;
+use finance_query_types::Candle;
 
 use super::{BayesianSearch, GridSearch, OptimizationResult, OptimizeMetric, ParamValue};
 
@@ -199,8 +199,8 @@ impl BayesianSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::result::PerformanceMetrics;
-    use crate::backtesting::{ParamRange, SmaCrossover};
+    use crate::result::PerformanceMetrics;
+    use crate::{ParamRange, SmaCrossover};
 
     fn make_candles(prices: &[f64]) -> Vec<Candle> {
         prices

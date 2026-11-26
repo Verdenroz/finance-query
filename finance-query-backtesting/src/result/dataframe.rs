@@ -226,7 +226,7 @@ mod tests {
     fn metrics_rows_stack_through_the_trait() {
         let metrics = make_result(vec![make_trade(50.0, 5.0, true)], vec![]).metrics;
         let single = metrics.to_dataframe().unwrap();
-        let df = <PerformanceMetrics as crate::ToDataFrame>::vec_to_dataframe(&[
+        let df = <PerformanceMetrics as finance_query_types::ToDataFrame>::vec_to_dataframe(&[
             metrics.clone(),
             metrics,
         ])

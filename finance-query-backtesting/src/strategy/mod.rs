@@ -25,9 +25,9 @@ pub mod prebuilt;
 
 use std::collections::HashMap;
 
-use crate::backtesting::condition::HtfIndicatorSpec;
-use crate::indicators::Indicator;
-use crate::models::chart::Candle;
+use crate::condition::HtfIndicatorSpec;
+use finance_query_types::Candle;
+use finance_query_types::indicators::Indicator;
 
 use super::position::{Position, PositionSide};
 use super::signal::Signal;
@@ -124,7 +124,7 @@ pub struct StrategyContext<'a> {
     /// Index override for [`indicator`](Self::indicator) /
     /// [`indicator_prev`](Self::indicator_prev) lookups; `None` means `index`.
     ///
-    /// [`htf()`](crate::backtesting::refs::htf) keeps candles in base-bar index
+    /// [`htf()`](crate::refs::htf) keeps candles in base-bar index
     /// space while its indicator map holds a per-bar `[prev, curr]` pair, so
     /// indicator lookups address slot 1 while candle lookups keep `index`.
     pub indicator_index: Option<usize>,
@@ -357,7 +357,7 @@ pub trait Strategy: Send + Sync {
     /// this automatically; raw [`Strategy`] implementations that use HTF
     /// conditions should override this to avoid the O(n²) dynamic fallback.
     ///
-    /// [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
+    /// [`StrategyBuilder`]: crate::strategy::StrategyBuilder
     fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
         vec![]
     }
@@ -391,7 +391,7 @@ pub trait Strategy: Send + Sync {
     /// those conditions fall back to scanning from the entry bar — but should
     /// override it to avoid the O(bars²) fallback.
     ///
-    /// [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
+    /// [`StrategyBuilder`]: crate::strategy::StrategyBuilder
     fn tracks_position_extremes(&self) -> bool {
         false
     }

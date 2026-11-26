@@ -1,5 +1,5 @@
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::IndicatorRef;
 
@@ -317,11 +317,11 @@ impl IndicatorRef for IchimokuLaggingRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::BacktestEngine;
-    use crate::backtesting::refs::{IndicatorRefExt, price};
-    use crate::backtesting::strategy::StrategyBuilder;
-    use crate::models::chart::Candle;
+    use crate::config::BacktestConfig;
+    use crate::engine::BacktestEngine;
+    use crate::refs::{IndicatorRefExt, price};
+    use crate::strategy::StrategyBuilder;
+    use finance_query_types::Candle;
     use std::collections::HashMap;
 
     #[test]

@@ -1,7 +1,7 @@
-use crate::backtesting::config::SizingContext;
-use crate::backtesting::position::{Position, PositionSide, Trade};
-use crate::backtesting::signal::{Signal, SignalDirection};
-use crate::models::chart::Candle;
+use crate::config::SizingContext;
+use crate::position::{Position, PositionSide, Trade};
+use crate::signal::{Signal, SignalDirection};
+use finance_query_types::Candle;
 
 use super::BacktestEngine;
 use super::margin;
@@ -318,10 +318,10 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::config::BacktestConfig;
-    use crate::backtesting::engine::fixtures::*;
-    use crate::backtesting::strategy::{Strategy, StrategyContext};
-    use crate::indicators::Indicator;
+    use crate::config::BacktestConfig;
+    use crate::engine::fixtures::*;
+    use crate::strategy::{Strategy, StrategyContext};
+    use finance_query_types::indicators::Indicator;
 
     // ── Position scaling integration tests ───────────────────────────────────
 

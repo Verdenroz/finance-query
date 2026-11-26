@@ -559,9 +559,9 @@ fn run_simulation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics};
-    use crate::backtesting::signal::Signal;
-    use crate::backtesting::{BacktestConfig, PositionSide, Trade};
+    use crate::result::{BacktestResult, EquityPoint, PerformanceMetrics};
+    use crate::signal::Signal;
+    use crate::{BacktestConfig, PositionSide, Trade};
 
     fn make_signal() -> Signal {
         Signal::long(0, 100.0)

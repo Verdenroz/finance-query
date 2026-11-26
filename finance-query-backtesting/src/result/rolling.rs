@@ -91,7 +91,7 @@ impl BacktestResult {
 mod tests {
     use super::super::EquityPoint;
     use super::super::fixtures::{equity_point, make_result, make_trade};
-    use crate::backtesting::position::Trade;
+    use crate::position::Trade;
 
     // ─── Rolling & temporal analysis ─────────────────────────────────────────
 

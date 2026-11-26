@@ -1,7 +1,7 @@
 use super::*;
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::engine::fixtures::*;
-use crate::backtesting::strategy::SmaCrossover;
+use crate::config::BacktestConfig;
+use crate::engine::fixtures::*;
+use crate::strategy::SmaCrossover;
 
 #[test]
 fn test_insufficient_data() {
@@ -58,7 +58,7 @@ fn test_commission_accounting_invariant() {
 
 #[test]
 fn test_unsorted_dividends_returns_error() {
-    use crate::models::chart::Dividend;
+    use finance_query_types::Dividend;
 
     let prices: Vec<f64> = (0..30).map(|i| 100.0 + i as f64).collect();
     let candles = make_candles(&prices);
@@ -81,7 +81,7 @@ fn test_unsorted_dividends_returns_error() {
 
 #[test]
 fn test_short_dividend_is_liability() {
-    use crate::models::chart::Dividend;
+    use finance_query_types::Dividend;
 
     let candles = make_candles(&[100.0, 100.0, 100.0]);
     let dividends = vec![Dividend::__new(candles[1].timestamp, 1.0, None)];
@@ -106,7 +106,7 @@ fn test_short_dividend_is_liability() {
 
 #[test]
 fn test_open_position_final_equity_includes_accrued_dividends() {
-    use crate::models::chart::Dividend;
+    use finance_query_types::Dividend;
 
     let candles = make_candles(&[100.0, 100.0, 100.0]);
     let dividends = vec![Dividend::__new(candles[1].timestamp, 1.0, None)];
@@ -134,8 +134,8 @@ fn test_open_position_final_equity_includes_accrued_dividends() {
 fn unsorted_candles_are_rejected() {
     let mut candles = make_candles(&[100.0, 101.0, 102.0, 103.0]);
     candles.swap(1, 2);
-    use crate::backtesting::refs::*;
-    use crate::backtesting::strategy::StrategyBuilder;
+    use crate::refs::*;
+    use crate::strategy::StrategyBuilder;
     let strategy = StrategyBuilder::new("s")
         .entry(price().above(0.0))
         .exit(price().below(0.0))
@@ -157,7 +157,7 @@ fn unsorted_candles_are_rejected() {
 #[derive(Clone)]
 struct LimitEntryTrailing {
     track: bool,
-    trail: crate::backtesting::condition::TrailingStop,
+    trail: crate::condition::TrailingStop,
     limit: f64,
 }
 
@@ -166,12 +166,12 @@ impl Strategy for LimitEntryTrailing {
         "limit-entry-trailing"
     }
 
-    fn required_indicators(&self) -> Vec<(String, crate::indicators::Indicator)> {
+    fn required_indicators(&self) -> Vec<(String, finance_query_types::indicators::Indicator)> {
         vec![]
     }
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
-        use crate::backtesting::condition::Condition;
+        use crate::condition::Condition;
         if ctx.position.is_none() {
             if ctx.index == 0 {
                 return Signal::buy_limit(ctx.timestamp(), ctx.close(), self.limit);
@@ -217,7 +217,7 @@ fn a_limit_entry_counts_its_own_fill_bar_in_the_peak() {
                 &candles,
                 LimitEntryTrailing {
                     track,
-                    trail: crate::backtesting::condition::TrailingStop::new(0.10),
+                    trail: crate::condition::TrailingStop::new(0.10),
                     limit: 95.0,
                 },
             )
@@ -251,9 +251,9 @@ fn a_limit_entry_counts_its_own_fill_bar_in_the_peak() {
 fn sweeps_reject_unsorted_candles_at_their_own_entry_point() {
     // Validation moved off the per-candidate path, so each sweep entry point
     // has to check the series itself or an unsorted run would slip through.
-    use crate::backtesting::optimizer::{BayesianSearch, GridSearch, ParamRange, ParamValue};
-    use crate::backtesting::refs::*;
-    use crate::backtesting::strategy::StrategyBuilder;
+    use crate::optimizer::{BayesianSearch, GridSearch, ParamRange, ParamValue};
+    use crate::refs::*;
+    use crate::strategy::StrategyBuilder;
     use std::collections::HashMap;
 
     let mut candles = make_candles(&(0..80).map(|i| 100.0 + i as f64).collect::<Vec<f64>>());
@@ -541,7 +541,7 @@ fn intrabar_take_profit_exit_does_not_leave_a_phantom_peak() {
 
 #[test]
 fn ex_date_bar_curve_point_includes_the_same_bar_dividend() {
-    use crate::models::chart::Dividend;
+    use finance_query_types::Dividend;
 
     let candles = make_candles(&[100.0; 6]);
     let dividends = vec![Dividend::__new(candles[2].timestamp, 5.0, None)];
@@ -573,7 +573,7 @@ fn ex_date_bar_curve_point_includes_the_same_bar_dividend() {
 
 #[test]
 fn open_position_metrics_include_dividends_and_span() {
-    use crate::models::chart::Dividend;
+    use finance_query_types::Dividend;
 
     let candles = make_candles(&[100.0; 6]);
     let dividends = vec![Dividend::__new(candles[2].timestamp, 5.0, None)];
@@ -609,7 +609,7 @@ fn a_buy_limit_follow_signal_queues_instead_of_market_filling() {
         fn name(&self) -> &str {
             "ExitThenBuyLimit"
         }
-        fn required_indicators(&self) -> Vec<(String, crate::indicators::Indicator)> {
+        fn required_indicators(&self) -> Vec<(String, finance_query_types::indicators::Indicator)> {
             vec![]
         }
         fn on_candle(&self, ctx: &StrategyContext) -> Signal {

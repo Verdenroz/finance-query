@@ -1,5 +1,5 @@
-use crate::backtesting::strategy::StrategyContext;
-use crate::indicators::Indicator;
+use crate::strategy::StrategyContext;
+use finance_query_types::indicators::Indicator;
 
 use super::IndicatorRef;
 
@@ -124,7 +124,7 @@ impl IndicatorRef for AccumulationDistributionRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::refs::{balance_of_power, chaikin_oscillator, mfi};
+    use crate::refs::{balance_of_power, chaikin_oscillator, mfi};
 
     #[test]
     fn test_volume_keys() {

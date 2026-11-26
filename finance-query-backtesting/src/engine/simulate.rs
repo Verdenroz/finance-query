@@ -1,10 +1,10 @@
-use crate::backtesting::config::SizingContext;
-use crate::backtesting::error::{BacktestError, Result};
-use crate::backtesting::position::{Position, Trade};
-use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
-use crate::backtesting::signal::{OrderType, PendingOrder, Signal, SignalDirection};
-use crate::backtesting::strategy::{PositionExtremes, Strategy, StrategyContext};
-use crate::models::chart::{Candle, Dividend};
+use crate::config::SizingContext;
+use crate::error::{BacktestError, Result};
+use crate::position::{Position, Trade};
+use crate::result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
+use crate::signal::{OrderType, PendingOrder, Signal, SignalDirection};
+use crate::strategy::{PositionExtremes, Strategy, StrategyContext};
+use finance_query_types::{Candle, Dividend};
 
 use super::BacktestEngine;
 use super::exits::{check_sl_tp, update_position_extremes, update_trailing_hwm};

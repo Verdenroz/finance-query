@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::models::chart::Candle;
+use finance_query_types::Candle;
 
 use super::error::{BacktestError, Result};
 
@@ -282,7 +282,7 @@ pub struct Signal {
 
     /// User-defined tags for post-hoc trade subgroup analysis.
     ///
-    /// Tags are propagated to [`Trade::tags`](crate::backtesting::Trade::tags) when a position closes,
+    /// Tags are propagated to [`Trade::tags`](crate::Trade::tags) when a position closes,
     /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
     /// Use the `.tag()` builder to attach tags at signal creation time.
     #[serde(default)]
@@ -328,8 +328,8 @@ pub struct Signal {
     ///
     /// Set via the `.stop_loss(pct)` builder method.
     ///
-    /// [`Position`]: crate::backtesting::Position
-    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    /// [`Position`]: crate::Position
+    /// [`BacktestConfig::stop_loss_pct`]: crate::BacktestConfig::stop_loss_pct
     #[serde(default)]
     pub bracket_stop_loss_pct: Option<f64>,
 
@@ -340,8 +340,8 @@ pub struct Signal {
     ///
     /// Set via the `.take_profit(pct)` builder method.
     ///
-    /// [`Position`]: crate::backtesting::Position
-    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    /// [`Position`]: crate::Position
+    /// [`BacktestConfig::take_profit_pct`]: crate::BacktestConfig::take_profit_pct
     #[serde(default)]
     pub bracket_take_profit_pct: Option<f64>,
 
@@ -352,8 +352,8 @@ pub struct Signal {
     ///
     /// Set via the `.trailing_stop(pct)` builder method.
     ///
-    /// [`Position`]: crate::backtesting::Position
-    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    /// [`Position`]: crate::Position
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::BacktestConfig::trailing_stop_pct
     #[serde(default)]
     pub bracket_trailing_stop_pct: Option<f64>,
 }
@@ -741,7 +741,7 @@ impl Signal {
 
     /// Attach a tag to this signal for post-hoc trade subgroup analysis.
     ///
-    /// Tags are propagated to [`Trade::tags`](crate::backtesting::Trade::tags) when the position closes,
+    /// Tags are propagated to [`Trade::tags`](crate::Trade::tags) when the position closes,
     /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
     /// Multiple tags can be chained: `.tag("breakout").tag("high_volume")`.
     pub fn tag(mut self, name: impl Into<String>) -> Self {
@@ -765,7 +765,7 @@ impl Signal {
     /// let signal = Signal::long(ts, price).stop_loss(0.05);
     /// ```
     ///
-    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    /// [`BacktestConfig::stop_loss_pct`]: crate::BacktestConfig::stop_loss_pct
     pub fn stop_loss(mut self, pct: f64) -> Self {
         self.bracket_stop_loss_pct = Some(pct.abs());
         self
@@ -787,7 +787,7 @@ impl Signal {
     /// let signal = Signal::long(ts, price).take_profit(0.15);
     /// ```
     ///
-    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    /// [`BacktestConfig::take_profit_pct`]: crate::BacktestConfig::take_profit_pct
     pub fn take_profit(mut self, pct: f64) -> Self {
         self.bracket_take_profit_pct = Some(pct.abs());
         self
@@ -810,7 +810,7 @@ impl Signal {
     /// let signal = Signal::long(ts, price).trailing_stop(0.03);
     /// ```
     ///
-    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::BacktestConfig::trailing_stop_pct
     pub fn trailing_stop(mut self, pct: f64) -> Self {
         self.bracket_trailing_stop_pct = Some(pct.abs());
         self
@@ -826,7 +826,7 @@ impl Default for Signal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::chart::Candle;
+    use finance_query_types::Candle;
 
     fn make_candle(open: f64, high: f64, low: f64, close: f64) -> Candle {
         Candle::__new(0, open, high, low, close, 1000, None, None)

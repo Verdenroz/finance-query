@@ -49,7 +49,7 @@ pub use trend::*;
 pub use volatility::*;
 pub use volume::*;
 
-use crate::indicators::Indicator;
+use finance_query_types::indicators::Indicator;
 
 use super::strategy::StrategyContext;
 

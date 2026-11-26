@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics};
+use crate::result::{BacktestResult, EquityPoint, PerformanceMetrics};
 
 /// Snapshot of capital allocation at a single point in time.
 #[non_exhaustive]

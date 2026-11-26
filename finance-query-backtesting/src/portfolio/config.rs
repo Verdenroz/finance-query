@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::error::{BacktestError, Result};
+use crate::config::BacktestConfig;
+use crate::error::{BacktestError, Result};
 
 /// Controls how capital is divided among symbols when opening new positions.
 #[non_exhaustive]
@@ -178,7 +178,7 @@ impl PortfolioConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backtesting::config::PositionSizing;
+    use crate::config::PositionSizing;
 
     #[test]
     fn test_default_config_validates() {

@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
-use crate::backtesting::engine::SizingSeries;
-use crate::backtesting::position::{Position, Trade};
-use crate::backtesting::result::{EquityPoint, SignalRecord};
-use crate::backtesting::strategy::Strategy;
-use crate::models::chart::{Candle, Dividend};
+use crate::engine::SizingSeries;
+use crate::position::{Position, Trade};
+use crate::result::{EquityPoint, SignalRecord};
+use crate::strategy::Strategy;
+use finance_query_types::{Candle, Dividend};
 
 /// Per-symbol simulation state (private to the engine).
 pub(super) struct SymbolState<S: Strategy> {
@@ -19,7 +19,7 @@ pub(super) struct SymbolState<S: Strategy> {
     pub(super) warmup: usize,
     pub(super) position: Option<Position>,
     pub(super) hwm: Option<f64>,
-    pub(super) extremes: Option<crate::backtesting::strategy::PositionExtremes>,
+    pub(super) extremes: Option<crate::strategy::PositionExtremes>,
     pub(super) track_extremes: bool,
     pub(super) div_idx: usize,
     pub(super) trades: Vec<Trade>,
