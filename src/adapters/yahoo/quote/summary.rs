@@ -103,8 +103,13 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
     // Helper macro to deserialize a module, returning None on missing/error
     macro_rules! deserialize_module {
         ($name:expr) => {
-            data.get($name)
-                .and_then(|v| serde_json::from_value(v.clone()).ok())
+            data.get($name).and_then(|v| {
+                serde_json::from_value(v.clone())
+                    .inspect_err(|e| {
+                        tracing::warn!(symbol, module = $name, error = %e, "quoteSummary module failed to parse");
+                    })
+                    .ok()
+            })
         };
     }
 
@@ -185,5 +190,24 @@ mod tests {
 
         let response = parse_summary(json, "INVALID");
         assert!(response.is_err());
+    }
+
+    #[test]
+    fn test_parse_summary_malformed_module_is_none() {
+        let json = json!({
+            "quoteSummary": {
+                "result": [
+                    {
+                        "price": { "regularMarketPrice": { "raw": 150.0, "fmt": "150.00" } },
+                        "financialData": "not an object"
+                    }
+                ],
+                "error": null
+            }
+        });
+
+        let response = parse_summary(json, "AAPL").unwrap();
+        assert!(response.price.is_some());
+        assert!(response.financial_data.is_none());
     }
 }
