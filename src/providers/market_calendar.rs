@@ -10,6 +10,7 @@ use super::{CalendarProvider, ProviderAdapter, ProviderCore};
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::Result;
 use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+use crate::providers::Operation;
 
 pub(crate) struct LocalMarketCalendarProvider;
 
@@ -28,7 +29,7 @@ impl CalendarProvider for LocalMarketCalendarProvider {
         to: &str,
     ) -> Result<Vec<MarketCalendarEntry>> {
         if kind != CalendarKind::MarketHoliday {
-            return Err(self.not_supported(kind.operation()));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         if from.is_empty() || to.is_empty() {
             let today = Utc::now().date_naive();

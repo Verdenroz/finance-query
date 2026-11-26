@@ -272,7 +272,7 @@ impl Tickers {
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
-            events.extend(crate::models::calendar::build_economic_events(
+            events.extend(crate::adapters::fred::calendar::build_economic_events(
                 releases, window,
             ));
         }

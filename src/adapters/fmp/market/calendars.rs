@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::providers::Operation;
 
 use crate::adapters::fmp::build_client;
 
@@ -189,7 +190,7 @@ pub async fn fetch_market_calendar_response(
         // FMP serves neither; dispatch falls through to a provider that does
         // (Polygon for holidays, Alpha Vantage for live status).
         CalendarKind::MarketHoliday | CalendarKind::MarketStatus => {
-            let operation = kind.operation();
+            let operation = Operation::from_calendar(kind);
             return Err(crate::error::FinanceError::NotSupported {
                 provider: crate::Provider::Fmp,
                 operation,

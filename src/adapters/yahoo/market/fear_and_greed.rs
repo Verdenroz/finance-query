@@ -5,15 +5,17 @@
 
 use std::time::Duration;
 
+use serde::Deserialize;
+
 use crate::error::{FinanceError, Result};
-use crate::models::sentiment::response::{FearAndGreed, FearAndGreedApiResponse};
+use crate::models::sentiment::{FearAndGreed, FearGreedLabel};
 
 const BASE_URL: &str = "https://api.alternative.me/fng";
 
 /// Fetch the current Fear & Greed Index from Alternative.me.
 pub(crate) async fn fetch() -> Result<FearAndGreed> {
     let raw = fetch_raw(1, BASE_URL).await?;
-    FearAndGreed::from_response(raw)
+    parse_current(raw)
 }
 
 /// Fetch `limit` historical entries (newest first) of the Fear & Greed Index
@@ -21,7 +23,79 @@ pub(crate) async fn fetch() -> Result<FearAndGreed> {
 /// (Bitcoin) market sentiment.
 pub(crate) async fn fetch_history(limit: u32) -> Result<Vec<FearAndGreed>> {
     let raw = fetch_raw(limit, BASE_URL).await?;
-    FearAndGreed::vec_from_response(raw)
+    parse_history(raw)
+}
+
+#[derive(Debug, Deserialize)]
+struct FearAndGreedApiResponse {
+    data: Vec<FearAndGreedEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FearAndGreedEntry {
+    value: String,
+    value_classification: String,
+    timestamp: String,
+}
+
+fn parse_current(resp: FearAndGreedApiResponse) -> Result<FearAndGreed> {
+    let entry =
+        resp.data
+            .into_iter()
+            .next()
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "data".to_string(),
+                context: "Alternative.me API returned empty data array".to_string(),
+            })?;
+
+    parse_entry(entry)
+}
+
+/// Parse every entry in the response (current + historical), newest
+/// first — matching the API's own ordering. Used for `limit > 1` requests.
+fn parse_history(resp: FearAndGreedApiResponse) -> Result<Vec<FearAndGreed>> {
+    resp.data.into_iter().map(parse_entry).collect()
+}
+
+fn parse_entry(entry: FearAndGreedEntry) -> Result<FearAndGreed> {
+    let value = entry
+        .value
+        .parse::<u8>()
+        .map_err(|_| FinanceError::ResponseStructureError {
+            field: "value".to_string(),
+            context: format!("Cannot parse '{}' as u8", entry.value),
+        })?;
+
+    let classification = parse_classification(&entry.value_classification)?;
+
+    let timestamp =
+        entry
+            .timestamp
+            .parse::<i64>()
+            .map_err(|_| FinanceError::ResponseStructureError {
+                field: "timestamp".to_string(),
+                context: format!("Cannot parse '{}' as i64", entry.timestamp),
+            })?;
+
+    Ok(FearAndGreed {
+        value,
+        classification,
+        timestamp,
+    })
+}
+
+fn parse_classification(s: &str) -> Result<FearGreedLabel> {
+    match s {
+        "Extreme Fear" => Ok(FearGreedLabel::ExtremeFear),
+        "Fear" => Ok(FearGreedLabel::Fear),
+        "Neutral" => Ok(FearGreedLabel::Neutral),
+        "Greed" => Ok(FearGreedLabel::Greed),
+        "Extreme Greed" => Ok(FearGreedLabel::ExtremeGreed),
+        other => Err(FinanceError::ResponseStructureError {
+            field: "value_classification".to_string(),
+            context: format!("Unknown classification '{other}'"),
+        }),
+    }
 }
 
 /// `base_url` is injectable so tests can point at a mock server instead of
@@ -54,6 +128,49 @@ async fn fetch_raw(limit: u32, base_url: &str) -> Result<FearAndGreedApiResponse
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_classification() {
+        assert_eq!(
+            parse_classification("Extreme Fear").unwrap(),
+            FearGreedLabel::ExtremeFear
+        );
+        assert_eq!(parse_classification("Fear").unwrap(), FearGreedLabel::Fear);
+        assert_eq!(
+            parse_classification("Neutral").unwrap(),
+            FearGreedLabel::Neutral
+        );
+        assert_eq!(
+            parse_classification("Greed").unwrap(),
+            FearGreedLabel::Greed
+        );
+        assert_eq!(
+            parse_classification("Extreme Greed").unwrap(),
+            FearGreedLabel::ExtremeGreed
+        );
+        assert!(parse_classification("unknown").is_err());
+    }
+
+    #[test]
+    fn test_fear_greed_from_response() {
+        let resp = FearAndGreedApiResponse {
+            data: vec![FearAndGreedEntry {
+                value: "25".to_string(),
+                value_classification: "Fear".to_string(),
+                timestamp: "1700000000".to_string(),
+            }],
+        };
+        let fg = parse_current(resp).unwrap();
+        assert_eq!(fg.value, 25);
+        assert_eq!(fg.classification, FearGreedLabel::Fear);
+        assert_eq!(fg.timestamp, 1700000000);
+    }
+
+    #[test]
+    fn test_empty_data_returns_error() {
+        let resp = FearAndGreedApiResponse { data: vec![] };
+        assert!(parse_current(resp).is_err());
+    }
 
     fn single_entry_body(value: &str, classification: &str, timestamp: &str) -> String {
         serde_json::json!({
@@ -93,7 +210,7 @@ mod tests {
             .await;
 
         let raw = fetch_raw(1, &base).await.unwrap();
-        let fg = FearAndGreed::from_response(raw).unwrap();
+        let fg = parse_current(raw).unwrap();
         assert_eq!(fg.value, 20);
         assert_eq!(
             fg.classification,
@@ -116,7 +233,7 @@ mod tests {
             .await;
 
         let raw = fetch_raw(3, &base).await.unwrap();
-        let history = FearAndGreed::vec_from_response(raw).unwrap();
+        let history = parse_history(raw).unwrap();
 
         assert_eq!(history.len(), 3);
         assert_eq!(history[0].value, 72);

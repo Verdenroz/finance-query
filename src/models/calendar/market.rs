@@ -28,22 +28,6 @@ pub enum CalendarKind {
     MarketStatus,
 }
 
-impl CalendarKind {
-    /// The [`Operation`](crate::providers::Operation) this kind dispatches as.
-    pub(crate) fn operation(self) -> crate::providers::Operation {
-        use crate::providers::Operation;
-        match self {
-            Self::Earnings => Operation::EarningsCalendar,
-            Self::Ipo => Operation::IpoCalendar,
-            Self::Dividend => Operation::DividendCalendar,
-            Self::Split => Operation::SplitCalendar,
-            Self::Economic => Operation::EconomicCalendar,
-            Self::MarketHoliday => Operation::HolidayCalendar,
-            Self::MarketStatus => Operation::MarketStatus,
-        }
-    }
-}
-
 /// One market-wide calendar entry.
 ///
 /// The `kind`-specific payload lives in [`MarketCalendarEntry::detail`].

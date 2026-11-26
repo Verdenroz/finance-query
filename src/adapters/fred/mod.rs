@@ -33,6 +33,7 @@
 //! # }
 //! ```
 
+pub(crate) mod calendar;
 pub(crate) mod client;
 pub(crate) mod economic;
 pub mod models;

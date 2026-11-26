@@ -732,7 +732,7 @@ impl YahooClient {
             .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
-        crate::models::fundamentals::FinancialStatement::from_response(
+        crate::adapters::yahoo::fundamentals::parse::parse_statement(
             json,
             symbol,
             statement_type,

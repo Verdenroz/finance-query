@@ -23,7 +23,7 @@ pub struct News {
     pub time: String,
 
     /// Which provider supplied this article (None = Yahoo Finance default)
-    pub provider_id: Option<crate::providers::Provider>,
+    pub provider_id: Option<finance_query_types::Provider>,
 
     /// Sentiment score for this article's title (VADER lexicon-based).
     /// Only present when the `sentiment` feature is enabled.

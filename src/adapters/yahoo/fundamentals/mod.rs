@@ -2,6 +2,8 @@
 //!
 //! Fetches financial statement data over time (income statement, balance sheet, cash flow).
 
+pub(crate) mod parse;
+
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::{Frequency, StatementType};
 use crate::error::Result;
