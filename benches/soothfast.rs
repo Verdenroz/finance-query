@@ -76,9 +76,10 @@ use finance_query::translation::{
 };
 use finance_query::{
     Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FearAndGreed, Fetch,
-    FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News, Options, Provider,
-    ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse, Region, Routes, ScreenerResults,
-    SearchResults, Ticker, Tickers, TimeRange, Transcript, TrendingQuote, analyze_sentiment,
+    FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News, Operation, Options,
+    Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse, Region, Routes,
+    ScreenerResults, SearchResults, Ticker, Tickers, TimeRange, Transcript, TrendingQuote,
+    analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::sync::Arc;
@@ -1791,11 +1792,24 @@ fn capability_name() {
 // real cache/dispatch logic (first access fetches, subsequent accesses are
 // free) with zero network and full determinism.
 
-struct CannedProvider;
+struct CannedProvider {
+    id: &'static str,
+    quotes: bool,
+}
+
+impl CannedProvider {
+    const fn new(id: &'static str) -> Self {
+        Self { id, quotes: true }
+    }
+
+    const fn charts_only(id: &'static str) -> Self {
+        Self { id, quotes: false }
+    }
+}
 
 impl finance_query::ProviderCore for CannedProvider {
     fn id(&self) -> Provider {
-        Provider::custom("canned")
+        Provider::custom(self.id)
     }
 }
 
@@ -1811,6 +1825,12 @@ fn canned_quote(symbol: &str) -> QuoteSummaryResponse {
 #[async_trait::async_trait]
 impl finance_query::QuoteProvider for CannedProvider {
     async fn fetch_quote(&self, symbol: &str) -> finance_query::Result<QuoteSummaryResponse> {
+        if !self.quotes {
+            return Err(finance_query::ProviderCore::not_supported(
+                self,
+                Operation::Quote,
+            ));
+        }
         Ok(canned_quote(symbol))
     }
 
@@ -1849,7 +1869,7 @@ impl ProviderAdapter for CannedProvider {
 
 fn canned_provider_set() -> Arc<ProviderSet> {
     Arc::new(ProviderSet::new(
-        vec![Arc::new(CannedProvider) as Arc<dyn ProviderAdapter>],
+        vec![Arc::new(CannedProvider::new("canned")) as Arc<dyn ProviderAdapter>],
         Routes::new(Fetch::Sequential)
             .route(Capability::QUOTE, [Provider::custom("canned")])
             .route(Capability::CHART, [Provider::custom("canned")]),
@@ -1904,6 +1924,82 @@ fn ticker_chart_then_cached(input: &(tokio::runtime::Runtime, Ticker)) {
         .block_on(ticker.chart(Interval::OneDay, TimeRange::OneMonth))
         .unwrap();
     keep((first, second));
+}
+
+fn no_cache_ticker(set: Arc<ProviderSet>) -> (tokio::runtime::Runtime, Ticker) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let ticker = rt
+        .block_on(
+            Ticker::builder("AAPL")
+                .with_provider_set(set)
+                .no_cache()
+                .build(),
+        )
+        .unwrap();
+    (rt, ticker)
+}
+
+#[fixture]
+fn fallthrough_ticker() -> (tokio::runtime::Runtime, Ticker) {
+    no_cache_ticker(Arc::new(ProviderSet::new(
+        vec![
+            Arc::new(CannedProvider::charts_only("charts_only")) as Arc<dyn ProviderAdapter>,
+            Arc::new(CannedProvider::new("quotes")),
+        ],
+        Routes::new(Fetch::Sequential).route(
+            Capability::QUOTE,
+            [Provider::custom("charts_only"), Provider::custom("quotes")],
+        ),
+    )))
+}
+
+#[fixture]
+fn parallel_ticker() -> (tokio::runtime::Runtime, Ticker) {
+    no_cache_ticker(Arc::new(ProviderSet::new(
+        vec![
+            Arc::new(CannedProvider::new("a")) as Arc<dyn ProviderAdapter>,
+            Arc::new(CannedProvider::new("b")),
+            Arc::new(CannedProvider::new("c")),
+        ],
+        Routes::new(Fetch::Parallel).route(
+            Capability::QUOTE,
+            [
+                Provider::custom("a"),
+                Provider::custom("b"),
+                Provider::custom("c"),
+            ],
+        ),
+    )))
+}
+
+#[bench(
+    group = "dispatch",
+    setup = fallthrough_ticker,
+    alloc = 10,
+    covers = "finance_query::Ticker::quote"
+)]
+fn dispatch_fallthrough(input: &(tokio::runtime::Runtime, Ticker)) {
+    let (rt, ticker) = input;
+    keep(
+        rt.block_on(ticker.quote::<finance_query::format::Raw>())
+            .unwrap(),
+    );
+}
+
+#[bench(
+    group = "dispatch",
+    setup = parallel_ticker,
+    alloc = 10,
+    covers = "finance_query::Ticker::quote"
+)]
+fn dispatch_parallel(input: &(tokio::runtime::Runtime, Ticker)) {
+    let (rt, ticker) = input;
+    keep(
+        rt.block_on(ticker.quote::<finance_query::format::Raw>())
+            .unwrap(),
+    );
 }
 
 #[fixture]
