@@ -2,13 +2,17 @@ use super::governance::{EmployeeCount, ExecutiveCompensation};
 use super::press_release::PressRelease;
 use super::transcript::*;
 use super::*;
+use crate::ToDataFrame;
 use crate::models::corporate::asset_profile::CompanyOfficer;
+use crate::models::corporate::earnings::Earnings;
 use crate::models::corporate::earnings::{
     QuarterlyEarnings, QuarterlyFinancials, YearlyFinancials,
 };
 use crate::models::corporate::earnings_transcript::EarningsTranscript;
-use crate::models::corporate::fund_performance::{AnnualReturn, RiskStatistic};
-use crate::models::corporate::sec_filings::SecExhibit;
+use crate::models::corporate::fund_performance::{
+    AnnualReturn, RiskOverviewStatisticsCat, RiskStatistic,
+};
+use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
 use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
 use crate::models::dataframe_test_util::columns;
 use serde::de::DeserializeOwned;
@@ -467,5 +471,284 @@ fn transcript_speaker_and_metadata_frames() {
             "title:str",
             "url:str"
         ]
+    );
+}
+
+#[test]
+fn flat_frames_of_nested_types_keep_their_exact_columns() {
+    let profile: AssetProfile = parse(json!({"companyOfficers": [{"name": "Cook"}]}));
+    assert_eq!(
+        columns(&profile.to_dataframe().unwrap()),
+        [
+            "address1:str",
+            "address2:str",
+            "address3:str",
+            "city:str",
+            "state:str",
+            "zip:str",
+            "country:str",
+            "phone:str",
+            "fax:str",
+            "website:str",
+            "industry:str",
+            "industry_key:str",
+            "industry_disp:str",
+            "sector:str",
+            "sector_key:str",
+            "sector_disp:str",
+            "long_business_summary:str",
+            "full_time_employees:i64",
+            "audit_risk:i32",
+            "board_risk:i32",
+            "compensation_risk:i32",
+            "shareholder_rights_risk:i32",
+            "overall_risk:i32",
+            "governance_epoch_date:i64",
+            "compensation_as_of_epoch_date:i64",
+            "max_age:i64",
+        ]
+    );
+
+    let top: TopHoldings = parse(json!({"holdings": [{"symbol": "AAPL"}]}));
+    assert_eq!(
+        columns(&top.to_dataframe().unwrap()),
+        [
+            "max_age:i64",
+            "cash_position:f64",
+            "stock_position:f64",
+            "bond_position:f64",
+            "other_position:f64",
+            "preferred_position:f64",
+            "convertible_position:f64",
+            "equity_holdings_price_to_earnings:f64",
+            "equity_holdings_price_to_book:f64",
+            "equity_holdings_price_to_sales:f64",
+            "equity_holdings_price_to_cashflow:f64",
+            "sector_weightings_realestate:f64",
+            "sector_weightings_consumer_cyclical:f64",
+            "sector_weightings_basic_materials:f64",
+            "sector_weightings_consumer_defensive:f64",
+            "sector_weightings_technology:f64",
+            "sector_weightings_communication_services:f64",
+            "sector_weightings_financial_services:f64",
+            "sector_weightings_utilities:f64",
+            "sector_weightings_industrials:f64",
+            "sector_weightings_energy:f64",
+            "sector_weightings_healthcare:f64",
+        ]
+    );
+
+    let filing: SecFiling = parse(json!({"exhibits": [{"type": "EX-1"}]}));
+    assert_eq!(
+        columns(&filing.to_dataframe().unwrap()),
+        [
+            "max_age:i64",
+            "date:str",
+            "epoch_date:i64",
+            "filing_type:str",
+            "title:str",
+            "edgar_url:str",
+        ]
+    );
+}
+
+#[test]
+fn nested_row_fields_have_child_frames() {
+    let profile: AssetProfile = parse(json!({"companyOfficers": [{"name": "Cook", "age": 60}]}));
+    let officers = profile.company_officers_dataframe().unwrap();
+    assert_eq!(officers.height(), 1);
+    assert!(columns(&officers).contains(&"age:i32".to_string()));
+
+    let top: TopHoldings = parse(json!({
+        "holdings": [{"symbol": "AAPL"}, {"symbol": "MSFT"}],
+        "bondRatings": [{"aaa": fv(0.5)}]
+    }));
+    assert_eq!(top.holdings_dataframe().unwrap().height(), 2);
+    assert_eq!(top.bond_ratings_dataframe().unwrap().height(), 1);
+    let none: TopHoldings = parse(json!({}));
+    let empty = none.holdings_dataframe().unwrap();
+    assert_eq!(empty.height(), 0);
+    assert_eq!(columns(&empty), columns(&top.holdings_dataframe().unwrap()));
+
+    let filing: SecFiling = parse(json!({"exhibits": [{"type": "EX-1", "url": "u"}]}));
+    assert_eq!(
+        columns(&filing.exhibits_dataframe().unwrap()),
+        ["exhibit_type:str", "url:str"]
+    );
+}
+
+#[test]
+fn nested_frame_holds_rows_as_list_of_struct() {
+    let filing: SecFiling = parse(json!({"exhibits": [{"type": "EX-1", "url": "u"}]}));
+    let df = filing.to_nested_dataframe().unwrap();
+    assert_eq!(columns(&df).last().unwrap(), "exhibits:list[struct[2]]");
+    assert_eq!(df.height(), 1);
+}
+
+#[test]
+fn transcript_rows_nest_sentences_and_words() {
+    let paragraph: Paragraph = parse(json!({
+        "speaker": 1, "text": "A b.",
+        "sentences": [{"text": "A b.", "words": [{"word": "A"}, {"word": "b"}]}]
+    }));
+    let sentences = paragraph.sentences_dataframe().unwrap();
+    assert_eq!(columns(&sentences), ["start:f64", "end:f64", "text:str"]);
+    assert_eq!(sentences.height(), 1);
+
+    let sentence = &paragraph.sentences[0];
+    let words = sentence.words_dataframe().unwrap();
+    assert_eq!(words.height(), 2);
+    assert_eq!(columns(&words)[0], "word:str");
+}
+
+#[test]
+fn fund_performance_nests_its_row_wrappers() {
+    let perf: FundPerformance = parse(json!({
+        "annualTotalReturns": {"returns": [{"year": "2023", "annualValue": fv(0.2)}]},
+        "riskOverviewStatistics": {"riskStatistics": [{"year": "5y"}]}
+    }));
+    let annual = perf.annual_total_returns_dataframe().unwrap();
+    assert_eq!(
+        columns(&annual),
+        ["returns:list[struct[2]]", "returns_cat:list[struct[2]]"]
+    );
+    assert_eq!(annual.height(), 1);
+    let returns = perf
+        .annual_total_returns
+        .as_ref()
+        .unwrap()
+        .returns_dataframe()
+        .unwrap();
+    assert_eq!(columns(&returns), ["year:str", "annual_value:f64"]);
+
+    let risk = perf.risk_overview_statistics_dataframe().unwrap();
+    assert_eq!(columns(&risk), ["risk_statistics:list[struct[8]]"]);
+    let cols = columns(&perf.to_nested_dataframe().unwrap());
+    assert!(
+        cols.iter()
+            .any(|c| c.starts_with("annual_total_returns:list[struct["))
+    );
+    assert!(
+        !columns(&perf.to_dataframe().unwrap())
+            .iter()
+            .any(|c| c.starts_with("annual_total_returns"))
+    );
+}
+
+#[test]
+fn earnings_wrappers_expose_their_rows() {
+    let earnings: Earnings = parse(json!({
+        "defaultMethodology": "gaap",
+        "earningsChart": {"quarterly": [{"date": "1Q2024", "actual": fv(1.0)}]},
+        "financialsChart": {
+            "yearly": [{"date": 2023, "revenue": fvi(5)}],
+            "quarterly": [{"date": "1Q2024"}, {"date": "2Q2024"}]
+        }
+    }));
+    assert_eq!(
+        columns(&earnings.to_dataframe().unwrap()),
+        ["default_methodology:str"]
+    );
+
+    let chart = earnings.earnings_chart_dataframe().unwrap();
+    assert_eq!(chart.height(), 1);
+    assert_eq!(columns(&chart).last().unwrap(), "quarterly:list[struct[7]]");
+    assert!(
+        !columns(&chart)
+            .iter()
+            .any(|c| c.starts_with("earnings_date"))
+    );
+    let quarterly = earnings
+        .earnings_chart
+        .as_ref()
+        .unwrap()
+        .quarterly_dataframe()
+        .unwrap();
+    assert_eq!(columns(&quarterly)[..2], ["date:str", "actual:f64"]);
+
+    let financials = earnings.financials_chart_dataframe().unwrap();
+    assert_eq!(
+        columns(&financials),
+        ["yearly:list[struct[3]]", "quarterly:list[struct[3]]"]
+    );
+    let chart = earnings.financials_chart.as_ref().unwrap();
+    assert_eq!(chart.yearly_dataframe().unwrap().height(), 1);
+    assert_eq!(chart.quarterly_dataframe().unwrap().height(), 2);
+
+    let none: Earnings = parse(json!({}));
+    assert_eq!(none.earnings_chart_dataframe().unwrap().height(), 0);
+}
+
+#[test]
+fn risk_overview_category_wrapper_exposes_its_rows() {
+    let risk: RiskOverviewStatisticsCat =
+        parse(json!({"riskStatisticsCat": [{"year": "3y"}, {"year": "5y"}]}));
+    let df = risk.risk_statistics_cat_dataframe().unwrap();
+    assert_eq!(df.height(), 2);
+    assert_eq!(columns(&df)[..2], ["year:str", "alpha:f64"]);
+}
+
+#[test]
+fn transcript_wrappers_nest_speakers_and_paragraphs() {
+    let transcript: Transcript = parse(json!({
+        "transcriptContent": {
+            "company_id": 1,
+            "event_id": 2,
+            "speaker_mapping": [{"speaker": 1, "speaker_data": {"name": "Cook"}}],
+            "transcript": {"paragraphs": [{"speaker": 1, "text": "Hi."}, {"speaker": 2, "text": "Bye."}]}
+        },
+        "transcriptMetadata": {
+            "date": 1, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
+            "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 4
+        }
+    }));
+    let flat = columns(&transcript.to_dataframe().unwrap());
+    assert_eq!(flat[0], "transcript_metadata_date:i64");
+    assert_eq!(flat.len(), 11);
+
+    let content = transcript.transcript_content_dataframe().unwrap();
+    assert_eq!(
+        columns(&content),
+        [
+            "company_id:i64",
+            "event_id:i64",
+            "version:str",
+            "speaker_mapping:list[struct[4]]",
+            "transcript:list[struct[3]]",
+        ]
+    );
+    let content = &transcript.transcript_content;
+    let speakers = content.speaker_mapping_dataframe().unwrap();
+    assert_eq!(columns(&speakers)[0], "speaker:i32");
+
+    let data = content.transcript_dataframe().unwrap();
+    let cols = columns(&data);
+    assert_eq!(cols[..2], ["number_of_speakers:i32", "text:str"]);
+    assert!(cols[2].starts_with("paragraphs:list[struct["));
+    let paragraphs = content
+        .transcript
+        .as_ref()
+        .unwrap()
+        .paragraphs_dataframe()
+        .unwrap();
+    assert_eq!(paragraphs.height(), 2);
+}
+
+#[test]
+fn row_list_wrappers_nest_their_rows() {
+    let filings: SecFilings = parse(json!({
+        "filings": [{"type": "10-K", "exhibits": [{"type": "EX-1"}]}]
+    }));
+    let df = filings.to_nested_dataframe().unwrap();
+    assert!(
+        columns(&df)
+            .last()
+            .unwrap()
+            .starts_with("exhibits:list[struct[")
+    );
+    assert_eq!(df.height(), 1);
+    assert_eq!(
+        columns(&SecFilings::vec_to_nested_dataframe(&[]).unwrap()),
+        columns(&df)
     );
 }

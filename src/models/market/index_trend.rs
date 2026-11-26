@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// Index trend data (growth estimates for the index)
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndexTrend {
@@ -16,6 +17,7 @@ pub struct IndexTrend {
 
     /// Growth estimates for different periods
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub estimates: Option<Vec<TrendEstimate>>,
 
     /// PE ratio (may be FormattedValue or plain number)
@@ -29,6 +31,7 @@ pub struct IndexTrend {
 
 /// Industry trend data
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryTrend {
@@ -42,6 +45,7 @@ pub struct IndustryTrend {
 
     /// Growth estimates for different periods
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub estimates: Option<Vec<TrendEstimate>>,
 
     /// PE ratio (may be FormattedValue or plain number)
@@ -55,6 +59,7 @@ pub struct IndustryTrend {
 
 /// Sector trend data
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorTrend {
@@ -68,6 +73,7 @@ pub struct SectorTrend {
 
     /// Growth estimates for different periods
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub estimates: Option<Vec<TrendEstimate>>,
 
     /// PE ratio (may be FormattedValue or plain number)

@@ -84,6 +84,7 @@ pub struct AssetProfile {
 
     /// List of company officers
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub company_officers: Vec<CompanyOfficer>,
 
     /// Audit risk score (1-10)

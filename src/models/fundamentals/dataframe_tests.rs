@@ -1,8 +1,8 @@
 use crate::models::dataframe_test_util::columns;
 use crate::models::fundamentals::{
-    CompanyProfile, DefaultKeyStatistics, EtfCountryWeighting, EtfHolding, EtfSectorWeighting,
-    FinancialData, GradingAction, PriceTargetConsensus, PriceTargetSummary, RatingConsensus,
-    SummaryDetail,
+    CompanyProfile, DefaultKeyStatistics, EtfCountryWeighting, EtfHolding, EtfProfile,
+    EtfSectorWeighting, FinancialData, GradingAction, PriceTargetConsensus, PriceTargetSummary,
+    RatingConsensus, SummaryDetail,
 };
 use serde_json::json;
 
@@ -315,4 +315,41 @@ fn grading_action_columns() {
     let empty = <GradingAction>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn etf_profile_nests_holdings_and_weightings() {
+    let profile: EtfProfile = serde_json::from_value(json!({
+        "symbol": "SPY",
+        "holdings": [{"symbol": "AAPL", "weight": 0.07}, {"symbol": "MSFT"}],
+        "sector_weightings": [{"sector": "Tech", "weight": 0.3}],
+        "country_weightings": []
+    }))
+    .unwrap();
+    let flat = profile.to_dataframe().unwrap();
+    assert_eq!(flat.height(), 1);
+    assert!(!columns(&flat).iter().any(|c| c.contains("holdings")));
+
+    let holdings = profile.holdings_dataframe().unwrap();
+    assert_eq!(columns(&holdings)[..2], ["symbol:str", "description:str"]);
+    assert_eq!(holdings.height(), 2);
+    assert_eq!(profile.sector_weightings_dataframe().unwrap().height(), 1);
+    let countries = profile.country_weightings_dataframe().unwrap();
+    assert_eq!(countries.height(), 0);
+    assert_eq!(
+        columns(&countries),
+        columns(&EtfCountryWeighting::vec_to_dataframe(&[]).unwrap())
+    );
+
+    let nested = columns(&profile.to_nested_dataframe().unwrap());
+    assert!(
+        nested
+            .iter()
+            .any(|c| c.starts_with("holdings:list[struct["))
+    );
+    assert!(
+        nested
+            .iter()
+            .any(|c| c.starts_with("country_weightings:list[struct["))
+    );
 }

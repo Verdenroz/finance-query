@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for search endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResults {
@@ -15,12 +16,15 @@ pub struct SearchResults {
     pub count: Option<i32>,
     /// Quote/symbol results - use `.quotes.to_dataframe()` for DataFrame conversion
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub quotes: SearchQuotes,
     /// News article results - use `.news.to_dataframe()` for DataFrame conversion
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub news: SearchNewsList,
     /// Research reports - use `.research_reports.to_dataframe()` for DataFrame conversion
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub research_reports: ResearchReports,
     /// Total search execution time (milliseconds)
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -43,6 +43,7 @@ pub struct FundPerformance {
 
     /// Annual total returns by year
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub annual_total_returns: Option<AnnualTotalReturns>,
 
     /// Quarterly returns
@@ -51,10 +52,12 @@ pub struct FundPerformance {
 
     /// Risk statistics (alpha, beta, sharpe ratio, etc.)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub risk_overview_statistics: Option<RiskOverviewStatistics>,
 
     /// Risk statistics for the fund's category average
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub risk_overview_statistics_cat: Option<RiskOverviewStatisticsCat>,
 }
 
@@ -230,14 +233,17 @@ pub struct TrailingReturnsCat {
 
 /// Annual total returns by year
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct AnnualTotalReturns {
     /// Annual returns for this fund
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub returns: Option<Vec<AnnualReturn>>,
 
     /// Annual returns for the category average
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub returns_cat: Option<Vec<AnnualReturn>>,
 }
 
@@ -266,19 +272,23 @@ pub struct PastQuarterlyReturns {
 
 /// Risk overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskOverviewStatistics {
     /// Risk statistics for various time periods
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub risk_statistics: Option<Vec<RiskStatistic>>,
 }
 
 /// Category average risk overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskOverviewStatisticsCat {
     /// Category average risk statistics
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub risk_statistics_cat: Option<Vec<RiskStatistic>>,
 }
 

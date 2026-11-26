@@ -26,10 +26,12 @@ pub struct EdgarFilingIndex {
 
 /// Directory metadata for an EDGAR filing.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarFilingIndexDirectory {
     /// Listing of files for the filing.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub item: Vec<EdgarFilingIndexItem>,
 }
 

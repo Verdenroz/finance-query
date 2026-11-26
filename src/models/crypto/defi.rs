@@ -25,6 +25,7 @@ pub struct ProtocolTvl {
     /// Latest total value locked, in USD.
     pub tvl: Option<f64>,
     /// TVL broken down by chain, in USD.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub tvl_by_chain: Vec<ChainAllocation>,
     /// Change in TVL over the last day, as a percentage.
     pub change_1d_percent: Option<f64>,

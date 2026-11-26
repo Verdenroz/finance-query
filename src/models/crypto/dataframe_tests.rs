@@ -148,3 +148,17 @@ fn defi_frames() {
         ]
     );
 }
+
+#[cfg(feature = "defi")]
+#[test]
+fn protocol_tvl_exposes_chain_rows() {
+    use super::defi::ProtocolTvl;
+
+    let protocol: ProtocolTvl = serde_json::from_value(json!({
+        "slug": "aave", "chains": [], "tvl_by_chain": [{"chain": "Ethereum", "tvl": 2.0}]
+    }))
+    .unwrap();
+    let df = protocol.tvl_by_chain_dataframe().unwrap();
+    assert_eq!(columns(&df), ["chain:str", "tvl:f64"]);
+    assert_eq!(df.height(), 1);
+}

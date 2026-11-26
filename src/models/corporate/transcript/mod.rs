@@ -6,11 +6,14 @@ use serde::{Deserialize, Serialize};
 
 /// Full transcript response from Yahoo Finance.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct Transcript {
     /// The transcript content including speakers and paragraphs.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub transcript_content: TranscriptContent,
     /// Metadata about the transcript.
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub transcript_metadata: TranscriptMetadata,
 }
 
@@ -89,6 +92,7 @@ impl Transcript {
 
 /// Transcript content including speakers and full transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct TranscriptContent {
     /// Company ID (quartrId).
     pub company_id: i64,
@@ -99,9 +103,11 @@ pub struct TranscriptContent {
     pub version: Option<String>,
     /// Mapping of speaker IDs to speaker information.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub speaker_mapping: Vec<SpeakerMapping>,
     /// The full transcript data.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub transcript: Option<TranscriptData>,
 }
 
@@ -133,6 +139,7 @@ pub struct SpeakerData {
 
 /// Full transcript data with paragraphs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct TranscriptData {
     /// Number of speakers in the call.
     #[serde(default)]
@@ -142,6 +149,7 @@ pub struct TranscriptData {
     pub text: String,
     /// Paragraphs (sections spoken by each speaker).
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub paragraphs: Vec<Paragraph>,
 }
 
@@ -163,6 +171,7 @@ pub struct Paragraph {
     pub text: String,
     /// Sentences in this paragraph.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub sentences: Vec<Sentence>,
     /// Sentiment score for this paragraph (VADER lexicon-based).
     /// Only present when the `sentiment` feature is enabled.
@@ -187,6 +196,7 @@ pub struct Sentence {
     pub text: String,
     /// Individual words with timing and confidence.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub words: Vec<Word>,
 }
 
