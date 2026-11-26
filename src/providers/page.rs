@@ -1,6 +1,7 @@
 //! Resumable provider pages. Cursors contain no credentials.
 
-use crate::{FinanceError, Operation, Provider, Result};
+use super::Operation;
+use crate::{FinanceError, Provider, Result};
 
 /// Bump whenever a request's cursor identity changes meaning, so older cursors are rejected.
 const CURSOR_VERSION: u8 = 1;

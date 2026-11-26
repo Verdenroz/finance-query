@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
+use crate::models::discovery::reference::ScreenerFilters;
 
 /// A result from the stock screener endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,12 +126,51 @@ pub async fn fetch_symbol_search_response(
         .collect())
 }
 
+fn screener_query(filters: &ScreenerFilters) -> Vec<(&'static str, String)> {
+    let mut q: Vec<(&'static str, String)> = Vec::new();
+    let mut num = |k: &'static str, v: Option<f64>| {
+        if let Some(v) = v {
+            q.push((k, v.to_string()));
+        }
+    };
+    num("marketCapMoreThan", filters.market_cap_min);
+    num("marketCapLowerThan", filters.market_cap_max);
+    num("priceMoreThan", filters.price_min);
+    num("priceLowerThan", filters.price_max);
+    num("volumeMoreThan", filters.volume_min);
+    num("betaMoreThan", filters.beta_min);
+    num("betaLowerThan", filters.beta_max);
+    for (k, v) in [
+        ("sector", &filters.sector),
+        ("industry", &filters.industry),
+        ("exchange", &filters.exchange),
+        ("country", &filters.country),
+    ] {
+        if let Some(v) = v {
+            q.push((k, v.clone()));
+        }
+    }
+    if let Some(v) = filters.actively_trading {
+        q.push(("isActivelyTrading", v.to_string()));
+    }
+    if let Some(v) = filters.is_etf {
+        q.push(("isEtf", v.to_string()));
+    }
+    if let Some(v) = filters.is_fund {
+        q.push(("isFund", v.to_string()));
+    }
+    if let Some(v) = filters.limit {
+        q.push(("limit", v.to_string()));
+    }
+    q
+}
+
 /// Run a screener query and return provider-neutral matches.
 pub async fn fetch_screener_response(
     filters: &crate::models::discovery::reference::ScreenerFilters,
 ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
     use crate::models::discovery::reference::ScreenerMatch;
-    let owned = filters.to_query();
+    let owned = screener_query(filters);
     let params: Vec<(&str, &str)> = owned.iter().map(|(k, v)| (*k, v.as_str())).collect();
     let results = stock_screener(&params).await?;
     Ok(results
@@ -231,5 +271,33 @@ mod tests {
             .collect();
 
         assert_eq!(matched[0].exchange.as_deref(), Some("NASDAQ"));
+    }
+
+    #[test]
+    fn empty_filters_render_no_query_params() {
+        assert!(screener_query(&ScreenerFilters::new()).is_empty());
+    }
+
+    #[test]
+    fn set_filters_render_with_provider_parameter_names() {
+        let q = screener_query(
+            &ScreenerFilters::new()
+                .market_cap(Some(1e9), None)
+                .price(None, Some(50.0))
+                .sector("Technology")
+                .actively_trading(true)
+                .limit(25),
+        );
+
+        assert_eq!(
+            q,
+            vec![
+                ("marketCapMoreThan", "1000000000".to_string()),
+                ("priceLowerThan", "50".to_string()),
+                ("sector", "Technology".to_string()),
+                ("isActivelyTrading", "true".to_string()),
+                ("limit", "25".to_string()),
+            ]
+        );
     }
 }
