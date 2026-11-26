@@ -44,6 +44,8 @@ mod batch;
 #[cfg(feature = "polygon")]
 mod book;
 mod client;
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
 #[cfg(feature = "fred")]
 mod economic;
 mod handle;

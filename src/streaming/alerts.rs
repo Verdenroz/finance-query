@@ -213,6 +213,77 @@ pub struct AlertEvent {
     pub update: PriceUpdate,
 }
 
+#[cfg(feature = "dataframe")]
+impl AlertEvent {
+    /// Converts the event to a single-row polars DataFrame.
+    ///
+    /// Columns are `symbol`, `price`, `previous_price`, `change_percent` and
+    /// `time`, then the columns of [`PriceUpdate`] as `update_{column}`, then
+    /// `condition_kind` (the [`AlertConditionKind`] name). The condition's
+    /// threshold is not in the frame.
+    pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        Self::vec_to_dataframe(std::slice::from_ref(self))
+    }
+
+    /// Converts a slice of events to one DataFrame with the columns of
+    /// [`to_dataframe`](Self::to_dataframe).
+    pub fn vec_to_dataframe(
+        items: &[Self],
+    ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        let updates: Vec<PriceUpdate> = items.iter().map(|item| item.update.clone()).collect();
+        let mut update = PriceUpdate::vec_to_dataframe(&updates)?;
+        let names: Vec<String> = update
+            .get_column_names()
+            .iter()
+            .map(|name| format!("update_{name}"))
+            .collect();
+        update.set_column_names(&names)?;
+
+        let head = DataFrame::new(
+            items.len(),
+            vec![
+                Series::new(
+                    "symbol".into(),
+                    items.iter().map(|i| i.symbol.as_str()).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "price".into(),
+                    items.iter().map(|i| i.price).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "previous_price".into(),
+                    items.iter().map(|i| i.previous_price).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "change_percent".into(),
+                    items.iter().map(|i| i.change_percent).collect::<Vec<_>>(),
+                )
+                .into(),
+                Series::new(
+                    "time".into(),
+                    items.iter().map(|i| i.time).collect::<Vec<_>>(),
+                )
+                .into(),
+            ],
+        )?;
+        let kind = Series::new(
+            "condition_kind".into(),
+            items
+                .iter()
+                .map(|i| i.condition.kind().as_str())
+                .collect::<Vec<_>>(),
+        );
+        let mut frame = head.hstack(update.columns())?;
+        frame.with_column(kind.into())?;
+        Ok(frame)
+    }
+}
+
 /// Per-rule firing state.
 struct RuleState {
     rule: AlertRule,

@@ -1,6 +1,6 @@
 use crate::models::dataframe_test_util::columns;
 use crate::models::quote::snapshot::MarketSnapshot;
-use crate::models::quote::{Price, QuoteTypeData};
+use crate::models::quote::{Price, QuoteSummaryResponse, QuoteTypeData};
 use serde_json::json;
 
 #[test]
@@ -113,4 +113,35 @@ fn market_snapshot_columns() {
     let empty = <MarketSnapshot>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn quote_summary_flat_frame_has_only_the_symbol() {
+    let summary = QuoteSummaryResponse {
+        symbol: "AAPL".into(),
+        ..Default::default()
+    };
+    let df = summary.to_dataframe().unwrap();
+    assert_eq!(columns(&df), ["symbol:str"]);
+    assert_eq!(df.height(), 1);
+
+    let empty = <QuoteSummaryResponse>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), ["symbol:str"]);
+    assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn quote_summary_nested_frame_carries_every_module() {
+    let summary = QuoteSummaryResponse {
+        price: Some(serde_json::from_value(json!({})).unwrap()),
+        ..Default::default()
+    };
+    let df = summary.to_nested_dataframe().unwrap();
+    assert_eq!(df.height(), 1);
+    assert_eq!(df.width(), 28);
+    assert!(columns(&df)[1..].iter().all(|c| c.contains(":list[struct")));
+    assert_eq!(summary.price_dataframe().unwrap().height(), 1);
+
+    let empty = <QuoteSummaryResponse>::vec_to_nested_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), columns(&df));
 }

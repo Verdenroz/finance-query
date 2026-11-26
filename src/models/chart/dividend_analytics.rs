@@ -8,6 +8,7 @@ use super::events::Dividend;
 ///
 /// Obtain via [`Ticker::dividend_analytics`](crate::Ticker::dividend_analytics).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct DividendAnalytics {
     /// Total dividends paid in the requested range
@@ -21,8 +22,10 @@ pub struct DividendAnalytics {
     /// `None` when fewer than two payments spanning at least one year are available.
     pub cagr: Option<f64>,
     /// Most recent dividend payment
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub last_payment: Option<Dividend>,
     /// Earliest dividend payment in the requested range
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub first_payment: Option<Dividend>,
 }
 

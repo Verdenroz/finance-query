@@ -3,6 +3,8 @@
 //! Spark provides lightweight chart data optimized for sparkline rendering.
 //! It fetches multiple symbols in a single request, returning only close prices.
 
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
 pub(crate) mod response;
 
 use super::ChartMeta;
@@ -41,16 +43,20 @@ impl Spark {
     ) -> Option<Self> {
         let data = result.response.first()?;
 
-        let timestamps = data.timestamp.clone().unwrap_or_default();
-
-        // Extract close prices, filtering out None values
-        let closes: Vec<f64> = data
+        let prices = data
             .indicators
             .quote
             .first()
-            .and_then(|q| q.close.as_ref())
-            .map(|prices| prices.iter().filter_map(|&p| p).collect())
+            .and_then(|q| q.close.as_deref())
             .unwrap_or_default();
+        let (timestamps, closes) = match data.timestamp.as_deref() {
+            Some(timestamps) => timestamps
+                .iter()
+                .zip(prices)
+                .filter_map(|(&timestamp, &close)| Some((timestamp, close?)))
+                .unzip(),
+            None => (Vec::new(), prices.iter().flatten().copied().collect()),
+        };
 
         Some(Self {
             symbol: result.symbol.clone(),
@@ -103,5 +109,64 @@ impl Spark {
     /// Get the maximum close price
     pub fn max_close(&self) -> Option<f64> {
         self.closes.iter().copied().reduce(f64::max)
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl Spark {
+    /// Converts the points to a long-format polars DataFrame, one row per point.
+    ///
+    /// Columns are `symbol` (string), `timestamp` (i64), `close` (f64), `interval`
+    /// and `range` (strings, repeated on every row). The shorter of `timestamps`
+    /// and `closes` is padded with nulls. Chart metadata is in
+    /// [`meta_dataframe`](Self::meta_dataframe).
+    pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use crate::dataframe::padded;
+        use polars::prelude::*;
+
+        let rows = self.timestamps.len().max(self.closes.len());
+        DataFrame::new(
+            rows,
+            vec![
+                Series::new("symbol".into(), vec![self.symbol.as_str(); rows]).into(),
+                Series::new(
+                    "timestamp".into(),
+                    padded(self.timestamps.iter().copied().map(Some), rows),
+                )
+                .into(),
+                Series::new(
+                    "close".into(),
+                    padded(self.closes.iter().copied().map(Some), rows),
+                )
+                .into(),
+                Series::new("interval".into(), vec![self.interval.as_deref(); rows]).into(),
+                Series::new("range".into(), vec![self.range.as_deref(); rows]).into(),
+            ],
+        )
+    }
+
+    /// Converts a slice of sparks to one long-format DataFrame with the columns
+    /// of [`to_dataframe`](Self::to_dataframe).
+    pub fn vec_to_dataframe(
+        items: &[Self],
+    ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use polars::prelude::*;
+
+        let schema = DataFrame::new(
+            0,
+            vec![
+                Series::new("symbol".into(), Vec::<&str>::new()).into(),
+                Series::new("timestamp".into(), Vec::<i64>::new()).into(),
+                Series::new("close".into(), Vec::<f64>::new()).into(),
+                Series::new("interval".into(), Vec::<&str>::new()).into(),
+                Series::new("range".into(), Vec::<&str>::new()).into(),
+            ],
+        );
+        crate::dataframe::stack_rows(schema, items, Self::to_dataframe)
+    }
+
+    /// Converts the chart metadata to a one-row polars DataFrame.
+    pub fn meta_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        self.meta.to_dataframe()
     }
 }

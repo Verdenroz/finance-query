@@ -19,6 +19,7 @@ const CHANNEL_CAPACITY: usize = 4096;
 
 /// A single executed trade.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TradeTick {
@@ -31,6 +32,7 @@ pub struct TradeTick {
     /// Exchange identifier, where the venue reports one.
     pub exchange: Option<i32>,
     /// Trade condition codes.
+    #[cfg_attr(feature = "dataframe", dataframe(skip))]
     pub conditions: Vec<i32>,
     /// Provider trade identifier, where one is supplied.
     pub trade_id: Option<String>,

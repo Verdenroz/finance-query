@@ -39,6 +39,31 @@ pub(crate) fn stack_rows<T>(
         .iter()
         .map(frame)
         .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
+        .map(|mut stacked| {
+            stacked.rechunk_mut();
+            stacked
+        })
+}
+
+/// Prepends a string column that repeats `value` on every row.
+pub(crate) fn with_leading_column(
+    mut frame: DataFrame,
+    name: &str,
+    value: &str,
+) -> PolarsResult<DataFrame> {
+    use polars::prelude::{NamedFrom, Series};
+
+    let column = Series::new(name.into(), vec![value; frame.height()]);
+    frame.insert_column(0, column.into())?;
+    Ok(frame)
+}
+
+/// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.
+pub(crate) fn padded<T>(values: impl Iterator<Item = Option<T>>, rows: usize) -> Vec<Option<T>> {
+    values
+        .chain(std::iter::repeat_with(|| None))
+        .take(rows)
+        .collect()
 }
 
 macro_rules! delegate_wrapped_rows {
@@ -65,7 +90,35 @@ macro_rules! delegate_wrapped_rows {
     };
 }
 
-delegate_rows_to_inherent!(crate::CalendarEvent, crate::MarketCalendarEntry);
+impl<T: ToDataFrame> ToDataFrame for crate::ProviderPage<T> {
+    fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_dataframe(&self.items)
+    }
+
+    fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+        stack_rows(T::vec_to_dataframe(&[]), items, Self::to_dataframe)
+    }
+
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_nested_dataframe(&self.items)
+    }
+
+    fn vec_to_nested_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+        stack_rows(
+            T::vec_to_nested_dataframe(&[]),
+            items,
+            Self::to_nested_dataframe,
+        )
+    }
+}
+
+delegate_rows_to_inherent!(
+    crate::CalendarEvent,
+    crate::MarketCalendarEntry,
+    crate::models::chart::spark::Spark,
+    crate::streaming::AlertEvent,
+    crate::SparkData,
+);
 
 delegate_to_inherent!(
     crate::BatchCapitalGainsResponse,
@@ -76,13 +129,16 @@ delegate_to_inherent!(
     crate::BatchOptionsResponse,
     crate::BatchQuotesResponse,
     crate::BatchRecommendationsResponse,
+    crate::BatchSparksResponse,
     crate::BatchSplitsResponse,
     crate::Chart,
+    crate::CompanyFacts,
     crate::Contracts,
     crate::EconomicSeries,
     crate::EdgarFilingIndex,
     crate::EdgarSearchResults,
     crate::FactConcept,
+    crate::FactsByTaxonomy,
     crate::FinancialStatement,
     crate::LookupResults,
     crate::MarketHours,
