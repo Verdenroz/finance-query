@@ -81,7 +81,7 @@ pub mod edgar {
 mod backoff;
 use finance_query_types::constants;
 mod models;
-#[cfg(any(feature = "risk", feature = "backtesting"))]
+#[cfg(feature = "risk")]
 use finance_query_types::perf_metrics;
 mod providers;
 pub(crate) mod rate_limiter;

@@ -1,6 +1,8 @@
 //! Backtesting engine for trading strategy simulation.
 //!
-//! This module provides a complete backtesting framework with:
+//! It is re-exported as `finance_query::backtesting`, enabled there by the `backtesting` feature.
+//!
+//! This crate provides a complete backtesting framework with:
 //! - Expression-based strategy builder for custom entry/exit conditions
 //! - Pre-built strategies (SMA, RSI, MACD, Bollinger, SuperTrend, Donchian)
 //! - Full technical indicator coverage (40+ indicators)

@@ -30,7 +30,7 @@ jobs:
       - name: Run tests
         # Not --all-features: that pulls in `translation-offline`, which builds
         # CTranslate2 from source and needs cmake + a C++ toolchain.
-        run: cargo test --features full --verbose
+        run: cargo test -p finance-query -p finance-query-types -p finance-query-backtesting --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe --verbose
 
   publish:
     name: Publish to crates.io
