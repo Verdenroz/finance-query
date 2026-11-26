@@ -269,7 +269,7 @@ required-features = ["translation-offline"]
 [[bench]]
 name = "soothfast"
 harness = false
-required-features = ["risk", "backtesting", "translation", "sentiment"]
+required-features = ["risk", "backtesting", "translation", "sentiment", "dataframe"]
 
 [profile.release]
 opt-level = 3

@@ -2028,6 +2028,50 @@ fn de_edgar_facts() {
     keep(serde_json::from_str::<CompanyFacts>(keep(EDGAR_FACTS_JSON)).unwrap());
 }
 
+// ── Polars DataFrame conversions (feature: dataframe) ────────────────────────
+
+#[fixture]
+fn parsed_chart() -> Chart {
+    serde_json::from_str(CHART_JSON).unwrap()
+}
+
+#[fixture]
+fn parsed_options() -> Options {
+    serde_json::from_str(OPTIONS_JSON).unwrap()
+}
+
+#[fixture]
+fn parsed_quote() -> Quote {
+    serde_json::from_str(QUOTE_JSON).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup_sized = synthetic_candles,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 80,
+    covers = "finance_query::Candle"
+)]
+fn df_candles(candles: &[Candle]) {
+    keep(Candle::vec_to_dataframe(keep(candles)).unwrap());
+}
+
+#[bench(group = "dataframe", setup = parsed_chart, alloc = 102, covers = "finance_query::Chart")]
+fn df_chart(chart: &Chart) {
+    keep(keep(chart).to_dataframe().unwrap());
+}
+
+#[bench(group = "dataframe", setup = parsed_options, alloc = 113, covers = "finance_query::Options")]
+fn df_option_calls(options: &Options) {
+    keep(keep(options).calls().to_dataframe().unwrap());
+}
+
+#[bench(group = "dataframe", setup = parsed_quote, alloc = 1538, covers = "finance_query::Quote")]
+fn df_quote(quote: &Quote) {
+    keep(keep(quote).to_dataframe().unwrap());
+}
+
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────
 
 static FRED_SERIES_JSON: &str = include_str!("fixtures/fred_series.json");
