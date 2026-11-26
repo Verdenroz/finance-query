@@ -109,11 +109,19 @@ cpu = "portable"
 features = "bench-gate"
 
 [docs]
-package = ["finance-query"]
+package = ["finance-query", "finance-query-types", "finance-query-backtesting"]
 
 # The minimum lives here because a released CLI rejects it under [docs].
 [package.finance-query.docs]
 features = "full"
+coverage = 100
+
+[package.finance-query-types.docs]
+features = "indicators,dataframe"
+coverage = 100
+
+[package.finance-query-backtesting.docs]
+features = "dataframe"
 coverage = 100
 
 [package.finance-query-server.spec]
