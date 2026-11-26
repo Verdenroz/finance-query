@@ -2,6 +2,7 @@ use super::governance::{EmployeeCount, ExecutiveCompensation};
 use super::press_release::PressRelease;
 use super::transcript::*;
 use super::*;
+use crate::ToDataFrame;
 use crate::models::corporate::asset_profile::CompanyOfficer;
 use crate::models::corporate::earnings::Earnings;
 use crate::models::corporate::earnings::{
@@ -731,4 +732,23 @@ fn transcript_wrappers_nest_speakers_and_paragraphs() {
         .paragraphs_dataframe()
         .unwrap();
     assert_eq!(paragraphs.height(), 2);
+}
+
+#[test]
+fn row_list_wrappers_nest_their_rows() {
+    let filings: SecFilings = parse(json!({
+        "filings": [{"type": "10-K", "exhibits": [{"type": "EX-1"}]}]
+    }));
+    let df = filings.to_nested_dataframe().unwrap();
+    assert!(
+        columns(&df)
+            .last()
+            .unwrap()
+            .starts_with("exhibits:list[struct[")
+    );
+    assert_eq!(df.height(), 1);
+    assert_eq!(
+        columns(&SecFilings::vec_to_nested_dataframe(&[]).unwrap()),
+        columns(&df)
+    );
 }
