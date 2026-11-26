@@ -19,7 +19,7 @@ use crate::adapters::common::ws_tls;
 
 use super::client::{StreamError, StreamResult};
 use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
-use super::source::{StreamCommand, StreamSource, apply_command};
+use super::source::{Ready, StreamCommand, StreamSource, apply_command};
 
 /// Yahoo Finance WebSocket URL.
 const YAHOO_WS_URL: &str = "wss://streamer.finance.yahoo.com/?version=2";
@@ -41,8 +41,9 @@ impl StreamSource<PriceUpdate> for YahooStreamSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<PriceUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
-        connect_and_stream(subscriptions, broadcast_tx, command_rx).await
+        connect_and_stream(subscriptions, broadcast_tx, command_rx, ready).await
     }
 }
 
@@ -51,6 +52,7 @@ async fn connect_and_stream(
     subscriptions: &Arc<RwLock<HashSet<String>>>,
     broadcast_tx: &broadcast::Sender<PriceUpdate>,
     command_rx: &mut mpsc::Receiver<StreamCommand>,
+    ready: &mut Ready,
 ) -> StreamResult<()> {
     use futures::StreamExt;
 
@@ -61,6 +63,7 @@ async fn connect_and_stream(
         .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
 
     info!("Connected to Yahoo Finance WebSocket");
+    ready.signal();
 
     let (mut write, mut read) = ws_stream.split();
 

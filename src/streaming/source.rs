@@ -10,10 +10,22 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::sync::{RwLock, broadcast, mpsc};
+use tokio::sync::{RwLock, broadcast, mpsc, oneshot};
 use tracing::{error, info};
 
 use super::client::StreamResult;
+
+/// Tells the caller starting a stream that its first session connected.
+pub(crate) struct Ready(Option<oneshot::Sender<StreamResult<()>>>);
+
+impl Ready {
+    /// Report the connection as established. Only the first call has an effect.
+    pub(crate) fn signal(&mut self) {
+        if let Some(tx) = self.0.take() {
+            let _ = tx.send(Ok(()));
+        }
+    }
+}
 
 /// Commands sent to a running streaming session.
 pub(crate) enum StreamCommand {
@@ -42,14 +54,16 @@ where
     ///
     /// Returns `Ok(())` for a graceful shutdown (a [`StreamCommand::Close`] or a
     /// server close frame) — the loop stops. Returns `Err(..)` for a recoverable
-    /// disconnect — the loop reconnects after a backoff. The session should
-    /// honor `command_rx` for live (un)subscribe and reflect changes into the
+    /// disconnect — the loop reconnects after a backoff, except that an `Err`
+    /// before `ready` is signalled ends the stream and goes to the caller. The
+    /// session should honor `command_rx` for live (un)subscribe and reflect changes into the
     /// shared `subscriptions` set.
     async fn run_session(
         &self,
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<T>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()>;
 }
 
@@ -129,6 +143,7 @@ pub(crate) async fn run_stream_loop<T>(
     broadcast_tx: broadcast::Sender<T>,
     mut command_rx: mpsc::Receiver<StreamCommand>,
     reconnect: ReconnectConfig,
+    first_session: oneshot::Sender<StreamResult<()>>,
 ) -> StreamResult<()>
 where
     T: Clone + Send + 'static,
@@ -136,11 +151,12 @@ where
     let subscriptions = Arc::new(RwLock::new(HashSet::<String>::from_iter(initial_symbols)));
     let mut attempt: u32 = 0;
     let mut seed = crate::backoff::seed_from_time();
+    let mut ready = Ready(Some(first_session));
 
     loop {
         let session_start = tokio::time::Instant::now();
         match source
-            .run_session(&subscriptions, &broadcast_tx, &mut command_rx)
+            .run_session(&subscriptions, &broadcast_tx, &mut command_rx, &mut ready)
             .await
         {
             Ok(()) => {
@@ -148,6 +164,10 @@ where
                 break;
             }
             Err(e) => {
+                if let Some(tx) = ready.0.take() {
+                    let _ = tx.send(Err(e.clone()));
+                    return Err(e);
+                }
                 if session_start.elapsed() >= reconnect.healthy_after {
                     attempt = 0;
                 }
@@ -234,7 +254,9 @@ mod tests {
             subscriptions: &Arc<RwLock<HashSet<String>>>,
             broadcast_tx: &broadcast::Sender<PriceUpdate>,
             command_rx: &mut mpsc::Receiver<StreamCommand>,
+            ready: &mut Ready,
         ) -> StreamResult<()> {
+            ready.signal();
             let subs: Vec<String> = subscriptions.read().await.iter().cloned().collect();
             for sym in subs {
                 let data = PricingData {
@@ -309,7 +331,9 @@ mod tests {
             _subscriptions: &Arc<RwLock<HashSet<String>>>,
             _broadcast_tx: &broadcast::Sender<PriceUpdate>,
             _command_rx: &mut mpsc::Receiver<StreamCommand>,
+            ready: &mut Ready,
         ) -> StreamResult<()> {
+            ready.signal();
             Err(super::super::client::StreamError::ConnectionFailed(
                 "boom".to_string(),
             ))
@@ -331,7 +355,9 @@ mod tests {
             _subscriptions: &Arc<RwLock<HashSet<String>>>,
             _broadcast_tx: &broadcast::Sender<PriceUpdate>,
             _command_rx: &mut mpsc::Receiver<StreamCommand>,
+            ready: &mut Ready,
         ) -> StreamResult<()> {
+            ready.signal();
             tokio::time::sleep(Duration::from_millis(20)).await;
             Err(super::super::client::StreamError::ConnectionFailed(
                 "dropped".to_string(),

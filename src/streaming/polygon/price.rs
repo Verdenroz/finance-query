@@ -12,7 +12,7 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 use crate::adapters::polygon::websocket::PolygonMessage;
 use crate::streaming::client::StreamResult;
 use crate::streaming::pricing::{MarketHoursType, PriceUpdate, QuoteType};
-use crate::streaming::source::{StreamCommand, StreamSource};
+use crate::streaming::source::{Ready, StreamCommand, StreamSource};
 
 use super::{AssetClass, SessionHandler, prune_symbols, run_polygon_session};
 
@@ -38,6 +38,7 @@ impl StreamSource<PriceUpdate> for PolygonPriceSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<PriceUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
         run_polygon_session(
             self.class,
@@ -45,6 +46,7 @@ impl StreamSource<PriceUpdate> for PolygonPriceSource {
             subscriptions,
             broadcast_tx,
             command_rx,
+            ready,
             PriceMerger::new(self.class),
         )
         .await

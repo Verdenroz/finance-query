@@ -134,7 +134,8 @@ impl PriceStream {
         let initial_symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
 
         Ok(PriceStream {
-            inner: SourceStream::start(source, initial_symbols, reconnect, CHANNEL_CAPACITY),
+            inner: SourceStream::start(source, initial_symbols, reconnect, CHANNEL_CAPACITY)
+                .await?,
         })
     }
 

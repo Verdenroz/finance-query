@@ -20,7 +20,7 @@ use tracing::{debug, info, warn};
 use crate::adapters::polygon::websocket::{ClusterDTO, PolygonMessage, PolygonStream};
 
 use super::client::{StreamError, StreamResult};
-use super::source::{StreamCommand, apply_command};
+use super::source::{Ready, StreamCommand, apply_command};
 
 pub(crate) use book::PolygonBookSource;
 pub(crate) use options::PolygonOptionsSource;
@@ -182,6 +182,7 @@ pub(crate) async fn run_polygon_session<T, H>(
     subscriptions: &Arc<RwLock<HashSet<String>>>,
     broadcast_tx: &broadcast::Sender<T>,
     command_rx: &mut mpsc::Receiver<StreamCommand>,
+    ready: &mut Ready,
     mut handler: H,
 ) -> StreamResult<()>
 where
@@ -202,6 +203,7 @@ where
 
     let sender = stream.sender();
     info!("Connected to Polygon {} cluster", class.label());
+    ready.signal();
 
     loop {
         tokio::select! {

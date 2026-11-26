@@ -8,7 +8,7 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 use crate::adapters::polygon::websocket::PolygonMessage;
 use crate::streaming::book::{BookLevel, OrderBookUpdate};
 use crate::streaming::client::StreamResult;
-use crate::streaming::source::{StreamCommand, StreamSource};
+use crate::streaming::source::{Ready, StreamCommand, StreamSource};
 
 use super::{AssetClass, Decode, run_polygon_session};
 
@@ -29,6 +29,7 @@ impl StreamSource<OrderBookUpdate> for PolygonBookSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<OrderBookUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
         run_polygon_session(
             AssetClass::Crypto,
@@ -36,6 +37,7 @@ impl StreamSource<OrderBookUpdate> for PolygonBookSource {
             subscriptions,
             broadcast_tx,
             command_rx,
+            ready,
             Decode(|msg| to_book(msg).into_iter().collect()),
         )
         .await

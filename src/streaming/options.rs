@@ -219,7 +219,8 @@ impl OptionsChainStreamBuilder {
         let reconnect =
             ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
         Ok(OptionsChainStream {
-            inner: SourceStream::start(source, self.underlyings, reconnect, CHANNEL_CAPACITY),
+            inner: SourceStream::start(source, self.underlyings, reconnect, CHANNEL_CAPACITY)
+                .await?,
         })
     }
 }

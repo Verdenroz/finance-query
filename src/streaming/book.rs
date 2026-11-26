@@ -143,7 +143,8 @@ impl DepthStreamBuilder {
                 self.pairs,
                 reconnect,
                 CHANNEL_CAPACITY,
-            ),
+            )
+            .await?,
         })
     }
 }

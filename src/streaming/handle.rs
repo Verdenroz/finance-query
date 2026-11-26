@@ -16,8 +16,9 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::stream::Stream;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 
+use super::client::StreamResult;
 use super::source::{ReconnectConfig, StreamCommand, StreamSource, run_stream_loop};
 use super::subscription::Subscription;
 
@@ -41,15 +42,31 @@ where
     T: Clone + Send + 'static,
 {
     /// Spawn the source's reconnect loop and return a handle to its output.
-    pub(crate) fn start(
+    ///
+    /// Resolves once the first session has connected, or with the error that
+    /// kept it from connecting.
+    pub(crate) async fn start(
         source: Arc<dyn StreamSource<T>>,
         symbols: Vec<String>,
         reconnect: ReconnectConfig,
         capacity: usize,
-    ) -> Self {
-        Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
-            let _ = run_stream_loop(source, symbols, broadcast_tx, command_rx, reconnect).await;
-        })
+    ) -> StreamResult<Self> {
+        let (first_tx, first_rx) = oneshot::channel();
+        let stream = Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
+            let _ = run_stream_loop(
+                source,
+                symbols,
+                broadcast_tx,
+                command_rx,
+                reconnect,
+                first_tx,
+            )
+            .await;
+        });
+        match first_rx.await {
+            Ok(Err(e)) => Err(e),
+            _ => Ok(stream),
+        }
     }
 
     /// Spawn an arbitrary background loop behind the same handle API.

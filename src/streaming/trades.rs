@@ -125,7 +125,7 @@ impl TradeStreamBuilder {
         let reconnect =
             ReconnectConfig::new(self.retry_delay).max_attempts(self.max_reconnect_attempts);
         Ok(TradeStream {
-            inner: SourceStream::start(source, self.symbols, reconnect, CHANNEL_CAPACITY),
+            inner: SourceStream::start(source, self.symbols, reconnect, CHANNEL_CAPACITY).await?,
         })
     }
 }
