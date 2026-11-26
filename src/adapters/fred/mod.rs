@@ -207,8 +207,9 @@ pub async fn fetch_market_calendar_response(
 }
 
 /// Map FRED release dates to the canonical `Economic` calendar detail,
-/// dropping no-data phantom fills first. FRED's release calendar reports when a release happens, not its value, so
-/// every field besides `event`/`country` stays `None`.
+/// dropping no-data phantom fills first. FRED's release calendar reports when
+/// a release happens, not its value, so every field besides `event`/`country`
+/// stays `None`.
 fn release_dates_to_calendar_entries(
     dates: Vec<ReleaseDate>,
 ) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
