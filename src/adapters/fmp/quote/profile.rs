@@ -141,7 +141,7 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
     }
     let ipo_date = row
         .ipo_date
-        .filter(|date| crate::models::discovery::listings::date(date).is_ok());
+        .filter(|date| crate::providers::stock_listing::date(date).is_ok());
     Ok(CompanyProfile {
         symbol: Some(row.symbol),
         name: row.company_name,
