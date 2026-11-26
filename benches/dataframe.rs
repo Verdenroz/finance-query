@@ -5,8 +5,8 @@
 //! Inputs are the real captured server responses in `benches/fixtures/` plus a
 //! deterministic synthetic candle series for scaling.
 //!
-//! Criterion-only: this is deliberately excluded from the `regression` gate
-//! because Polars is far too heavy to build/run under the CI valgrind gate.
+//! Criterion timings only. The gated counterparts are the `dataframe` group in
+//! `benches/soothfast.rs`.
 //!
 //! ```text
 //! cargo bench --bench dataframe --features finance-query/dataframe
