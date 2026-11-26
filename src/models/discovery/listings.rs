@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Provider-reported stock identity and listing lifecycle.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct StockListing {
     /// Stock symbol.
@@ -34,6 +35,7 @@ pub struct StockListing {
 /// A ticker a security started trading under on a date.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TickerChange {
     /// First day under this ticker (`YYYY-MM-DD`).
@@ -45,6 +47,7 @@ pub struct TickerChange {
 /// An open-ended provider stock-type code.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct StockType {
     /// Provider code; unknown future codes are retained.

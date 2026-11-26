@@ -21,6 +21,7 @@ pub struct ProviderFilings {
 /// A single SEC filing entry from a provider.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ProviderFiling {
     /// SEC accession number (unique filing ID).

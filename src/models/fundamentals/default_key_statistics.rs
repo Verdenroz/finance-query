@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct DefaultKeyStatistics<F: Format = Both> {

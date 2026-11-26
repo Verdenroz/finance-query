@@ -21,6 +21,7 @@ pub struct UpgradeDowngradeHistory {
 /// Individual analyst rating change
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct GradeChange {
     /// Timestamp of the grade change (epoch)

@@ -21,6 +21,7 @@ pub struct InstitutionOwnership {
 /// Individual institutional owner
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct InstitutionOwner {
     /// Maximum age of this data in seconds
