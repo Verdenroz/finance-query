@@ -210,7 +210,7 @@ fn with_leading_column(
 }
 
 #[cfg(feature = "dataframe")]
-fn sorted<'a, V>(map: &'a HashMap<String, V>) -> Vec<(&'a String, &'a V)> {
+fn sorted<V>(map: &HashMap<String, V>) -> Vec<(&String, &V)> {
     let mut entries: Vec<_> = map.iter().collect();
     entries.sort_by_key(|(key, _)| *key);
     entries
