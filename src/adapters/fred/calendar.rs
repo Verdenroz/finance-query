@@ -57,15 +57,18 @@ pub(crate) fn build_economic_events(
         .collect()
 }
 
+/// Runs of at least this many consecutive daily rows for one release are phantom fills.
+const MIN_PHANTOM_RUN: i64 = 5;
+
 /// Drop FRED "no-data" phantom fills.
 ///
 /// Queried with `include_release_dates_with_no_data`, FRED returns one row per
 /// calendar day for releases that lack scheduled-date data — notably the FOMC
 /// Press Release, which comes back as a run of ~30 consecutive daily rows. No
 /// genuine macro release recurs on consecutive days, so any date inside a run
-/// of 3+ consecutive calendar days for the same release is a phantom fill and
-/// is discarded. Isolated dates and 2-day adjacencies are kept, so the filter
-/// is independent of the calendar window size.
+/// of `MIN_PHANTOM_RUN`+ consecutive calendar days for the same release is a
+/// phantom fill and is discarded. Shorter runs are kept, so the filter is
+/// independent of the calendar window size.
 fn drop_phantom_daily_fills(releases: Vec<ReleaseDate>) -> Vec<ReleaseDate> {
     use std::collections::{HashMap, HashSet};
 
@@ -83,11 +86,8 @@ fn drop_phantom_daily_fills(releases: Vec<ReleaseDate>) -> Vec<ReleaseDate> {
         .filter(|r| {
             let Some(ord) = day(r) else { return false };
             let days = &days_by_release[&r.release_id];
-            let has = |d: i64| days.contains(&d);
-            // Part of a 3+-day run iff one of these consecutive triples holds.
-            let in_run = (has(ord - 2) && has(ord - 1))
-                || (has(ord - 1) && has(ord + 1))
-                || (has(ord + 1) && has(ord + 2));
+            let in_run = (ord - MIN_PHANTOM_RUN + 1..=ord)
+                .any(|start| (start..start + MIN_PHANTOM_RUN).all(|d| days.contains(&d)));
             !in_run
         })
         .collect()
@@ -203,5 +203,26 @@ mod tests {
                 .count(),
             2
         );
+    }
+
+    fn daily_run(release_id: u64, len: u32) -> Vec<ReleaseDate> {
+        (1..=len)
+            .map(|day| ReleaseDate {
+                release_id,
+                release_name: "Release".to_string(),
+                date: format!("2026-07-{day:02}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn keeps_three_and_four_day_runs() {
+        assert_eq!(drop_phantom_daily_fills(daily_run(10, 3)).len(), 3);
+        assert_eq!(drop_phantom_daily_fills(daily_run(10, 4)).len(), 4);
+    }
+
+    #[test]
+    fn drops_five_day_run() {
+        assert!(drop_phantom_daily_fills(daily_run(10, 5)).is_empty());
     }
 }
