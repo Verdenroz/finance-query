@@ -1983,8 +1983,7 @@ fn ser_currencies(currencies: &[Currency]) {
 //
 // These are the heaviest per-request serde paths in production. Fixtures are
 // real `GET /v2/...` responses (see `.claude/rules/benches.md`), so the gate
-// tracks the exact shapes users parse. `dataframe` conversions are
-// intentionally excluded (Polars is too heavy for the gate — criterion-only).
+// tracks the exact shapes users parse.
 
 static QUOTE_JSON: &str = include_str!("fixtures/quote.json");
 static CHART_JSON: &str = include_str!("fixtures/chart.json");

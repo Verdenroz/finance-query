@@ -193,9 +193,8 @@ translation = []
 translation-offline = ["translation", "dep:ct2rs", "dep:zip", "reqwest/blocking"]
 # Regression-gate aggregate: every feature whose representative work is pure-Rust
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
-# public models already covered; dataframe/translation-offline are too heavy for
-# valgrind (excluded by design — see .claude/rules/benches.md).
-bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment"]
+# public models already covered; translation-offline is excluded (native build).
+bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "dataframe"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the
@@ -252,8 +251,8 @@ harness = false
 name = "tickers"
 harness = false
 
-# Polars DataFrame conversions (Candle/Chart/Options/Quote). Criterion-only —
-# deliberately NOT in the regression gate (Polars is too heavy for the CI gate).
+# Polars DataFrame conversions (Candle/Chart/Options/Quote), criterion timings.
+# The gated counterparts live in the `soothfast` bench.
 [[bench]]
 name = "dataframe"
 harness = false
