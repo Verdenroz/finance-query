@@ -7,7 +7,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::{Mutex, RwLock};
-// tokio's Instant tracks the runtime clock, so TTL expiry is testable under
+// The tokio Instant tracks the runtime clock, so TTL expiry is testable under
 // `tokio::time::pause`. Outside tests it is std::time::Instant.
 use tokio::time::Instant;
 

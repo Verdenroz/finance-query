@@ -24,7 +24,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // When run from workspace root (e.g. `cargo run -p finance-query-mcp`),
+    // When it runs from the workspace root (e.g. `cargo run -p finance-query-mcp`),
     // try the crate-local .env first, then fall back to the standard search.
     dotenvy::from_path("finance-query-mcp/.env").ok();
     dotenvy::dotenv().ok();
