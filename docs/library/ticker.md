@@ -142,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Symbol: AAPL
 Name: Apple Inc.
 Price: $333.74
-Change: +0.48 (+0.00%)
+Change: +0.48 (+0.14%)
 Market Cap: $4901757779968
 Logo: Some("https://s.yimg.com/lb/brands/50x50_apple.png")
 Company Logo: Some("https://s.yimg.com/lb/brands/50x50_apple.png")
@@ -657,7 +657,7 @@ Bollinger: Upper=338.35, Lower=272.69
 
 Calculate specific indicators with any period:
 
-```rust capture-output feature=indicators
+```rust no_run feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::{Interval, Ticker, TimeRange};
@@ -686,17 +686,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-```text soothfast-output
-SMA(15): 209.72
-RSI(21): 74.80
-MACD: 8.9736
-```
+Each line prints the latest value of its series, and a series that is still
+inside its warm-up window prints nothing.
 
 #### 3. Direct Functions
 
 Use indicator functions directly with custom data:
 
-```rust capture-output feature=indicators
+```rust no_run feature=indicators
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::indicators::{rsi, sma};
@@ -719,10 +716,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-```text soothfast-output
-SMA(25): 209.72
-RSI(10): 81.96
-```
+`sma(&closes, 25)` needs 25 closes before it produces a value, and a
+one-month daily chart holds about 20, so the SMA line prints nothing here. Use
+`TimeRange::ThreeMonths` or a shorter period to see it.
 
 !!! tip "See Also"
     For complete indicator documentation including all available indicators, see [Indicators](indicators.md).
@@ -838,7 +834,7 @@ timestamp=1784035800: SpinningTop (Neutral)
 
 Compute a comprehensive risk summary from historical price data:
 
-```rust capture-output feature=risk
+```rust no_run feature=risk
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use finance_query::{Interval, Ticker, TimeRange};
@@ -870,11 +866,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-```text soothfast-output
-VaR 95%:      1.97%
-Max Drawdown: 13.82%
-Sharpe:       2.01
-```
+The output starts with the beta against `^GSPC`, then the VaR, max drawdown
+and Sharpe of the unbenchmarked summary. Its beta is `None`, so no second beta
+line is printed.
 
 See [Risk Analytics](risk.md) for the full `RiskSummary` field reference and standalone metric functions.
 

@@ -1094,6 +1094,6 @@ BRL: BRL
 - [Batch Tickers](tickers.md) - Efficient multi-symbol operations
 - [FRED & Treasury](providers/fred.md) - Macro-economic data (requires `fred` feature)
 - [Crypto](providers/coingecko.md) - CoinGecko cryptocurrency data (requires `crypto` feature)
-- [Feeds](feeds.md) - RSS/Atom news aggregation (requires `rss` feature)
+- [Feeds](feeds.md) - RSS/Atom news aggregation
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Regional settings and network options
