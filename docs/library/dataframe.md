@@ -811,6 +811,26 @@ columns = ["timestamp", "amount", "provider_id"]
 ```
 <!-- /soothfast:bind -->
 
+### Vec and Slices
+
+`Vec<T>` and `[T]` implement `ToDataFrame` for every `T` that does, so a list of rows converts with method syntax. Import the prelude to bring the trait into scope:
+
+```rust feature=dataframe
+use finance_query::Dividend;
+use finance_query::prelude::*;
+
+let dividends: Vec<Dividend> = serde_json::from_str(
+    r#"[{"timestamp": 1704067200, "amount": 0.24},
+        {"timestamp": 1711929600, "amount": 0.25}]"#,
+)
+.unwrap();
+
+assert_eq!(dividends.to_dataframe().unwrap().height(), 2);
+assert_eq!(dividends[..1].to_dataframe().unwrap().height(), 1);
+```
+
+An empty list keeps the row type's schema. `Vec` and slice frames stack one row per item, so `candles.to_dataframe()` equals `Candle::vec_to_dataframe(&candles)`.
+
 ### Single Item to DataFrame
 
 Individual structs create single-row DataFrames:
