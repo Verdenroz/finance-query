@@ -101,21 +101,35 @@ pub mod derive {
     /// One `List(Struct)` column holding each parent's child rows as a list of structs.
     ///
     /// An empty slice is an empty list. Child rows use their own nested frame,
-    /// so nesting recurses. The struct fields come from the
-    /// child's zero-row frame so the dtype holds when every list is empty.
+    /// so nesting recurses.
     pub fn nested_column<'a, T: ToDataFrame + 'a>(
         name: &str,
         rows: impl ExactSizeIterator<Item = &'a [T]>,
     ) -> PolarsResult<Column> {
-        let dtype = T::vec_to_nested_dataframe(&[])?
+        let children = rows
+            .map(|items| T::vec_to_nested_dataframe(items))
+            .collect::<PolarsResult<Vec<_>>>()?;
+        let schema = T::vec_to_nested_dataframe(&[])?;
+        // Hand-written impls return a column-less frame for no rows, so the
+        // struct fields come from the first child that has columns.
+        let template = children
+            .iter()
+            .find(|child| child.width() > 0)
+            .unwrap_or(&schema);
+        let dtype = template
+            .clone()
             .into_struct(PlSmallStr::EMPTY)
             .into_series()
             .dtype()
             .clone();
-        let mut builder = get_list_builder(&dtype, rows.len(), rows.len(), name.into());
-        for items in rows {
-            let child = T::vec_to_nested_dataframe(items)?;
-            builder.append_series(&child.into_struct(PlSmallStr::EMPTY).into_series())?;
+        let mut builder = get_list_builder(&dtype, children.len(), children.len(), name.into());
+        for child in children {
+            let list = if child.width() == 0 {
+                Series::new_empty(PlSmallStr::EMPTY, &dtype)
+            } else {
+                child.into_struct(PlSmallStr::EMPTY).into_series()
+            };
+            builder.append_series(&list)?;
         }
         Ok(Column::from(builder.finish().into_series()))
     }

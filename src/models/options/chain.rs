@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - use `Ticker::options()` to obtain options data.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionChain {
     /// Expiration date (Unix timestamp)
@@ -15,9 +16,11 @@ pub struct OptionChain {
     pub has_mini_options: Option<bool>,
 
     /// Call options
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub calls: Vec<OptionContract>,
 
     /// Put options
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub puts: Vec<OptionContract>,
 }
 

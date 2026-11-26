@@ -28,6 +28,7 @@ where
 /// Contains company metadata and filing history. The `filings` field holds
 /// the most recent ~1000 filings inline, with links to older history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarSubmissions {
@@ -53,10 +54,12 @@ pub struct EdgarSubmissions {
 
     /// Ticker symbols associated with this entity
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
     pub tickers: Vec<String>,
 
     /// Stock exchanges
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(list))]
     pub exchanges: Vec<String>,
 
     /// State of incorporation
@@ -89,20 +92,24 @@ pub struct EdgarSubmissions {
 
     /// Filing history
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub filings: Option<EdgarFilings>,
 }
 
 /// Container for recent filings and links to older filing history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilings {
     /// Recent filings (up to ~1000, inline in the response)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub recent: Option<EdgarFilingRecent>,
 
     /// Links to additional filing history JSON files
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub files: Vec<EdgarFilingFile>,
 }
 

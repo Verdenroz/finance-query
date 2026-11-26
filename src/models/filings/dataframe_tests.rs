@@ -1,3 +1,4 @@
+use super::filing_index::EdgarFilingIndexDirectory;
 use super::*;
 use crate::models::dataframe_test_util::columns;
 use serde_json::json;
@@ -187,4 +188,78 @@ fn edgar_search_source_columns() {
     let empty = <EdgarSearchSource>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn submissions_nest_the_filing_history() {
+    let submissions: EdgarSubmissions = serde_json::from_value(json!({
+        "cik": "320193",
+        "name": "Apple",
+        "tickers": ["AAPL"],
+        "filings": {
+            "recent": {
+                "accessionNumber": ["0001", "0002"],
+                "filingDate": ["2024-01-01", "2024-02-01"],
+                "reportDate": ["2024-01-01", "2024-02-01"],
+                "acceptanceDateTime": ["a", "b"],
+                "form": ["10-K", "8-K"],
+                "size": [1, 2],
+                "isXBRL": [1, 0],
+                "isInlineXBRL": [1, 0],
+                "primaryDocument": ["a.htm", "b.htm"],
+                "primaryDocDescription": ["x", "y"]
+            },
+            "files": [{"name": "older.json", "filingCount": 3}]
+        }
+    }))
+    .unwrap();
+    let flat = columns(&submissions.to_dataframe().unwrap());
+    assert!(flat.contains(&"tickers:list[str]".to_string()));
+    assert!(!flat.iter().any(|c| c.starts_with("filings")));
+
+    let filings = submissions.filings_dataframe().unwrap();
+    assert_eq!(filings.height(), 1);
+    let cols = columns(&filings);
+    assert!(cols[0].starts_with("recent:list[struct["));
+    assert!(cols[1].starts_with("files:list[struct["));
+
+    let filings = submissions.filings.as_ref().unwrap();
+    let recent = filings.recent_dataframe().unwrap();
+    assert_eq!(recent.height(), 2);
+    assert_eq!(
+        columns(&recent)[..2],
+        ["accession_number:str", "filing_date:str"]
+    );
+    assert_eq!(filings.files_dataframe().unwrap().height(), 1);
+}
+
+#[test]
+fn filings_without_recent_keep_a_consistent_nested_dtype() {
+    let with: EdgarFilings = serde_json::from_value(json!({
+        "recent": {"accessionNumber": ["0001"], "form": ["10-K"]},
+        "files": []
+    }))
+    .unwrap();
+    let without: EdgarFilings = serde_json::from_value(json!({})).unwrap();
+    let both = EdgarFilings::vec_to_nested_dataframe(&[with.clone(), without]).unwrap();
+    let recent = both.column("recent").unwrap().list().unwrap();
+    assert_eq!(recent.get_as_series(0).unwrap().len(), 1);
+    assert_eq!(recent.get_as_series(1).unwrap().len(), 0);
+    assert_eq!(with.recent_dataframe().unwrap().height(), 1);
+}
+
+#[test]
+fn filing_index_directory_exposes_its_items() {
+    let directory: EdgarFilingIndexDirectory = serde_json::from_value(json!({
+        "item": [{"name": "a.htm", "type": "text.gif", "size": "10"}]
+    }))
+    .unwrap();
+    let items = directory.item_dataframe().unwrap();
+    assert_eq!(columns(&items), ["name:str", "item_type:str", "size:u64"]);
+    assert_eq!(items.height(), 1);
+    assert_eq!(directory.to_dataframe().unwrap().width(), 0);
+    assert_eq!(
+        columns(&directory.to_nested_dataframe().unwrap()),
+        ["item:list[struct[3]]"]
+    );
 }

@@ -33,12 +33,14 @@ pub struct SectorPerformance {
 
 /// One day of aggregate performance across every sector and exchange.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct SectorPerformanceHistory {
     /// Date (`YYYY-MM-DD`).
     pub date: Option<String>,
     /// Per-sector percentage change on that date, one entry per
     /// (sector, exchange) pair.
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub sectors: Vec<SectorPerformance>,
 }
 

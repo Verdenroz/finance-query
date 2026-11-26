@@ -118,6 +118,7 @@ struct RawResearchReport {
 
 /// Industry data from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryData {
@@ -136,24 +137,31 @@ pub struct IndustryData {
     pub sector_key: Option<String>,
     /// Industry overview statistics
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub overview: Option<IndustryOverview>,
     /// Industry performance metrics
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance: Option<IndustryPerformance>,
     /// Benchmark performance (e.g., S&P 500)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub benchmark: Option<BenchmarkPerformance>,
     /// Top companies by market cap
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_companies: Vec<IndustryCompany>,
     /// Top performing companies by YTD return
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_performing_companies: Vec<PerformingCompany>,
     /// Top growth companies by growth estimate
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_growth_companies: Vec<GrowthCompany>,
     /// Research reports
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub research_reports: Vec<ResearchReport>,
 }
 

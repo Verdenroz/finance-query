@@ -1,3 +1,4 @@
+use super::SearchResults;
 use super::news::SearchNews;
 use super::thumbnail::{NewsThumbnail, ThumbnailResolution};
 use crate::models::dataframe_test_util::columns;
@@ -50,4 +51,29 @@ fn search_news_keeps_flat_columns_and_nests_the_thumbnail() {
             .unwrap(),
         "thumbnail:list[struct[1]]"
     );
+}
+
+#[test]
+fn search_results_nest_quotes_news_and_reports() {
+    let results: SearchResults = serde_json::from_value(json!({
+        "count": 2,
+        "quotes": [{"symbol": "AAPL"}],
+        "news": [{"title": "t"}, {"title": "u"}],
+        "researchReports": []
+    }))
+    .unwrap();
+    assert_eq!(
+        columns(&results.to_dataframe().unwrap()),
+        ["count:i32", "total_time:i64"]
+    );
+    assert_eq!(results.quotes_dataframe().unwrap().height(), 1);
+    assert_eq!(results.news_dataframe().unwrap().height(), 2);
+    let reports = results.research_reports_dataframe().unwrap();
+    assert_eq!(reports.height(), 0);
+    assert!(reports.width() > 0);
+
+    let cols = columns(&results.to_nested_dataframe().unwrap());
+    assert!(cols[2].starts_with("quotes:list[struct["));
+    assert!(cols[3].starts_with("news:list[struct["));
+    assert!(cols[4].starts_with("research_reports:list[struct["));
 }
