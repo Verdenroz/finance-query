@@ -105,17 +105,17 @@ type GqlAroonData {
 Performance summary over the whole run.
 """
 type GqlBacktestMetrics {
-	totalReturnPct: Float!
-	annualizedReturnPct: Float!
+	totalReturn: Float!
+	annualizedReturn: Float!
 	sharpeRatio: Float!
 	sortinoRatio: Float!
-	maxDrawdownPct: Float!
+	maxDrawdown: Float!
 	maxDrawdownDuration: Int!
 	winRate: Float!
 	profitFactor: Float!
-	avgTradeReturnPct: Float!
-	avgWinPct: Float!
-	avgLossPct: Float!
+	avgTradeReturn: Float!
+	avgWinReturn: Float!
+	avgLossReturn: Float!
 	avgTradeDuration: Float!
 	totalTrades: Int!
 	winningTrades: Int!
@@ -133,7 +133,7 @@ type GqlBacktestMetrics {
 	executedSignals: Int!
 	avgWinDuration: Float!
 	avgLossDuration: Float!
-	timeInMarketPct: Float!
+	timeInMarket: Float!
 	maxIdlePeriod: Int!
 	totalDividendIncome: Float!
 	kellyCriterion: Float!
@@ -979,7 +979,7 @@ Portfolio value at one bar.
 type GqlEquityPoint {
 	timestamp: Int!
 	equity: Float!
-	drawdownPct: Float!
+	drawdown: Float!
 }
 
 type GqlEquityPointConnection {
@@ -4034,7 +4034,7 @@ type GqlTrade {
 	commission: Float!
 	transactionTax: Float!
 	pnl: Float!
-	returnPct: Float!
+	netReturn: Float!
 	dividendIncome: Float!
 	unreinvestedDividends: Float!
 	financingCost: Float!
