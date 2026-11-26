@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 /// A forex currency pair quote (e.g., EUR/USD).
 ///
-/// Obtain via [`Providers::forex`](crate::Providers::forex) then
-/// [`.quote()`](crate::domains::ForexPair::quote).
+/// Obtain via `Providers::forex` then
+/// `.quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

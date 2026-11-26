@@ -6,7 +6,7 @@ use super::events::Dividend;
 
 /// Computed analytics derived from a symbol's dividend history.
 ///
-/// Obtain via [`Ticker::dividend_analytics`](crate::Ticker::dividend_analytics).
+/// Obtain via `Ticker::dividend_analytics`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

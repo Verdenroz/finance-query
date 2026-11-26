@@ -1,9 +1,9 @@
 //! Aggregated analyst-consensus models.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route; FMP is currently the only provider. These are provider-side rollups
 //! over the whole analyst panel — distinct from the raw per-analyst grade
-//! actions in [`UpgradeDowngradeHistory`](crate::UpgradeDowngradeHistory).
+//! actions in [`UpgradeDowngradeHistory`](super::super::corporate::UpgradeDowngradeHistory).
 
 use serde::{Deserialize, Serialize};
 

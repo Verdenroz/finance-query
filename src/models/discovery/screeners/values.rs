@@ -5,10 +5,10 @@
 //!
 //! | Field | Type | Module |
 //! |-------|------|--------|
-//! | [`EquityField::Region`] | [`Region`](crate::Region) | `crate::Region` |
-//! | [`EquityField::Sector`] | [`Sector`](crate::Sector) | `crate::Sector` |
-//! | [`EquityField::Industry`] / `finance::industry()` | [`Industry`](crate::Industry) | `crate::Industry` |
-//! | [`EquityField::Exchange`] / [`FundField::Exchange`] | [`ExchangeCode`](crate::ExchangeCode) | `crate::ExchangeCode` |
+//! | [`EquityField::Region`] | [`Region`](finance_query_types::constants::Region) | `crate::Region` |
+//! | [`EquityField::Sector`] | [`Sector`](finance_query_types::constants::sectors::Sector) | `crate::Sector` |
+//! | [`EquityField::Industry`] / `finance::industry()` | [`Industry`](finance_query_types::constants::industries::Industry) | `crate::Industry` |
+//! | [`EquityField::Exchange`] / [`FundField::Exchange`] | [`ExchangeCode`](finance_query_types::constants::exchange_codes::ExchangeCode) | `crate::ExchangeCode` |
 //!
 //! This module contains only the screener-specific value enums that have no counterpart
 //! elsewhere in the library:
@@ -57,7 +57,7 @@
 /// [`ScreenerFieldExt::eq_str`](super::condition::ScreenerFieldExt::eq_str).
 ///
 /// These are Yahoo Finance's proprietary peer group classifications used to group
-/// stocks for comparison purposes. Values are broader than [`Industry`](crate::Industry)
+/// stocks for comparison purposes. Values are broader than [`Industry`](finance_query_types::constants::industries::Industry)
 /// names.
 ///
 /// # Example

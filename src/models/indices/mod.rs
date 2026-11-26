@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A stock market index quote (e.g., S&P 500, NASDAQ, Dow Jones).
 ///
-/// Obtain via [`Providers::index`](crate::Providers::index)`(symbol).quote()`.
+/// Obtain via `Providers::index``(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -28,7 +28,7 @@ pub struct IndexQuote {
 
 /// A major stock market index whose constituent lists providers can serve.
 ///
-/// Passed to [`Index::constituents`](crate::Index::constituents) (derived from
+/// Passed to `Index::constituents` (derived from
 /// the handle's symbol) and the INDICES provider route.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]

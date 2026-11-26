@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A commodity price quote (e.g., gold, silver, crude oil).
 ///
-/// Obtain via [`Providers::commodity`](crate::Providers::commodity)`(symbol).quote()`.
+/// Obtain via `Providers::commodity``(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

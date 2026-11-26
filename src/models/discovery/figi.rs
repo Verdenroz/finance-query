@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// share a `composite_figi` are the same security on different venues; the
 /// `share_class_figi` groups share classes across countries.
 ///
-/// Obtain via [`openfigi::resolve_cusip`](crate::openfigi::resolve_cusip) and
+/// Obtain via `openfigi::resolve_cusip` and
 /// friends.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

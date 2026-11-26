@@ -10,7 +10,7 @@ use crate::models::quote::*;
 /// JSON parsing on every accessor call. Uses `Option<T>` for each module since
 /// Yahoo Finance may not return all modules for all symbols.
 ///
-/// The return type of [`QuoteProvider::fetch_quote`](crate::QuoteProvider),
+/// The return type of `QuoteProvider::fetch_quote`,
 /// so an implementor populates the modules it can serve and leaves the rest
 /// `None`. Each field mirrors one Yahoo `quoteSummary` module.
 #[derive(Debug, Clone, Default)]

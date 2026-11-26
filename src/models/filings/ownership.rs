@@ -1,8 +1,8 @@
 //! Ownership models parsed from primary-source SEC filings, plus two
 //! secondary-source models (congressional trades, fails-to-deliver) served
-//! through the same [`Capability::FILINGS`](crate::Capability::FILINGS)
+//! through the same [`Capability::FILINGS`](finance_query_types::Capability::FILINGS)
 //! route. Unlike the aggregated holder summaries on
-//! [`Ticker`](crate::Ticker), [`InsiderTrade`] and [`InstitutionalHolding`]
+//! `Ticker`, [`InsiderTrade`] and [`InstitutionalHolding`]
 //! come straight from the filed XML — Forms 3/4/5 for insider activity and
 //! 13F-HR information tables for institutional positions. EDGAR is the only
 //! source for [`InstitutionalHolding`]; [`InsiderTrade`] also has Alpha

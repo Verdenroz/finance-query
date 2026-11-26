@@ -1,6 +1,6 @@
 //! Trailing-twelve-month (TTM) fundamentals snapshots.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route; FMP is currently the only provider. A TTM snapshot is a single
 //! always-current rollup — unlike [`FinancialStatement`](super::FinancialStatement),
 //! it is not indexed by fiscal period, so callers do not need to know whether

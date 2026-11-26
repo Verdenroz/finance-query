@@ -1,6 +1,6 @@
 //! Provider-neutral full-text filing search models.
 //!
-//! Served through the [`Capability::FILINGS`](crate::Capability::FILINGS)
+//! Served through the [`Capability::FILINGS`](finance_query_types::Capability::FILINGS)
 //! route; EDGAR is currently the only provider. Distinct from
 //! [`EdgarSearchResults`](super::EdgarSearchResults), which mirrors EDGAR's raw
 //! Elasticsearch envelope — this is the flattened shape the routed API returns.

@@ -11,7 +11,7 @@ pub mod cot;
 
 /// A futures contract quote.
 ///
-/// Obtain via [`Providers::futures`](crate::Providers::futures)`(symbol).quote()`.
+/// Obtain via `Providers::futures``(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

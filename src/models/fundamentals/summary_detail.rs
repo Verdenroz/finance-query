@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// - `SummaryDetail<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `SummaryDetail<Pretty>` — fields hold `Option<String>` (human-readable)
 ///
-/// Obtain converted views via [`Quote::as_raw`](crate::Quote::as_raw) or call
+/// Obtain converted views via [`Quote::as_raw`](super::super::quote::Quote::as_raw) or call
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

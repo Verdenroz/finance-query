@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// Total value locked in a DeFi protocol, with the metadata needed to
 /// identify it.
 ///
-/// Obtain via [`CryptoCoin::tvl`](crate::CryptoCoin::tvl).
+/// Obtain via `CryptoCoin::tvl`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -51,7 +51,7 @@ pub struct ChainAllocation {
 
 /// One point of a protocol's TVL history.
 ///
-/// Obtain via [`CryptoCoin::tvl_history`](crate::CryptoCoin::tvl_history).
+/// Obtain via `CryptoCoin::tvl_history`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -64,7 +64,7 @@ pub struct TvlPoint {
 
 /// Aggregate value locked on one blockchain.
 ///
-/// Obtain via [`defi::chains`](crate::defi::chains).
+/// Obtain via `defi::chains`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -83,7 +83,7 @@ pub struct ChainTvl {
 
 /// Circulating supply of one stablecoin.
 ///
-/// Obtain via [`defi::stablecoins`](crate::defi::stablecoins).
+/// Obtain via `defi::stablecoins`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]

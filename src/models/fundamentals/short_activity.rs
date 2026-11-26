@@ -1,6 +1,6 @@
 //! Short interest, short volume, and share float models.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route; Polygon is currently the only provider.
 
 use serde::{Deserialize, Serialize};

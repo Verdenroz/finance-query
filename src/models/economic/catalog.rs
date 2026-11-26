@@ -1,6 +1,6 @@
 //! Discovery models for the macro-economic series universe.
 //!
-//! Served through the [`Capability::ECONOMIC`](crate::Capability::ECONOMIC)
+//! Served through the [`Capability::ECONOMIC`](finance_query_types::Capability::ECONOMIC)
 //! route; FRED is currently the only provider. These answer "which series
 //! exist" — [`EconomicSeries`](super::EconomicSeries) answers "what does this
 //! series say", and needs an id you already know.

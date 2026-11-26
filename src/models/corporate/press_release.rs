@@ -1,6 +1,6 @@
 //! Company press-release model.
 //!
-//! Served through the [`Capability::CORPORATE`](crate::Capability::CORPORATE)
+//! Served through the [`Capability::CORPORATE`](finance_query_types::Capability::CORPORATE)
 //! route; FMP is currently the only provider. Distinct from
 //! [`News`](super::news::News) — these are the company's own releases, not
 //! press coverage.

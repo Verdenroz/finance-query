@@ -1,6 +1,6 @@
 //! US Treasury securities auction models.
 //!
-//! Served through the [`Capability::ECONOMIC`](crate::Capability::ECONOMIC)
+//! Served through the [`Capability::ECONOMIC`](finance_query_types::Capability::ECONOMIC)
 //! route from US Treasury FiscalData. [`TreasuryAuction`] covers auctions that
 //! have been announced or settled; [`UpcomingAuction`] covers the announced
 //! schedule ahead of the auction date.
@@ -102,13 +102,11 @@ pub struct UpcomingAuction {
     pub issue_date: String,
 }
 
-/// Which auctions [`EconomicCatalog::treasury_auctions`] should return.
+/// Which auctions `EconomicCatalog::treasury_auctions` should return.
 ///
 /// Every field is optional; the default asks for the most recent auctions of
 /// every type. Build one with [`TreasuryAuctionQuery::new`] and the chainable
 /// setters.
-///
-/// [`EconomicCatalog::treasury_auctions`]: crate::domains::EconomicCatalog::treasury_auctions
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct TreasuryAuctionQuery {

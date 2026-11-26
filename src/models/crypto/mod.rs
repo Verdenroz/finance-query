@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 
 /// A provider-agnostic cryptocurrency quote.
 ///
-/// Obtain via [`Providers::crypto`](crate::Providers::crypto) then
-/// [`.quote()`](crate::domains::CryptoCoin::quote). Supported providers:
+/// Obtain via `Providers::crypto` then
+/// `.quote()`. Supported providers:
 /// Alpha Vantage, CoinGecko, FMP, Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
@@ -43,7 +43,7 @@ pub struct CryptoQuote {
 
 /// A cryptocurrency quote from CoinGecko.
 ///
-/// Obtain via [`crypto::coins`](crate::crypto::coins) or [`crypto::coin`](crate::crypto::coin).
+/// Obtain via `crypto::coins` or `crypto::coin`.
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
@@ -73,7 +73,7 @@ pub struct CoinQuote {
 
 /// A coin trending in the last 24h, from CoinGecko's `/search/trending`.
 ///
-/// Obtain via [`Market::crypto_trending`](crate::domains::Market::crypto_trending).
+/// Obtain via `Market::crypto_trending`.
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
@@ -95,7 +95,7 @@ pub struct TrendingCoin {
 
 /// Aggregate global cryptocurrency market statistics, from CoinGecko's `/global`.
 ///
-/// Obtain via [`Market::crypto_global`](crate::domains::Market::crypto_global).
+/// Obtain via `Market::crypto_global`.
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
