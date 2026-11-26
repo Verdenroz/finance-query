@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- DataFrames for series, sparks, facts and streams (#717)
+- Nested row frames for DataFrame conversions (#714)
 - DataFrame for remaining flat types (#709)
 - DataFrame conversion for batch financials (#706)
 - ToDataFrame trait impls for wrapper frames (#702)
@@ -30,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Yahoo quote and FRED calendar parsing (#710)
 - Skip undated Polygon statement rows (#705)
+
+### ⚡ Performance
+
+- Iterate mfi, cmo and ema loops without indexing (#719)
+
+### 📝 Documentation
+
+- Nested, list, series and streaming DataFrames (#718)
 
 ### 📦 Dependencies
 
@@ -105,17 +115,24 @@ ADDED    finance_query::indicators::summary::SuperTrendData::to_dataframe
 ADDED    finance_query::indicators::zigzag::ZigZagPoint::to_dataframe
 ADDED    finance_query::models::calendar::CalendarEvent::vec_to_dataframe
 ADDED    finance_query::models::calendar::market::MarketCalendarEntry::vec_to_dataframe
+ADDED    finance_query::models::chart::dividend_analytics::DividendAnalytics::to_dataframe
 ADDED    finance_query::models::chart::events::CapitalGain::to_dataframe
 ADDED    finance_query::models::chart::events::Split::to_dataframe
 ADDED    finance_query::models::chart::meta::ChartMeta::to_dataframe
+ADDED    finance_query::models::chart::spark::Spark::meta_dataframe
+ADDED    finance_query::models::chart::spark::Spark::to_dataframe
 ADDED    finance_query::models::chart::stock_bars::StockBar::to_dataframe
 ADDED    finance_query::models::commodities::CommodityQuote::to_dataframe
 ADDED    finance_query::models::corporate::asset_profile::AssetProfile::to_dataframe
+ADDED    finance_query::models::corporate::asset_profile::AssetProfile::to_nested_dataframe
 ADDED    finance_query::models::corporate::asset_profile::CompanyOfficer::to_dataframe
 ADDED    finance_query::models::corporate::calendar_events::CalendarEvents::to_dataframe
+ADDED    finance_query::models::corporate::earnings::Earnings::to_dataframe
+ADDED    finance_query::models::corporate::earnings::Earnings::to_nested_dataframe
 ADDED    finance_query::models::corporate::earnings_transcript::EarningsTranscript::to_dataframe
 ADDED    finance_query::models::corporate::equity_performance::EquityPerformance::to_dataframe
 ADDED    finance_query::models::corporate::fund_performance::FundPerformance::to_dataframe
+ADDED    finance_query::models::corporate::fund_performance::FundPerformance::to_nested_dataframe
 ADDED    finance_query::models::corporate::fund_profile::FundProfile::to_dataframe
 ADDED    finance_query::models::corporate::governance::EmployeeCount::to_dataframe
 ADDED    finance_query::models::corporate::governance::ExecutiveCompensation::to_dataframe
@@ -126,6 +143,9 @@ ADDED    finance_query::models::corporate::press_release::PressRelease::to_dataf
 ADDED    finance_query::models::corporate::recommendation::symbol::SimilarSymbol::to_dataframe
 ADDED    finance_query::models::corporate::summary_profile::SummaryProfile::to_dataframe
 ADDED    finance_query::models::corporate::top_holdings::TopHoldings::to_dataframe
+ADDED    finance_query::models::corporate::top_holdings::TopHoldings::to_nested_dataframe
+ADDED    finance_query::models::corporate::transcript::Transcript::to_dataframe
+ADDED    finance_query::models::corporate::transcript::Transcript::to_nested_dataframe
 ADDED    finance_query::models::corporate::transcript::TranscriptWithMeta::to_dataframe
 ADDED    finance_query::models::crypto::CoinQuote::to_dataframe
 ADDED    finance_query::models::crypto::CryptoQuote::to_dataframe
@@ -134,6 +154,7 @@ ADDED    finance_query::models::crypto::TrendingCoin::to_dataframe
 ADDED    finance_query::models::crypto::defi::ChainAllocation::to_dataframe
 ADDED    finance_query::models::crypto::defi::ChainTvl::to_dataframe
 ADDED    finance_query::models::crypto::defi::ProtocolTvl::to_dataframe
+ADDED    finance_query::models::crypto::defi::ProtocolTvl::to_nested_dataframe
 ADDED    finance_query::models::crypto::defi::StablecoinSupply::to_dataframe
 ADDED    finance_query::models::crypto::defi::TvlPoint::to_dataframe
 ADDED    finance_query::models::discovery::figi::SecurityMapping::to_dataframe
@@ -147,8 +168,11 @@ ADDED    finance_query::models::discovery::reference::SymbolDetails::to_datafram
 ADDED    finance_query::models::discovery::reference::SymbolMatch::to_dataframe
 ADDED    finance_query::models::discovery::screeners::quote::ScreenerQuote::to_dataframe
 ADDED    finance_query::models::discovery::search::news::SearchNews::to_dataframe
+ADDED    finance_query::models::discovery::search::news::SearchNews::to_nested_dataframe
 ADDED    finance_query::models::discovery::search::quote::SearchQuote::to_dataframe
 ADDED    finance_query::models::discovery::search::research::ResearchReport::to_dataframe
+ADDED    finance_query::models::discovery::search::response::SearchResults::to_dataframe
+ADDED    finance_query::models::discovery::search::response::SearchResults::to_nested_dataframe
 ADDED    finance_query::models::discovery::search::thumbnail::ThumbnailResolution::to_dataframe
 ADDED    finance_query::models::discovery::trending::response::TrendingQuote::to_dataframe
 ADDED    finance_query::models::economic::MacroObservation::to_dataframe
@@ -160,6 +184,7 @@ ADDED    finance_query::models::economic::catalog::EconomicRelease::to_dataframe
 ADDED    finance_query::models::economic::catalog::EconomicSeriesMatch::to_dataframe
 ADDED    finance_query::models::filings::cik::CikEntry::to_dataframe
 ADDED    finance_query::models::filings::company_facts::FactUnit::to_dataframe
+ADDED    finance_query::models::filings::company_facts::FactsByTaxonomy::to_dataframe
 ADDED    finance_query::models::filings::filing_index::EdgarFilingIndexItem::to_dataframe
 ADDED    finance_query::models::filings::full_text::FilingSearchHit::to_dataframe
 ADDED    finance_query::models::filings::ownership::CongressionalTrade::to_dataframe
@@ -173,6 +198,10 @@ ADDED    finance_query::models::filings::sections::FilingSection::to_dataframe
 ADDED    finance_query::models::filings::sections::RiskFactor::to_dataframe
 ADDED    finance_query::models::filings::submissions::EdgarFiling::to_dataframe
 ADDED    finance_query::models::filings::submissions::EdgarFilingFile::to_dataframe
+ADDED    finance_query::models::filings::submissions::EdgarFilings::to_dataframe
+ADDED    finance_query::models::filings::submissions::EdgarFilings::to_nested_dataframe
+ADDED    finance_query::models::filings::submissions::EdgarSubmissions::to_dataframe
+ADDED    finance_query::models::filings::submissions::EdgarSubmissions::to_nested_dataframe
 ADDED    finance_query::models::forex::ForexQuote::to_dataframe
 ADDED    finance_query::models::fundamentals::company_profile::CompanyProfile::to_dataframe
 ADDED    finance_query::models::fundamentals::consensus::PriceTargetConsensus::to_dataframe
@@ -182,6 +211,8 @@ ADDED    finance_query::models::fundamentals::default_key_statistics::DefaultKey
 ADDED    finance_query::models::fundamentals::earnings_surprise::EarningsSurprise::to_dataframe
 ADDED    finance_query::models::fundamentals::etf::EtfCountryWeighting::to_dataframe
 ADDED    finance_query::models::fundamentals::etf::EtfHolding::to_dataframe
+ADDED    finance_query::models::fundamentals::etf::EtfProfile::to_dataframe
+ADDED    finance_query::models::fundamentals::etf::EtfProfile::to_nested_dataframe
 ADDED    finance_query::models::fundamentals::etf::EtfSectorWeighting::to_dataframe
 ADDED    finance_query::models::fundamentals::financial_data::FinancialData::to_dataframe
 ADDED    finance_query::models::fundamentals::grading_history::GradingAction::to_dataframe
@@ -199,22 +230,50 @@ ADDED    finance_query::models::indices::IndexQuote::to_dataframe
 ADDED    finance_query::models::market::currencies::response::Currency::to_dataframe
 ADDED    finance_query::models::market::exchanges::Exchange::to_dataframe
 ADDED    finance_query::models::market::hours::response::MarketTime::to_dataframe
+ADDED    finance_query::models::market::index_trend::IndexTrend::to_dataframe
+ADDED    finance_query::models::market::index_trend::IndexTrend::to_nested_dataframe
+ADDED    finance_query::models::market::index_trend::IndustryTrend::to_dataframe
+ADDED    finance_query::models::market::index_trend::IndustryTrend::to_nested_dataframe
+ADDED    finance_query::models::market::index_trend::SectorTrend::to_dataframe
+ADDED    finance_query::models::market::index_trend::SectorTrend::to_nested_dataframe
 ADDED    finance_query::models::market::index_trend::TrendEstimate::to_dataframe
+ADDED    finance_query::models::market::industries::response::IndustryData::to_dataframe
+ADDED    finance_query::models::market::industries::response::IndustryData::to_nested_dataframe
 ADDED    finance_query::models::market::market_summary::response::MarketSummaryQuote::to_dataframe
+ADDED    finance_query::models::market::market_summary::response::MarketSummaryQuote::to_nested_dataframe
+ADDED    finance_query::models::market::market_summary::response::SparkData::to_dataframe
 ADDED    finance_query::models::market::performance::IndustryPe::to_dataframe
 ADDED    finance_query::models::market::performance::MoverQuote::to_dataframe
 ADDED    finance_query::models::market::performance::SectorPe::to_dataframe
 ADDED    finance_query::models::market::performance::SectorPerformance::to_dataframe
+ADDED    finance_query::models::market::performance::SectorPerformanceHistory::to_dataframe
+ADDED    finance_query::models::market::performance::SectorPerformanceHistory::to_nested_dataframe
+ADDED    finance_query::models::market::sectors::response::SectorData::to_dataframe
+ADDED    finance_query::models::market::sectors::response::SectorData::to_nested_dataframe
+ADDED    finance_query::models::options::chain::OptionChain::to_dataframe
+ADDED    finance_query::models::options::chain::OptionChain::to_nested_dataframe
 ADDED    finance_query::models::options::chain::OptionsQuote::to_dataframe
 ADDED    finance_query::models::options::contract::OptionContract::to_dataframe
 ADDED    finance_query::models::quote::data::Quote::to_dataframe
 ADDED    finance_query::models::quote::price::Price::to_dataframe
 ADDED    finance_query::models::quote::quote_type::QuoteTypeData::to_dataframe
+ADDED    finance_query::models::quote::response::QuoteSummaryResponse::to_dataframe
+ADDED    finance_query::models::quote::response::QuoteSummaryResponse::to_nested_dataframe
 ADDED    finance_query::models::quote::snapshot::MarketSnapshot::to_dataframe
 ADDED    finance_query::models::sentiment::SymbolSentiment::to_dataframe
+ADDED    finance_query::models::sentiment::response::FearAndGreed::to_dataframe
 ADDED    finance_query::models::sentiment::score::Sentiment::to_dataframe
 ADDED    finance_query::quote::TrendEstimate
 ADDED    finance_query::risk::RiskSummary::to_dataframe
+ADDED    finance_query::streaming::alerts::AlertEvent::to_dataframe
+ADDED    finance_query::streaming::book::BookLevel::to_dataframe
+ADDED    finance_query::streaming::book::OrderBookUpdate::to_dataframe
+ADDED    finance_query::streaming::book::OrderBookUpdate::to_nested_dataframe
+ADDED    finance_query::streaming::economic::SeriesUpdate::to_dataframe
+ADDED    finance_query::streaming::options::Greeks::to_dataframe
+ADDED    finance_query::streaming::options::OptionContractUpdate::to_dataframe
+ADDED    finance_query::streaming::pricing::PriceUpdate::to_dataframe
+ADDED    finance_query::streaming::trades::TradeTick::to_dataframe
 REMOVED  finance_query::constants::enums::frequency::Frequency
 REMOVED  finance_query::constants::enums::interval::Interval
 REMOVED  finance_query::constants::enums::interval::Interval::as_str
@@ -240,13 +299,25 @@ REMOVED  finance_query::providers::provider::CustomId
 REMOVED  finance_query::providers::provider::Provider
 REMOVED  finance_query::providers::provider::Provider::capabilities
 REMOVED  finance_query::providers::provider::Provider::custom
+CHANGED  finance_query::DividendAnalytics (body)
+CHANGED  finance_query::EdgarFilings (body)
 CHANGED  finance_query::EdgarSearchSource (signature)
+CHANGED  finance_query::EdgarSubmissions (body)
+CHANGED  finance_query::EtfProfile (body)
 CHANGED  finance_query::FilingSearchHit (signature)
 CHANGED  finance_query::FinancialStatement (signature)
 CHANGED  finance_query::IndicatorsSummary (body)
+CHANGED  finance_query::IndustryData (body)
+CHANGED  finance_query::MarketSummaryQuote (body)
 CHANGED  finance_query::News (signature)
+CHANGED  finance_query::OptionChain (body)
+CHANGED  finance_query::QuoteSummaryResponse (body)
 CHANGED  finance_query::Recommendation (signature)
 CHANGED  finance_query::SearchNews (signature)
+CHANGED  finance_query::SearchResults (body)
+CHANGED  finance_query::SectorData (body)
+CHANGED  finance_query::SectorPerformanceHistory (body)
+CHANGED  finance_query::Transcript (body)
 CHANGED  finance_query::backtesting::BacktestError (signature)
 CHANGED  finance_query::backtesting::Position (body)
 CHANGED  finance_query::backtesting::Signal (body)
@@ -267,34 +338,77 @@ CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
 CHANGED  finance_query::defi::ProtocolTvl (signature)
 CHANGED  finance_query::gdelt::News (signature)
 CHANGED  finance_query::indicators::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::cmo (body)
+CHANGED  finance_query::indicators::cmo::cmo (body)
 CHANGED  finance_query::indicators::heikin_ashi (body)
 CHANGED  finance_query::indicators::heikin_ashi::heikin_ashi (body)
+CHANGED  finance_query::indicators::mfi (body)
+CHANGED  finance_query::indicators::mfi::mfi (body)
 CHANGED  finance_query::indicators::summary::IndicatorsSummary (body)
+CHANGED  finance_query::models::chart::dividend_analytics::DividendAnalytics (body)
+CHANGED  finance_query::models::corporate::asset_profile::AssetProfile (body)
 CHANGED  finance_query::models::corporate::calendar_events::CalendarEvents (body)
+CHANGED  finance_query::models::corporate::earnings::Earnings (body)
+CHANGED  finance_query::models::corporate::earnings::EarningsChart (body)
+CHANGED  finance_query::models::corporate::earnings::FinancialsChart (body)
 CHANGED  finance_query::models::corporate::earnings_trend::EarningsTrendPeriod (body)
 CHANGED  finance_query::models::corporate::equity_performance::EquityPerformance (body)
+CHANGED  finance_query::models::corporate::fund_performance::AnnualTotalReturns (body)
 CHANGED  finance_query::models::corporate::fund_performance::FundPerformance (body)
+CHANGED  finance_query::models::corporate::fund_performance::RiskOverviewStatistics (body)
+CHANGED  finance_query::models::corporate::fund_performance::RiskOverviewStatisticsCat (body)
 CHANGED  finance_query::models::corporate::fund_profile::FundProfile (body)
 CHANGED  finance_query::models::corporate::news::scraped::News (signature)
 CHANGED  finance_query::models::corporate::recommendation::data::Recommendation (signature)
+CHANGED  finance_query::models::corporate::sec_filings::SecFiling (body)
 CHANGED  finance_query::models::corporate::top_holdings::TopHoldings (body)
 CHANGED  finance_query::models::corporate::transcript::Paragraph (body)
+CHANGED  finance_query::models::corporate::transcript::Sentence (body)
 CHANGED  finance_query::models::corporate::transcript::SpeakerMapping (body)
+CHANGED  finance_query::models::corporate::transcript::Transcript (body)
+CHANGED  finance_query::models::corporate::transcript::TranscriptContent (body)
+CHANGED  finance_query::models::corporate::transcript::TranscriptData (body)
 CHANGED  finance_query::models::crypto::defi::ProtocolTvl (signature)
 CHANGED  finance_query::models::discovery::search::news::SearchNews (signature)
+CHANGED  finance_query::models::discovery::search::response::SearchResults (body)
+CHANGED  finance_query::models::discovery::search::thumbnail::NewsThumbnail (body)
+CHANGED  finance_query::models::filings::filing_index::EdgarFilingIndexDirectory (body)
 CHANGED  finance_query::models::filings::full_text::FilingSearchHit (signature)
 CHANGED  finance_query::models::filings::search::EdgarSearchSource (signature)
+CHANGED  finance_query::models::filings::submissions::EdgarFilings (body)
+CHANGED  finance_query::models::filings::submissions::EdgarSubmissions (body)
 CHANGED  finance_query::models::fundamentals::default_key_statistics::DefaultKeyStatistics (signature)
+CHANGED  finance_query::models::fundamentals::etf::EtfProfile (body)
 CHANGED  finance_query::models::fundamentals::response::FinancialStatement (signature)
 CHANGED  finance_query::models::fundamentals::summary_detail::SummaryDetail (signature)
+CHANGED  finance_query::models::market::index_trend::IndexTrend (body)
+CHANGED  finance_query::models::market::index_trend::IndustryTrend (body)
+CHANGED  finance_query::models::market::index_trend::SectorTrend (body)
+CHANGED  finance_query::models::market::industries::response::IndustryData (body)
+CHANGED  finance_query::models::market::market_summary::response::MarketSummaryQuote (body)
+CHANGED  finance_query::models::market::performance::SectorPerformanceHistory (body)
+CHANGED  finance_query::models::market::sectors::response::SectorData (body)
+CHANGED  finance_query::models::options::chain::OptionChain (body)
+CHANGED  finance_query::models::quote::response::QuoteSummaryResponse (body)
 CHANGED  finance_query::providers::adapter::markets::CalendarProvider (body)
+CHANGED  finance_query::quote::AssetProfile (body)
 CHANGED  finance_query::quote::CalendarEvents (body)
 CHANGED  finance_query::quote::DefaultKeyStatistics (signature)
+CHANGED  finance_query::quote::Earnings (body)
 CHANGED  finance_query::quote::EquityPerformance (body)
 CHANGED  finance_query::quote::FundPerformance (body)
 CHANGED  finance_query::quote::FundProfile (body)
+CHANGED  finance_query::quote::IndexTrend (body)
+CHANGED  finance_query::quote::IndustryTrend (body)
+CHANGED  finance_query::quote::SectorTrend (body)
 CHANGED  finance_query::quote::SummaryDetail (signature)
 CHANGED  finance_query::quote::TopHoldings (body)
+CHANGED  finance_query::streaming::OptionContractUpdate (body)
+CHANGED  finance_query::streaming::OrderBookUpdate (body)
+CHANGED  finance_query::streaming::TradeTick (body)
+CHANGED  finance_query::streaming::book::OrderBookUpdate (body)
+CHANGED  finance_query::streaming::options::OptionContractUpdate (body)
+CHANGED  finance_query::streaming::trades::TradeTick (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 ```
 
