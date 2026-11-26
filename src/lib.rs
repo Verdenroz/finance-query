@@ -377,9 +377,9 @@ pub use finance::{EarningsCalendarEntry, IpoCalendarEntry, earnings_calendar, ip
 
 pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
-    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse, Tickers,
-    TickersBuilder,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
+    BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
+    Tickers, TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]
