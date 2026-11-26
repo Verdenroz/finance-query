@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- What a consumer has to do. "Nothing" is a useful answer. -->
 <!-- /soothfast:notes -->
 
+### 💥 Breaking changes
+
+- Backtest outputs as fractions (#741)
+
 ### ✨ Features
 
 - DataFrames for Vec, slices and remaining types (#726)
@@ -31,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Polygon timestamps in seconds (#737)
 - Explicit TLS provider and bounded stream start (#731)
 - Point bench covers at the code they run (#725)
 - Yahoo quote and FRED calendar parsing (#710)
@@ -60,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Move DataFrame plumbing for models split (#736)
+- Move request types out of models (#735)
 - Trim per-PR jobs (#733)
 - Cover Yahoo pricing decode and batch parse (#722)
 - Split backtesting into its own crate (#711)
@@ -280,6 +287,12 @@ ADDED    finance_query::models::sentiment::response::FearAndGreed::to_dataframe
 ADDED    finance_query::models::sentiment::score::Sentiment::to_dataframe
 ADDED    finance_query::prelude
 ADDED    finance_query::prelude::ToDataFrame
+ADDED    finance_query::providers::page::PageCursor
+ADDED    finance_query::providers::page::PageCursor::continuation
+ADDED    finance_query::providers::page::ProviderPage
+ADDED    finance_query::providers::stock_bars::StockBarsRequest
+ADDED    finance_query::providers::stock_bars::StockBarsRequest::with_sort
+ADDED    finance_query::providers::stock_listing::StockListingRequest
 ADDED    finance_query::quote::TrendEstimate
 ADDED    finance_query::risk::RiskSummary::to_dataframe
 ADDED    finance_query::streaming::alerts::AlertEvent::to_dataframe
@@ -291,6 +304,7 @@ ADDED    finance_query::streaming::options::Greeks::to_dataframe
 ADDED    finance_query::streaming::options::OptionContractUpdate::to_dataframe
 ADDED    finance_query::streaming::pricing::PriceUpdate::to_dataframe
 ADDED    finance_query::streaming::trades::TradeTick::to_dataframe
+REMOVED  finance_query::backtesting::result::metrics::PerformanceMetrics::max_drawdown_percentage
 REMOVED  finance_query::constants::enums::frequency::Frequency
 REMOVED  finance_query::constants::enums::interval::Interval
 REMOVED  finance_query::constants::enums::interval::Interval::as_str
@@ -310,6 +324,12 @@ REMOVED  finance_query::constants::sectors::Sector
 REMOVED  finance_query::indicators::Indicator::warmup_bars
 REMOVED  finance_query::models::chart::candle::Candle
 REMOVED  finance_query::models::chart::events::Dividend
+REMOVED  finance_query::models::chart::stock_bars::StockBarsRequest
+REMOVED  finance_query::models::chart::stock_bars::StockBarsRequest::with_sort
+REMOVED  finance_query::models::discovery::listings::StockListingRequest
+REMOVED  finance_query::models::pagination::PageCursor
+REMOVED  finance_query::models::pagination::PageCursor::continuation
+REMOVED  finance_query::models::pagination::ProviderPage
 REMOVED  finance_query::providers::capability::Capability
 REMOVED  finance_query::providers::capability::Capability::name
 REMOVED  finance_query::providers::provider::CustomId
@@ -337,24 +357,30 @@ CHANGED  finance_query::SectorData (body)
 CHANGED  finance_query::SectorPerformanceHistory (body)
 CHANGED  finance_query::Transcript (body)
 CHANGED  finance_query::backtesting::BacktestError (signature)
-CHANGED  finance_query::backtesting::BenchmarkMetrics (body)
-CHANGED  finance_query::backtesting::ComparisonRow (body)
-CHANGED  finance_query::backtesting::PerformanceMetrics (body)
+CHANGED  finance_query::backtesting::BenchmarkMetrics (signature)
+CHANGED  finance_query::backtesting::ComparisonRow (signature)
+CHANGED  finance_query::backtesting::EquityPoint (signature)
+CHANGED  finance_query::backtesting::MonteCarloResult (signature)
+CHANGED  finance_query::backtesting::PerformanceMetrics (signature)
 CHANGED  finance_query::backtesting::Position (body)
 CHANGED  finance_query::backtesting::Signal (body)
 CHANGED  finance_query::backtesting::SignalRecord (body)
 CHANGED  finance_query::backtesting::Strategy (body)
 CHANGED  finance_query::backtesting::StrategyContext (body)
-CHANGED  finance_query::backtesting::Trade (body)
-CHANGED  finance_query::backtesting::comparison::ComparisonRow (body)
+CHANGED  finance_query::backtesting::Trade (signature)
+CHANGED  finance_query::backtesting::comparison::BacktestComparison::ranked_by (body)
+CHANGED  finance_query::backtesting::comparison::ComparisonRow (signature)
 CHANGED  finance_query::backtesting::condition::Condition (body)
 CHANGED  finance_query::backtesting::condition::HtfIndicatorSpec (body)
 CHANGED  finance_query::backtesting::error::BacktestError (signature)
+CHANGED  finance_query::backtesting::monte_carlo::MonteCarloResult (signature)
 CHANGED  finance_query::backtesting::position::Position (body)
-CHANGED  finance_query::backtesting::position::Trade (body)
+CHANGED  finance_query::backtesting::position::Position::partial_close (body)
+CHANGED  finance_query::backtesting::position::Trade (signature)
+CHANGED  finance_query::backtesting::result::EquityPoint (signature)
 CHANGED  finance_query::backtesting::result::SignalRecord (body)
-CHANGED  finance_query::backtesting::result::benchmark::BenchmarkMetrics (body)
-CHANGED  finance_query::backtesting::result::metrics::PerformanceMetrics (body)
+CHANGED  finance_query::backtesting::result::benchmark::BenchmarkMetrics (signature)
+CHANGED  finance_query::backtesting::result::metrics::PerformanceMetrics (signature)
 CHANGED  finance_query::backtesting::signal::Signal (body)
 CHANGED  finance_query::backtesting::strategy::Strategy (body)
 CHANGED  finance_query::backtesting::strategy::StrategyContext (body)
