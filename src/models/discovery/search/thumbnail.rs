@@ -6,8 +6,10 @@ use serde::{Deserialize, Serialize};
 
 /// Thumbnail image with multiple resolutions
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct NewsThumbnail {
     /// Available image resolutions
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub resolutions: Option<Vec<ThumbnailResolution>>,
 }
 

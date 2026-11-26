@@ -49,6 +49,7 @@ pub struct TopHoldings {
 
     /// Top holdings in the fund
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub holdings: Option<Vec<Holding>>,
 
     /// Equity holdings valuation metrics
@@ -62,6 +63,7 @@ pub struct TopHoldings {
 
     /// Bond credit ratings distribution
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub bond_ratings: Option<Vec<BondRating>>,
 
     /// Sector weightings distribution (flattened from Yahoo's array format)

@@ -163,6 +163,7 @@ pub struct Paragraph {
     pub text: String,
     /// Sentences in this paragraph.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub sentences: Vec<Sentence>,
     /// Sentiment score for this paragraph (VADER lexicon-based).
     /// Only present when the `sentiment` feature is enabled.
@@ -187,6 +188,7 @@ pub struct Sentence {
     pub text: String,
     /// Individual words with timing and confidence.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub words: Vec<Word>,
 }
 
