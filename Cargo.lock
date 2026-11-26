@@ -1588,6 +1588,7 @@ dependencies = [
  "criterion",
  "csv",
  "ct2rs",
+ "finance-query-backtesting",
  "finance-query-derive",
  "finance-query-types",
  "flate2",
@@ -1596,7 +1597,6 @@ dependencies = [
  "percent-encoding",
  "polars",
  "prost",
- "rayon",
  "regex",
  "reqwest",
  "serde",
@@ -1611,6 +1611,21 @@ dependencies = [
  "tracing",
  "vader_sentiment",
  "zip",
+]
+
+[[package]]
+name = "finance-query-backtesting"
+version = "3.4.0"
+dependencies = [
+ "chrono",
+ "finance-query",
+ "finance-query-types",
+ "polars",
+ "rayon",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
 ]
 
 [[package]]

@@ -34,6 +34,7 @@ COPY server/Cargo.toml ./server/
 COPY server/src ./server/src
 COPY finance-query-derive ./finance-query-derive
 COPY finance-query-types ./finance-query-types
+COPY finance-query-backtesting ./finance-query-backtesting
 COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 COPY finance-query-mcp/src ./finance-query-mcp/src
 RUN cargo chef prepare --recipe-path recipe.json
@@ -63,6 +64,7 @@ COPY server/Cargo.toml ./server/
 COPY server/src ./server/src
 COPY finance-query-derive ./finance-query-derive
 COPY finance-query-types ./finance-query-types
+COPY finance-query-backtesting ./finance-query-backtesting
 COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 COPY finance-query-mcp/src ./finance-query-mcp/src
 
