@@ -32,6 +32,7 @@ use finance_query::backtesting::condition::{
     Condition, always_false, always_true, has_position, held_for_bars, in_loss, in_profit, is_long,
     is_short, no_position, stop_loss, take_profit, trailing_stop, trailing_take_profit,
 };
+use finance_query::backtesting::portfolio::{PortfolioConfig, PortfolioEngine, SymbolData};
 use finance_query::backtesting::refs::{
     IndicatorRefExt, accumulation_distribution as ref_accumulation_distribution, adx as ref_adx,
     alma as ref_alma, aroon as ref_aroon, atr as ref_atr,
@@ -52,8 +53,9 @@ use finance_query::backtesting::refs::{
 };
 use finance_query::backtesting::resample::{base_to_htf_index, resample};
 use finance_query::backtesting::{
-    BacktestConfig, BacktestEngine, BayesianSearch, GridSearch, MonteCarloConfig, OptimizeMetric,
-    ParamRange, PositionSizing, SmaCrossover, StrategyBuilder,
+    BacktestConfig, BacktestEngine, BayesianSearch, EnsembleMode, EnsembleStrategy, GridSearch,
+    MonteCarloConfig, OptimizeMetric, ParamRange, PositionSizing, RsiReversal, SmaCrossover,
+    StrategyBuilder, WalkForwardConfig,
 };
 use finance_query::crypto::CoinQuote;
 use finance_query::fred::{MacroSeries, TreasuryYield};
@@ -75,7 +77,7 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FearAndGreed, Fetch,
+    Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions, FearAndGreed, Fetch,
     FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News, Operation, Options,
     Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse, Region, Routes,
     ScreenerResults, SearchResults, Ticker, Tickers, TimeRange, Transcript, TrendingQuote,
@@ -982,6 +984,125 @@ fn backtest_result() -> finance_query::backtesting::BacktestResult {
 fn bt_monte_carlo(result: &finance_query::backtesting::BacktestResult) {
     let mc_config = MonteCarloConfig::new().num_simulations(500).seed(42);
     keep(mc_config.run(keep(result)));
+}
+
+fn portfolio_inputs_sized(n: usize) -> (PortfolioConfig, Vec<SymbolData>) {
+    let (config, _) = backtest_inputs_sized(n);
+    let data = ["AAA", "BBB", "CCC"]
+        .into_iter()
+        .map(|symbol| SymbolData::new(symbol, synthetic_candles(n)))
+        .collect();
+    (PortfolioConfig::new(config), data)
+}
+
+#[bench(
+    group = "backtesting",
+    setup_sized = portfolio_inputs_sized,
+    alloc = 78073,
+    complexity = "n",
+    covers = "finance_query::backtesting::PortfolioEngine::run"
+)]
+fn bt_portfolio_3_symbols(input: &(PortfolioConfig, Vec<SymbolData>)) {
+    let (config, data) = input;
+    let engine = PortfolioEngine::new(config.clone());
+    keep(engine.run(keep(data), |_| SmaCrossover::new(10, 20))).unwrap();
+}
+
+#[bench(
+    group = "backtesting",
+    setup = backtest_inputs,
+    alloc = 2695,
+    covers = "finance_query::backtesting::WalkForwardConfig::run"
+)]
+fn bt_walk_forward(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let grid = GridSearch::new()
+        .param("fast", ParamRange::int_range(5, 10, 5))
+        .param("slow", ParamRange::int_range(20, 30, 10))
+        .optimize_for(OptimizeMetric::SharpeRatio);
+    let walk_forward = WalkForwardConfig::new(grid, config.clone())
+        .in_sample_bars(300)
+        .out_of_sample_bars(100);
+    keep(
+        walk_forward
+            .run(keep("BENCH"), keep(candles), |params| {
+                SmaCrossover::new(
+                    params["fast"].as_int() as usize,
+                    params["slow"].as_int() as usize,
+                )
+            })
+            .unwrap(),
+    );
+}
+
+#[bench(
+    group = "backtesting",
+    setup = backtest_inputs,
+    alloc = 273,
+    covers = "finance_query::backtesting::EnsembleStrategy"
+)]
+fn bt_ensemble(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let strategy = EnsembleStrategy::new("ensemble")
+        .add(SmaCrossover::new(10, 20), 2.0)
+        .add(RsiReversal::new(14), 1.0)
+        .mode(EnsembleMode::WeightedMajority)
+        .build();
+    let engine = BacktestEngine::new(config.clone());
+    keep(engine.run(keep("BENCH"), keep(candles), strategy)).unwrap();
+}
+
+#[fixture]
+fn dividend_inputs() -> (BacktestConfig, Vec<Candle>, Vec<Dividend>) {
+    let (config, candles) = backtest_inputs();
+    let dividends = (1..=16)
+        .map(|i| {
+            serde_json::from_value(serde_json::json!({
+                "timestamp": 1_700_000_000_i64 + i * 60 * 86_400,
+                "amount": 0.5,
+            }))
+            .unwrap()
+        })
+        .collect();
+    (config, candles, dividends)
+}
+
+#[bench(
+    group = "backtesting",
+    setup = dividend_inputs,
+    alloc = 159,
+    covers = "finance_query::backtesting::BacktestEngine::run_with_dividends"
+)]
+fn bt_run_with_dividends(input: &(BacktestConfig, Vec<Candle>, Vec<Dividend>)) {
+    let (config, candles, dividends) = input;
+    let engine = BacktestEngine::new(config.clone());
+    keep(
+        engine
+            .run_with_dividends(
+                keep("BENCH"),
+                keep(candles),
+                SmaCrossover::new(10, 20),
+                keep(dividends),
+            )
+            .unwrap(),
+    );
+}
+
+#[bench(
+    group = "backtesting",
+    setup = backtest_inputs,
+    alloc = 115,
+    covers = "finance_query::backtesting::StrategyBuilder::regime_filter"
+)]
+fn bt_regime_filter(input: &(BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let strategy = StrategyBuilder::new("regime")
+        .regime_filter(ref_sma(50).above_ref(ref_sma(200)))
+        .entry(ref_ema(10).crosses_above_ref(ref_ema(30)))
+        .exit(ref_ema(10).crosses_below_ref(ref_ema(30)))
+        .build();
+    let engine = BacktestEngine::new(config.clone());
+    keep(engine.run(keep("BENCH"), keep(candles), strategy)).unwrap();
 }
 
 // ── Strategy DSL: refs and conditions ────────────────────────────────────────
