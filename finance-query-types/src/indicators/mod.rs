@@ -66,6 +66,8 @@ mod heikin_ashi;
 mod hma;
 mod ichimoku;
 mod keltner_channels;
+#[cfg(test)]
+mod loop_identity;
 mod macd;
 mod mcginley_dynamic;
 mod mfi;
