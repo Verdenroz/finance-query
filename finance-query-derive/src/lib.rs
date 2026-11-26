@@ -90,8 +90,12 @@ use syn::{
 ///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
 ///   `{field}_dataframe()` for that field's rows, plus `to_nested_dataframe()` and
 ///   `vec_to_nested_dataframe()` with one `List(Struct)` column per nested field.
-///   A `None` or empty field is an empty list. It cannot be combined with
-///   `skip`, `list` or `flatten`.
+///   A `None` or empty field is an empty list. The same methods are the
+///   `ToDataFrame` trait's `to_nested_dataframe` and `vec_to_nested_dataframe`.
+///   A single `T` or `Option<T>` field uses `T`'s nested frame, so a wrapper that
+///   only holds row lists becomes one row with its own `List(Struct)` columns;
+///   `Vec<T>` child frames stay flat. It cannot be combined with `skip`, `list`
+///   or `flatten`.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
 ///   `finance_query` re-exported under another path.
 ///

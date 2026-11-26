@@ -46,6 +46,19 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
     let pl = quote! { #krate::polars::prelude };
     let nested = nested_fields(fields)?;
     let nested_methods = nested_methods(&nested, &krate, &pl);
+    let trait_nested = if nested.is_empty() {
+        TokenStream::new()
+    } else {
+        quote! {
+            fn to_nested_dataframe(&self) -> #pl::PolarsResult<#pl::DataFrame> {
+                Self::to_nested_dataframe(self)
+            }
+
+            fn vec_to_nested_dataframe(items: &[Self]) -> #pl::PolarsResult<#pl::DataFrame> {
+                Self::vec_to_nested_dataframe(items)
+            }
+        }
+    };
 
     Ok(quote! {
         impl #impl_ty {
@@ -83,6 +96,7 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
             fn vec_to_dataframe(items: &[Self]) -> #pl::PolarsResult<#pl::DataFrame> {
                 Self::vec_to_dataframe(items)
             }
+            #trait_nested
         }
 
         impl #krate::__dataframe::Columns for #impl_ty {
@@ -419,11 +433,11 @@ fn nested_methods(nested: &[NestedField], krate: &Path, pl: &TokenStream) -> Tok
                 let rows = rows_of(field, quote! { self });
                 quote! { <#inner as #krate::ToDataFrame>::vec_to_dataframe(#rows) }
             }
-            Shape::One => quote! { <#inner as #krate::ToDataFrame>::to_dataframe(&self.#ident) },
+            Shape::One => quote! { <#inner as #krate::ToDataFrame>::to_nested_dataframe(&self.#ident) },
             Shape::OptionOne => quote! {
                 match &self.#ident {
-                    ::core::option::Option::Some(item) => <#inner as #krate::ToDataFrame>::to_dataframe(item),
-                    ::core::option::Option::None => <#inner as #krate::ToDataFrame>::vec_to_dataframe(&[]),
+                    ::core::option::Option::Some(item) => <#inner as #krate::ToDataFrame>::to_nested_dataframe(item),
+                    ::core::option::Option::None => <#inner as #krate::ToDataFrame>::vec_to_nested_dataframe(&[]),
                 }
             },
         };

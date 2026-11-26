@@ -45,6 +45,24 @@ pub trait ToDataFrame {
             Some(first) => frames.try_fold(first?, |acc, frame| acc.vstack(&frame?)),
         }
     }
+
+    /// Converts this value to a DataFrame that also carries its nested rows.
+    ///
+    /// Types with `#[dataframe(nested)]` fields add one `List(Struct)` column
+    /// per field. The default is [`to_dataframe`](Self::to_dataframe).
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        self.to_dataframe()
+    }
+
+    /// Converts a slice of values to one DataFrame that also carries nested rows.
+    ///
+    /// The default is [`vec_to_dataframe`](Self::vec_to_dataframe).
+    fn vec_to_nested_dataframe(items: &[Self]) -> PolarsResult<DataFrame>
+    where
+        Self: Sized,
+    {
+        Self::vec_to_dataframe(items)
+    }
 }
 
 /// Support code for `#[derive(ToDataFrame)]`. Not public API.
@@ -82,20 +100,21 @@ pub mod derive {
 
     /// One `List(Struct)` column holding each parent's child rows as a list of structs.
     ///
-    /// An empty slice is an empty list. The struct fields come from the
+    /// An empty slice is an empty list. Child rows use their own nested frame,
+    /// so nesting recurses. The struct fields come from the
     /// child's zero-row frame so the dtype holds when every list is empty.
     pub fn nested_column<'a, T: ToDataFrame + 'a>(
         name: &str,
         rows: impl ExactSizeIterator<Item = &'a [T]>,
     ) -> PolarsResult<Column> {
-        let dtype = T::vec_to_dataframe(&[])?
+        let dtype = T::vec_to_nested_dataframe(&[])?
             .into_struct(PlSmallStr::EMPTY)
             .into_series()
             .dtype()
             .clone();
         let mut builder = get_list_builder(&dtype, rows.len(), rows.len(), name.into());
         for items in rows {
-            let child = T::vec_to_dataframe(items)?;
+            let child = T::vec_to_nested_dataframe(items)?;
             builder.append_series(&child.into_struct(PlSmallStr::EMPTY).into_series())?;
         }
         Ok(Column::from(builder.finish().into_series()))

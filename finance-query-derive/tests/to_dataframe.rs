@@ -410,3 +410,63 @@ fn csv_export_of_the_flat_frame_succeeds_with_nested_fields() {
     CsvWriter::new(&mut out).finish(&mut df).unwrap();
     assert!(String::from_utf8(out).unwrap().contains('A'));
 }
+
+#[derive(ToDataFrame)]
+struct Wrapper {
+    #[dataframe(nested)]
+    rows: Vec<Holding>,
+}
+
+#[derive(ToDataFrame)]
+struct Holder {
+    id: i64,
+    #[dataframe(nested)]
+    wrapper: Option<Wrapper>,
+}
+
+#[test]
+fn row_only_wrapper_nests_through_its_own_nested_frame() {
+    let holder = Holder {
+        id: 1,
+        wrapper: Some(Wrapper {
+            rows: vec![holding("A"), holding("B")],
+        }),
+    };
+
+    let child = holder.wrapper_dataframe().unwrap();
+    assert_eq!(child.height(), 1);
+    assert_eq!(schema(&child), columns(&[("rows", struct_list())]));
+
+    let df = holder.to_nested_dataframe().unwrap();
+    let wrapper = df.column("wrapper").unwrap().list().unwrap();
+    let inner = wrapper.get_as_series(0).unwrap();
+    let rows = inner.struct_().unwrap().field_by_name("rows").unwrap();
+    let first = rows.list().unwrap().get_as_series(0).unwrap();
+    let symbols = first.struct_().unwrap().field_by_name("symbol").unwrap();
+    assert_eq!(symbols.str().unwrap().get(1), Some("B"));
+
+    let none = Holder {
+        id: 2,
+        wrapper: None,
+    };
+    assert_eq!(none.wrapper_dataframe().unwrap().height(), 0);
+    let nested = none.to_nested_dataframe().unwrap();
+    assert_eq!(
+        nested.column("wrapper").unwrap().dtype(),
+        df.column("wrapper").unwrap().dtype()
+    );
+}
+
+#[test]
+fn trait_nested_methods_default_to_the_flat_frame_without_nested_fields() {
+    let rows = [holding("A"), holding("B")];
+    let flat = <Holding as ToDataFrame>::vec_to_dataframe(&rows).unwrap();
+    let nested = <Holding as ToDataFrame>::vec_to_nested_dataframe(&rows).unwrap();
+    assert!(flat.equals_missing(&nested));
+    assert_eq!(
+        <Fund as ToDataFrame>::vec_to_nested_dataframe(&[fund("A", 1)])
+            .unwrap()
+            .width(),
+        5
+    );
+}
