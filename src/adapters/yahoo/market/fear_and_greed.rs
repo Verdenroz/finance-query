@@ -53,8 +53,27 @@ fn parse_current(resp: FearAndGreedApiResponse) -> Result<FearAndGreed> {
 
 /// Parse every entry in the response (current + historical), newest
 /// first — matching the API's own ordering. Used for `limit > 1` requests.
+/// Errors when `data` is empty or the first entry (the current reading) fails
+/// to parse; unparseable historical entries are skipped.
 fn parse_history(resp: FearAndGreedApiResponse) -> Result<Vec<FearAndGreed>> {
-    resp.data.into_iter().map(parse_entry).collect()
+    if resp.data.is_empty() {
+        return Err(FinanceError::ResponseStructureError {
+            field: "data".to_string(),
+            context: "Alternative.me API returned empty data array".to_string(),
+        });
+    }
+
+    let mut entries = Vec::with_capacity(resp.data.len());
+    for (index, entry) in resp.data.into_iter().enumerate() {
+        match parse_entry(entry) {
+            Ok(parsed) => entries.push(parsed),
+            Err(e) if index == 0 => return Err(e),
+            Err(e) => {
+                tracing::warn!(index, error = %e, "skipping unparseable fear and greed entry");
+            }
+        }
+    }
+    Ok(entries)
 }
 
 fn parse_entry(entry: FearAndGreedEntry) -> Result<FearAndGreed> {
@@ -241,6 +260,46 @@ mod tests {
         assert_eq!(history[2].value, 20);
         assert!(history[0].timestamp > history[1].timestamp);
         assert!(history[1].timestamp > history[2].timestamp);
+    }
+
+    fn history_entry(value: &str, timestamp: &str) -> FearAndGreedEntry {
+        FearAndGreedEntry {
+            value: value.to_string(),
+            value_classification: "Fear".to_string(),
+            timestamp: timestamp.to_string(),
+        }
+    }
+
+    #[test]
+    fn parse_history_skips_bad_historical_entry() {
+        let resp = FearAndGreedApiResponse {
+            data: vec![
+                history_entry("30", "1700000200"),
+                history_entry("20", "1700000100"),
+                history_entry("bad", "1700000000"),
+            ],
+        };
+
+        let history = parse_history(resp).unwrap();
+        let values: Vec<u8> = history.iter().map(|fg| fg.value).collect();
+        assert_eq!(values, [30, 20]);
+    }
+
+    #[test]
+    fn parse_history_errors_when_current_entry_is_bad() {
+        let resp = FearAndGreedApiResponse {
+            data: vec![
+                history_entry("bad", "1700000200"),
+                history_entry("20", "1700000100"),
+            ],
+        };
+        assert!(parse_history(resp).is_err());
+    }
+
+    #[test]
+    fn parse_history_errors_on_empty_data() {
+        let resp = FearAndGreedApiResponse { data: vec![] };
+        assert!(parse_history(resp).is_err());
     }
 
     #[tokio::test]

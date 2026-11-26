@@ -92,10 +92,10 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
         })?;
 
     if result.is_empty() {
-        return Err(FinanceError::ApiError(format!(
-            "No data found for symbol: {}",
-            symbol
-        )));
+        return Err(FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "No quote summary data found".to_string(),
+        });
     }
 
     let data = &result[0];
@@ -103,8 +103,13 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
     // Helper macro to deserialize a module, returning None on missing/error
     macro_rules! deserialize_module {
         ($name:expr) => {
-            data.get($name)
-                .and_then(|v| serde_json::from_value(v.clone()).ok())
+            data.get($name).and_then(|v| {
+                serde_json::from_value(v.clone())
+                    .inspect_err(|e| {
+                        tracing::warn!(symbol, module = $name, error = %e, "quoteSummary module failed to parse");
+                    })
+                    .ok()
+            })
         };
     }
 
@@ -183,7 +188,29 @@ mod tests {
             }
         });
 
-        let response = parse_summary(json, "INVALID");
-        assert!(response.is_err());
+        let err = parse_summary(json, "INVALID").unwrap_err();
+        assert!(matches!(
+            err,
+            FinanceError::SymbolNotFound { symbol: Some(ref s), .. } if s == "INVALID"
+        ));
+    }
+
+    #[test]
+    fn test_parse_summary_malformed_module_is_none() {
+        let json = json!({
+            "quoteSummary": {
+                "result": [
+                    {
+                        "price": { "regularMarketPrice": { "raw": 150.0, "fmt": "150.00" } },
+                        "financialData": "not an object"
+                    }
+                ],
+                "error": null
+            }
+        });
+
+        let response = parse_summary(json, "AAPL").unwrap();
+        assert!(response.price.is_some());
+        assert!(response.financial_data.is_none());
     }
 }
