@@ -92,10 +92,10 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
         })?;
 
     if result.is_empty() {
-        return Err(FinanceError::ApiError(format!(
-            "No data found for symbol: {}",
-            symbol
-        )));
+        return Err(FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "No quote summary data found".to_string(),
+        });
     }
 
     let data = &result[0];
@@ -188,8 +188,11 @@ mod tests {
             }
         });
 
-        let response = parse_summary(json, "INVALID");
-        assert!(response.is_err());
+        let err = parse_summary(json, "INVALID").unwrap_err();
+        assert!(matches!(
+            err,
+            FinanceError::SymbolNotFound { symbol: Some(ref s), .. } if s == "INVALID"
+        ));
     }
 
     #[test]
