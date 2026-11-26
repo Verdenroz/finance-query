@@ -156,7 +156,7 @@ The `Quote` struct aggregates data from multiple `quote modules` into a single s
 
 - `Raw` returns numeric fields as plain numbers (e.g., `Option<f64>`).
 - `Pretty` returns formatted strings (e.g., `Option<String>` like `"1.2M"`).
-- `Both` returns the raw + formatted pair (the default for sub-module accessors like `financial_data()` or `key_stats()`).
+- `Both` returns the raw + formatted pair (the default type parameter, so a bare `Quote` is `Quote<Both>`, and what sub-module accessors like `financial_data()` or `key_stats()` return).
 
 ```rust capture-output
 #[tokio::main]
@@ -976,7 +976,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Options Data
 
-Get options chains:
+Get options chains. `options(None)` returns only the nearest expiration, while
+`expiration_dates()` lists every available one. Pass one of those timestamps to
+`options(Some(ts))` to fetch another expiration:
 
 ```rust capture-output
 #[tokio::main]
@@ -985,7 +987,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ticker = Ticker::new("AAPL").await?;
 
-    // Get all available expiration dates and options
+    // Nearest expiration's contracts, plus all available expiration dates
     let options = ticker.options(None).await?;
 
     // expiration_dates() and strikes() are methods

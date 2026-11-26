@@ -9,10 +9,10 @@ pub struct BenchmarkMetrics {
     /// Benchmark symbol (e.g. `"SPY"`)
     pub symbol: String,
 
-    /// Buy-and-hold return of the benchmark over the same period (percentage)
+    /// Buy-and-hold return of the benchmark over the same period, in percent (`5.0` means +5%)
     pub benchmark_return_pct: f64,
 
-    /// Buy-and-hold return of the backtested symbol over the same period (percentage)
+    /// Buy-and-hold return of the backtested symbol over the same period, in percent (`5.0` means +5%)
     pub buy_and_hold_return_pct: f64,
 
     /// Jensen's Alpha: annualised strategy excess return over the benchmark (CAPM).

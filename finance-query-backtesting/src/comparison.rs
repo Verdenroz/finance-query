@@ -57,10 +57,10 @@ pub struct ComparisonRow {
     /// Symbol that was tested.
     pub symbol: String,
 
-    /// Total return percentage.
+    /// Total return in percent (`16.52` means +16.52%).
     pub total_return_pct: f64,
 
-    /// Annualised return percentage.
+    /// Annualised return in percent.
     pub annualized_return_pct: f64,
 
     /// Sharpe ratio.
@@ -72,12 +72,12 @@ pub struct ComparisonRow {
     /// Calmar ratio.
     pub calmar_ratio: f64,
 
-    /// Maximum drawdown as a fraction (0.0–1.0).
+    /// Maximum drawdown as a fraction (0.0–1.0, **not** a percentage).
     ///
     /// Multiply by 100 to get a conventional percentage.
     pub max_drawdown_pct: f64,
 
-    /// Win rate (`winning_trades / total_trades`).
+    /// Win rate as a fraction (0.0-1.0): `winning_trades / total_trades`.
     pub win_rate: f64,
 
     /// Profit factor (`gross_profit / gross_loss`).
@@ -98,7 +98,7 @@ pub struct ComparisonRow {
     /// Omega Ratio.
     pub omega_ratio: f64,
 
-    /// Time in market as a fraction (0.0–1.0).
+    /// Time in market as a fraction (0.0–1.0, **not** a percentage despite the name).
     pub time_in_market_pct: f64,
 
     /// The score on the metric used to rank the comparison.
