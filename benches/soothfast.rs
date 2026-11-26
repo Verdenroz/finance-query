@@ -588,7 +588,12 @@ fn ind_choppiness_index(s: &Series) {
 }
 
 // Volume
-#[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::mfi")]
+#[bench(
+    group = "indicators",
+    setup = series_1000,
+    alloc = 3,
+    covers = "finance_query::indicators::mfi"
+)]
 fn ind_mfi(s: &Series) {
     let (_, highs, lows, closes, volumes) = s;
     keep(mfi(
