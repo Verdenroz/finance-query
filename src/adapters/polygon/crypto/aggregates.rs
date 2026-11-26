@@ -46,7 +46,7 @@ fn grouped_daily_to_candles(aggs: AggregateResponseDTO) -> Vec<(String, Candle)>
             Some((
                 ticker,
                 Candle::__new(
-                    r.timestamp,
+                    r.timestamp / 1_000,
                     r.open,
                     r.high,
                     r.low,
@@ -112,5 +112,6 @@ mod tests {
         assert_eq!(candles.len(), 1);
         assert_eq!(candles[0].0, "X:BTCUSD");
         assert!((candles[0].1.close - 43100.0).abs() < 0.01);
+        assert_eq!(candles[0].1.timestamp, 1704067200);
     }
 }
