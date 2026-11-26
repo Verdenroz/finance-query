@@ -61,9 +61,9 @@ use finance_query::backtesting::{
 use finance_query::crypto::CoinQuote;
 use finance_query::fred::{MacroSeries, TreasuryYield};
 use finance_query::indicators::{
-    accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
-    bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
+    MacdResult, accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator,
+    balance_of_power, bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index,
+    cmf, cmo, coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
     fibonacci_retracement, heikin_ashi, hma, ichimoku, keltner_channels, last_value, macd,
     mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma,
     stochastic, stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
@@ -73,16 +73,18 @@ use finance_query::risk::{
     max_drawdown, omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio,
     tracking_error, ulcer_index, win_loss_stats,
 };
-use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
+use finance_query::streaming::{
+    AlertCondition, AlertEvaluator, AlertRule, MarketHoursType, OptionType, PriceUpdate, QuoteType,
+};
 use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions, FearAndGreed, Fetch,
-    FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News, Operation, Options,
-    Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse, Region, Routes,
-    ScreenerResults, SearchResults, Ticker, Tickers, TimeRange, Transcript, TrendingQuote,
-    analyze_sentiment,
+    BatchQuotesResponse, Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions,
+    FearAndGreed, Fetch, FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News,
+    Operation, Options, Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse,
+    Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers, TimeRange,
+    Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::sync::Arc;
@@ -1858,6 +1860,43 @@ fn stream_deserialize(json: &str) {
 }
 
 #[fixture]
+fn alert_inputs() -> (Vec<AlertRule>, Vec<PriceUpdate>) {
+    let rules = vec![
+        AlertRule::new("AAPL", AlertCondition::CrossesAbove(176.0)),
+        AlertRule::new("AAPL", AlertCondition::CrossesBelow(174.0)).repeating(),
+        AlertRule::new("AAPL", AlertCondition::PriceAbove(180.0)),
+        AlertRule::new("AAPL", AlertCondition::PercentChangeAbove(1.0)).repeating(),
+        AlertRule::new("MSFT", AlertCondition::VolumeAbove(10_000_000)).repeating(),
+    ];
+    let updates = (0..32)
+        .map(|i| {
+            let mut update = make_price_update();
+            if i % 4 == 3 {
+                update.id = "MSFT".to_string();
+            }
+            update.price = 172.0 + (i % 8) as f32;
+            update.change_percent = if i % 2 == 0 { 1.5 } else { 0.2 };
+            update
+        })
+        .collect();
+    (rules, updates)
+}
+
+#[bench(
+    group = "streaming",
+    setup = alert_inputs,
+    alloc = 99,
+    covers = "finance_query::streaming::AlertEvaluator::evaluate"
+)]
+fn alerts_evaluate(input: &(Vec<AlertRule>, Vec<PriceUpdate>)) {
+    let (rules, updates) = input;
+    let mut evaluator = AlertEvaluator::new(rules.iter().cloned());
+    for update in updates {
+        keep(evaluator.evaluate(keep(update)));
+    }
+}
+
+#[fixture]
 fn pricing_frame() -> String {
     __bench::pricing_frame()
 }
@@ -1870,6 +1909,19 @@ fn pricing_frame() -> String {
 )]
 fn stream_decode_pricing(frame: &str) {
     keep(__bench::decode_pricing(keep(frame)).unwrap());
+}
+
+// ── House PTR PDF parser (internal entrypoint) ───────────────────────────────
+
+static HOUSE_PTR_PDF: &[u8] = include_bytes!("../tests/fixtures/housetrades/ptr_20023717.pdf");
+
+#[bench(
+    group = "filings",
+    alloc = 5392,
+    covers = "finance_query::__bench::house_ptr_lines"
+)]
+fn parse_house_ptr() {
+    keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)).unwrap());
 }
 
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────
@@ -2246,6 +2298,7 @@ static FINANCIALS_JSON: &str = include_str!("fixtures/financials.json");
 static SCREENER_JSON: &str = include_str!("fixtures/screener.json");
 static EDGAR_SUBMISSIONS_JSON: &str = include_str!("fixtures/edgar_submissions.json");
 static EDGAR_FACTS_JSON: &str = include_str!("fixtures/edgar_facts.json");
+static SECTOR_JSON: &str = include_str!("fixtures/sector.json");
 
 #[soothfast::measured(group = "endpoint_serde", p99 = "3ms", covers = "finance_query::Quote")]
 fn de_quote() {
@@ -2327,6 +2380,58 @@ fn df_quote(quote: &Quote) {
 }
 
 #[fixture]
+fn parsed_sector() -> SectorData {
+    serde_json::from_str(SECTOR_JSON).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = parsed_sector,
+    alloc = 1526,
+    covers = "finance_query::SectorData"
+)]
+fn df_sector_nested(sector: &SectorData) {
+    keep(keep(sector).to_nested_dataframe().unwrap());
+    keep(keep(sector).top_companies_dataframe().unwrap());
+}
+
+#[fixture]
+fn batch_quotes() -> BatchQuotesResponse {
+    let quote: serde_json::Value = serde_json::from_str(QUOTE_JSON).unwrap();
+    let quotes: serde_json::Map<String, serde_json::Value> = (0..10)
+        .map(|i| (format!("SYM{i}"), quote.clone()))
+        .collect();
+    serde_json::from_value(serde_json::json!({ "quotes": quotes, "errors": {} })).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = batch_quotes,
+    alloc = 18729,
+    covers = "finance_query::BatchQuotesResponse::to_dataframe"
+)]
+fn df_batch_quotes(batch: &BatchQuotesResponse) {
+    keep(keep(batch).to_dataframe().unwrap());
+}
+
+#[fixture]
+fn macd_series(n: usize) -> MacdResult {
+    macd(&synthetic_closes(n), 12, 26, 9).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup_sized = macd_series,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 28,
+    covers = "finance_query::indicators::MacdResult::to_dataframe"
+)]
+fn df_macd_series(result: &MacdResult) {
+    keep(keep(result).to_dataframe().unwrap());
+}
+
+#[fixture]
 fn parsed_company_facts() -> CompanyFacts {
     serde_json::from_str(EDGAR_FACTS_JSON).unwrap()
 }
@@ -2347,7 +2452,7 @@ static YAHOO_BATCH_QUOTE_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/b
 
 #[bench(group = "wire_serde", alloc = 69, covers = "finance_query::Quote")]
 fn de_yahoo_quote_batch() {
-    keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)));
+    keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)).unwrap());
 }
 
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────
