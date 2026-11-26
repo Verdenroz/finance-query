@@ -32,3 +32,19 @@ pub(crate) async fn connect(url: &str) -> Result<(WsStream, Response), tungsteni
     let connector = Connector::Rustls(client_config()?);
     tokio_tungstenite::connect_async_tls_with_config(url, None, false, Some(connector)).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_config_builds_without_a_process_default_provider() {
+        assert!(rustls::crypto::CryptoProvider::get_default().is_none());
+        assert!(client_config().is_ok());
+    }
+
+    #[tokio::test]
+    async fn refused_tls_connection_is_an_error() {
+        assert!(connect("wss://127.0.0.1:1").await.is_err());
+    }
+}

@@ -365,6 +365,42 @@ mod tests {
         }
     }
 
+    struct NeverConnectsSource;
+
+    #[async_trait::async_trait]
+    impl StreamSource<PriceUpdate> for NeverConnectsSource {
+        fn id(&self) -> &'static str {
+            "never-connects"
+        }
+
+        async fn run_session(
+            &self,
+            _subscriptions: &Arc<RwLock<HashSet<String>>>,
+            _broadcast_tx: &broadcast::Sender<PriceUpdate>,
+            _command_rx: &mut mpsc::Receiver<StreamCommand>,
+            _ready: &mut Ready,
+        ) -> StreamResult<()> {
+            Err(super::super::client::StreamError::ConnectionFailed(
+                "refused".to_string(),
+            ))
+        }
+    }
+
+    #[tokio::test]
+    async fn first_connect_failure_is_returned_to_the_caller() {
+        let result = PriceStream::subscribe_with_source(
+            Arc::new(NeverConnectsSource),
+            ["AAPL"],
+            ReconnectConfig::new(Duration::from_millis(1)),
+        )
+        .await;
+
+        assert!(matches!(
+            result,
+            Err(super::super::client::StreamError::ConnectionFailed(m)) if m == "refused"
+        ));
+    }
+
     #[tokio::test]
     async fn a_session_shorter_than_healthy_after_still_counts_toward_max_attempts() {
         // Sessions last ~20ms — longer than base_delay but well short of
