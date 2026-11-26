@@ -1921,7 +1921,7 @@ static HOUSE_PTR_PDF: &[u8] = include_bytes!("../tests/fixtures/housetrades/ptr_
     covers = "finance_query::__bench::house_ptr_lines"
 )]
 fn parse_house_ptr() {
-    keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)));
+    keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)).unwrap());
 }
 
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────
@@ -2452,7 +2452,7 @@ static YAHOO_BATCH_QUOTE_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/b
 
 #[bench(group = "wire_serde", alloc = 69, covers = "finance_query::Quote")]
 fn de_yahoo_quote_batch() {
-    keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)));
+    keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)).unwrap());
 }
 
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────

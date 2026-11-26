@@ -694,17 +694,16 @@ pub mod __bench {
     }
 
     /// Parse a Yahoo batch-quote body and convert each row to a [`Quote`].
-    pub fn parse_quote_batch(body: &[u8]) -> Vec<(String, Quote)> {
-        parse_quotes_batch(body)
-            .unwrap()
+    pub fn parse_quote_batch(body: &[u8]) -> crate::Result<Vec<(String, Quote)>> {
+        Ok(parse_quotes_batch(body)?
             .into_iter()
             .map(|(symbol, response)| (symbol, Quote::from_response(&response, None, None)))
-            .collect()
+            .collect())
     }
 
     /// Extract the text lines of a House PTR disclosure PDF.
     #[cfg(feature = "housetrades")]
-    pub fn house_ptr_lines(pdf: &[u8]) -> Vec<String> {
-        crate::adapters::housetrades::pdf::extract_lines(pdf.to_vec()).unwrap()
+    pub fn house_ptr_lines(pdf: &[u8]) -> Option<Vec<String>> {
+        crate::adapters::housetrades::pdf::extract_lines(pdf.to_vec()).ok()
     }
 }
