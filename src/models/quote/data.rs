@@ -52,6 +52,7 @@ use super::{
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct Quote<F: Format = Both> {

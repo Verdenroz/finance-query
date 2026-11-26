@@ -51,6 +51,7 @@ impl std::fmt::Display for AssetClass {
 /// the price fields.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct MarketSnapshot {
     /// Ticker symbol as the provider spells it (e.g. `"AAPL"`, `"X:BTCUSD"`).

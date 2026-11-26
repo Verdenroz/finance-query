@@ -15,6 +15,7 @@ use crate::models::quote::*;
 /// `None`. Each field mirrors one Yahoo `quoteSummary` module.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct QuoteSummaryResponse {
     /// The symbol this response is for

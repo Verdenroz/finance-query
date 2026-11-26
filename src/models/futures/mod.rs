@@ -14,6 +14,7 @@ pub mod cot;
 /// Obtain via `Providers::futures``(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FuturesQuote {
     /// Contract ticker symbol (e.g., `"ESM26"` for E-mini S&P June 2026)

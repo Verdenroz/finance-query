@@ -61,6 +61,7 @@ struct RawTimezone {
 /// Market time information for a specific market
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketTime {

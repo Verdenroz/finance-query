@@ -103,6 +103,41 @@ pub mod derive {
 
     use super::ToDataFrame;
 
+    /// Stacks one frame per item under the row type's zero-row schema.
+    pub fn stack_rows<T>(
+        schema: PolarsResult<DataFrame>,
+        items: &[T],
+        frame: impl Fn(&T) -> PolarsResult<DataFrame>,
+    ) -> PolarsResult<DataFrame> {
+        items
+            .iter()
+            .map(frame)
+            .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
+            .map(|mut stacked| {
+                stacked.rechunk_mut();
+                stacked
+            })
+    }
+
+    /// Prepends a string column that repeats `value` on every row.
+    pub fn with_leading_column(
+        mut frame: DataFrame,
+        name: &str,
+        value: &str,
+    ) -> PolarsResult<DataFrame> {
+        let column = Series::new(name.into(), vec![value; frame.height()]);
+        frame.insert_column(0, column.into())?;
+        Ok(frame)
+    }
+
+    /// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.
+    pub fn padded<T>(values: impl Iterator<Item = Option<T>>, rows: usize) -> Vec<Option<T>> {
+        values
+            .chain(std::iter::repeat_with(|| None))
+            .take(rows)
+            .collect()
+    }
+
     pub trait Columns {
         fn columns(rows: &[Option<&Self>], prefix: &str) -> Vec<Column>;
     }

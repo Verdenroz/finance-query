@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// A symbol matched by a search or listing query.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SymbolMatch {
     /// Ticker symbol, uppercased.
@@ -46,6 +47,7 @@ pub struct SymbolMatch {
 /// Detailed reference data for a single symbol.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SymbolDetails {
     /// Ticker symbol.
@@ -94,6 +96,7 @@ pub struct SymbolDetails {
 /// A tradable exchange.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ExchangeInfo {
     /// Provider-assigned exchange ID.
@@ -117,6 +120,7 @@ pub struct ExchangeInfo {
 /// A symbol matched by a screener query.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ScreenerMatch {
     /// Ticker symbol.

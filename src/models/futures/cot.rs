@@ -31,6 +31,7 @@ pub struct CommitmentsOfTraders {
 /// One weekly report row, broken down by trader category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CotObservation {
     /// Report date (`YYYY-MM-DD`) — the Tuesday the report is as of.

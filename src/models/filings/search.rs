@@ -121,6 +121,7 @@ pub struct EdgarSearchHitsContainer {
 /// Total count information for search results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EdgarSearchTotal {
     /// Total number of matching documents
@@ -156,6 +157,7 @@ pub struct EdgarSearchHit {
 /// Source data for a search hit containing the actual filing information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EdgarSearchSource {
     /// Filing date (YYYY-MM-DD)

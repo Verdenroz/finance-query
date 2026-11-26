@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct ChartMeta {
     /// Stock symbol

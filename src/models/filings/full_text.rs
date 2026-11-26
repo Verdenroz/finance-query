@@ -58,6 +58,7 @@ impl FilingSearchFilters {
 /// One filing matching a full-text search.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FilingSearchHit {
     /// Accession number of the filing.

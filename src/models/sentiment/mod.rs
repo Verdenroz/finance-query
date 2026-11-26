@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 /// this reflects news sentiment for a specific stock.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SymbolSentiment {
     /// Sentiment score (-1.0 = very negative, 0.0 = neutral, 1.0 = very positive).

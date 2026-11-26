@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 /// friends.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SecurityMapping {

@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 /// Alpha Vantage, CoinGecko, FMP, Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CryptoQuote {
     /// Coin identifier (e.g., `"bitcoin"` for CoinGecko, `"BTC"` for others)
@@ -47,6 +48,7 @@ pub struct CryptoQuote {
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CoinQuote {
     /// CoinGecko coin ID (e.g., `"bitcoin"`, `"ethereum"`)
@@ -77,6 +79,7 @@ pub struct CoinQuote {
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TrendingCoin {
     /// CoinGecko coin ID (e.g., `"bitcoin"`)
@@ -99,6 +102,7 @@ pub struct TrendingCoin {
 #[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct GlobalCryptoStats {
     /// Number of active cryptocurrencies tracked

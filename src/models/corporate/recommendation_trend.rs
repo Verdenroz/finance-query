@@ -21,6 +21,7 @@ pub struct RecommendationTrend {
 /// Recommendations for a specific time period
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct RecommendationPeriod {
     /// Time period (e.g., "0m", "-1m", "-2m")
