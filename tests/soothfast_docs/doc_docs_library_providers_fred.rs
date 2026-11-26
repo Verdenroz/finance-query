@@ -48,11 +48,11 @@ fn doc_block_line_55() {
     }
 }
 
-// line 167: compile-only (no_run)
+// line 168: compile-only (no_run)
 #[cfg(feature = "fred")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_167() {
+fn doc_block_line_168() {
     use finance_query::fred;
 
     #[tokio::main]
@@ -72,11 +72,11 @@ fn doc_block_line_167() {
     }
 }
 
-// line 213: compile-only (no_run)
+// line 214: compile-only (no_run)
 #[cfg(feature = "fred")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_213() {
+fn doc_block_line_214() {
     use finance_query::fred;
 
     #[tokio::main]

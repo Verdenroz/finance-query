@@ -26,10 +26,10 @@ fn doc_block_line_12() {
     }
 }
 
-// line 81: compile-only (no_run)
+// line 80: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_81() {
+fn doc_block_line_80() {
     use finance_query::{finance, EquityScreenerQuery, EquityField, ScreenerFieldExt};
 
     #[tokio::main]
@@ -49,10 +49,10 @@ fn doc_block_line_81() {
     }
 }
 
-// line 191: compile-only (no_run)
+// line 190: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_191() {
+fn doc_block_line_190() {
     use finance_query::{EquityScreenerQuery, finance};
 
     #[tokio::main]
@@ -70,10 +70,10 @@ fn doc_block_line_191() {
     }
 }
 
-// line 213: compile-only (no_run)
+// line 212: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_213() {
+fn doc_block_line_212() {
     use finance_query::{finance, FundScreenerQuery, FundField, ScreenerFieldExt};
 
     #[tokio::main]

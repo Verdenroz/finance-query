@@ -61,10 +61,106 @@ fn doc_block_line_86() {
     }
 }
 
-// line 1864: compile-only (no_run)
+// line 660: compile-only (no_run)
+#[cfg(feature = "indicators")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1864() {
+fn doc_block_line_660() {
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        use finance_query::{Interval, Ticker, TimeRange};
+
+        let ticker = Ticker::new("AAPL").await?;
+        let chart = ticker
+            .chart(Interval::OneDay, TimeRange::ThreeMonths)
+            .await?;
+
+        // Custom periods
+        let sma_15 = chart.sma(15);
+        let rsi_21 = chart.rsi(21)?;
+        let macd = chart.macd(8, 21, 5)?; // Fast, slow, signal
+
+        // Access latest value
+        if let Some(&latest_sma) = sma_15.last().and_then(|v| v.as_ref()) {
+            println!("SMA(15): {:.2}", latest_sma);
+        }
+        if let Some(&latest_rsi) = rsi_21.last().and_then(|v| v.as_ref()) {
+            println!("RSI(21): {:.2}", latest_rsi);
+        }
+        if let Some(&latest_macd) = macd.macd_line.last().and_then(|v| v.as_ref()) {
+            println!("MACD: {:.4}", latest_macd);
+        }
+        Ok(())
+    }
+}
+
+// line 696: compile-only (no_run)
+#[cfg(feature = "indicators")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_696() {
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        use finance_query::indicators::{rsi, sma};
+        use finance_query::{Interval, Ticker, TimeRange};
+
+        let ticker = Ticker::new("AAPL").await?;
+        let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+        let closes: Vec<f64> = chart.candles.iter().map(|c| c.close).collect();
+
+        let sma_25 = sma(&closes, 25);
+        let rsi_10 = rsi(&closes, 10)?;
+
+        if let Some(&latest) = sma_25.last().and_then(|v| v.as_ref()) {
+            println!("SMA(25): {:.2}", latest);
+        }
+        if let Some(&latest) = rsi_10.last().and_then(|v| v.as_ref()) {
+            println!("RSI(10): {:.2}", latest);
+        }
+        Ok(())
+    }
+}
+
+// line 837: compile-only (no_run)
+#[cfg(feature = "risk")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_837() {
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        use finance_query::{Interval, Ticker, TimeRange};
+
+        let ticker = Ticker::new("AAPL").await?;
+
+        // With S&P 500 as benchmark (enables beta calculation)
+        let risk = ticker
+            .risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC"))
+            .await?;
+        if let Some(beta) = risk.beta {
+            println!("Beta (vs ^GSPC): {:.2}", beta);
+        }
+
+        // Without a benchmark
+        let risk = ticker
+            .risk(Interval::OneDay, TimeRange::OneYear, None)
+            .await?;
+
+        println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+        println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+        if let Some(sharpe) = risk.sharpe {
+            println!("Sharpe:       {:.2}", sharpe);
+        }
+        if let Some(beta) = risk.beta {
+            println!("Beta:         {:.2}", beta);
+        }
+        Ok(())
+    }
+}
+
+// line 1860: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_1860() {
         #[tokio::main]
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use finance_query::{Ticker, Interval, TimeRange};
