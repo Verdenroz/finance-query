@@ -61,13 +61,13 @@ impl crate::ToDataFrame for SearchNewsList {
     fn vec_to_dataframe(
         items: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        crate::dataframe::stack_rows(SearchNews::vec_to_dataframe(&[]), items, Self::to_dataframe)
+        crate::__dataframe::stack_rows(SearchNews::vec_to_dataframe(&[]), items, Self::to_dataframe)
     }
 
     fn vec_to_nested_dataframe(
         items: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        crate::dataframe::stack_rows(
+        crate::__dataframe::stack_rows(
             SearchNews::vec_to_nested_dataframe(&[]),
             items,
             Self::to_nested_dataframe,

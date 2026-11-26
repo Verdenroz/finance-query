@@ -197,7 +197,7 @@ impl FactConcept {
 }
 
 #[cfg(feature = "dataframe")]
-use crate::dataframe::with_leading_column;
+use crate::__dataframe::with_leading_column;
 
 #[cfg(feature = "dataframe")]
 fn sorted<V>(map: &HashMap<String, V>) -> Vec<(&String, &V)> {

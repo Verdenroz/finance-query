@@ -121,7 +121,7 @@ impl Spark {
     /// and `closes` is padded with nulls. Chart metadata is in
     /// [`meta_dataframe`](Self::meta_dataframe).
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::dataframe::padded;
+        use crate::__dataframe::padded;
         use polars::prelude::*;
 
         let rows = self.timestamps.len().max(self.closes.len());
@@ -162,7 +162,7 @@ impl Spark {
                 Series::new("range".into(), Vec::<&str>::new()).into(),
             ],
         );
-        crate::dataframe::stack_rows(schema, items, Self::to_dataframe)
+        crate::__dataframe::stack_rows(schema, items, Self::to_dataframe)
     }
 
     /// Converts the chart metadata to a one-row polars DataFrame.

@@ -1,3 +1,4 @@
+use finance_query_types::__dataframe::stack_rows;
 use finance_query_types::ToDataFrame;
 use polars::prelude::{DataFrame, PolarsResult};
 
@@ -27,43 +28,6 @@ macro_rules! delegate_rows_to_inherent {
             }
         )*
     };
-}
-
-/// Stacks one frame per item under the row type's zero-row schema.
-pub(crate) fn stack_rows<T>(
-    schema: PolarsResult<DataFrame>,
-    items: &[T],
-    frame: impl Fn(&T) -> PolarsResult<DataFrame>,
-) -> PolarsResult<DataFrame> {
-    items
-        .iter()
-        .map(frame)
-        .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
-        .map(|mut stacked| {
-            stacked.rechunk_mut();
-            stacked
-        })
-}
-
-/// Prepends a string column that repeats `value` on every row.
-pub(crate) fn with_leading_column(
-    mut frame: DataFrame,
-    name: &str,
-    value: &str,
-) -> PolarsResult<DataFrame> {
-    use polars::prelude::{NamedFrom, Series};
-
-    let column = Series::new(name.into(), vec![value; frame.height()]);
-    frame.insert_column(0, column.into())?;
-    Ok(frame)
-}
-
-/// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.
-pub(crate) fn padded<T>(values: impl Iterator<Item = Option<T>>, rows: usize) -> Vec<Option<T>> {
-    values
-        .chain(std::iter::repeat_with(|| None))
-        .take(rows)
-        .collect()
 }
 
 macro_rules! delegate_wrapped_rows {
