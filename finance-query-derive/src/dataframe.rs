@@ -369,7 +369,14 @@ enum Shape {
 fn nested_fields(
     fields: &syn::punctuated::Punctuated<Field, syn::Token![,]>,
 ) -> syn::Result<Vec<NestedField<'_>>> {
-    let mut nested = Vec::new();
+    let mut taken = Vec::new();
+    for field in fields {
+        let attrs = field_attrs(field)?;
+        if let (Some(ident), false, false) = (&field.ident, attrs.skip, attrs.nested) {
+            taken.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
+        }
+    }
+    let mut nested: Vec<NestedField> = Vec::new();
     for field in fields {
         let attrs = field_attrs(field)?;
         let Some(ident) = &field.ident else {
@@ -388,9 +395,16 @@ fn nested_fields(
             None if optional => (Shape::OptionOne, ty),
             None => (Shape::One, ty),
         };
+        let column = attrs.rename.unwrap_or_else(|| ident.to_string());
+        if taken.contains(&column) || nested.iter().any(|other| other.column == column) {
+            return Err(syn::Error::new_spanned(
+                field,
+                format!("nested column `{column}` collides with another column; use `rename`"),
+            ));
+        }
         nested.push(NestedField {
             ident,
-            column: attrs.rename.unwrap_or_else(|| ident.to_string()),
+            column,
             inner,
             shape,
         });

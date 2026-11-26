@@ -145,6 +145,23 @@ use syn::{
 ///     rows: Vec<Row>,
 /// }
 /// ```
+///
+/// A nested column name that matches another column also fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     rows: String,
+///     #[dataframe(nested, rename = "rows")]
+///     children: Vec<Row>,
+/// }
+/// ```
 #[proc_macro_derive(ToDataFrame, attributes(dataframe))]
 pub fn derive_to_dataframe(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
