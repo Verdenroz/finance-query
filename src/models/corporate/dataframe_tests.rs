@@ -9,7 +9,7 @@ use crate::models::corporate::earnings::{
 };
 use crate::models::corporate::earnings_transcript::EarningsTranscript;
 use crate::models::corporate::fund_performance::{
-    AnnualReturn, AnnualTotalReturns, RiskOverviewStatisticsCat, RiskStatistic,
+    AnnualReturn, RiskOverviewStatisticsCat, RiskStatistic,
 };
 use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
 use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
