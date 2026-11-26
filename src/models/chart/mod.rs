@@ -22,3 +22,6 @@ pub use dividend_analytics::DividendAnalytics;
 pub use events::{CapitalGain, Dividend, Split};
 pub use finance_query_types::Candle;
 pub use meta::ChartMeta;
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

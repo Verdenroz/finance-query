@@ -242,6 +242,7 @@ impl FeedSource {
 
 /// A single entry from an RSS/Atom feed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FeedEntry {
     /// Article or item title
@@ -428,3 +429,6 @@ mod tests {
         assert!(!entries.is_empty());
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;
