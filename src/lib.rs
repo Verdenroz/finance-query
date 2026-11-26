@@ -701,4 +701,10 @@ pub mod __bench {
             .map(|(symbol, response)| (symbol, Quote::from_response(&response, None, None)))
             .collect()
     }
+
+    /// Extract the text lines of a House PTR disclosure PDF.
+    #[cfg(feature = "housetrades")]
+    pub fn house_ptr_lines(pdf: &[u8]) -> Vec<String> {
+        crate::adapters::housetrades::pdf::extract_lines(pdf.to_vec()).unwrap()
+    }
 }

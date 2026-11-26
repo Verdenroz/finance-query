@@ -1872,6 +1872,19 @@ fn stream_decode_pricing(frame: &str) {
     keep(__bench::decode_pricing(keep(frame)).unwrap());
 }
 
+// ── House PTR PDF parser (internal entrypoint) ───────────────────────────────
+
+static HOUSE_PTR_PDF: &[u8] = include_bytes!("../tests/fixtures/housetrades/ptr_20023717.pdf");
+
+#[bench(
+    group = "filings",
+    alloc = 5392,
+    covers = "finance_query::__bench::house_ptr_lines"
+)]
+fn parse_house_ptr() {
+    keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)));
+}
+
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────
 
 #[fixture]
