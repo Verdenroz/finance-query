@@ -2,6 +2,7 @@
 
 use super::{CalendarProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
+use crate::providers::Operation;
 
 pub(crate) struct NasdaqProvider;
 
@@ -28,7 +29,7 @@ impl CalendarProvider for NasdaqProvider {
                 | CalendarKind::Dividend
                 | CalendarKind::Split
         ) {
-            return Err(self.not_supported(crate::providers::Operation::from_calendar(kind)));
+            return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         crate::adapters::nasdaq::fetch_market_calendar_response(kind, from, to).await
     }

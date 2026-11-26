@@ -6,6 +6,7 @@ use super::models::{NasdaqDividendRow, NasdaqEarningsRow, NasdaqIpoRow, NasdaqSp
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::{FinanceError, Result};
 use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+use crate::providers::Operation;
 
 /// Earnings/dividends/splits are fetched one day at a time; cap the range so
 /// a broad request doesn't fan out into hundreds of HTTP calls.
@@ -42,10 +43,7 @@ pub(crate) async fn fetch_market_calendar_response(
             .await
         }
         CalendarKind::Ipo => ipo_calendar(from, to).await,
-        _ => {
-            Err(crate::providers::Operation::from_calendar(kind)
-                .not_supported(crate::Provider::Nasdaq))
-        }
+        _ => Err(Operation::from_calendar(kind).not_supported(crate::Provider::Nasdaq)),
     }
 }
 

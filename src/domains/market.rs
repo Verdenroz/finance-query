@@ -12,6 +12,7 @@ use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
 };
 use crate::providers::Capability;
+use crate::providers::Operation;
 use crate::providers::ProviderSet;
 
 domain_handle! {
@@ -47,11 +48,7 @@ impl MarketCalendar {
                         let p = p.clone();
                         async move {
                             p.as_calendar()
-                                .ok_or_else(|| {
-                                    p.not_supported(crate::providers::Operation::from_calendar(
-                                        kind,
-                                    ))
-                                })?
+                                .ok_or_else(|| p.not_supported(Operation::from_calendar(kind)))?
                                 .fetch_market_calendar(kind, &from, &to)
                                 .await
                         }
