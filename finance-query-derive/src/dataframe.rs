@@ -370,16 +370,21 @@ fn nested_fields<'a>(
     fields: &'a syn::punctuated::Punctuated<Field, syn::Token![,]>,
     format_param: Option<&Ident>,
 ) -> syn::Result<Vec<NestedField<'a>>> {
-    let mut taken = Vec::new();
-    for field in fields {
-        let attrs = field_attrs(field)?;
-        if let (Some(ident), false, false) = (&field.ident, attrs.skip, attrs.nested) {
-            taken.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
-        }
-    }
+    let attrs = fields
+        .iter()
+        .map(field_attrs)
+        .collect::<syn::Result<Vec<_>>>()?;
+    let taken: Vec<String> = fields
+        .iter()
+        .zip(&attrs)
+        .filter(|(_, attrs)| !attrs.skip && !attrs.nested)
+        .filter_map(|(field, attrs)| {
+            let ident = field.ident.as_ref()?;
+            Some(attrs.rename.clone().unwrap_or_else(|| ident.to_string()))
+        })
+        .collect();
     let mut nested: Vec<NestedField> = Vec::new();
-    for field in fields {
-        let attrs = field_attrs(field)?;
+    for (field, attrs) in fields.iter().zip(attrs) {
         let Some(ident) = &field.ident else {
             continue;
         };
