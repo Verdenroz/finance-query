@@ -35,10 +35,17 @@ impl FearGreedLabel {
     }
 }
 
+impl std::fmt::Display for FearGreedLabel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// The current CNN Fear & Greed Index reading from Alternative.me.
 ///
 /// Scale: 0 (Extreme Fear) → 100 (Extreme Greed).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FearAndGreed {
     /// Index value (0–100)
