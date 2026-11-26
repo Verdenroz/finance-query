@@ -67,6 +67,7 @@ pub use retry::RetryPolicy;
 mod build;
 mod convert;
 mod operation;
+mod page;
 mod routes;
 mod set;
 
@@ -76,6 +77,7 @@ pub(crate) use convert::{build_financial_statement, build_options, range_to_date
 pub use finance_query_types::Capability;
 pub use finance_query_types::{CustomId, Provider};
 pub use operation::Operation;
+pub use page::{PageCursor, ProviderPage};
 pub use routes::{Fetch, Routes};
 pub use set::ProviderSet;
 

@@ -333,7 +333,8 @@ pub use providers::{
     OptionsProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
 pub use providers::{
-    Capability, CustomId, Fetch, Operation, Provider, ProviderHealth, RetryPolicy,
+    Capability, CustomId, Fetch, Operation, PageCursor, Provider, ProviderHealth, ProviderPage,
+    RetryPolicy,
 };
 
 /// The attribute every capability trait implementation needs.
@@ -398,7 +399,6 @@ pub use models::discovery::reference::{
 pub use models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
-pub use models::pagination::{PageCursor, ProviderPage};
 
 pub use error::{ErrorCategory, FinanceError, Result};
 
