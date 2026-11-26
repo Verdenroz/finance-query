@@ -3,8 +3,9 @@
 use super::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSplitsResponse,
+    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
 };
+use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::SimilarSymbol;
@@ -36,10 +37,8 @@ fn stack_by_symbol<T>(
     Ok(stacked)
 }
 
-fn with_symbol(mut frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
-    let column = Series::new("symbol".into(), vec![symbol; frame.height()]);
-    frame.insert_column(0, column.into())?;
-    Ok(frame)
+fn with_symbol(frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
+    crate::dataframe::with_leading_column(frame, "symbol", symbol)
 }
 
 fn rename_symbol(mut frame: DataFrame) -> PolarsResult<DataFrame> {
@@ -71,6 +70,21 @@ impl BatchChartsResponse {
         stack_by_symbol(&self.charts, Chart::to_dataframe, || {
             Candle::vec_to_dataframe(&[])
         })
+    }
+}
+
+impl BatchSparksResponse {
+    /// Converts the sparks to a long-format polars DataFrame, one row per point.
+    ///
+    /// Columns are `symbol` followed by the columns of `Spark::to_dataframe`.
+    /// Rows are grouped by symbol in ascending order, points in stored order.
+    /// Failed symbols in `errors` are omitted.
+    pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        stack_by_symbol(
+            &self.sparks,
+            |spark| spark.to_dataframe()?.drop("symbol"),
+            || Spark::vec_to_dataframe(&[])?.drop("symbol"),
+        )
     }
 }
 
@@ -416,5 +430,31 @@ mod tests {
         assert_eq!(names(&df)[..2], ["symbol", "contract_symbol"]);
         assert_eq!(names(&df).last().unwrap(), "option_type");
         assert_eq!(df.height(), 2);
+    }
+
+    #[test]
+    fn sparks_stack_by_symbol_with_one_symbol_column() {
+        let spark = |symbol: &str, ts: i64| {
+            serde_json::json!({
+                "symbol": symbol, "meta": {"symbol": "AAPL"}, "timestamps": [ts], "closes": [1.5],
+                "interval": "5m", "range": "1d"
+            })
+        };
+        let batch: BatchSparksResponse = response(serde_json::json!({
+            "sparks": {"B": spark("B", 2), "A": spark("A", 1)},
+            "errors": {}
+        }));
+        let df = batch.to_dataframe().unwrap();
+        assert_eq!(
+            names(&df),
+            ["symbol", "timestamp", "close", "interval", "range"]
+        );
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.height(), 2);
+
+        let empty: BatchSparksResponse = response(serde_json::json!({"sparks": {}, "errors": {}}));
+        let empty = empty.to_dataframe().unwrap();
+        assert_eq!(names(&empty), names(&df));
+        assert_eq!(empty.height(), 0);
     }
 }

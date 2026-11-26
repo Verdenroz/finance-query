@@ -23,6 +23,7 @@ const DEFAULT_GREEKS_REFRESH: Duration = Duration::from_secs(60);
 
 /// Option greeks for a contract.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Greeks {
@@ -50,6 +51,7 @@ impl Greeks {
 /// snapshot (see [`OptionsChainStreamBuilder::greeks_refresh`]) because the
 /// real-time feed does not carry them.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OptionContractUpdate {
@@ -82,6 +84,7 @@ pub struct OptionContractUpdate {
     /// Implied volatility, from the snapshot refresh.
     pub implied_volatility: Option<f64>,
     /// Greeks, from the snapshot refresh.
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub greeks: Option<Greeks>,
     /// Event timestamp (milliseconds).
     pub time: i64,

@@ -59,6 +59,31 @@ impl From<i32> for QuoteType {
     }
 }
 
+impl std::fmt::Display for QuoteType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::None => "NONE",
+            Self::AltSymbol => "ALT_SYMBOL",
+            Self::Heartbeat => "HEARTBEAT",
+            Self::Equity => "EQUITY",
+            Self::Index => "INDEX",
+            Self::MutualFund => "MUTUAL_FUND",
+            Self::MoneyMarket => "MONEY_MARKET",
+            Self::Option => "OPTION",
+            Self::Currency => "CURRENCY",
+            Self::Warrant => "WARRANT",
+            Self::Bond => "BOND",
+            Self::Future => "FUTURE",
+            Self::Etf => "ETF",
+            Self::Commodity => "COMMODITY",
+            Self::EcnQuote => "ECN_QUOTE",
+            Self::Cryptocurrency => "CRYPTOCURRENCY",
+            Self::Indicator => "INDICATOR",
+            Self::Industry => "INDUSTRY",
+        })
+    }
+}
+
 /// Option type enumeration
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
@@ -78,6 +103,15 @@ impl From<i32> for OptionType {
             1 => OptionType::Put,
             _ => OptionType::Call,
         }
+    }
+}
+
+impl std::fmt::Display for OptionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Call => "CALL",
+            Self::Put => "PUT",
+        })
     }
 }
 
@@ -104,6 +138,17 @@ impl From<i32> for MarketHoursType {
             3 => MarketHoursType::ExtendedHoursMarket,
             _ => MarketHoursType::PreMarket,
         }
+    }
+}
+
+impl std::fmt::Display for MarketHoursType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::PreMarket => "PRE_MARKET",
+            Self::RegularMarket => "REGULAR_MARKET",
+            Self::PostMarket => "POST_MARKET",
+            Self::ExtendedHoursMarket => "EXTENDED_HOURS_MARKET",
+        })
     }
 }
 
@@ -296,6 +341,7 @@ impl PricingData {
 /// This is the user-facing struct with properly typed enum fields
 /// that serialize to readable strings like `"EQUITY"` or `"CRYPTOCURRENCY"`.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct PriceUpdate {

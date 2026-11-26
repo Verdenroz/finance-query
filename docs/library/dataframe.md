@@ -832,6 +832,110 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 154 columns
 ```
 
+### Nested Rows
+
+Types that hold a list of rows, such as the holdings of a fund, keep the parent frame flat so it stays CSV-safe. Each list has its own child frame through a `{field}_dataframe()` method. `to_nested_dataframe()` (and `vec_to_nested_dataframe()` for a slice) instead keeps the rows inside the parent as a `List(Struct)` column.
+
+```rust feature=dataframe
+use finance_query::quote::TopHoldings;
+
+let top: TopHoldings = serde_json::from_str(
+    r#"{"holdings": [
+        {"symbol": "AAPL", "holdingName": "Apple Inc", "holdingPercent": {"raw": 0.07}},
+        {"symbol": "MSFT", "holdingName": "Microsoft Corp", "holdingPercent": {"raw": 0.06}}
+    ]}"#,
+)
+.unwrap();
+
+let holdings = top.holdings_dataframe().unwrap();
+assert_eq!(holdings.height(), 2);
+println!("{:?}", holdings.get_column_names());
+
+let nested = top.to_nested_dataframe().unwrap();
+assert_eq!(nested.height(), 1);
+println!("{:?}", nested.column("holdings").unwrap().dtype());
+```
+
+Nested and list columns cannot be written to CSV. Write the flat parent frame or a child frame instead.
+
+### List Columns
+
+A `Vec<String>` field marked as a list becomes a `List(String)` column. EDGAR submissions and full-text search hits use this for `tickers`, `exchanges`, `ciks` and similar fields.
+
+```rust feature=dataframe
+use finance_query::EdgarSearchSource;
+
+let hit: EdgarSearchSource = serde_json::from_str(
+    r#"{"form": "10-K", "ciks": ["0000320193"], "display_names": ["Apple Inc. (AAPL)"]}"#,
+)
+.unwrap();
+
+let df = hit.to_dataframe().unwrap();
+println!("{:?}", df.column("ciks").unwrap().dtype());
+```
+
+## Series and Streaming Frames
+
+Indicator results hold one series per field, so their frames have one row per bar. Series shorter than the longest are padded with trailing nulls. There is no timestamp column, so `hstack` the frame onto the candle frame it was computed from.
+
+```rust feature=dataframe,indicators
+use finance_query::MacdResult;
+
+let macd = MacdResult {
+    macd_line: vec![None, Some(1.0), Some(1.5)],
+    signal_line: vec![None, None, Some(1.2)],
+    histogram: vec![None, None, Some(0.3)],
+};
+
+let df = macd.to_dataframe().unwrap();
+assert_eq!(df.height(), 3);
+println!("{:?}", df.get_column_names());
+```
+
+Sparks are long format, one row per point. `Spark::meta_dataframe()` returns the chart metadata as one row, and `BatchSparksResponse::to_dataframe()` stacks every symbol with a leading `symbol` column.
+
+Streaming events convert the same way. `PriceUpdate`, `OrderBookUpdate`, `TradeTick`, `OptionContractUpdate` and `AlertEvent` all have `vec_to_dataframe`, so collect a batch of events and convert it once. An `AlertEvent` frame carries the triggering tick as `update_*` columns plus a `condition_kind` column.
+
+```rust feature=dataframe
+use finance_query::streaming::PriceUpdate;
+
+let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
+    .into_iter()
+    .map(|id| PriceUpdate {
+        id: id.to_string(),
+        ..PriceUpdate::default()
+    })
+    .collect();
+
+let df = PriceUpdate::vec_to_dataframe(&ticks).unwrap();
+assert_eq!(df.height(), 2);
+println!("{}", df.width());
+```
+
+`FearAndGreed`, `QuoteSummaryResponse` and `DividendAnalytics` also have `to_dataframe()`, each as a single row.
+
+### Company Facts
+
+`CompanyFacts::to_dataframe()` and `FactsByTaxonomy::to_dataframe()` return every data point in long format. Columns are `taxonomy` (company facts only), `concept` and `unit`, followed by the fact columns. Rows are sorted by taxonomy, concept and unit.
+
+```rust feature=dataframe
+use finance_query::CompanyFacts;
+
+let facts: CompanyFacts = serde_json::from_str(
+    r#"{"cik": 320193, "entityName": "Apple Inc.", "facts": {"us-gaap": {
+        "Revenues": {"units": {"USD": [
+            {"end": "2023-09-30", "val": 383285000000.0, "fy": 2023, "fp": "FY", "form": "10-K"},
+            {"end": "2024-09-28", "val": 391035000000.0, "fy": 2024, "fp": "FY", "form": "10-K"}
+        ]}}
+    }}}"#,
+)
+.unwrap();
+
+let df = facts.to_dataframe().unwrap();
+assert_eq!(df.height(), 2);
+println!("{:?}", &df.get_column_names()[..3]);
+```
+
 ## Error Handling
 
 DataFrame conversion can fail due to Polars errors:

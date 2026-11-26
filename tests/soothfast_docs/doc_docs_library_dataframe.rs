@@ -2,11 +2,111 @@
 // source: docs/library/dataframe.md
 #![allow(unused)]
 
-// line 868: compile-only (no_run)
+// line 839
+#[cfg(feature = "dataframe")]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_839() {
+    use finance_query::quote::TopHoldings;
+
+    let top: TopHoldings = serde_json::from_str(
+        r#"{"holdings": [
+            {"symbol": "AAPL", "holdingName": "Apple Inc", "holdingPercent": {"raw": 0.07}},
+            {"symbol": "MSFT", "holdingName": "Microsoft Corp", "holdingPercent": {"raw": 0.06}}
+        ]}"#,
+    )
+    .unwrap();
+
+    let holdings = top.holdings_dataframe().unwrap();
+    assert_eq!(holdings.height(), 2);
+    println!("{:?}", holdings.get_column_names());
+
+    let nested = top.to_nested_dataframe().unwrap();
+    assert_eq!(nested.height(), 1);
+    println!("{:?}", nested.column("holdings").unwrap().dtype());
+}
+
+// line 865
+#[cfg(feature = "dataframe")]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_865() {
+    use finance_query::EdgarSearchSource;
+
+    let hit: EdgarSearchSource = serde_json::from_str(
+        r#"{"form": "10-K", "ciks": ["0000320193"], "display_names": ["Apple Inc. (AAPL)"]}"#,
+    )
+    .unwrap();
+
+    let df = hit.to_dataframe().unwrap();
+    println!("{:?}", df.column("ciks").unwrap().dtype());
+}
+
+// line 881
+#[cfg(all(feature = "dataframe", feature = "indicators"))]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_881() {
+    use finance_query::MacdResult;
+
+    let macd = MacdResult {
+        macd_line: vec![None, Some(1.0), Some(1.5)],
+        signal_line: vec![None, None, Some(1.2)],
+        histogram: vec![None, None, Some(0.3)],
+    };
+
+    let df = macd.to_dataframe().unwrap();
+    assert_eq!(df.height(), 3);
+    println!("{:?}", df.get_column_names());
+}
+
+// line 899
+#[cfg(feature = "dataframe")]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_899() {
+    use finance_query::streaming::PriceUpdate;
+
+    let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
+        .into_iter()
+        .map(|id| PriceUpdate {
+            id: id.to_string(),
+            ..PriceUpdate::default()
+        })
+        .collect();
+
+    let df = PriceUpdate::vec_to_dataframe(&ticks).unwrap();
+    assert_eq!(df.height(), 2);
+    println!("{}", df.width());
+}
+
+// line 921
+#[cfg(feature = "dataframe")]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_921() {
+    use finance_query::CompanyFacts;
+
+    let facts: CompanyFacts = serde_json::from_str(
+        r#"{"cik": 320193, "entityName": "Apple Inc.", "facts": {"us-gaap": {
+            "Revenues": {"units": {"USD": [
+                {"end": "2023-09-30", "val": 383285000000.0, "fy": 2023, "fp": "FY", "form": "10-K"},
+                {"end": "2024-09-28", "val": 391035000000.0, "fy": 2024, "fp": "FY", "form": "10-K"}
+            ]}}
+        }}}"#,
+    )
+    .unwrap();
+
+    let df = facts.to_dataframe().unwrap();
+    assert_eq!(df.height(), 2);
+    println!("{:?}", &df.get_column_names()[..3]);
+}
+
+// line 972: compile-only (no_run)
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_868() {
+fn doc_block_line_972() {
         use finance_query::{Interval, Ticker, TimeRange};
         use polars::prelude::*;
 

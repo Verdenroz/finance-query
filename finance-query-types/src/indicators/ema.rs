@@ -14,11 +14,10 @@ pub(crate) fn ema_raw(data: &[f64], period: usize) -> Vec<f64> {
     let mut result = Vec::with_capacity(data.len() - period + 1);
     result.push(initial);
     let mut prev = initial;
-    for &price in &data[period..] {
-        let val = (price - prev) * multiplier + prev;
-        result.push(val);
-        prev = val;
-    }
+    result.extend(data[period..].iter().map(|&price| {
+        prev = (price - prev) * multiplier + prev;
+        prev
+    }));
     result
 }
 
