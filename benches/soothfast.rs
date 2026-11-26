@@ -340,13 +340,23 @@ fn ind_hma(s: &Series) {
     keep(hma(keep(closes), 20)).unwrap();
 }
 
-#[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::dema")]
+#[bench(
+    group = "indicators",
+    setup = series_1000,
+    alloc = 3,
+    covers = "finance_query::indicators::dema"
+)]
 fn ind_dema(s: &Series) {
     let (_, _, _, closes, _) = s;
     keep(dema(keep(closes), 20)).unwrap();
 }
 
-#[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::tema")]
+#[bench(
+    group = "indicators",
+    setup = series_1000,
+    alloc = 4,
+    covers = "finance_query::indicators::tema"
+)]
 fn ind_tema(s: &Series) {
     let (_, _, _, closes, _) = s;
     keep(tema(keep(closes), 20)).unwrap();
