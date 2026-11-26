@@ -61,9 +61,9 @@ use finance_query::backtesting::{
 use finance_query::crypto::CoinQuote;
 use finance_query::fred::{MacroSeries, TreasuryYield};
 use finance_query::indicators::{
-    accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
-    bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
+    MacdResult, accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator,
+    balance_of_power, bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index,
+    cmf, cmo, coppock_curve, dema, donchian_channels, elder_ray, ema, fibonacci_pivot_points,
     fibonacci_retracement, heikin_ashi, hma, ichimoku, keltner_channels, last_value, macd,
     mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma,
     stochastic, stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
@@ -78,11 +78,11 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions, FearAndGreed, Fetch,
-    FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News, Operation, Options,
-    Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse, Region, Routes,
-    ScreenerResults, SearchResults, Ticker, Tickers, TimeRange, Transcript, TrendingQuote,
-    analyze_sentiment,
+    BatchQuotesResponse, Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions,
+    FearAndGreed, Fetch, FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News,
+    Operation, Options, Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse,
+    Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers, TimeRange,
+    Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::sync::Arc;
@@ -2246,6 +2246,7 @@ static FINANCIALS_JSON: &str = include_str!("fixtures/financials.json");
 static SCREENER_JSON: &str = include_str!("fixtures/screener.json");
 static EDGAR_SUBMISSIONS_JSON: &str = include_str!("fixtures/edgar_submissions.json");
 static EDGAR_FACTS_JSON: &str = include_str!("fixtures/edgar_facts.json");
+static SECTOR_JSON: &str = include_str!("fixtures/sector.json");
 
 #[soothfast::measured(group = "endpoint_serde", p99 = "3ms", covers = "finance_query::Quote")]
 fn de_quote() {
@@ -2324,6 +2325,58 @@ fn df_option_calls(options: &Options) {
 #[bench(group = "dataframe", setup = parsed_quote, alloc = 1538, covers = "finance_query::Quote")]
 fn df_quote(quote: &Quote) {
     keep(keep(quote).to_dataframe().unwrap());
+}
+
+#[fixture]
+fn parsed_sector() -> SectorData {
+    serde_json::from_str(SECTOR_JSON).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = parsed_sector,
+    alloc = 1526,
+    covers = "finance_query::SectorData"
+)]
+fn df_sector_nested(sector: &SectorData) {
+    keep(keep(sector).to_nested_dataframe().unwrap());
+    keep(keep(sector).top_companies_dataframe().unwrap());
+}
+
+#[fixture]
+fn batch_quotes() -> BatchQuotesResponse {
+    let quote: serde_json::Value = serde_json::from_str(QUOTE_JSON).unwrap();
+    let quotes: serde_json::Map<String, serde_json::Value> = (0..10)
+        .map(|i| (format!("SYM{i}"), quote.clone()))
+        .collect();
+    serde_json::from_value(serde_json::json!({ "quotes": quotes, "errors": {} })).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = batch_quotes,
+    alloc = 18729,
+    covers = "finance_query::BatchQuotesResponse::to_dataframe"
+)]
+fn df_batch_quotes(batch: &BatchQuotesResponse) {
+    keep(keep(batch).to_dataframe().unwrap());
+}
+
+#[fixture]
+fn macd_series(n: usize) -> MacdResult {
+    macd(&synthetic_closes(n), 12, 26, 9).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup_sized = macd_series,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 28,
+    covers = "finance_query::indicators::MacdResult::to_dataframe"
+)]
+fn df_macd_series(result: &MacdResult) {
+    keep(keep(result).to_dataframe().unwrap());
 }
 
 #[fixture]
