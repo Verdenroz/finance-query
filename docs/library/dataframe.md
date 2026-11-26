@@ -11,8 +11,15 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "3", features = ["dataframe"] }
-    polars = "0.53"
+    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window"] }
     ```
+
+    The `finance_query::polars` re-export exists so type names in public
+    signatures resolve to the same version. It enables only `lazy`,
+    `polars-ops`, `fmt` and `dtype-struct`, so add `polars` yourself for the
+    features your code needs. Cargo unifies the two into one build. Drop
+    `csv`, `parquet`, `json` and `rolling_window` from the line above if you
+    don't use them.
 
 ## Overview
 
@@ -392,8 +399,11 @@ Series: 'daily_return_pct' [f64]
 
 ### Time-based Operations
 
+Timestamp columns are `i64` epoch seconds, so compare them against epoch
+seconds.
+
 ```rust capture-output feature=dataframe
-use chrono::DateTime;
+use chrono::{Duration, Utc};
 use finance_query::{Interval, Ticker, TimeRange};
 use polars::prelude::*;
 
@@ -402,30 +412,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::new("AAPL").await?;
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
+    let total = df.height();
 
-    // Convert timestamp to datetime
-    let dates: Vec<_> = df
-        .column("timestamp")?
-        .i64()?
-        .into_iter()
-        .map(|ts| ts.map(|t| DateTime::from_timestamp(t, 0).unwrap()))
-        .collect();
-    println!("{} rows", dates.len());
-
-    // Filter by date range
-    let start_ts = 1704067200i64; // 2024-01-01
-    let df_filtered = df
+    // Keep the last six months
+    let cutoff = (Utc::now() - Duration::days(182)).timestamp();
+    let recent = df
         .lazy()
-        .filter(col("timestamp").gt_eq(lit(start_ts)))
+        .filter(col("timestamp").gt_eq(lit(cutoff)))
         .collect()?;
-    println!("Rows since 2024-01-01: {}", df_filtered.height());
+    println!("Filtered to fewer rows: {}", recent.height() < total);
     Ok(())
 }
 ```
 
 ```text soothfast-output
-251 rows
-Rows since 2024-01-01: 251
+Filtered to fewer rows: true
+```
+
+For calendar operations such as `dt().date()` or `group_by_dynamic`, cast the
+column to a datetime first. Polars needs its `dtype-datetime` and `temporal`
+features for this, and `Datetime` takes milliseconds:
+
+```rust ignore
+let df = df
+    .lazy()
+    .with_column(
+        (col("timestamp") * lit(1000))
+            .cast(DataType::Datetime(TimeUnit::Milliseconds, None))
+            .alias("datetime"),
+    )
+    .collect()?;
 ```
 
 ### Sorting and Ranking
@@ -547,39 +563,21 @@ shape: (14, 5)
 
 ## Multiple Symbols
 
-Combine data from multiple symbols:
+The batch responses from `Tickers` convert directly. `to_dataframe()` stacks
+every symbol into one frame with a leading `symbol` column, sorted by symbol.
+Symbols that failed are listed in `errors` and left out of the frame.
 
 ```rust capture-output feature=dataframe
-use finance_query::{Interval, Ticker, TimeRange};
-use polars::prelude::*;
+use finance_query::{Interval, Tickers, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let aapl = Ticker::new("AAPL").await?;
-    let msft = Ticker::new("MSFT").await?;
-    let nvda = Ticker::new("NVDA").await?;
+    let tickers = Tickers::new(vec!["AAPL", "MSFT", "NVDA"]).await?;
+    let response = tickers
+        .charts(Interval::OneDay, TimeRange::OneMonth)
+        .await?;
 
-    let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-    let msft_chart = msft.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-    let nvda_chart = nvda.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-
-    // Convert to DataFrames
-    let mut aapl_df = aapl_chart.to_dataframe()?;
-    let mut msft_df = msft_chart.to_dataframe()?;
-    let mut nvda_df = nvda_chart.to_dataframe()?;
-
-    // Add symbol column to each
-    aapl_df.with_column(Series::new("symbol".into(), vec!["AAPL"; aapl_df.height()]).into())?;
-    msft_df.with_column(Series::new("symbol".into(), vec!["MSFT"; msft_df.height()]).into())?;
-    nvda_df.with_column(Series::new("symbol".into(), vec!["NVDA"; nvda_df.height()]).into())?;
-
-    // Combine into single DataFrame
-    let combined = concat(
-        [aapl_df.lazy(), msft_df.lazy(), nvda_df.lazy()],
-        UnionArgs::default(),
-    )?
-    .collect()?;
-
+    let combined = response.to_dataframe()?;
     println!("Combined data: {} rows", combined.height());
     Ok(())
 }
@@ -589,16 +587,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Combined data: 69 rows
 ```
 
+`BatchQuotesResponse`, `BatchSparksResponse`, `BatchDividendsResponse`,
+`BatchSplitsResponse`, `BatchCapitalGainsResponse`, `BatchNewsResponse`,
+`BatchOptionsResponse`, `BatchRecommendationsResponse` and
+`BatchFinancialsResponse` have the same method.
+
+## Financial Statements
+
+`FinancialStatement::to_dataframe()` returns a long frame with one row per
+metric and date. `to_wide_dataframe()` returns one row per date and one
+nullable `f64` column per metric:
+
+```rust no_run feature=dataframe
+use finance_query::{Frequency, StatementType, Ticker};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let ticker = Ticker::new("AAPL").await?;
+    let income = ticker
+        .financials(StatementType::Income, Frequency::Annual)
+        .await?;
+
+    let wide = income.to_wide_dataframe()?;
+    println!("{}", wide);
+    Ok(())
+}
+```
+
+The `date` column is a string sorted ascending, and metric columns keep the
+CamelCase names Yahoo uses. Yahoo returns about four periods.
+
 ## Exporting Data
 
-The `dataframe` feature enables Polars with only its `lazy` feature. File
-writers live behind Polars' own feature flags, so exporting requires adding
-`polars` to your `Cargo.toml` with the matching features (`csv`, `parquet`,
-`json`):
-
-```toml
-polars = { version = "0.53", features = ["lazy", "csv", "parquet", "json"] }
-```
+File writers live behind Polars' own feature flags, so exporting requires the
+matching features (`csv`, `parquet`, `json`) on the `polars` line from the top
+of this page.
 
 ### CSV Export
 

@@ -561,9 +561,11 @@ pub mod prelude {
 
 /// The polars version used in this crate's public signatures.
 ///
-/// Use this re-export instead of a direct `polars` dependency so the
-/// versions cannot diverge. polars is bumped only in a semver-major release
-/// of finance-query.
+/// Use it to name polars types in code that touches this crate's signatures.
+/// It enables only `lazy`, `polars-ops`, `fmt` and `dtype-struct`, so add
+/// `polars` with `default-features = false` and the features you need
+/// (for example `csv` or `parquet`) to your own dependencies. polars is
+/// bumped only in a semver-major release of finance-query.
 #[cfg(feature = "dataframe")]
 pub use polars;
 
