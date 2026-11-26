@@ -12,8 +12,10 @@ use std::time::Duration;
 use futures::SinkExt;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use tokio::time::interval;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, error, info, warn};
+
+use crate::adapters::common::ws_tls;
 
 use super::client::{StreamError, StreamResult};
 use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
@@ -54,7 +56,7 @@ async fn connect_and_stream(
 
     info!("Connecting to Yahoo Finance WebSocket...");
 
-    let (ws_stream, _) = connect_async(YAHOO_WS_URL)
+    let (ws_stream, _) = ws_tls::connect(YAHOO_WS_URL)
         .await
         .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
 

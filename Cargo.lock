@@ -1599,6 +1599,8 @@ dependencies = [
  "prost",
  "regex",
  "reqwest",
+ "rustls",
+ "rustls-native-certs",
  "serde",
  "serde_json",
  "serial_test",

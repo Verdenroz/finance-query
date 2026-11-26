@@ -276,7 +276,7 @@ impl PolygonStreamBuilder {
     pub async fn build(self) -> Result<PolygonStream> {
         let url = format!("{POLYGON_WEBSOCKET_BASE}/{}", self.cluster.as_str());
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
+        let (ws_stream, _) = crate::adapters::common::ws_tls::connect(&url)
             .await
             .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}")))?;
 
