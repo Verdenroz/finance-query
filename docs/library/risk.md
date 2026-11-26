@@ -151,10 +151,10 @@ Max drawdown: 0.1039   Beta: 0.0059
 <!-- soothfast:claim finance_query::risk_sortino.alloc.allocs <= 0 -->
 <!-- soothfast:claim finance_query::risk_parametric_var.alloc.allocs <= 0 -->
 <!-- soothfast:claim finance_query::risk_beta.alloc.allocs <= 0 -->
-<!-- soothfast:claim finance_query::risk_beta.walltime.median_ns < 500000 -->
+<!-- soothfast:claim finance_query::risk_beta.perfcnt.instructions < 410000 -->
 `sharpe_ratio`, `sortino_ratio`, `parametric_var`, and `beta` fold over the
-input slices without copying — zero allocations, and `beta` completes in
-well under half a millisecond on commodity hardware.
+input slices without copying — zero allocations, and `beta` costs under
+410 thousand CPU instructions.
 
 <!-- soothfast:claim finance_query::risk_historical_var.alloc.allocs <= 2 -->
 `historical_var` makes exactly two allocations regardless of input size (the

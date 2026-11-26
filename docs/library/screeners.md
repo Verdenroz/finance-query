@@ -32,10 +32,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Screener responses are large, but cheap to decode — a checked claim, re-verified against real measurements in CI:
 
-<!-- soothfast:claim finance_query::de_screener.walltime.median_ns < 2000000 -->
-<!-- soothfast:claim finance_query::de_screener.perfcnt.instructions < 7000000 -->
+<!-- soothfast:claim finance_query::de_screener.perfcnt.instructions < 5400000 -->
 - Deserializing a real full screener response page (measured in
-  `benches/soothfast.rs`) takes **well under 2 ms** and fewer than **7 million
+  `benches/soothfast.rs`) costs fewer than **5.4 million
   CPU instructions** — the network round-trip dominates, not the parsing.
 
 **Available `Screener` variants:**

@@ -74,9 +74,9 @@ Found 15 results
 - `research_reports` - Optional research reports
 - `recommendations` - Recommended symbols
 
-<!-- soothfast:claim finance_query::de_search.walltime.median_ns < 20000 -->
-- Deserializing a search response takes **under 20 µs** — a measured claim,
-  checked against real benchmarks in CI.
+<!-- soothfast:claim finance_query::de_search.perfcnt.instructions < 72000 -->
+- Deserializing a search response costs **under 72 thousand CPU
+  instructions** — a measured claim, checked against real benchmarks in CI.
 
 ### Lookup
 
@@ -380,7 +380,7 @@ CAI: +13.70%
 CVSA: +13.46%
 ```
 
-<!-- soothfast:claim finance_query::de_screener.walltime.median_ns < 2000000 -->
+<!-- soothfast:claim finance_query::de_screener.perfcnt.instructions < 5400000 -->
 See [Screeners](screeners.md) for all 15 `Screener` variants and the complete list.
 
 ### Custom Screeners
@@ -613,7 +613,7 @@ Dow Jones Forecast: Weak Jobs Report Supports Dow Near 55,000
   Link: https://www.fxempire.com/forecasts/article/dow-jones-forecast-weak-jobs-report-supports-dow-near-55000-1615590
 ```
 
-<!-- soothfast:claim finance_query::de_news.walltime.median_ns < 15000 -->
+<!-- soothfast:claim finance_query::de_news.perfcnt.instructions < 54000 -->
 
 ### Earnings Transcripts
 

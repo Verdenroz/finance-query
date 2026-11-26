@@ -26,14 +26,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::stream_serialize.walltime.median_ns < 5000 -->
+<!-- soothfast:claim finance_query::stream_serialize.perfcnt.instructions < 17000 -->
 <!-- soothfast:claim finance_query::stream_serialize.alloc.allocs <= 4 -->
-- Serializing a `PriceUpdate` tick to JSON stays **under 5 µs** and makes
+- Serializing a `PriceUpdate` tick to JSON stays **under 17 thousand CPU instructions** and makes
   exactly **4 allocations** — cheap enough to fan out to many consumers on
   every tick.
 
-<!-- soothfast:claim finance_query::stream_deserialize.walltime.median_ns < 5000 -->
-- Decoding a JSON tick back into a `PriceUpdate` also stays **under 5 µs**.
+<!-- soothfast:claim finance_query::stream_deserialize.perfcnt.instructions < 21000 -->
+- Decoding a JSON tick back into a `PriceUpdate` also stays **under 21 thousand CPU instructions**.
 
 ## Subscribing
 

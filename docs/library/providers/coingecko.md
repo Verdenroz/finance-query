@@ -34,8 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_crypto_coins.walltime.median_ns < 200000 -->
-<!-- soothfast:claim finance_query::de_crypto_coins.perfcnt.instructions < 700000 -->
+<!-- soothfast:claim finance_query::de_crypto_coins.perfcnt.instructions < 480000 -->
 The network round-trip, not parsing, dominates every call.
 
 - `vs_currency` — Quote currency: `"usd"`, `"eur"`, `"btc"`, `"eth"`, etc.

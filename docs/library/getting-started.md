@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_quote.walltime.median_ns < 4000000 -->
+<!-- soothfast:claim finance_query::de_quote.perfcnt.instructions < 13000000 -->
 The network round-trip dominates each call — deserialization is far from the bottleneck.
 
 ## Multi-Provider Data Sources
@@ -159,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_search.walltime.median_ns < 20000 -->
+<!-- soothfast:claim finance_query::de_search.perfcnt.instructions < 72000 -->
 
 → [Finance Module](finance.md) for market-wide data
 

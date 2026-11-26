@@ -462,8 +462,7 @@ println!(
 39 trades, total return -99.73%
 ```
 
-<!-- soothfast:claim finance_query::bt_sma_crossover.walltime.median_ns < 5000000 -->
-<!-- soothfast:claim finance_query::bt_sma_crossover.perfcnt.instructions < 15000000 -->
+<!-- soothfast:claim finance_query::bt_sma_crossover.perfcnt.instructions < 14000000 -->
 Cheap enough to grid-search thousands of parameter combinations in seconds.
 
 ## Performance Metrics

@@ -259,8 +259,8 @@ Measure rate of change and momentum for entry/exit signals.
 - `awesome_oscillator` - Bill Williams Awesome Oscillator
 - `coppock_curve` - Coppock Curve
 
-<!-- soothfast:claim finance_query::ind_momentum.walltime.median_ns < 500000 -->
-- **Measured cost:** the momentum-family regression bench (`benches/soothfast.rs`, group `indicators`) computes 11 momentum indicators over 1,000 candles in well under **0.5 ms** — a checked claim, re-verified against real measurements in CI.
+<!-- soothfast:claim finance_query::ind_momentum.perfcnt.instructions < 1700000 -->
+- **Measured cost:** the momentum-family regression bench (`benches/soothfast.rs`, group `indicators`) computes 11 momentum indicators over 1,000 candles in under **1.7 million CPU instructions** — a checked claim, re-verified against real measurements in CI.
 
 ### Trend Indicators
 
@@ -360,7 +360,7 @@ timestamp=1704492800: SpinningTop (Neutral)
 timestamp=1704579200: TweezerBottom (Bullish)
 ```
 
-<!-- soothfast:claim finance_query::ind_patterns.walltime.median_ns < 500000 -->
+<!-- soothfast:claim finance_query::ind_patterns.perfcnt.instructions < 1800000 -->
 <!-- soothfast:claim finance_query::ind_patterns.alloc.allocs <= 1 -->
 The scan makes exactly one allocation — the output vector — regardless of how many patterns fire.
 
