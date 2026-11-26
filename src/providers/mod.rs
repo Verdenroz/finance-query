@@ -70,6 +70,8 @@ mod operation;
 mod page;
 mod routes;
 mod set;
+mod stock_bars;
+pub(crate) mod stock_listing;
 
 pub(crate) use build::build_providers;
 #[allow(unused_imports)] // each is used only by a feature-gated provider bridge
@@ -80,6 +82,8 @@ pub use operation::Operation;
 pub use page::{PageCursor, ProviderPage};
 pub use routes::{Fetch, Routes};
 pub use set::ProviderSet;
+pub use stock_bars::StockBarsRequest;
+pub use stock_listing::StockListingRequest;
 
 #[cfg(test)]
 mod tests;
