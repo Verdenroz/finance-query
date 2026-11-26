@@ -37,6 +37,21 @@ impl<F: Format> BatchQuotesAs<F> {
     }
 }
 
+#[cfg(feature = "translation")]
+impl<F: Format> crate::translation::Translatable for BatchQuotesAs<F> {
+    fn visit_translatable(&mut self, visit: &mut dyn FnMut(&mut String)) {
+        for quote in self.quotes.values_mut() {
+            crate::translation::Translatable::visit_translatable(quote, visit);
+        }
+    }
+
+    fn after_translate(&mut self) {
+        for quote in self.quotes.values_mut() {
+            crate::translation::Translatable::after_translate(quote);
+        }
+    }
+}
+
 impl<F: Format> From<BatchQuotesResponse> for BatchQuotesAs<F>
 where
     Quote<Both>: Into<Quote<F>>,
