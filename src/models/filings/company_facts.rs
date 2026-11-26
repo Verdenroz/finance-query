@@ -228,14 +228,12 @@ impl FactsByTaxonomy {
         let schema = with_leading_column(FactUnit::vec_to_dataframe(&[])?, "unit", "")?;
         let mut stacked = with_leading_column(schema, "concept", "")?;
         for (concept, fact) in sorted(&self.0) {
-            for (unit, _) in sorted(&fact.units) {
-                let Some(frame) = fact.to_dataframe_for_unit(unit)? else {
-                    continue;
-                };
-                let frame = with_leading_column(frame, "unit", unit)?;
+            for (unit, points) in sorted(&fact.units) {
+                let frame = with_leading_column(FactUnit::vec_to_dataframe(points)?, "unit", unit)?;
                 stacked.vstack_mut(&with_leading_column(frame, "concept", concept)?)?;
             }
         }
+        stacked.rechunk_mut();
         Ok(stacked)
     }
 }
@@ -255,6 +253,7 @@ impl CompanyFacts {
             let frame = with_leading_column(facts.to_dataframe()?, "taxonomy", taxonomy)?;
             stacked.vstack_mut(&frame)?;
         }
+        stacked.rechunk_mut();
         Ok(stacked)
     }
 }
