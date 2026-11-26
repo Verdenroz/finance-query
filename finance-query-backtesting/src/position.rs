@@ -218,14 +218,14 @@ impl Position {
             - self.financing_cost_accrued
     }
 
-    /// Calculate unrealized return percentage
-    pub fn unrealized_return_pct(&self, current_price: f64) -> f64 {
+    /// Unrealized return as a fraction of the entry value (`0.05` means +5%)
+    pub fn unrealized_return(&self, current_price: f64) -> f64 {
         let entry_value = self.entry_price * self.entry_quantity;
         if entry_value == 0.0 {
             return 0.0;
         }
         let pnl = self.unrealized_pnl(current_price);
-        (pnl / entry_value) * 100.0
+        pnl / entry_value
     }
 
     /// Check if position is profitable at given price
