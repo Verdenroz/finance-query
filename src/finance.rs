@@ -939,5 +939,9 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "dataframe"))]
+#[cfg(all(
+    test,
+    feature = "dataframe",
+    any(feature = "fmp", feature = "alphavantage")
+))]
 mod dataframe_tests;
