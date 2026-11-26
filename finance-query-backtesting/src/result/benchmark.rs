@@ -9,13 +9,14 @@ pub struct BenchmarkMetrics {
     /// Benchmark symbol (e.g. `"SPY"`)
     pub symbol: String,
 
-    /// Buy-and-hold return of the benchmark over the same period, in percent (`5.0` means +5%)
-    pub benchmark_return_pct: f64,
+    /// Buy-and-hold return of the benchmark over the same period, as a fraction (`0.05` means +5%)
+    pub benchmark_return: f64,
 
-    /// Buy-and-hold return of the backtested symbol over the same period, in percent (`5.0` means +5%)
-    pub buy_and_hold_return_pct: f64,
+    /// Buy-and-hold return of the backtested symbol over the same period, as a fraction (`0.05` means +5%)
+    pub buy_and_hold_return: f64,
 
-    /// Jensen's Alpha: annualised strategy excess return over the benchmark (CAPM).
+    /// Jensen's Alpha: annualised strategy excess return over the benchmark (CAPM),
+    /// as a fraction (`0.02` means +2% a year).
     ///
     /// Computed as `strategy_ann - rf - β × (benchmark_ann - rf)` on the
     /// timestamp-aligned subset of strategy and benchmark returns.
@@ -32,7 +33,7 @@ pub struct BenchmarkMetrics {
     ///
     /// For accurate alpha, supply benchmark candles with the **same interval**
     /// as the strategy candles.
-    pub alpha: f64,
+    pub jensens_alpha: f64,
 
     /// Beta: sensitivity of strategy returns to benchmark movements
     pub beta: f64,
@@ -41,6 +42,6 @@ pub struct BenchmarkMetrics {
     pub information_ratio: f64,
 
     /// Tracking error: annualised standard deviation of (strategy − benchmark)
-    /// periodic returns — the denominator of `information_ratio`.
+    /// periodic returns, as a fraction. The denominator of `information_ratio`.
     pub tracking_error: f64,
 }

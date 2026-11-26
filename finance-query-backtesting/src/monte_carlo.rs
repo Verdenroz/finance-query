@@ -12,7 +12,7 @@
 //! let mc = MonteCarloConfig::default()
 //!     .method(MonteCarloMethod::BlockBootstrap { block_size: 10 })
 //!     .run(&result);
-//! println!("Median return: {:.2}%", mc.total_return.p50);
+//! println!("Median return: {:.2}%", mc.total_return_dist.p50 * 100.0);
 //! println!("5th pct drawdown: {:.2}%", mc.max_drawdown.p5 * 100.0);
 //! ```
 
@@ -141,12 +141,12 @@ impl MonteCarloConfig {
     /// a precise probability statement about future performance.
     pub fn run(&self, result: &BacktestResult) -> MonteCarloResult {
         let initial_capital = result.initial_capital;
-        let trade_returns: Vec<f64> = result.trades.iter().map(|t| t.return_pct / 100.0).collect();
+        let trade_returns: Vec<f64> = result.trades.iter().map(|t| t.net_return).collect();
 
         if trade_returns.len() < 2 || self.num_simulations == 0 {
             // Not enough trades to reshuffle — return degenerate result
-            let obs_return = result.metrics.total_return_pct;
-            let obs_dd = result.metrics.max_drawdown_pct;
+            let obs_return = result.metrics.total_return;
+            let obs_dd = result.metrics.max_drawdown;
             let obs_sharpe = result.metrics.sharpe_ratio;
             let obs_pf = result.metrics.profit_factor;
             let trivial = |v: f64| PercentileStats {
@@ -160,7 +160,7 @@ impl MonteCarloConfig {
             return MonteCarloResult {
                 num_simulations: self.num_simulations,
                 method: self.method.clone(),
-                total_return: trivial(obs_return),
+                total_return_dist: trivial(obs_return),
                 max_drawdown: trivial(obs_dd),
                 sharpe_ratio: trivial(obs_sharpe),
                 profit_factor: trivial(obs_pf),
@@ -226,7 +226,7 @@ impl MonteCarloConfig {
         MonteCarloResult {
             num_simulations: self.num_simulations,
             method: self.method.clone(),
-            total_return: PercentileStats::from_sorted(&mut sim_returns),
+            total_return_dist: PercentileStats::from_sorted(&mut sim_returns),
             max_drawdown: PercentileStats::from_sorted(&mut sim_drawdowns),
             sharpe_ratio: PercentileStats::from_sorted(&mut sim_sharpes),
             profit_factor: PercentileStats::from_sorted(&mut sim_pfs),
@@ -290,8 +290,8 @@ pub struct MonteCarloResult {
     /// Resampling method used to generate the simulations
     pub method: MonteCarloMethod,
 
-    /// Distribution of total return (%) across simulations
-    pub total_return: PercentileStats,
+    /// Distribution of total return as a fraction (`0.05` means +5%) across simulations
+    pub total_return_dist: PercentileStats,
 
     /// Distribution of maximum drawdown (0.0–1.0) across simulations
     pub max_drawdown: PercentileStats,
@@ -529,7 +529,7 @@ fn run_simulation(
         }
     }
 
-    let total_return = ((equity / initial_capital) - 1.0) * 100.0;
+    let total_return = (equity / initial_capital) - 1.0;
 
     let sharpe = if w_count >= 2 {
         let variance = w_m2 / (w_count - 1) as f64;
@@ -579,7 +579,7 @@ mod tests {
             commission: 0.0,
             transaction_tax: 0.0,
             pnl: (exit - entry) * qty,
-            return_pct: ((exit / entry) - 1.0) * 100.0,
+            net_return: (exit / entry) - 1.0,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             financing_cost: 0.0,
@@ -595,7 +595,7 @@ mod tests {
         EquityPoint {
             timestamp: ts,
             equity,
-            drawdown_pct: 0.0,
+            drawdown: 0.0,
         }
     }
 
@@ -650,7 +650,7 @@ mod tests {
         let mc1 = config.run(&result);
         let mc2 = config.run(&result);
 
-        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+        assert!((mc1.total_return_dist.p50 - mc2.total_return_dist.p50).abs() < f64::EPSILON);
         assert!((mc1.max_drawdown.p50 - mc2.max_drawdown.p50).abs() < f64::EPSILON);
     }
 
@@ -669,10 +669,10 @@ mod tests {
             .seed(1)
             .run(&result);
 
-        assert!(mc.total_return.p5 <= mc.total_return.p25);
-        assert!(mc.total_return.p25 <= mc.total_return.p50);
-        assert!(mc.total_return.p50 <= mc.total_return.p75);
-        assert!(mc.total_return.p75 <= mc.total_return.p95);
+        assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p25);
+        assert!(mc.total_return_dist.p25 <= mc.total_return_dist.p50);
+        assert!(mc.total_return_dist.p50 <= mc.total_return_dist.p75);
+        assert!(mc.total_return_dist.p75 <= mc.total_return_dist.p95);
         assert!(mc.max_drawdown.p5 <= mc.max_drawdown.p95);
     }
 
@@ -682,8 +682,8 @@ mod tests {
         let mc = MonteCarloConfig::default().run(&result);
 
         // With only 1 trade there's nothing to resample — all percentiles equal observed
-        assert_eq!(mc.total_return.p5, mc.total_return.p50);
-        assert_eq!(mc.total_return.p50, mc.total_return.p95);
+        assert_eq!(mc.total_return_dist.p5, mc.total_return_dist.p50);
+        assert_eq!(mc.total_return_dist.p50, mc.total_return_dist.p95);
     }
 
     #[test]
@@ -692,7 +692,7 @@ mod tests {
         let result = minimal_result(trades);
         let mc = MonteCarloConfig::default().seed(99).run(&result);
 
-        let spread = mc.total_return.p95 - mc.total_return.p5;
+        let spread = mc.total_return_dist.p95 - mc.total_return_dist.p5;
         assert!(
             spread < 1e-6,
             "expected tight spread for identical trades, got {spread}"
@@ -705,9 +705,9 @@ mod tests {
         let mc = MonteCarloConfig::default().num_simulations(0).run(&result);
 
         assert_eq!(mc.num_simulations, 0);
-        assert_eq!(mc.total_return.p5, mc.total_return.p50);
-        assert_eq!(mc.total_return.p50, mc.total_return.p95);
-        assert_eq!(mc.total_return.p50, result.metrics.total_return_pct);
+        assert_eq!(mc.total_return_dist.p5, mc.total_return_dist.p50);
+        assert_eq!(mc.total_return_dist.p50, mc.total_return_dist.p95);
+        assert_eq!(mc.total_return_dist.p50, result.metrics.total_return);
     }
 
     // ── BlockBootstrap ──────────────────────────────────────────────────────
@@ -729,8 +729,8 @@ mod tests {
             .seed(7)
             .run(&result);
 
-        assert!(mc.total_return.p5 <= mc.total_return.p50);
-        assert!(mc.total_return.p50 <= mc.total_return.p95);
+        assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p50);
+        assert!(mc.total_return_dist.p50 <= mc.total_return_dist.p95);
     }
 
     #[test]
@@ -742,7 +742,7 @@ mod tests {
         let mc1 = config.run(&result);
         let mc2 = config.run(&result);
 
-        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+        assert!((mc1.total_return_dist.p50 - mc2.total_return_dist.p50).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -760,8 +760,8 @@ mod tests {
             .run(&result);
 
         // All identical trades → both should give the same tight distribution
-        let iid_spread = iid.total_return.p95 - iid.total_return.p5;
-        let bb_spread = bb.total_return.p95 - bb.total_return.p5;
+        let iid_spread = iid.total_return_dist.p95 - iid.total_return_dist.p5;
+        let bb_spread = bb.total_return_dist.p95 - bb.total_return_dist.p5;
         assert!(iid_spread < 1e-6, "iid spread {iid_spread}");
         assert!(bb_spread < 1e-6, "bb spread {bb_spread}");
     }
@@ -785,8 +785,8 @@ mod tests {
             .seed(5)
             .run(&result);
 
-        assert!(mc.total_return.p5 <= mc.total_return.p50);
-        assert!(mc.total_return.p50 <= mc.total_return.p95);
+        assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p50);
+        assert!(mc.total_return_dist.p50 <= mc.total_return_dist.p95);
     }
 
     #[test]
@@ -798,7 +798,7 @@ mod tests {
         let mc1 = config.run(&result);
         let mc2 = config.run(&result);
 
-        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+        assert!((mc1.total_return_dist.p50 - mc2.total_return_dist.p50).abs() < f64::EPSILON);
     }
 
     // ── Parametric ──────────────────────────────────────────────────────────
@@ -819,10 +819,10 @@ mod tests {
             .seed(3)
             .run(&result);
 
-        assert!(mc.total_return.p5 <= mc.total_return.p25);
-        assert!(mc.total_return.p25 <= mc.total_return.p50);
-        assert!(mc.total_return.p50 <= mc.total_return.p75);
-        assert!(mc.total_return.p75 <= mc.total_return.p95);
+        assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p25);
+        assert!(mc.total_return_dist.p25 <= mc.total_return_dist.p50);
+        assert!(mc.total_return_dist.p50 <= mc.total_return_dist.p75);
+        assert!(mc.total_return_dist.p75 <= mc.total_return_dist.p95);
     }
 
     #[test]
@@ -834,7 +834,7 @@ mod tests {
         let mc1 = config.run(&result);
         let mc2 = config.run(&result);
 
-        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+        assert!((mc1.total_return_dist.p50 - mc2.total_return_dist.p50).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -847,7 +847,7 @@ mod tests {
             .seed(1)
             .run(&result);
 
-        let spread = mc.total_return.p95 - mc.total_return.p5;
+        let spread = mc.total_return_dist.p95 - mc.total_return_dist.p5;
         assert!(
             spread < 1e-6,
             "expected tight spread for zero-variance trades, got {spread}"

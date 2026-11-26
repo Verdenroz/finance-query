@@ -148,7 +148,7 @@ impl Tickers {
     ///     |_sym| SmaCrossover::new(10, 50),
     /// ).await?;
     ///
-    /// println!("Portfolio return: {:.2}%", result.portfolio_metrics.total_return_pct);
+    /// println!("Portfolio return: {:.2}%", result.portfolio_metrics.total_return * 100.0);
     /// # Ok(())
     /// # }
     /// ```

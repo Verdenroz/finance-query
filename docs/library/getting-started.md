@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     ).await?;
 
-    println!("Return: {:.2}%", result.metrics.total_return_pct);
+    println!("Return: {:.2}%", result.metrics.total_return * 100.0);
     Ok(())
 }
 ```

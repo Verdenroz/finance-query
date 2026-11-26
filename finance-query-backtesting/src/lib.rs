@@ -25,9 +25,9 @@
 //!     None,
 //! ).await?;
 //!
-//! println!("Return: {:.2}%", result.metrics.total_return_pct);
+//! println!("Return: {:.2}%", result.metrics.total_return * 100.0);
 //! println!("Sharpe: {:.2}", result.metrics.sharpe_ratio);
-//! println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown_pct * 100.0);
+//! println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown * 100.0);
 //! # Ok(())
 //! # }
 //! ```

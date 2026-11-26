@@ -41,7 +41,7 @@ pub struct GqlTradeSignal {
 pub struct GqlEquityPoint {
     pub timestamp: i64,
     pub equity: f64,
-    pub drawdown_pct: f64,
+    pub drawdown: f64,
 }
 
 /// One completed round trip.
@@ -58,7 +58,7 @@ pub struct GqlTrade {
     pub commission: f64,
     pub transaction_tax: f64,
     pub pnl: f64,
-    pub return_pct: f64,
+    pub net_return: f64,
     pub dividend_income: f64,
     pub unreinvested_dividends: f64,
     pub financing_cost: f64,
@@ -73,17 +73,17 @@ pub struct GqlTrade {
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlBacktestMetrics {
-    pub total_return_pct: f64,
-    pub annualized_return_pct: f64,
+    pub total_return: f64,
+    pub annualized_return: f64,
     pub sharpe_ratio: f64,
     pub sortino_ratio: f64,
-    pub max_drawdown_pct: f64,
+    pub max_drawdown: f64,
     pub max_drawdown_duration: i64,
     pub win_rate: f64,
     pub profit_factor: f64,
-    pub avg_trade_return_pct: f64,
-    pub avg_win_pct: f64,
-    pub avg_loss_pct: f64,
+    pub avg_trade_return: f64,
+    pub avg_win_return: f64,
+    pub avg_loss_return: f64,
     pub avg_trade_duration: f64,
     pub total_trades: u32,
     pub winning_trades: u32,
@@ -101,7 +101,7 @@ pub struct GqlBacktestMetrics {
     pub executed_signals: u32,
     pub avg_win_duration: f64,
     pub avg_loss_duration: f64,
-    pub time_in_market_pct: f64,
+    pub time_in_market: f64,
     pub max_idle_period: i64,
     pub total_dividend_income: f64,
     pub kelly_criterion: f64,

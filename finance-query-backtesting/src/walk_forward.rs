@@ -358,7 +358,7 @@ fn aggregate_oos_metrics(
             combined_equity.push(EquityPoint {
                 timestamp: point.timestamp,
                 equity: scaled_equity,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             });
         }
 
@@ -371,7 +371,7 @@ fn aggregate_oos_metrics(
     let mut peak = f64::NEG_INFINITY;
     for point in &mut combined_equity {
         peak = peak.max(point.equity);
-        point.drawdown_pct = if peak > 0.0 {
+        point.drawdown = if peak > 0.0 {
             (peak - point.equity) / peak
         } else {
             0.0
