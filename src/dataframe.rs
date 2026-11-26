@@ -99,6 +99,7 @@ delegate_rows_to_inherent!(
     crate::CalendarEvent,
     crate::MarketCalendarEntry,
     crate::models::chart::spark::Spark,
+    crate::streaming::AlertEvent,
     crate::SparkData,
 );
 

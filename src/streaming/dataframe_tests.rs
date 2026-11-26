@@ -185,7 +185,7 @@ fn series_update_columns() {
 }
 
 #[test]
-fn alert_event_flattens_the_tick_and_leaves_out_the_condition() {
+fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
     let event = AlertEvent {
         symbol: "AAPL".into(),
         condition: AlertCondition::PriceAbove(1.0),
@@ -207,6 +207,17 @@ fn alert_event_flattens_the_tick_and_leaves_out_the_condition() {
             "update_id:str",
         ]
     );
-    assert_eq!(df.width(), 5 + 33);
-    assert_eq!(AlertEvent::vec_to_dataframe(&[]).unwrap().width(), 5 + 33);
+    assert_eq!(df.width(), 5 + 33 + 1);
+    assert_eq!(columns(&df).last().unwrap(), "condition_kind:str");
+    assert_eq!(
+        df.column("condition_kind").unwrap().str().unwrap().get(0),
+        Some("priceAbove")
+    );
+
+    let empty = AlertEvent::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), columns(&df));
+    assert_eq!(empty.height(), 0);
+
+    let two = AlertEvent::vec_to_dataframe(&[event.clone(), event]).unwrap();
+    assert_eq!(two.height(), 2);
 }
