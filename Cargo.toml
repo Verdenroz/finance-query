@@ -72,7 +72,7 @@ prost = "0.14.3"
 base64 = "0.22"
 
 # Optional: DataFrame support
-polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-struct"] }
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 finance-query-types = { version = "3.4.0", path = "finance-query-types" }
 

@@ -86,6 +86,12 @@ use syn::{
 /// - `#[dataframe(flatten)]` on a field whose type also derives `ToDataFrame`
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
 /// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
+/// - `#[dataframe(nested)]` on a `Vec<T>`, `Option<Vec<T>>`, `T` or `Option<T>`
+///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
+///   `{field}_dataframe()` for that field's rows, plus `to_nested_dataframe()` and
+///   `vec_to_nested_dataframe()` with one `List(Struct)` column per nested field.
+///   A `None` or empty field is an empty list. It cannot be combined with
+///   `skip`, `list` or `flatten`.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
 ///   `finance_query` re-exported under another path.
 ///
@@ -104,6 +110,36 @@ use syn::{
 ///     pub sentiment: Option<Sentiment>,
 /// }
 /// // Columns: symbol, last, provider, sentiment_label, sentiment_score, sentiment_confidence
+/// ```
+///
+/// Nested rows reach polars as a child frame or as list columns on the parent:
+///
+/// ```ignore
+/// #[derive(ToDataFrame)]
+/// pub struct Fund {
+///     pub symbol: String,
+///     #[dataframe(nested)]
+///     pub holdings: Vec<Holding>,
+/// }
+///
+/// let holdings = fund.holdings_dataframe()?; // one row per holding
+/// let nested = fund.to_nested_dataframe()?;  // symbol, holdings: List(Struct)
+/// ```
+///
+/// Combining `nested` with `flatten` fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(nested, flatten)]
+///     rows: Vec<Row>,
+/// }
 /// ```
 #[proc_macro_derive(ToDataFrame, attributes(dataframe))]
 pub fn derive_to_dataframe(input: TokenStream) -> TokenStream {

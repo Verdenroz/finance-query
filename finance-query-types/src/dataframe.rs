@@ -54,8 +54,13 @@ pub mod derive {
     use std::marker::PhantomData;
 
     use polars::prelude::{
-        Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, Series,
+        Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, PlSmallStr,
+        PolarsResult, Series,
     };
+
+    use polars::chunked_array::builder::get_list_builder;
+
+    use super::ToDataFrame;
 
     pub trait Columns {
         fn columns(rows: &[Option<&Self>], prefix: &str) -> Vec<Column>;
@@ -73,6 +78,27 @@ pub mod derive {
             }
         }
         Column::from(builder.finish().into_series())
+    }
+
+    /// One `List(Struct)` column holding each parent's child rows as a list of structs.
+    ///
+    /// An empty slice is an empty list. The struct fields come from the
+    /// child's zero-row frame so the dtype holds when every list is empty.
+    pub fn nested_column<'a, T: ToDataFrame + 'a>(
+        name: &str,
+        rows: impl ExactSizeIterator<Item = &'a [T]>,
+    ) -> PolarsResult<Column> {
+        let dtype = T::vec_to_dataframe(&[])?
+            .into_struct(PlSmallStr::EMPTY)
+            .into_series()
+            .dtype()
+            .clone();
+        let mut builder = get_list_builder(&dtype, rows.len(), rows.len(), name.into());
+        for items in rows {
+            let child = T::vec_to_dataframe(items)?;
+            builder.append_series(&child.into_struct(PlSmallStr::EMPTY).into_series())?;
+        }
+        Ok(Column::from(builder.finish().into_series()))
     }
 
     /// Selects a column builder by whether `T: Display`, resolved by autoref at the call site.

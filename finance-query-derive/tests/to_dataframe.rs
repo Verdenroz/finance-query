@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use finance_query::ToDataFrame;
-use finance_query::polars::prelude::{DataFrame, DataType};
+use finance_query::polars::prelude::{CsvWriter, DataFrame, DataType, Field, SerWriter};
 
 #[derive(Clone, Copy)]
 enum Side {
@@ -264,4 +264,149 @@ fn empty_slice_keeps_the_schema() {
         schema(&df),
         columns(&[("price", DataType::Float64), ("note", DataType::String)])
     );
+}
+
+#[derive(ToDataFrame)]
+struct Holding {
+    symbol: String,
+    weight: Option<f64>,
+}
+
+#[derive(ToDataFrame)]
+struct Fund {
+    name: String,
+    #[dataframe(nested)]
+    holdings: Vec<Holding>,
+    #[dataframe(nested)]
+    maybe_holdings: Option<Vec<Holding>>,
+    #[dataframe(nested)]
+    top: Holding,
+    #[dataframe(nested, rename = "benchmark")]
+    maybe_top: Option<Holding>,
+}
+
+fn holding(symbol: &str) -> Holding {
+    Holding {
+        symbol: symbol.into(),
+        weight: Some(0.5),
+    }
+}
+
+fn fund(name: &str, holdings: usize) -> Fund {
+    Fund {
+        name: name.into(),
+        holdings: (0..holdings).map(|i| holding(&format!("S{i}"))).collect(),
+        maybe_holdings: (holdings > 1).then(|| vec![holding("M")]),
+        top: holding("TOP"),
+        maybe_top: (holdings > 0).then(|| holding("B")),
+    }
+}
+
+fn struct_list() -> DataType {
+    DataType::List(Box::new(DataType::Struct(vec![
+        Field::new("symbol".into(), DataType::String),
+        Field::new("weight".into(), DataType::Float64),
+    ])))
+}
+
+#[test]
+fn nested_fields_stay_out_of_the_flat_frame() {
+    let df = fund("A", 2).to_dataframe().unwrap();
+    assert_eq!(schema(&df), columns(&[("name", DataType::String)]));
+}
+
+#[test]
+fn child_frames_cover_every_field_shape() {
+    let parent = fund("A", 2);
+    let holdings = parent.holdings_dataframe().unwrap();
+    assert_eq!(holdings.height(), 2);
+    assert_eq!(
+        schema(&holdings),
+        columns(&[("symbol", DataType::String), ("weight", DataType::Float64)])
+    );
+    assert_eq!(parent.maybe_holdings_dataframe().unwrap().height(), 1);
+    assert_eq!(parent.top_dataframe().unwrap().height(), 1);
+    assert_eq!(parent.maybe_top_dataframe().unwrap().height(), 1);
+}
+
+#[test]
+fn empty_and_none_children_keep_the_child_schema() {
+    let parent = fund("A", 0);
+    for df in [
+        parent.holdings_dataframe().unwrap(),
+        parent.maybe_holdings_dataframe().unwrap(),
+        parent.maybe_top_dataframe().unwrap(),
+    ] {
+        assert_eq!(df.height(), 0);
+        assert_eq!(schema(&df), schema(&holding("x").to_dataframe().unwrap()));
+    }
+}
+
+#[test]
+fn nested_frame_appends_list_struct_columns_in_field_order() {
+    let df = fund("A", 2).to_nested_dataframe().unwrap();
+    assert_eq!(
+        schema(&df),
+        columns(&[
+            ("name", DataType::String),
+            ("holdings", struct_list()),
+            ("maybe_holdings", struct_list()),
+            ("top", struct_list()),
+            ("benchmark", struct_list()),
+        ])
+    );
+    assert_eq!(df.height(), 1);
+    let list_len = |name: &str, row: usize| {
+        df.column(name)
+            .unwrap()
+            .list()
+            .unwrap()
+            .get_as_series(row)
+            .unwrap()
+            .len()
+    };
+    assert_eq!(list_len("holdings", 0), 2);
+    assert_eq!(list_len("top", 0), 1);
+}
+
+#[test]
+fn empty_children_are_empty_lists_not_null() {
+    let df = fund("A", 0).to_nested_dataframe().unwrap();
+    for name in ["holdings", "maybe_holdings", "benchmark"] {
+        let column = df.column(name).unwrap();
+        assert_eq!(column.null_count(), 0, "{name}");
+        assert_eq!(
+            column.list().unwrap().get_as_series(0).unwrap().len(),
+            0,
+            "{name}"
+        );
+    }
+}
+
+#[test]
+fn vec_to_nested_dataframe_spans_parents() {
+    let parents = [fund("A", 3), fund("B", 0), fund("C", 1)];
+    let df = Fund::vec_to_nested_dataframe(&parents).unwrap();
+    assert_eq!(df.height(), 3);
+    let lens: Vec<usize> = df
+        .column("holdings")
+        .unwrap()
+        .list()
+        .unwrap()
+        .into_iter()
+        .map(|list| list.unwrap().len())
+        .collect();
+    assert_eq!(lens, [3, 0, 1]);
+    assert_eq!(
+        Fund::vec_to_nested_dataframe(&[]).unwrap().width(),
+        df.width()
+    );
+}
+
+#[test]
+fn csv_export_of_the_flat_frame_succeeds_with_nested_fields() {
+    let mut df = fund("A", 2).to_dataframe().unwrap();
+    let mut out = Vec::new();
+    CsvWriter::new(&mut out).finish(&mut df).unwrap();
+    assert!(String::from_utf8(out).unwrap().contains('A'));
 }
