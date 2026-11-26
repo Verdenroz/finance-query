@@ -146,18 +146,18 @@ components:
         changePercent:
           description: Percent change carried by the triggering tick.
           type: number
-          format: float
+          format: double
         condition:
           description: Condition that fired.
           $ref: "#/components/schemas/AlertCondition"
         previousPrice:
           description: "Last price seen before this tick, if any."
           type: number
-          format: float
+          format: double
         price:
           description: Price on the triggering tick.
           type: number
-          format: float
+          format: double
         symbol:
           description: Symbol that triggered.
           type: string
@@ -235,22 +235,22 @@ components:
       properties:
         ask:
           type: number
-          format: float
+          format: double
         askSize:
           type: integer
           format: int64
         bid:
           type: number
-          format: float
+          format: double
         bidSize:
           type: integer
           format: int64
         change:
           type: number
-          format: float
+          format: double
         changePercent:
           type: number
-          format: float
+          format: double
         circulatingSupply:
           type: number
           format: double
@@ -258,10 +258,10 @@ components:
           type: string
         dayHigh:
           type: number
-          format: float
+          format: double
         dayLow:
           type: number
-          format: float
+          format: double
         dayVolume:
           type: integer
           format: int64
@@ -292,15 +292,15 @@ components:
           format: int64
         openPrice:
           type: number
-          format: float
+          format: double
         optionsType:
           $ref: "#/components/schemas/OptionType"
         previousClose:
           type: number
-          format: float
+          format: double
         price:
           type: number
-          format: float
+          format: double
         priceHint:
           type: integer
           format: int64
@@ -310,7 +310,7 @@ components:
           type: string
         strikePrice:
           type: number
-          format: float
+          format: double
         time:
           type: integer
           format: int64

@@ -60,13 +60,13 @@ fn price_update_columns() {
         columns(&df)[..8],
         [
             "id:str",
-            "price:f32",
+            "price:f64",
             "time:i64",
             "currency:str",
             "exchange:str",
             "quote_type:str",
             "market_hours:str",
-            "change_percent:f32",
+            "change_percent:f64",
         ]
     );
     assert_eq!(
@@ -200,9 +200,9 @@ fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
         columns(&df)[..6],
         [
             "symbol:str",
-            "price:f32",
-            "previous_price:f32",
-            "change_percent:f32",
+            "price:f64",
+            "previous_price:f64",
+            "change_percent:f64",
             "time:i64",
             "update_id:str",
         ]

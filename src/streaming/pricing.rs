@@ -346,30 +346,30 @@ impl PricingData {
 #[allow(missing_docs)]
 pub struct PriceUpdate {
     pub id: String,
-    pub price: f32,
+    pub price: f64,
     pub time: i64,
     pub currency: String,
     pub exchange: String,
     pub quote_type: QuoteType,
     pub market_hours: MarketHoursType,
-    pub change_percent: f32,
+    pub change_percent: f64,
     pub day_volume: i64,
-    pub day_high: f32,
-    pub day_low: f32,
-    pub change: f32,
+    pub day_high: f64,
+    pub day_low: f64,
+    pub change: f64,
     pub short_name: String,
     pub expire_date: i64,
-    pub open_price: f32,
-    pub previous_close: f32,
-    pub strike_price: f32,
+    pub open_price: f64,
+    pub previous_close: f64,
+    pub strike_price: f64,
     pub underlying_symbol: String,
     pub open_interest: i64,
     pub options_type: OptionType,
     pub mini_option: i64,
     pub last_size: i64,
-    pub bid: f32,
+    pub bid: f64,
     pub bid_size: i64,
-    pub ask: f32,
+    pub ask: f64,
     pub ask_size: i64,
     pub price_hint: i64,
     pub vol_24hr: i64,
@@ -380,34 +380,46 @@ pub struct PriceUpdate {
     pub market_cap: f64,
 }
 
+/// Widens by shortest decimal form so `189.98f32` becomes `189.98f64`, not
+/// `189.97999572753906`.
+fn widen(value: f32) -> f64 {
+    if !value.is_finite() {
+        return f64::from(value);
+    }
+    ryu::Buffer::new()
+        .format_finite(value)
+        .parse()
+        .unwrap_or_else(|_| f64::from(value))
+}
+
 impl From<PricingData> for PriceUpdate {
     fn from(data: PricingData) -> Self {
         Self {
             id: data.id,
-            price: data.price,
+            price: widen(data.price),
             time: data.time,
             currency: data.currency,
             exchange: data.exchange,
             quote_type: QuoteType::from(data.quote_type),
             market_hours: MarketHoursType::from(data.market_hours),
-            change_percent: data.change_percent,
+            change_percent: widen(data.change_percent),
             day_volume: data.day_volume,
-            day_high: data.day_high,
-            day_low: data.day_low,
-            change: data.change,
+            day_high: widen(data.day_high),
+            day_low: widen(data.day_low),
+            change: widen(data.change),
             short_name: data.short_name,
             expire_date: data.expire_date,
-            open_price: data.open_price,
-            previous_close: data.previous_close,
-            strike_price: data.strike_price,
+            open_price: widen(data.open_price),
+            previous_close: widen(data.previous_close),
+            strike_price: widen(data.strike_price),
             underlying_symbol: data.underlying_symbol,
             open_interest: data.open_interest,
             options_type: OptionType::from(data.options_type as i32),
             mini_option: data.mini_option,
             last_size: data.last_size,
-            bid: data.bid,
+            bid: widen(data.bid),
             bid_size: data.bid_size,
-            ask: data.ask,
+            ask: widen(data.ask),
             ask_size: data.ask_size,
             price_hint: data.price_hint,
             vol_24hr: data.vol_24hr,
@@ -457,6 +469,19 @@ mod tests {
         assert_eq!(MarketHoursType::from(0), MarketHoursType::PreMarket);
         assert_eq!(MarketHoursType::from(1), MarketHoursType::RegularMarket);
         assert_eq!(MarketHoursType::from(2), MarketHoursType::PostMarket);
+    }
+
+    #[test]
+    fn widening_keeps_the_shortest_decimal_form() {
+        let update = PriceUpdate::from(PricingData {
+            price: 189.98,
+            bid: f32::NAN,
+            ask: f32::INFINITY,
+            ..Default::default()
+        });
+        assert_eq!(update.price, 189.98_f64);
+        assert!(update.bid.is_nan());
+        assert_eq!(update.ask, f64::INFINITY);
     }
 
     fn sample() -> PricingData {

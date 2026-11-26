@@ -147,15 +147,15 @@ impl AlertCondition {
     ///
     /// `previous` is the last price seen for the symbol; crossing conditions
     /// need it and never fire on the first tick of a symbol.
-    fn holds(&self, update: &PriceUpdate, previous: Option<f32>) -> bool {
-        let price = update.price as f64;
+    fn holds(&self, update: &PriceUpdate, previous: Option<f64>) -> bool {
+        let price = update.price;
         match *self {
-            Self::CrossesAbove(t) => previous.is_some_and(|p| (p as f64) <= t) && price > t,
-            Self::CrossesBelow(t) => previous.is_some_and(|p| (p as f64) >= t) && price < t,
+            Self::CrossesAbove(t) => previous.is_some_and(|p| p <= t) && price > t,
+            Self::CrossesBelow(t) => previous.is_some_and(|p| p >= t) && price < t,
             Self::PriceAbove(t) => price > t,
             Self::PriceBelow(t) => price < t,
-            Self::PercentChangeAbove(t) => update.change_percent as f64 >= t,
-            Self::PercentChangeBelow(t) => update.change_percent as f64 <= t,
+            Self::PercentChangeAbove(t) => update.change_percent >= t,
+            Self::PercentChangeBelow(t) => update.change_percent <= t,
             Self::VolumeAbove(t) => update.day_volume >= t,
         }
     }
@@ -202,11 +202,11 @@ pub struct AlertEvent {
     /// Condition that fired.
     pub condition: AlertCondition,
     /// Price on the triggering tick.
-    pub price: f32,
+    pub price: f64,
     /// Last price seen before this tick, if any.
-    pub previous_price: Option<f32>,
+    pub previous_price: Option<f64>,
     /// Percent change carried by the triggering tick.
-    pub change_percent: f32,
+    pub change_percent: f64,
     /// Tick timestamp (milliseconds).
     pub time: i64,
     /// The full triggering tick.
@@ -302,7 +302,7 @@ pub struct AlertEvaluator {
     /// Symbols any rule watches — a shared feed carries far more than these,
     /// and untracked ids must not accumulate history.
     watched: HashSet<String>,
-    last_price: HashMap<String, f32>,
+    last_price: HashMap<String, f64>,
 }
 
 impl AlertEvaluator {
@@ -452,7 +452,7 @@ mod tests {
     use super::*;
     use futures::StreamExt;
 
-    fn tick(symbol: &str, price: f32) -> PriceUpdate {
+    fn tick(symbol: &str, price: f64) -> PriceUpdate {
         PriceUpdate {
             id: symbol.to_string(),
             price,

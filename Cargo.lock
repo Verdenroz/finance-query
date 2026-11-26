@@ -1601,6 +1601,7 @@ dependencies = [
  "reqwest",
  "rustls",
  "rustls-native-certs",
+ "ryu",
  "serde",
  "serde_json",
  "serial_test",
