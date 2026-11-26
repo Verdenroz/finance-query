@@ -51,3 +51,69 @@ fn analyst_recommendation_columns() {
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
 }
+
+#[cfg(feature = "alphavantage")]
+#[test]
+fn earnings_calendar_entry_columns() {
+    let row: EarningsCalendarEntry = serde_json::from_value(json!({"symbol": "x"})).unwrap();
+    let expected = [
+        "symbol:str",
+        "name:str",
+        "report_date:str",
+        "fiscal_date_ending:str",
+        "estimate:f64",
+        "currency:str",
+    ];
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+
+    let empty = <EarningsCalendarEntry>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}
+
+#[cfg(feature = "alphavantage")]
+#[test]
+fn ipo_calendar_entry_columns() {
+    let row: IpoCalendarEntry = serde_json::from_value(json!({})).unwrap();
+    let expected = [
+        "symbol:str",
+        "name:str",
+        "ipo_date:str",
+        "price_range:str",
+        "exchange:str",
+    ];
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+
+    let empty = <IpoCalendarEntry>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}
+
+#[cfg(feature = "fmp")]
+#[test]
+fn insider_transaction_columns() {
+    let row: InsiderTransaction = serde_json::from_value(json!({})).unwrap();
+    let expected = [
+        "symbol:str",
+        "filing_date:str",
+        "transaction_date:str",
+        "reporting_name:str",
+        "transaction_type:str",
+        "securities_transacted:f64",
+        "price:f64",
+        "securities_owned:f64",
+        "type_of_owner:str",
+        "link:str",
+    ];
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+
+    let empty = <InsiderTransaction>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}

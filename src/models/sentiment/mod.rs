@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 /// Unlike [`FearAndGreed`] (a market-wide 0—100 gauge from Alternative.me),
 /// this reflects news sentiment for a specific stock.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct SymbolSentiment {
     /// Sentiment score (-1.0 = very negative, 0.0 = neutral, 1.0 = very positive).
@@ -31,3 +32,6 @@ pub struct SymbolSentiment {
     /// Human-readable label (e.g., "Bullish", "Bearish", "Neutral").
     pub label: Option<String>,
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

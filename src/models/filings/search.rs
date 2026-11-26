@@ -69,6 +69,7 @@ pub struct EdgarSearchHitsContainer {
 
 /// Total count information for search results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarSearchTotal {
     /// Total number of matching documents

@@ -20,3 +20,6 @@ pub mod sectors;
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod index_trend;
 pub use index_trend::{IndexTrend, IndustryTrend, SectorTrend};
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

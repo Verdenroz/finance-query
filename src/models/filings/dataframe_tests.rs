@@ -151,3 +151,16 @@ fn search_hit_and_file_columns() {
         ]
     );
 }
+
+#[test]
+fn edgar_search_total_columns() {
+    let row: EdgarSearchTotal = serde_json::from_value(json!({})).unwrap();
+    let expected = ["value:u64", "relation:str"];
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(columns(&df), expected);
+    assert_eq!(df.height(), 1);
+
+    let empty = <EdgarSearchTotal>::vec_to_dataframe(&[]).unwrap();
+    assert_eq!(columns(&empty), expected);
+    assert_eq!(empty.height(), 0);
+}

@@ -587,6 +587,7 @@ impl From<Period> for crate::adapters::fmp::models::Period {
 #[cfg(feature = "fmp")]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct InsiderTransaction {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -837,6 +838,7 @@ pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::
 #[cfg(feature = "alphavantage")]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct EarningsCalendarEntry {
     /// Ticker symbol.
     pub symbol: String,
@@ -872,6 +874,7 @@ impl From<crate::adapters::alphavantage::models::EarningsCalendarEntryDTO>
 #[cfg(feature = "alphavantage")]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct IpoCalendarEntry {
     /// Ticker symbol.
     pub symbol: Option<String>,
