@@ -7,6 +7,10 @@ use polars::prelude::{DataFrame, PolarsResult};
 /// `Chart` and `Options`). Generic code can take `T: ToDataFrame` instead of
 /// naming each model.
 ///
+/// Slices and `Vec`s of any `ToDataFrame` type implement it too, so
+/// `candles.to_dataframe()` stacks one row per item. Import the trait (or
+/// `finance_query::prelude::*`) to call it with method syntax.
+///
 /// The derive keeps the inherent `to_dataframe` and `vec_to_dataframe`
 /// methods, so calling them does not require this trait in scope.
 ///
@@ -62,6 +66,26 @@ pub trait ToDataFrame {
         Self: Sized,
     {
         Self::vec_to_dataframe(items)
+    }
+}
+
+impl<T: ToDataFrame> ToDataFrame for [T] {
+    fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_dataframe(self)
+    }
+
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        T::vec_to_nested_dataframe(self)
+    }
+}
+
+impl<T: ToDataFrame> ToDataFrame for Vec<T> {
+    fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        self.as_slice().to_dataframe()
+    }
+
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        self.as_slice().to_nested_dataframe()
     }
 }
 

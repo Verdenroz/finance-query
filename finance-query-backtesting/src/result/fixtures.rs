@@ -5,7 +5,7 @@ use crate::config::BacktestConfig;
 use crate::position::{Position, PositionSide, Trade};
 use crate::signal::Signal;
 
-pub(super) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
+pub(crate) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
     Trade {
         side: if is_long {
             PositionSide::Long
@@ -33,7 +33,7 @@ pub(super) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
     }
 }
 
-pub(super) fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts: i64) -> Trade {
+pub(crate) fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts: i64) -> Trade {
     Trade {
         side: PositionSide::Long,
         entry_timestamp: entry_ts,
@@ -59,7 +59,7 @@ pub(super) fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts
 
 /// Minimal `BacktestResult` fixture using the default `BacktestConfig`
 /// (risk_free_rate=0.0, bars_per_year=252.0).
-pub(super) fn make_result(trades: Vec<Trade>, equity_curve: Vec<EquityPoint>) -> BacktestResult {
+pub(crate) fn make_result(trades: Vec<Trade>, equity_curve: Vec<EquityPoint>) -> BacktestResult {
     let metrics = PerformanceMetrics::calculate(
         &trades,
         &equity_curve,
@@ -88,12 +88,12 @@ pub(super) fn make_result(trades: Vec<Trade>, equity_curve: Vec<EquityPoint>) ->
     }
 }
 
-pub(super) fn ts(date: &str) -> i64 {
+pub(crate) fn ts(date: &str) -> i64 {
     let d = NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap();
     d.and_hms_opt(12, 0, 0).unwrap().and_utc().timestamp()
 }
 
-pub(super) fn equity_point(timestamp: i64, equity: f64, drawdown_pct: f64) -> EquityPoint {
+pub(crate) fn equity_point(timestamp: i64, equity: f64, drawdown_pct: f64) -> EquityPoint {
     EquityPoint {
         timestamp,
         equity,

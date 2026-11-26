@@ -2,11 +2,29 @@
 // source: docs/library/dataframe.md
 #![allow(unused)]
 
-// line 839
+// line 818
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_839() {
+fn doc_block_line_818() {
+    use finance_query::Dividend;
+    use finance_query::prelude::*;
+
+    let dividends: Vec<Dividend> = serde_json::from_str(
+        r#"[{"timestamp": 1704067200, "amount": 0.24},
+            {"timestamp": 1711929600, "amount": 0.25}]"#,
+    )
+    .unwrap();
+
+    assert_eq!(dividends.to_dataframe().unwrap().height(), 2);
+    assert_eq!(dividends[..1].to_dataframe().unwrap().height(), 1);
+}
+
+// line 859
+#[cfg(feature = "dataframe")]
+#[rustfmt::skip]
+#[test]
+fn doc_block_line_859() {
     use finance_query::quote::TopHoldings;
 
     let top: TopHoldings = serde_json::from_str(
@@ -26,11 +44,11 @@ fn doc_block_line_839() {
     println!("{:?}", nested.column("holdings").unwrap().dtype());
 }
 
-// line 865
+// line 885
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_865() {
+fn doc_block_line_885() {
     use finance_query::EdgarSearchSource;
 
     let hit: EdgarSearchSource = serde_json::from_str(
@@ -42,11 +60,11 @@ fn doc_block_line_865() {
     println!("{:?}", df.column("ciks").unwrap().dtype());
 }
 
-// line 881
+// line 901
 #[cfg(all(feature = "dataframe", feature = "indicators"))]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_881() {
+fn doc_block_line_901() {
     use finance_query::MacdResult;
 
     let macd = MacdResult {
@@ -60,11 +78,11 @@ fn doc_block_line_881() {
     println!("{:?}", df.get_column_names());
 }
 
-// line 899
+// line 919
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_899() {
+fn doc_block_line_919() {
     use finance_query::streaming::PriceUpdate;
 
     let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
@@ -80,11 +98,11 @@ fn doc_block_line_899() {
     println!("{}", df.width());
 }
 
-// line 921
+// line 941
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_921() {
+fn doc_block_line_941() {
     use finance_query::CompanyFacts;
 
     let facts: CompanyFacts = serde_json::from_str(
@@ -102,11 +120,11 @@ fn doc_block_line_921() {
     println!("{:?}", &df.get_column_names()[..3]);
 }
 
-// line 972: compile-only (no_run)
+// line 992: compile-only (no_run)
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_972() {
+fn doc_block_line_992() {
         use finance_query::{Interval, Ticker, TimeRange};
         use polars::prelude::*;
 

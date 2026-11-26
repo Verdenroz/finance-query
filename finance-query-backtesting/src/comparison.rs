@@ -42,6 +42,11 @@ use super::result::BacktestResult;
 /// A single row in the comparison table — one strategy's key metrics.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(finance_query_types::ToDataFrame),
+    dataframe(crate = "finance_query_types")
+)]
 pub struct ComparisonRow {
     /// User-supplied label for the strategy (e.g. `"SMA 10/50"`).
     pub label: String,
