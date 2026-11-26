@@ -832,6 +832,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 154 columns
 ```
 
+### Nested Rows
+
+Types that hold a list of rows, such as the holdings of a fund, keep the parent frame flat so it stays CSV-safe. Each list has its own child frame through a `{field}_dataframe()` method. `to_nested_dataframe()` (and `vec_to_nested_dataframe()` for a slice) instead keeps the rows inside the parent as a `List(Struct)` column.
+
+```rust feature=dataframe
+use finance_query::quote::TopHoldings;
+
+let top: TopHoldings = serde_json::from_str(
+    r#"{"holdings": [
+        {"symbol": "AAPL", "holdingName": "Apple Inc", "holdingPercent": {"raw": 0.07}},
+        {"symbol": "MSFT", "holdingName": "Microsoft Corp", "holdingPercent": {"raw": 0.06}}
+    ]}"#,
+)
+.unwrap();
+
+let holdings = top.holdings_dataframe().unwrap();
+assert_eq!(holdings.height(), 2);
+println!("{:?}", holdings.get_column_names());
+
+let nested = top.to_nested_dataframe().unwrap();
+assert_eq!(nested.height(), 1);
+println!("{:?}", nested.column("holdings").unwrap().dtype());
+```
+
+Nested and list columns cannot be written to CSV. Write the flat parent frame or a child frame instead.
+
+### List Columns
+
+A `Vec<String>` field marked as a list becomes a `List(String)` column. EDGAR submissions and full-text search hits use this for `tickers`, `exchanges`, `ciks` and similar fields.
+
+```rust feature=dataframe
+use finance_query::EdgarSearchSource;
+
+let hit: EdgarSearchSource = serde_json::from_str(
+    r#"{"form": "10-K", "ciks": ["0000320193"], "display_names": ["Apple Inc. (AAPL)"]}"#,
+)
+.unwrap();
+
+let df = hit.to_dataframe().unwrap();
+println!("{:?}", df.column("ciks").unwrap().dtype());
+```
+
 ## Error Handling
 
 DataFrame conversion can fail due to Polars errors:
