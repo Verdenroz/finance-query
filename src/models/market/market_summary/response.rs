@@ -93,8 +93,9 @@ impl MarketSummaryQuote {
 impl SparkData {
     /// Converts the points to a long-format polars DataFrame, one row per point.
     ///
-    /// Columns are `timestamp` (i64) and `close` (f64). Missing closes stay null,
-    /// and the shorter series is padded with nulls. A `None` series is empty.
+    /// Columns are `symbol` (string, repeated on every row), `timestamp` (i64)
+    /// and `close` (f64). Missing closes stay null, and the shorter series is
+    /// padded with nulls. A `None` series is empty.
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
         use crate::dataframe::padded;
         use polars::prelude::*;
@@ -105,6 +106,7 @@ impl SparkData {
         DataFrame::new(
             rows,
             vec![
+                Series::new("symbol".into(), vec![self.symbol.as_deref(); rows]).into(),
                 Series::new(
                     "timestamp".into(),
                     padded(timestamps.iter().copied().map(Some), rows),
@@ -125,6 +127,7 @@ impl SparkData {
         let schema = DataFrame::new(
             0,
             vec![
+                Series::new("symbol".into(), Vec::<&str>::new()).into(),
                 Series::new("timestamp".into(), Vec::<i64>::new()).into(),
                 Series::new("close".into(), Vec::<f64>::new()).into(),
             ],

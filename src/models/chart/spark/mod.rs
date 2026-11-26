@@ -43,18 +43,20 @@ impl Spark {
     ) -> Option<Self> {
         let data = result.response.first()?;
 
-        let timestamps = data.timestamp.as_deref().unwrap_or_default();
         let prices = data
             .indicators
             .quote
             .first()
             .and_then(|q| q.close.as_deref())
             .unwrap_or_default();
-        let (timestamps, closes) = timestamps
-            .iter()
-            .zip(prices)
-            .filter_map(|(&timestamp, &close)| Some((timestamp, close?)))
-            .unzip();
+        let (timestamps, closes) = match data.timestamp.as_deref() {
+            Some(timestamps) => timestamps
+                .iter()
+                .zip(prices)
+                .filter_map(|(&timestamp, &close)| Some((timestamp, close?)))
+                .unzip(),
+            None => (Vec::new(), prices.iter().flatten().copied().collect()),
+        };
 
         Some(Self {
             symbol: result.symbol.clone(),
@@ -115,18 +117,28 @@ impl Spark {
     /// Converts the points to a long-format polars DataFrame, one row per point.
     ///
     /// Columns are `symbol` (string), `timestamp` (i64), `close` (f64), `interval`
-    /// and `range` (strings, repeated on every row). Chart metadata is in
+    /// and `range` (strings, repeated on every row). The shorter of `timestamps`
+    /// and `closes` is padded with nulls. Chart metadata is in
     /// [`meta_dataframe`](Self::meta_dataframe).
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use crate::dataframe::padded;
         use polars::prelude::*;
 
-        let rows = self.closes.len();
+        let rows = self.timestamps.len().max(self.closes.len());
         DataFrame::new(
             rows,
             vec![
                 Series::new("symbol".into(), vec![self.symbol.as_str(); rows]).into(),
-                Series::new("timestamp".into(), self.timestamps.as_slice()).into(),
-                Series::new("close".into(), self.closes.as_slice()).into(),
+                Series::new(
+                    "timestamp".into(),
+                    padded(self.timestamps.iter().copied().map(Some), rows),
+                )
+                .into(),
+                Series::new(
+                    "close".into(),
+                    padded(self.closes.iter().copied().map(Some), rows),
+                )
+                .into(),
                 Series::new("interval".into(), vec![self.interval.as_deref(); rows]).into(),
                 Series::new("range".into(), vec![self.range.as_deref(); rows]).into(),
             ],

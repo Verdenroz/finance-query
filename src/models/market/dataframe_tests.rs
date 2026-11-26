@@ -181,13 +181,16 @@ fn trend_wrappers_nest_their_estimates() {
 fn market_summary_spark_columns() {
     use crate::{MarketSummaryQuote, SparkData};
 
-    let expected = ["timestamp:i64", "close:f64"];
-    let row: SparkData =
-        serde_json::from_value(json!({"timestamp": [1, 2], "close": [1.5, null]})).unwrap();
+    let expected = ["symbol:str", "timestamp:i64", "close:f64"];
+    let row: SparkData = serde_json::from_value(
+        json!({"symbol": "^GSPC", "timestamp": [1, 2], "close": [1.5, null]}),
+    )
+    .unwrap();
     let df = row.to_dataframe().unwrap();
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 2);
     assert_eq!(df.column("close").unwrap().null_count(), 1);
+    assert_eq!(df.column("symbol").unwrap().null_count(), 0);
 
     let empty = SparkData::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);

@@ -60,6 +60,32 @@ fn spark_rows_pair_each_timestamp_with_its_close() {
 }
 
 #[test]
+fn spark_without_timestamps_keeps_its_closes() {
+    let result = serde_json::from_value(json!({
+        "symbol": "AAPL",
+        "response": [{
+            "meta": {"symbol": "AAPL"},
+            "indicators": {"quote": [{"close": [1.0, null, 2.0]}]}
+        }]
+    }))
+    .unwrap();
+    let spark = Spark::from_response(&result, None, None).unwrap();
+    assert_eq!(spark.closes, [1.0, 2.0]);
+    assert_eq!(spark.percent_change(), Some(100.0));
+    let df = spark.to_dataframe().unwrap();
+    assert_eq!(df.height(), 2);
+    assert_eq!(df.column("timestamp").unwrap().null_count(), 2);
+}
+
+#[test]
+fn spark_pads_the_shorter_series() {
+    let df = spark(&[1, 2, 3], &[1.5, 2.5]).to_dataframe().unwrap();
+    assert_eq!(df.height(), 3);
+    assert_eq!(df.column("close").unwrap().null_count(), 1);
+    assert_eq!(df.column("symbol").unwrap().null_count(), 0);
+}
+
+#[test]
 fn spark_meta_is_one_row() {
     let df = spark(&[1], &[1.5]).meta_dataframe().unwrap();
     assert_eq!(df.height(), 1);
