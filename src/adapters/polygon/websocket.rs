@@ -471,8 +471,11 @@ where
         ))
     })
     .await
-    .map_err(|_| FinanceError::Timeout {
-        timeout_ms: AUTH_TIMEOUT.as_millis() as u64,
+    .map_err(|_| {
+        FinanceError::ApiError(format!(
+            "Polygon WebSocket authentication timed out after {}s",
+            AUTH_TIMEOUT.as_secs()
+        ))
     })?
 }
 

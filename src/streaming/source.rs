@@ -127,11 +127,12 @@ impl ReconnectConfig {
         self.start_timeout
     }
 
-    /// Attempts allowed before the stream's first connect fails: the start
-    /// bound, lowered to `max_attempts` when that cap is tighter.
+    /// Sessions tried before the stream's first connect fails: the start
+    /// bound, lowered when `max_attempts` reconnects allow fewer.
     fn start_attempts(&self) -> u32 {
-        self.max_attempts
-            .map_or(self.start_attempts, |max| max.min(self.start_attempts))
+        self.max_attempts.map_or(self.start_attempts, |max| {
+            max.saturating_add(1).min(self.start_attempts)
+        })
     }
 
     /// Bound the stream's start. Test hook; production uses 3 attempts
@@ -495,6 +496,18 @@ mod tests {
             Err(super::super::client::StreamError::ConnectionFailed(m)) if m == "refused"
         ));
         assert_eq!(source.attempts.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn one_reconnect_allows_a_second_start_session() {
+        let stream = PriceStream::subscribe_with_source(
+            NeverConnectsSource::new(false, 2),
+            ["AAPL"],
+            ReconnectConfig::new(Duration::from_millis(1)).max_attempts(Some(1)),
+        )
+        .await;
+
+        assert!(stream.is_ok());
     }
 
     #[tokio::test]

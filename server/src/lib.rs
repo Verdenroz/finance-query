@@ -581,6 +581,10 @@ struct StreamHubInner {
     fanout: Option<broadcast::Sender<Arc<SharedTick>>>,
     pump: Option<tokio::task::JoinHandle<()>>,
     symbol_ref_counts: HashMap<String, usize>,
+    /// Failed upstream connects so far and the latest error, so subscribers
+    /// queued behind a failed connect share its outcome.
+    connect_failures: u64,
+    last_connect_error: Option<finance_query::streaming::StreamError>,
 }
 
 /// Read the upstream stream once and hand every client the same tick.
@@ -603,6 +607,11 @@ impl StreamHub {
         })
     }
 
+    /// Count `symbols` against the shared upstream, creating it if needed.
+    ///
+    /// Counts are taken only once the subscribe succeeds, so a caller must not
+    /// unsubscribe symbols whose subscribe is still pending; cancel the future
+    /// instead.
     pub async fn subscribe_symbols(&self, symbols: &[String]) -> Result<(), FinanceError> {
         self.subscribe_symbols_via(symbols, |unique| async move {
             PriceStream::subscribe(unique).await
@@ -632,16 +641,33 @@ impl StreamHub {
             return Ok(());
         }
 
+        let failures_seen = self.inner.lock().await.connect_failures;
         let _creating = self.connect_lock.lock().await;
         if self.join_upstream(&unique).await {
             return Ok(());
         }
+        {
+            let inner = self.inner.lock().await;
+            if inner.connect_failures != failures_seen
+                && let Some(e) = inner.last_connect_error.clone()
+            {
+                return Err(e.into());
+            }
+        }
 
         // Counts change only at commit, so a failed or cancelled connect
         // leaves nothing to undo; dropping the stream stops its task.
-        let stream = connect(unique.clone()).await?;
+        let connected = connect(unique.clone()).await;
 
         let mut inner = self.inner.lock().await;
+        let stream = match connected {
+            Ok(stream) => stream,
+            Err(e) => {
+                inner.connect_failures += 1;
+                inner.last_connect_error = Some(e.clone());
+                return Err(e.into());
+            }
+        };
         for symbol in &unique {
             *inner.symbol_ref_counts.entry(symbol.clone()).or_insert(0) += 1;
         }
@@ -914,6 +940,30 @@ mod stream_hub_tests {
             })
             .await;
         assert!(next.is_err());
+    }
+
+    #[tokio::test]
+    async fn queued_first_subscribers_share_a_failed_connect() {
+        let hub = StreamHub::new();
+        let connects = Arc::new(AtomicUsize::new(0));
+        let subscribe = |symbol: &'static str| {
+            let hub = hub.clone();
+            let connects = Arc::clone(&connects);
+            async move {
+                hub.subscribe_symbols_via(&symbols(&[symbol]), |_| async move {
+                    connects.fetch_add(1, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    Err(StreamError::ConnectionFailed("refused".into()))
+                })
+                .await
+            }
+        };
+
+        let results =
+            futures_util::future::join_all(["AAPL", "NVDA", "TSLA", "MSFT"].map(subscribe)).await;
+
+        assert!(results.iter().all(Result::is_err));
+        assert_eq!(connects.load(Ordering::SeqCst), 1);
     }
 
     #[tokio::test]

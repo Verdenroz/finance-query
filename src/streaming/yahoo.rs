@@ -111,7 +111,10 @@ async fn connect_and_stream(
     loop {
         tokio::select! {
             // Handle incoming WebSocket messages
-            Some(msg) = read.next() => {
+            msg = read.next() => {
+                let Some(msg) = msg else {
+                    return Err(StreamError::WebSocketError("connection closed".to_string()));
+                };
                 match msg {
                     Ok(Message::Text(text)) => {
                         if let Err(e) = handle_text_message(&text, broadcast_tx) {
@@ -146,7 +149,10 @@ async fn connect_and_stream(
 
             // Handle commands (subscribe/unsubscribe)
             cmd = command_rx.recv() => {
-                let Some(cmd) = cmd else { return Ok(()) };
+                let Some(cmd) = cmd else {
+                    let _ = write.send(Message::Close(None)).await;
+                    return Ok(());
+                };
                 let Some(changed) = apply_command(&cmd, subscriptions).await else {
                     info!("Received close command");
                     let _ = write.send(Message::Close(None)).await;
@@ -162,8 +168,6 @@ async fn connect_and_stream(
                 let _ = write.send(Message::Text(msg.to_string().into())).await;
                 info!("Subscription change applied: {:?}", changed);
             }
-
-            else => break,
         }
     }
 

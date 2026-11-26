@@ -220,7 +220,13 @@ where
 
     loop {
         tokio::select! {
-            Some(msg) = stream.next() => {
+            msg = stream.next() => {
+                let Some(msg) = msg else {
+                    return Err(StreamError::WebSocketError(format!(
+                        "{} connection closed",
+                        class.label()
+                    )));
+                };
                 match msg {
                     PolygonMessage::Status(status) => debug!("polygon status: {status}"),
                     PolygonMessage::Unknown(raw) => warn!("unparsed polygon frame: {raw}"),
@@ -254,16 +260,8 @@ where
                     return Err(StreamError::WebSocketError(e.to_string()));
                 }
             }
-
-            else => break,
         }
     }
-
-    // Upstream ended without a Close command — reconnect.
-    Err(StreamError::WebSocketError(format!(
-        "{} connection closed",
-        class.label()
-    )))
 }
 
 #[cfg(test)]

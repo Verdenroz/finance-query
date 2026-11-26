@@ -35,16 +35,16 @@ impl SubscriptionRoot {
             .await
             .map_err(|e| Error::new(e.to_string()))?;
 
-        let Some(hub_stream) = hub.resubscribe().await else {
-            hub.unsubscribe_symbols(&symbols).await;
-            return Err(Error::new("Price stream unavailable"));
-        };
-
         let subscribed: HashSet<String> = symbols.iter().cloned().collect();
         let guard = SubscriptionGuard {
             hub: hub.clone(),
             symbols,
         };
+
+        let hub_stream = hub
+            .resubscribe()
+            .await
+            .ok_or_else(|| Error::new("Price stream unavailable"))?;
 
         let filtered = hub_stream
             .filter(move |t| std::future::ready(subscribed.contains(&t.update().id)))
@@ -82,11 +82,6 @@ impl SubscriptionRoot {
             .await
             .map_err(|e| Error::new(e.to_string()))?;
 
-        let Some(hub_stream) = hub.resubscribe().await else {
-            hub.unsubscribe_symbols(&symbols).await;
-            return Err(Error::new("Price stream unavailable"));
-        };
-
         // Pre-filter on the rules' symbols: the hub carries every symbol any
         // client anywhere subscribed to.
         let watched: HashSet<String> = symbols.iter().cloned().collect();
@@ -94,6 +89,11 @@ impl SubscriptionRoot {
             hub: hub.clone(),
             symbols,
         };
+
+        let hub_stream = hub
+            .resubscribe()
+            .await
+            .ok_or_else(|| Error::new("Price stream unavailable"))?;
 
         let alerts = hub_stream
             .filter(move |t| std::future::ready(watched.contains(&t.update().id)))
