@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// A quote/document result from symbol lookup
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct LookupQuote {

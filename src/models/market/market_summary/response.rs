@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// A single market summary quote (index, currency, commodity, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketSummaryQuote {

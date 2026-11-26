@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct SummaryDetail<F: Format = Both> {

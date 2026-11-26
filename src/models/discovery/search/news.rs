@@ -82,6 +82,7 @@ impl crate::ToDataFrame for SearchNewsList {
 /// `thumbnail_dataframe()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct SearchNews {

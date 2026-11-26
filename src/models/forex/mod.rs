@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// [`.quote()`](crate::domains::ForexPair::quote).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ForexQuote {
     /// Currency pair symbol (e.g., `"EURUSD"`, `"BTCUSD"`)

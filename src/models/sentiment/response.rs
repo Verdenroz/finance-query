@@ -46,6 +46,7 @@ impl std::fmt::Display for FearGreedLabel {
 /// Scale: 0 (Extreme Fear) → 100 (Extreme Greed).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FearAndGreed {
     /// Index value (0–100)

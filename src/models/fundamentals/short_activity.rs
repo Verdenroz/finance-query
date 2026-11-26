@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// A short-interest data point (bi-monthly settlement report).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ShortInterest {
     /// Settlement date (`YYYY-MM-DD`).
@@ -23,6 +24,7 @@ pub struct ShortInterest {
 /// A daily short-volume data point.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ShortVolume {
     /// Trade date (`YYYY-MM-DD`).
@@ -38,6 +40,7 @@ pub struct ShortVolume {
 /// Share float and shares outstanding.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ShareFloat {
     /// Ticker symbol.

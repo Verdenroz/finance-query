@@ -154,6 +154,7 @@ impl StockBarsRequest {
 /// A provider price bar with exact timestamp units and fractional volume.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct StockBar {
     /// UTC Unix milliseconds, without rounding or timezone conversion.

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via [`Providers::index`](crate::Providers::index)`(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct IndexQuote {
     /// Index ticker symbol (e.g., `"^GSPC"`, `"^IXIC"`)
@@ -82,6 +83,7 @@ impl std::fmt::Display for MajorIndex {
 /// A constituent (member) of a major stock market index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct IndexConstituent {
     /// Ticker symbol of the constituent company
@@ -105,6 +107,7 @@ pub struct IndexConstituent {
 /// A historical change in a major index's constituency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct IndexConstituentChange {
     /// Date of the change (`YYYY-MM-DD`)

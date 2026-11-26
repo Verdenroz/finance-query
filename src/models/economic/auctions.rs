@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 /// reverse.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TreasuryAuction {
     /// Date the row was published (`YYYY-MM-DD`).
@@ -80,6 +81,7 @@ pub struct TreasuryAuction {
 /// is unset until the formal announcement lands.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct UpcomingAuction {
     /// Date the schedule was published (`YYYY-MM-DD`).

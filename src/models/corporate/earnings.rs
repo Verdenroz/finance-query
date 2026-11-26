@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Earnings data including charts and forecasts
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Earnings {
@@ -28,6 +29,7 @@ pub struct Earnings {
 /// Earnings chart showing quarterly data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsChart {
     /// Quarterly earnings data
@@ -67,6 +69,7 @@ pub struct EarningsChart {
 /// Quarterly earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyEarnings {
     /// Date/quarter identifier
@@ -101,6 +104,7 @@ pub struct QuarterlyEarnings {
 /// Financial chart showing revenue and earnings over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialsChart {
     /// Yearly financial data
@@ -117,6 +121,7 @@ pub struct FinancialsChart {
 /// Yearly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct YearlyFinancials {
     /// Date
@@ -135,6 +140,7 @@ pub struct YearlyFinancials {
 /// Quarterly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyFinancials {
     /// Date

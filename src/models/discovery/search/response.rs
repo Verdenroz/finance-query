@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Response wrapper for search endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResults {

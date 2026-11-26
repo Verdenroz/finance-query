@@ -253,6 +253,7 @@ impl CompanyFacts {
 /// Represents one reported value from a specific filing and period.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)

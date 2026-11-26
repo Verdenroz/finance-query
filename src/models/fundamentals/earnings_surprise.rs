@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// One reported earnings result versus the analyst estimate.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EarningsSurprise {
     /// Ticker symbol.

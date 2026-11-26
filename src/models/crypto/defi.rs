@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via [`CryptoCoin::tvl`](crate::CryptoCoin::tvl).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ProtocolTvl {
     /// DefiLlama protocol slug, as queried (e.g. `"aave"`).
@@ -41,6 +42,7 @@ pub struct ProtocolTvl {
 /// One chain's share of a protocol's TVL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ChainAllocation {
     /// Chain name (e.g. `"Ethereum"`).
@@ -54,6 +56,7 @@ pub struct ChainAllocation {
 /// Obtain via [`CryptoCoin::tvl_history`](crate::CryptoCoin::tvl_history).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TvlPoint {
     /// Unix timestamp (seconds) of the snapshot.
@@ -67,6 +70,7 @@ pub struct TvlPoint {
 /// Obtain via [`defi::chains`](crate::defi::chains).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ChainTvl {
     /// Chain name (e.g. `"Ethereum"`).
@@ -86,6 +90,7 @@ pub struct ChainTvl {
 /// Obtain via [`defi::stablecoins`](crate::defi::stablecoins).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct StablecoinSupply {
     /// Stablecoin name (e.g. `"Tether"`).
