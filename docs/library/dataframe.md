@@ -913,6 +913,8 @@ assert_eq!(df.height(), 2);
 println!("{}", df.width());
 ```
 
+`FearAndGreed`, `QuoteSummaryResponse` and `DividendAnalytics` also have `to_dataframe()`, each as a single row.
+
 ### Company Facts
 
 `CompanyFacts::to_dataframe()` and `FactsByTaxonomy::to_dataframe()` return every data point in long format. Columns are `taxonomy` (company facts only), `concept` and `unit`, followed by the fact columns. Rows are sorted by taxonomy, concept and unit.
