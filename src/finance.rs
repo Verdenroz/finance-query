@@ -648,6 +648,7 @@ impl From<crate::adapters::fmp::corporate::insider_trading::InsiderTradeDTO>
 #[cfg(feature = "fmp")]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct AnalystEstimate {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -718,6 +719,7 @@ impl From<crate::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO> for
 #[cfg(feature = "fmp")]
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct AnalystRecommendation {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -933,3 +935,6 @@ mod tests {
         assert!(std::sync::Arc::ptr_eq(&first, &after));
     }
 }
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

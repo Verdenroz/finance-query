@@ -53,3 +53,6 @@ pub(crate) use income_statement_history::{
     IncomeStatementHistory, IncomeStatementHistoryQuarterly,
 };
 pub use summary_detail::SummaryDetail;
+
+#[cfg(all(test, feature = "dataframe"))]
+mod dataframe_tests;

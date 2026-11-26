@@ -1,7 +1,6 @@
 use crate::models::format::{Both, Format};
 use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 /// Default key statistics for a symbol
 ///
@@ -12,6 +11,7 @@ use serde_json::Value;
 /// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct DefaultKeyStatistics<F: Format = Both> {
@@ -25,11 +25,11 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Annual holdings turnover (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub annual_holdings_turnover: Option<Value>,
+    pub annual_holdings_turnover: Option<serde_json::Value>,
 
     /// Annual report expense ratio (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub annual_report_expense_ratio: Option<Value>,
+    pub annual_report_expense_ratio: Option<serde_json::Value>,
 
     /// Beta coefficient (volatility vs market)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,7 +37,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// 3-year beta (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub beta3_year: Option<Value>,
+    pub beta3_year: Option<serde_json::Value>,
 
     /// Book value per share
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,7 +69,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// 5-year average return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub five_year_average_return: Option<Value>,
+    pub five_year_average_return: Option<serde_json::Value>,
 
     /// Number of floating shares
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,11 +89,11 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Fund inception date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fund_inception_date: Option<Value>,
+    pub fund_inception_date: Option<serde_json::Value>,
 
     /// Funding to date (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub funding_to_date: Option<Value>,
+    pub funding_to_date: Option<serde_json::Value>,
 
     /// Percentage of shares held by insiders
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -109,7 +109,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Last capital gain (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_cap_gain: Option<Value>,
+    pub last_cap_gain: Option<serde_json::Value>,
 
     /// Last dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -133,15 +133,15 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Latest amount raised (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latest_amount_raised: Option<Value>,
+    pub latest_amount_raised: Option<serde_json::Value>,
 
     /// Latest funding date (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latest_funding_date: Option<Value>,
+    pub latest_funding_date: Option<serde_json::Value>,
 
     /// Latest implied valuation (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latest_implied_valuation: Option<Value>,
+    pub latest_implied_valuation: Option<serde_json::Value>,
 
     /// Latest share class
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -161,11 +161,11 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Morningstar overall rating (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub morning_star_overall_rating: Option<Value>,
+    pub morning_star_overall_rating: Option<serde_json::Value>,
 
     /// Morningstar risk rating (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub morning_star_risk_rating: Option<Value>,
+    pub morning_star_risk_rating: Option<serde_json::Value>,
 
     /// Most recent quarter end date
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,7 +181,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// PEG ratio (Price/Earnings to Growth)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub peg_ratio: Option<Value>,
+    pub peg_ratio: Option<serde_json::Value>,
 
     /// Price hint (decimal places)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -193,7 +193,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Price to sales ratio (trailing 12 months)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_to_sales_trailing12_months: Option<Value>,
+    pub price_to_sales_trailing12_months: Option<serde_json::Value>,
 
     /// Profit margins percentage
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -201,11 +201,11 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Quarter-to-date return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub qtd_return: Option<Value>,
+    pub qtd_return: Option<serde_json::Value>,
 
     /// Quarterly revenue growth rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub revenue_quarterly_growth: Option<Value>,
+    pub revenue_quarterly_growth: Option<serde_json::Value>,
 
     /// Total shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -237,15 +237,15 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// 3-year average return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub three_year_average_return: Option<Value>,
+    pub three_year_average_return: Option<serde_json::Value>,
 
     /// Total assets (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_assets: Option<Value>,
+    pub total_assets: Option<serde_json::Value>,
 
     /// Total funding rounds (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_funding_rounds: Option<Value>,
+    pub total_funding_rounds: Option<serde_json::Value>,
 
     /// Trailing earnings per share
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -253,11 +253,11 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Yield percentage (for bonds/funds)
     #[serde(rename = "yield", skip_serializing_if = "Option::is_none")]
-    pub yield_value: Option<Value>,
+    pub yield_value: Option<serde_json::Value>,
 
     /// Year-to-date return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ytd_return: Option<Value>,
+    pub ytd_return: Option<serde_json::Value>,
 }
 
 #[cfg(test)]

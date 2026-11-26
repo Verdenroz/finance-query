@@ -50,6 +50,7 @@ impl std::fmt::Display for AssetClass {
 /// a batch is never silently short: check [`error`](Self::error) before reading
 /// the price fields.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct MarketSnapshot {
     /// Ticker symbol as the provider spells it (e.g. `"AAPL"`, `"X:BTCUSD"`).

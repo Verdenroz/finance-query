@@ -39,6 +39,7 @@ pub struct EtfProfile {
 
 /// One position inside an ETF's portfolio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EtfHolding {
     /// Ticker symbol of the held security.
@@ -51,6 +52,7 @@ pub struct EtfHolding {
 
 /// One sector's weight inside an ETF's portfolio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EtfSectorWeighting {
     /// Sector name.
@@ -61,6 +63,7 @@ pub struct EtfSectorWeighting {
 
 /// One country's weight inside an ETF's portfolio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EtfCountryWeighting {
     /// Country name.

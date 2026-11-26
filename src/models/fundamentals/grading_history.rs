@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// A single analyst upgrade/downgrade/initiation action.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct GradingAction {
     /// Ticker symbol.
