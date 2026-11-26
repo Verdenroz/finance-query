@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ Performance
 
+- Iterate chaikin oscillator without indexing (#721)
+- Bench dispatch and backtesting paths (#723)
 - Iterate mfi, cmo and ema loops without indexing (#719)
 
 ### 📝 Documentation
@@ -51,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Cover Yahoo pricing decode and batch parse (#722)
 - Split backtesting into its own crate (#711)
 - Remove undeclared coingecko crypto module (#712)
 - Derive the PerformanceMetrics frame (#707)
@@ -338,6 +341,8 @@ CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
 CHANGED  finance_query::defi::ProtocolTvl (signature)
 CHANGED  finance_query::gdelt::News (signature)
 CHANGED  finance_query::indicators::IndicatorsSummary (body)
+CHANGED  finance_query::indicators::chaikin_oscillator (body)
+CHANGED  finance_query::indicators::chaikin_oscillator::chaikin_oscillator (body)
 CHANGED  finance_query::indicators::cmo (body)
 CHANGED  finance_query::indicators::cmo::cmo (body)
 CHANGED  finance_query::indicators::heikin_ashi (body)

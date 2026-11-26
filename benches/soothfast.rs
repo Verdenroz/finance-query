@@ -27,6 +27,7 @@
 //! checked on every run; a run with failing assertions is never saved as a
 //! baseline.
 
+use finance_query::__bench;
 use finance_query::Capability;
 use finance_query::backtesting::condition::{
     Condition, always_false, always_true, has_position, held_for_bars, in_loss, in_profit, is_long,
@@ -640,6 +641,7 @@ fn ind_cmf(s: &Series) {
 #[bench(
     group = "indicators",
     setup = series_1000,
+    alloc = 4,
     covers = "finance_query::indicators::chaikin_oscillator"
 )]
 fn ind_chaikin_oscillator(s: &Series) {
@@ -1855,6 +1857,21 @@ fn stream_deserialize(json: &str) {
     keep(serde_json::from_str::<PriceUpdate>(keep(json)).unwrap());
 }
 
+#[fixture]
+fn pricing_frame() -> String {
+    __bench::pricing_frame()
+}
+
+#[bench(
+    group = "streaming",
+    setup = pricing_frame,
+    alloc = 5,
+    covers = "finance_query::streaming::PriceUpdate"
+)]
+fn stream_decode_pricing(frame: &str) {
+    keep(__bench::decode_pricing(keep(frame)).unwrap());
+}
+
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────
 
 #[fixture]
@@ -2219,7 +2236,8 @@ fn ser_currencies(currencies: &[Currency]) {
 // ── Endpoint response (de)serialization (real captured server payloads) ──────
 //
 // These are the heaviest per-request serde paths in production. Fixtures are
-// real `GET /v2/...` responses, so the gate tracks the exact shapes users parse.
+// real `GET /v2/...` responses, the shapes the server returns, not provider
+// wire formats.
 
 static QUOTE_JSON: &str = include_str!("fixtures/quote.json");
 static CHART_JSON: &str = include_str!("fixtures/chart.json");
@@ -2306,6 +2324,15 @@ fn df_option_calls(options: &Options) {
 #[bench(group = "dataframe", setup = parsed_quote, alloc = 1538, covers = "finance_query::Quote")]
 fn df_quote(quote: &Quote) {
     keep(keep(quote).to_dataframe().unwrap());
+}
+
+// ── Provider wire parsers (raw upstream bodies, internal entrypoint) ─────────
+
+static YAHOO_BATCH_QUOTE_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/batch_quote.json");
+
+#[bench(group = "wire_serde", alloc = 69, covers = "finance_query::Quote")]
+fn de_yahoo_quote_batch() {
+    keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)));
 }
 
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────

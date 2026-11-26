@@ -182,3 +182,54 @@ fn handle_text_message(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::streaming::pricing::{PricingData, QuoteType};
+
+    fn frame(message: &str) -> String {
+        serde_json::json!({ "type": "pricing", "message": message }).to_string()
+    }
+
+    #[tokio::test]
+    async fn handle_text_message_broadcasts_decoded_update() {
+        let (tx, mut rx) = broadcast::channel(4);
+        let data = PricingData {
+            id: "NVDA".into(),
+            price: 120.5,
+            quote_type: 8,
+            ..Default::default()
+        };
+        let encoded = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            prost::Message::encode_to_vec(&data),
+        );
+
+        handle_text_message(&frame(&encoded), &tx).unwrap();
+
+        let update = rx.recv().await.unwrap();
+        assert_eq!(update.id, "NVDA");
+        assert_eq!(update.quote_type, QuoteType::Equity);
+    }
+
+    #[test]
+    fn handle_text_message_rejects_malformed_base64() {
+        let (tx, _rx) = broadcast::channel(4);
+        let err = handle_text_message(&frame("%%%"), &tx).unwrap_err();
+        assert!(matches!(err, PricingDecodeError::Base64(_)));
+    }
+
+    #[test]
+    fn handle_text_message_rejects_invalid_protobuf() {
+        let (tx, _rx) = broadcast::channel(4);
+        let err = handle_text_message(&frame("Cv8B"), &tx).unwrap_err();
+        assert!(matches!(err, PricingDecodeError::Protobuf(_)));
+    }
+
+    #[test]
+    fn handle_text_message_rejects_non_json() {
+        let (tx, _rx) = broadcast::channel(4);
+        assert!(handle_text_message("not json", &tx).is_err());
+    }
+}
