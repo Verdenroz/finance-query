@@ -102,6 +102,9 @@ jobs:
               - '.github/workflows/ci.yml'
             fuzz_inputs:
               - 'fuzz/**'
+              - 'src/adapters/**'
+              - 'src/models/**'
+              - 'src/streaming/pricing.rs'
               - 'finance-query-types/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
