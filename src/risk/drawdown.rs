@@ -2,7 +2,6 @@
 
 /// Maximum drawdown result.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct DrawdownResult {
     /// Maximum drawdown as a positive fraction (e.g., 0.30 = 30% loss from peak)
     pub max_drawdown: f64,

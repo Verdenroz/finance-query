@@ -1,5 +1,4 @@
 use super::RiskSummary;
-use super::drawdown::DrawdownResult;
 use crate::models::dataframe_test_util::columns;
 use serde_json::json;
 
@@ -30,22 +29,6 @@ fn risk_summary_columns() {
     assert_eq!(df.height(), 1);
 
     let empty = <RiskSummary>::vec_to_dataframe(&[]).unwrap();
-    assert_eq!(columns(&empty), expected);
-    assert_eq!(empty.height(), 0);
-}
-
-#[test]
-fn drawdown_result_columns() {
-    let row = DrawdownResult {
-        max_drawdown: 0.3,
-        recovery_periods: None,
-    };
-    let expected = ["max_drawdown:f64", "recovery_periods:u64"];
-    let df = row.to_dataframe().unwrap();
-    assert_eq!(columns(&df), expected);
-    assert_eq!(df.height(), 1);
-
-    let empty = DrawdownResult::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
 }
