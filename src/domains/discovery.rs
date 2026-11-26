@@ -127,7 +127,7 @@ impl Discovery {
 
     /// Fetch details as of YYYY-MM-DD, independently of undated detail cache entries.
     pub async fn details_at(&self, symbol: &str, date: &str) -> Result<SymbolDetails> {
-        crate::models::discovery::listings::date(date)?;
+        crate::providers::stock_listing::date(date)?;
         let key = serde_json::to_string(&("details_at", symbol, date))?;
         self.details_cache
             .get_or_try(key, || async {
