@@ -111,7 +111,7 @@ pub trait CalendarProvider: ProviderCore {
     /// Fetch a market-wide calendar over `[from, to]` (`YYYY-MM-DD` dates).
     ///
     /// One method rather than one per kind — providers serve all kinds from the
-    /// same calendar family, and `kind.operation()` still reports the precise
+    /// same calendar family, and `Operation::from_calendar(kind)` still reports the precise
     /// [`Operation`] in `NotSupported` errors.
     async fn fetch_market_calendar(
         &self,
