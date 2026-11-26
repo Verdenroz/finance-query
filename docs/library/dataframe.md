@@ -615,7 +615,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 The `date` column is a string sorted ascending, and metric columns keep the
-CamelCase names Yahoo uses. Yahoo returns about four periods.
+CamelCase names Yahoo uses.
 
 ## Exporting Data
 
