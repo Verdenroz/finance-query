@@ -114,11 +114,10 @@ impl FinancialStatement {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "dataframe"))]
 mod tests {
     use super::*;
 
-    #[cfg(feature = "dataframe")]
     mod dataframe {
         use super::*;
         use polars::prelude::DataType;
