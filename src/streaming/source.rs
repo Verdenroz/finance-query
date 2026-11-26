@@ -70,9 +70,11 @@ where
     /// Returns `Ok(())` for a graceful shutdown (a [`StreamCommand::Close`] or a
     /// server close frame) — the loop stops. Returns `Err(..)` for a recoverable
     /// disconnect — the loop reconnects after a backoff. Until `ready` is
-    /// signalled the same retries are the stream's start, and the last `Err`
-    /// goes to the caller once they run out. The session should honor `command_rx` for live (un)subscribe and reflect changes into the
-    /// shared `subscriptions` set.
+    /// signalled the retries are the stream's start, bounded by
+    /// [`ReconnectConfig`]'s start limits, and the last `Err` goes to the
+    /// caller once they run out. The session should honor `command_rx` for
+    /// live (un)subscribe and reflect changes into the shared `subscriptions`
+    /// set.
     async fn run_session(
         &self,
         subscriptions: &Arc<RwLock<HashSet<String>>>,
@@ -91,7 +93,9 @@ where
 /// jitter applied so many concurrently-reconnecting streams don't retry in
 /// lockstep. `max_attempts` optionally stops the loop from reconnecting
 /// forever; `None` (the default) preserves the original "retry forever"
-/// behavior.
+/// behavior. Reaching the first connected session has its own, tighter bound
+/// (`start_attempts` within `start_timeout`) so a caller awaiting a stream's
+/// start is never held indefinitely.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ReconnectConfig {
     base_delay: Duration,
@@ -100,6 +104,8 @@ pub(crate) struct ReconnectConfig {
     jitter: f64,
     max_attempts: Option<u32>,
     healthy_after: Duration,
+    start_attempts: u32,
+    start_timeout: Duration,
 }
 
 impl ReconnectConfig {
@@ -111,7 +117,22 @@ impl ReconnectConfig {
             jitter: 0.2,
             max_attempts: None,
             healthy_after: Duration::from_secs(60),
+            start_attempts: 3,
+            start_timeout: Duration::from_secs(30),
         }
+    }
+
+    pub(crate) fn start_timeout(&self) -> Duration {
+        self.start_timeout
+    }
+
+    /// Bound the stream's start. Test hook — production uses 3 attempts
+    /// within 30s.
+    #[cfg(test)]
+    pub(crate) fn start_bound(mut self, attempts: u32, timeout: Duration) -> Self {
+        self.start_attempts = attempts;
+        self.start_timeout = timeout;
+        self
     }
 
     /// Cap the number of consecutive reconnect attempts before the loop gives
@@ -173,6 +194,7 @@ where
 
     loop {
         let session_start = tokio::time::Instant::now();
+        let starting = ready.first.is_some();
         match source
             .run_session(&subscriptions, &broadcast_tx, &mut command_rx, &mut ready)
             .await
@@ -182,13 +204,27 @@ where
                 break;
             }
             Err(e) => {
-                if ready.permanent && ready.first.is_some() {
+                let abandoned = ready.first.as_ref().is_some_and(|tx| tx.is_closed());
+                if starting && (ready.permanent || abandoned) {
                     ready.fail(&e);
                     error!("{} stream error: {}, not retrying", source.id(), e);
                     break;
                 }
+                if starting && ready.first.is_none() {
+                    attempt = 0;
+                }
                 if session_start.elapsed() >= reconnect.healthy_after {
                     attempt = 0;
+                }
+                if ready.first.is_some() && attempt + 1 >= reconnect.start_attempts {
+                    error!(
+                        "{} stream error: {}, giving up after {} start attempts",
+                        source.id(),
+                        e,
+                        attempt + 1
+                    );
+                    ready.fail(&e);
+                    break;
                 }
                 if let Some(max) = reconnect.max_attempts
                     && attempt >= max
@@ -199,7 +235,6 @@ where
                         e,
                         max
                     );
-                    ready.fail(&e);
                     break;
                 }
                 let delay = reconnect.delay_for(attempt, &mut seed);
@@ -435,7 +470,7 @@ mod tests {
         let result = PriceStream::subscribe_with_source(
             source.clone(),
             ["AAPL"],
-            ReconnectConfig::new(Duration::from_millis(1)).max_attempts(Some(2)),
+            ReconnectConfig::new(Duration::from_millis(1)).start_bound(2, Duration::from_secs(30)),
         )
         .await;
 
@@ -443,7 +478,42 @@ mod tests {
             result,
             Err(super::super::client::StreamError::ConnectionFailed(m)) if m == "refused"
         ));
-        assert_eq!(source.attempts.load(Ordering::SeqCst), 3);
+        assert_eq!(source.attempts.load(Ordering::SeqCst), 2);
+    }
+
+    struct HangingSource;
+
+    #[async_trait::async_trait]
+    impl StreamSource<PriceUpdate> for HangingSource {
+        fn id(&self) -> &'static str {
+            "hanging"
+        }
+
+        async fn run_session(
+            &self,
+            _subscriptions: &Arc<RwLock<HashSet<String>>>,
+            _broadcast_tx: &broadcast::Sender<PriceUpdate>,
+            _command_rx: &mut mpsc::Receiver<StreamCommand>,
+            _ready: &mut Ready,
+        ) -> StreamResult<()> {
+            std::future::pending().await
+        }
+    }
+
+    #[tokio::test]
+    async fn start_is_bounded_when_the_source_never_answers() {
+        let result = PriceStream::subscribe_with_source(
+            Arc::new(HangingSource),
+            ["AAPL"],
+            ReconnectConfig::new(Duration::from_millis(1))
+                .start_bound(3, Duration::from_millis(50)),
+        )
+        .await;
+
+        assert!(matches!(
+            result,
+            Err(super::super::client::StreamError::ConnectionFailed(_))
+        ));
     }
 
     #[tokio::test]

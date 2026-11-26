@@ -18,7 +18,7 @@ use std::time::Duration;
 use futures::stream::Stream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
-use super::client::StreamResult;
+use super::client::{StreamError, StreamResult};
 use super::source::{ReconnectConfig, StreamCommand, StreamSource, run_stream_loop};
 use super::subscription::Subscription;
 
@@ -63,8 +63,15 @@ where
             )
             .await;
         });
-        match first_rx.await {
-            Ok(Err(e)) => Err(e),
+        let timeout = reconnect.start_timeout();
+        match tokio::time::timeout(timeout, first_rx).await {
+            Ok(Ok(Err(e))) => Err(e),
+            Err(_) => {
+                stream.close().await;
+                Err(StreamError::ConnectionFailed(format!(
+                    "no connection within {timeout:?}"
+                )))
+            }
             _ => Ok(stream),
         }
     }
