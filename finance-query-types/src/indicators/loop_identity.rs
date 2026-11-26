@@ -241,6 +241,46 @@ fn tema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
     Ok(result)
 }
 
+fn chaikin_oscillator(
+    highs: &[f64],
+    lows: &[f64],
+    closes: &[f64],
+    volumes: &[f64],
+) -> Result<Vec<Option<f64>>> {
+    let len = highs.len();
+    if lows.len() != len || closes.len() != len || volumes.len() != len {
+        return Err(IndicatorError::InvalidPeriod(
+            "Data lengths must match".to_string(),
+        ));
+    }
+    if len < 10 {
+        return Err(IndicatorError::InsufficientData { need: 10, got: len });
+    }
+
+    let mut ad_series = Vec::with_capacity(len);
+    let mut ad_cumulative = 0.0;
+
+    for i in 0..len {
+        let high_low = highs[i] - lows[i];
+        if high_low != 0.0 {
+            let mf_multiplier = ((closes[i] - lows[i]) - (highs[i] - closes[i])) / high_low;
+            ad_cumulative += mf_multiplier * volumes[i];
+        }
+        ad_series.push(ad_cumulative);
+    }
+
+    let ema3_raw = ema_raw(&ad_series, 3);
+    let ema10_raw = ema_raw(&ad_series, 10);
+
+    let mut result = vec![None; len];
+
+    for (k, &e10) in ema10_raw.iter().enumerate() {
+        result[k + 9] = Some(ema3_raw[k + 7] - e10);
+    }
+
+    Ok(result)
+}
+
 fn lcg(seed: u64, len: usize) -> Vec<f64> {
     let mut state = seed;
     (0..len)
@@ -348,4 +388,25 @@ fn mfi_rejects_mismatched_lengths_like_reference() {
     let a = [1.0, 2.0, 3.0];
     let b = [1.0, 2.0];
     same(super::mfi(&a, &b, &a, &a, 1), mfi(&a, &b, &a, &a, 1));
+}
+
+#[test]
+fn chaikin_oscillator_matches_reference() {
+    for closes in series() {
+        let highs: Vec<f64> = closes.iter().map(|c| c + 1.5).collect();
+        let lows: Vec<f64> = closes.iter().map(|c| c - 1.0).collect();
+        let volumes: Vec<f64> = lcg(9, closes.len()).iter().map(|v| v * 10.0).collect();
+        for (h, l) in [(&highs, &lows), (&closes, &closes)] {
+            same(
+                super::chaikin_oscillator(h, l, &closes, &volumes),
+                chaikin_oscillator(h, l, &closes, &volumes),
+            );
+        }
+    }
+    let a = [1.0; 12];
+    let b = [1.0; 11];
+    same(
+        super::chaikin_oscillator(&a, &b, &a, &a),
+        chaikin_oscillator(&a, &b, &a, &a),
+    );
 }

@@ -641,6 +641,7 @@ fn ind_cmf(s: &Series) {
 #[bench(
     group = "indicators",
     setup = series_1000,
+    alloc = 4,
     covers = "finance_query::indicators::chaikin_oscillator"
 )]
 fn ind_chaikin_oscillator(s: &Series) {
