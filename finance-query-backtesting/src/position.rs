@@ -78,7 +78,7 @@ pub struct Position {
     #[serde(default)]
     pub partial_close_count: usize,
 
-    /// Per-trade stop-loss percentage override.
+    /// Per-trade stop-loss override as a fraction of entry price (`0.05` is 5%).
     ///
     /// Populated from [`Signal::bracket_stop_loss_pct`] when the position is
     /// opened. Takes precedence over [`BacktestConfig::stop_loss_pct`] when
@@ -89,7 +89,7 @@ pub struct Position {
     #[serde(default)]
     pub bracket_stop_loss_pct: Option<f64>,
 
-    /// Per-trade take-profit percentage override.
+    /// Per-trade take-profit override as a fraction of entry price (`0.10` is 10%).
     ///
     /// Populated from [`Signal::bracket_take_profit_pct`] when the position is
     /// opened. Takes precedence over [`BacktestConfig::take_profit_pct`] when
@@ -100,7 +100,7 @@ pub struct Position {
     #[serde(default)]
     pub bracket_take_profit_pct: Option<f64>,
 
-    /// Per-trade trailing stop percentage override.
+    /// Per-trade trailing stop override as a fraction (`0.05` is 5%).
     ///
     /// Populated from [`Signal::bracket_trailing_stop_pct`] when the position
     /// is opened. Takes precedence over [`BacktestConfig::trailing_stop_pct`]
@@ -517,7 +517,7 @@ pub struct Trade {
     /// Realized P&L (after commission and transaction tax, including any unreinvested dividend income)
     pub pnl: f64,
 
-    /// Return as percentage
+    /// Return in percent of the entry value (`16.52` means +16.52%)
     pub return_pct: f64,
 
     /// Dividend income received while this position was open

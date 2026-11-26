@@ -4,7 +4,7 @@
     [docs.rs/finance-query — backtesting](https://docs.rs/finance-query/latest/finance_query/backtesting/index.html)
 
 !!! tip "Data Source"
-    Backtesting fetches chart data through your configured [providers](providers/index.md). By default this is Yahoo Finance; use `TickerBuilder::providers()` to use Polygon, FMP, or other data sources for backtesting.
+    Backtesting fetches chart data through your configured [providers](providers/index.md). By default this is Yahoo Finance; build the ticker from a configured `Providers` (`providers.ticker(symbol)`) to use Polygon, FMP, or other data sources for backtesting.
 
 Test trading strategies against historical data. The backtesting engine provides pre-built strategies, a custom strategy builder, ensemble composition, parameter optimization, walk-forward validation, Monte Carlo simulation, and portfolio-level backtesting.
 
@@ -462,8 +462,7 @@ println!(
 39 trades, total return -99.73%
 ```
 
-<!-- soothfast:claim finance_query::bt_sma_crossover.walltime.median_ns < 5000000 -->
-<!-- soothfast:claim finance_query::bt_sma_crossover.perfcnt.instructions < 15000000 -->
+<!-- soothfast:claim finance_query::bt_sma_crossover.perfcnt.instructions < 14000000 -->
 Cheap enough to grid-search thousands of parameter combinations in seconds.
 
 ## Performance Metrics
@@ -499,8 +498,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Avg Trade:       {:.2}%", result.metrics.avg_trade_return_pct);
     println!("Avg Win:         {:.2}%", result.metrics.avg_win_pct);
     println!("Avg Loss:        {:.2}%", result.metrics.avg_loss_pct);
-    println!("Largest Win:     {:.2}%", result.metrics.largest_win);
-    println!("Largest Loss:    {:.2}%", result.metrics.largest_loss);
+    println!("Largest Win:     ${:.2}", result.metrics.largest_win);
+    println!("Largest Loss:    ${:.2}", result.metrics.largest_loss);
     println!("Max Consec. Wins:   {}", result.metrics.max_consecutive_wins);
     println!("Max Consec. Losses: {}", result.metrics.max_consecutive_losses);
 
@@ -1296,6 +1295,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+### Percent Units
+
+Fields named `*_pct` and `win_rate` do not share one convention. Fractions
+run 0.0 to 1.0, while percents are scaled by 100, so `16.52` means 16.52%.
+
+| Field | Unit |
+|-------|------|
+| `total_return_pct`, `annualized_return_pct` | percent |
+| `avg_trade_return_pct`, `avg_win_pct`, `avg_loss_pct` | percent |
+| `Trade::return_pct` | percent |
+| `BenchmarkMetrics::benchmark_return_pct`, `buy_and_hold_return_pct` | percent |
+| `max_drawdown_pct`, `EquityPoint::drawdown_pct` | fraction |
+| `win_rate` | fraction |
+| `time_in_market_pct` | fraction |
+| `Position::bracket_*_pct`, `BacktestConfig` `*_pct` | fraction |
+
+`ComparisonRow` carries the same units as the `PerformanceMetrics` field of the
+same name. `largest_win` and `largest_loss` are currency amounts, not percents.
 
 ## DataFrame Export
 

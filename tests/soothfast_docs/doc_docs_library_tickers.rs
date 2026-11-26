@@ -21,10 +21,10 @@ fn doc_block_line_122() {
     }
 }
 
-// line 931: compile-only (no_run)
+// line 930: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_931() {
+fn doc_block_line_930() {
         use finance_query::{Interval, Tickers, TimeRange};
 
         #[tokio::main]

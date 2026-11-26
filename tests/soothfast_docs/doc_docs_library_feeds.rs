@@ -62,10 +62,10 @@ fn doc_block_line_59() {
     }
 }
 
-// line 186: compile-only (no_run)
+// line 185: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_186() {
+fn doc_block_line_185() {
     use finance_query::feeds::{self, FeedSource};
 
     #[tokio::main]

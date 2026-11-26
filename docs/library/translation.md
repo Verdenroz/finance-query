@@ -120,10 +120,9 @@ async fn main() {
 ```
 <!-- /soothfast:bind -->
 
-<!-- soothfast:claim finance_query::translate_dictionary.walltime.median_ns < 25000 -->
-<!-- soothfast:claim finance_query::translate_dictionary.perfcnt.instructions < 35000 -->
+<!-- soothfast:claim finance_query::translate_dictionary.perfcnt.instructions < 24000 -->
 - Dictionary-tier translation of a batch of UI strings (8 mixed texts →
-  Spanish) completes in **single-digit microseconds** and costs **under 35k
+  Spanish) costs **under 24 thousand
   CPU instructions** — cheap enough to run on every response.
 
 ## Language Tags

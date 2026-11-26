@@ -597,6 +597,11 @@ impl Ticker {
     }
 
     /// Get the options chain.
+    ///
+    /// With `None`, Yahoo returns only the nearest expiration, while
+    /// `Options::expiration_dates` lists every
+    /// available one. Pass `Some(timestamp)` from that list to fetch another
+    /// expiration.
     pub async fn options(&self, date: Option<i64>) -> Result<Options> {
         {
             let cache = self.options_cache.read().await;

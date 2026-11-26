@@ -353,10 +353,9 @@ AAPL: 4 dividends
   Timestamp: 1762785000, Amount: $0.26
   Timestamp: 1770647400, Amount: $0.26
   Timestamp: 1778506200, Amount: $0.27
-MSFT: 5 dividends
+MSFT: 4 dividends
   Timestamp: 1755783000, Amount: $0.83
   Timestamp: 1763649000, Amount: $0.91
-  Timestamp: 1771511400, Amount: $0.91
   Timestamp: 1771511400, Amount: $0.91
   Timestamp: 1779370200, Amount: $0.91
 ```

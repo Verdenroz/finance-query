@@ -32,11 +32,11 @@ fn doc_block_line_19() {
     }
 }
 
-// line 46: compile-only (no_run)
+// line 45: compile-only (no_run)
 #[cfg(feature = "crypto")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_46() {
+fn doc_block_line_45() {
     use finance_query::crypto;
 
     #[tokio::main]

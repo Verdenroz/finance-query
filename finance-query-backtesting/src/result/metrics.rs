@@ -18,10 +18,12 @@ use crate::position::Trade;
     dataframe(crate = "finance_query_types")
 )]
 pub struct PerformanceMetrics {
-    /// Total return percentage
+    /// Total return in percent (`16.52` means +16.52%), unlike the fraction-valued
+    /// `max_drawdown_pct`.
     pub total_return_pct: f64,
 
-    /// Annualized return percentage (assumes 252 trading days)
+    /// Annualized return in percent (`16.52` means +16.52%), assuming `bars_per_year`
+    /// bars per year.
     pub annualized_return_pct: f64,
 
     /// Sharpe ratio (risk-free rate = 0)
@@ -43,7 +45,7 @@ pub struct PerformanceMetrics {
     /// Counts the number of consecutive bars from a peak until full recovery.
     pub max_drawdown_duration: i64,
 
-    /// Win rate: `winning_trades / total_trades`.
+    /// Win rate as a fraction (0.0-1.0): `winning_trades / total_trades`.
     ///
     /// The denominator is `total_trades`, which includes break-even trades
     /// (`pnl == 0.0`).  Break-even trades are neither wins nor losses, so they
@@ -58,13 +60,13 @@ pub struct PerformanceMetrics {
     /// is not representable in JSON.
     pub profit_factor: f64,
 
-    /// Average trade return percentage
+    /// Average trade return in percent (see `Trade::return_pct`)
     pub avg_trade_return_pct: f64,
 
-    /// Average winning trade return percentage
+    /// Average winning trade return in percent
     pub avg_win_pct: f64,
 
-    /// Average losing trade return percentage
+    /// Average losing trade return in percent (negative)
     pub avg_loss_pct: f64,
 
     /// Average trade duration in seconds
@@ -130,7 +132,8 @@ pub struct PerformanceMetrics {
     /// Average duration of losing trades in seconds
     pub avg_loss_duration: f64,
 
-    /// Fraction of backtest time spent with an open position (0.0 - 1.0)
+    /// Fraction of backtest time spent with an open position (0.0-1.0, **not** a
+    /// percentage despite the name)
     pub time_in_market_pct: f64,
 
     /// Longest idle period between trades in seconds (0 if fewer than 2 trades)

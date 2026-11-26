@@ -2,10 +2,10 @@
 // source: docs/library/getting-started.md
 #![allow(unused)]
 
-// line 41: compile-only (no_run)
+// line 59: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_41() {
+fn doc_block_line_59() {
     use finance_query::{Ticker, Interval, TimeRange, format::Raw};
 
     #[tokio::main]
@@ -26,11 +26,11 @@ fn doc_block_line_41() {
     }
 }
 
-// line 74: compile-only (no_run)
+// line 92: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_74() {
+fn doc_block_line_92() {
     use finance_query::{Capability, Fetch, Provider, Providers};
 
     #[tokio::main]
@@ -46,10 +46,10 @@ fn doc_block_line_74() {
     }
 }
 
-// line 96: compile-only (no_run)
+// line 114: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_96() {
+fn doc_block_line_114() {
     use finance_query::{Ticker, format::Raw};
 
     #[tokio::main]
@@ -63,10 +63,10 @@ fn doc_block_line_96() {
     }
 }
 
-// line 114: compile-only (no_run)
+// line 132: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_114() {
+fn doc_block_line_132() {
     use finance_query::{Interval, Tickers, TimeRange};
 
     #[tokio::main]
@@ -79,10 +79,10 @@ fn doc_block_line_114() {
     }
 }
 
-// line 131: compile-only (no_run)
+// line 149: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_131() {
+fn doc_block_line_149() {
     use finance_query::{finance, Screener, SearchOptions};
 
     #[tokio::main]
@@ -95,11 +95,11 @@ fn doc_block_line_131() {
     }
 }
 
-// line 150: compile-only (no_run)
+// line 168: compile-only (no_run)
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_150() {
+fn doc_block_line_168() {
     use finance_query::{Interval, Ticker, TimeRange};
 
     #[tokio::main]
@@ -113,11 +113,11 @@ fn doc_block_line_150() {
     }
 }
 
-// line 168: compile-only (no_run)
+// line 186: compile-only (no_run)
 #[cfg(feature = "indicators")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_168() {
+fn doc_block_line_186() {
     use finance_query::{Interval, Ticker, TimeRange};
 
     #[tokio::main]
@@ -133,11 +133,11 @@ fn doc_block_line_168() {
     }
 }
 
-// line 188: compile-only (no_run)
+// line 206: compile-only (no_run)
 #[cfg(feature = "backtesting")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_188() {
+fn doc_block_line_206() {
     use finance_query::backtesting::SmaCrossover;
     use finance_query::{Interval, Ticker, TimeRange};
 
@@ -157,10 +157,10 @@ fn doc_block_line_188() {
     }
 }
 
-// line 212: compile-only (no_run)
+// line 230: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_212() {
+fn doc_block_line_230() {
     use finance_query::streaming::PriceStream;
     use futures::StreamExt;
 
@@ -180,10 +180,10 @@ fn doc_block_line_212() {
     }
 }
 
-// line 236: compile-only (no_run)
+// line 254: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_236() {
+fn doc_block_line_254() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -206,11 +206,11 @@ fn doc_block_line_236() {
     }
 }
 
-// line 263: compile-only (no_run)
+// line 281: compile-only (no_run)
 #[cfg(feature = "risk")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_263() {
+fn doc_block_line_281() {
     use finance_query::{Interval, Ticker, TimeRange};
 
     #[tokio::main]

@@ -35,7 +35,7 @@ use super::{
 /// ```
 ///
 /// Note: This struct is marked `#[non_exhaustive]` and cannot be constructed manually.
-/// Use `Ticker::quote()` or `AsyncTicker::quote()` instead.
+/// Use `Ticker::quote()` instead.
 ///
 /// # Field Precedence
 ///

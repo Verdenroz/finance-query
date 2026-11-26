@@ -26,15 +26,33 @@ finance-query = { version = "3", features = ["dataframe", "backtesting"] }
 | `fmp` | Financial Modeling Prep API (250 req/day free) |
 | `alphavantage` | Alpha Vantage API (25 req/day free) |
 | `crypto` | CoinGecko cryptocurrency data (keyless, 30 req/min) |
-| `fred` | FRED macro-economic data (120 req/min, free API key) |
+| `fred` | FRED macro-economic data and US Treasury yield curve (120 req/min, free API key) |
+| `worldbank` | World Bank Open Data global macro indicators (keyless) |
+| `fiscaldata` | US Treasury FiscalData federal debt and interest statistics (keyless) |
+| `bls` | BLS labor and inflation statistics (keyless v1, `BLS_API_KEY` upgrades to v2) |
+| `frankfurter` | ECB reference exchange rates via Frankfurter (keyless forex) |
+| `binance` | Binance public market data (keyless crypto quotes and OHLCV) |
+| `kraken` | Kraken public market data (keyless crypto, US-accessible) |
+| `defi` | DefiLlama DeFi TVL, chain rankings and stablecoin supplies (keyless) |
+| `finra` | FINRA daily short-sale volume (free, non-commercial use) |
+| `secftd` | SEC fails-to-deliver flat files on the EDGAR adapter (keyless) |
+| `openfigi` | OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless) |
+| `gdelt` | GDELT DOC 2.0 global news search (keyless) |
+| `cftc` | CFTC Commitments of Traders futures positioning (keyless) |
+| `nasdaq` | Nasdaq market-wide earnings, IPO, dividend and split calendars (keyless) |
+| `wikipedia` | Wikipedia S&P 500 index-constituent table scraping (keyless) |
+| `housetrades` | House of Representatives Periodic Transaction Report disclosures (keyless) |
+| `senatetrades` | Senate Periodic Transaction Report disclosures (keyless, needs headless Chromium) |
 | `dataframe` | Polars DataFrame integration for data analysis |
 | `backtesting` | Strategy backtesting engine (includes `indicators`) |
 | `indicators` | 42 technical indicators (auto-enabled with `backtesting`) |
 | `risk` | Risk analytics: VaR, Sharpe/Sortino/Calmar, beta, drawdown (includes `indicators`) |
-| `rss` | RSS/Atom news feed aggregation |
 | `sentiment` | Offline VADER sentiment scoring for news titles and transcripts (keyless) |
 | `translation` | Translate human-readable response fields (built-in dictionary + pluggable backend) |
 | `translation-offline` | Local opus-mt machine-translation backend (needs `cmake` + a C++ toolchain) |
+| `full` | Every feature above except `translation-offline` |
+
+RSS/Atom feeds need no feature flag.
 
 ## Quick Example
 
@@ -59,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_quote.walltime.median_ns < 4000000 -->
+<!-- soothfast:claim finance_query::de_quote.perfcnt.instructions < 13000000 -->
 The network round-trip dominates each call — deserialization is far from the bottleneck.
 
 ## Multi-Provider Data Sources
@@ -141,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_search.walltime.median_ns < 20000 -->
+<!-- soothfast:claim finance_query::de_search.perfcnt.instructions < 72000 -->
 
 → [Finance Module](finance.md) for market-wide data
 
