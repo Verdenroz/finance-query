@@ -901,10 +901,9 @@ use finance_query::streaming::PriceUpdate;
 
 let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
     .into_iter()
-    .map(|id| {
-        let mut tick = PriceUpdate::default();
-        tick.id = id.to_string();
-        tick
+    .map(|id| PriceUpdate {
+        id: id.to_string(),
+        ..PriceUpdate::default()
     })
     .collect();
 

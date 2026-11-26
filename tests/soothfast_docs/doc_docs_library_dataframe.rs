@@ -69,10 +69,9 @@ fn doc_block_line_899() {
 
     let ticks: Vec<PriceUpdate> = ["AAPL", "MSFT"]
         .into_iter()
-        .map(|id| {
-            let mut tick = PriceUpdate::default();
-            tick.id = id.to_string();
-            tick
+        .map(|id| PriceUpdate {
+            id: id.to_string(),
+            ..PriceUpdate::default()
         })
         .collect();
 
@@ -81,11 +80,11 @@ fn doc_block_line_899() {
     println!("{}", df.width());
 }
 
-// line 922
+// line 921
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_922() {
+fn doc_block_line_921() {
     use finance_query::CompanyFacts;
 
     let facts: CompanyFacts = serde_json::from_str(
@@ -103,11 +102,11 @@ fn doc_block_line_922() {
     println!("{:?}", &df.get_column_names()[..3]);
 }
 
-// line 973: compile-only (no_run)
+// line 972: compile-only (no_run)
 #[cfg(feature = "dataframe")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_973() {
+fn doc_block_line_972() {
         use finance_query::{Interval, Ticker, TimeRange};
         use polars::prelude::*;
 
