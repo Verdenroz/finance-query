@@ -35,60 +35,50 @@ pub fn cmo(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
 
     let mut result = vec![None; data.len()];
 
-    // Pre-calculate changes
-    let mut changes = Vec::with_capacity(data.len());
-    changes.push(0.0); // Dummy for index 0
-    for i in 1..data.len() {
-        changes.push(data[i] - data[i - 1]);
-    }
+    let changes: Vec<f64> = data.windows(2).map(|w| w[1] - w[0]).collect();
 
-    // Calculate initial window
     let mut gains_sum = 0.0;
     let mut losses_sum = 0.0;
 
-    for &change in changes.iter().skip(1).take(period) {
+    for &change in &changes[..period] {
         if change > 0.0 {
             gains_sum += change;
         } else {
             losses_sum += -change;
         }
     }
+    result[period] = Some(chande_momentum(gains_sum, losses_sum));
 
-    // First value at index period
-    let total = gains_sum + losses_sum;
-    if total != 0.0 {
-        result[period] = Some(((gains_sum - losses_sum) / total) * 100.0);
-    } else {
-        result[period] = Some(0.0);
-    }
-
-    // Slide window
-    for i in (period + 1)..data.len() {
-        // Remove old change (at index i - period)
-        let old_change = changes[i - period];
+    for ((out, &old_change), &new_change) in result[period + 1..]
+        .iter_mut()
+        .zip(&changes)
+        .zip(&changes[period..])
+    {
         if old_change > 0.0 {
             gains_sum -= old_change;
         } else {
             losses_sum -= -old_change;
         }
 
-        // Add new change (at index i)
-        let new_change = changes[i];
         if new_change > 0.0 {
             gains_sum += new_change;
         } else {
             losses_sum += -new_change;
         }
 
-        let total = gains_sum + losses_sum;
-        if total != 0.0 {
-            result[i] = Some(((gains_sum - losses_sum) / total) * 100.0);
-        } else {
-            result[i] = Some(0.0);
-        }
+        *out = Some(chande_momentum(gains_sum, losses_sum));
     }
 
     Ok(result)
+}
+
+fn chande_momentum(gains_sum: f64, losses_sum: f64) -> f64 {
+    let total = gains_sum + losses_sum;
+    if total != 0.0 {
+        ((gains_sum - losses_sum) / total) * 100.0
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]

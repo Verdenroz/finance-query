@@ -433,7 +433,12 @@ fn ind_momentum_single(s: &Series) {
     keep(momentum(keep(closes), 10)).unwrap();
 }
 
-#[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::cmo")]
+#[bench(
+    group = "indicators",
+    setup = series_1000,
+    alloc = 2,
+    covers = "finance_query::indicators::cmo"
+)]
 fn ind_cmo(s: &Series) {
     let (_, _, _, closes, _) = s;
     keep(cmo(keep(closes), 14)).unwrap();
