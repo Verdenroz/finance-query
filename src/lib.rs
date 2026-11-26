@@ -410,6 +410,7 @@ pub use finance::{LookupOptions, LookupType, SearchOptions};
 // ============================================================================
 // Parameter enums - Used with Ticker and finance methods
 // ============================================================================
+pub use constants::fundamental_types;
 pub use constants::indices::Region as IndicesRegion;
 pub use constants::screeners::Screener;
 pub use constants::sectors::Sector;

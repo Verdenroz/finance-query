@@ -18,8 +18,10 @@ pub mod exchange_codes;
 
 /// Fundamental timeseries field types for financial statements
 ///
-/// These constants represent field names that must be prefixed with frequency ("annual" or "quarterly")
-/// Example: "annualTotalRevenue", "quarterlyTotalRevenue"
+/// Metric names as they key `FinancialStatement::statement`, without a frequency
+/// prefix: `TOTAL_REVENUE` is `"TotalRevenue"`. Fetching adds the
+/// `"annual"`/`"quarterly"` prefix on the wire (`Frequency::prefix`) and strips
+/// it again when parsing.
 pub mod fundamental_types;
 
 /// World market indices

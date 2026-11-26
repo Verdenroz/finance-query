@@ -42,7 +42,12 @@ pub struct Chart {
 impl Chart {
     /// Converts the candles to a polars DataFrame.
     ///
-    /// Each candle becomes a row with columns for timestamp, open, high, low, close, volume.
+    /// Each candle becomes a row with columns for timestamp, open, high, low, close, volume,
+    /// adj_close and provider_id.
+    ///
+    /// `provider_id` is the provider that served each candle (e.g. `"yahoo"`), null when
+    /// unknown. It repeats the chart's own [`provider_id`](Self::provider_id), so a join
+    /// of two chart frames duplicates the column; drop or rename it before joining.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         Candle::vec_to_dataframe(&self.candles)
     }
