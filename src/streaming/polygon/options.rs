@@ -18,7 +18,7 @@ use crate::streaming::client::StreamResult;
 use crate::streaming::options::{
     ContractParts, Greeks, OptionContractUpdate, parse_contract_symbol,
 };
-use crate::streaming::source::{StreamCommand, StreamSource};
+use crate::streaming::source::{Ready, StreamCommand, StreamSource};
 
 use super::{AssetClass, SessionHandler, prune_symbols, run_polygon_session};
 
@@ -48,6 +48,7 @@ impl StreamSource<OptionContractUpdate> for PolygonOptionsSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<OptionContractUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
         let refresh = self.greeks_refresh.map(|interval| {
             tokio::spawn(refresh_snapshots(
@@ -63,6 +64,7 @@ impl StreamSource<OptionContractUpdate> for PolygonOptionsSource {
             subscriptions,
             broadcast_tx,
             command_rx,
+            ready,
             ContractMerger::default(),
         )
         .await;

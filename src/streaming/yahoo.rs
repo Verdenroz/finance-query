@@ -12,12 +12,14 @@ use std::time::Duration;
 use futures::SinkExt;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use tokio::time::interval;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, error, info, warn};
+
+use crate::adapters::common::ws_tls;
 
 use super::client::{StreamError, StreamResult};
 use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
-use super::source::{StreamCommand, StreamSource, apply_command};
+use super::source::{Ready, StreamCommand, StreamSource, apply_command};
 
 /// Yahoo Finance WebSocket URL.
 const YAHOO_WS_URL: &str = "wss://streamer.finance.yahoo.com/?version=2";
@@ -39,8 +41,9 @@ impl StreamSource<PriceUpdate> for YahooStreamSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<PriceUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
-        connect_and_stream(subscriptions, broadcast_tx, command_rx).await
+        connect_and_stream(subscriptions, broadcast_tx, command_rx, ready).await
     }
 }
 
@@ -49,16 +52,21 @@ async fn connect_and_stream(
     subscriptions: &Arc<RwLock<HashSet<String>>>,
     broadcast_tx: &broadcast::Sender<PriceUpdate>,
     command_rx: &mut mpsc::Receiver<StreamCommand>,
+    ready: &mut Ready,
 ) -> StreamResult<()> {
     use futures::StreamExt;
 
     info!("Connecting to Yahoo Finance WebSocket...");
 
-    let (ws_stream, _) = connect_async(YAHOO_WS_URL)
-        .await
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
+    let (ws_stream, _) = ws_tls::connect(YAHOO_WS_URL).await.map_err(|e| {
+        if ws_tls::is_permanent(&e) {
+            ready.permanent();
+        }
+        StreamError::ConnectionFailed(e.to_string())
+    })?;
 
     info!("Connected to Yahoo Finance WebSocket");
+    ready.signal();
 
     let (mut write, mut read) = ws_stream.split();
 
@@ -103,7 +111,10 @@ async fn connect_and_stream(
     loop {
         tokio::select! {
             // Handle incoming WebSocket messages
-            Some(msg) = read.next() => {
+            msg = read.next() => {
+                let Some(msg) = msg else {
+                    return Err(StreamError::WebSocketError("connection closed".to_string()));
+                };
                 match msg {
                     Ok(Message::Text(text)) => {
                         if let Err(e) = handle_text_message(&text, broadcast_tx) {
@@ -137,7 +148,11 @@ async fn connect_and_stream(
             }
 
             // Handle commands (subscribe/unsubscribe)
-            Some(cmd) = command_rx.recv() => {
+            cmd = command_rx.recv() => {
+                let Some(cmd) = cmd else {
+                    let _ = write.send(Message::Close(None)).await;
+                    return Ok(());
+                };
                 let Some(changed) = apply_command(&cmd, subscriptions).await else {
                     info!("Received close command");
                     let _ = write.send(Message::Close(None)).await;
@@ -153,8 +168,6 @@ async fn connect_and_stream(
                 let _ = write.send(Message::Text(msg.to_string().into())).await;
                 info!("Subscription change applied: {:?}", changed);
             }
-
-            else => break,
         }
     }
 
