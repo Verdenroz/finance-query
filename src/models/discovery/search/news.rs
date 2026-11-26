@@ -48,10 +48,38 @@ impl SearchNewsList {
     }
 }
 
+#[cfg(feature = "dataframe")]
+impl crate::ToDataFrame for SearchNewsList {
+    fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        Self::to_dataframe(self)
+    }
+
+    fn to_nested_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        SearchNews::vec_to_nested_dataframe(&self.0)
+    }
+
+    fn vec_to_dataframe(
+        items: &[Self],
+    ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        crate::dataframe::stack_rows(SearchNews::vec_to_dataframe(&[]), items, Self::to_dataframe)
+    }
+
+    fn vec_to_nested_dataframe(
+        items: &[Self],
+    ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        crate::dataframe::stack_rows(
+            SearchNews::vec_to_nested_dataframe(&[]),
+            items,
+            Self::to_nested_dataframe,
+        )
+    }
+}
+
 /// A news result from search
 ///
 /// When the `dataframe` feature is enabled, scalar fields can be converted
-/// to a DataFrame. `related_tickers` becomes a `List(String)` column; the thumbnail is skipped.
+/// to a DataFrame. `related_tickers` becomes a `List(String)` column; the thumbnail is reached with
+/// `thumbnail_dataframe()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
@@ -76,7 +104,8 @@ pub struct SearchNews {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub news_type: Option<String>,
-    /// Article thumbnail image (excluded from DataFrame)
+    /// Article thumbnail image
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<NewsThumbnail>,
     /// Sentiment score for this article's title (VADER lexicon-based).

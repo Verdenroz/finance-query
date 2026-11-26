@@ -1,6 +1,11 @@
 use crate::models::dataframe_test_util::columns;
 use crate::models::market::index_trend::TrendEstimate;
-use crate::models::market::performance::{IndustryPe, MoverQuote, SectorPe, SectorPerformance};
+use crate::models::market::industries::IndustryData;
+use crate::models::market::performance::{
+    IndustryPe, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
+};
+use crate::models::market::sectors::SectorData;
+use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
 use serde_json::json;
 
 #[test]
@@ -73,4 +78,101 @@ fn trend_estimate_columns() {
     let empty = <TrendEstimate>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);
     assert_eq!(empty.height(), 0);
+}
+
+#[test]
+fn sector_data_nests_its_row_lists() {
+    let sector: SectorData = serde_json::from_value(json!({
+        "name": "Technology",
+        "key": "technology",
+        "overview": {"companiesCount": 5},
+        "topCompanies": [{"symbol": "AAPL"}, {"symbol": "MSFT"}],
+        "topEtfs": [],
+        "topMutualFunds": [],
+        "industries": [{"name": "Software"}],
+        "researchReports": []
+    }))
+    .unwrap();
+    let flat = columns(&sector.to_dataframe().unwrap());
+    assert_eq!(flat[..3], ["name:str", "symbol:str", "key:str"]);
+    assert!(flat.contains(&"overview_companies_count:i64".to_string()));
+    assert!(!flat.iter().any(|c| c.contains("top_companies")));
+
+    let companies = sector.top_companies_dataframe().unwrap();
+    assert_eq!(columns(&companies)[..2], ["symbol:str", "name:str"]);
+    assert_eq!(companies.height(), 2);
+    let etfs = sector.top_etfs_dataframe().unwrap();
+    assert_eq!(etfs.height(), 0);
+    assert_eq!(columns(&etfs)[0], "symbol:str");
+    assert_eq!(sector.industries_dataframe().unwrap().height(), 1);
+    assert!(
+        columns(&sector.to_nested_dataframe().unwrap())
+            .last()
+            .unwrap()
+            .starts_with("research_reports:list[struct[")
+    );
+}
+
+#[test]
+fn industry_data_nests_its_row_lists() {
+    let industry: IndustryData = serde_json::from_value(json!({
+        "name": "Software",
+        "key": "software",
+        "topCompanies": [{"symbol": "MSFT"}],
+        "topGrowthCompanies": [{"symbol": "NOW"}, {"symbol": "CRM"}]
+    }))
+    .unwrap();
+    assert_eq!(industry.top_companies_dataframe().unwrap().height(), 1);
+    assert_eq!(
+        industry.top_growth_companies_dataframe().unwrap().height(),
+        2
+    );
+    let performing = industry.top_performing_companies_dataframe().unwrap();
+    assert_eq!(performing.height(), 0);
+    assert_eq!(columns(&performing)[0], "symbol:str");
+    assert_eq!(
+        columns(&industry.to_dataframe().unwrap())[..2],
+        ["name:str", "key:str"]
+    );
+}
+
+#[test]
+fn sector_performance_history_nests_the_day() {
+    let day: SectorPerformanceHistory = serde_json::from_value(json!({
+        "date": "2024-01-02",
+        "sectors": [{"sector": "Tech", "change_percent": 1.5}]
+    }))
+    .unwrap();
+    assert_eq!(columns(&day.to_dataframe().unwrap()), ["date:str"]);
+    let sectors = day.sectors_dataframe().unwrap();
+    assert_eq!(
+        columns(&sectors),
+        ["sector:str", "exchange:str", "change_percent:f64"]
+    );
+    assert_eq!(sectors.height(), 1);
+}
+
+#[test]
+fn trend_wrappers_nest_their_estimates() {
+    let body = json!({
+        "symbol": "SP5",
+        "estimates": [{"period": "0q"}, {"period": "+1q"}]
+    });
+    let index: IndexTrend = serde_json::from_value(body.clone()).unwrap();
+    let industry: IndustryTrend = serde_json::from_value(body.clone()).unwrap();
+    let sector: SectorTrend = serde_json::from_value(body).unwrap();
+    for estimates in [
+        index.estimates_dataframe().unwrap(),
+        industry.estimates_dataframe().unwrap(),
+        sector.estimates_dataframe().unwrap(),
+    ] {
+        assert_eq!(columns(&estimates), ["period:str", "growth:f64"]);
+        assert_eq!(estimates.height(), 2);
+    }
+    let none: IndexTrend = serde_json::from_value(json!({})).unwrap();
+    assert_eq!(none.estimates_dataframe().unwrap().height(), 0);
+    assert_eq!(
+        columns(&index.to_dataframe().unwrap()),
+        ["max_age:i64", "symbol:str", "pe_ratio:f64", "peg_ratio:f64"]
+    );
 }

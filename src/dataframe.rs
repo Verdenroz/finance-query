@@ -29,6 +29,42 @@ macro_rules! delegate_rows_to_inherent {
     };
 }
 
+/// Stacks one frame per item under the row type's zero-row schema.
+pub(crate) fn stack_rows<T>(
+    schema: PolarsResult<DataFrame>,
+    items: &[T],
+    frame: impl Fn(&T) -> PolarsResult<DataFrame>,
+) -> PolarsResult<DataFrame> {
+    items
+        .iter()
+        .map(frame)
+        .try_fold(schema?, |acc, frame| acc.vstack(&frame?))
+}
+
+macro_rules! delegate_wrapped_rows {
+    ($($ty:ty => $row:ty),* $(,)?) => {
+        $(
+            impl ToDataFrame for $ty {
+                fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+                    <$ty>::to_dataframe(self)
+                }
+
+                fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+                    stack_rows(<$row>::vec_to_dataframe(&[]), items, Self::to_dataframe)
+                }
+
+                fn vec_to_nested_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
+                    stack_rows(
+                        <$row as ToDataFrame>::vec_to_nested_dataframe(&[]),
+                        items,
+                        <Self as ToDataFrame>::to_nested_dataframe,
+                    )
+                }
+            }
+        )*
+    };
+}
+
 delegate_rows_to_inherent!(crate::CalendarEvent, crate::MarketCalendarEntry);
 
 delegate_to_inherent!(
@@ -45,7 +81,6 @@ delegate_to_inherent!(
     crate::Contracts,
     crate::EconomicSeries,
     crate::EdgarFilingIndex,
-    crate::EdgarFilingRecent,
     crate::EdgarSearchResults,
     crate::FactConcept,
     crate::FinancialStatement,
@@ -54,10 +89,13 @@ delegate_to_inherent!(
     crate::Options,
     crate::ProviderFilings,
     crate::Recommendation,
-    crate::ResearchReports,
     crate::ScreenerResults,
-    crate::SearchNewsList,
-    crate::SearchQuotes,
+);
+
+delegate_wrapped_rows!(
+    crate::EdgarFilingRecent => crate::EdgarFiling,
+    crate::ResearchReports => crate::ResearchReport,
+    crate::SearchQuotes => crate::SearchQuote,
 );
 
 #[cfg(feature = "cftc")]

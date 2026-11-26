@@ -131,6 +131,7 @@ struct RawResearchReport {
 
 /// Complete sector data with all available information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorData {
@@ -146,14 +147,17 @@ pub struct SectorData {
 
     /// Sector overview with market statistics
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub overview: Option<SectorOverview>,
 
     /// Sector performance metrics
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub performance: Option<SectorPerformance>,
 
     /// Benchmark (S&P 500) comparison performance
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub benchmark: Option<SectorPerformance>,
 
     /// Benchmark name (usually "S&P 500")
@@ -162,22 +166,27 @@ pub struct SectorData {
 
     /// Top companies in the sector
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_companies: Vec<SectorCompany>,
 
     /// Top ETFs tracking this sector
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_etfs: Vec<SectorETF>,
 
     /// Top mutual funds in this sector
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub top_mutual_funds: Vec<SectorMutualFund>,
 
     /// Industries within this sector
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub industries: Vec<SectorIndustry>,
 
     /// Recent research reports
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub research_reports: Vec<ResearchReport>,
 }
 

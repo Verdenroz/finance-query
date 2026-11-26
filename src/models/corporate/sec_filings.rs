@@ -50,6 +50,7 @@ pub struct SecFiling {
 
     /// List of exhibits associated with this filing
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(nested))]
     pub exhibits: Vec<SecExhibit>,
 }
 

@@ -45,6 +45,24 @@ pub trait ToDataFrame {
             Some(first) => frames.try_fold(first?, |acc, frame| acc.vstack(&frame?)),
         }
     }
+
+    /// Converts this value to a DataFrame that also carries its nested rows.
+    ///
+    /// Types with `#[dataframe(nested)]` fields add one `List(Struct)` column
+    /// per field. The default is [`to_dataframe`](Self::to_dataframe).
+    fn to_nested_dataframe(&self) -> PolarsResult<DataFrame> {
+        self.to_dataframe()
+    }
+
+    /// Converts a slice of values to one DataFrame that also carries nested rows.
+    ///
+    /// The default is [`vec_to_dataframe`](Self::vec_to_dataframe).
+    fn vec_to_nested_dataframe(items: &[Self]) -> PolarsResult<DataFrame>
+    where
+        Self: Sized,
+    {
+        Self::vec_to_dataframe(items)
+    }
 }
 
 /// Support code for `#[derive(ToDataFrame)]`. Not public API.
@@ -53,9 +71,13 @@ pub mod derive {
     use std::fmt::Display;
     use std::marker::PhantomData;
 
+    use polars::chunked_array::builder::get_list_builder;
     use polars::prelude::{
-        Column, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, Series,
+        Column, DataFrame, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom,
+        PlSmallStr, PolarsResult, Series,
     };
+
+    use super::ToDataFrame;
 
     pub trait Columns {
         fn columns(rows: &[Option<&Self>], prefix: &str) -> Vec<Column>;
@@ -73,6 +95,29 @@ pub mod derive {
             }
         }
         Column::from(builder.finish().into_series())
+    }
+
+    fn struct_series(frame: DataFrame) -> Series {
+        frame.into_struct(PlSmallStr::EMPTY).into_series()
+    }
+
+    /// One `List(Struct)` column holding each parent's child rows as a list of structs.
+    ///
+    /// An empty slice is an empty list. Child rows use their own nested frame,
+    /// so nesting recurses.
+    pub fn nested_column<'a, T: ToDataFrame + 'a>(
+        name: &str,
+        rows: impl ExactSizeIterator<Item = &'a [T]>,
+    ) -> PolarsResult<Column> {
+        let dtype = struct_series(T::vec_to_nested_dataframe(&[])?)
+            .dtype()
+            .clone();
+        let mut builder = get_list_builder(&dtype, rows.len(), rows.len(), name.into());
+        for items in rows {
+            let child = T::vec_to_nested_dataframe(items)?;
+            builder.append_series(&struct_series(child))?;
+        }
+        Ok(Column::from(builder.finish().into_series()))
     }
 
     /// Selects a column builder by whether `T: Display`, resolved by autoref at the call site.
