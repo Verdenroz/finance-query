@@ -27,6 +27,7 @@ pub struct StockListing {
     /// Share-class identifier.
     pub share_class_figi: Option<String>,
     /// Provider-reported listing date.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub list_date: Option<String>,
     /// Provider-reported delisting timestamp.
     pub delisted_utc: Option<String>,
@@ -39,6 +40,7 @@ pub struct StockListing {
 #[non_exhaustive]
 pub struct TickerChange {
     /// First day under this ticker (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// The ticker from that day.
     pub ticker: String,

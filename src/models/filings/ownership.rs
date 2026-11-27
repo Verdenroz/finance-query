@@ -45,6 +45,7 @@ pub struct InsiderTrade {
     /// Security traded (e.g. `"Common Stock"`).
     pub security_title: Option<String>,
     /// Transaction date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub transaction_date: Option<String>,
     /// SEC transaction code (`"P"` purchase, `"S"` sale, `"M"` option exercise…).
     pub transaction_code: Option<String>,
@@ -92,6 +93,7 @@ pub struct InstitutionalHolding {
     /// Accession number of the source filing.
     pub accession_number: Option<String>,
     /// Period the holdings are reported as of (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub report_date: Option<String>,
 }
 
@@ -118,8 +120,10 @@ pub struct CongressionalTrade {
     /// Description of the asset traded.
     pub asset_description: Option<String>,
     /// Date the transaction occurred (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub transaction_date: Option<String>,
     /// Date the transaction was publicly disclosed (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub disclosure_date: Option<String>,
     /// Link to the source disclosure filing.
     pub link: Option<String>,
@@ -134,6 +138,7 @@ pub struct FailToDeliver {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Settlement date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Number of shares that failed to deliver.
     pub quantity: Option<f64>,

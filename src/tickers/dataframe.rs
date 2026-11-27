@@ -237,7 +237,7 @@ impl super::BatchIndicatorsResponse {
 mod tests {
     use super::*;
     use crate::models::quote::Quote;
-    use polars::prelude::DataType;
+    use polars::prelude::{DataType, TimeUnit, TimeZone};
 
     fn response<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> T {
         serde_json::from_value(json).unwrap()
@@ -393,9 +393,9 @@ mod tests {
         );
         assert_eq!(
             column("metric")[..3],
-            ["NetIncome", "TotalRevenue", "TotalRevenue"]
+            ["net_income", "total_revenue", "total_revenue"]
         );
-        assert_eq!(column("date")[1..3], ["2023-09-30", "2024-09-30"]);
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
     }
 
     #[test]
@@ -485,7 +485,10 @@ mod tests {
             names(&df),
             ["symbol", "timestamp", "close", "interval", "range"]
         );
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+        );
         assert_eq!(df.height(), 2);
 
         let empty: BatchSparksResponse = response(serde_json::json!({"sparks": {}, "errors": {}}));

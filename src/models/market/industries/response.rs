@@ -340,6 +340,7 @@ pub struct ResearchReport {
     pub provider: Option<String>,
     /// Report date (ISO 8601)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime))]
     pub report_date: Option<String>,
     /// Report type (e.g., "Quantitative Report")
     #[serde(skip_serializing_if = "Option::is_none")]

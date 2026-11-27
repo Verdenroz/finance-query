@@ -27,7 +27,7 @@ fn company_profile_columns() {
         "is_adr:bool",
         "is_fund:bool",
         "cik:str",
-        "ipo_date:str",
+        "ipo_date:date",
         "provider_id:str",
     ];
     let df = row.to_dataframe().unwrap();
@@ -307,7 +307,7 @@ fn grading_action_columns() {
     let row: GradingAction = serde_json::from_value(json!({})).unwrap();
     let expected = [
         "symbol:str",
-        "date:str",
+        "date:date",
         "grading_company:str",
         "previous_grade:str",
         "new_grade:str",
@@ -332,6 +332,7 @@ fn etf_profile_nests_holdings_and_weightings() {
     .unwrap();
     let flat = profile.to_dataframe().unwrap();
     assert_eq!(flat.height(), 1);
+    assert!(columns(&flat).contains(&"inception_date:date".to_string()));
     assert!(!columns(&flat).iter().any(|c| c.contains("holdings")));
 
     let holdings = profile.holdings_dataframe().unwrap();

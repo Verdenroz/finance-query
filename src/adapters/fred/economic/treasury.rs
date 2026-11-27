@@ -5,6 +5,8 @@
 
 use std::time::Duration;
 
+use chrono::NaiveDate;
+
 use super::super::models::TreasuryYield;
 use crate::error::{FinanceError, Result};
 use tracing::info;
@@ -46,7 +48,7 @@ pub(crate) async fn fetch_yields(year: u32) -> Result<Vec<TreasuryYield>> {
     parse_csv(&text, year)
 }
 
-/// Parse the Treasury yield CSV text into [`TreasuryYield`] records.
+/// Parse the Treasury yield CSV text into [`TreasuryYield`] records, oldest first.
 fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -60,10 +62,9 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
             context: format!("CSV parse error for year {year}: {e}"),
         })?;
 
-        let date = record.get(0).unwrap_or("").trim().to_string();
-        if date.is_empty() {
+        let Some(date) = record.get(0).and_then(iso_date) else {
             continue;
-        }
+        };
 
         let parse_col = |i: usize| -> Option<f64> { record.get(i)?.trim().parse::<f64>().ok() };
 
@@ -85,7 +86,15 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
         });
     }
 
+    yields.sort_by(|a, b| a.date.cmp(&b.date));
     Ok(yields)
+}
+
+/// Converts Treasury's `MM/DD/YYYY` to `YYYY-MM-DD`.
+fn iso_date(raw: &str) -> Option<String> {
+    NaiveDate::parse_from_str(raw.trim(), "%m/%d/%Y")
+        .ok()
+        .map(|day| day.format("%Y-%m-%d").to_string())
 }
 
 #[cfg(test)]
@@ -99,7 +108,7 @@ mod tests {
         let yields = parse_csv(csv, 2025).unwrap();
         assert_eq!(yields.len(), 1);
         let row = &yields[0];
-        assert_eq!(row.date, "01/02/2025");
+        assert_eq!(row.date, "2025-01-02");
         assert_eq!(row.y1m, Some(4.33));
         assert_eq!(row.y10, Some(4.57));
         assert_eq!(row.y30, Some(4.79));
@@ -113,6 +122,26 @@ mod tests {
         assert_eq!(yields.len(), 1);
         assert!(yields[0].y1m.is_none());
         assert_eq!(yields[0].y1, Some(4.29));
+    }
+
+    #[test]
+    fn test_parse_csv_iso_dates_ascending() {
+        let csv = "Date,1 Mo,2 Mo,3 Mo,4 Mo,6 Mo,1 Yr,2 Yr,3 Yr,5 Yr,7 Yr,10 Yr,20 Yr,30 Yr\n\
+                   01/03/2025,4.31,,,,,,,,,,,,\n\
+                   12/31/2024,4.37,,,,,,,,,,,,\n\
+                   01/02/2025,4.33,,,,,,,,,,,,\n";
+        let yields = parse_csv(csv, 2025).unwrap();
+        let dates: Vec<&str> = yields.iter().map(|y| y.date.as_str()).collect();
+        assert_eq!(dates, ["2024-12-31", "2025-01-02", "2025-01-03"]);
+        assert_eq!(yields[2].y1m, Some(4.31));
+    }
+
+    #[test]
+    fn test_parse_csv_skips_unparseable_dates() {
+        let csv = "Date,1 Mo,2 Mo,3 Mo,4 Mo,6 Mo,1 Yr,2 Yr,3 Yr,5 Yr,7 Yr,10 Yr,20 Yr,30 Yr\n\
+                   ,4.31,,,,,,,,,,,,\n\
+                   2025-01-02,4.33,,,,,,,,,,,,\n";
+        assert!(parse_csv(csv, 2025).unwrap().is_empty());
     }
 
     #[tokio::test]

@@ -17,7 +17,7 @@ fn series_frame_prefixes_series_id() {
     .unwrap();
     let df = series.to_dataframe().unwrap();
 
-    assert_eq!(columns(&df), ["series_id:str", "date:str", "value:f64"]);
+    assert_eq!(columns(&df), ["series_id:str", "date:date", "value:f64"]);
     assert_eq!(df.height(), 2);
     assert_eq!(df.column("value").unwrap().null_count(), 1);
 }
@@ -34,7 +34,7 @@ fn series_frame_empty_keeps_schema() {
     .unwrap();
     let df = series.to_dataframe().unwrap();
 
-    assert_eq!(columns(&df), ["series_id:str", "date:str", "value:f64"]);
+    assert_eq!(columns(&df), ["series_id:str", "date:date", "value:f64"]);
     assert_eq!(df.height(), 0);
 }
 
@@ -50,8 +50,8 @@ fn catalog_frames_columns() {
             "frequency:str",
             "units:str",
             "seasonal_adjustment:str",
-            "observation_start:str",
-            "observation_end:str",
+            "observation_start:date",
+            "observation_end:date",
             "popularity:i64",
             "notes:str",
         ]
@@ -82,7 +82,7 @@ fn macro_series_and_yield_frames() {
     .unwrap();
     assert_eq!(
         columns(&series.to_dataframe().unwrap()),
-        ["series_id:str", "date:str", "value:f64"]
+        ["series_id:str", "date:date", "value:f64"]
     );
 
     let yields: Vec<TreasuryYield> = serde_json::from_value(json!([{
@@ -93,7 +93,7 @@ fn macro_series_and_yield_frames() {
     .unwrap();
     let df = TreasuryYield::vec_to_dataframe(&yields).unwrap();
     assert_eq!(df.width(), 14);
-    assert_eq!(columns(&df)[..2], ["date:str", "y1m:f64"]);
+    assert_eq!(columns(&df)[..2], ["date:date", "y1m:f64"]);
 }
 
 #[cfg(feature = "fiscaldata")]
@@ -109,7 +109,10 @@ fn auction_frames_columns() {
     let df = TreasuryAuction::vec_to_dataframe(&auctions).unwrap();
     let cols = columns(&df);
     assert_eq!(df.width(), 24);
-    assert_eq!(cols[0], "record_date:str");
+    assert_eq!(cols[0], "record_date:date");
+    for date in ["auction_date", "issue_date", "maturity_date"] {
+        assert!(cols.contains(&format!("{date}:date")), "{date}");
+    }
     assert!(cols.contains(&"reopening:bool".to_string()));
     assert!(cols.contains(&"offering_amt:f64".to_string()));
 
@@ -122,15 +125,15 @@ fn auction_frames_columns() {
     assert_eq!(
         columns(&UpcomingAuction::vec_to_dataframe(&upcoming).unwrap()),
         [
-            "record_date:str",
+            "record_date:date",
             "security_type:str",
             "security_term:str",
             "cusip:str",
             "reopening:bool",
             "offering_amt:f64",
-            "announcement_date:str",
-            "auction_date:str",
-            "issue_date:str",
+            "announcement_date:date",
+            "auction_date:date",
+            "issue_date:date",
         ]
     );
 }

@@ -30,6 +30,7 @@ pub struct EarningsTrend {
 pub struct EarningsTrendPeriod {
     /// End date for this period
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub end_date: Option<String>,
 
     /// Earnings estimates

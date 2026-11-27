@@ -104,7 +104,7 @@ fn earnings_trend_flattens_estimates() {
     let df = trend.to_dataframe().unwrap();
     let cols = columns(&df);
 
-    assert_eq!(cols[0], "end_date:str");
+    assert_eq!(cols[0], "end_date:date");
     assert!(cols.contains(&"earnings_estimate_avg:f64".to_string()));
     assert!(cols.contains(&"revenue_estimate_number_of_analysts:i64".to_string()));
     assert!(cols.contains(&"eps_trend_seven_days_ago:f64".to_string()));
@@ -373,7 +373,7 @@ fn record_frames() {
     let releases: Vec<PressRelease> = parse(json!([{"symbol": "AAPL", "title": "t"}]));
     assert_eq!(
         columns(&PressRelease::vec_to_dataframe(&releases).unwrap()),
-        ["symbol:str", "date:str", "title:str", "text:str"]
+        ["symbol:str", "date:date", "title:str", "text:str"]
     );
 
     let transcripts: Vec<EarningsTranscript> =
@@ -384,7 +384,7 @@ fn record_frames() {
             "symbol:str",
             "quarter:str",
             "year:i32",
-            "date:str",
+            "date:date",
             "text:str",
         ]
     );
@@ -395,11 +395,14 @@ fn record_frames() {
     assert_eq!(cols.len(), 14);
     assert!(cols.contains(&"year:i32".to_string()));
     assert!(cols.contains(&"total:f64".to_string()));
+    assert!(cols.contains(&"filing_date:date".to_string()));
 
     let staff: Vec<EmployeeCount> = parse(json!([{"employee_count": 100}]));
     let cols = columns(&EmployeeCount::vec_to_dataframe(&staff).unwrap());
     assert_eq!(cols.len(), 8);
     assert!(cols.contains(&"employee_count:i64".to_string()));
+    assert!(cols.contains(&"period_of_report:date".to_string()));
+    assert!(cols.contains(&"filing_date:date".to_string()));
 }
 
 #[test]

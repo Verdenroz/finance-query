@@ -16,6 +16,7 @@ pub struct PressRelease {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Publication date/time as reported by the provider.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Release title.
     pub title: Option<String>,
