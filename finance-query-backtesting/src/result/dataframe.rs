@@ -40,7 +40,7 @@ impl BacktestResult {
         DataFrame::new(
             t.len(),
             vec![
-                series("side", t, |x| x.side.to_string()),
+                series("side", t, |x| x.side.as_str()),
                 datetimes("entry_timestamp", t, |x| x.entry_timestamp),
                 datetimes("exit_timestamp", t, |x| x.exit_timestamp),
                 series("entry_price", t, |x| x.entry_price),
@@ -72,9 +72,13 @@ impl BacktestResult {
             vec![
                 datetimes("timestamp", s, |x| x.timestamp),
                 series("price", s, |x| x.price),
-                series("direction", s, |x| x.direction.to_string()),
+                series("direction", s, |x| x.direction.as_str()),
                 series("strength", s, |x| x.strength),
-                series("reason", s, |x| x.reason.clone()),
+                Series::new(
+                    "reason".into(),
+                    s.iter().map(|x| x.reason.as_deref()).collect::<Vec<_>>(),
+                )
+                .into(),
                 series("executed", s, |x| x.executed),
             ],
         )

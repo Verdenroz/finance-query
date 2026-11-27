@@ -11,6 +11,7 @@ use crate::portfolio::PortfolioResult;
 use crate::result::dataframe::datetimes;
 use crate::result::{EquityPoint, PerformanceMetrics};
 use crate::walk_forward::WalkForwardReport;
+use finance_query_types::__dataframe::Columns;
 
 fn column<U>(name: &str, values: Vec<U>) -> Column
 where
@@ -27,14 +28,11 @@ fn sorted<V>(map: &HashMap<String, V>) -> Vec<(&String, &V)> {
 
 /// Stacks each metrics row under `leading` columns, which must hold one value per row.
 fn metrics_rows(leading: Vec<Column>, metrics: &[&PerformanceMetrics]) -> PolarsResult<DataFrame> {
-    let mut frame = PerformanceMetrics::vec_to_dataframe(&[])?;
-    for m in metrics {
-        frame = frame.vstack(&m.to_dataframe()?)?;
-    }
+    let rows: Vec<Option<&PerformanceMetrics>> = metrics.iter().copied().map(Some).collect();
+    let mut frame = DataFrame::new_infer_height(PerformanceMetrics::columns(&rows, ""))?;
     for (at, column) in leading.into_iter().enumerate() {
         frame.insert_column(at, column)?;
     }
-    frame.rechunk_mut();
     Ok(frame)
 }
 
@@ -125,7 +123,16 @@ impl PortfolioResult {
     /// Columns are `timestamp` (datetime, UTC), `asset` (string, `cash` or a symbol) and `value`
     /// (f64). Each snapshot emits `cash` first, then its positions sorted by symbol.
     pub fn allocation_dataframe(&self) -> PolarsResult<DataFrame> {
-        let (mut timestamps, mut assets, mut values) = (Vec::new(), Vec::new(), Vec::new());
+        let rows = self
+            .allocation_history
+            .iter()
+            .map(|snapshot| 1 + snapshot.positions.len())
+            .sum();
+        let (mut timestamps, mut assets, mut values) = (
+            Vec::with_capacity(rows),
+            Vec::with_capacity(rows),
+            Vec::with_capacity(rows),
+        );
         for snapshot in &self.allocation_history {
             timestamps.push(snapshot.timestamp);
             assets.push("cash");
@@ -180,7 +187,7 @@ impl OptimizationReport {
             n,
             vec![
                 column("evaluation", (1..=n as u64).collect()),
-                column("best_metric", self.convergence_curve.clone()),
+                Series::new("best_metric".into(), self.convergence_curve.as_slice()).into(),
             ],
         )
     }
