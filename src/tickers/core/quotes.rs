@@ -186,7 +186,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Fallback for when no provider supports `fetch_quotes_batch`.

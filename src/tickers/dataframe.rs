@@ -12,20 +12,18 @@ use crate::models::corporate::recommendation::SimilarSymbol;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::{Contracts, Options};
 use crate::models::quote::Quote;
+use indexmap::IndexMap;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::HashMap;
 
 fn stack_by_symbol<T>(
-    items: &HashMap<String, T>,
+    items: &IndexMap<String, T>,
     convert: impl Fn(&T) -> PolarsResult<DataFrame>,
     empty: impl FnOnce() -> PolarsResult<DataFrame>,
 ) -> PolarsResult<DataFrame> {
-    let mut symbols: Vec<&String> = items.keys().collect();
-    symbols.sort();
-
-    let mut frames = symbols
-        .into_iter()
-        .map(|symbol| with_symbol(convert(&items[symbol])?, symbol));
+    let mut frames = items
+        .iter()
+        .map(|(symbol, item)| with_symbol(convert(item)?, symbol));
     let Some(first) = frames.next() else {
         return with_symbol(empty()?, "");
     };
@@ -50,7 +48,7 @@ impl BatchQuotesResponse {
     /// Converts the quotes to a polars DataFrame, one row per symbol.
     ///
     /// Columns are `symbol` followed by the columns of `Quote::to_dataframe`.
-    /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
+    /// Rows follow input symbol order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
             &self.quotes,
@@ -64,7 +62,7 @@ impl BatchChartsResponse {
     /// Converts the charts to a long-format polars DataFrame, one row per candle.
     ///
     /// Columns are `symbol` followed by the columns of `Chart::to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, candles in chart order.
+    /// Rows are grouped by symbol in input order, candles in chart order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(&self.charts, Chart::to_dataframe, || {
@@ -77,7 +75,7 @@ impl BatchSparksResponse {
     /// Converts the sparks to a long-format polars DataFrame, one row per point.
     ///
     /// Columns are `symbol` followed by the columns of `Spark::to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, points in stored order.
+    /// Rows are grouped by symbol in input order, points in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -92,7 +90,7 @@ impl BatchDividendsResponse {
     /// Converts the dividends to a long-format polars DataFrame, one row per dividend.
     ///
     /// Columns are `symbol` followed by the columns of `Dividend::vec_to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, dividends in stored order.
+    /// Rows are grouped by symbol in input order, dividends in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -107,7 +105,7 @@ impl BatchSplitsResponse {
     /// Converts the splits to a long-format polars DataFrame, one row per split.
     ///
     /// Columns are `symbol` followed by the columns of `Split::vec_to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, splits in stored order.
+    /// Rows are grouped by symbol in input order, splits in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -122,7 +120,7 @@ impl BatchCapitalGainsResponse {
     /// Converts the capital gains to a long-format polars DataFrame, one row per gain.
     ///
     /// Columns are `symbol` followed by the columns of `CapitalGain::vec_to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, gains in stored order.
+    /// Rows are grouped by symbol in input order, gains in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -137,7 +135,7 @@ impl BatchFinancialsResponse {
     /// Converts the statements to a long-format polars DataFrame, one row per symbol, metric and date.
     ///
     /// Columns are `symbol` followed by the columns of `FinancialStatement::to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, then sorted by metric and date.
+    /// Rows are grouped by symbol in input order, then sorted by metric and date.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -162,7 +160,7 @@ impl BatchNewsResponse {
     /// Converts the news to a long-format polars DataFrame, one row per article.
     ///
     /// Columns are `symbol` followed by the columns of `News::vec_to_dataframe`.
-    /// Rows are grouped by symbol in ascending order, articles in stored order.
+    /// Rows are grouped by symbol in input order, articles in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -177,7 +175,7 @@ impl BatchRecommendationsResponse {
     /// Converts the recommendations to a long-format polars DataFrame, one row per similar symbol.
     ///
     /// Columns are `symbol` (the queried symbol), `recommended_symbol` and `score`.
-    /// Rows are grouped by queried symbol in ascending order, recommendations in
+    /// Rows are grouped by queried symbol in input order, recommendations in
     /// stored order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
@@ -192,7 +190,7 @@ impl BatchOptionsResponse {
     /// Converts the option chains to a long-format polars DataFrame, one row per contract.
     ///
     /// Columns are `symbol` followed by the columns of `Options::to_dataframe`,
-    /// including `option_type`. Rows are grouped by symbol in ascending order.
+    /// including `option_type`. Rows are grouped by symbol in input order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(&self.options, Options::to_dataframe, || {
@@ -209,7 +207,7 @@ impl super::BatchIndicatorsResponse {
     /// Converts the indicator summaries to a polars DataFrame, one row per symbol.
     ///
     /// Columns are `symbol` followed by the columns of `IndicatorsSummary::to_dataframe`.
-    /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
+    /// Rows follow input symbol order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
             &self.indicators,
@@ -236,14 +234,20 @@ mod tests {
     }
 
     #[test]
-    fn dividends_sorted_by_symbol_with_symbol_first() {
-        let batch: BatchDividendsResponse = response(serde_json::json!({
-            "dividends": {
-                "MSFT": [{"timestamp": 5, "amount": 0.5}],
-                "AAPL": [{"timestamp": 1, "amount": 0.1}, {"timestamp": 2, "amount": 0.2}]
-            },
-            "errors": {"BAD": "boom"}
-        }));
+    fn dividends_follow_input_order_with_symbol_first() {
+        let mut batch = BatchDividendsResponse::with_capacity(2);
+        batch.dividends.insert(
+            "MSFT".into(),
+            response(serde_json::json!([{"timestamp": 5, "amount": 0.5}])),
+        );
+        batch.dividends.insert(
+            "AAPL".into(),
+            response(serde_json::json!([
+                {"timestamp": 1, "amount": 0.1},
+                {"timestamp": 2, "amount": 0.2}
+            ])),
+        );
+        batch.errors.insert("BAD".into(), "boom".into());
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
@@ -257,7 +261,7 @@ mod tests {
             .unwrap()
             .into_no_null_iter()
             .collect();
-        assert_eq!(symbols, ["AAPL", "AAPL", "MSFT"]);
+        assert_eq!(symbols, ["MSFT", "AAPL", "AAPL"]);
         let timestamps: Vec<_> = df
             .column("timestamp")
             .unwrap()
@@ -265,7 +269,7 @@ mod tests {
             .unwrap()
             .into_no_null_iter()
             .collect();
-        assert_eq!(timestamps, [1, 2, 5]);
+        assert_eq!(timestamps, [5, 1, 2]);
     }
 
     #[test]

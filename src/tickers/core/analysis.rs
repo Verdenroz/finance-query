@@ -113,7 +113,7 @@ impl Tickers {
             response.errors.insert(symbol.to_string(), error.clone());
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     // ========================================================================

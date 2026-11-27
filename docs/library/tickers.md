@@ -187,8 +187,10 @@ MSFT Price: $393.82
 
 `BatchQuotesResponse` contains:
 
-- `quotes`: `HashMap<String, Quote>` - Successfully fetched quotes grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `quotes`: `IndexMap<String, Quote>` - Successfully fetched quotes grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
+
+Every batch response uses `finance_query::IndexMap`, ordered like the symbols passed to `Tickers`, with repeated symbols keeping their first position. The REST server serializes these maps as JSON objects, which are unordered; GraphQL batch fields return lists in input order.
 
 ## Batch Charts
 
@@ -233,8 +235,8 @@ AAPL: 20 candles
 
 `BatchChartsResponse` contains:
 
-- `charts`: `HashMap<String, Chart>` - Successfully fetched charts grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `charts`: `IndexMap<String, Chart>` - Successfully fetched charts grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Spark Data
 
@@ -314,8 +316,8 @@ Each `Spark` contains:
 
 `BatchSparksResponse` contains:
 
-- `sparks`: `HashMap<String, Spark>` - Successfully fetched sparks grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `sparks`: `IndexMap<String, Spark>` - Successfully fetched sparks grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Dividends
 
@@ -364,8 +366,8 @@ MSFT: 4 dividends
 
 `BatchDividendsResponse` contains:
 
-- `dividends`: `HashMap<String, Vec<Dividend>>` - Dividend history grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `dividends`: `IndexMap<String, Vec<Dividend>>` - Dividend history grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Splits
 
@@ -405,8 +407,8 @@ NVDA: 2 splits
 
 `BatchSplitsResponse` contains:
 
-- `splits`: `HashMap<String, Vec<Split>>` - Split history grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `splits`: `IndexMap<String, Vec<Split>>` - Split history grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Capital Gains
 
@@ -444,8 +446,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 `BatchCapitalGainsResponse` contains:
 
-- `capital_gains`: `HashMap<String, Vec<CapitalGain>>` - Capital gains grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `capital_gains`: `IndexMap<String, Vec<CapitalGain>>` - Capital gains grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Financials
 
@@ -508,8 +510,8 @@ MSFT: 30 metrics
 
 `BatchFinancialsResponse` contains:
 
-- `financials`: `HashMap<String, FinancialStatement>` - Financial statements grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `financials`: `IndexMap<String, FinancialStatement>` - Financial statements grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch News
 
@@ -565,8 +567,8 @@ AAPL: 20 news articles
 
 `BatchNewsResponse` contains:
 
-- `news`: `HashMap<String, Vec<News>>` - News articles grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `news`: `IndexMap<String, Vec<News>>` - News articles grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Recommendations
 
@@ -612,8 +614,8 @@ AAPL: 5 recommendations
 
 `BatchRecommendationsResponse` contains:
 
-- `recommendations`: `HashMap<String, Recommendation>` - Recommendations grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `recommendations`: `IndexMap<String, Recommendation>` - Recommendations grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Options
 
@@ -662,8 +664,8 @@ AAPL: 23 expirations
 
 `BatchOptionsResponse` contains:
 
-- `options`: `HashMap<String, Options>` - Options chains grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `options`: `IndexMap<String, Options>` - Options chains grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Batch Indicators
 
@@ -724,8 +726,8 @@ MSFT Indicators:
 
 `BatchIndicatorsResponse` contains:
 
-- `indicators`: `HashMap<String, IndicatorsSummary>` - Indicators grouped by symbol
-- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+- `indicators`: `IndexMap<String, IndicatorsSummary>` - Indicators grouped by symbol, in input order
+- `errors`: `IndexMap<String, String>` - Error messages grouped by symbol, in input order
 
 ## Event Calendar
 

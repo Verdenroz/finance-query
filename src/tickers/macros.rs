@@ -1,10 +1,24 @@
 //! Macros for generating batch response types and cached fetch methods.
 
+pub(crate) fn in_symbol_order<V>(
+    mut unordered: indexmap::IndexMap<String, V>,
+    symbols: &[std::sync::Arc<str>],
+) -> indexmap::IndexMap<String, V> {
+    let mut ordered = indexmap::IndexMap::with_capacity(unordered.len());
+    for symbol in symbols {
+        if let Some(value) = unordered.swap_remove(&**symbol) {
+            ordered.insert(symbol.to_string(), value);
+        }
+    }
+    ordered.extend(unordered);
+    ordered
+}
+
 /// Generate batch response types with identical structure but different field names.
 ///
 /// Each response type contains:
-/// - `HashMap<String, T>` for successful results
-/// - `HashMap<String, String>` for errors
+/// - `IndexMap<String, T>` for successful results, in input symbol order
+/// - `IndexMap<String, String>` for errors, in input symbol order
 /// - `success_count()`, `error_count()`, `all_successful()` convenience methods
 ///
 /// # Usage
@@ -26,16 +40,25 @@ macro_rules! define_batch_response {
         #[non_exhaustive]
         pub struct $name {
             #[doc = "Successfully fetched data, keyed by symbol"]
-            pub $field: std::collections::HashMap<String, $type>,
+            pub $field: indexmap::IndexMap<String, $type>,
             #[doc = "Symbols that failed to fetch, with error messages"]
-            pub errors: std::collections::HashMap<String, String>,
+            pub errors: indexmap::IndexMap<String, String>,
         }
 
         impl $name {
             pub(crate) fn with_capacity(capacity: usize) -> Self {
                 Self {
-                    $field: std::collections::HashMap::with_capacity(capacity),
-                    errors: std::collections::HashMap::with_capacity(capacity),
+                    $field: indexmap::IndexMap::with_capacity(capacity),
+                    errors: indexmap::IndexMap::with_capacity(capacity),
+                }
+            }
+
+            /// Reorders both maps to follow `symbols`. A repeated symbol keeps
+            /// its first position.
+            pub(crate) fn in_symbol_order(self, symbols: &[std::sync::Arc<str>]) -> Self {
+                Self {
+                    $field: crate::tickers::macros::in_symbol_order(self.$field, symbols),
+                    errors: crate::tickers::macros::in_symbol_order(self.errors, symbols),
                 }
             }
 
@@ -229,7 +252,7 @@ macro_rules! batch_fetch_cached {
         #[cfg(feature = "translation")]
         $self.translate_response(&mut response).await?;
 
-        Ok(response)
+        Ok(response.in_symbol_order(&$self.symbols))
     }};
 }
 

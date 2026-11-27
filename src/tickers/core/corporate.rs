@@ -60,7 +60,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch stock splits for all symbols
@@ -109,7 +109,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch capital gains for all symbols
@@ -157,7 +157,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Aggregate upcoming financial events across all symbols into a single

@@ -129,7 +129,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Get a specific chart by symbol
@@ -223,7 +223,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch spark data for all symbols in a single request.
@@ -353,7 +353,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 }
 
