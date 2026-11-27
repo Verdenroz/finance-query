@@ -224,7 +224,17 @@ pub mod derive {
     }
 
     fn parse_date(value: &str) -> Option<i32> {
-        let day = NaiveDate::parse_from_str(value.get(..10)?, "%Y-%m-%d").ok()?;
+        let bytes = value.as_bytes().get(..10)?;
+        if bytes[4] != b'-' || bytes[7] != b'-' {
+            return None;
+        }
+        let number = |digits: &[u8]| {
+            digits.iter().try_fold(0u32, |acc, &b| {
+                b.is_ascii_digit().then(|| acc * 10 + u32::from(b - b'0'))
+            })
+        };
+        let year = i32::try_from(number(&bytes[..4])?).ok()?;
+        let day = NaiveDate::from_ymd_opt(year, number(&bytes[5..7])?, number(&bytes[8..10])?)?;
         Some(chrono::Datelike::num_days_from_ce(&day) - UNIX_EPOCH_FROM_CE_DAYS)
     }
 
