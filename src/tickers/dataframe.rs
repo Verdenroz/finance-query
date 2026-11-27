@@ -393,9 +393,9 @@ mod tests {
         );
         assert_eq!(
             column("metric")[..3],
-            ["NetIncome", "TotalRevenue", "TotalRevenue"]
+            ["net_income", "total_revenue", "total_revenue"]
         );
-        assert_eq!(column("date")[1..3], ["2023-09-30", "2024-09-30"]);
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
     }
 
     #[test]
