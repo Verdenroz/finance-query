@@ -14,7 +14,7 @@ use crate::models::options::{Contracts, Options};
 use crate::models::quote::Quote;
 use indexmap::IndexMap;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn stack_by_symbol<T>(
     items: &IndexMap<String, T>,
@@ -146,7 +146,7 @@ impl BatchFinancialsResponse {
                     symbol: String::new(),
                     statement_type: String::new(),
                     frequency: String::new(),
-                    statement: HashMap::new(),
+                    statement: BTreeMap::new(),
                     provider_id: None,
                 }
                 .to_dataframe()?

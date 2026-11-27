@@ -560,8 +560,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = ticker.backtest(SmaCrossover::new(10, 20), Interval::OneDay, TimeRange::TwoYears, None).await?;
 
     // Break performance down by calendar period
-    let by_year  = result.by_year();         // HashMap<i32, PerformanceMetrics>
-    let by_month = result.by_month();        // HashMap<(i32, u32), PerformanceMetrics>
+    let by_year  = result.by_year();         // BTreeMap<i32, PerformanceMetrics>, chronological
+    let by_month = result.by_month();        // BTreeMap<(i32, u32), PerformanceMetrics>, chronological
     let by_dow   = result.by_day_of_week();  // HashMap<Weekday, PerformanceMetrics>
 
     for (year, metrics) in &by_year {
