@@ -603,8 +603,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The `date` column is a string sorted ascending, and metric columns keep the
-CamelCase names Yahoo uses.
+The `date` column is a polars `Date` sorted ascending. Metric names are
+snake_case in both frames, whatever casing the provider uses: Yahoo's
+`TotalRevenue` and FMP's `totalRevenue` both become `total_revenue`. The
+statement map itself (`income.statement`) keeps the provider's names.
 
 ## Exporting Data
 

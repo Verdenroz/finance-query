@@ -45,13 +45,15 @@ pub struct FinancialStatement {
 impl FinancialStatement {
     /// Converts the statement to a long-format polars DataFrame, one row per metric and date.
     ///
-    /// Columns are `symbol`, `statement_type`, `frequency`, `metric`, `date` (strings) and
-    /// `value` (f64). Rows are sorted by metric, then date.
+    /// Columns are `symbol`, `statement_type`, `frequency`, `metric` (strings), `date` (Date)
+    /// and `value` (f64). `metric` holds the provider's metric name in snake_case
+    /// (`TotalRevenue` becomes `total_revenue`). Rows are sorted by metric, then date. Errors
+    /// when two metric names map to the same snake_case name.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         use polars::prelude::*;
 
-        let rows: Vec<(&str, &str, f64)> = self
-            .statement
+        let metrics = self.frame_metrics()?;
+        let rows: Vec<(&str, &str, f64)> = metrics
             .iter()
             .flat_map(|(metric, by_date)| {
                 by_date
@@ -76,7 +78,7 @@ impl FinancialStatement {
                     rows.iter().map(|r| r.0).collect::<Vec<_>>(),
                 )
                 .into(),
-                Series::new("date".into(), rows.iter().map(|r| r.1).collect::<Vec<_>>()).into(),
+                crate::__dataframe::str_date("date".into(), rows.iter().map(|r| Some(r.1))),
                 Series::new("value".into(), rows.iter().map(|r| r.2).collect::<Vec<_>>()).into(),
             ],
         )
@@ -84,9 +86,10 @@ impl FinancialStatement {
 
     /// Converts the statement to a wide-format polars DataFrame, one row per date.
     ///
-    /// The first column is `date` (string), followed by one nullable f64 column per metric.
-    /// Dates are sorted ascending and metric columns are sorted by name. A metric with no
-    /// value on a date is null. A metric named `date` collides with the first column and errors.
+    /// The first column is `date` (Date), followed by one nullable f64 column per metric,
+    /// named as in [`to_dataframe`](Self::to_dataframe)'s `metric` column. Dates are sorted
+    /// ascending and metric columns by name. A metric with no value on a date is null. Errors
+    /// when two metric names map to the same column name, or a metric maps to `date`.
     pub fn to_wide_dataframe(
         &self,
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
@@ -100,17 +103,59 @@ impl FinancialStatement {
         dates.sort();
         dates.dedup();
 
-        let mut metrics: Vec<&String> = self.statement.keys().collect();
-        metrics.sort();
-
-        let mut columns: Vec<Column> = vec![Series::new("date".into(), dates.clone()).into()];
-        for metric in metrics {
-            let by_date = &self.statement[metric];
+        let mut columns: Vec<Column> = vec![crate::__dataframe::str_date(
+            "date".into(),
+            dates.iter().map(|d| Some(*d)),
+        )];
+        for (metric, by_date) in self.frame_metrics()? {
             let values: Vec<Option<f64>> = dates.iter().map(|d| by_date.get(*d).copied()).collect();
-            columns.push(Series::new(metric.as_str().into(), values).into());
+            columns.push(Series::new(metric.into(), values).into());
         }
         DataFrame::new(dates.len(), columns)
     }
+
+    fn frame_metrics(
+        &self,
+    ) -> ::polars::prelude::PolarsResult<Vec<(String, &BTreeMap<String, f64>)>> {
+        let mut metrics: Vec<_> = self
+            .statement
+            .iter()
+            .map(|(metric, by_date)| (snake_case(metric), by_date))
+            .collect();
+        metrics.sort_by(|a, b| a.0.cmp(&b.0));
+        match metrics.windows(2).find(|pair| pair[0].0 == pair[1].0) {
+            Some(pair) => Err(::polars::prelude::PolarsError::Duplicate(
+                format!("two metrics map to the column name `{}`", pair[0].0).into(),
+            )),
+            None => Ok(metrics),
+        }
+    }
+}
+
+/// `TotalRevenue` -> `total_revenue`, `DilutedEPS` -> `diluted_eps`, `totalRevenue` ->
+/// `total_revenue`; already snake_case names pass through unchanged.
+#[cfg(feature = "dataframe")]
+fn snake_case(name: &str) -> String {
+    let chars: Vec<char> = name.chars().collect();
+    let mut out = String::with_capacity(name.len() + 4);
+    for (i, &c) in chars.iter().enumerate() {
+        if !c.is_ascii_uppercase() {
+            out.push(c);
+            continue;
+        }
+        let prev = i.checked_sub(1).map(|j| chars[j]);
+        let next_is_lower = chars.get(i + 1).is_some_and(char::is_ascii_lowercase);
+        let starts_word = match prev {
+            Some(p) if p.is_ascii_lowercase() || p.is_ascii_digit() => true,
+            Some(p) if p.is_ascii_uppercase() => next_is_lower,
+            _ => false,
+        };
+        if starts_word && !out.ends_with('_') {
+            out.push('_');
+        }
+        out.push(c.to_ascii_lowercase());
+    }
+    out
 }
 
 #[cfg(all(test, feature = "dataframe"))]
@@ -145,6 +190,32 @@ mod tests {
                 .collect()
         }
 
+        fn dates(df: &polars::prelude::DataFrame) -> Vec<String> {
+            df.column("date")
+                .unwrap()
+                .date()
+                .unwrap()
+                .as_date_iter()
+                .map(|d| d.unwrap().to_string())
+                .collect()
+        }
+
+        fn with_metrics(metrics: &[&str]) -> FinancialStatement {
+            let by_metric = metrics
+                .iter()
+                .map(|m| {
+                    (
+                        m.to_string(),
+                        BTreeMap::from([("2024-09-30".to_string(), 1.0)]),
+                    )
+                })
+                .collect();
+            FinancialStatement {
+                statement: by_metric,
+                ..statement()
+            }
+        }
+
         #[test]
         fn long_format_sorted_by_metric_then_date() {
             let df = statement().to_dataframe().unwrap();
@@ -167,14 +238,12 @@ mod tests {
             );
             assert_eq!(df.column("value").unwrap().dtype(), &DataType::Float64);
             assert_eq!(df.column("metric").unwrap().dtype(), &DataType::String);
+            assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
             assert_eq!(
                 strings(&df, "metric"),
-                ["NetIncome", "TotalRevenue", "TotalRevenue"]
+                ["net_income", "total_revenue", "total_revenue"]
             );
-            assert_eq!(
-                strings(&df, "date"),
-                ["2024-09-30", "2023-09-30", "2024-09-30"]
-            );
+            assert_eq!(dates(&df), ["2024-09-30", "2023-09-30", "2024-09-30"]);
             assert_eq!(strings(&df, "symbol"), ["AAPL"; 3]);
         }
 
@@ -187,13 +256,50 @@ mod tests {
                 .iter()
                 .map(|n| n.to_string())
                 .collect();
-            assert_eq!(names, ["date", "NetIncome", "TotalRevenue"]);
-            assert_eq!(df.column("date").unwrap().dtype(), &DataType::String);
-            assert_eq!(df.column("NetIncome").unwrap().dtype(), &DataType::Float64);
-            assert_eq!(strings(&df, "date"), ["2023-09-30", "2024-09-30"]);
-            let net_income = df.column("NetIncome").unwrap().f64().unwrap();
+            assert_eq!(names, ["date", "net_income", "total_revenue"]);
+            assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
+            assert_eq!(df.column("net_income").unwrap().dtype(), &DataType::Float64);
+            assert_eq!(dates(&df), ["2023-09-30", "2024-09-30"]);
+            let net_income = df.column("net_income").unwrap().f64().unwrap();
             assert_eq!(net_income.get(0), None);
             assert_eq!(net_income.get(1), Some(100.0));
+        }
+
+        #[test]
+        fn snake_case_handles_provider_spellings() {
+            for (raw, want) in [
+                ("TotalRevenue", "total_revenue"),
+                ("totalRevenue", "total_revenue"),
+                ("total_revenue", "total_revenue"),
+                ("DilutedEPS", "diluted_eps"),
+                ("EBITDA", "ebitda"),
+                ("NetPPE", "net_ppe"),
+                ("EPSBasic", "eps_basic"),
+                ("revenue", "revenue"),
+            ] {
+                assert_eq!(snake_case(raw), want, "{raw}");
+            }
+        }
+
+        #[test]
+        fn camel_and_snake_names_share_one_shape() {
+            let df = with_metrics(&["netIncome", "operating_income"])
+                .to_wide_dataframe()
+                .unwrap();
+            let names: Vec<_> = df
+                .get_column_names()
+                .iter()
+                .map(|n| n.to_string())
+                .collect();
+            assert_eq!(names, ["date", "net_income", "operating_income"]);
+        }
+
+        #[test]
+        fn colliding_metric_names_error() {
+            let statement = with_metrics(&["TotalRevenue", "totalRevenue"]);
+            assert!(statement.to_dataframe().is_err());
+            assert!(statement.to_wide_dataframe().is_err());
+            assert!(with_metrics(&["Date"]).to_wide_dataframe().is_err());
         }
     }
 }
