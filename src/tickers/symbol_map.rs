@@ -100,15 +100,24 @@ impl<V> SymbolMap<V> {
         self.entries.iter_mut().map(|(_, value)| value)
     }
 
+    /// Appends an entry without checking for `symbol`. The caller guarantees
+    /// the symbol is absent.
+    pub(crate) fn push(&mut self, symbol: String, value: V) {
+        self.entries.push((symbol, value));
+    }
+
     /// Reorders entries to follow `symbols`; symbols not listed go last in
     /// their current order.
     pub(crate) fn sort_by_symbols(&mut self, symbols: &[std::sync::Arc<str>]) {
-        let mut position = std::collections::HashMap::with_capacity(symbols.len());
-        for (index, symbol) in symbols.iter().enumerate() {
-            position.entry(&**symbol).or_insert(index);
-        }
-        self.entries
-            .sort_by_key(|(key, _)| position.get(key.as_str()).copied().unwrap_or(usize::MAX));
+        let position: std::collections::HashMap<&str, usize> = symbols
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(index, symbol)| (&**symbol, index))
+            .collect();
+        self.entries.sort_by_cached_key(|(key, _)| {
+            position.get(key.as_str()).copied().unwrap_or(usize::MAX)
+        });
     }
 }
 
@@ -120,11 +129,17 @@ impl<V> Default for SymbolMap<V> {
     }
 }
 
+/// # Panics
+///
+/// Panics if `symbol` is not in the map.
 impl<V> Index<&str> for SymbolMap<V> {
     type Output = V;
 
     fn index(&self, symbol: &str) -> &V {
-        self.get(symbol).expect("no entry for symbol")
+        match self.get(symbol) {
+            Some(value) => value,
+            None => panic!("no entry for symbol {symbol:?}"),
+        }
     }
 }
 

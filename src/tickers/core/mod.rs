@@ -135,7 +135,14 @@ impl TickersBuilder {
         I: IntoIterator<Item = S>,
     {
         Self {
-            symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
+            symbols: {
+                let mut seen = std::collections::HashSet::new();
+                symbols
+                    .into_iter()
+                    .map(|s| Arc::<str>::from(s.into()))
+                    .filter(|s| seen.insert(Arc::clone(s)))
+                    .collect()
+            },
             config: ClientConfig::default(),
             shared_client: None,
             injected_providers: None,

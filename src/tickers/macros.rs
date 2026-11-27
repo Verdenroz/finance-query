@@ -168,7 +168,7 @@ macro_rules! batch_fetch_cached {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
                         response
                             .$resp_field
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -190,7 +190,7 @@ macro_rules! batch_fetch_cached {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
                         response
                             .$resp_field
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -221,7 +221,7 @@ macro_rules! batch_fetch_cached {
         for (sym, result) in results {
             match result {
                 Ok(value) => parsed.push((sym, value)),
-                Err(e) => { response.errors.insert(sym.to_string(), e.to_string()); }
+                Err(e) => { response.errors.push(sym.to_string(), e.to_string()); }
             }
         }
 
@@ -235,7 +235,7 @@ macro_rules! batch_fetch_cached {
 
         // Build response
         for (sym, value) in parsed {
-            response.$resp_field.insert(sym.to_string(), value);
+            response.$resp_field.push(sym.to_string(), value);
         }
 
         #[cfg(feature = "translation")]

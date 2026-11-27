@@ -54,7 +54,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&cache_key_for(symbol)) {
                         response
                             .indicators
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -74,7 +74,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&cache_key_for(symbol)) {
                         response
                             .indicators
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -105,12 +105,12 @@ impl Tickers {
 
         // Populate response (no lock needed)
         for (symbol, indicators) in calculated_indicators {
-            response.indicators.insert(symbol, indicators);
+            response.indicators.push(symbol, indicators);
         }
 
         // Add errors from chart fetch
         for (symbol, error) in &charts_response.errors {
-            response.errors.insert(symbol.to_string(), error.clone());
+            response.errors.push(symbol.to_string(), error.clone());
         }
 
         Ok(response.in_symbol_order(&self.symbols))
