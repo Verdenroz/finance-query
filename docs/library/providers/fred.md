@@ -205,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `y20` | 20 years |
 | `y30` | 30 years |
 
-Dates are formatted as `MM/DD/YYYY` (the Treasury's native format). Fields are `None` on days when that maturity is not published.
+Dates are `YYYY-MM-DD` and rows run oldest first, so `last()` is the most recent day. Fields are `None` on days when that maturity is not published.
 
 <!-- /soothfast:bind -->
 
