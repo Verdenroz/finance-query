@@ -49,6 +49,7 @@ impl Contracts {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionContract {
     /// Contract symbol (e.g., "AAPL250117C00150000")

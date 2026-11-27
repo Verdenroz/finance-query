@@ -519,8 +519,7 @@ impl BacktestEngine {
                     .unwrap_or(pos.entry_timestamp);
                 let span = (last.timestamp - first.timestamp) as f64;
                 let open_span = (last.timestamp - counted_to).max(0) as f64;
-                metrics.time_in_market_pct =
-                    (metrics.time_in_market_pct + open_span / span).min(1.0);
+                metrics.time_in_market = (metrics.time_in_market + open_span / span).min(1.0);
             }
         }
 
@@ -596,7 +595,7 @@ impl BacktestEngine {
         if equity > *peak_equity {
             *peak_equity = equity;
         }
-        let drawdown_pct = if *peak_equity > 0.0 {
+        let drawdown = if *peak_equity > 0.0 {
             (*peak_equity - equity) / *peak_equity
         } else {
             0.0
@@ -604,7 +603,7 @@ impl BacktestEngine {
         equity_curve.push(EquityPoint {
             timestamp: candle.timestamp,
             equity,
-            drawdown_pct,
+            drawdown,
         });
         equity
     }
@@ -624,7 +623,7 @@ impl BacktestEngine {
         *peak_equity = peak_before_bar.max(cash);
         if let Some(last) = equity_curve.last_mut() {
             last.equity = cash;
-            last.drawdown_pct = if *peak_equity > 0.0 {
+            last.drawdown = if *peak_equity > 0.0 {
                 (*peak_equity - cash) / *peak_equity
             } else {
                 0.0

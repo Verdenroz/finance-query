@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// A company's identity and classification profile.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CompanyProfile {
     /// Ticker symbol.

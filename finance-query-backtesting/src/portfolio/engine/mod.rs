@@ -356,7 +356,7 @@ impl PortfolioEngine {
             if portfolio_equity > portfolio_peak {
                 portfolio_peak = portfolio_equity;
             }
-            let drawdown_pct = if portfolio_peak > 0.0 {
+            let drawdown = if portfolio_peak > 0.0 {
                 (portfolio_peak - portfolio_equity) / portfolio_peak
             } else {
                 0.0
@@ -365,7 +365,7 @@ impl PortfolioEngine {
             portfolio_equity_curve.push(EquityPoint {
                 timestamp,
                 equity: portfolio_equity,
-                drawdown_pct,
+                drawdown,
             });
 
             // Record per-symbol equity curves for symbols active this bar
@@ -396,7 +396,7 @@ impl PortfolioEngine {
                 state.equity_curve.push(EquityPoint {
                     timestamp,
                     equity: sym_equity,
-                    drawdown_pct: sym_drawdown,
+                    drawdown: sym_drawdown,
                 });
             }
 

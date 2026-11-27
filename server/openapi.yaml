@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Finance Query v2
-  version: 4.0.0
+  version: 5.0.0
   description: High-performance financial data API server built on finance-query library
 servers:
   - url: "https://finance-query.com"
@@ -6544,25 +6544,25 @@ components:
       description: Performance summary over the whole run.
       type: object
       properties:
-        annualizedReturnPct:
+        annualizedReturn:
           type: number
           format: double
         avgLossDuration:
           type: number
           format: double
-        avgLossPct:
+        avgLossReturn:
           type: number
           format: double
         avgTradeDuration:
           type: number
           format: double
-        avgTradeReturnPct:
+        avgTradeReturn:
           type: number
           format: double
         avgWinDuration:
           type: number
           format: double
-        avgWinPct:
+        avgWinReturn:
           type: number
           format: double
         calmarRatio:
@@ -6600,12 +6600,12 @@ components:
           type: integer
           format: int32
           minimum: 0
+        maxDrawdown:
+          type: number
+          format: double
         maxDrawdownDuration:
           type: integer
           format: int64
-        maxDrawdownPct:
-          type: number
-          format: double
         maxIdlePeriod:
           type: integer
           format: int64
@@ -6637,7 +6637,7 @@ components:
         tailRatio:
           type: number
           format: double
-        timeInMarketPct:
+        timeInMarket:
           type: number
           format: double
         totalCommission:
@@ -6649,7 +6649,7 @@ components:
         totalFinancingCost:
           type: number
           format: double
-        totalReturnPct:
+        totalReturn:
           type: number
           format: double
         totalSignals:
@@ -6671,17 +6671,17 @@ components:
           format: int32
           minimum: 0
       required:
-        - totalReturnPct
-        - annualizedReturnPct
+        - totalReturn
+        - annualizedReturn
         - sharpeRatio
         - sortinoRatio
-        - maxDrawdownPct
+        - maxDrawdown
         - maxDrawdownDuration
         - winRate
         - profitFactor
-        - avgTradeReturnPct
-        - avgWinPct
-        - avgLossPct
+        - avgTradeReturn
+        - avgWinReturn
+        - avgLossReturn
         - avgTradeDuration
         - totalTrades
         - winningTrades
@@ -6699,7 +6699,7 @@ components:
         - executedSignals
         - avgWinDuration
         - avgLossDuration
-        - timeInMarketPct
+        - timeInMarket
         - maxIdlePeriod
         - totalDividendIncome
         - kellyCriterion
@@ -7567,7 +7567,7 @@ components:
       description: Portfolio value at one bar.
       type: object
       properties:
-        drawdownPct:
+        drawdown:
           type: number
           format: double
         equity:
@@ -7579,7 +7579,7 @@ components:
       required:
         - timestamp
         - equity
-        - drawdownPct
+        - drawdown
     GqlEtfCountryWeighting:
       description: "Mirrors `finance_query::EtfCountryWeighting`."
       type: object
@@ -10775,13 +10775,13 @@ components:
           format: double
         isPartial:
           type: boolean
+        netReturn:
+          type: number
+          format: double
         pnl:
           type: number
           format: double
         quantity:
-          type: number
-          format: double
-        returnPct:
           type: number
           format: double
         scaleSequence:
@@ -10811,7 +10811,7 @@ components:
         - commission
         - transactionTax
         - pnl
-        - returnPct
+        - netReturn
         - dividendIncome
         - unreinvestedDividends
         - financingCost

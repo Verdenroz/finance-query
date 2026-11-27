@@ -72,13 +72,13 @@ class GqlAroonData:
 class GqlBacktestMetrics:
     """Performance summary over the whole run."""
 
-    annualized_return_pct: float
+    annualized_return: float
     avg_loss_duration: float
-    avg_loss_pct: float
+    avg_loss_return: float
     avg_trade_duration: float
-    avg_trade_return_pct: float
+    avg_trade_return: float
     avg_win_duration: float
-    avg_win_pct: float
+    avg_win_return: float
     calmar_ratio: float
     executed_signals: int
     expectancy: float
@@ -89,8 +89,8 @@ class GqlBacktestMetrics:
     losing_trades: int
     max_consecutive_losses: int
     max_consecutive_wins: int
+    max_drawdown: float
     max_drawdown_duration: int
-    max_drawdown_pct: float
     max_idle_period: int
     omega_ratio: float
     profit_factor: float
@@ -101,11 +101,11 @@ class GqlBacktestMetrics:
     sortino_ratio: float
     sqn: float
     tail_ratio: float
-    time_in_market_pct: float
+    time_in_market: float
     total_commission: float
     total_dividend_income: float
     total_financing_cost: float
-    total_return_pct: float
+    total_return: float
     total_signals: int
     total_trades: int
     ulcer_index: float
@@ -113,13 +113,13 @@ class GqlBacktestMetrics:
     winning_trades: int
 
     _WIRE: typing.ClassVar[dict[str, str]] = {
-        "annualized_return_pct": "annualizedReturnPct",
+        "annualized_return": "annualizedReturn",
         "avg_loss_duration": "avgLossDuration",
-        "avg_loss_pct": "avgLossPct",
+        "avg_loss_return": "avgLossReturn",
         "avg_trade_duration": "avgTradeDuration",
-        "avg_trade_return_pct": "avgTradeReturnPct",
+        "avg_trade_return": "avgTradeReturn",
         "avg_win_duration": "avgWinDuration",
-        "avg_win_pct": "avgWinPct",
+        "avg_win_return": "avgWinReturn",
         "calmar_ratio": "calmarRatio",
         "executed_signals": "executedSignals",
         "kelly_criterion": "kellyCriterion",
@@ -129,8 +129,8 @@ class GqlBacktestMetrics:
         "losing_trades": "losingTrades",
         "max_consecutive_losses": "maxConsecutiveLosses",
         "max_consecutive_wins": "maxConsecutiveWins",
+        "max_drawdown": "maxDrawdown",
         "max_drawdown_duration": "maxDrawdownDuration",
-        "max_drawdown_pct": "maxDrawdownPct",
         "max_idle_period": "maxIdlePeriod",
         "omega_ratio": "omegaRatio",
         "profit_factor": "profitFactor",
@@ -140,11 +140,11 @@ class GqlBacktestMetrics:
         "short_trades": "shortTrades",
         "sortino_ratio": "sortinoRatio",
         "tail_ratio": "tailRatio",
-        "time_in_market_pct": "timeInMarketPct",
+        "time_in_market": "timeInMarket",
         "total_commission": "totalCommission",
         "total_dividend_income": "totalDividendIncome",
         "total_financing_cost": "totalFinancingCost",
-        "total_return_pct": "totalReturnPct",
+        "total_return": "totalReturn",
         "total_signals": "totalSignals",
         "total_trades": "totalTrades",
         "ulcer_index": "ulcerIndex",
@@ -757,13 +757,9 @@ class GqlElderRayData:
 class GqlEquityPoint:
     """Portfolio value at one bar."""
 
-    drawdown_pct: float
+    drawdown: float
     equity: float
     timestamp: int
-
-    _WIRE: typing.ClassVar[dict[str, str]] = {
-        "drawdown_pct": "drawdownPct",
-    }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -3063,9 +3059,9 @@ class GqlTrade:
     exit_timestamp: int
     financing_cost: float
     is_partial: bool
+    net_return: float
     pnl: float
     quantity: float
-    return_pct: float
     scale_sequence: int
     side: str
     tags: list[str]
@@ -3083,7 +3079,7 @@ class GqlTrade:
         "exit_timestamp": "exitTimestamp",
         "financing_cost": "financingCost",
         "is_partial": "isPartial",
-        "return_pct": "returnPct",
+        "net_return": "netReturn",
         "scale_sequence": "scaleSequence",
         "transaction_tax": "transactionTax",
         "unreinvested_dividends": "unreinvestedDividends",

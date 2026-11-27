@@ -60,13 +60,13 @@ export interface GqlAroonData {
 
 /** Performance summary over the whole run. */
 export interface GqlBacktestMetrics {
-  annualizedReturnPct: number;
+  annualizedReturn: number;
   avgLossDuration: number;
-  avgLossPct: number;
+  avgLossReturn: number;
   avgTradeDuration: number;
-  avgTradeReturnPct: number;
+  avgTradeReturn: number;
   avgWinDuration: number;
-  avgWinPct: number;
+  avgWinReturn: number;
   calmarRatio: number;
   executedSignals: number;
   expectancy: number;
@@ -77,8 +77,8 @@ export interface GqlBacktestMetrics {
   losingTrades: number;
   maxConsecutiveLosses: number;
   maxConsecutiveWins: number;
+  maxDrawdown: number;
   maxDrawdownDuration: number;
-  maxDrawdownPct: number;
   maxIdlePeriod: number;
   omegaRatio: number;
   profitFactor: number;
@@ -89,11 +89,11 @@ export interface GqlBacktestMetrics {
   sortinoRatio: number;
   sqn: number;
   tailRatio: number;
-  timeInMarketPct: number;
+  timeInMarket: number;
   totalCommission: number;
   totalDividendIncome: number;
   totalFinancingCost: number;
-  totalReturnPct: number;
+  totalReturn: number;
   totalSignals: number;
   totalTrades: number;
   ulcerIndex: number;
@@ -468,7 +468,7 @@ export interface GqlElderRayData {
 
 /** Portfolio value at one bar. */
 export interface GqlEquityPoint {
-  drawdownPct: number;
+  drawdown: number;
   equity: number;
   timestamp: number;
 }
@@ -1841,9 +1841,9 @@ export interface GqlTrade {
   exitTimestamp: number;
   financingCost: number;
   isPartial: boolean;
+  netReturn: number;
   pnl: number;
   quantity: number;
-  returnPct: number;
   scaleSequence: number;
   side: string;
   tags: string[];

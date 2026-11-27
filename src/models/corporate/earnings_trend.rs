@@ -25,6 +25,7 @@ pub struct EarningsTrend {
 /// Earnings trend for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsTrendPeriod {
     /// End date for this period
@@ -55,6 +56,7 @@ pub struct EarningsTrendPeriod {
 /// Earnings estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsEstimate {
     /// Average estimate
@@ -89,6 +91,7 @@ pub struct EarningsEstimate {
 /// Revenue estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct RevenueEstimate {
     /// Average estimate
@@ -119,6 +122,7 @@ pub struct RevenueEstimate {
 /// EPS trend over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsTrend {
     /// Current EPS
@@ -149,6 +153,7 @@ pub struct EpsTrend {
 /// EPS revision data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsRevisions {
     /// Number of upward revisions in last 7 days

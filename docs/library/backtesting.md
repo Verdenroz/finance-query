@@ -39,9 +39,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     ).await?;
 
-    println!("Total Return: {:.2}%", result.metrics.total_return_pct);
+    println!("Total Return: {:.2}%", result.metrics.total_return * 100.0);
     println!("Sharpe Ratio: {:.2}", result.metrics.sharpe_ratio);
-    println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown_pct * 100.0);
+    println!("Max Drawdown: {:.2}%", result.metrics.max_drawdown * 100.0);
     Ok(())
 }
 ```
@@ -454,7 +454,7 @@ let result = engine
 assert!(result.metrics.total_trades > 0);
 println!(
     "{} trades, total return {:.2}%",
-    result.metrics.total_trades, result.metrics.total_return_pct
+    result.metrics.total_trades, result.metrics.total_return * 100.0
 );
 ```
 
@@ -479,15 +479,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = ticker.backtest(SmaCrossover::new(10, 20), Interval::OneDay, TimeRange::OneYear, None).await?;
 
     // Returns
-    println!("Total Return:      {:.2}%", result.metrics.total_return_pct);
-    println!("Annualized Return: {:.2}%", result.metrics.annualized_return_pct);
+    println!("Total Return:      {:.2}%", result.metrics.total_return * 100.0);
+    println!("Annualized Return: {:.2}%", result.metrics.annualized_return * 100.0);
     println!("Final Equity:      ${:.2}", result.final_equity);
 
     // Risk-adjusted
     println!("Sharpe Ratio:    {:.2}", result.metrics.sharpe_ratio);
     println!("Sortino Ratio:   {:.2}", result.metrics.sortino_ratio);
     println!("Calmar Ratio:    {:.2}", result.metrics.calmar_ratio);
-    println!("Max Drawdown:    {:.2}%", result.metrics.max_drawdown_pct * 100.0);
+    println!("Max Drawdown:    {:.2}%", result.metrics.max_drawdown * 100.0);
 
     // Trade statistics
     println!("Total Trades:    {}", result.metrics.total_trades);
@@ -495,9 +495,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Losing Trades:   {}", result.metrics.losing_trades);
     println!("Win Rate:        {:.2}%", result.metrics.win_rate * 100.0);
     println!("Profit Factor:   {:.2}", result.metrics.profit_factor);
-    println!("Avg Trade:       {:.2}%", result.metrics.avg_trade_return_pct);
-    println!("Avg Win:         {:.2}%", result.metrics.avg_win_pct);
-    println!("Avg Loss:        {:.2}%", result.metrics.avg_loss_pct);
+    println!("Avg Trade:       {:.2}%", result.metrics.avg_trade_return * 100.0);
+    println!("Avg Win:         {:.2}%", result.metrics.avg_win_return * 100.0);
+    println!("Avg Loss:        {:.2}%", result.metrics.avg_loss_return * 100.0);
     println!("Largest Win:     ${:.2}", result.metrics.largest_win);
     println!("Largest Loss:    ${:.2}", result.metrics.largest_loss);
     println!("Max Consec. Wins:   {}", result.metrics.max_consecutive_wins);
@@ -506,7 +506,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Position breakdown
     println!("Long Trades:  {}", result.metrics.long_trades);
     println!("Short Trades: {}", result.metrics.short_trades);
-    println!("Time in Market: {:.1}%", result.metrics.time_in_market_pct * 100.0);
+    println!("Time in Market: {:.1}%", result.metrics.time_in_market * 100.0);
 
     // Signal execution
     println!("Total Signals:    {}", result.metrics.total_signals);
@@ -565,7 +565,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let by_dow   = result.by_day_of_week();  // HashMap<Weekday, PerformanceMetrics>
 
     for (year, metrics) in &by_year {
-        println!("{year}: {:.2}%", metrics.total_return_pct);
+        println!("{year}: {:.2}%", metrics.total_return * 100.0);
     }
     Ok(())
 }
@@ -764,10 +764,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ).await?;
 
     if let Some(bench) = &result.benchmark {
-        println!("Strategy return:   {:.2}%", result.metrics.total_return_pct);
-        println!("Benchmark return:  {:.2}%", bench.benchmark_return_pct);
-        println!("Buy & hold return: {:.2}%", bench.buy_and_hold_return_pct);
-        println!("Alpha: {:.4}", bench.alpha);
+        println!("Strategy return:   {:.2}%", result.metrics.total_return * 100.0);
+        println!("Benchmark return:  {:.2}%", bench.benchmark_return * 100.0);
+        println!("Buy & hold return: {:.2}%", bench.buy_and_hold_return * 100.0);
+        println!("Alpha: {:.4}", bench.jensens_alpha);
         println!("Beta:  {:.4}", bench.beta);
         println!("Information Ratio: {:.4}", bench.information_ratio);
     }
@@ -823,7 +823,7 @@ assert_eq!(report.table().len(), 3);
 for row in report.table() {
     println!(
         "#{} {} — Sharpe {:.2}, Return {:.2}%",
-        row.rank, row.label, row.sharpe_ratio, row.total_return_pct,
+        row.rank, row.label, row.sharpe_ratio, row.total_return * 100.0,
     );
 }
 ```
@@ -1020,7 +1020,7 @@ let report = WalkForwardConfig::new(grid, config)
     }).unwrap();
 
 assert!(!report.windows.is_empty());
-println!("OOS Return:      {:.2}%", report.aggregate_metrics.total_return_pct);
+println!("OOS Return:      {:.2}%", report.aggregate_metrics.total_return * 100.0);
 println!("Consistency:     {:.1}%", report.consistency_ratio * 100.0);
 println!("Windows tested:  {}", report.windows.len());
 
@@ -1028,8 +1028,8 @@ for w in &report.windows {
     println!(
         "Window {}: IS {:.1}% → OOS {:.1}%",
         w.window,
-        w.in_sample.metrics.total_return_pct,
-        w.out_of_sample.metrics.total_return_pct,
+        w.in_sample.metrics.total_return * 100.0,
+        w.out_of_sample.metrics.total_return * 100.0,
     );
 }
 ```
@@ -1068,11 +1068,11 @@ let mc = MonteCarloConfig::new()
     .method(MonteCarloMethod::IidShuffle)
     .run(&result);
 
-assert!(mc.total_return.p5 <= mc.total_return.p95);
-println!("Return p5:  {:.2}%", mc.total_return.p5);
-println!("Return p50: {:.2}%", mc.total_return.p50);
-println!("Return p95: {:.2}%", mc.total_return.p95);
-println!("Drawdown p95: {:.2}%", mc.max_drawdown.p95);
+assert!(mc.total_return_dist.p5 <= mc.total_return_dist.p95);
+println!("Return p5:  {:.2}%", mc.total_return_dist.p5 * 100.0);
+println!("Return p50: {:.2}%", mc.total_return_dist.p50 * 100.0);
+println!("Return p95: {:.2}%", mc.total_return_dist.p95 * 100.0);
+println!("Drawdown p95: {:.2}%", mc.max_drawdown.p95 * 100.0);
 println!("Sharpe p50:   {:.2}", mc.sharpe_ratio.p50);
 ```
 
@@ -1132,11 +1132,11 @@ let result = PortfolioEngine::new(config)
     .unwrap();
 
 assert_eq!(result.symbols.len(), 3);
-println!("Portfolio Return: {:.2}%", result.portfolio_metrics.total_return_pct);
+println!("Portfolio Return: {:.2}%", result.portfolio_metrics.total_return * 100.0);
 println!("Final Equity:     ${:.2}", result.final_equity);
 
 for (sym, sym_result) in &result.symbols {
-    println!("{}: {:.2}%", sym, sym_result.metrics.total_return_pct);
+    println!("{}: {:.2}%", sym, sym_result.metrics.total_return * 100.0);
 }
 ```
 
@@ -1286,11 +1286,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Backtest Results for AAPL");
     println!("=========================");
-    println!("Total Return: {:.2}%",  result.metrics.total_return_pct);
+    println!("Total Return: {:.2}%",  result.metrics.total_return * 100.0);
     println!("Sharpe Ratio: {:.2}",   result.metrics.sharpe_ratio);
     println!("Win Rate:     {:.2}%",  result.metrics.win_rate * 100.0);
     println!("Total Trades: {}",      result.metrics.total_trades);
-    println!("Max Drawdown: {:.2}%",  result.metrics.max_drawdown_pct * 100.0);
+    println!("Max Drawdown: {:.2}%",  result.metrics.max_drawdown * 100.0);
 
     Ok(())
 }
@@ -1298,22 +1298,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Percent Units
 
-Fields named `*_pct` and `win_rate` do not share one convention. Fractions
-run 0.0 to 1.0, while percents are scaled by 100, so `16.52` means 16.52%.
+Every backtest output is a fraction, so `0.1652` means 16.52%. Inputs keep
+their `_pct` names and are fractions too (`stop_loss_pct(0.05)` is 5%). The one
+exception is `ulcer_index`, which is 0-100 by definition.
 
 | Field | Unit |
 |-------|------|
-| `total_return_pct`, `annualized_return_pct` | percent |
-| `avg_trade_return_pct`, `avg_win_pct`, `avg_loss_pct` | percent |
-| `Trade::return_pct` | percent |
-| `BenchmarkMetrics::benchmark_return_pct`, `buy_and_hold_return_pct` | percent |
-| `max_drawdown_pct`, `EquityPoint::drawdown_pct` | fraction |
-| `win_rate` | fraction |
-| `time_in_market_pct` | fraction |
+| `total_return`, `annualized_return` | fraction |
+| `avg_trade_return`, `avg_win_return`, `avg_loss_return` | fraction |
+| `Trade::net_return` | fraction |
+| `BenchmarkMetrics::benchmark_return`, `buy_and_hold_return`, `jensens_alpha`, `tracking_error` | fraction |
+| `max_drawdown`, `EquityPoint::drawdown` | fraction |
+| `MonteCarloResult::total_return_dist`, `max_drawdown` | fraction |
+| `win_rate`, `time_in_market` | fraction |
 | `Position::bracket_*_pct`, `BacktestConfig` `*_pct` | fraction |
+| `ulcer_index` | percent (0-100) |
 
 `ComparisonRow` carries the same units as the `PerformanceMetrics` field of the
-same name. `largest_win` and `largest_loss` are currency amounts, not percents.
+same name. `largest_win` and `largest_loss` are currency amounts. Sharpe,
+Sortino, Calmar, recovery factor and the other ratios are unit-free.
 
 ## DataFrame Export
 
@@ -1321,8 +1324,8 @@ With the `dataframe` feature enabled, a `BacktestResult` converts to Polars Data
 
 | Method | Rows | Columns |
 |--------|------|---------|
-| `equity_dataframe()` | One per bar | `timestamp`, `equity`, `drawdown_pct` |
-| `trades_dataframe()` | One per trade | `side` (`LONG`/`SHORT`), `entry_timestamp`, `exit_timestamp`, `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`, `transaction_tax`, `pnl`, `return_pct`, `dividend_income`, `unreinvested_dividends`, `financing_cost`, `is_partial`, `scale_sequence` |
+| `equity_dataframe()` | One per bar | `timestamp`, `equity`, `drawdown` |
+| `trades_dataframe()` | One per trade | `side` (`LONG`/`SHORT`), `entry_timestamp`, `exit_timestamp`, `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`, `transaction_tax`, `pnl`, `net_return`, `dividend_income`, `unreinvested_dividends`, `financing_cost`, `is_partial`, `scale_sequence` |
 | `signals_dataframe()` | One per signal | `timestamp`, `price`, `direction`, `strength`, `reason`, `executed` |
 | `metrics.to_dataframe()` | One | One column per `PerformanceMetrics` field |
 

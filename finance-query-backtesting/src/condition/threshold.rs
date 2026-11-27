@@ -47,7 +47,7 @@ impl StopLoss {
 impl Condition for StopLoss {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            let pnl_pct = pos.unrealized_return_pct(ctx.close()) / 100.0;
+            let pnl_pct = pos.unrealized_return(ctx.close());
             pnl_pct <= -self.pct
         } else {
             false
@@ -115,7 +115,7 @@ impl TakeProfit {
 impl Condition for TakeProfit {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            let pnl_pct = pos.unrealized_return_pct(ctx.close()) / 100.0;
+            let pnl_pct = pos.unrealized_return(ctx.close());
             pnl_pct >= self.pct
         } else {
             false
@@ -248,7 +248,7 @@ pub struct InProfit;
 impl Condition for InProfit {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            pos.unrealized_return_pct(ctx.close()) > 0.0
+            pos.unrealized_return(ctx.close()) > 0.0
         } else {
             false
         }
@@ -276,7 +276,7 @@ pub struct InLoss;
 impl Condition for InLoss {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            pos.unrealized_return_pct(ctx.close()) < 0.0
+            pos.unrealized_return(ctx.close()) < 0.0
         } else {
             false
         }
@@ -501,21 +501,18 @@ impl Condition for TrailingTakeProfit {
                 close_low,
                 ..
             } = position_extremes(ctx, pos);
-            // unrealized_return_pct is monotone in price, so the peak profit is
+            // unrealized_return is monotone in price, so the peak profit is
             // reached at the window's extreme close for the position's side.
             let best_close = match pos.side {
                 crate::position::PositionSide::Long => close_high,
                 crate::position::PositionSide::Short => close_low,
             };
-            let peak_profit_pct = pos.unrealized_return_pct(best_close);
+            let peak_profit_pct = pos.unrealized_return(best_close);
 
             // Only trigger if we've been in profit and current profit is below peak by trail_pct
-            let current_profit_pct = pos.unrealized_return_pct(ctx.close());
+            let current_profit_pct = pos.unrealized_return(ctx.close());
 
-            // Convert trail_pct to percentage points (e.g., 0.02 -> 2.0 percentage points)
-            let trail_threshold = self.trail_pct * 100.0;
-
-            peak_profit_pct > 0.0 && current_profit_pct <= peak_profit_pct - trail_threshold
+            peak_profit_pct > 0.0 && current_profit_pct <= peak_profit_pct - self.trail_pct
         } else {
             false
         }
@@ -618,6 +615,39 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn stop_loss_triggers_on_first_close_five_percent_below_entry() {
+        use crate::refs::*;
+        use crate::{BacktestConfig, BacktestEngine, StrategyBuilder};
+
+        let closes = [100.0, 100.0, 100.0, 100.0, 96.0, 94.9, 94.0, 94.0, 94.0];
+        let candles: Vec<_> = closes
+            .iter()
+            .enumerate()
+            .map(|(i, &px)| {
+                finance_query_types::Candle::__new(
+                    1_600_000_000 + i as i64 * 86400,
+                    px,
+                    px,
+                    px,
+                    px,
+                    1_000,
+                    None,
+                    None,
+                )
+            })
+            .collect();
+        let strat = StrategyBuilder::new("t")
+            .entry(price().above(0.0))
+            .exit(stop_loss(0.05))
+            .build();
+        let result = BacktestEngine::new(BacktestConfig::zero_cost())
+            .run("TEST", &candles, strat)
+            .unwrap();
+
+        assert_eq!(result.trades[0].exit_timestamp, candles[6].timestamp);
     }
 
     #[test]
@@ -865,7 +895,7 @@ mod tests {
     }
 
     /// The `TrailingTakeProfit` fast path folds closes into a single extreme and
-    /// evaluates `unrealized_return_pct` once, instead of evaluating it per bar
+    /// evaluates `unrealized_return` once, instead of evaluating it per bar
     /// and folding the results. That is only exact because the function is
     /// monotone in price — increasing for longs, decreasing for shorts. Pin it.
     #[test]
@@ -890,14 +920,14 @@ mod tests {
 
                 let per_bar = closes
                     .iter()
-                    .map(|&c| pos.unrealized_return_pct(c))
+                    .map(|&c| pos.unrealized_return(c))
                     .fold(f64::NEG_INFINITY, f64::max);
 
                 let extreme = match side {
                     PositionSide::Long => closes.iter().copied().fold(f64::NEG_INFINITY, f64::max),
                     PositionSide::Short => closes.iter().copied().fold(f64::INFINITY, f64::min),
                 };
-                let single = pos.unrealized_return_pct(extreme);
+                let single = pos.unrealized_return(extreme);
 
                 assert_eq!(
                     per_bar, single,

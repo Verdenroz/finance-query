@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 /// Index trend data (growth estimates for the index)
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndexTrend {
@@ -32,6 +33,7 @@ pub struct IndexTrend {
 /// Industry trend data
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryTrend {
@@ -60,6 +62,7 @@ pub struct IndustryTrend {
 /// Sector trend data
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorTrend {
@@ -88,6 +91,7 @@ pub struct SectorTrend {
 /// Growth estimate for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct TrendEstimate {
     /// Period (e.g., "0q", "+1q", "0y", "+1y", "LTG")

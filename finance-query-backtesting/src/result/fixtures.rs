@@ -5,7 +5,7 @@ use crate::config::BacktestConfig;
 use crate::position::{Position, PositionSide, Trade};
 use crate::signal::Signal;
 
-pub(crate) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
+pub(crate) fn make_trade(pnl: f64, net_return: f64, is_long: bool) -> Trade {
     Trade {
         side: if is_long {
             PositionSide::Long
@@ -21,7 +21,7 @@ pub(crate) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
         commission: 0.0,
         transaction_tax: 0.0,
         pnl,
-        return_pct,
+        net_return,
         dividend_income: 0.0,
         unreinvested_dividends: 0.0,
         financing_cost: 0.0,
@@ -33,7 +33,7 @@ pub(crate) fn make_trade(pnl: f64, return_pct: f64, is_long: bool) -> Trade {
     }
 }
 
-pub(crate) fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts: i64) -> Trade {
+pub(crate) fn make_trade_timed(pnl: f64, net_return: f64, entry_ts: i64, exit_ts: i64) -> Trade {
     Trade {
         side: PositionSide::Long,
         entry_timestamp: entry_ts,
@@ -45,7 +45,7 @@ pub(crate) fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts
         commission: 0.0,
         transaction_tax: 0.0,
         pnl,
-        return_pct,
+        net_return,
         dividend_income: 0.0,
         unreinvested_dividends: 0.0,
         financing_cost: 0.0,
@@ -93,10 +93,10 @@ pub(crate) fn ts(date: &str) -> i64 {
     d.and_hms_opt(12, 0, 0).unwrap().and_utc().timestamp()
 }
 
-pub(crate) fn equity_point(timestamp: i64, equity: f64, drawdown_pct: f64) -> EquityPoint {
+pub(crate) fn equity_point(timestamp: i64, equity: f64, drawdown: f64) -> EquityPoint {
     EquityPoint {
         timestamp,
         equity,
-        drawdown_pct,
+        drawdown,
     }
 }

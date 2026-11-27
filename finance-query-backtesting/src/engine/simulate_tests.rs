@@ -491,9 +491,9 @@ fn intrabar_stop_exit_resyncs_the_bars_equity_point_to_realized_cash() {
         exit_point.equity
     );
     assert!(
-        (exit_point.drawdown_pct - 0.05).abs() < 1e-6,
+        (exit_point.drawdown - 0.05).abs() < 1e-6,
         "expected drawdown capped at the stop's 5%, got {}",
-        exit_point.drawdown_pct
+        exit_point.drawdown
     );
 }
 
@@ -528,14 +528,14 @@ fn intrabar_take_profit_exit_does_not_leave_a_phantom_peak() {
         .expect("equity point for the exit bar");
     assert!((exit_point.equity - 11_000.0).abs() < 1e-6);
     assert!(
-        exit_point.drawdown_pct.abs() < 1e-9,
+        exit_point.drawdown.abs() < 1e-9,
         "the pre-exit close-marked snapshot must not become the peak, got drawdown {}",
-        exit_point.drawdown_pct
+        exit_point.drawdown
     );
     assert!(
-        result.metrics.max_drawdown_pct.abs() < 1e-9,
+        result.metrics.max_drawdown.abs() < 1e-9,
         "expected no drawdown against the realized peak, got {}",
-        result.metrics.max_drawdown_pct
+        result.metrics.max_drawdown
     );
 }
 
@@ -595,9 +595,9 @@ fn open_position_metrics_include_dividends_and_span() {
     assert!((result.metrics.total_dividend_income - 500.0).abs() < 1e-6);
     // Entered at bar 1's open, held through bar 5 of a 0..5 curve.
     assert!(
-        (result.metrics.time_in_market_pct - 0.8).abs() < 1e-9,
+        (result.metrics.time_in_market - 0.8).abs() < 1e-9,
         "expected 0.8, got {}",
-        result.metrics.time_in_market_pct
+        result.metrics.time_in_market
     );
 }
 

@@ -1150,13 +1150,13 @@ pub const GQL_BACKTEST_VALID_FIELDS: &[&str] = &[
 /// Full field set for `GqlBacktestMetrics` — expanded whole when `metrics`
 /// is selected, matching every other composite boundary here.
 pub const GQL_BACKTEST_METRICS_FIELDS: &str = "{ \
-    totalReturnPct annualizedReturnPct sharpeRatio sortinoRatio \
-    maxDrawdownPct maxDrawdownDuration winRate profitFactor \
-    avgTradeReturnPct avgWinPct avgLossPct avgTradeDuration totalTrades \
+    totalReturn annualizedReturn sharpeRatio sortinoRatio \
+    maxDrawdown maxDrawdownDuration winRate profitFactor \
+    avgTradeReturn avgWinReturn avgLossReturn avgTradeDuration totalTrades \
     winningTrades losingTrades largestWin largestLoss maxConsecutiveWins \
     maxConsecutiveLosses calmarRatio totalCommission totalFinancingCost \
     longTrades shortTrades totalSignals executedSignals avgWinDuration \
-    avgLossDuration timeInMarketPct maxIdlePeriod totalDividendIncome \
+    avgLossDuration timeInMarket maxIdlePeriod totalDividendIncome \
     kellyCriterion sqn expectancy omegaRatio tailRatio recoveryFactor \
     ulcerIndex serenityRatio \
 }";
@@ -1164,7 +1164,7 @@ pub const GQL_BACKTEST_METRICS_FIELDS: &str = "{ \
 /// Full field set for one `GqlTrade` node, inside its connection wrapper.
 pub const GQL_BACKTEST_TRADE_FIELDS: &str = "{ edges { node { \
     side entryTimestamp exitTimestamp entryPrice exitPrice quantity \
-    entryQuantity commission transactionTax pnl returnPct dividendIncome \
+    entryQuantity commission transactionTax pnl netReturn dividendIncome \
     unreinvestedDividends financingCost tags isPartial scaleSequence \
     entrySignal { direction strength timestamp price reason tags } \
     exitSignal { direction strength timestamp price reason tags } \
@@ -1175,7 +1175,7 @@ pub const BACKTEST_COMPOSITE_FIELDS: &[(&str, &str)] = &[
     ("metrics", GQL_BACKTEST_METRICS_FIELDS),
     (
         "equityCurve",
-        "{ edges { node { timestamp equity drawdownPct } } \
+        "{ edges { node { timestamp equity drawdown } } \
            pageInfo { hasNextPage endCursor } }",
     ),
     ("trades", GQL_BACKTEST_TRADE_FIELDS),
