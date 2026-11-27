@@ -380,6 +380,7 @@ pub struct PriceUpdate {
     pub market_cap: f64,
 }
 
+const ROUND: f64 = 6_755_399_441_055_744.0;
 const SCALES: [f64; 11] = [1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10];
 
 /// Widens by shortest decimal form so `189.98f32` becomes `189.98f64`, not
@@ -388,11 +389,34 @@ fn widen(value: f32) -> f64 {
     widen_scaled(value).unwrap_or_else(|| widen_shortest(value))
 }
 
+fn hint_scale(hint: i64) -> Option<f64> {
+    SCALES.get(usize::try_from(hint).ok()?).copied()
+}
+
+/// `hint_scale` is 10^`price_hint`, Yahoo's quote decimal count. Below 2^20
+/// scaled units an f32 rounds to at most one integer there, so that candidate
+/// is the shortest decimal whenever it round-trips.
+fn widen_price(value: f32, hint_scale: Option<f64>) -> f64 {
+    let Some(scale) = hint_scale else {
+        return widen(value);
+    };
+    let wide = f64::from(value);
+    let scaled = wide * scale;
+    if scaled.is_nan() || scaled.abs() >= 1_048_576.0 {
+        return widen(value);
+    }
+    let candidate = ((scaled + ROUND) - ROUND) / scale;
+    if candidate as f32 == value {
+        candidate.copysign(wide)
+    } else {
+        widen(value)
+    }
+}
+
 /// Below 2^24 the shortest decimal has a fractional digit count, so the first
 /// scale whose rounded quotient round-trips is it. Adding and subtracting
 /// 1.5 * 2^52 rounds half to even, as the shortest form does on exact ties.
 fn widen_scaled(value: f32) -> Option<f64> {
-    const ROUND: f64 = 6_755_399_441_055_744.0;
     if value.is_nan() || value.abs() >= 16_777_216.0 {
         return None;
     }
@@ -415,9 +439,10 @@ fn widen_shortest(value: f32) -> f64 {
 
 impl From<PricingData> for PriceUpdate {
     fn from(data: PricingData) -> Self {
+        let hint = hint_scale(data.price_hint);
         Self {
             id: data.id,
-            price: widen(data.price),
+            price: widen_price(data.price, hint),
             time: data.time,
             currency: data.currency,
             exchange: data.exchange,
@@ -425,22 +450,22 @@ impl From<PricingData> for PriceUpdate {
             market_hours: MarketHoursType::from(data.market_hours),
             change_percent: widen(data.change_percent),
             day_volume: data.day_volume,
-            day_high: widen(data.day_high),
-            day_low: widen(data.day_low),
-            change: widen(data.change),
+            day_high: widen_price(data.day_high, hint),
+            day_low: widen_price(data.day_low, hint),
+            change: widen_price(data.change, hint),
             short_name: data.short_name,
             expire_date: data.expire_date,
-            open_price: widen(data.open_price),
-            previous_close: widen(data.previous_close),
-            strike_price: widen(data.strike_price),
+            open_price: widen_price(data.open_price, hint),
+            previous_close: widen_price(data.previous_close, hint),
+            strike_price: widen_price(data.strike_price, hint),
             underlying_symbol: data.underlying_symbol,
             open_interest: data.open_interest,
             options_type: OptionType::from(data.options_type as i32),
             mini_option: data.mini_option,
             last_size: data.last_size,
-            bid: widen(data.bid),
+            bid: widen_price(data.bid, hint),
             bid_size: data.bid_size,
-            ask: widen(data.ask),
+            ask: widen_price(data.ask, hint),
             ask_size: data.ask_size,
             price_hint: data.price_hint,
             vol_24hr: data.vol_24hr,
@@ -508,7 +533,8 @@ mod tests {
     #[test]
     fn scaled_widening_matches_shortest_form() {
         let strided = (0..=u32::MAX).step_by(4099);
-        let prices = (1..=10_000_000u32).map(|i| (i as f32 * 1e-4).to_bits());
+        let cents = (1..=1_000_000u32).map(|i| (i as f32 * 1e-2).to_bits());
+        let prices = (1..=1_000_000u32).map(|i| (i as f32 * 1e-4).to_bits());
         let edges = [
             0,
             1,
@@ -516,14 +542,18 @@ mod tests {
             f32::NAN.to_bits(),
             f32::INFINITY.to_bits(),
         ];
-        for bits in strided.chain(prices).chain(edges) {
+        for bits in strided.chain(cents).chain(prices).chain(edges) {
             for bits in [bits, bits | 1 << 31] {
                 let value = f32::from_bits(bits);
-                assert_eq!(
-                    widen(value).to_bits(),
-                    widen_shortest(value).to_bits(),
-                    "{bits:#x}"
-                );
+                let shortest = widen_shortest(value).to_bits();
+                assert_eq!(widen(value).to_bits(), shortest, "{bits:#x}");
+                for hint in [-1, 0, 2, 4, 10, 11] {
+                    assert_eq!(
+                        widen_price(value, hint_scale(hint)).to_bits(),
+                        shortest,
+                        "{bits:#x} hint {hint}"
+                    );
+                }
             }
         }
     }
