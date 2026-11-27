@@ -17,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- Yahoo surprise_percent in percent points (#747)
 - Backtest outputs as fractions (#741)
 
 ### ✨ Features
 
+- Typed time attributes for ToDataFrame (#743)
+- Public risk, quote and options helpers (#730)
 - DataFrames for Vec, slices and remaining types (#726)
 - DataFrames for series, sparks, facts and streams (#717)
 - Nested row frames for DataFrame conversions (#714)
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Soothfast 0.9.1, workflows to master (#748)
 - Bump soothfast to 0.9.0 (#732)
 - Bump cookie to 0.18.3 for RUSTSEC-2026-0594 (#704)
 - Bump the all-dependencies group with 4 updates (#694)
@@ -65,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- FieldsInit derive, widen model internals (#744)
+- Key model docs on public paths (#734)
 - Move DataFrame plumbing for models split (#736)
 - Move request types out of models (#735)
 - Trim per-PR jobs (#733)
@@ -89,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ```
 ADDED    finance_query::AroonData::to_dataframe
+ADDED    finance_query::BatchQuotesAs
 ADDED    finance_query::BollingerBandsData::to_dataframe
 ADDED    finance_query::BullBearPowerData::to_dataframe
 ADDED    finance_query::Candle::to_dataframe
@@ -120,6 +127,129 @@ ADDED    finance_query::finance::AnalystRecommendation::to_dataframe
 ADDED    finance_query::finance::EarningsCalendarEntry::to_dataframe
 ADDED    finance_query::finance::InsiderTransaction::to_dataframe
 ADDED    finance_query::finance::IpoCalendarEntry::to_dataframe
+ADDED    finance_query::fundamental_types
+ADDED    finance_query::fundamental_types::ACCOUNTS_PAYABLE
+ADDED    finance_query::fundamental_types::ACCOUNTS_RECEIVABLE
+ADDED    finance_query::fundamental_types::ACCUMULATED_DEPRECIATION
+ADDED    finance_query::fundamental_types::ADDITIONAL_PAID_IN_CAPITAL
+ADDED    finance_query::fundamental_types::BASIC_AVERAGE_SHARES
+ADDED    finance_query::fundamental_types::BASIC_EPS
+ADDED    finance_query::fundamental_types::BEGINNING_CASH_POSITION
+ADDED    finance_query::fundamental_types::CAPITAL_EXPENDITURE
+ADDED    finance_query::fundamental_types::CAPITAL_EXPENDITURE_REPORTED
+ADDED    finance_query::fundamental_types::CASH_AND_CASH_EQUIVALENTS
+ADDED    finance_query::fundamental_types::CASH_CASH_EQUIVALENTS_AND_SHORT_TERM_INVESTMENTS
+ADDED    finance_query::fundamental_types::CASH_DIVIDENDS_PAID
+ADDED    finance_query::fundamental_types::CASH_FINANCIAL
+ADDED    finance_query::fundamental_types::CASH_FLOW_FROM_CONTINUING_FINANCING_ACTIVITIES
+ADDED    finance_query::fundamental_types::CASH_FLOW_FROM_CONTINUING_INVESTING_ACTIVITIES
+ADDED    finance_query::fundamental_types::CASH_FLOW_FROM_CONTINUING_OPERATING_ACTIVITIES
+ADDED    finance_query::fundamental_types::CHANGESIN_CASH
+ADDED    finance_query::fundamental_types::CHANGES_IN_ACCOUNT_RECEIVABLES
+ADDED    finance_query::fundamental_types::CHANGE_IN_ACCOUNT_PAYABLE
+ADDED    finance_query::fundamental_types::CHANGE_IN_INVENTORY
+ADDED    finance_query::fundamental_types::CHANGE_IN_OTHER_WORKING_CAPITAL
+ADDED    finance_query::fundamental_types::CHANGE_IN_RECEIVABLES
+ADDED    finance_query::fundamental_types::CHANGE_IN_WORKING_CAPITAL
+ADDED    finance_query::fundamental_types::COMMON_STOCK
+ADDED    finance_query::fundamental_types::COMMON_STOCK_DIVIDEND_PAID
+ADDED    finance_query::fundamental_types::COMMON_STOCK_EQUITY
+ADDED    finance_query::fundamental_types::COMMON_STOCK_ISSUANCE
+ADDED    finance_query::fundamental_types::COMMON_STOCK_PAYMENTS
+ADDED    finance_query::fundamental_types::COST_OF_REVENUE
+ADDED    finance_query::fundamental_types::CURRENT_ASSETS
+ADDED    finance_query::fundamental_types::CURRENT_DEBT
+ADDED    finance_query::fundamental_types::CURRENT_DEFERRED_REVENUE
+ADDED    finance_query::fundamental_types::CURRENT_LIABILITIES
+ADDED    finance_query::fundamental_types::DEFERRED_INCOME_TAX
+ADDED    finance_query::fundamental_types::DEPRECIATION_AND_AMORTIZATION
+ADDED    finance_query::fundamental_types::DILUTED_AVERAGE_SHARES
+ADDED    finance_query::fundamental_types::DILUTED_EPS
+ADDED    finance_query::fundamental_types::EBIT
+ADDED    finance_query::fundamental_types::EBITDA
+ADDED    finance_query::fundamental_types::EFFECT_OF_EXCHANGE_RATE_CHANGES
+ADDED    finance_query::fundamental_types::END_CASH_POSITION
+ADDED    finance_query::fundamental_types::FINANCING_CASH_FLOW
+ADDED    finance_query::fundamental_types::FREE_CASH_FLOW
+ADDED    finance_query::fundamental_types::GOODWILL
+ADDED    finance_query::fundamental_types::GOODWILL_AND_OTHER_INTANGIBLE_ASSETS
+ADDED    finance_query::fundamental_types::GROSS_PPE
+ADDED    finance_query::fundamental_types::GROSS_PROFIT
+ADDED    finance_query::fundamental_types::INTEREST_EXPENSE
+ADDED    finance_query::fundamental_types::INTEREST_INCOME
+ADDED    finance_query::fundamental_types::INVENTORY
+ADDED    finance_query::fundamental_types::INVESTED_CAPITAL
+ADDED    finance_query::fundamental_types::INVESTING_CASH_FLOW
+ADDED    finance_query::fundamental_types::INVESTMENTS_AND_ADVANCES
+ADDED    finance_query::fundamental_types::LONG_TERM_DEBT
+ADDED    finance_query::fundamental_types::LONG_TERM_DEBT_AND_CAPITAL_LEASE_OBLIGATION
+ADDED    finance_query::fundamental_types::LONG_TERM_DEBT_ISSUANCE
+ADDED    finance_query::fundamental_types::LONG_TERM_DEBT_PAYMENTS
+ADDED    finance_query::fundamental_types::LONG_TERM_EQUITY_INVESTMENT
+ADDED    finance_query::fundamental_types::NET_BUSINESS_PURCHASE_AND_SALE
+ADDED    finance_query::fundamental_types::NET_COMMON_STOCK_ISSUANCE
+ADDED    finance_query::fundamental_types::NET_DEBT
+ADDED    finance_query::fundamental_types::NET_INCOME
+ADDED    finance_query::fundamental_types::NET_INCOME_COMMON_STOCKHOLDERS
+ADDED    finance_query::fundamental_types::NET_INCOME_FROM_CONTINUING_OPERATIONS
+ADDED    finance_query::fundamental_types::NET_INCOME_FROM_CONTINUING_OPERATION_NET_MINORITY_INTEREST
+ADDED    finance_query::fundamental_types::NET_INTEREST_INCOME
+ADDED    finance_query::fundamental_types::NET_INVESTMENT_PURCHASE_AND_SALE
+ADDED    finance_query::fundamental_types::NET_ISSUANCE_PAYMENTS_OF_DEBT
+ADDED    finance_query::fundamental_types::NET_LONG_TERM_DEBT_ISSUANCE
+ADDED    finance_query::fundamental_types::NET_NON_OPERATING_INTEREST_INCOME_EXPENSE
+ADDED    finance_query::fundamental_types::NET_OTHER_FINANCING_CHARGES
+ADDED    finance_query::fundamental_types::NET_OTHER_INVESTING_CHANGES
+ADDED    finance_query::fundamental_types::NET_PPE
+ADDED    finance_query::fundamental_types::NET_PPE_PURCHASE_AND_SALE
+ADDED    finance_query::fundamental_types::NET_SHORT_TERM_DEBT_ISSUANCE
+ADDED    finance_query::fundamental_types::NON_CURRENT_DEFERRED_REVENUE
+ADDED    finance_query::fundamental_types::NON_CURRENT_DEFERRED_TAXES_LIABILITIES
+ADDED    finance_query::fundamental_types::NORMALIZED_EBITDA
+ADDED    finance_query::fundamental_types::OPERATING_CASH_FLOW
+ADDED    finance_query::fundamental_types::OPERATING_EXPENSE
+ADDED    finance_query::fundamental_types::OPERATING_INCOME
+ADDED    finance_query::fundamental_types::OPERATING_REVENUE
+ADDED    finance_query::fundamental_types::ORDINARY_SHARES_NUMBER
+ADDED    finance_query::fundamental_types::OTHER_CURRENT_ASSETS
+ADDED    finance_query::fundamental_types::OTHER_CURRENT_LIABILITIES
+ADDED    finance_query::fundamental_types::OTHER_INCOME_EXPENSE
+ADDED    finance_query::fundamental_types::OTHER_INTANGIBLE_ASSETS
+ADDED    finance_query::fundamental_types::OTHER_NON_CASH_ITEMS
+ADDED    finance_query::fundamental_types::OTHER_NON_CURRENT_ASSETS
+ADDED    finance_query::fundamental_types::OTHER_NON_CURRENT_LIABILITIES
+ADDED    finance_query::fundamental_types::PAYABLES_AND_ACCRUED_EXPENSES
+ADDED    finance_query::fundamental_types::PREPAID_ASSETS
+ADDED    finance_query::fundamental_types::PRETAX_INCOME
+ADDED    finance_query::fundamental_types::PURCHASE_OF_BUSINESS
+ADDED    finance_query::fundamental_types::PURCHASE_OF_INVESTMENT
+ADDED    finance_query::fundamental_types::PURCHASE_OF_PPE
+ADDED    finance_query::fundamental_types::RECEIVABLES
+ADDED    finance_query::fundamental_types::RECONCILED_COST_OF_REVENUE
+ADDED    finance_query::fundamental_types::RECONCILED_DEPRECIATION
+ADDED    finance_query::fundamental_types::REPURCHASE_OF_CAPITAL_STOCK
+ADDED    finance_query::fundamental_types::RESEARCH_AND_DEVELOPMENT
+ADDED    finance_query::fundamental_types::RETAINED_EARNINGS
+ADDED    finance_query::fundamental_types::SALE_OF_BUSINESS
+ADDED    finance_query::fundamental_types::SALE_OF_INVESTMENT
+ADDED    finance_query::fundamental_types::SALE_OF_PPE
+ADDED    finance_query::fundamental_types::SELLING_GENERAL_AND_ADMIN
+ADDED    finance_query::fundamental_types::SHARE_ISSUED
+ADDED    finance_query::fundamental_types::STOCKHOLDERS_EQUITY
+ADDED    finance_query::fundamental_types::STOCK_BASED_COMPENSATION
+ADDED    finance_query::fundamental_types::TANGIBLE_BOOK_VALUE
+ADDED    finance_query::fundamental_types::TAX_PROVISION
+ADDED    finance_query::fundamental_types::TOTAL_ASSETS
+ADDED    finance_query::fundamental_types::TOTAL_DEBT
+ADDED    finance_query::fundamental_types::TOTAL_EQUITY_GROSS_MINORITY_INTEREST
+ADDED    finance_query::fundamental_types::TOTAL_EXPENSES
+ADDED    finance_query::fundamental_types::TOTAL_LIABILITIES_NET_MINORITY_INTEREST
+ADDED    finance_query::fundamental_types::TOTAL_NON_CURRENT_ASSETS
+ADDED    finance_query::fundamental_types::TOTAL_NON_CURRENT_LIABILITIES_NET_MINORITY_INTEREST
+ADDED    finance_query::fundamental_types::TOTAL_OPERATING_INCOME_AS_REPORTED
+ADDED    finance_query::fundamental_types::TOTAL_REVENUE
+ADDED    finance_query::fundamental_types::TREASURY_STOCK
+ADDED    finance_query::fundamental_types::WORKING_CAPITAL
 ADDED    finance_query::indicators::fibonacci_retracement::FibonacciLevels::to_dataframe
 ADDED    finance_query::indicators::pivot_points::PivotPoints::to_dataframe
 ADDED    finance_query::indicators::summary::AroonData::to_dataframe
@@ -276,6 +406,9 @@ ADDED    finance_query::models::options::chain::OptionChain::to_dataframe
 ADDED    finance_query::models::options::chain::OptionChain::to_nested_dataframe
 ADDED    finance_query::models::options::chain::OptionsQuote::to_dataframe
 ADDED    finance_query::models::options::contract::OptionContract::to_dataframe
+ADDED    finance_query::models::options::response::Options::calls
+ADDED    finance_query::models::options::response::Options::expiration_dates
+ADDED    finance_query::models::options::response::Options::puts
 ADDED    finance_query::models::quote::data::Quote::to_dataframe
 ADDED    finance_query::models::quote::price::Price::to_dataframe
 ADDED    finance_query::models::quote::quote_type::QuoteTypeData::to_dataframe
@@ -294,7 +427,12 @@ ADDED    finance_query::providers::stock_bars::StockBarsRequest
 ADDED    finance_query::providers::stock_bars::StockBarsRequest::with_sort
 ADDED    finance_query::providers::stock_listing::StockListingRequest
 ADDED    finance_query::quote::TrendEstimate
+ADDED    finance_query::risk::DrawdownSpan
 ADDED    finance_query::risk::RiskSummary::to_dataframe
+ADDED    finance_query::risk::drawdown::DrawdownSpan
+ADDED    finance_query::risk::drawdown::max_drawdown_span
+ADDED    finance_query::risk::max_drawdown_span
+ADDED    finance_query::risk::returns
 ADDED    finance_query::streaming::alerts::AlertEvent::to_dataframe
 ADDED    finance_query::streaming::book::BookLevel::to_dataframe
 ADDED    finance_query::streaming::book::OrderBookUpdate::to_dataframe
@@ -304,6 +442,11 @@ ADDED    finance_query::streaming::options::Greeks::to_dataframe
 ADDED    finance_query::streaming::options::OptionContractUpdate::to_dataframe
 ADDED    finance_query::streaming::pricing::PriceUpdate::to_dataframe
 ADDED    finance_query::streaming::trades::TradeTick::to_dataframe
+ADDED    finance_query::ticker::core::Ticker::nearest_expiration
+ADDED    finance_query::ticker::core::Ticker::options
+ADDED    finance_query::tickers::core::Tickers::quotes
+ADDED    finance_query::tickers::core::Tickers::quotes_as
+ADDED    finance_query::tickers::core::quotes::BatchQuotesAs
 REMOVED  finance_query::backtesting::result::metrics::PerformanceMetrics::max_drawdown_percentage
 REMOVED  finance_query::constants::enums::frequency::Frequency
 REMOVED  finance_query::constants::enums::interval::Interval
@@ -321,6 +464,11 @@ REMOVED  finance_query::constants::industries::Industry
 REMOVED  finance_query::constants::industries::Industry::as_slug
 REMOVED  finance_query::constants::screeners::Screener
 REMOVED  finance_query::constants::sectors::Sector
+REMOVED  finance_query::domains::crypto::CryptoCoin::tvl_history
+REMOVED  finance_query::domains::economic::EconomicCatalog::treasury_auctions
+REMOVED  finance_query::domains::economic::EconomicIndicator::series
+REMOVED  finance_query::domains::forex::ForexPair::quote
+REMOVED  finance_query::domains::indices::Index::constituents
 REMOVED  finance_query::indicators::Indicator::warmup_bars
 REMOVED  finance_query::models::chart::candle::Candle
 REMOVED  finance_query::models::chart::events::Dividend
@@ -336,8 +484,11 @@ REMOVED  finance_query::providers::provider::CustomId
 REMOVED  finance_query::providers::provider::Provider
 REMOVED  finance_query::providers::provider::Provider::capabilities
 REMOVED  finance_query::providers::provider::Provider::custom
+REMOVED  finance_query::ticker::core::Ticker::dividend_analytics
 REMOVED  finance_query::ticker::core::Ticker::quote
+CHANGED  finance_query::ChartEvents (signature)
 CHANGED  finance_query::DividendAnalytics (body)
+CHANGED  finance_query::EarningsSurprise (body)
 CHANGED  finance_query::EdgarFilings (body)
 CHANGED  finance_query::EdgarSearchSource (signature)
 CHANGED  finance_query::EdgarSubmissions (body)
@@ -349,12 +500,15 @@ CHANGED  finance_query::IndustryData (body)
 CHANGED  finance_query::MarketSummaryQuote (body)
 CHANGED  finance_query::News (signature)
 CHANGED  finance_query::OptionChain (body)
+CHANGED  finance_query::Options (signature)
+CHANGED  finance_query::Quote (body)
 CHANGED  finance_query::QuoteSummaryResponse (body)
 CHANGED  finance_query::Recommendation (signature)
 CHANGED  finance_query::SearchNews (signature)
 CHANGED  finance_query::SearchResults (body)
 CHANGED  finance_query::SectorData (body)
 CHANGED  finance_query::SectorPerformanceHistory (body)
+CHANGED  finance_query::SymbolMatch (body)
 CHANGED  finance_query::Transcript (body)
 CHANGED  finance_query::backtesting::BacktestError (signature)
 CHANGED  finance_query::backtesting::BenchmarkMetrics (signature)
@@ -385,6 +539,7 @@ CHANGED  finance_query::backtesting::signal::Signal (body)
 CHANGED  finance_query::backtesting::strategy::Strategy (body)
 CHANGED  finance_query::backtesting::strategy::StrategyContext (body)
 CHANGED  finance_query::backtesting::walk_forward::WalkForwardConfig::run (body)
+CHANGED  finance_query::crypto::SymbolMatch (body)
 CHANGED  finance_query::defi::ProtocolTvl (signature)
 CHANGED  finance_query::gdelt::News (signature)
 CHANGED  finance_query::indicators::IndicatorsSummary (body)
@@ -398,11 +553,13 @@ CHANGED  finance_query::indicators::mfi (body)
 CHANGED  finance_query::indicators::mfi::mfi (body)
 CHANGED  finance_query::indicators::summary::IndicatorsSummary (body)
 CHANGED  finance_query::models::chart::dividend_analytics::DividendAnalytics (body)
+CHANGED  finance_query::models::chart::events::ChartEvents (signature)
 CHANGED  finance_query::models::corporate::asset_profile::AssetProfile (body)
 CHANGED  finance_query::models::corporate::calendar_events::CalendarEvents (body)
 CHANGED  finance_query::models::corporate::earnings::Earnings (body)
 CHANGED  finance_query::models::corporate::earnings::EarningsChart (body)
 CHANGED  finance_query::models::corporate::earnings::FinancialsChart (body)
+CHANGED  finance_query::models::corporate::earnings_history::EarningsHistoryEntry (body)
 CHANGED  finance_query::models::corporate::earnings_trend::EarningsTrendPeriod (body)
 CHANGED  finance_query::models::corporate::equity_performance::EquityPerformance (body)
 CHANGED  finance_query::models::corporate::fund_performance::AnnualTotalReturns (body)
@@ -421,6 +578,7 @@ CHANGED  finance_query::models::corporate::transcript::Transcript (body)
 CHANGED  finance_query::models::corporate::transcript::TranscriptContent (body)
 CHANGED  finance_query::models::corporate::transcript::TranscriptData (body)
 CHANGED  finance_query::models::crypto::defi::ProtocolTvl (signature)
+CHANGED  finance_query::models::discovery::reference::SymbolMatch (body)
 CHANGED  finance_query::models::discovery::search::news::SearchNews (signature)
 CHANGED  finance_query::models::discovery::search::response::SearchResults (body)
 CHANGED  finance_query::models::discovery::search::thumbnail::NewsThumbnail (body)
@@ -430,6 +588,7 @@ CHANGED  finance_query::models::filings::search::EdgarSearchSource (signature)
 CHANGED  finance_query::models::filings::submissions::EdgarFilings (body)
 CHANGED  finance_query::models::filings::submissions::EdgarSubmissions (body)
 CHANGED  finance_query::models::fundamentals::default_key_statistics::DefaultKeyStatistics (signature)
+CHANGED  finance_query::models::fundamentals::earnings_surprise::EarningsSurprise (body)
 CHANGED  finance_query::models::fundamentals::etf::EtfProfile (body)
 CHANGED  finance_query::models::fundamentals::response::FinancialStatement (signature)
 CHANGED  finance_query::models::fundamentals::summary_detail::SummaryDetail (signature)
@@ -441,6 +600,8 @@ CHANGED  finance_query::models::market::market_summary::response::MarketSummaryQ
 CHANGED  finance_query::models::market::performance::SectorPerformanceHistory (body)
 CHANGED  finance_query::models::market::sectors::response::SectorData (body)
 CHANGED  finance_query::models::options::chain::OptionChain (body)
+CHANGED  finance_query::models::options::response::Options (signature)
+CHANGED  finance_query::models::quote::data::Quote (body)
 CHANGED  finance_query::models::quote::response::QuoteSummaryResponse (body)
 CHANGED  finance_query::providers::adapter::markets::CalendarProvider (body)
 CHANGED  finance_query::quote::AssetProfile (body)
@@ -455,6 +616,8 @@ CHANGED  finance_query::quote::IndustryTrend (body)
 CHANGED  finance_query::quote::SectorTrend (body)
 CHANGED  finance_query::quote::SummaryDetail (signature)
 CHANGED  finance_query::quote::TopHoldings (body)
+CHANGED  finance_query::risk::drawdown::max_drawdown (body)
+CHANGED  finance_query::risk::max_drawdown (body)
 CHANGED  finance_query::streaming::OptionContractUpdate (body)
 CHANGED  finance_query::streaming::OrderBookUpdate (body)
 CHANGED  finance_query::streaming::TradeTick (body)
@@ -463,6 +626,7 @@ CHANGED  finance_query::streaming::options::OptionContractUpdate (body)
 CHANGED  finance_query::streaming::trades::TradeStreamBuilder::build (body)
 CHANGED  finance_query::streaming::trades::TradeTick (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
+CHANGED  finance_query::ticker::core::Ticker::risk (body)
 ```
 
 
