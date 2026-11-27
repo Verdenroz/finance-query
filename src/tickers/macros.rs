@@ -1,17 +1,21 @@
 //! Macros for generating batch response types and cached fetch methods.
 
 pub(crate) fn in_symbol_order<V>(
-    mut unordered: indexmap::IndexMap<String, V>,
+    mut map: indexmap::IndexMap<String, V>,
     symbols: &[std::sync::Arc<str>],
 ) -> indexmap::IndexMap<String, V> {
-    let mut ordered = indexmap::IndexMap::with_capacity(unordered.len());
+    let mut next = 0;
     for symbol in symbols {
-        if let Some(value) = unordered.swap_remove(&**symbol) {
-            ordered.insert(symbol.to_string(), value);
+        if let Some(index) = map.get_index_of(&**symbol)
+            && index >= next
+        {
+            if index != next {
+                map.move_index(index, next);
+            }
+            next += 1;
         }
     }
-    ordered.extend(unordered);
-    ordered
+    map
 }
 
 /// Generate batch response types with identical structure but different field names.
@@ -49,7 +53,7 @@ macro_rules! define_batch_response {
             pub(crate) fn with_capacity(capacity: usize) -> Self {
                 Self {
                     $field: indexmap::IndexMap::with_capacity(capacity),
-                    errors: indexmap::IndexMap::with_capacity(capacity),
+                    errors: indexmap::IndexMap::new(),
                 }
             }
 
