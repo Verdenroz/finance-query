@@ -68,7 +68,7 @@ Set `FMP_API_KEY` (or `ALPHAVANTAGE_API_KEY`) in your environment before calling
 
 Fetches the current price quote for the commodity:
 
-```rust no_run covers=finance_query::models::commodities::CommodityQuote
+```rust no_run covers=finance_query::CommodityQuote
 use finance_query::Providers;
 
 #[tokio::main]
@@ -169,7 +169,7 @@ commodities have no natural benchmark to compare against.
 
 ## `CommodityQuote` Fields
 
-<!-- soothfast:bind finance_query::models::commodities::CommodityQuote -->
+<!-- soothfast:bind finance_query::CommodityQuote -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -186,7 +186,7 @@ commodities have no natural benchmark to compare against.
 This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
-```rust capture-output covers=finance_query::models::commodities::CommodityQuote
+```rust capture-output covers=finance_query::CommodityQuote
 use finance_query::CommodityQuote;
 
 // `CommodityQuote` is #[non_exhaustive] outside the crate, so construct via

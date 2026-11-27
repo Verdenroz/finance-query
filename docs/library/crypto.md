@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 `CoinQuote` is returned by both `crypto::coins` and `crypto::coin`.
 
-<!-- soothfast:bind finance_query::models::crypto::CoinQuote -->
+<!-- soothfast:bind finance_query::crypto::CoinQuote -->
 
 | Field | Type | Description |
 |---|---|---|
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
-```rust capture-output feature=crypto covers=finance_query::models::crypto::CoinQuote
+```rust capture-output feature=crypto covers=finance_query::crypto::CoinQuote
 use finance_query::crypto::CoinQuote;
 
 // `CoinQuote` is #[non_exhaustive] outside the crate, so construct via
@@ -176,12 +176,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:bind finance_query::models::crypto::CryptoQuote -->
+<!-- soothfast:bind finance_query::CryptoQuote -->
 `quote` returns a [`CryptoQuote`](https://docs.rs/finance-query/latest/finance_query/struct.CryptoQuote.html)
 where the price field is `price` (not `current_price`):
 <!-- /soothfast:bind -->
 
-```rust capture-output feature=crypto covers=finance_query::models::crypto::CryptoQuote
+```rust capture-output feature=crypto covers=finance_query::CryptoQuote
 use finance_query::CryptoQuote;
 
 // `CryptoQuote` is #[non_exhaustive] outside the crate, so construct via

@@ -743,7 +743,7 @@ confidence = 0.791
 
 Get the current CNN Fear & Greed Index reading from Alternative.me (no API key required):
 
-```rust capture-output covers=finance_query::models::sentiment::response::FearAndGreed
+```rust capture-output covers=finance_query::FearAndGreed
 use finance_query::finance;
 
 #[tokio::main]
@@ -764,7 +764,7 @@ Classification: Fear
 
 **`FearAndGreed` fields:**
 
-<!-- soothfast:bind finance_query::models::sentiment::response::FearAndGreed -->
+<!-- soothfast:bind finance_query::FearAndGreed -->
 
 - `value: u8` — Index value from 0 (Extreme Fear) to 100 (Extreme Greed)
 - `classification: FearGreedLabel` — One of `ExtremeFear`, `Fear`, `Neutral`, `Greed`, `ExtremeGreed`

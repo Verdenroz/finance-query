@@ -13,8 +13,8 @@ pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
 
 /// A provider-agnostic economic data series with metadata.
 ///
-/// Obtain via [`Providers::economic`](crate::Providers::economic) then
-/// [`.series()`](crate::domains::EconomicIndicator::series). Supported providers:
+/// Obtain via `Providers::economic` then
+/// `.series()`. Supported providers:
 /// Alpha Vantage, Polygon, FRED.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -45,7 +45,7 @@ pub struct MacroObservation {
 
 /// A FRED macro-economic time series with all its observations.
 ///
-/// Obtain via [`fred::series`](crate::fred::series).
+/// Obtain via `fred::series`.
 #[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -59,7 +59,7 @@ pub struct MacroSeries {
 /// One day of US Treasury yield curve rates.
 ///
 /// Maturities with no published rate on a given date are `None`.
-/// Obtain via [`fred::treasury_yields`](crate::fred::treasury_yields).
+/// Obtain via `fred::treasury_yields`.
 #[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

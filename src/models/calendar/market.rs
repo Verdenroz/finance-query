@@ -1,7 +1,7 @@
 //! Market-wide calendar models.
 //!
-//! Returned by the [`Capability::CALENDAR`](crate::Capability::CALENDAR) route
-//! via [`Providers::calendar`](crate::Providers::calendar). These span the whole
+//! Returned by the [`Capability::CALENDAR`](finance_query_types::Capability::CALENDAR) route
+//! via `Providers::calendar`. These span the whole
 //! market over a date range, unlike [`CalendarEvent`](super::CalendarEvent),
 //! which builds a per-symbol timeline from already-fetched Yahoo quote data.
 
