@@ -19,7 +19,7 @@ thiserror = "2.0.18"
 chrono = { version = "0.4", features = ["serde"] }
 rayon = "1"
 tracing = "0.1"
-polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt"] }
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-datetime", "dtype-date", "timezones"] }
 
 [features]
 default = []
