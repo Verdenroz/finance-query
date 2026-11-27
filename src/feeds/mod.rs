@@ -250,6 +250,7 @@ pub struct FeedEntry {
     /// Canonical link to the article
     pub url: String,
     /// Publication date/time as an RFC 3339 string (if available)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime))]
     pub published: Option<String>,
     /// Short summary or description
     pub summary: Option<String>,

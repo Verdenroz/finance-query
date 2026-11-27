@@ -66,7 +66,8 @@ fn search_results_nest_quotes_news_and_reports() {
         columns(&results.to_dataframe().unwrap()),
         ["count:i32", "total_time:i64"]
     );
-    assert_eq!(results.quotes_dataframe().unwrap().height(), 1);
+    let quotes = columns(&results.quotes_dataframe().unwrap());
+    assert!(quotes.contains(&"name_change_date:date".to_string()));
     assert_eq!(results.news_dataframe().unwrap().height(), 2);
     let reports = results.research_reports_dataframe().unwrap();
     assert_eq!(reports.height(), 0);

@@ -57,6 +57,7 @@ pub struct CompanyProfile {
     pub cik: Option<String>,
     /// Provider-reported IPO date, in YYYY-MM-DD format.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub ipo_date: Option<String>,
     /// Provider that supplied this profile.
     #[serde(default, skip_serializing_if = "Option::is_none")]

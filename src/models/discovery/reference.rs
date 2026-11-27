@@ -38,9 +38,11 @@ pub struct SymbolMatch {
     pub image: Option<String>,
     /// Provider-reported IPO date, when available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub ipo_date: Option<String>,
     /// Provider-reported delisting date, when available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub delisted_date: Option<String>,
 }
 
@@ -73,6 +75,7 @@ pub struct SymbolDetails {
     /// Market capitalisation.
     pub market_cap: Option<f64>,
     /// Date the security was listed (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub list_date: Option<String>,
     /// Shares outstanding, weighted across share classes.
     pub shares_outstanding: Option<f64>,

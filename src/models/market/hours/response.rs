@@ -88,6 +88,7 @@ pub struct MarketTime {
 
     /// Current time (ISO 8601 format)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime))]
     pub time: Option<String>,
 
     /// Timezone name (e.g., "America/New_York")

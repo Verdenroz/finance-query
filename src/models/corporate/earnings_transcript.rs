@@ -21,6 +21,7 @@ pub struct EarningsTranscript {
     /// Fiscal year.
     pub year: Option<i32>,
     /// Call date (`YYYY-MM-DD`), when the provider reports one.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Full transcript text.
     pub text: String,

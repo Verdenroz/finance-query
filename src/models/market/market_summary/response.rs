@@ -97,11 +97,11 @@ impl MarketSummaryQuote {
 impl SparkData {
     /// Converts the points to a long-format polars DataFrame, one row per point.
     ///
-    /// Columns are `symbol` (string, repeated on every row), `timestamp` (i64)
-    /// and `close` (f64). Missing closes stay null, and the shorter series is
-    /// padded with nulls. A `None` series is empty.
+    /// Columns are `symbol` (string, repeated on every row), `timestamp`
+    /// (`Datetime(us, UTC)`) and `close` (f64). Missing closes stay null, and
+    /// the shorter series is padded with nulls. A `None` series is empty.
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::__dataframe::padded;
+        use crate::__dataframe::{EpochUnit, epoch_datetime, padded};
         use polars::prelude::*;
 
         let timestamps = self.timestamp.as_deref().unwrap_or_default();
@@ -111,11 +111,12 @@ impl SparkData {
             rows,
             vec![
                 Series::new("symbol".into(), vec![self.symbol.as_deref(); rows]).into(),
-                Series::new(
+                epoch_datetime(
                     "timestamp".into(),
-                    padded(timestamps.iter().copied().map(Some), rows),
-                )
-                .into(),
+                    EpochUnit::Seconds,
+                    false,
+                    padded(timestamps.iter().copied().map(Some), rows).into_iter(),
+                ),
                 Series::new("close".into(), padded(closes.iter().copied(), rows)).into(),
             ],
         )
@@ -126,13 +127,19 @@ impl SparkData {
     pub fn vec_to_dataframe(
         items: &[Self],
     ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use crate::__dataframe::{EpochUnit, epoch_datetime};
         use polars::prelude::*;
 
         let schema = DataFrame::new(
             0,
             vec![
                 Series::new("symbol".into(), Vec::<&str>::new()).into(),
-                Series::new("timestamp".into(), Vec::<i64>::new()).into(),
+                epoch_datetime(
+                    "timestamp".into(),
+                    EpochUnit::Seconds,
+                    false,
+                    std::iter::empty(),
+                ),
                 Series::new("close".into(), Vec::<f64>::new()).into(),
             ],
         );

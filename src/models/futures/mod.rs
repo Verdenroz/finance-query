@@ -26,6 +26,7 @@ pub struct FuturesQuote {
     /// Exchange where the contract trades
     pub exchange: Option<String>,
     /// Contract expiration date as YYYY-MM-DD
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub expiration_date: Option<String>,
     /// Current contract price
     pub price: Option<f64>,
