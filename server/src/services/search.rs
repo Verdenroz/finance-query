@@ -112,7 +112,7 @@ pub async fn lookup(
                 // point of `lookup` being a fast, cheap discovery call.
                 let symbols: Vec<&str> = result.quotes.iter().map(|q| q.symbol.as_str()).collect();
                 let quotes = if symbols.is_empty() {
-                    std::collections::HashMap::new()
+                    finance_query::SymbolMap::new()
                 } else {
                     Tickers::builder(symbols)
                         .build()

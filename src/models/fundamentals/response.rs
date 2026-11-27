@@ -3,7 +3,7 @@
 //! Flattened, user-friendly financial statement response.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// A flattened, user-friendly financial statement
 ///
@@ -35,7 +35,7 @@ pub struct FinancialStatement {
 
     /// Financial data: metric name -> (date -> value)
     /// Example: { "TotalRevenue": { "2024-09-30": 391035000000 } }
-    pub statement: HashMap<String, HashMap<String, f64>>,
+    pub statement: BTreeMap<String, BTreeMap<String, f64>>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
     pub provider_id: Option<finance_query_types::Provider>,
@@ -50,7 +50,7 @@ impl FinancialStatement {
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         use polars::prelude::*;
 
-        let mut rows: Vec<(&str, &str, f64)> = self
+        let rows: Vec<(&str, &str, f64)> = self
             .statement
             .iter()
             .flat_map(|(metric, by_date)| {
@@ -59,7 +59,6 @@ impl FinancialStatement {
                     .map(move |(date, value)| (metric.as_str(), date.as_str(), *value))
             })
             .collect();
-        rows.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
 
         let height = rows.len();
         DataFrame::new(

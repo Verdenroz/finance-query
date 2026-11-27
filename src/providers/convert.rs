@@ -27,7 +27,7 @@ pub(crate) fn build_financial_statement(
     let statement = data
         .into_iter()
         .filter_map(|(metric, values)| {
-            let values: std::collections::HashMap<String, f64> = values
+            let values: std::collections::BTreeMap<String, f64> = values
                 .into_iter()
                 .filter_map(|(date, value)| json_value_to_f64(value).map(|v| (date, v)))
                 .collect();

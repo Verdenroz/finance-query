@@ -564,7 +564,7 @@ shape: (14, 5)
 ## Multiple Symbols
 
 The batch responses from `Tickers` convert directly. `to_dataframe()` stacks
-every symbol into one frame with a leading `symbol` column, sorted by symbol.
+every symbol into one frame with a leading `symbol` column, in input order.
 Symbols that failed are listed in `errors` and left out of the frame.
 
 ```rust capture-output feature=dataframe

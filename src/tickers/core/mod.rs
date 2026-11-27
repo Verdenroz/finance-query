@@ -135,7 +135,14 @@ impl TickersBuilder {
         I: IntoIterator<Item = S>,
     {
         Self {
-            symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
+            symbols: {
+                let mut seen = std::collections::HashSet::new();
+                symbols
+                    .into_iter()
+                    .map(|s| Arc::<str>::from(s.into()))
+                    .filter(|s| seen.insert(Arc::clone(s)))
+                    .collect()
+            },
             config: ClientConfig::default(),
             shared_client: None,
             injected_providers: None,
@@ -622,5 +629,53 @@ mod tests {
             before,
             "calendar refetched a cached chain"
         );
+    }
+
+    async fn chart_keys(tickers: &Tickers) -> Vec<String> {
+        let response = tickers
+            .charts(Interval::OneDay, TimeRange::OneMonth)
+            .await
+            .unwrap();
+        response.charts.keys().cloned().collect()
+    }
+
+    #[tokio::test]
+    async fn batch_keys_follow_input_order_fetched_and_cached() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let tickers = Tickers::builder(["MSFT", "AAPL", "GOOG"])
+            .with_provider_set(provider_set(CountingProvider::slow_chart("MSFT")))
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(chart_keys(&tickers).await, ["MSFT", "AAPL", "GOOG"]);
+        assert_eq!(chart_keys(&tickers).await, ["MSFT", "AAPL", "GOOG"]);
+    }
+
+    #[tokio::test]
+    async fn duplicate_symbols_keep_first_occurrence_order() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let tickers = Tickers::builder(["MSFT", "AAPL", "MSFT", "GOOG", "AAPL"])
+            .with_provider_set(provider_set(CountingProvider::slow_chart("MSFT")))
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(chart_keys(&tickers).await, ["MSFT", "AAPL", "GOOG"]);
+    }
+
+    #[tokio::test]
+    async fn duplicate_input_symbols_are_dropped() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let tickers = Tickers::builder(["A", "B", "A"])
+            .with_provider_set(provider_set(CountingProvider::new()))
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(tickers.symbols(), ["A", "B"]);
     }
 }

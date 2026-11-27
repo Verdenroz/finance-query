@@ -47,19 +47,35 @@ fn resolve_gql_lang(lang: Option<&str>) -> Option<String> {
 /// Pull the `errors: {symbol: message}` map every batch service response
 /// carries (see `define_batch_response!` in the library) into the shared
 /// `GqlBatchError` list every batch root field returns alongside its results.
-fn extract_batch_errors(json: &serde_json::Value) -> Vec<GqlBatchError> {
-    json.get("errors")
+fn extract_batch_errors(json: &serde_json::Value, symbols: &[String]) -> Vec<GqlBatchError> {
+    let errors = json
+        .get("errors")
         .and_then(|v| v.as_object())
-        .map(|errors| {
-            errors
-                .iter()
-                .map(|(symbol, message)| GqlBatchError {
-                    symbol: symbol.clone(),
-                    message: message.as_str().unwrap_or_default().to_string(),
-                })
-                .collect()
+        .cloned()
+        .unwrap_or_default();
+    order_by_input(errors, symbols)
+        .into_iter()
+        .map(|(symbol, message)| GqlBatchError {
+            symbol,
+            message: message.as_str().unwrap_or_default().to_string(),
         })
-        .unwrap_or_default()
+        .collect()
+}
+
+/// REST JSON objects are unordered, so batch resolvers restore the caller's
+/// symbol order here. Symbols the caller did not send sort last.
+fn order_by_input(
+    map: serde_json::Map<String, serde_json::Value>,
+    symbols: &[String],
+) -> Vec<(String, serde_json::Value)> {
+    let mut entries: Vec<_> = map.into_iter().collect();
+    entries.sort_by_key(|(symbol, _)| {
+        symbols
+            .iter()
+            .position(|s| s.eq_ignore_ascii_case(symbol))
+            .unwrap_or(usize::MAX)
+    });
+    entries
 }
 
 /// Convert a library `Options` chain into its GraphQL representation —
@@ -156,5 +172,26 @@ impl GqlTicker {
             },
             TickerFundamentalsTtmQuery { symbol },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn order_by_input_follows_symbols_and_sorts_unknown_last() {
+        let map: serde_json::Map<_, _> = ["AAPL", "GOOG", "MSFT", "ZZZ"]
+            .into_iter()
+            .map(|s| (s.to_string(), serde_json::Value::Null))
+            .collect();
+        let symbols = ["msft".to_string(), "AAPL".to_string(), "GOOG".to_string()];
+
+        let ordered: Vec<_> = order_by_input(map, &symbols)
+            .into_iter()
+            .map(|(symbol, _)| symbol)
+            .collect();
+
+        assert_eq!(ordered, ["MSFT", "AAPL", "GOOG", "ZZZ"]);
     }
 }

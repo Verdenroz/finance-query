@@ -14,10 +14,10 @@ use std::sync::Arc;
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct BatchQuotesAs<F: Format = Raw> {
-    /// Successfully fetched quotes, keyed by symbol
-    pub quotes: HashMap<String, Quote<F>>,
-    /// Symbols that failed to fetch, with error messages
-    pub errors: HashMap<String, String>,
+    /// Successfully fetched quotes, keyed by symbol, in input order
+    pub quotes: crate::tickers::SymbolMap<Quote<F>>,
+    /// Symbols that failed to fetch, with error messages, in input order
+    pub errors: crate::tickers::SymbolMap<String>,
 }
 
 impl<F: Format> BatchQuotesAs<F> {
@@ -99,7 +99,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -117,7 +117,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -233,7 +233,7 @@ impl Tickers {
         }
 
         for (symbol, quote) in parsed_quotes {
-            response.quotes.insert(symbol, quote);
+            response.quotes.push(symbol, quote);
         }
 
         // Translate before caching so cached quotes are already localized
@@ -248,18 +248,25 @@ impl Tickers {
             }
         }
 
-        // Track missing symbols
-        for symbol in &self.symbols {
-            let s = &**symbol;
-            if !response.quotes.contains_key(s) && !response.errors.contains_key(s) {
-                response.errors.insert(
-                    symbol.to_string(),
-                    "Symbol not found in response".to_string(),
-                );
-            }
+        let present: std::collections::HashSet<&str> = response
+            .quotes
+            .keys()
+            .chain(response.errors.keys())
+            .map(String::as_str)
+            .collect();
+        let missing: Vec<String> = self
+            .symbols
+            .iter()
+            .filter(|symbol| !present.contains(&***symbol))
+            .map(|symbol| symbol.to_string())
+            .collect();
+        for symbol in missing {
+            response
+                .errors
+                .push(symbol, "Symbol not found in response".to_string());
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Fallback for when no provider supports `fetch_quotes_batch`.

@@ -3,8 +3,8 @@
 /// Generate batch response types with identical structure but different field names.
 ///
 /// Each response type contains:
-/// - `HashMap<String, T>` for successful results
-/// - `HashMap<String, String>` for errors
+/// - `SymbolMap<T>` for successful results, in input symbol order
+/// - `SymbolMap<String>` for errors, in input symbol order
 /// - `success_count()`, `error_count()`, `all_successful()` convenience methods
 ///
 /// # Usage
@@ -26,17 +26,25 @@ macro_rules! define_batch_response {
         #[non_exhaustive]
         pub struct $name {
             #[doc = "Successfully fetched data, keyed by symbol"]
-            pub $field: std::collections::HashMap<String, $type>,
+            pub $field: crate::tickers::SymbolMap<$type>,
             #[doc = "Symbols that failed to fetch, with error messages"]
-            pub errors: std::collections::HashMap<String, String>,
+            pub errors: crate::tickers::SymbolMap<String>,
         }
 
         impl $name {
             pub(crate) fn with_capacity(capacity: usize) -> Self {
                 Self {
-                    $field: std::collections::HashMap::with_capacity(capacity),
-                    errors: std::collections::HashMap::with_capacity(capacity),
+                    $field: crate::tickers::SymbolMap::with_capacity(capacity),
+                    errors: crate::tickers::SymbolMap::new(),
                 }
+            }
+
+            /// Reorders both maps to follow `symbols`. A repeated symbol keeps
+            /// its first position.
+            pub(crate) fn in_symbol_order(mut self, symbols: &[std::sync::Arc<str>]) -> Self {
+                self.$field.sort_by_symbols(symbols);
+                self.errors.sort_by_symbols(symbols);
+                self
             }
 
             #[doc = "Number of successfully fetched items"]
@@ -158,7 +166,9 @@ macro_rules! batch_fetch_cached {
                 let mut response = $resp_ty::with_capacity($self.symbols.len());
                 for symbol in &$self.symbols {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
-                        response.$resp_field.insert(symbol.to_string(), entry.value.clone());
+                        response
+                            .$resp_field
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -178,7 +188,9 @@ macro_rules! batch_fetch_cached {
                 let mut response = $resp_ty::with_capacity($self.symbols.len());
                 for symbol in &$self.symbols {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
-                        response.$resp_field.insert(symbol.to_string(), entry.value.clone());
+                        response
+                            .$resp_field
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -209,7 +221,7 @@ macro_rules! batch_fetch_cached {
         for (sym, result) in results {
             match result {
                 Ok(value) => parsed.push((sym, value)),
-                Err(e) => { response.errors.insert(sym.to_string(), e.to_string()); }
+                Err(e) => { response.errors.push(sym.to_string(), e.to_string()); }
             }
         }
 
@@ -223,13 +235,13 @@ macro_rules! batch_fetch_cached {
 
         // Build response
         for (sym, value) in parsed {
-            response.$resp_field.insert(sym.to_string(), value);
+            response.$resp_field.push(sym.to_string(), value);
         }
 
         #[cfg(feature = "translation")]
         $self.translate_response(&mut response).await?;
 
-        Ok(response)
+        Ok(response.in_symbol_order(&$self.symbols))
     }};
 }
 

@@ -1,6 +1,6 @@
 //! Locally computed TTM metrics reusing cached financials + quote data.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::fundamental_types::*;
@@ -216,7 +216,7 @@ fn ratios_from_facts(symbol: &str, f: &Facts) -> FinancialRatiosTtm {
     }
 }
 
-fn sorted_dates(stmt: &HashMap<String, HashMap<String, f64>>, metric: &str) -> Vec<String> {
+fn sorted_dates(stmt: &BTreeMap<String, BTreeMap<String, f64>>, metric: &str) -> Vec<String> {
     let mut dates: Vec<String> = stmt
         .get(metric)
         .map(|m| m.keys().cloned().collect())
@@ -225,11 +225,15 @@ fn sorted_dates(stmt: &HashMap<String, HashMap<String, f64>>, metric: &str) -> V
     dates
 }
 
-fn value_at(stmt: &HashMap<String, HashMap<String, f64>>, metric: &str, date: &str) -> Option<f64> {
+fn value_at(
+    stmt: &BTreeMap<String, BTreeMap<String, f64>>,
+    metric: &str,
+    date: &str,
+) -> Option<f64> {
     stmt.get(metric).and_then(|m| m.get(date)).copied()
 }
 
-fn latest(stmt: &HashMap<String, HashMap<String, f64>>, metric: &str) -> Option<f64> {
+fn latest(stmt: &BTreeMap<String, BTreeMap<String, f64>>, metric: &str) -> Option<f64> {
     let dates = sorted_dates(stmt, metric);
     let date = dates.first()?;
     value_at(stmt, metric, date)
