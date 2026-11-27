@@ -6,13 +6,13 @@ use super::{
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
     SymbolMap,
 };
+use crate::__dataframe::Columns;
 use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::SimilarSymbol;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::{Contracts, Options};
-use crate::models::quote::Quote;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::BTreeMap;
 
@@ -35,6 +35,15 @@ fn stack_by_symbol<T>(
     Ok(stacked)
 }
 
+/// One row per symbol for single-row item types, built in one pass with no per-item frames to stack.
+fn rows_by_symbol<T: Columns>(items: &SymbolMap<T>) -> PolarsResult<DataFrame> {
+    let rows: Vec<Option<&T>> = items.values().map(Some).collect();
+    let mut frame = DataFrame::new_infer_height(T::columns(&rows, ""))?.drop("symbol")?;
+    let symbols: Vec<&str> = items.keys().map(String::as_str).collect();
+    frame.insert_column(0, Series::new("symbol".into(), symbols).into())?;
+    Ok(frame)
+}
+
 fn with_symbol(frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
     crate::__dataframe::with_leading_column(frame, "symbol", symbol)
 }
@@ -50,11 +59,7 @@ impl BatchQuotesResponse {
     /// Columns are `symbol` followed by the columns of `Quote::to_dataframe`.
     /// Rows follow input symbol order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
-            &self.quotes,
-            |quote| quote.to_dataframe()?.drop("symbol"),
-            || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),
-        )
+        rows_by_symbol(&self.quotes)
     }
 }
 
@@ -65,11 +70,7 @@ impl BatchQuotesAs<crate::format::Both> {
     /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
     /// Only the `Both` format has a frame; `Raw` and `Pretty` quotes do not.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
-            &self.quotes,
-            |quote| quote.to_dataframe()?.drop("symbol"),
-            || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),
-        )
+        rows_by_symbol(&self.quotes)
     }
 }
 
@@ -235,6 +236,7 @@ impl super::BatchIndicatorsResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::quote::Quote;
     use polars::prelude::DataType;
 
     fn response<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> T {
@@ -621,5 +623,41 @@ mod tests {
         let empty = empty.to_dataframe().unwrap();
         assert_eq!(names(&empty), names(&df));
         assert_eq!(empty.height(), 0);
+    }
+
+    #[test]
+    fn quote_rows_match_stacked_quote_frames() {
+        let quote = |symbol: &str, time: i64| -> Quote {
+            response(serde_json::json!({
+                "symbol": symbol,
+                "regularMarketTime": time,
+                "exDividendDate": {"raw": 1794528000, "fmt": "2026-11-09"}
+            }))
+        };
+        let mut batch = BatchQuotesResponse::with_capacity(3);
+        batch
+            .quotes
+            .insert("MSFT".into(), quote("MSFT", 1794603601));
+        batch
+            .quotes
+            .insert("AAPL".into(), quote("AAPL", 1794603602));
+        batch.quotes.insert(
+            "BRK-B".into(),
+            response(serde_json::json!({"symbol": "BRK-B"})),
+        );
+
+        let stacked = stack_by_symbol(
+            &batch.quotes,
+            |quote| quote.to_dataframe()?.drop("symbol"),
+            || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),
+        )
+        .unwrap();
+        assert!(batch.to_dataframe().unwrap().equals_missing(&stacked));
+
+        let empty = BatchQuotesResponse::with_capacity(0)
+            .to_dataframe()
+            .unwrap();
+        assert_eq!(empty.height(), 0);
+        assert_eq!(empty.get_column_names(), stacked.get_column_names());
     }
 }

@@ -233,6 +233,7 @@ fn unparseable_strings_become_null() {
         strings("2024-01-01 00:00:00", "2024-13-40"),
         strings("", "é2024-01-02"),
         strings("", "2024-1-2"),
+        strings("", "2024-02-30"),
         strings("", ""),
     ])
     .unwrap();
