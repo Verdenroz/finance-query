@@ -251,10 +251,12 @@ impl CompanyFacts {
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub start: Option<String>,
 
     /// End date of the period (for duration facts) or instant date (for point-in-time facts)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub end: Option<String>,
 
     /// The reported value
@@ -279,6 +281,7 @@ pub struct FactUnit {
 
     /// Date the filing was filed
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filed: Option<String>,
 
     /// Frame identifier (e.g., "CY2023Q4I")

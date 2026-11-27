@@ -38,6 +38,7 @@ pub struct EconomicSeries {
 #[non_exhaustive]
 pub struct MacroObservation {
     /// Date of the observation as `YYYY-MM-DD`
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// Observation value. `None` when FRED reports a missing value (`"."`).
     pub value: Option<f64>,
@@ -67,6 +68,7 @@ pub struct MacroSeries {
 #[non_exhaustive]
 pub struct TreasuryYield {
     /// Date as `YYYY-MM-DD`
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// 1-month Treasury yield (%)
     pub y1m: Option<f64>,

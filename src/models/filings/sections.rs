@@ -40,5 +40,6 @@ pub struct RiskFactor {
     /// Risk category.
     pub category: Option<String>,
     /// Date of the filing the factor was extracted from (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: Option<String>,
 }
