@@ -22,4 +22,5 @@ mod provider_handles;
 mod provider_introspection;
 mod provider_trait_types;
 mod provider_wire_format;
+mod quote_round_trip;
 mod stock_ingestion_api;
