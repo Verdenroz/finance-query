@@ -30,10 +30,10 @@
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FormattedValue<T> {
     /// Human-readable formatted string
-    pub fmt: Option<String>,
+    pub fmt: Option<Box<str>>,
 
     /// Long format (for large numbers with full precision)
-    pub long_fmt: Option<String>,
+    pub long_fmt: Option<Box<str>>,
 
     /// Raw numeric value (None if data is unavailable)
     pub raw: Option<T>,
@@ -73,8 +73,8 @@ impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for FormattedValue
         #[derive(serde::Deserialize)]
         #[serde(rename_all = "camelCase")]
         struct Full<T> {
-            fmt: Option<String>,
-            long_fmt: Option<String>,
+            fmt: Option<Box<str>>,
+            long_fmt: Option<Box<str>>,
             raw: Option<T>,
         }
 
@@ -131,7 +131,7 @@ impl<T> FormattedValue<T> {
     /// Create a FormattedValue with raw and formatted values
     pub fn with_fmt(raw: T, fmt: String) -> Self {
         Self {
-            fmt: Some(fmt),
+            fmt: Some(fmt.into_boxed_str()),
             long_fmt: None,
             raw: Some(raw),
         }
@@ -140,8 +140,8 @@ impl<T> FormattedValue<T> {
     /// Create a FormattedValue with all fields
     pub fn with_all(raw: T, fmt: String, long_fmt: String) -> Self {
         Self {
-            fmt: Some(fmt),
-            long_fmt: Some(long_fmt),
+            fmt: Some(fmt.into_boxed_str()),
+            long_fmt: Some(long_fmt.into_boxed_str()),
             raw: Some(raw),
         }
     }

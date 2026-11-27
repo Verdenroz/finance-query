@@ -362,7 +362,7 @@ pub fn derive_format_convert(input: TokenStream) -> TokenStream {
         .map(|(f, is_fmt)| {
             let ident = f.ident.as_ref().unwrap();
             if *is_fmt {
-                quote! { #ident: v.#ident.and_then(|fv| fv.fmt.or(fv.long_fmt)) }
+                quote! { #ident: v.#ident.and_then(|fv| fv.fmt.or(fv.long_fmt).map(String::from)) }
             } else {
                 quote! { #ident: v.#ident }
             }

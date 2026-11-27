@@ -98,8 +98,9 @@ pub mod derive {
     use chrono::{DateTime, NaiveDate};
     use polars::chunked_array::builder::{ListPrimitiveChunkedBuilder, get_list_builder};
     use polars::prelude::{
-        Column, DataFrame, DataType, Int32Type, Int64Type, IntoSeries, ListBuilderTrait,
-        ListStringChunkedBuilder, NamedFrom, PlSmallStr, PolarsResult, Series, TimeUnit, TimeZone,
+        Column, DataFrame, DataType, Int32Chunked, Int32Type, Int64Chunked, Int64Type, IntoColumn,
+        IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, NewChunkedArray,
+        PlSmallStr, PolarsResult, Series, TimeUnit, TimeZone,
     };
 
     use super::ToDataFrame;
@@ -190,12 +191,16 @@ pub mod derive {
             .and_then(|value| i32::try_from(value.div_euclid(per_day)).ok())
     }
 
-    fn datetime_series(name: &str, micros: Vec<Option<i64>>) -> Series {
-        Series::new(name.into(), micros).into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
+    fn datetime_column(name: String, micros: impl Iterator<Item = Option<i64>>) -> Column {
+        Int64Chunked::from_iter_options(name.into(), micros)
+            .into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
+            .into_column()
     }
 
-    fn date_series(name: &str, days: Vec<Option<i32>>) -> Series {
-        Series::new(name.into(), days).into_date()
+    fn date_column(name: String, days: impl Iterator<Item = Option<i32>>) -> Column {
+        Int32Chunked::from_iter_options(name.into(), days)
+            .into_date()
+            .into_column()
     }
 
     /// A `Datetime(us, UTC)` column from epoch integers; overflow and, with `nonzero`, `0` become null.
@@ -205,10 +210,7 @@ pub mod derive {
         nonzero: bool,
         values: impl Iterator<Item = Option<i64>>,
     ) -> Column {
-        let micros = values
-            .map(|value| epoch_micros(value, unit, nonzero))
-            .collect();
-        Column::from(datetime_series(&name, micros))
+        datetime_column(name, values.map(|value| epoch_micros(value, unit, nonzero)))
     }
 
     /// A `Date` column from epoch integers, taking the UTC calendar day.
@@ -218,14 +220,21 @@ pub mod derive {
         nonzero: bool,
         values: impl Iterator<Item = Option<i64>>,
     ) -> Column {
-        let days = values
-            .map(|value| epoch_day(value, unit, nonzero))
-            .collect();
-        Column::from(date_series(&name, days))
+        date_column(name, values.map(|value| epoch_day(value, unit, nonzero)))
     }
 
     fn parse_date(value: &str) -> Option<i32> {
-        let day = NaiveDate::parse_from_str(value.get(..10)?, "%Y-%m-%d").ok()?;
+        let bytes = value.as_bytes().get(..10)?;
+        if bytes[4] != b'-' || bytes[7] != b'-' {
+            return None;
+        }
+        let number = |digits: &[u8]| {
+            digits.iter().try_fold(0u32, |acc, &b| {
+                b.is_ascii_digit().then(|| acc * 10 + u32::from(b - b'0'))
+            })
+        };
+        let year = i32::try_from(number(&bytes[..4])?).ok()?;
+        let day = NaiveDate::from_ymd_opt(year, number(&bytes[5..7])?, number(&bytes[8..10])?)?;
         Some(chrono::Datelike::num_days_from_ce(&day) - UNIX_EPOCH_FROM_CE_DAYS)
     }
 
@@ -238,8 +247,7 @@ pub mod derive {
 
     /// A `Date` column from the leading `YYYY-MM-DD` of each string; unparseable values become null.
     pub fn str_date<'a>(name: String, values: impl Iterator<Item = Option<&'a str>>) -> Column {
-        let days = values.map(|value| value.and_then(parse_date)).collect();
-        Column::from(date_series(&name, days))
+        date_column(name, values.map(|value| value.and_then(parse_date)))
     }
 
     /// A `Datetime(us, UTC)` column from RFC 3339 strings; unparseable values become null.
@@ -247,8 +255,7 @@ pub mod derive {
         name: String,
         values: impl Iterator<Item = Option<&'a str>>,
     ) -> Column {
-        let micros = values.map(|value| value.and_then(parse_rfc3339)).collect();
-        Column::from(datetime_series(&name, micros))
+        datetime_column(name, values.map(|value| value.and_then(parse_rfc3339)))
     }
 
     /// A `List(Datetime(us, UTC))` column from lists of epoch integers.

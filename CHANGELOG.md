@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- Store FormattedValue strings as Box<str> (#751)
 - Input-ordered batch maps, sorted statement maps (#745)
 - F64 streaming price fields (#740)
 - Yahoo surprise_percent in percent points (#747)
@@ -40,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Round-trip TopHoldings sector weightings (#752)
+- Keep SymbolNotFound out of provider health (#756)
 - Polygon timestamps in seconds (#737)
 - Explicit TLS provider and bounded stream start (#731)
 - Point bench covers at the code they run (#725)
@@ -61,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+- Bump soupsieve to 4.1.3 in v1 (#755)
 - Soothfast 0.9.1, workflows to master (#748)
 - Bump soothfast to 0.9.0 (#732)
 - Bump cookie to 0.18.3 for RUSTSEC-2026-0594 (#704)
@@ -71,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Cover remaining batch to_dataframe impls (#757)
+- Pin translation bench backend state (#754)
 - FieldsInit derive, widen model internals (#744)
 - Key model docs on public paths (#734)
 - Move DataFrame plumbing for models split (#736)
@@ -513,6 +519,7 @@ CHANGED  finance_query::FactConcept (signature)
 CHANGED  finance_query::FactsByTaxonomy (signature)
 CHANGED  finance_query::FilingSearchHit (signature)
 CHANGED  finance_query::FinancialStatement (signature)
+CHANGED  finance_query::FormattedValue (signature)
 CHANGED  finance_query::IndicatorsSummary (body)
 CHANGED  finance_query::IndustryData (body)
 CHANGED  finance_query::MarketSummaryQuote (body)
@@ -625,6 +632,7 @@ CHANGED  finance_query::models::market::sectors::response::SectorData (body)
 CHANGED  finance_query::models::options::chain::OptionChain (body)
 CHANGED  finance_query::models::options::response::Options (signature)
 CHANGED  finance_query::models::quote::data::Quote (body)
+CHANGED  finance_query::models::quote::formatted_value::FormattedValue (signature)
 CHANGED  finance_query::models::quote::response::QuoteSummaryResponse (body)
 CHANGED  finance_query::providers::adapter::markets::CalendarProvider (body)
 CHANGED  finance_query::quote::AssetProfile (body)
