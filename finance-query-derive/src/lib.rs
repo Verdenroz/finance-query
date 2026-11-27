@@ -99,6 +99,109 @@ use syn::{
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
 ///   `finance_query` re-exported under another path.
 ///
+/// # Time columns
+///
+/// The struct field keeps its type; only the column is typed. Every datetime
+/// column is `Datetime(Microseconds, UTC)` and every date column is `Date`,
+/// whatever the source unit, so columns from different sources join without casts.
+///
+/// - `#[dataframe(datetime = "s" | "ms" | "us" | "ns")]` on `i64`,
+///   `FormattedValue<i64>` or `F::Value<i64>` reads an epoch instant.
+/// - `#[dataframe(datetime)]` on a `String` parses RFC 3339 / ISO 8601 with an
+///   offset or `Z`.
+/// - `#[dataframe(date)]` on a `String` parses the leading `YYYY-MM-DD`, so
+///   `"2024-01-02 16:30:00"` and `"2024-01-02T00:00:00.000"` both work.
+/// - `#[dataframe(date = "s" | "ms")]` on the epoch integer types takes the UTC calendar day.
+/// - `nonzero` next to an epoch form turns `0` into null, for fields where
+///   `0` means unset.
+/// - `Vec` of the epoch integer types, or `Option<Vec<..>>`, needs `list` and
+///   becomes `List(Datetime)` or `List(Date)`.
+///
+/// A value that does not parse, or an epoch that overflows the microsecond
+/// range, becomes null and never an error. The raw value stays on the struct.
+/// `Option` fields are nullable as usual. Combining a time attribute with
+/// `skip`, `flatten` or `nested`, a `datetime` without a unit on an integer, a
+/// unit on a `String`, or any other field type fails to compile.
+///
+/// ```ignore
+/// #[derive(ToDataFrame)]
+/// pub struct Event {
+///     #[dataframe(datetime = "s")]
+///     pub timestamp: i64,
+///     #[dataframe(date)]
+///     pub filing_date: String,
+///     #[dataframe(date = "s", nonzero)]
+///     pub expire_date: i64,
+/// }
+/// // Columns: Datetime(us, UTC), Date, Date
+/// ```
+///
+/// A unit-less `datetime` on an integer fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(datetime)]
+///     time: i64,
+/// }
+/// ```
+///
+/// So does a unit on a `String`:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(datetime = "s")]
+///     time: String,
+/// }
+/// ```
+///
+/// A time attribute on any other type fails too:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(date = "s")]
+///     time: f64,
+/// }
+/// ```
+///
+/// A `Vec` needs `list`:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(datetime = "s")]
+///     times: Vec<i64>,
+/// }
+/// ```
+///
+/// A time attribute cannot be combined with `flatten`, `nested` or `skip`:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(datetime = "s", skip)]
+///     time: i64,
+/// }
+/// ```
+///
+/// `nonzero` only applies to epoch forms:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(date, nonzero)]
+///     day: String,
+/// }
+/// ```
+///
 /// A struct generic over `F: Format` gets the impl for `F = Both` only.
 ///
 /// # Example

@@ -95,10 +95,11 @@ pub mod derive {
     use std::fmt::Display;
     use std::marker::PhantomData;
 
-    use polars::chunked_array::builder::get_list_builder;
+    use chrono::{DateTime, NaiveDate};
+    use polars::chunked_array::builder::{ListPrimitiveChunkedBuilder, get_list_builder};
     use polars::prelude::{
-        Column, DataFrame, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom,
-        PlSmallStr, PolarsResult, Series,
+        Column, DataFrame, DataType, Int32Type, Int64Type, IntoSeries, ListBuilderTrait,
+        ListStringChunkedBuilder, NamedFrom, PlSmallStr, PolarsResult, Series, TimeUnit, TimeZone,
     };
 
     use super::ToDataFrame;
@@ -136,6 +137,160 @@ pub mod derive {
             .chain(std::iter::repeat_with(|| None))
             .take(rows)
             .collect()
+    }
+
+    /// Unit of an epoch integer.
+    #[derive(Clone, Copy)]
+    pub enum EpochUnit {
+        /// Seconds since the Unix epoch.
+        Seconds,
+        /// Milliseconds since the Unix epoch.
+        Millis,
+        /// Microseconds since the Unix epoch.
+        Micros,
+        /// Nanoseconds since the Unix epoch.
+        Nanos,
+    }
+
+    /// Time unit of every `Datetime` column.
+    pub const DATETIME_UNIT: TimeUnit = TimeUnit::Microseconds;
+    /// Time zone of every `Datetime` column.
+    pub const DATETIME_ZONE: TimeZone = TimeZone::UTC;
+
+    const UNIX_EPOCH_FROM_CE_DAYS: i32 = 719_163;
+
+    fn datetime_dtype() -> DataType {
+        DataType::Datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
+    }
+
+    fn micros(value: i64, unit: EpochUnit) -> Option<i64> {
+        match unit {
+            EpochUnit::Seconds => value.checked_mul(1_000_000),
+            EpochUnit::Millis => value.checked_mul(1_000),
+            EpochUnit::Micros => Some(value),
+            EpochUnit::Nanos => Some(value.div_euclid(1_000)),
+        }
+    }
+
+    fn epoch_micros(value: Option<i64>, unit: EpochUnit, nonzero: bool) -> Option<i64> {
+        value
+            .filter(|value| !nonzero || *value != 0)
+            .and_then(|value| micros(value, unit))
+    }
+
+    fn epoch_day(value: Option<i64>, unit: EpochUnit, nonzero: bool) -> Option<i32> {
+        let per_day = match unit {
+            EpochUnit::Seconds => 86_400,
+            EpochUnit::Millis => 86_400_000,
+            EpochUnit::Micros => 86_400_000_000,
+            EpochUnit::Nanos => 86_400_000_000_000,
+        };
+        value
+            .filter(|value| !nonzero || *value != 0)
+            .and_then(|value| i32::try_from(value.div_euclid(per_day)).ok())
+    }
+
+    fn datetime_series(name: &str, micros: Vec<Option<i64>>) -> Series {
+        Series::new(name.into(), micros).into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
+    }
+
+    fn date_series(name: &str, days: Vec<Option<i32>>) -> Series {
+        Series::new(name.into(), days).into_date()
+    }
+
+    /// A `Datetime(us, UTC)` column from epoch integers; overflow and, with `nonzero`, `0` become null.
+    pub fn epoch_datetime(
+        name: String,
+        unit: EpochUnit,
+        nonzero: bool,
+        values: impl Iterator<Item = Option<i64>>,
+    ) -> Column {
+        let micros = values
+            .map(|value| epoch_micros(value, unit, nonzero))
+            .collect();
+        Column::from(datetime_series(&name, micros))
+    }
+
+    /// A `Date` column from epoch integers, taking the UTC calendar day.
+    pub fn epoch_date(
+        name: String,
+        unit: EpochUnit,
+        nonzero: bool,
+        values: impl Iterator<Item = Option<i64>>,
+    ) -> Column {
+        let days = values
+            .map(|value| epoch_day(value, unit, nonzero))
+            .collect();
+        Column::from(date_series(&name, days))
+    }
+
+    fn parse_date(value: &str) -> Option<i32> {
+        let day = NaiveDate::parse_from_str(value.get(..10)?, "%Y-%m-%d").ok()?;
+        Some(chrono::Datelike::num_days_from_ce(&day) - UNIX_EPOCH_FROM_CE_DAYS)
+    }
+
+    fn parse_rfc3339(value: &str) -> Option<i64> {
+        DateTime::parse_from_rfc3339(value)
+            .or_else(|_| DateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S%.f%#z"))
+            .ok()
+            .map(|datetime| datetime.timestamp_micros())
+    }
+
+    /// A `Date` column from the leading `YYYY-MM-DD` of each string; unparseable values become null.
+    pub fn str_date<'a>(name: String, values: impl Iterator<Item = Option<&'a str>>) -> Column {
+        let days = values.map(|value| value.and_then(parse_date)).collect();
+        Column::from(date_series(&name, days))
+    }
+
+    /// A `Datetime(us, UTC)` column from RFC 3339 strings; unparseable values become null.
+    pub fn rfc3339_datetime<'a>(
+        name: String,
+        values: impl Iterator<Item = Option<&'a str>>,
+    ) -> Column {
+        let micros = values.map(|value| value.and_then(parse_rfc3339)).collect();
+        Column::from(datetime_series(&name, micros))
+    }
+
+    /// A `List(Datetime(us, UTC))` column from lists of epoch integers.
+    pub fn datetime_list(
+        name: String,
+        unit: EpochUnit,
+        nonzero: bool,
+        values: impl Iterator<Item = Option<Vec<Option<i64>>>>,
+    ) -> Column {
+        let mut builder =
+            ListPrimitiveChunkedBuilder::<Int64Type>::new(name.into(), 0, 0, datetime_dtype());
+        for list in values {
+            match list {
+                Some(list) => builder.append_iter(
+                    list.into_iter()
+                        .map(|value| epoch_micros(value, unit, nonzero)),
+                ),
+                None => builder.append_null(),
+            }
+        }
+        Column::from(builder.finish().into_series())
+    }
+
+    /// A `List(Date)` column from lists of epoch integers.
+    pub fn date_list(
+        name: String,
+        unit: EpochUnit,
+        nonzero: bool,
+        values: impl Iterator<Item = Option<Vec<Option<i64>>>>,
+    ) -> Column {
+        let mut builder =
+            ListPrimitiveChunkedBuilder::<Int32Type>::new(name.into(), 0, 0, DataType::Date);
+        for list in values {
+            match list {
+                Some(list) => builder.append_iter(
+                    list.into_iter()
+                        .map(|value| epoch_day(value, unit, nonzero)),
+                ),
+                None => builder.append_null(),
+            }
+        }
+        Column::from(builder.finish().into_series())
     }
 
     pub trait Columns {
@@ -223,5 +378,70 @@ pub mod derive {
         ) -> Option<Column> {
             None
         }
+    }
+}
+
+#[cfg(all(test, feature = "dataframe"))]
+mod tests {
+    use super::derive::{
+        EpochUnit, date_list, datetime_list, epoch_date, epoch_datetime, rfc3339_datetime, str_date,
+    };
+    use polars::prelude::{DataType, TimeUnit, TimeZone};
+
+    fn utc() -> DataType {
+        DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+    }
+
+    #[test]
+    fn epoch_units_scale_to_microseconds() {
+        let column = epoch_datetime(
+            "t".into(),
+            EpochUnit::Nanos,
+            false,
+            [Some(1_500), Some(-1), None].into_iter(),
+        );
+        assert_eq!(column.dtype(), &utc());
+        let values: Vec<_> = column.datetime().unwrap().phys.iter().collect();
+        assert_eq!(values, vec![Some(1), Some(-1), None]);
+    }
+
+    #[test]
+    fn epoch_dates_floor_toward_the_earlier_day() {
+        let column = epoch_date(
+            "d".into(),
+            EpochUnit::Millis,
+            false,
+            [Some(86_399_999), Some(-1), Some(i64::MAX)].into_iter(),
+        );
+        let values: Vec<_> = column.date().unwrap().phys.iter().collect();
+        assert_eq!(values, vec![Some(0), Some(-1), None]);
+    }
+
+    #[test]
+    fn string_parsers_return_null_on_failure() {
+        let dates = str_date(
+            "d".into(),
+            [Some("2024-02-29"), Some("2023-02-29"), None].into_iter(),
+        );
+        let values: Vec<_> = dates.date().unwrap().phys.iter().collect();
+        assert_eq!(values, vec![Some(19_782), None, None]);
+
+        let instants = rfc3339_datetime(
+            "t".into(),
+            [Some("1970-01-01T00:00:01Z"), Some("1970-01-01"), None].into_iter(),
+        );
+        let values: Vec<_> = instants.datetime().unwrap().phys.iter().collect();
+        assert_eq!(values, vec![Some(1_000_000), None, None]);
+    }
+
+    #[test]
+    fn list_helpers_keep_null_rows_and_dtypes() {
+        let rows = || [Some(vec![Some(0), Some(1)]), None].into_iter();
+        let datetimes = datetime_list("t".into(), EpochUnit::Seconds, true, rows());
+        assert_eq!(datetimes.dtype(), &DataType::List(Box::new(utc())));
+        assert_eq!(datetimes.null_count(), 1);
+        let dates = date_list("d".into(), EpochUnit::Seconds, false, rows());
+        assert_eq!(dates.dtype(), &DataType::List(Box::new(DataType::Date)));
+        assert_eq!(dates.null_count(), 1);
     }
 }
