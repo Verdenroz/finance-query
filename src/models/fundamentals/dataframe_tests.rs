@@ -111,7 +111,7 @@ fn default_key_statistics_columns() {
         "beta:f64",
         "book_value:f64",
         "category:str",
-        "date_short_interest:i64",
+        "date_short_interest:date",
         "earnings_quarterly_growth:f64",
         "enterprise_to_ebitda:f64",
         "enterprise_to_revenue:f64",
@@ -120,28 +120,30 @@ fn default_key_statistics_columns() {
         "forward_eps:f64",
         "forward_pe:f64",
         "fund_family:str",
+        "fund_inception_date:date",
         "held_percent_insiders:f64",
         "held_percent_institutions:f64",
         "implied_shares_outstanding:i64",
-        "last_dividend_date:i64",
+        "last_dividend_date:date",
         "last_dividend_value:f64",
-        "last_fiscal_year_end:i64",
-        "last_split_date:i64",
+        "last_fiscal_year_end:date",
+        "last_split_date:date",
         "last_split_factor:str",
+        "latest_funding_date:date",
         "latest_share_class:str",
         "lead_investor:str",
         "legal_type:str",
         "max_age:i64",
-        "most_recent_quarter:i64",
+        "most_recent_quarter:date",
         "net_income_to_common:i64",
-        "next_fiscal_year_end:i64",
+        "next_fiscal_year_end:date",
         "price_hint:i64",
         "price_to_book:f64",
         "profit_margins:f64",
         "shares_outstanding:i64",
         "shares_percent_shares_out:f64",
         "shares_short:i64",
-        "shares_short_previous_month_date:i64",
+        "shares_short_previous_month_date:date",
         "shares_short_prior_month:i64",
         "short_percent_of_float:f64",
         "short_ratio:f64",
@@ -219,7 +221,8 @@ fn summary_detail_columns() {
         "day_low:f64",
         "dividend_rate:f64",
         "dividend_yield:f64",
-        "ex_dividend_date:i64",
+        "ex_dividend_date:date",
+        "expire_date:date",
         "fifty_day_average:f64",
         "fifty_two_week_high:f64",
         "fifty_two_week_low:f64",
@@ -240,6 +243,7 @@ fn summary_detail_columns() {
         "regular_market_open:f64",
         "regular_market_previous_close:f64",
         "regular_market_volume:i64",
+        "start_date:date",
         "to_currency:str",
         "total_assets:i64",
         "tradeable:bool",
@@ -352,4 +356,32 @@ fn etf_profile_nests_holdings_and_weightings() {
             .iter()
             .any(|c| c.starts_with("country_weightings:list[struct["))
     );
+}
+
+#[test]
+fn summary_detail_epoch_dates_are_utc_days() {
+    let row: SummaryDetail = serde_json::from_value(json!({
+        "exDividendDate": { "raw": 1794528000, "fmt": "2026-11-09" },
+        "expireDate": { "raw": 1797984000 },
+        "startDate": {}
+    }))
+    .unwrap();
+    let df = row.to_dataframe().unwrap();
+    let day = |name| df.column(name).unwrap().date().unwrap().phys.get(0);
+    assert_eq!(day("ex_dividend_date"), Some(20_770));
+    assert_eq!(day("expire_date"), Some(20_810));
+    assert_eq!(day("start_date"), None);
+}
+
+#[test]
+fn default_key_statistics_epoch_dates_are_utc_days() {
+    let row: DefaultKeyStatistics = serde_json::from_value(json!({
+        "mostRecentQuarter": { "raw": 1759017600 },
+        "fundInceptionDate": { "raw": 1011657600 }
+    }))
+    .unwrap();
+    let df = row.to_dataframe().unwrap();
+    let day = |name| df.column(name).unwrap().date().unwrap().phys.get(0);
+    assert_eq!(day("most_recent_quarter"), Some(20_359));
+    assert_eq!(day("fund_inception_date"), Some(11_709));
 }
