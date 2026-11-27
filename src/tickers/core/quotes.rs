@@ -15,9 +15,9 @@ use std::sync::Arc;
 #[non_exhaustive]
 pub struct BatchQuotesAs<F: Format = Raw> {
     /// Successfully fetched quotes, keyed by symbol, in input order
-    pub quotes: indexmap::IndexMap<String, Quote<F>>,
+    pub quotes: crate::tickers::SymbolMap<Quote<F>>,
     /// Symbols that failed to fetch, with error messages, in input order
-    pub errors: indexmap::IndexMap<String, String>,
+    pub errors: crate::tickers::SymbolMap<String>,
 }
 
 impl<F: Format> BatchQuotesAs<F> {
@@ -99,8 +99,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .entry(symbol.to_string())
-                            .or_insert_with(|| entry.value.clone());
+                            .insert(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -118,8 +117,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .entry(symbol.to_string())
-                            .or_insert_with(|| entry.value.clone());
+                            .insert(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);

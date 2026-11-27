@@ -1,28 +1,10 @@
 //! Macros for generating batch response types and cached fetch methods.
 
-pub(crate) fn in_symbol_order<V>(
-    mut map: indexmap::IndexMap<String, V>,
-    symbols: &[std::sync::Arc<str>],
-) -> indexmap::IndexMap<String, V> {
-    let mut next = 0;
-    for symbol in symbols {
-        if let Some(index) = map.get_index_of(&**symbol)
-            && index >= next
-        {
-            if index != next {
-                map.move_index(index, next);
-            }
-            next += 1;
-        }
-    }
-    map
-}
-
 /// Generate batch response types with identical structure but different field names.
 ///
 /// Each response type contains:
-/// - `IndexMap<String, T>` for successful results, in input symbol order
-/// - `IndexMap<String, String>` for errors, in input symbol order
+/// - `SymbolMap<T>` for successful results, in input symbol order
+/// - `SymbolMap<String>` for errors, in input symbol order
 /// - `success_count()`, `error_count()`, `all_successful()` convenience methods
 ///
 /// # Usage
@@ -44,26 +26,25 @@ macro_rules! define_batch_response {
         #[non_exhaustive]
         pub struct $name {
             #[doc = "Successfully fetched data, keyed by symbol"]
-            pub $field: indexmap::IndexMap<String, $type>,
+            pub $field: crate::tickers::SymbolMap<$type>,
             #[doc = "Symbols that failed to fetch, with error messages"]
-            pub errors: indexmap::IndexMap<String, String>,
+            pub errors: crate::tickers::SymbolMap<String>,
         }
 
         impl $name {
             pub(crate) fn with_capacity(capacity: usize) -> Self {
                 Self {
-                    $field: indexmap::IndexMap::with_capacity(capacity),
-                    errors: indexmap::IndexMap::new(),
+                    $field: crate::tickers::SymbolMap::with_capacity(capacity),
+                    errors: crate::tickers::SymbolMap::new(),
                 }
             }
 
             /// Reorders both maps to follow `symbols`. A repeated symbol keeps
             /// its first position.
-            pub(crate) fn in_symbol_order(self, symbols: &[std::sync::Arc<str>]) -> Self {
-                Self {
-                    $field: crate::tickers::macros::in_symbol_order(self.$field, symbols),
-                    errors: crate::tickers::macros::in_symbol_order(self.errors, symbols),
-                }
+            pub(crate) fn in_symbol_order(mut self, symbols: &[std::sync::Arc<str>]) -> Self {
+                self.$field.sort_by_symbols(symbols);
+                self.errors.sort_by_symbols(symbols);
+                self
             }
 
             #[doc = "Number of successfully fetched items"]
@@ -187,8 +168,7 @@ macro_rules! batch_fetch_cached {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
                         response
                             .$resp_field
-                            .entry(symbol.to_string())
-                            .or_insert_with(|| entry.value.clone());
+                            .insert(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -210,8 +190,7 @@ macro_rules! batch_fetch_cached {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
                         response
                             .$resp_field
-                            .entry(symbol.to_string())
-                            .or_insert_with(|| entry.value.clone());
+                            .insert(symbol.to_string(), entry.value.clone());
                     }
                 }
                 drop(cache);

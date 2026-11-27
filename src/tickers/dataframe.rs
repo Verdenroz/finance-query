@@ -4,6 +4,7 @@ use super::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
+    SymbolMap,
 };
 use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
@@ -12,12 +13,11 @@ use crate::models::corporate::recommendation::SimilarSymbol;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::{Contracts, Options};
 use crate::models::quote::Quote;
-use indexmap::IndexMap;
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::BTreeMap;
 
 fn stack_by_symbol<T>(
-    items: &IndexMap<String, T>,
+    items: &SymbolMap<T>,
     convert: impl Fn(&T) -> PolarsResult<DataFrame>,
     empty: impl FnOnce() -> PolarsResult<DataFrame>,
 ) -> PolarsResult<DataFrame> {

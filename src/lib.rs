@@ -344,7 +344,6 @@ pub use providers::{
 /// this crate's semver now covers `async-trait`: an `async-trait` 0.2 would
 /// be a breaking change here, because downstream impls use this attribute.
 pub use async_trait::async_trait;
-pub use indexmap::IndexMap;
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 
 // Domain-specific query handles — constructable via Providers factory methods.
@@ -381,7 +380,7 @@ pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
-    Tickers, TickersBuilder,
+    SymbolMap, Tickers, TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]

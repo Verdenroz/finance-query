@@ -1671,7 +1671,6 @@ dependencies = [
  "finance-query-types",
  "flate2",
  "futures",
- "indexmap",
  "mockito",
  "percent-encoding",
  "polars",

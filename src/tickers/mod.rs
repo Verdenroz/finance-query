@@ -7,6 +7,7 @@ mod core;
 #[cfg(feature = "dataframe")]
 mod dataframe;
 mod macros;
+mod symbol_map;
 
 pub use core::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
@@ -14,6 +15,7 @@ pub use core::{
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
     Tickers, TickersBuilder,
 };
+pub use symbol_map::SymbolMap;
 
 #[cfg(feature = "indicators")]
 pub use core::BatchIndicatorsResponse;
