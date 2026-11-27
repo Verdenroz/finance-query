@@ -2320,6 +2320,7 @@ fn ser_currencies(currencies: &[Currency]) {
 // wire formats.
 
 static QUOTE_JSON: &str = include_str!("fixtures/quote.json");
+static QUOTE_ETF_JSON: &str = include_str!("fixtures/quote_etf.json");
 static CHART_JSON: &str = include_str!("fixtures/chart.json");
 static OPTIONS_JSON: &str = include_str!("fixtures/options.json");
 static FINANCIALS_JSON: &str = include_str!("fixtures/financials.json");
@@ -2331,6 +2332,11 @@ static SECTOR_JSON: &str = include_str!("fixtures/sector.json");
 #[soothfast::measured(group = "endpoint_serde", p99 = "3ms", covers = "finance_query::Quote")]
 fn de_quote() {
     keep(serde_json::from_str::<Quote>(keep(QUOTE_JSON)).unwrap());
+}
+
+#[soothfast::measured(group = "endpoint_serde", alloc = 664, covers = "finance_query::Quote")]
+fn de_quote_etf() {
+    keep(serde_json::from_str::<Quote>(keep(QUOTE_ETF_JSON)).unwrap());
 }
 
 #[soothfast::measured(group = "endpoint_serde", covers = "finance_query::Chart")]
@@ -2380,6 +2386,11 @@ fn parsed_quote() -> Quote {
     serde_json::from_str(QUOTE_JSON).unwrap()
 }
 
+#[fixture]
+fn parsed_quote_etf() -> Quote {
+    serde_json::from_str(QUOTE_ETF_JSON).unwrap()
+}
+
 #[bench(
     group = "dataframe",
     setup_sized = synthetic_candles,
@@ -2404,6 +2415,16 @@ fn df_option_calls(options: &Options) {
 
 #[bench(group = "dataframe", setup = parsed_quote, alloc = 1538, covers = "finance_query::Quote")]
 fn df_quote(quote: &Quote) {
+    keep(keep(quote).to_dataframe().unwrap());
+}
+
+#[bench(
+    group = "dataframe",
+    setup = parsed_quote_etf,
+    alloc = 1688,
+    covers = "finance_query::Quote"
+)]
+fn df_quote_etf(quote: &Quote) {
     keep(keep(quote).to_dataframe().unwrap());
 }
 

@@ -195,12 +195,13 @@ impl ProviderSet {
     }
 
     /// Record a candidate's outcome in the health tracker. `NotSupported`
-    /// isn't a provider failure (it just means "try the next candidate"), so
-    /// it's excluded from health accounting entirely.
+    /// (try the next candidate) and `SymbolNotFound` (the provider answered,
+    /// the caller asked for a bad symbol) aren't provider failures, so they
+    /// are excluded from health accounting entirely.
     fn record_health<T>(&self, provider: Provider, result: &Result<T>) {
         match result {
             Ok(_) => self.health.record(provider, true, None),
-            Err(FinanceError::NotSupported { .. }) => {}
+            Err(FinanceError::NotSupported { .. } | FinanceError::SymbolNotFound { .. }) => {}
             Err(e) => self.health.record(provider, false, Some(e.to_string())),
         }
     }

@@ -2,15 +2,41 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::models::quote::FormattedValue;
 
-/// Custom deserializer that flattens Yahoo's array of single-sector objects into one struct
+/// Flattens Yahoo's array of single-sector objects into one struct. Also accepts the
+/// flattened map form that `Serialize` writes, so serialized quotes read back.
 fn deserialize_sector_weightings<'de, D>(
     deserializer: D,
 ) -> Result<Option<SectorWeighting>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let weightings: Option<Vec<SectorWeighting>> = Option::deserialize(deserializer)?;
-    Ok(weightings.map(|w| SectorWeighting::flatten(&w)))
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = Option<SectorWeighting>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a sector weighting array or object")
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_seq<A: serde::de::SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
+            let weightings = Vec::<SectorWeighting>::deserialize(
+                serde::de::value::SeqAccessDeserializer::new(seq),
+            )?;
+            Ok(Some(SectorWeighting::flatten(&weightings)))
+        }
+
+        fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
+            SectorWeighting::deserialize(serde::de::value::MapAccessDeserializer::new(map))
+                .map(Some)
+        }
+    }
+
+    deserializer.deserialize_any(Visitor)
 }
 
 /// Fund holdings including asset allocation, top holdings, and sector weightings
