@@ -143,37 +143,18 @@ components:
       description: "A fired alert, carrying the tick that triggered it."
       type: object
       properties:
-        changePercent:
-          description: Percent change carried by the triggering tick.
-          type: number
-          format: float
         condition:
           description: Condition that fired.
           $ref: "#/components/schemas/AlertCondition"
         previousPrice:
           description: "Last price seen before this tick, if any."
           type: number
-          format: float
-        price:
-          description: Price on the triggering tick.
-          type: number
-          format: float
-        symbol:
-          description: Symbol that triggered.
-          type: string
-        time:
-          description: Tick timestamp (milliseconds).
-          type: integer
-          format: int64
+          format: double
         update:
           description: The full triggering tick.
           $ref: "#/components/schemas/PriceUpdate"
       required:
-        - symbol
         - condition
-        - price
-        - changePercent
-        - time
         - update
     FeedStreamCommand:
       description: "Inbound control message for `/v2/feeds/stream`."
@@ -235,22 +216,22 @@ components:
       properties:
         ask:
           type: number
-          format: float
+          format: double
         askSize:
           type: integer
           format: int64
         bid:
           type: number
-          format: float
+          format: double
         bidSize:
           type: integer
           format: int64
         change:
           type: number
-          format: float
+          format: double
         changePercent:
           type: number
-          format: float
+          format: double
         circulatingSupply:
           type: number
           format: double
@@ -258,10 +239,10 @@ components:
           type: string
         dayHigh:
           type: number
-          format: float
+          format: double
         dayLow:
           type: number
-          format: float
+          format: double
         dayVolume:
           type: integer
           format: int64
@@ -292,15 +273,15 @@ components:
           format: int64
         openPrice:
           type: number
-          format: float
+          format: double
         optionsType:
           $ref: "#/components/schemas/OptionType"
         previousClose:
           type: number
-          format: float
+          format: double
         price:
           type: number
-          format: float
+          format: double
         priceHint:
           type: integer
           format: int64
@@ -310,7 +291,7 @@ components:
           type: string
         strikePrice:
           type: number
-          format: float
+          format: double
         time:
           type: integer
           format: int64

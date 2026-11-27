@@ -3,17 +3,17 @@
 //! Contains all data structures and types for Yahoo Finance's chart endpoint.
 
 #[cfg(feature = "indicators")]
-pub(crate) mod compute;
+pub mod compute;
 mod stock_bars;
 pub use stock_bars::{PriceAdjustment, StockBar};
 mod data;
 pub mod dividend_analytics;
 pub mod events;
 pub use events::ChartEvents;
-pub(crate) mod indicators;
+pub mod indicators;
 mod meta;
-pub(crate) mod response;
-pub(crate) mod result;
+pub mod response;
+pub mod result;
 /// Spark / sparkline submodule.
 pub mod spark;
 

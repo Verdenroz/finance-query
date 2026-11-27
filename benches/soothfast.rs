@@ -1874,7 +1874,7 @@ fn alert_inputs() -> (Vec<AlertRule>, Vec<PriceUpdate>) {
             if i % 4 == 3 {
                 update.id = "MSFT".to_string();
             }
-            update.price = 172.0 + (i % 8) as f32;
+            update.price = 172.0 + (i % 8) as f64;
             update.change_percent = if i % 2 == 0 { 1.5 } else { 0.2 };
             update
         })

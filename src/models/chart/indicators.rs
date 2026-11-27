@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 /// Chart indicators containing OHLCV data
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ChartIndicators {
+#[doc(hidden)]
+pub struct ChartIndicators {
     /// Quote data (OHLCV)
     pub quote: Vec<QuoteIndicator>,
     /// Adjusted close data
@@ -16,7 +17,8 @@ pub(crate) struct ChartIndicators {
 
 /// OHLCV quote indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct QuoteIndicator {
+#[doc(hidden)]
+pub struct QuoteIndicator {
     /// Open prices
     pub open: Option<Vec<Option<f64>>>,
     /// High prices
@@ -31,7 +33,8 @@ pub(crate) struct QuoteIndicator {
 
 /// Adjusted close indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct AdjCloseIndicator {
+#[doc(hidden)]
+pub struct AdjCloseIndicator {
     /// Adjusted close prices
     #[serde(rename = "adjclose")]
     pub adj_close: Option<Vec<Option<f64>>>,

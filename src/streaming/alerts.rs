@@ -147,15 +147,15 @@ impl AlertCondition {
     ///
     /// `previous` is the last price seen for the symbol; crossing conditions
     /// need it and never fire on the first tick of a symbol.
-    fn holds(&self, update: &PriceUpdate, previous: Option<f32>) -> bool {
-        let price = update.price as f64;
+    fn holds(&self, update: &PriceUpdate, previous: Option<f64>) -> bool {
+        let price = update.price;
         match *self {
-            Self::CrossesAbove(t) => previous.is_some_and(|p| (p as f64) <= t) && price > t,
-            Self::CrossesBelow(t) => previous.is_some_and(|p| (p as f64) >= t) && price < t,
+            Self::CrossesAbove(t) => previous.is_some_and(|p| p <= t) && price > t,
+            Self::CrossesBelow(t) => previous.is_some_and(|p| p >= t) && price < t,
             Self::PriceAbove(t) => price > t,
             Self::PriceBelow(t) => price < t,
-            Self::PercentChangeAbove(t) => update.change_percent as f64 >= t,
-            Self::PercentChangeBelow(t) => update.change_percent as f64 <= t,
+            Self::PercentChangeAbove(t) => update.change_percent >= t,
+            Self::PercentChangeBelow(t) => update.change_percent <= t,
             Self::VolumeAbove(t) => update.day_volume >= t,
         }
     }
@@ -197,18 +197,10 @@ impl AlertRule {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AlertEvent {
-    /// Symbol that triggered.
-    pub symbol: String,
     /// Condition that fired.
     pub condition: AlertCondition,
-    /// Price on the triggering tick.
-    pub price: f32,
     /// Last price seen before this tick, if any.
-    pub previous_price: Option<f32>,
-    /// Percent change carried by the triggering tick.
-    pub change_percent: f32,
-    /// Tick timestamp (milliseconds).
-    pub time: i64,
+    pub previous_price: Option<f64>,
     /// The full triggering tick.
     pub update: PriceUpdate,
 }
@@ -217,8 +209,8 @@ pub struct AlertEvent {
 impl AlertEvent {
     /// Converts the event to a single-row polars DataFrame.
     ///
-    /// Columns are `symbol`, `price`, `previous_price`, `change_percent` and
-    /// `time`, then the columns of [`PriceUpdate`] as `update_{column}`, then
+    /// Columns are `previous_price`, then the columns of
+    /// [`PriceUpdate`] as `update_{column}`, then
     /// `condition_kind` (the [`AlertConditionKind`] name). The condition's
     /// threshold is not in the frame.
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
@@ -245,28 +237,8 @@ impl AlertEvent {
             items.len(),
             vec![
                 Series::new(
-                    "symbol".into(),
-                    items.iter().map(|i| i.symbol.as_str()).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "price".into(),
-                    items.iter().map(|i| i.price).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
                     "previous_price".into(),
                     items.iter().map(|i| i.previous_price).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "change_percent".into(),
-                    items.iter().map(|i| i.change_percent).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "time".into(),
-                    items.iter().map(|i| i.time).collect::<Vec<_>>(),
                 )
                 .into(),
             ],
@@ -302,7 +274,7 @@ pub struct AlertEvaluator {
     /// Symbols any rule watches — a shared feed carries far more than these,
     /// and untracked ids must not accumulate history.
     watched: HashSet<String>,
-    last_price: HashMap<String, f32>,
+    last_price: HashMap<String, f64>,
 }
 
 impl AlertEvaluator {
@@ -352,13 +324,11 @@ impl AlertEvaluator {
             let holds = state.rule.condition.holds(update, previous);
             if holds && state.armed {
                 state.armed = false;
+                // A tick almost always fires one rule; skip the 4-slot first allocation.
+                fired.reserve_exact(usize::from(fired.is_empty()));
                 fired.push(AlertEvent {
-                    symbol: update.id.clone(),
                     condition: state.rule.condition,
-                    price: update.price,
                     previous_price: previous,
-                    change_percent: update.change_percent,
-                    time: update.time,
                     update: update.clone(),
                 });
             } else if !holds && state.rule.repeat {
@@ -433,7 +403,7 @@ where
 ///     .alerts([AlertRule::new("AAPL", AlertCondition::CrossesAbove(200.0))]);
 ///
 /// while let Some(alert) = alerts.next().await {
-///     println!("{} crossed at {}", alert.symbol, alert.price);
+///     println!("{} crossed at {}", alert.update.id, alert.update.price);
 /// }
 /// # Ok(())
 /// # }
@@ -452,7 +422,7 @@ mod tests {
     use super::*;
     use futures::StreamExt;
 
-    fn tick(symbol: &str, price: f32) -> PriceUpdate {
+    fn tick(symbol: &str, price: f64) -> PriceUpdate {
         PriceUpdate {
             id: symbol.to_string(),
             price,
@@ -539,8 +509,24 @@ mod tests {
         ]);
         let fired = evaluator.evaluate(&tick("NVDA", 20.0));
         assert_eq!(fired.len(), 1);
-        assert_eq!(fired[0].symbol, "NVDA");
+        assert_eq!(fired[0].update.id, "NVDA");
         assert_eq!(evaluator.symbols(), vec!["AAPL", "NVDA"]);
+    }
+
+    #[test]
+    fn rules_firing_on_one_tick_return_in_rule_order() {
+        let mut evaluator = AlertEvaluator::new([
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(30.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(10.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(500.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(20.0)),
+        ]);
+        let thresholds: Vec<f64> = evaluator
+            .evaluate(&tick("AAPL", 100.0))
+            .iter()
+            .map(|event| event.condition.threshold())
+            .collect();
+        assert_eq!(thresholds, [30.0, 10.0, 20.0]);
     }
 
     #[test]
@@ -612,7 +598,7 @@ mod tests {
             .await;
 
         assert_eq!(alerts.len(), 1);
-        assert_eq!(alerts[0].price, 151.0);
+        assert_eq!(alerts[0].update.price, 151.0);
         assert_eq!(alerts[0].update.id, "AAPL");
     }
 }

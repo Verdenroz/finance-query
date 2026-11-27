@@ -122,14 +122,14 @@ Each update yielded by the stream contains:
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | `String` | Ticker symbol (e.g., `"AAPL"`) |
-| `price` | `f32` | Current price |
-| `change` | `f32` | Price change from previous close |
-| `change_percent` | `f32` | Percent change from previous close |
-| `day_high` | `f32` | Day's high price |
-| `day_low` | `f32` | Day's low price |
+| `price` | `f64` | Current price |
+| `change` | `f64` | Price change from previous close |
+| `change_percent` | `f64` | Percent change from previous close |
+| `day_high` | `f64` | Day's high price |
+| `day_low` | `f64` | Day's low price |
 | `day_volume` | `i64` | Day's trading volume |
-| `open_price` | `f32` | Opening price |
-| `previous_close` | `f32` | Previous close price |
+| `open_price` | `f64` | Opening price |
+| `previous_close` | `f64` | Previous close price |
 | `short_name` | `String` | Short name/description |
 | `currency` | `String` | Currency code (e.g., `"USD"`) |
 | `exchange` | `String` | Exchange code (e.g., `"NMS"`) |

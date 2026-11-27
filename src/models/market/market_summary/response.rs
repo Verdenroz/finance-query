@@ -69,19 +69,22 @@ pub struct SparkData {
 /// Raw response from market summary endpoint
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RawMarketSummaryResponse {
+#[doc(hidden)]
+pub struct RawMarketSummaryResponse {
     pub market_summary_response: Option<MarketSummaryResult>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MarketSummaryResult {
+#[doc(hidden)]
+pub struct MarketSummaryResult {
     pub result: Option<Vec<MarketSummaryQuote>>,
 }
 
 impl MarketSummaryQuote {
     /// Parse market summary quotes from the raw JSON response
-    pub(crate) fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
         let raw: RawMarketSummaryResponse = serde_json::from_value(value)?;
         Ok(raw
             .market_summary_response

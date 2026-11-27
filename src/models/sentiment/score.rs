@@ -101,7 +101,8 @@ pub fn analyze(text: &str) -> Sentiment {
 /// Aggregate compound scores into a single [`Sentiment`] (simple mean).
 ///
 /// Returns `None` when there is nothing to aggregate.
-pub(crate) fn aggregate(scores: &[f64]) -> Option<Sentiment> {
+#[doc(hidden)]
+pub fn aggregate(scores: &[f64]) -> Option<Sentiment> {
     if scores.is_empty() {
         return None;
     }
@@ -112,7 +113,8 @@ pub(crate) fn aggregate(scores: &[f64]) -> Option<Sentiment> {
 /// Aggregate texts weighted by length (longer segments count more).
 ///
 /// Used for transcript-level scoring where paragraphs differ widely in length.
-pub(crate) fn aggregate_weighted(texts: &[&str]) -> Option<Sentiment> {
+#[doc(hidden)]
+pub fn aggregate_weighted(texts: &[&str]) -> Option<Sentiment> {
     let mut weighted_sum = 0.0;
     let mut total_weight = 0.0;
     for text in texts {

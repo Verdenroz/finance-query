@@ -10,21 +10,24 @@ use serde::{Deserialize, Serialize};
 /// ignores the many response fields nothing reads.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct QuoteTypeResponse {
+#[doc(hidden)]
+pub struct QuoteTypeResponse {
     /// Quote type container
     pub quote_type: QuoteTypeContainer,
 }
 
 /// Container for quote type results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct QuoteTypeContainer {
+#[doc(hidden)]
+pub struct QuoteTypeContainer {
     /// Quote type results
     pub result: Vec<QuoteTypeResult>,
 }
 
 /// Quote type result for a symbol
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct QuoteTypeResult {
+#[doc(hidden)]
+pub struct QuoteTypeResult {
     /// Quartr ID (company ID for earnings transcripts)
     #[serde(rename = "quartrId")]
     pub quartr_id: Option<String>,

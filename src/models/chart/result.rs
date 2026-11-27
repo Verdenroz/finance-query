@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 /// Chart result for a single symbol
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ChartResult {
+#[doc(hidden)]
+pub struct ChartResult {
     /// Metadata about the chart
     pub meta: ChartMeta,
     /// Timestamps for each data point
@@ -23,7 +24,8 @@ pub(crate) struct ChartResult {
 
 impl ChartResult {
     /// Convert chart result to a vector of candles
-    pub(crate) fn to_candles(&self) -> Vec<Candle> {
+    #[doc(hidden)]
+    pub fn to_candles(&self) -> Vec<Candle> {
         let timestamps = match &self.timestamp {
             Some(ts) => ts,
             None => return vec![],

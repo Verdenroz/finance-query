@@ -18,7 +18,7 @@ pub mod performance;
 pub mod sectors;
 
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
-pub(crate) mod index_trend;
+pub mod index_trend;
 pub use index_trend::{IndexTrend, IndustryTrend, SectorTrend, TrendEstimate};
 
 #[cfg(all(test, feature = "dataframe"))]

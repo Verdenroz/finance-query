@@ -110,7 +110,7 @@ impl PriceMerger {
             PolygonMessage::Trade(trade) => {
                 let snapshot = self.entry(trade.symbol()?);
                 if let Some(p) = trade.p {
-                    snapshot.price = p as f32;
+                    snapshot.price = p;
                 }
                 if let Some(s) = trade.s {
                     snapshot.last_size = s as i64;
@@ -126,10 +126,10 @@ impl PriceMerger {
             PolygonMessage::Quote(quote) => {
                 let snapshot = self.entry(quote.symbol()?);
                 if let Some(bp) = quote.bp {
-                    snapshot.bid = bp as f32;
+                    snapshot.bid = bp;
                 }
                 if let Some(ap) = quote.ap {
-                    snapshot.ask = ap as f32;
+                    snapshot.ask = ap;
                 }
                 if let Some(bs) = quote.bs {
                     snapshot.bid_size = bs as i64;
@@ -149,10 +149,10 @@ impl PriceMerger {
             PolygonMessage::ForexQuote(quote) => {
                 let snapshot = self.entry(quote.p.as_deref()?);
                 if let Some(b) = quote.b {
-                    snapshot.bid = b as f32;
+                    snapshot.bid = b;
                 }
                 if let Some(a) = quote.a {
-                    snapshot.ask = a as f32;
+                    snapshot.ask = a;
                 }
                 if let Some(t) = quote.t {
                     snapshot.time = t;
@@ -165,19 +165,19 @@ impl PriceMerger {
             PolygonMessage::Aggregate(agg) => {
                 let snapshot = self.entry(agg.symbol()?);
                 if let Some(c) = agg.c {
-                    snapshot.price = c as f32;
+                    snapshot.price = c;
                 }
                 if let Some(o) = agg.o {
-                    snapshot.open_price = o as f32;
+                    snapshot.open_price = o;
                 }
                 if let Some(h) = agg.h {
-                    snapshot.day_high = snapshot.day_high.max(h as f32);
+                    snapshot.day_high = snapshot.day_high.max(h);
                 }
                 if let Some(l) = agg.l {
                     snapshot.day_low = if snapshot.day_low == 0.0 {
-                        l as f32
+                        l
                     } else {
-                        snapshot.day_low.min(l as f32)
+                        snapshot.day_low.min(l)
                     };
                 }
                 if let Some(v) = agg.v {
@@ -192,7 +192,7 @@ impl PriceMerger {
             PolygonMessage::IndexValue(index) => {
                 let snapshot = self.entry(index.ticker.as_deref()?);
                 if let Some(val) = index.val {
-                    snapshot.price = val as f32;
+                    snapshot.price = val;
                 }
                 if let Some(t) = index.t {
                     snapshot.time = t;

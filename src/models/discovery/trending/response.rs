@@ -18,25 +18,29 @@ pub struct TrendingQuote {
 /// Raw response from trending endpoint
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RawTrendingResponse {
+#[doc(hidden)]
+pub struct RawTrendingResponse {
     pub finance: Option<TrendingFinance>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TrendingFinance {
+#[doc(hidden)]
+pub struct TrendingFinance {
     pub result: Option<Vec<TrendingResult>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TrendingResult {
+#[doc(hidden)]
+pub struct TrendingResult {
     pub quotes: Option<Vec<TrendingQuote>>,
 }
 
 impl TrendingQuote {
     /// Parse trending quotes from the raw JSON response
-    pub(crate) fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
         let raw: RawTrendingResponse = serde_json::from_value(value)?;
         Ok(raw
             .finance

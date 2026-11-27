@@ -7,14 +7,16 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for spark endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkResponse {
+#[doc(hidden)]
+pub struct SparkResponse {
     /// Spark container
     pub spark: SparkContainer,
 }
 
 /// Container for spark results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkContainer {
+#[doc(hidden)]
+pub struct SparkContainer {
     /// Spark results per symbol
     pub result: Option<Vec<SparkSymbolResult>>,
     /// Error if any
@@ -23,7 +25,8 @@ pub(crate) struct SparkContainer {
 
 /// Spark result for a single symbol
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkSymbolResult {
+#[doc(hidden)]
+pub struct SparkSymbolResult {
     /// Symbol
     pub symbol: String,
     /// Response data (array of chart-like responses)
@@ -32,7 +35,8 @@ pub(crate) struct SparkSymbolResult {
 
 /// Spark data (similar to chart result but with minimal indicators)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkData {
+#[doc(hidden)]
+pub struct SparkData {
     /// Metadata about the chart
     pub meta: ChartMeta,
     /// Timestamps for each data point
@@ -43,21 +47,24 @@ pub(crate) struct SparkData {
 
 /// Spark indicators containing only close prices
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkIndicators {
+#[doc(hidden)]
+pub struct SparkIndicators {
     /// Quote data (close prices only)
     pub quote: Vec<SparkQuote>,
 }
 
 /// Spark quote with only close prices
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SparkQuote {
+#[doc(hidden)]
+pub struct SparkQuote {
     /// Close prices
     pub close: Option<Vec<Option<f64>>>,
 }
 
 impl SparkResponse {
     /// Parse from JSON value
-    pub(crate) fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 }

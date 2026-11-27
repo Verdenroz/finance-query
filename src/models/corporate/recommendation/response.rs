@@ -7,14 +7,16 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for recommendations endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct RecommendationResponse {
+#[doc(hidden)]
+pub struct RecommendationResponse {
     /// Finance container
     pub finance: RecommendationFinance,
 }
 
 /// Finance container for recommendations
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct RecommendationFinance {
+#[doc(hidden)]
+pub struct RecommendationFinance {
     /// Recommendation results
     pub result: Vec<RecommendationResult>,
     /// Error if any

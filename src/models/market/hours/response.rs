@@ -168,7 +168,8 @@ impl MarketHours {
     /// user-friendly format. Yahoo labels every region's market
     /// `"U.S. markets"` in `name`/`message` (the times themselves are
     /// correct); the label is corrected from the market id here.
-    pub(crate) fn from_response(raw: serde_json::Value) -> Result<Self, String> {
+    #[doc(hidden)]
+    pub fn from_response(raw: serde_json::Value) -> Result<Self, String> {
         let raw_response: RawHoursResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse hours response: {}", e))?;
 
