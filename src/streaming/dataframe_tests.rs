@@ -60,13 +60,13 @@ fn price_update_columns() {
         columns(&df)[..8],
         [
             "id:str",
-            "price:f32",
+            "price:f64",
             "time:i64",
             "currency:str",
             "exchange:str",
             "quote_type:str",
             "market_hours:str",
-            "change_percent:f32",
+            "change_percent:f64",
         ]
     );
     assert_eq!(
@@ -187,27 +187,13 @@ fn series_update_columns() {
 #[test]
 fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
     let event = AlertEvent {
-        symbol: "AAPL".into(),
         condition: AlertCondition::PriceAbove(1.0),
-        price: 2.0,
         previous_price: None,
-        change_percent: 0.0,
-        time: 1,
         update: PriceUpdate::default(),
     };
     let df = event.to_dataframe().unwrap();
-    assert_eq!(
-        columns(&df)[..6],
-        [
-            "symbol:str",
-            "price:f32",
-            "previous_price:f32",
-            "change_percent:f32",
-            "time:i64",
-            "update_id:str",
-        ]
-    );
-    assert_eq!(df.width(), 5 + 33 + 1);
+    assert_eq!(columns(&df)[..2], ["previous_price:f64", "update_id:str"]);
+    assert_eq!(df.width(), 1 + 33 + 1);
     assert_eq!(columns(&df).last().unwrap(), "condition_kind:str");
     assert_eq!(
         df.column("condition_kind").unwrap().str().unwrap().get(0),

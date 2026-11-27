@@ -10,30 +10,30 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct GqlPriceUpdate {
     pub id: String,
-    pub price: f32,
+    pub price: f64,
     pub time: i64,
     pub currency: String,
     pub exchange: String,
     pub quote_type: String,
     pub market_hours: String,
-    pub change_percent: f32,
+    pub change_percent: f64,
     pub day_volume: i64,
-    pub day_high: f32,
-    pub day_low: f32,
-    pub change: f32,
+    pub day_high: f64,
+    pub day_low: f64,
+    pub change: f64,
     pub short_name: String,
     pub expire_date: i64,
-    pub open_price: f32,
-    pub previous_close: f32,
-    pub strike_price: f32,
+    pub open_price: f64,
+    pub previous_close: f64,
+    pub strike_price: f64,
     pub underlying_symbol: String,
     pub open_interest: i64,
     pub options_type: String,
     pub mini_option: i64,
     pub last_size: i64,
-    pub bid: f32,
+    pub bid: f64,
     pub bid_size: i64,
-    pub ask: f32,
+    pub ask: f64,
     pub ask_size: i64,
     pub price_hint: i64,
     pub vol_24hr: i64,
@@ -163,20 +163,12 @@ impl From<GqlAlertRuleInput> for AlertRule {
 #[derive(SimpleObject, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlAlertEvent {
-    /// Symbol that triggered.
-    pub symbol: String,
     /// Which predicate fired.
     pub condition: GqlAlertConditionKind,
     /// Threshold the predicate compared against.
     pub threshold: f64,
-    /// Price on the triggering tick.
-    pub price: f32,
     /// Last price seen before this tick.
-    pub previous_price: Option<f32>,
-    /// Percent change carried by the triggering tick.
-    pub change_percent: f32,
-    /// Tick timestamp (milliseconds).
-    pub time: i64,
+    pub previous_price: Option<f64>,
     /// The full triggering tick.
     pub update: GqlPriceUpdate,
 }
@@ -184,13 +176,9 @@ pub struct GqlAlertEvent {
 impl From<AlertEvent> for GqlAlertEvent {
     fn from(event: AlertEvent) -> Self {
         Self {
-            symbol: event.symbol,
             condition: event.condition.kind().into(),
             threshold: event.condition.threshold(),
-            price: event.price,
             previous_price: event.previous_price,
-            change_percent: event.change_percent,
-            time: event.time,
             update: GqlPriceUpdate::from(event.update),
         }
     }

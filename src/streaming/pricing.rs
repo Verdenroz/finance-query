@@ -4,6 +4,7 @@
 
 use prost::Message;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 
 /// Quote type enumeration
 #[derive(
@@ -346,30 +347,30 @@ impl PricingData {
 #[allow(missing_docs)]
 pub struct PriceUpdate {
     pub id: String,
-    pub price: f32,
+    pub price: f64,
     pub time: i64,
     pub currency: String,
     pub exchange: String,
     pub quote_type: QuoteType,
     pub market_hours: MarketHoursType,
-    pub change_percent: f32,
+    pub change_percent: f64,
     pub day_volume: i64,
-    pub day_high: f32,
-    pub day_low: f32,
-    pub change: f32,
+    pub day_high: f64,
+    pub day_low: f64,
+    pub change: f64,
     pub short_name: String,
     pub expire_date: i64,
-    pub open_price: f32,
-    pub previous_close: f32,
-    pub strike_price: f32,
+    pub open_price: f64,
+    pub previous_close: f64,
+    pub strike_price: f64,
     pub underlying_symbol: String,
     pub open_interest: i64,
     pub options_type: OptionType,
     pub mini_option: i64,
     pub last_size: i64,
-    pub bid: f32,
+    pub bid: f64,
     pub bid_size: i64,
-    pub ask: f32,
+    pub ask: f64,
     pub ask_size: i64,
     pub price_hint: i64,
     pub vol_24hr: i64,
@@ -380,34 +381,125 @@ pub struct PriceUpdate {
     pub market_cap: f64,
 }
 
+const ROUND: f64 = 6_755_399_441_055_744.0;
+const PRICE_LANES: usize = 10;
+const SCALES: [f64; 11] = [1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10];
+
+/// Widens by shortest decimal form so `189.98f32` becomes `189.98f64`, not
+/// `189.97999572753906`.
+fn widen(value: f32) -> f64 {
+    widen_scaled(value).unwrap_or_else(|| widen_shortest(value))
+}
+
+/// NaN when the hint is out of range, which sends every value to [`widen`].
+fn hint_scale(hint: i64) -> f64 {
+    usize::try_from(hint)
+        .ok()
+        .and_then(|h| SCALES.get(h))
+        .map_or(f64::NAN, |&scale| scale)
+}
+
+/// `scale` is 10^`price_hint`, Yahoo's quote decimal count. Below 2^20 scaled
+/// units an f32 rounds to at most one integer there, so that candidate is the
+/// shortest decimal whenever it round-trips. All lanes are checked together,
+/// which keeps the loop free of branches so it vectorizes; any miss, including
+/// a signed zero the rounding would unsign, redoes the lanes through [`widen`].
+fn widen_prices(values: [f32; PRICE_LANES], scale: f64) -> [f64; PRICE_LANES] {
+    let mut widened = [0.0; PRICE_LANES];
+    let mut misses = 0u32;
+    for (out, &value) in widened.iter_mut().zip(&values) {
+        let wide = f64::from(value);
+        let scaled = wide * scale;
+        let candidate = ((scaled + ROUND) - ROUND) / scale;
+        misses |= u32::from(scaled.abs().partial_cmp(&1_048_576.0) != Some(Ordering::Less))
+            | u32::from((candidate as f32).to_bits() != value.to_bits());
+        *out = candidate;
+    }
+    if misses == 0 {
+        widened
+    } else {
+        values.map(widen)
+    }
+}
+
+/// Below 2^24 the shortest decimal has a fractional digit count, so the first
+/// scale whose rounded quotient round-trips is it. Adding and subtracting
+/// 1.5 * 2^52 rounds half to even, as the shortest form does on exact ties.
+fn widen_scaled(value: f32) -> Option<f64> {
+    if value.is_nan() || value.abs() >= 16_777_216.0 {
+        return None;
+    }
+    let wide = f64::from(value);
+    SCALES.iter().find_map(|&scale| {
+        let candidate = ((wide * scale + ROUND) - ROUND) / scale;
+        (candidate as f32 == value).then(|| candidate.copysign(wide))
+    })
+}
+
+fn widen_shortest(value: f32) -> f64 {
+    if !value.is_finite() {
+        return f64::from(value);
+    }
+    ryu::Buffer::new()
+        .format_finite(value)
+        .parse()
+        .unwrap_or_else(|_| f64::from(value))
+}
+
 impl From<PricingData> for PriceUpdate {
     fn from(data: PricingData) -> Self {
+        let [
+            price,
+            day_high,
+            day_low,
+            change,
+            open_price,
+            previous_close,
+            strike_price,
+            bid,
+            ask,
+            _,
+        ] = widen_prices(
+            [
+                data.price,
+                data.day_high,
+                data.day_low,
+                data.change,
+                data.open_price,
+                data.previous_close,
+                data.strike_price,
+                data.bid,
+                data.ask,
+                0.0,
+            ],
+            hint_scale(data.price_hint),
+        );
         Self {
             id: data.id,
-            price: data.price,
+            price,
             time: data.time,
             currency: data.currency,
             exchange: data.exchange,
             quote_type: QuoteType::from(data.quote_type),
             market_hours: MarketHoursType::from(data.market_hours),
-            change_percent: data.change_percent,
+            change_percent: widen(data.change_percent),
             day_volume: data.day_volume,
-            day_high: data.day_high,
-            day_low: data.day_low,
-            change: data.change,
+            day_high,
+            day_low,
+            change,
             short_name: data.short_name,
             expire_date: data.expire_date,
-            open_price: data.open_price,
-            previous_close: data.previous_close,
-            strike_price: data.strike_price,
+            open_price,
+            previous_close,
+            strike_price,
             underlying_symbol: data.underlying_symbol,
             open_interest: data.open_interest,
             options_type: OptionType::from(data.options_type as i32),
             mini_option: data.mini_option,
             last_size: data.last_size,
-            bid: data.bid,
+            bid,
             bid_size: data.bid_size,
-            ask: data.ask,
+            ask,
             ask_size: data.ask_size,
             price_hint: data.price_hint,
             vol_24hr: data.vol_24hr,
@@ -457,6 +549,47 @@ mod tests {
         assert_eq!(MarketHoursType::from(0), MarketHoursType::PreMarket);
         assert_eq!(MarketHoursType::from(1), MarketHoursType::RegularMarket);
         assert_eq!(MarketHoursType::from(2), MarketHoursType::PostMarket);
+    }
+
+    #[test]
+    fn widening_keeps_the_shortest_decimal_form() {
+        let update = PriceUpdate::from(PricingData {
+            price: 189.98,
+            bid: f32::NAN,
+            ask: f32::INFINITY,
+            ..Default::default()
+        });
+        assert_eq!(update.price, 189.98_f64);
+        assert!(update.bid.is_nan());
+        assert_eq!(update.ask, f64::INFINITY);
+    }
+
+    #[test]
+    fn scaled_widening_matches_shortest_form() {
+        let strided = (0..=u32::MAX).step_by(4099);
+        let cents = (1..=1_000_000u32).map(|i| (i as f32 * 1e-2).to_bits());
+        let prices = (1..=1_000_000u32).map(|i| (i as f32 * 1e-4).to_bits());
+        let edges = [
+            0,
+            1,
+            0x007f_ffff,
+            f32::NAN.to_bits(),
+            f32::INFINITY.to_bits(),
+        ];
+        for bits in strided.chain(cents).chain(prices).chain(edges) {
+            for bits in [bits, bits | 1 << 31] {
+                let value = f32::from_bits(bits);
+                let shortest = widen_shortest(value).to_bits();
+                assert_eq!(widen(value).to_bits(), shortest, "{bits:#x}");
+                for hint in [-1, 0, 2, 4, 10, 11] {
+                    assert_eq!(
+                        widen_prices([value; PRICE_LANES], hint_scale(hint))[0].to_bits(),
+                        shortest,
+                        "{bits:#x} hint {hint}"
+                    );
+                }
+            }
+        }
     }
 
     fn sample() -> PricingData {
