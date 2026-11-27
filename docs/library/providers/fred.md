@@ -52,7 +52,7 @@ second init is_err = true
 
 ## Fetching FRED Series
 
-```rust no_run feature=fred covers=finance_query::models::economic::MacroSeries
+```rust no_run feature=fred covers=finance_query::fred::MacroSeries
 use finance_query::fred;
 
 #[tokio::main]
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `"PAYEMS"` | Total Nonfarm Payrolls |
 | `"PCE"` | Personal Consumption Expenditures |
 
-<!-- soothfast:bind finance_query::models::economic::MacroSeries -->
+<!-- soothfast:bind finance_query::fred::MacroSeries -->
 
 **`MacroSeries` fields:**
 
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 <!-- /soothfast:bind -->
 
-<!-- soothfast:bind finance_query::models::economic::MacroObservation -->
+<!-- soothfast:bind finance_query::fred::MacroObservation -->
 
 **`MacroObservation` fields:**
 
@@ -165,7 +165,7 @@ per date.
 
 No initialization required. Fetches directly from the US Treasury Department:
 
-```rust no_run feature=fred covers=finance_query::models::economic::TreasuryYield
+```rust no_run feature=fred covers=finance_query::fred::TreasuryYield
 use finance_query::fred;
 
 #[tokio::main]
@@ -185,7 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:bind finance_query::models::economic::TreasuryYield -->
+<!-- soothfast:bind finance_query::fred::TreasuryYield -->
 
 **`TreasuryYield` fields** (all yields are `Option<f64>` in %):
 

@@ -53,7 +53,7 @@ The series ID is a FRED series identifier such as `"GDP"`, `"FEDFUNDS"`, or `"CP
 
 The returned [`EconomicSeries`](https://docs.rs/finance-query/latest/finance_query/struct.EconomicSeries.html) value contains:
 
-<!-- soothfast:bind finance_query::models::economic::EconomicSeries -->
+<!-- soothfast:bind finance_query::EconomicSeries -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -67,7 +67,7 @@ The returned [`EconomicSeries`](https://docs.rs/finance-query/latest/finance_que
 
 Each `MacroObservation` has:
 
-<!-- soothfast:bind finance_query::models::economic::MacroObservation -->
+<!-- soothfast:bind finance_query::fred::MacroObservation -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -81,7 +81,7 @@ Both tables are backed by a compiled, real value — `EconomicSeries` and
 both derive `Deserialize`, so a fixture value can be built from outside the
 crate with `serde_json::from_value`:
 
-```rust capture-output feature=fred covers=finance_query::models::economic::EconomicSeries
+```rust capture-output feature=fred covers=finance_query::EconomicSeries
 use finance_query::EconomicSeries;
 use finance_query::fred::MacroObservation;
 
@@ -113,7 +113,7 @@ first observation = 2024-01-01 -> Some(28624.1)
 
 ## Example: Inspecting GDP Data
 
-```rust no_run feature=fred covers=finance_query::models::economic::MacroObservation
+```rust no_run feature=fred covers=finance_query::fred::MacroObservation
 use finance_query::{Capability, Provider, Providers};
 
 #[tokio::main]

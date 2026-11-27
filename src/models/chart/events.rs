@@ -135,7 +135,7 @@ impl ChartEvents {
     /// Build events from public model values.
     ///
     /// The only way to construct this outside the crate, for a
-    /// [`CorporateProvider`](crate::ProviderAdapter) implementation returning
+    /// `CorporateProvider` implementation returning
     /// events it fetched itself.
     pub fn from_parts(
         dividends: Vec<Dividend>,

@@ -1,6 +1,6 @@
 //! Earnings-surprise history.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route; FMP and Yahoo both implement it.
 
 use serde::{Deserialize, Serialize};
