@@ -19,13 +19,33 @@ enum Mapping {
     Skip,
 }
 
+#[derive(Clone, Copy)]
+enum TimeKind {
+    Datetime,
+    Date,
+}
+
+struct TimeAttr {
+    kind: TimeKind,
+    unit: Option<LitStr>,
+}
+
+/// How an epoch integer is read out of the field.
+#[derive(Clone, Copy)]
+enum Epoch {
+    Plain,
+    Formatted,
+}
+
 #[derive(Default)]
 struct FieldAttrs {
     skip: bool,
     flatten: bool,
     list: bool,
     nested: bool,
+    nonzero: bool,
     rename: Option<String>,
+    time: Option<TimeAttr>,
 }
 
 pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
@@ -148,6 +168,17 @@ fn field_columns(
 
     let pl = quote! { #krate::polars::prelude };
     let name = quote! { ::std::format!("{}{}", prefix, #column) };
+    if let Some(time) = &attrs.time {
+        let source = TimeSource {
+            krate,
+            format_param,
+            field,
+            inner,
+            name: &name,
+            values: &values,
+        };
+        return time_columns(&source, time, attrs.list, attrs.nonzero).map(Some);
+    }
     let series = |convert: TokenStream| {
         quote! {
             [#pl::Column::from(<#pl::Series as #pl::NamedFrom<_, _>>::new(
@@ -183,6 +214,126 @@ fn field_columns(
         Mapping::Skip => return Ok(None),
     };
     Ok(Some(columns))
+}
+
+struct TimeSource<'a> {
+    krate: &'a Path,
+    format_param: Option<&'a Ident>,
+    field: &'a Field,
+    inner: &'a Type,
+    name: &'a TokenStream,
+    values: &'a TokenStream,
+}
+
+fn time_columns(
+    source: &TimeSource,
+    time: &TimeAttr,
+    list: bool,
+    nonzero: bool,
+) -> syn::Result<TokenStream> {
+    let TimeSource {
+        krate,
+        format_param,
+        field,
+        inner,
+        name,
+        values,
+    } = *source;
+    let helpers = quote! { #krate::__dataframe };
+    let fail = |message: &str| Err(syn::Error::new_spanned(&field.ty, message));
+    let (element, is_vec) = match vec_inner(inner) {
+        Some(element) => (element, true),
+        None => (inner, false),
+    };
+    if is_vec != list {
+        return fail(if list {
+            "`list` requires a `Vec` field"
+        } else {
+            "a `Vec` time field requires `list`"
+        });
+    }
+    let Some(epoch) = epoch_source(element, format_param) else {
+        if is_vec || !is_string(element) {
+            return fail(
+                "`datetime` and `date` support `i64`, `FormattedValue<i64>` and `String`, or a `Vec` of the integer types with `list`",
+            );
+        }
+        if let Some(unit) = &time.unit {
+            return Err(syn::Error::new_spanned(
+                unit,
+                "a `String` field takes `datetime` or `date` without a unit",
+            ));
+        }
+        let helper = match time.kind {
+            TimeKind::Datetime => quote! { rfc3339_datetime },
+            TimeKind::Date => quote! { str_date },
+        };
+        return Ok(quote! {
+            [#helpers::#helper(
+                #name,
+                #values.map(|v| v.map(::std::string::String::as_str)),
+            )]
+        });
+    };
+    let Some(unit) = &time.unit else {
+        return fail("an integer time field needs a unit, such as `datetime = \"s\"`");
+    };
+    let unit = match unit.value().as_str() {
+        "s" => quote! { Seconds },
+        "ms" => quote! { Millis },
+        "us" => quote! { Micros },
+        _ => quote! { Nanos },
+    };
+    let unit = quote! { #helpers::EpochUnit::#unit };
+    if !is_vec {
+        let helper = match time.kind {
+            TimeKind::Datetime => quote! { epoch_datetime },
+            TimeKind::Date => quote! { epoch_date },
+        };
+        let scalar = match epoch {
+            Epoch::Plain => quote! { |v| v.copied() },
+            Epoch::Formatted => quote! { |v| v.and_then(|v| v.raw) },
+        };
+        return Ok(quote! {
+            [#helpers::#helper(#name, #unit, #nonzero, #values.map(#scalar))]
+        });
+    }
+    let each = match epoch {
+        Epoch::Plain => quote! { |v| ::core::option::Option::Some(*v) },
+        Epoch::Formatted => quote! { |v| v.raw },
+    };
+    let helper = match time.kind {
+        TimeKind::Datetime => quote! { datetime_list },
+        TimeKind::Date => quote! { date_list },
+    };
+    Ok(quote! {
+        [#helpers::#helper(
+            #name,
+            #unit,
+            #nonzero,
+            #values.map(|v| v.map(|list| list.iter().map(#each).collect::<::std::vec::Vec<_>>())),
+        )]
+    })
+}
+
+fn epoch_source(ty: &Type, format_param: Option<&Ident>) -> Option<Epoch> {
+    let Type::Path(type_path) = ty else {
+        return None;
+    };
+    let last = type_path.path.segments.last()?;
+    let wraps_i64 = first_generic(&last.arguments).is_some_and(is_i64);
+    if format_param.is_some_and(|param| is_format_assoc_value(type_path, param)) {
+        return wraps_i64.then_some(Epoch::Formatted);
+    }
+    match last.ident.to_string().as_str() {
+        "i64" if last.arguments.is_empty() => Some(Epoch::Plain),
+        "FormattedValue" if wraps_i64 => Some(Epoch::Formatted),
+        _ => None,
+    }
+}
+
+fn is_i64(ty: &Type) -> bool {
+    matches!(ty, Type::Path(tp) if tp.path.is_ident("i64"))
 }
 
 fn mapping(ty: &Type, format_param: Option<&Ident>) -> Mapping {
@@ -239,14 +390,55 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.list = true;
             } else if meta.path.is_ident("nested") {
                 attrs.nested = true;
+            } else if meta.path.is_ident("nonzero") {
+                attrs.nonzero = true;
             } else if meta.path.is_ident("rename") {
                 attrs.rename = Some(meta.value()?.parse::<LitStr>()?.value());
+            } else if meta.path.is_ident("datetime") || meta.path.is_ident("date") {
+                if attrs.time.is_some() {
+                    return Err(meta.error("only one of `datetime` and `date` is allowed"));
+                }
+                let kind = if meta.path.is_ident("date") {
+                    TimeKind::Date
+                } else {
+                    TimeKind::Datetime
+                };
+                let unit = if meta.input.peek(syn::Token![=]) {
+                    let unit: LitStr = meta.value()?.parse()?;
+                    let allowed: &[&str] = match kind {
+                        TimeKind::Datetime => &["s", "ms", "us", "ns"],
+                        TimeKind::Date => &["s", "ms"],
+                    };
+                    if !allowed.contains(&unit.value().as_str()) {
+                        return Err(syn::Error::new_spanned(
+                            &unit,
+                            format!("unit must be one of {}", allowed.join(", ")),
+                        ));
+                    }
+                    Some(unit)
+                } else {
+                    None
+                };
+                attrs.time = Some(TimeAttr { kind, unit });
             } else {
-                return Err(meta
-                    .error("expected `skip`, `flatten`, `list`, `nested` or `rename = \"...\"`"));
+                return Err(meta.error(
+                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date` or `rename = \"...\"`",
+                ));
             }
             Ok(())
         })?;
+    }
+    if attrs.time.is_some() && (attrs.skip || attrs.flatten || attrs.nested) {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`datetime` and `date` cannot be combined with `skip`, `flatten` or `nested`",
+        ));
+    }
+    if attrs.nonzero && attrs.time.as_ref().is_none_or(|time| time.unit.is_none()) {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`nonzero` requires `datetime = \"unit\"` or `date = \"unit\"`",
+        ));
     }
     if attrs.nested && (attrs.skip || attrs.list || attrs.flatten) {
         return Err(syn::Error::new_spanned(
