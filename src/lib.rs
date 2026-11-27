@@ -379,9 +379,9 @@ pub use finance::{EarningsCalendarEntry, IpoCalendarEntry, earnings_calendar, ip
 
 pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
-    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse, Tickers,
-    TickersBuilder,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
+    BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
+    Tickers, TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]
@@ -411,6 +411,7 @@ pub use finance::{LookupOptions, LookupType, SearchOptions};
 // ============================================================================
 // Parameter enums - Used with Ticker and finance methods
 // ============================================================================
+pub use constants::fundamental_types;
 pub use constants::indices::Region as IndicesRegion;
 pub use constants::screeners::Screener;
 pub use constants::sectors::Sector;
