@@ -993,6 +993,7 @@ fn bt_monte_carlo(result: &finance_query::backtesting::BacktestResult) {
 #[bench(
     group = "dataframe",
     setup = backtest_result,
+    alloc = 166,
     covers = "finance_query::backtesting::BacktestResult"
 )]
 fn df_backtest_trades_signals(result: &finance_query::backtesting::BacktestResult) {
@@ -1019,6 +1020,7 @@ fn optimization_report() -> finance_query::backtesting::OptimizationReport {
 #[bench(
     group = "dataframe",
     setup = optimization_report,
+    alloc = 382,
     covers = "finance_query::backtesting::OptimizationReport"
 )]
 fn df_optimization_report(report: &finance_query::backtesting::OptimizationReport) {
