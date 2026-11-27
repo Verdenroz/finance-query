@@ -380,9 +380,30 @@ pub struct PriceUpdate {
     pub market_cap: f64,
 }
 
+const SCALES: [f64; 11] = [1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10];
+
 /// Widens by shortest decimal form so `189.98f32` becomes `189.98f64`, not
 /// `189.97999572753906`.
 fn widen(value: f32) -> f64 {
+    widen_scaled(value).unwrap_or_else(|| widen_shortest(value))
+}
+
+/// Below 2^24 the shortest decimal has a fractional digit count, so the first
+/// scale whose rounded quotient round-trips is it. Adding and subtracting
+/// 1.5 * 2^52 rounds half to even, as the shortest form does on exact ties.
+fn widen_scaled(value: f32) -> Option<f64> {
+    const ROUND: f64 = 6_755_399_441_055_744.0;
+    if value.is_nan() || value.abs() >= 16_777_216.0 {
+        return None;
+    }
+    let wide = f64::from(value);
+    SCALES.iter().find_map(|&scale| {
+        let candidate = ((wide * scale + ROUND) - ROUND) / scale;
+        (candidate as f32 == value).then(|| candidate.copysign(wide))
+    })
+}
+
+fn widen_shortest(value: f32) -> f64 {
     if !value.is_finite() {
         return f64::from(value);
     }
@@ -482,6 +503,29 @@ mod tests {
         assert_eq!(update.price, 189.98_f64);
         assert!(update.bid.is_nan());
         assert_eq!(update.ask, f64::INFINITY);
+    }
+
+    #[test]
+    fn scaled_widening_matches_shortest_form() {
+        let strided = (0..=u32::MAX).step_by(4099);
+        let prices = (1..=10_000_000u32).map(|i| (i as f32 * 1e-4).to_bits());
+        let edges = [
+            0,
+            1,
+            0x007f_ffff,
+            f32::NAN.to_bits(),
+            f32::INFINITY.to_bits(),
+        ];
+        for bits in strided.chain(prices).chain(edges) {
+            for bits in [bits, bits | 1 << 31] {
+                let value = f32::from_bits(bits);
+                assert_eq!(
+                    widen(value).to_bits(),
+                    widen_shortest(value).to_bits(),
+                    "{bits:#x}"
+                );
+            }
+        }
     }
 
     fn sample() -> PricingData {
