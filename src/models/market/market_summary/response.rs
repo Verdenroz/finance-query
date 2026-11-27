@@ -38,6 +38,7 @@ pub struct MarketSummaryQuote {
     pub regular_market_previous_close: Option<FormattedValue<f64>>,
     /// Regular market time (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub regular_market_time: Option<FormattedValue<i64>>,
     /// Spark chart data (if available)
     #[serde(skip_serializing_if = "Option::is_none")]

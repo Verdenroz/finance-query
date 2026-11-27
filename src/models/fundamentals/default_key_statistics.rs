@@ -50,6 +50,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Date of short interest data
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub date_short_interest: Option<F::Value<i64>>,
 
     /// Quarterly earnings growth rate
@@ -90,7 +91,8 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Fund inception date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fund_inception_date: Option<serde_json::Value>,
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    pub fund_inception_date: Option<F::Value<i64>>,
 
     /// Funding to date (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -114,6 +116,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Last dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_dividend_date: Option<F::Value<i64>>,
 
     /// Last dividend value per share
@@ -122,10 +125,12 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Last fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Last stock split date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_split_date: Option<F::Value<i64>>,
 
     /// Last stock split factor (e.g., "4:1")
@@ -138,7 +143,8 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Latest funding date (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latest_funding_date: Option<serde_json::Value>,
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    pub latest_funding_date: Option<F::Value<i64>>,
 
     /// Latest implied valuation (for private companies)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -170,6 +176,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Most recent quarter end date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub most_recent_quarter: Option<F::Value<i64>>,
 
     /// Net income to common shareholders
@@ -178,6 +185,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Next fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub next_fiscal_year_end: Option<F::Value<i64>>,
 
     /// PEG ratio (Price/Earnings to Growth)
@@ -222,6 +230,7 @@ pub struct DefaultKeyStatistics<F: Format = Both> {
 
     /// Previous month date for short interest
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub shares_short_previous_month_date: Option<F::Value<i64>>,
 
     /// Shares short in prior month
@@ -291,6 +300,24 @@ mod tests {
         assert_eq!(
             stats.shares_outstanding.as_ref().map(|v| v.raw),
             Some(Some(14776353000))
+        );
+    }
+
+    #[test]
+    fn test_deserialize_epoch_dates() {
+        let json = r#"{
+            "fundInceptionDate": {"raw": 1011657600, "fmt": "2002-01-22"},
+            "latestFundingDate": {}
+        }"#;
+
+        let stats: DefaultKeyStatistics = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            stats.fund_inception_date.as_ref().map(|v| v.raw),
+            Some(Some(1011657600))
+        );
+        assert_eq!(
+            stats.latest_funding_date.as_ref().map(|v| v.raw),
+            Some(None)
         );
     }
 

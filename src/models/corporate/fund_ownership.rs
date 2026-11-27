@@ -50,6 +50,7 @@ pub struct FundOwner {
 
     /// Date of report
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub report_date: Option<crate::models::quote::FormattedValue<i64>>,
 }
 

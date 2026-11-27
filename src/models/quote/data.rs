@@ -123,6 +123,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Regular market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub regular_market_time: Option<i64>,
 
     /// Regular market day high
@@ -194,6 +195,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Pre-market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub pre_market_time: Option<i64>,
 
     /// Post-market price
@@ -210,6 +212,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Post-market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub post_market_time: Option<i64>,
 
     // ===== VOLUME DATA =====
@@ -316,6 +319,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Ex-dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub ex_dividend_date: Option<F::Value<i64>>,
 
     /// Dividend payout ratio
@@ -328,6 +332,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Last dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_dividend_date: Option<F::Value<i64>>,
 
     // ===== BID/ASK =====
@@ -390,6 +395,7 @@ pub struct Quote<F: Format = Both> {
 
     /// Date of short interest data
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub date_short_interest: Option<F::Value<i64>>,
 
     // ===== FINANCIAL METRICS =====
@@ -638,6 +644,7 @@ pub struct Quote<F: Format = Both> {
 
     /// First trade date (Unix epoch UTC)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub first_trade_date_epoch_utc: Option<i64>,
 
     /// Message board ID
@@ -668,18 +675,22 @@ pub struct Quote<F: Format = Both> {
 
     /// Last stock split date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_split_date: Option<F::Value<i64>>,
 
     /// Last fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub last_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Next fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub next_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Most recent quarter date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub most_recent_quarter: Option<F::Value<i64>>,
 
     // ===== MISC =====

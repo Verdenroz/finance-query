@@ -86,9 +86,11 @@ pub struct OptionContract {
     pub contract_size: Option<String>,
 
     /// Expiration date (Unix timestamp)
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s", nonzero))]
     pub expiration: Option<i64>,
 
     /// Last trade date (Unix timestamp)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub last_trade_date: Option<i64>,
 
     /// Implied volatility

@@ -70,6 +70,7 @@ pub struct FundPerformance {
 pub struct PerformanceOverview {
     /// As of date (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub as_of_date: Option<FormattedValue<i64>>,
 
     /// Year-to-date return percentage
@@ -120,6 +121,7 @@ pub struct PerformanceOverviewCat {
 pub struct TrailingReturns {
     /// As of date (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub as_of_date: Option<FormattedValue<i64>>,
 
     /// Year-to-date return

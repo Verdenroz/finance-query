@@ -62,6 +62,7 @@ pub struct ResearchReport {
     pub author: Option<String>,
     /// Report publication date (Unix timestamp in milliseconds)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms"))]
     pub report_date: Option<i64>,
     /// Report unique identifier
     #[serde(skip_serializing_if = "Option::is_none")]

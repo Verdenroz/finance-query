@@ -54,6 +54,7 @@ pub struct InsiderTransaction {
 
     /// Start date of the transaction
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub start_date: Option<crate::models::quote::FormattedValue<i64>>,
 
     /// Ownership type ("D" for direct, "I" for indirect)

@@ -96,11 +96,13 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Ex-dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub ex_dividend_date: Option<F::Value<i64>>,
 
     /// Expiration date (for options/futures)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expire_date: Option<serde_json::Value>,
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    pub expire_date: Option<F::Value<i64>>,
 
     /// 50-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -196,7 +198,8 @@ pub struct SummaryDetail<F: Format = Both> {
 
     /// Start date (for funds/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_date: Option<serde_json::Value>,
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    pub start_date: Option<F::Value<i64>>,
 
     /// Strike price (for options)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,6 +279,21 @@ mod tests {
             Some(Some(4090000000000))
         );
         assert_eq!(detail.tradeable, Some(true));
+    }
+
+    #[test]
+    fn test_deserialize_epoch_dates() {
+        let json = r#"{
+            "expireDate": {"raw": 1797984000, "fmt": "2026-12-23"},
+            "startDate": {}
+        }"#;
+
+        let detail: SummaryDetail = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            detail.expire_date.as_ref().map(|v| v.raw),
+            Some(Some(1797984000))
+        );
+        assert_eq!(detail.start_date.as_ref().map(|v| v.raw), Some(None));
     }
 
     #[test]
