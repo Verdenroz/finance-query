@@ -1,0 +1,19 @@
+{
+  "quoteSummary": {
+    "result": [
+      {
+        "price": {
+          "maxAge": 1,
+          "symbol": "AAPL",
+          "marketState": "POST",
+          "regularMarketPrice": {"raw": 356.27, "fmt": "356.27"},
+          "regularMarketChange": {"raw": 1.3899841, "fmt": "1.39"},
+          "regularMarketChangePercent": {"raw": 0.003916772, "fmt": "0.39%"},
+          "regularMarketPreviousClose": {"raw": 354.88, "fmt": "354.88"},
+          "postMarketChangePercent": {"raw": -0.0024843556, "fmt": "-0.25%"}
+        }
+      }
+    ],
+    "error": null
+  }
+}
