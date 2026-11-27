@@ -320,12 +320,10 @@ mod tests {
     fn candle_timestamp_is_epoch_seconds_as_microseconds() {
         let candle = Candle::__new(1_794_603_601, 0.0, 0.0, 0.0, 0.0, 0, None, None);
         let df = candle.to_dataframe().unwrap();
-        let micros = df
-            .column("timestamp")
-            .unwrap()
-            .cast(&DataType::Int64)
-            .unwrap();
-        assert_eq!(micros.i64().unwrap().get(0), Some(1_794_603_601_000_000));
+        assert_eq!(
+            crate::models::dataframe_test_util::micros(&df, "timestamp"),
+            Some(1_794_603_601_000_000)
+        );
     }
 
     #[test]

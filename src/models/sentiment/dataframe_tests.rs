@@ -1,6 +1,5 @@
 use super::{FearAndGreed, FearGreedLabel, SymbolSentiment};
-use crate::models::dataframe_test_util::columns;
-use polars::prelude::DataType;
+use crate::models::dataframe_test_util::{columns, micros};
 use serde_json::json;
 
 #[test]
@@ -34,12 +33,7 @@ fn fear_and_greed_columns() {
         df.column("classification").unwrap().str().unwrap().get(0),
         Some("Extreme Fear")
     );
-    let micros = df
-        .column("timestamp")
-        .unwrap()
-        .cast(&DataType::Int64)
-        .unwrap();
-    assert_eq!(micros.i64().unwrap().get(0), Some(1_700_000_000_000_000));
+    assert_eq!(micros(&df, "timestamp"), Some(1_700_000_000_000_000));
 
     let empty = <FearAndGreed>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);

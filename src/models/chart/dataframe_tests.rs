@@ -1,6 +1,5 @@
 use super::{Dividend, DividendAnalytics, StockBar};
-use crate::models::dataframe_test_util::columns;
-use polars::prelude::DataType;
+use crate::models::dataframe_test_util::{columns, micros};
 use serde_json::json;
 
 #[test]
@@ -47,25 +46,10 @@ fn dividend_analytics_flattens_both_payments() {
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 1);
     assert_eq!(
-        df.column("last_payment_timestamp")
-            .unwrap()
-            .cast(&DataType::Int64)
-            .unwrap()
-            .i64()
-            .unwrap()
-            .get(0),
+        micros(&df, "last_payment_timestamp"),
         Some(2 * 86_400_000_000)
     );
-    assert_eq!(
-        df.column("first_payment_timestamp")
-            .unwrap()
-            .cast(&DataType::Int64)
-            .unwrap()
-            .i64()
-            .unwrap()
-            .get(0),
-        Some(86_400_000_000)
-    );
+    assert_eq!(micros(&df, "first_payment_timestamp"), Some(86_400_000_000));
 
     let none = DividendAnalytics::from_dividends(&[])
         .to_dataframe()

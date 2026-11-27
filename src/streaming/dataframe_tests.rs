@@ -8,7 +8,7 @@ use super::options::{Greeks, OptionContractUpdate};
 use super::pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 #[cfg(feature = "polygon")]
 use super::trades::TradeTick;
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, micros};
 use polars::prelude::DataType;
 use serde_json::json;
 
@@ -88,8 +88,7 @@ fn price_update_time_is_epoch_millis_as_microseconds() {
         ..Default::default()
     };
     let df = update.to_dataframe().unwrap();
-    let micros = df.column("time").unwrap().cast(&DataType::Int64).unwrap();
-    assert_eq!(micros.i64().unwrap().get(0), Some(1_700_000_000_000_000));
+    assert_eq!(micros(&df, "time"), Some(1_700_000_000_000_000));
     assert_eq!(df.column("expire_date").unwrap().dtype(), &DataType::Int64);
 }
 
