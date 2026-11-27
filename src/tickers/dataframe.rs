@@ -268,13 +268,13 @@ mod tests {
         let mut batch = BatchDividendsResponse::with_capacity(2);
         batch.dividends.insert(
             "MSFT".into(),
-            response(serde_json::json!([{"timestamp": 5, "amount": 0.5}])),
+            response(serde_json::json!([{"timestamp": 432000, "amount": 0.5}])),
         );
         batch.dividends.insert(
             "AAPL".into(),
             response(serde_json::json!([
-                {"timestamp": 1, "amount": 0.1},
-                {"timestamp": 2, "amount": 0.2}
+                {"timestamp": 86400, "amount": 0.1},
+                {"timestamp": 172800, "amount": 0.2}
             ])),
         );
         batch.errors.insert("BAD".into(), "boom".into());
@@ -282,7 +282,7 @@ mod tests {
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
         assert_eq!(df.column("symbol").unwrap().dtype(), &DataType::String);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Date);
         assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
         let symbols: Vec<_> = df
             .column("symbol")
@@ -295,7 +295,9 @@ mod tests {
         let timestamps: Vec<_> = df
             .column("timestamp")
             .unwrap()
-            .i64()
+            .cast(&DataType::Int32)
+            .unwrap()
+            .i32()
             .unwrap()
             .into_no_null_iter()
             .collect();
@@ -428,7 +430,7 @@ mod tests {
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Date);
         assert_eq!(df.height(), 0);
 
         let charts: BatchChartsResponse = response(serde_json::json!({

@@ -14,7 +14,7 @@ fn page(timestamps: &[i64]) -> ProviderPage<Dividend> {
 
 #[test]
 fn provider_page_frame_is_its_items() {
-    let expected = ["timestamp:i64", "amount:f64", "provider_id:str"];
+    let expected = ["timestamp:date", "amount:f64", "provider_id:str"];
     let df = page(&[1, 2]).to_dataframe().unwrap();
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 2);

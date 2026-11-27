@@ -184,7 +184,7 @@ delegate_to_inherent!(crate::models::economic::MacroSeries);
 
 #[cfg(test)]
 mod tests {
-    use polars::prelude::{DataFrame, DataType};
+    use polars::prelude::{DataFrame, DataType, TimeUnit, TimeZone};
 
     use crate::{Candle, Dividend, News, Provider};
 
@@ -209,7 +209,10 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                ("timestamp", DataType::Int64),
+                (
+                    "timestamp",
+                    DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+                ),
                 ("open", DataType::Float64),
                 ("high", DataType::Float64),
                 ("low", DataType::Float64),
@@ -307,6 +310,18 @@ mod tests {
     }
 
     #[test]
+    fn candle_timestamp_is_epoch_seconds_as_microseconds() {
+        let candle = Candle::__new(1_794_603_601, 0.0, 0.0, 0.0, 0.0, 0, None, None);
+        let df = candle.to_dataframe().unwrap();
+        let micros = df
+            .column("timestamp")
+            .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap();
+        assert_eq!(micros.i64().unwrap().get(0), Some(1_794_603_601_000_000));
+    }
+
+    #[test]
     fn dividend_frame_adds_provider_id() {
         let dividend: Dividend =
             serde_json::from_value(serde_json::json!({"timestamp": 1, "amount": 0.25})).unwrap();
@@ -314,7 +329,7 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                ("timestamp", DataType::Int64),
+                ("timestamp", DataType::Date),
                 ("amount", DataType::Float64),
                 ("provider_id", DataType::String),
             ])

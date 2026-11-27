@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Candle {
     /// Timestamp (Unix)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Open price
     pub open: f64,
