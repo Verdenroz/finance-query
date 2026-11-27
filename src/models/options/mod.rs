@@ -4,7 +4,7 @@
 
 mod chain;
 mod contract;
-pub(crate) mod response;
+pub mod response;
 
 pub use chain::{OptionChain, OptionsQuote};
 pub use contract::{Contracts, OptionContract};

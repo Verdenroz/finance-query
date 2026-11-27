@@ -18,13 +18,16 @@ use std::sync::OnceLock;
 pub struct ChartEvents {
     /// Dividend events keyed by timestamp
     #[serde(default)]
-    pub(crate) dividends: HashMap<String, DividendEvent>,
+    #[doc(hidden)]
+    pub dividends: HashMap<String, DividendEvent>,
     /// Stock split events keyed by timestamp
     #[serde(default)]
-    pub(crate) splits: HashMap<String, SplitEvent>,
+    #[doc(hidden)]
+    pub splits: HashMap<String, SplitEvent>,
     /// Capital gain events keyed by timestamp
     #[serde(default)]
-    pub(crate) capital_gains: HashMap<String, CapitalGainEvent>,
+    #[doc(hidden)]
+    pub capital_gains: HashMap<String, CapitalGainEvent>,
 
     /// Cached sorted dividend vector (computed once on first access)
     #[serde(skip)]
@@ -39,7 +42,8 @@ pub struct ChartEvents {
 
 /// Raw dividend event from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct DividendEvent {
+#[doc(hidden)]
+pub struct DividendEvent {
     /// Dividend amount per share
     pub amount: f64,
     /// Timestamp of the dividend
@@ -49,7 +53,8 @@ pub(crate) struct DividendEvent {
 /// Raw split event from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SplitEvent {
+#[doc(hidden)]
+pub struct SplitEvent {
     /// Timestamp of the split
     pub date: i64,
     /// Numerator of the split ratio
@@ -62,7 +67,8 @@ pub(crate) struct SplitEvent {
 
 /// Raw capital gain event from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct CapitalGainEvent {
+#[doc(hidden)]
+pub struct CapitalGainEvent {
     /// Capital gain amount per share
     pub amount: f64,
     /// Timestamp of the capital gain distribution

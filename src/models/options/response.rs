@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct Options {
     /// Option chain container
-    pub(crate) option_chain: OptionChainContainer,
+    #[doc(hidden)]
+    pub option_chain: OptionChainContainer,
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -23,7 +24,8 @@ pub struct Options {
 
 /// Container for option chain results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct OptionChainContainer {
+#[doc(hidden)]
+pub struct OptionChainContainer {
     /// Results array
     pub result: Vec<OptionChainResult>,
 
@@ -34,7 +36,8 @@ pub(crate) struct OptionChainContainer {
 /// Single option chain result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct OptionChainResult {
+#[doc(hidden)]
+pub struct OptionChainResult {
     /// Underlying symbol
     pub underlying_symbol: Option<String>,
 
@@ -57,7 +60,8 @@ pub(crate) struct OptionChainResult {
 /// Option chain data for a specific expiration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct OptionChainData {
+#[doc(hidden)]
+pub struct OptionChainData {
     /// Expiration date (Unix timestamp)
     pub expiration_date: i64,
 

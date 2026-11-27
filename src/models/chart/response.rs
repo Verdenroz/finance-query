@@ -7,14 +7,16 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for chart endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ChartResponse {
+#[doc(hidden)]
+pub struct ChartResponse {
     /// Chart container
     pub chart: ChartContainer,
 }
 
 /// Container for chart results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ChartContainer {
+#[doc(hidden)]
+pub struct ChartContainer {
     /// Chart results
     pub result: Option<Vec<ChartResult>>,
     /// Error if any
@@ -23,7 +25,8 @@ pub(crate) struct ChartContainer {
 
 impl ChartResponse {
     /// Parse from JSON value
-    pub(crate) fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 }

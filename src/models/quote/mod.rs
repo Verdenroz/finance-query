@@ -5,7 +5,7 @@
 // Internal modules that remain in quote/
 pub mod price;
 pub mod quote_type;
-pub(crate) mod response;
+pub mod response;
 
 // Public modules
 pub mod data;
@@ -21,14 +21,14 @@ pub use formatted_value::FormattedValue;
 // ── Re-exports from new canonical locations (backward compat within crate) ───
 
 // From fundamentals/
-pub(crate) use crate::models::fundamentals::{
+pub use crate::models::fundamentals::{
     BalanceSheetHistory, BalanceSheetHistoryQuarterly, CashflowStatementHistory,
     CashflowStatementHistoryQuarterly, DefaultKeyStatistics, FinancialData, IncomeStatementHistory,
     IncomeStatementHistoryQuarterly, SummaryDetail,
 };
 
 // From corporate/
-pub(crate) use crate::models::corporate::{
+pub use crate::models::corporate::{
     AssetProfile, CalendarEvents, CompanyOfficer, Earnings, EarningsHistory, EarningsTrend,
     EquityPerformance, FundOwnership, FundPerformance, FundProfile, InsiderHolders,
     InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
@@ -36,19 +36,20 @@ pub(crate) use crate::models::corporate::{
 };
 
 // From market/
-pub(crate) use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
 
 // Internal re-exports for crate use
 pub use price::Price;
 pub use quote_type::QuoteTypeData;
-pub(crate) use response::QuoteSummaryResponse;
+pub use response::QuoteSummaryResponse;
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint
 ///
 /// These correspond to the different data categories available for a stock symbol.
 /// See: https://yahooquery.dpguthrie.com/guide/ticker/modules/
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum Module {
+#[doc(hidden)]
+pub enum Module {
     /// Company information, location, operations, and officers
     AssetProfile,
     /// Earnings and revenue expectations for upcoming earnings date

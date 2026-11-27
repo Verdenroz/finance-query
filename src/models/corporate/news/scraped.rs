@@ -36,13 +36,8 @@ pub struct News {
 
 impl News {
     /// Create a new News article
-    pub(crate) fn new(
-        title: String,
-        link: String,
-        source: String,
-        img: String,
-        time: String,
-    ) -> Self {
+    #[doc(hidden)]
+    pub fn new(title: String, link: String, source: String, img: String, time: String) -> Self {
         Self {
             title,
             link,

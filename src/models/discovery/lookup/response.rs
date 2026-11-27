@@ -68,7 +68,8 @@ impl LookupResults {
 
     /// Same reshape as [`from_json`](Self::from_json), straight from the raw
     /// response body — no `serde_json::Value` tree in between.
-    pub(crate) fn from_slice(bytes: &[u8]) -> Result<Self, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_slice(bytes: &[u8]) -> Result<Self, serde_json::Error> {
         Ok(Self::from_raw(serde_json::from_slice(bytes)?))
     }
 

@@ -185,7 +185,8 @@ pub struct Price<F: Format = Both> {
 
 impl Price<Both> {
     /// Rescales the change-percent fields from Yahoo's fractions to percent.
-    pub(crate) fn with_percent_changes(self) -> Self {
+    #[doc(hidden)]
+    pub fn with_percent_changes(self) -> Self {
         Self {
             pre_market_change_percent: self
                 .pre_market_change_percent

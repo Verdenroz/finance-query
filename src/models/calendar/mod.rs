@@ -81,7 +81,8 @@ pub enum EventKind {
 
 impl CalendarEvent {
     /// Construct an event, deriving the ISO date string from the timestamp.
-    pub(crate) fn new(timestamp: i64, symbol: Option<String>, event: EventKind) -> Self {
+    #[doc(hidden)]
+    pub fn new(timestamp: i64, symbol: Option<String>, event: EventKind) -> Self {
         Self {
             timestamp,
             date: iso_date(timestamp),
@@ -156,19 +157,22 @@ impl CalendarEvent {
 }
 
 /// Format a Unix-second timestamp as an ISO `YYYY-MM-DD` UTC date string.
-pub(crate) fn iso_date(timestamp: i64) -> String {
+#[doc(hidden)]
+pub fn iso_date(timestamp: i64) -> String {
     DateTime::<Utc>::from_timestamp(timestamp, 0)
         .map(|dt| dt.format("%Y-%m-%d").to_string())
         .unwrap_or_default()
 }
 
 /// Most recent declared per-share dividend from the quote's key statistics.
-pub(crate) fn last_dividend_value(stats: &DefaultKeyStatistics) -> Option<f64> {
+#[doc(hidden)]
+pub fn last_dividend_value(stats: &DefaultKeyStatistics) -> Option<f64> {
     stats.last_dividend_value.as_ref()?.raw.filter(|&v| v > 0.0)
 }
 
 /// Monthly expirations inside `window` whose chain is not yet loaded in `options`.
-pub(crate) fn uncounted_monthly_expirations(options: &Options, window: (i64, i64)) -> Vec<i64> {
+#[doc(hidden)]
+pub fn uncounted_monthly_expirations(options: &Options, window: (i64, i64)) -> Vec<i64> {
     let counts = options.contract_counts();
     options
         .expiration_dates()
@@ -191,7 +195,8 @@ pub(crate) fn uncounted_monthly_expirations(options: &Options, window: (i64, i64
 /// chains fetched for further expirations, merged into the contract counts. Only events whose timestamp
 /// falls within `window` (`[start, end]`, inclusive) are emitted. The result is
 /// **not** sorted — callers merge across symbols and sort once.
-pub(crate) fn build_symbol_events(
+#[doc(hidden)]
+pub fn build_symbol_events(
     symbol: &str,
     calendar: Option<&CalendarEvents>,
     options: Option<&Options>,
@@ -282,7 +287,8 @@ fn is_monthly_expiration(timestamp: i64) -> bool {
 }
 
 /// Sort events ascending by timestamp in place.
-pub(crate) fn sort_events(events: &mut [CalendarEvent]) {
+#[doc(hidden)]
+pub fn sort_events(events: &mut [CalendarEvent]) {
     events.sort_by_key(|e| e.timestamp);
 }
 

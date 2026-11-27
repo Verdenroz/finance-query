@@ -36,22 +36,18 @@ mod company_profile;
 pub use company_profile::CompanyProfile;
 
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
-pub(crate) mod balance_sheet_history;
-pub(crate) mod cashflow_statement_history;
-pub(crate) mod default_key_statistics;
-pub(crate) mod financial_data;
-pub(crate) mod income_statement_history;
-pub(crate) mod summary_detail;
+pub mod balance_sheet_history;
+pub mod cashflow_statement_history;
+pub mod default_key_statistics;
+pub mod financial_data;
+pub mod income_statement_history;
+pub mod summary_detail;
 
-pub(crate) use balance_sheet_history::{BalanceSheetHistory, BalanceSheetHistoryQuarterly};
-pub(crate) use cashflow_statement_history::{
-    CashflowStatementHistory, CashflowStatementHistoryQuarterly,
-};
+pub use balance_sheet_history::{BalanceSheetHistory, BalanceSheetHistoryQuarterly};
+pub use cashflow_statement_history::{CashflowStatementHistory, CashflowStatementHistoryQuarterly};
 pub use default_key_statistics::DefaultKeyStatistics;
 pub use financial_data::FinancialData;
-pub(crate) use income_statement_history::{
-    IncomeStatementHistory, IncomeStatementHistoryQuarterly,
-};
+pub use income_statement_history::{IncomeStatementHistory, IncomeStatementHistoryQuarterly};
 pub use summary_detail::SummaryDetail;
 
 #[cfg(all(test, feature = "dataframe"))]

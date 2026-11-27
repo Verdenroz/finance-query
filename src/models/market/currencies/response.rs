@@ -24,19 +24,22 @@ pub struct Currency {
 /// Raw response from currencies endpoint
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RawCurrenciesResponse {
+#[doc(hidden)]
+pub struct RawCurrenciesResponse {
     pub currencies: Option<CurrenciesResult>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct CurrenciesResult {
+#[doc(hidden)]
+pub struct CurrenciesResult {
     pub result: Option<Vec<Currency>>,
 }
 
 impl Currency {
     /// Parse currencies from the raw JSON response
-    pub(crate) fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
+    #[doc(hidden)]
+    pub fn from_response(value: serde_json::Value) -> Result<Vec<Self>, serde_json::Error> {
         let raw: RawCurrenciesResponse = serde_json::from_value(value)?;
         Ok(raw.currencies.and_then(|c| c.result).unwrap_or_default())
     }

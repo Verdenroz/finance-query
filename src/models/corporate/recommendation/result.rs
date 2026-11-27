@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 /// Recommendation result for a symbol
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RecommendationResult {
+#[doc(hidden)]
+pub struct RecommendationResult {
     /// Symbol that was queried
     pub symbol: String,
     /// Recommended symbols
