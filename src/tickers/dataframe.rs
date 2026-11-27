@@ -494,4 +494,135 @@ mod tests {
         assert_eq!(names(&empty), names(&df));
         assert_eq!(empty.height(), 0);
     }
+
+    #[test]
+    fn capital_gains_follow_input_order_with_symbol_first() {
+        let mut batch = BatchCapitalGainsResponse::with_capacity(2);
+        batch.capital_gains.insert(
+            "VTSAX".into(),
+            response(serde_json::json!([{"timestamp": 30, "amount": 0.75}])),
+        );
+        batch.capital_gains.insert(
+            "FXAIX".into(),
+            response(serde_json::json!([
+                {"timestamp": 10, "amount": 0.1},
+                {"timestamp": 20, "amount": 0.2}
+            ])),
+        );
+        batch.errors.insert("BAD".into(), "boom".into());
+        let df = batch.to_dataframe().unwrap();
+
+        assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
+        assert_eq!(df.height(), 3);
+        let symbols: Vec<_> = df
+            .column("symbol")
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_no_null_iter()
+            .collect();
+        assert_eq!(symbols, ["VTSAX", "FXAIX", "FXAIX"]);
+        let amounts: Vec<_> = df
+            .column("amount")
+            .unwrap()
+            .f64()
+            .unwrap()
+            .into_no_null_iter()
+            .collect();
+        assert_eq!(amounts, [0.75, 0.1, 0.2]);
+
+        let empty: BatchCapitalGainsResponse =
+            response(serde_json::json!({"capitalGains": {}, "errors": {"X": "boom"}}));
+        let empty = empty.to_dataframe().unwrap();
+        assert_eq!(names(&empty), names(&df));
+        assert_eq!(empty.height(), 0);
+    }
+
+    #[test]
+    fn news_follow_input_order_with_symbol_first() {
+        let article = |title: &str| {
+            serde_json::json!({
+                "title": title, "link": format!("https://example.com/{title}"),
+                "source": "Reuters", "img": "", "time": "1 hour ago"
+            })
+        };
+        let mut batch = BatchNewsResponse::with_capacity(2);
+        batch
+            .news
+            .insert("TSLA".into(), response(serde_json::json!([article("t1")])));
+        batch.news.insert(
+            "AAPL".into(),
+            response(serde_json::json!([article("a1"), article("a2")])),
+        );
+        let df = batch.to_dataframe().unwrap();
+
+        assert_eq!(
+            names(&df)[..6],
+            ["symbol", "title", "link", "source", "img", "time"]
+        );
+        assert_eq!(df.height(), 3);
+        let column = |name: &str| -> Vec<String> {
+            df.column(name)
+                .unwrap()
+                .str()
+                .unwrap()
+                .into_no_null_iter()
+                .map(str::to_string)
+                .collect()
+        };
+        assert_eq!(column("symbol"), ["TSLA", "AAPL", "AAPL"]);
+        assert_eq!(column("title"), ["t1", "a1", "a2"]);
+
+        let empty: BatchNewsResponse = response(serde_json::json!({"news": {}, "errors": {}}));
+        let empty = empty.to_dataframe().unwrap();
+        assert_eq!(names(&empty), names(&df));
+        assert_eq!(empty.height(), 0);
+    }
+
+    #[cfg(feature = "indicators")]
+    #[test]
+    fn indicators_one_row_per_symbol_in_input_order() {
+        use crate::indicators::IndicatorsSummary;
+        use crate::tickers::BatchIndicatorsResponse;
+
+        let mut batch = BatchIndicatorsResponse::with_capacity(2);
+        batch.indicators.insert(
+            "MSFT".into(),
+            IndicatorsSummary {
+                sma_10: Some(2.0),
+                ..Default::default()
+            },
+        );
+        batch.indicators.insert(
+            "AAPL".into(),
+            IndicatorsSummary {
+                sma_10: Some(1.0),
+                ..Default::default()
+            },
+        );
+        let df = batch.to_dataframe().unwrap();
+
+        assert_eq!(names(&df)[..2], ["symbol", "sma_10"]);
+        assert_eq!(df.column("sma_10").unwrap().dtype(), &DataType::Float64);
+        assert_eq!(df.height(), 2);
+        let symbols: Vec<_> = df
+            .column("symbol")
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_no_null_iter()
+            .collect();
+        assert_eq!(symbols, ["MSFT", "AAPL"]);
+        let sma: Vec<_> = df.column("sma_10").unwrap().f64().unwrap().iter().collect();
+        assert_eq!(sma, [Some(2.0), Some(1.0)]);
+        assert_eq!(df.column("ema_10").unwrap().null_count(), 2);
+
+        let empty: BatchIndicatorsResponse =
+            response(serde_json::json!({"indicators": {}, "errors": {}}));
+        let empty = empty.to_dataframe().unwrap();
+        assert_eq!(names(&empty), names(&df));
+        assert_eq!(empty.height(), 0);
+    }
 }
