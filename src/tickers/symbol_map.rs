@@ -106,8 +106,8 @@ impl<V> SymbolMap<V> {
         self.entries.push((symbol, value));
     }
 
-    /// Reorders entries to follow `symbols`; symbols not listed go last in
-    /// their current order.
+    /// Reorders entries to follow `symbols`, with unlisted symbols last in
+    /// their current order, and drops later entries for a repeated symbol.
     pub(crate) fn sort_by_symbols(&mut self, symbols: &[std::sync::Arc<str>]) {
         let position: std::collections::HashMap<&str, usize> = symbols
             .iter()
@@ -115,6 +115,13 @@ impl<V> SymbolMap<V> {
             .rev()
             .map(|(index, symbol)| (&**symbol, index))
             .collect();
+        let mut seen = vec![false; symbols.len()];
+        let mut seen_unlisted = std::collections::HashSet::new();
+        self.entries
+            .retain(|(key, _)| match position.get(key.as_str()) {
+                Some(&index) => !std::mem::replace(&mut seen[index], true),
+                None => seen_unlisted.insert(key.clone()),
+            });
         self.entries.sort_by_cached_key(|(key, _)| {
             position.get(key.as_str()).copied().unwrap_or(usize::MAX)
         });
@@ -242,5 +249,23 @@ mod tests {
         map.sort_by_symbols(&["A".into(), "B".into()]);
 
         assert_eq!(map.keys().collect::<Vec<_>>(), ["A", "B", "Z"]);
+    }
+
+    #[test]
+    fn sort_by_symbols_keeps_first_of_repeated_symbols() {
+        let mut map = SymbolMap::new();
+        map.push("A".to_string(), 1);
+        map.push("B".to_string(), 2);
+        map.push("A".to_string(), 3);
+        map.push("Z".to_string(), 4);
+        map.push("Z".to_string(), 5);
+        map.sort_by_symbols(&["A".into(), "B".into()]);
+
+        assert_eq!(
+            map.iter()
+                .map(|(k, v)| (k.as_str(), *v))
+                .collect::<Vec<_>>(),
+            [("A", 1), ("B", 2), ("Z", 4)]
+        );
     }
 }

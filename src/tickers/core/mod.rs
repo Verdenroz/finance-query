@@ -665,4 +665,17 @@ mod tests {
 
         assert_eq!(chart_keys(&tickers).await, ["MSFT", "AAPL", "GOOG"]);
     }
+
+    #[tokio::test]
+    async fn duplicate_input_symbols_are_dropped() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let tickers = Tickers::builder(["A", "B", "A"])
+            .with_provider_set(provider_set(CountingProvider::new()))
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(tickers.symbols(), ["A", "B"]);
+    }
 }
