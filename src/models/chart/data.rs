@@ -4,6 +4,7 @@
 use super::{Candle, ChartMeta};
 use crate::Provider;
 use crate::constants::{Interval, TimeRange};
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Fully typed chart data
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 pub struct Chart {
     /// Stock symbol
     pub symbol: String,
@@ -311,5 +312,24 @@ impl Chart {
         period: usize,
     ) -> crate::indicators::Result<Vec<Option<crate::indicators::FibonacciLevels>>> {
         crate::indicators::fibonacci_retracement(&self.high_prices(), &self.low_prices(), period)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chart_builds_from_fields_init() {
+        let chart = Chart::from(ChartFieldsInit {
+            symbol: "AAPL".to_string(),
+            meta: ChartMeta::default(),
+            candles: Vec::new(),
+            interval: Some(Interval::OneDay),
+            range: None,
+            provider_id: None,
+        });
+        assert_eq!(chart.symbol, "AAPL");
+        assert_eq!(chart.interval, Some(Interval::OneDay));
     }
 }
