@@ -109,7 +109,7 @@ fn defi_frames() {
         serde_json::from_value(json!([{"timestamp": 1, "tvl": 2.0}])).unwrap();
     assert_eq!(
         columns(&TvlPoint::vec_to_dataframe(&points).unwrap()),
-        ["timestamp:i64", "tvl:f64"]
+        ["timestamp:datetime[μs, UTC]", "tvl:f64"]
     );
 
     let allocations: Vec<ChainAllocation> =

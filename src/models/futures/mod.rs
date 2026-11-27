@@ -38,6 +38,7 @@ pub struct FuturesQuote {
     /// Session volume in contracts
     pub volume: Option<u64>,
     /// Unix timestamp of the last update, in **seconds**
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: Option<i64>,
 }
 

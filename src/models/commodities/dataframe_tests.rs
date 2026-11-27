@@ -18,7 +18,7 @@ fn commodity_quote_columns() {
             "price:f64",
             "change:f64",
             "change_percent:f64",
-            "timestamp:i64",
+            "timestamp:datetime[μs, UTC]",
         ]
     );
     assert_eq!(df.height(), 1);

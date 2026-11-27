@@ -7,7 +7,7 @@ use serde_json::json;
 fn stock_bar_columns() {
     let row: StockBar = serde_json::from_value(json!({"timestamp_ms": 1, "open": 1.5, "high": 1.5, "low": 1.5, "close": 1.5, "volume": 1.5})).unwrap();
     let expected = [
-        "timestamp_ms:i64",
+        "timestamp_ms:datetime[μs, UTC]",
         "open:f64",
         "high:f64",
         "low:f64",
