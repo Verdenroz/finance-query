@@ -499,20 +499,20 @@ mod tests {
         let mut batch = BatchCapitalGainsResponse::with_capacity(2);
         batch.capital_gains.insert(
             "VTSAX".into(),
-            response(serde_json::json!([{"timestamp": 30, "amount": 0.75}])),
+            response(serde_json::json!([{"timestamp": 2592000, "amount": 0.75}])),
         );
         batch.capital_gains.insert(
             "FXAIX".into(),
             response(serde_json::json!([
-                {"timestamp": 10, "amount": 0.1},
-                {"timestamp": 20, "amount": 0.2}
+                {"timestamp": 864000, "amount": 0.1},
+                {"timestamp": 1728000, "amount": 0.2}
             ])),
         );
         batch.errors.insert("BAD".into(), "boom".into());
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Date);
         assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.height(), 3);
         let symbols: Vec<_> = df
