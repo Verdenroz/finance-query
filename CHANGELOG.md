@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- F64 streaming price fields (#740)
 - Yahoo surprise_percent in percent points (#747)
 - Backtest outputs as fractions (#741)
 
@@ -618,11 +619,17 @@ CHANGED  finance_query::quote::SummaryDetail (signature)
 CHANGED  finance_query::quote::TopHoldings (body)
 CHANGED  finance_query::risk::drawdown::max_drawdown (body)
 CHANGED  finance_query::risk::max_drawdown (body)
+CHANGED  finance_query::streaming::AlertEvaluator (body)
+CHANGED  finance_query::streaming::AlertEvent (signature)
 CHANGED  finance_query::streaming::OptionContractUpdate (body)
 CHANGED  finance_query::streaming::OrderBookUpdate (body)
+CHANGED  finance_query::streaming::PriceUpdate (signature)
 CHANGED  finance_query::streaming::TradeTick (body)
+CHANGED  finance_query::streaming::alerts::AlertEvaluator (body)
+CHANGED  finance_query::streaming::alerts::AlertEvent (signature)
 CHANGED  finance_query::streaming::book::OrderBookUpdate (body)
 CHANGED  finance_query::streaming::options::OptionContractUpdate (body)
+CHANGED  finance_query::streaming::pricing::PriceUpdate (signature)
 CHANGED  finance_query::streaming::trades::TradeStreamBuilder::build (body)
 CHANGED  finance_query::streaming::trades::TradeTick (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
