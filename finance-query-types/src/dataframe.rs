@@ -98,9 +98,9 @@ pub mod derive {
     use chrono::{DateTime, NaiveDate};
     use polars::chunked_array::builder::{ListPrimitiveChunkedBuilder, get_list_builder};
     use polars::prelude::{
-        Column, DataFrame, DataType, Int32Chunked, Int32Type, Int64Chunked, Int64Type, IntoColumn,
+        ChunkedArray, Column, DataFrame, DataType, Int32Type, Int64Chunked, Int64Type, IntoColumn,
         IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, NewChunkedArray,
-        PlSmallStr, PolarsResult, Series, TimeUnit, TimeZone,
+        PlSmallStr, PolarsNumericType, PolarsResult, Series, TimeUnit, TimeZone,
     };
 
     use super::ToDataFrame;
@@ -192,16 +192,40 @@ pub mod derive {
             .and_then(|value| i32::try_from(value.div_euclid(per_day)).ok())
     }
 
+    /// Pushes into a plain `Vec` until the first null, which is the common case and avoids
+    /// the per-value builder; only a column with a null pays for the validity mask.
+    fn numeric<T: PolarsNumericType>(
+        name: String,
+        mut values: impl Iterator<Item = Option<T::Native>>,
+    ) -> ChunkedArray<T> {
+        let mut dense = Vec::with_capacity(values.size_hint().0);
+        while let Some(value) = values.next() {
+            match value {
+                Some(value) => dense.push(value),
+                None => {
+                    let rest = dense
+                        .into_iter()
+                        .map(Some)
+                        .chain(std::iter::once(None))
+                        .chain(values);
+                    return ChunkedArray::from_iter_options(name.into(), rest);
+                }
+            }
+        }
+        ChunkedArray::from_vec(name.into(), dense)
+    }
+
+    /// Collects first: `Int64Chunked::new` over a slice is far cheaper per row than the dense
+    /// push loop on long candle and stream frames, at one extra `Vec` per column.
     fn datetime_column(name: String, micros: impl Iterator<Item = Option<i64>>) -> Column {
-        Int64Chunked::from_iter_options(name.into(), micros)
+        let micros: Vec<Option<i64>> = micros.collect();
+        Int64Chunked::new(name.into(), &micros)
             .into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
             .into_column()
     }
 
     fn date_column(name: String, days: impl Iterator<Item = Option<i32>>) -> Column {
-        Int32Chunked::from_iter_options(name.into(), days)
-            .into_date()
-            .into_column()
+        numeric::<Int32Type>(name, days).into_date().into_column()
     }
 
     /// A `Datetime(us, UTC)` column from epoch integers; overflow and, with `nonzero`, `0` become null.
