@@ -990,6 +990,42 @@ fn bt_monte_carlo(result: &finance_query::backtesting::BacktestResult) {
     keep(mc_config.run(keep(result)));
 }
 
+#[bench(
+    group = "dataframe",
+    setup = backtest_result,
+    covers = "finance_query::backtesting::BacktestResult"
+)]
+fn df_backtest_trades_signals(result: &finance_query::backtesting::BacktestResult) {
+    keep(keep(result).trades_dataframe().unwrap());
+    keep(keep(result).signals_dataframe().unwrap());
+}
+
+#[fixture]
+fn optimization_report() -> finance_query::backtesting::OptimizationReport {
+    let (config, candles) = backtest_inputs();
+    GridSearch::new()
+        .param("fast", ParamRange::int_range(5, 25, 5))
+        .param("slow", ParamRange::int_range(20, 60, 10))
+        .optimize_for(OptimizeMetric::SharpeRatio)
+        .run("BENCH", &candles, &config, |params| {
+            SmaCrossover::new(
+                params["fast"].as_int() as usize,
+                params["slow"].as_int() as usize,
+            )
+        })
+        .unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = optimization_report,
+    covers = "finance_query::backtesting::OptimizationReport"
+)]
+fn df_optimization_report(report: &finance_query::backtesting::OptimizationReport) {
+    keep(keep(report).to_dataframe().unwrap());
+    keep(keep(report).convergence_dataframe().unwrap());
+}
+
 fn portfolio_inputs_sized(n: usize) -> (PortfolioConfig, Vec<SymbolData>) {
     let (config, _) = backtest_inputs_sized(n);
     let data = ["AAA", "BBB", "CCC"]

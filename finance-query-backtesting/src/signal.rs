@@ -32,16 +32,22 @@ pub enum SignalDirection {
     ScaleOut,
 }
 
+impl SignalDirection {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Long => "LONG",
+            Self::Short => "SHORT",
+            Self::Exit => "EXIT",
+            Self::Hold => "HOLD",
+            Self::ScaleIn => "SCALE_IN",
+            Self::ScaleOut => "SCALE_OUT",
+        }
+    }
+}
+
 impl std::fmt::Display for SignalDirection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Long => write!(f, "LONG"),
-            Self::Short => write!(f, "SHORT"),
-            Self::Exit => write!(f, "EXIT"),
-            Self::Hold => write!(f, "HOLD"),
-            Self::ScaleIn => write!(f, "SCALE_IN"),
-            Self::ScaleOut => write!(f, "SCALE_OUT"),
-        }
+        f.write_str(self.as_str())
     }
 }
 

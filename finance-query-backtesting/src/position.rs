@@ -14,12 +14,18 @@ pub enum PositionSide {
     Short,
 }
 
+impl PositionSide {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Long => "LONG",
+            Self::Short => "SHORT",
+        }
+    }
+}
+
 impl std::fmt::Display for PositionSide {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Long => write!(f, "LONG"),
-            Self::Short => write!(f, "SHORT"),
-        }
+        f.write_str(self.as_str())
     }
 }
 
