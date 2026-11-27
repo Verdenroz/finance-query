@@ -177,6 +177,13 @@ mod tests {
     }
 
     #[test]
+    fn public_metric_names_match_statement_keys() {
+        use crate::fundamental_types::TOTAL_REVENUE;
+        let wire = crate::Frequency::Annual.prefix(TOTAL_REVENUE);
+        assert_eq!(strip_frequency_prefix(&wire), TOTAL_REVENUE);
+    }
+
+    #[test]
     fn test_extract_value_simple() {
         let json: serde_json::Value = serde_json::json!({
             "raw": 123.45,

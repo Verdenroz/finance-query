@@ -1,5 +1,7 @@
 //! Maximum drawdown analysis.
 
+use crate::models::chart::Candle;
+
 /// Maximum drawdown result.
 #[derive(Debug, Clone)]
 pub struct DrawdownResult {
@@ -36,6 +38,7 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
     let mut peak_idx = 0_usize;
     let mut max_dd = 0.0_f64;
     let mut trough_idx = 0_usize;
+    let mut dd_peak_idx = 0_usize;
 
     for (i, &val) in equity.iter().enumerate() {
         if val > peak {
@@ -46,12 +49,13 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
         if dd > max_dd {
             max_dd = dd;
             trough_idx = i;
+            dd_peak_idx = peak_idx;
         }
     }
 
     // Find recovery: first index after trough where equity returns to peak level
     let recovery_periods = if max_dd > 0.0 {
-        let peak_val = equity[peak_idx];
+        let peak_val = equity[dd_peak_idx];
         equity[trough_idx..]
             .iter()
             .enumerate()
@@ -66,6 +70,55 @@ pub fn max_drawdown(returns: &[f64]) -> DrawdownResult {
         max_drawdown: max_dd,
         recovery_periods,
     }
+}
+
+/// Where the maximum drawdown happened in a candle series.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct DrawdownSpan {
+    /// Maximum drawdown as a positive fraction (e.g., 0.30 = 30% loss from peak)
+    pub max_drawdown: f64,
+    /// Index into the candle slice of the peak the drawdown fell from
+    pub peak_index: usize,
+    /// Index into the candle slice of the trough
+    pub trough_index: usize,
+    /// Unix timestamp of the peak candle
+    pub peak_timestamp: i64,
+    /// Unix timestamp of the trough candle
+    pub trough_timestamp: i64,
+}
+
+/// Locate the maximum drawdown of a candle series by close price.
+///
+/// Returns `None` when the closes never fall below a prior peak. `close` is
+/// not dividend-adjusted. The depth matches [`max_drawdown`] over
+/// [`returns`](crate::risk::returns) of the same candles.
+pub fn max_drawdown_span(candles: &[Candle]) -> Option<DrawdownSpan> {
+    let mut peak_idx = 0_usize;
+    let mut best: Option<(f64, usize, usize)> = None;
+
+    for (i, c) in candles.iter().enumerate() {
+        if !(c.close.is_finite() && c.close > 0.0) {
+            continue;
+        }
+        let peak = candles[peak_idx].close;
+        if !(peak.is_finite() && peak > 0.0) || c.close > peak {
+            peak_idx = i;
+            continue;
+        }
+        let dd = (peak - c.close) / peak;
+        if dd > best.map_or(0.0, |(d, ..)| d) {
+            best = Some((dd, peak_idx, i));
+        }
+    }
+
+    best.map(|(max_drawdown, peak_index, trough_index)| DrawdownSpan {
+        max_drawdown,
+        peak_index,
+        trough_index,
+        peak_timestamp: candles[peak_index].timestamp,
+        trough_timestamp: candles[trough_index].timestamp,
+    })
 }
 
 /// Per-period drawdown fraction (peak-to-current), built from the same
@@ -129,11 +182,51 @@ mod tests {
     }
 
     #[test]
+    fn recovery_is_measured_from_the_peak_of_the_max_drawdown() {
+        let r = max_drawdown(&[-0.5, 1.1, 1.1 / 1.05 - 1.0]);
+        assert_eq!(r.recovery_periods, Some(1));
+    }
+
+    #[test]
     fn test_no_recovery() {
         // Steady decline — never recovers
         let returns = vec![-0.05_f64; 10];
         let r = max_drawdown(&returns);
         assert!(r.max_drawdown > 0.0);
         assert!(r.recovery_periods.is_none());
+    }
+
+    fn candle(timestamp: i64, close: f64) -> Candle {
+        Candle::__new(timestamp, close, close, close, close, 1, None, None)
+    }
+
+    #[test]
+    fn span_locates_peak_and_trough() {
+        let candles = [
+            candle(10, 100.0),
+            candle(20, 110.0),
+            candle(30, 88.0),
+            candle(40, 95.0),
+            candle(50, 120.0),
+        ];
+        let span = max_drawdown_span(&candles).unwrap();
+        assert_eq!((span.peak_index, span.trough_index), (1, 2));
+        assert_eq!((span.peak_timestamp, span.trough_timestamp), (20, 30));
+        let from_returns = max_drawdown(&crate::risk::returns(&candles));
+        assert!((span.max_drawdown - from_returns.max_drawdown).abs() < 1e-12);
+    }
+
+    #[test]
+    fn span_skips_non_finite_closes() {
+        let candles = [candle(1, f64::NAN), candle(2, 100.0), candle(3, 50.0)];
+        let span = max_drawdown_span(&candles).unwrap();
+        assert!((span.max_drawdown - 0.5).abs() < 1e-12);
+        assert_eq!((span.peak_index, span.trough_index), (1, 2));
+    }
+
+    #[test]
+    fn span_is_none_without_drawdown() {
+        assert!(max_drawdown_span(&[]).is_none());
+        assert!(max_drawdown_span(&[candle(1, 1.0), candle(2, 2.0)]).is_none());
     }
 }

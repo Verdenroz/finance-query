@@ -1,6 +1,6 @@
 use super::{BatchQuotesResponse, Tickers};
 use crate::error::{FinanceError, Result};
-use crate::format::Both;
+use crate::format::{Both, Raw};
 use crate::models::format::Format;
 use crate::models::quote::{Quote, QuoteSummaryResponse};
 use crate::providers::Capability;
@@ -8,7 +8,80 @@ use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Quotes for multiple symbols in format `F`, from
+/// [`Tickers::quotes_as`].
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase", bound = "")]
+#[non_exhaustive]
+pub struct BatchQuotesAs<F: Format = Raw> {
+    /// Successfully fetched quotes, keyed by symbol
+    pub quotes: HashMap<String, Quote<F>>,
+    /// Symbols that failed to fetch, with error messages
+    pub errors: HashMap<String, String>,
+}
+
+impl<F: Format> BatchQuotesAs<F> {
+    /// Number of successfully fetched quotes
+    pub fn success_count(&self) -> usize {
+        self.quotes.len()
+    }
+
+    /// Number of failed symbols
+    pub fn error_count(&self) -> usize {
+        self.errors.len()
+    }
+
+    /// Check if all symbols were successful
+    pub fn all_successful(&self) -> bool {
+        self.errors.is_empty()
+    }
+}
+
+#[cfg(feature = "translation")]
+impl<F: Format> crate::translation::Translatable for BatchQuotesAs<F> {
+    fn visit_translatable(&mut self, visit: &mut dyn FnMut(&mut String)) {
+        for quote in self.quotes.values_mut() {
+            crate::translation::Translatable::visit_translatable(quote, visit);
+        }
+    }
+
+    fn after_translate(&mut self) {
+        for quote in self.quotes.values_mut() {
+            crate::translation::Translatable::after_translate(quote);
+        }
+    }
+}
+
+impl<F: Format> From<BatchQuotesResponse> for BatchQuotesAs<F>
+where
+    Quote<Both>: Into<Quote<F>>,
+{
+    fn from(response: BatchQuotesResponse) -> Self {
+        Self {
+            quotes: response
+                .quotes
+                .into_iter()
+                .map(|(symbol, quote)| (symbol, quote.into()))
+                .collect(),
+            errors: response.errors,
+        }
+    }
+}
+
 impl Tickers {
+    /// Batch fetch quotes in format `F`, e.g. `quotes_as::<Raw>()`.
+    ///
+    /// Same fetch and caching as [`quotes`](Self::quotes); the fetched quotes
+    /// are converted by move, so a `Raw` caller skips the extra clone that
+    /// `as_raw()` on each [`Quote<Both>`](Quote) makes.
+    pub async fn quotes_as<F>(&self) -> Result<BatchQuotesAs<F>>
+    where
+        F: Format,
+        Quote<Both>: Into<Quote<F>>,
+    {
+        Ok(self.quotes().await?.into())
+    }
+
     /// Batch fetch quotes for all symbols.
     ///
     /// Dispatches through the configured provider set. When logos are enabled,
@@ -274,6 +347,25 @@ impl Tickers {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn batch_quotes_as_converts_by_move_and_keeps_errors() {
+        let mut response = BatchQuotesResponse::with_capacity(2);
+        let summary = QuoteSummaryResponse {
+            symbol: "AAPL".into(),
+            ..Default::default()
+        };
+        response
+            .quotes
+            .insert("AAPL".into(), Quote::from_response(&summary, None, None));
+        response.errors.insert("BAD".into(), "not found".into());
+
+        let raw: BatchQuotesAs<Raw> = response.into();
+        assert_eq!(raw.success_count(), 1);
+        assert_eq!(raw.error_count(), 1);
+        assert!(!raw.all_successful());
+        assert_eq!(raw.quotes["AAPL"].symbol, "AAPL");
+    }
 
     #[tokio::test]
     #[ignore = "requires network access"]
