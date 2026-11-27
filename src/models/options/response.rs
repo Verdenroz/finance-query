@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 
 /// Response wrapper for options endpoint
 ///
+/// With Yahoo, `Ticker::options(None)` returns the chain for the nearest
+/// expiration only; [`expiration_dates`](Self::expiration_dates) lists the
+/// others to pass as `Some(timestamp)`. Other providers may load several
+/// expirations at once.
+///
 /// Note: While this type is public for return values, users should not manually construct it.
 /// Use `Ticker::options()` to obtain options data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,10 +115,49 @@ impl Options {
             .unwrap_or_default()
     }
 
+    /// Earliest expiration date (Unix timestamp) with a loaded chain.
+    ///
+    /// For a Yahoo chain fetched with `options(None)` this is the nearest
+    /// expiration. Contracts without an expiration are grouped under `0` by
+    /// providers that build chains from flat contract lists; that group is
+    /// skipped. `None` when no dated chain is loaded.
+    pub fn loaded_expiration(&self) -> Option<i64> {
+        self.first_result()?
+            .options
+            .iter()
+            .map(|chain| chain.expiration_date)
+            .filter(|&date| date != 0)
+            .min()
+    }
+
+    /// Borrowing iterator over call contracts across all loaded expirations.
+    ///
+    /// Same contracts as [`calls`](Self::calls) without cloning them.
+    pub fn calls_iter(&self) -> impl Iterator<Item = &OptionContract> {
+        self.contracts_iter(|chain| chain.calls.as_deref())
+    }
+
+    /// Borrowing iterator over put contracts across all loaded expirations.
+    ///
+    /// Same contracts as [`puts`](Self::puts) without cloning them.
+    pub fn puts_iter(&self) -> impl Iterator<Item = &OptionContract> {
+        self.contracts_iter(|chain| chain.puts.as_deref())
+    }
+
+    fn contracts_iter<'a>(
+        &'a self,
+        side: impl Fn(&'a OptionChainData) -> Option<&'a [OptionContract]> + 'a,
+    ) -> impl Iterator<Item = &'a OptionContract> {
+        self.first_result()
+            .into_iter()
+            .flat_map(|r| r.options.iter())
+            .flat_map(move |chain| side(chain).unwrap_or_default())
+    }
+
     /// Get the call contracts of every expiration in this response, flattened.
     ///
-    /// A response fetched with `ticker.options(None)` holds only the nearest
-    /// expiration.
+    /// With Yahoo, a response fetched with `ticker.options(None)` holds only the
+    /// nearest expiration; other providers may load several.
     ///
     /// Returns a `Contracts` wrapper that supports `.to_dataframe()` when
     /// the `dataframe` feature is enabled.
@@ -200,5 +244,81 @@ impl Options {
 
         // Combine into single DataFrame
         calls_df.vstack(&puts_df)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn options() -> Options {
+        serde_json::from_value(serde_json::json!({
+            "optionChain": {
+                "result": [{
+                    "expirationDates": [100, 200],
+                    "options": [{
+                        "expirationDate": 100,
+                        "calls": [{ "contractSymbol": "C1", "strike": 10.0 }],
+                        "puts": [
+                            { "contractSymbol": "P1", "strike": 9.0 },
+                            { "contractSymbol": "P2", "strike": 8.0 }
+                        ]
+                    }]
+                }],
+                "error": null
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn iterators_borrow_the_same_contracts_as_the_cloning_accessors() {
+        let options = options();
+        let calls: Vec<_> = options.calls_iter().map(|c| &c.contract_symbol).collect();
+        let puts: Vec<_> = options.puts_iter().map(|c| &c.contract_symbol).collect();
+        assert_eq!(calls, ["C1"]);
+        assert_eq!(puts, ["P1", "P2"]);
+        assert_eq!(options.calls().len(), calls.len());
+        assert_eq!(options.puts().len(), puts.len());
+    }
+
+    #[test]
+    fn loaded_expiration_is_the_first_chain() {
+        assert_eq!(options().loaded_expiration(), Some(100));
+    }
+
+    #[test]
+    fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
+        let contract =
+            |symbol: &str, expiration: Option<i64>| -> crate::models::options::OptionContract {
+                serde_json::from_value(serde_json::json!({
+                    "contractSymbol": symbol,
+                    "strike": 1.0,
+                    "expiration": expiration,
+                }))
+                .unwrap()
+            };
+        let options = crate::providers::build_options(
+            "X".into(),
+            Provider::Yahoo,
+            vec![],
+            vec![
+                contract("C0", None),
+                contract("C2", Some(200)),
+                contract("C1", Some(100)),
+            ],
+            vec![],
+        );
+        assert_eq!(options.loaded_expiration(), Some(100));
+    }
+
+    #[test]
+    fn empty_result_has_no_contracts_or_expiration() {
+        let options: Options = serde_json::from_value(
+            serde_json::json!({"optionChain": {"result": [], "error": null}}),
+        )
+        .unwrap();
+        assert_eq!(options.loaded_expiration(), None);
+        assert_eq!(options.calls_iter().count(), 0);
     }
 }

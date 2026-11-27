@@ -42,7 +42,7 @@ The network round-trip, not parsing, dominates every call.
 
 ## Single Coin Lookup
 
-```rust no_run feature=crypto covers=finance_query::models::crypto::CoinQuote
+```rust no_run feature=crypto covers=finance_query::crypto::CoinQuote
 use finance_query::crypto;
 
 #[tokio::main]
@@ -74,7 +74,7 @@ To discover IDs programmatically, call the CoinGecko `/coins/list` endpoint.
 
 ## `CoinQuote` Fields
 
-<!-- soothfast:bind finance_query::models::crypto::CoinQuote -->
+<!-- soothfast:bind finance_query::crypto::CoinQuote -->
 
 | Field | Type | Description |
 |-------|------|-------------|

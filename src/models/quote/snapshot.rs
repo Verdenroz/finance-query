@@ -1,10 +1,10 @@
 //! Cross-market snapshot model.
 //!
-//! Served through the [`Capability::QUOTE`](crate::Capability::QUOTE) route by
+//! Served through the [`Capability::QUOTE`](finance_query_types::Capability::QUOTE) route by
 //! providers whose snapshot endpoint spans asset classes; Polygon is currently
 //! the only one. A single request can mix equities, options contracts, FX
 //! pairs, crypto pairs, and indices — see
-//! [`Providers::snapshot`](crate::Providers::snapshot).
+//! `Providers::snapshot`.
 
 use serde::{Deserialize, Serialize};
 

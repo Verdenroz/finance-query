@@ -1,6 +1,6 @@
 //! Compile-time format type parameters for `FormattedValue`-bearing structs.
 //!
-//! Structs like [`Quote`](crate::Quote) carry a format type parameter `F: Format`
+//! Structs like [`Quote`](super::quote::Quote) carry a format type parameter `F: Format`
 //! that controls what type each numeric field holds:
 //!
 //! | `F`      | `F::Value<f64>`         | Access pattern            |
@@ -30,7 +30,7 @@ mod sealed {
     pub trait Sealed {}
 }
 
-/// Marker trait that controls how [`FormattedValue`](crate::FormattedValue) fields are typed.
+/// Marker trait that controls how [`FormattedValue`](super::quote::FormattedValue) fields are typed.
 ///
 /// Sealed — only [`Both`], [`Raw`], and [`Pretty`] implement this trait.
 pub trait Format: sealed::Sealed + Clone + std::fmt::Debug + PartialEq + 'static {
@@ -54,7 +54,7 @@ pub trait Format: sealed::Sealed + Clone + std::fmt::Debug + PartialEq + 'static
 
 /// Full format — fields hold `FormattedValue<T>` with `raw`, `fmt`, and `long_fmt`.
 ///
-/// This is the default format parameter, so a bare [`Quote`](crate::Quote) is
+/// This is the default format parameter, so a bare [`Quote`](super::quote::Quote) is
 /// `Quote<Both>`. This is the form that can be deserialized directly from
 /// Yahoo Finance JSON.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -63,15 +63,15 @@ pub struct Both;
 /// Raw format — fields hold `T` directly (e.g. `f64`, `i64`).
 ///
 /// Obtain via `Ticker::quote::<Raw>()`,
-/// [`Quote::into_raw`](crate::Quote::into_raw), or
-/// [`Quote::as_raw`](crate::Quote::as_raw). No `Option`-wrapping of the value itself;
+/// [`Quote::into_raw`](super::quote::Quote::into_raw), or
+/// [`Quote::as_raw`](super::quote::Quote::as_raw). No `Option`-wrapping of the value itself;
 /// the `Option` at the field level reflects missing data from the API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Raw;
 
 /// Pretty format — fields hold an `Option<String>` with the human-readable representation.
 ///
-/// Obtain via [`Quote::into_pretty`](crate::Quote::into_pretty).
+/// Obtain via [`Quote::into_pretty`](super::quote::Quote::into_pretty).
 /// Falls back to `long_fmt` when `fmt` is absent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Pretty;

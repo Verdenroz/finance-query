@@ -42,7 +42,12 @@ pub struct Chart {
 impl Chart {
     /// Converts the candles to a polars DataFrame.
     ///
-    /// Each candle becomes a row with columns for timestamp, open, high, low, close, volume.
+    /// Each candle becomes a row with columns for timestamp, open, high, low, close, volume,
+    /// adj_close and provider_id.
+    ///
+    /// `provider_id` is the provider that served each candle (e.g. `"yahoo"`), null when
+    /// unknown. It repeats the chart's own [`provider_id`](Self::provider_id), so a join
+    /// of two chart frames duplicates the column; drop or rename it before joining.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         Candle::vec_to_dataframe(&self.candles)
     }
@@ -311,5 +316,39 @@ impl Chart {
         period: usize,
     ) -> crate::indicators::Result<Vec<Option<crate::indicators::FibonacciLevels>>> {
         crate::indicators::fibonacci_retracement(&self.high_prices(), &self.low_prices(), period)
+    }
+}
+
+#[cfg(feature = "risk")]
+impl Chart {
+    /// Simple close-to-close returns of the candles, one fewer than
+    /// `candles`. See [`risk::returns`](crate::risk::returns).
+    ///
+    /// `close` is not dividend-adjusted, so returns exclude dividends.
+    pub fn returns(&self) -> Vec<f64> {
+        crate::risk::returns(&self.candles)
+    }
+}
+
+#[cfg(all(test, feature = "risk"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn returns_match_risk_returns() {
+        let candles: Vec<Candle> = [100.0, 110.0, 99.0]
+            .into_iter()
+            .map(|c| Candle::__new(0, c, c, c, c, 1, None, None))
+            .collect();
+        let chart = Chart {
+            symbol: "X".into(),
+            meta: ChartMeta::default(),
+            candles,
+            interval: None,
+            range: None,
+            provider_id: None,
+        };
+        assert_eq!(chart.returns(), crate::risk::returns(&chart.candles));
+        assert_eq!(chart.returns().len(), 2);
     }
 }

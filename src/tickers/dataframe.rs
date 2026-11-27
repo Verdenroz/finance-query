@@ -2,8 +2,8 @@
 
 use super::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
-    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
+    BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
 };
 use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
@@ -51,6 +51,21 @@ impl BatchQuotesResponse {
     ///
     /// Columns are `symbol` followed by the columns of `Quote::to_dataframe`.
     /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
+    pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
+        stack_by_symbol(
+            &self.quotes,
+            |quote| quote.to_dataframe()?.drop("symbol"),
+            || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),
+        )
+    }
+}
+
+impl BatchQuotesAs<crate::format::Both> {
+    /// Converts the quotes to a polars DataFrame, one row per symbol.
+    ///
+    /// Columns are `symbol` followed by the columns of `Quote::to_dataframe`.
+    /// Rows are sorted by symbol. Failed symbols in `errors` are omitted.
+    /// Only the `Both` format has a frame; `Raw` and `Pretty` quotes do not.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         stack_by_symbol(
             &self.quotes,
@@ -233,6 +248,21 @@ mod tests {
             .iter()
             .map(|n| n.to_string())
             .collect()
+    }
+
+    #[test]
+    fn quotes_as_both_frame_matches_batch_quotes_frame() {
+        let summary = crate::models::quote::QuoteSummaryResponse {
+            symbol: "AAPL".into(),
+            ..Default::default()
+        };
+        let mut batch = BatchQuotesResponse::with_capacity(1);
+        batch
+            .quotes
+            .insert("AAPL".into(), Quote::from_response(&summary, None, None));
+        let expected = batch.to_dataframe().unwrap();
+        let generic: BatchQuotesAs<crate::format::Both> = batch.into();
+        assert_eq!(generic.to_dataframe().unwrap(), expected);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! Sectioned filing text and risk-factor models.
 //!
-//! Served through the [`Capability::FILINGS`](crate::Capability::FILINGS)
+//! Served through the [`Capability::FILINGS`](finance_query_types::Capability::FILINGS)
 //! route by EDGAR (best-effort HTML section extraction, keyless) or Polygon.
 
 use serde::{Deserialize, Serialize};

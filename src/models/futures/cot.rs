@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 /// Weekly Commitments of Traders positioning for one futures market.
 ///
-/// Obtain via [`FuturesContract::commitments_of_traders`](crate::FuturesContract::commitments_of_traders).
+/// Obtain via `FuturesContract::commitments_of_traders`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CommitmentsOfTraders {

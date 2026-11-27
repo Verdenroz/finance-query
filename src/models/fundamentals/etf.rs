@@ -1,6 +1,6 @@
 //! ETF profile and holdings models.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route. Alpha Vantage, FMP, and Yahoo all implement it; coverage is ragged
 //! (Alpha Vantage serves fuller profile-level fields, FMP additionally serves
 //! sector/country breakdowns, Yahoo serves fee/holdings/sector data but no

@@ -1,7 +1,7 @@
 //! Market-wide performance models.
 //!
-//! Returned by the [`Capability::MARKET`](crate::Capability::MARKET) route via
-//! [`Providers::market`](crate::Providers::market).
+//! Returned by the [`Capability::MARKET`](finance_query_types::Capability::MARKET) route via
+//! `Providers::market`.
 
 use serde::{Deserialize, Serialize};
 

@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 **`ForexQuote` fields:**
 
-<!-- soothfast:bind finance_query::models::forex::ForexQuote -->
+<!-- soothfast:bind finance_query::ForexQuote -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
-```rust capture-output feature=alphavantage covers=finance_query::models::forex::ForexQuote
+```rust capture-output feature=alphavantage covers=finance_query::ForexQuote
 use finance_query::ForexQuote;
 
 // `ForexQuote` is #[non_exhaustive] outside the crate, so construct via

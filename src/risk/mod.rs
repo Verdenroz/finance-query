@@ -33,7 +33,7 @@ mod var;
 
 pub use self::beta::beta;
 pub use self::cvar::{historical_cvar, parametric_cvar};
-pub use self::drawdown::max_drawdown;
+pub use self::drawdown::{DrawdownSpan, max_drawdown, max_drawdown_span};
 pub use self::ratios::{
     calmar_ratio, information_ratio, kelly_criterion, omega_ratio, sharpe_ratio, sortino_ratio,
     tracking_error, ulcer_index, win_loss_stats,
@@ -102,8 +102,11 @@ pub struct RiskSummary {
     pub tracking_error: Option<f64>,
 }
 
-/// Compute returns from a slice of candles (simple daily returns: close-to-close).
-pub(crate) fn candles_to_returns(candles: &[Candle]) -> Vec<f64> {
+/// Simple close-to-close returns of a candle series, one fewer than `candles`.
+///
+/// These are the returns every function in this module is computed from.
+/// `close` is not dividend-adjusted, so returns exclude dividends.
+pub fn returns(candles: &[Candle]) -> Vec<f64> {
     candles
         .windows(2)
         .map(|w| (w[1].close - w[0].close) / w[0].close)
@@ -171,8 +174,29 @@ pub(crate) fn periods_per_year(interval: crate::Interval, cal: TradingCalendar) 
     }
 }
 
+impl RiskSummary {
+    /// Build a summary from candles of the given `interval`, annualised with the
+    /// exchange-traded calendar (252 trading days, 6.5h sessions).
+    ///
+    /// `benchmark` is a candle series for the same interval; `beta`,
+    /// `information_ratio` and `tracking_error` are `None` without it.
+    pub fn from_candles(
+        candles: &[Candle],
+        benchmark: Option<&[Candle]>,
+        interval: crate::Interval,
+    ) -> Self {
+        let benchmark_returns = benchmark.map(returns);
+        compute_risk_summary_with_periods(
+            candles,
+            benchmark_returns.as_deref(),
+            periods_per_year(interval, TradingCalendar::Exchange),
+        )
+    }
+}
+
 /// Build a [`RiskSummary`] from candle data and an optional benchmark return
 /// series, using the default daily exchange calendar (252 periods/year).
+#[cfg(test)]
 pub(crate) fn compute_risk_summary(
     candles: &[Candle],
     benchmark_returns: Option<&[f64]>,
@@ -188,7 +212,7 @@ pub(crate) fn compute_risk_summary_with_periods(
     benchmark_returns: Option<&[f64]>,
     periods_per_year: f64,
 ) -> RiskSummary {
-    let returns = candles_to_returns(candles);
+    let returns = returns(candles);
 
     let mut sorted = returns.clone();
     sorted.sort_by(|a, b| a.total_cmp(b));
@@ -308,7 +332,7 @@ mod tests {
         let bench_closes: Vec<f64> = (0..30).map(|i| 100.0 + i as f64 * 0.8).collect();
         let candles: Vec<Candle> = asset_closes.into_iter().map(make_candle).collect();
         let bench_candles: Vec<Candle> = bench_closes.into_iter().map(make_candle).collect();
-        let bench_returns = candles_to_returns(&bench_candles);
+        let bench_returns = returns(&bench_candles);
 
         let summary = compute_risk_summary(&candles, Some(&bench_returns));
         assert!(summary.information_ratio.is_some());
@@ -319,9 +343,38 @@ mod tests {
     }
 
     #[test]
+    fn from_candles_annualises_by_interval() {
+        use crate::Interval;
+        let candles: Vec<Candle> = (0..50).map(|i| make_candle(100.0 + i as f64)).collect();
+        let weekly = RiskSummary::from_candles(&candles, None, Interval::OneWeek);
+        let expected = compute_risk_summary_with_periods(&candles, None, 52.0);
+        assert_eq!(weekly.sharpe, expected.sharpe);
+        let daily = RiskSummary::from_candles(&candles, None, Interval::OneDay);
+        assert!(daily.sharpe.unwrap() > weekly.sharpe.unwrap());
+    }
+
+    #[test]
+    fn from_candles_matches_compute_with_benchmark_returns() {
+        let candles: Vec<Candle> = (0..30).map(|i| make_candle(100.0 + i as f64)).collect();
+        let bench: Vec<Candle> = (0..30)
+            .map(|i| make_candle(50.0 + i as f64 * 0.5))
+            .collect();
+        let from_candles =
+            RiskSummary::from_candles(&candles, Some(&bench), crate::Interval::OneDay);
+        let direct = compute_risk_summary(&candles, Some(&returns(&bench)));
+        assert_eq!(from_candles.beta, direct.beta);
+        assert_eq!(from_candles.sharpe, direct.sharpe);
+        assert!(
+            RiskSummary::from_candles(&candles, None, crate::Interval::OneDay)
+                .beta
+                .is_none()
+        );
+    }
+
+    #[test]
     fn test_candles_to_returns_basic() {
         let candles = vec![make_candle(100.0), make_candle(110.0), make_candle(99.0)];
-        let returns = candles_to_returns(&candles);
+        let returns = returns(&candles);
         assert_eq!(returns.len(), 2);
         assert!((returns[0] - 0.10).abs() < 1e-9);
         assert!((returns[1] - (-0.1)).abs() < 0.01);
@@ -329,8 +382,8 @@ mod tests {
 
     #[test]
     fn test_candles_to_returns_empty_and_single() {
-        assert!(candles_to_returns(&[]).is_empty());
-        assert!(candles_to_returns(&[make_candle(100.0)]).is_empty());
+        assert!(returns(&[]).is_empty());
+        assert!(returns(&[make_candle(100.0)]).is_empty());
 
         let empty_summary = compute_risk_summary(&[], None);
         assert_eq!(empty_summary.var_95, 0.0);
