@@ -5,7 +5,7 @@
 
 #[cfg(all(test, feature = "dataframe"))]
 mod dataframe_tests;
-pub(crate) mod response;
+pub mod response;
 
 use super::ChartMeta;
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,8 @@ pub struct Spark {
 
 impl Spark {
     /// Create from internal response data
-    pub(crate) fn from_response(
+    #[doc(hidden)]
+    pub fn from_response(
         result: &response::SparkSymbolResult,
         interval: Option<String>,
         range: Option<String>,

@@ -52,7 +52,8 @@ impl Transcript {
     /// Only available when the `sentiment` feature is enabled. Called
     /// automatically when a transcript is fetched.
     #[cfg(feature = "sentiment")]
-    pub(crate) fn score_sentiment(&mut self) {
+    #[doc(hidden)]
+    pub fn score_sentiment(&mut self) {
         if let Some(t) = self.transcript_content.transcript.as_mut() {
             for p in t.paragraphs.iter_mut() {
                 p.sentiment = Some(crate::models::sentiment::analyze(&p.text));

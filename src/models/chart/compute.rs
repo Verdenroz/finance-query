@@ -6,7 +6,8 @@ use crate::indicators::{self, Indicator, IndicatorResult, Result};
 /// Shared dispatch used by `Ticker::indicator` and the domain handles
 /// (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`, `Commodity`) so the
 /// indicator-selection logic lives in exactly one place.
-pub(crate) fn compute_indicator(indicator: Indicator, chart: &Chart) -> Result<IndicatorResult> {
+#[doc(hidden)]
+pub fn compute_indicator(indicator: Indicator, chart: &Chart) -> Result<IndicatorResult> {
     let o = chart.open_prices();
     let h = chart.high_prices();
     let l = chart.low_prices();

@@ -834,7 +834,8 @@ impl Quote<Both> {
     /// * `response` - The quote summary response from Yahoo Finance
     /// * `logo_url` - Optional company logo URL (fetched separately from /v7/finance/quote)
     /// * `company_logo_url` - Optional alternative company logo URL (fetched separately from /v7/finance/quote)
-    pub(crate) fn from_response(
+    #[doc(hidden)]
+    pub fn from_response(
         response: &QuoteSummaryResponse,
         logo_url: Option<String>,
         company_logo_url: Option<String>,

@@ -5,7 +5,7 @@
 
 use crate::models::format::{Both, Format};
 use crate::models::quote::FormattedValue;
-use finance_query_derive::FormatConvert;
+use finance_query_derive::{FieldsInit, FormatConvert};
 use serde::{Deserialize, Serialize};
 
 /// Detailed pricing data for a stock
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// - `Price` / `Price<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `Price<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `Price<Pretty>` — fields hold `Option<String>` (human-readable)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, FieldsInit, Default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]
@@ -185,7 +185,8 @@ pub struct Price<F: Format = Both> {
 
 impl Price<Both> {
     /// Rescales the change-percent fields from Yahoo's fractions to percent.
-    pub(crate) fn with_percent_changes(self) -> Self {
+    #[doc(hidden)]
+    pub fn with_percent_changes(self) -> Self {
         Self {
             pre_market_change_percent: self
                 .pre_market_change_percent

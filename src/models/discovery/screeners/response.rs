@@ -99,7 +99,8 @@ impl ScreenerResults {
     /// # Errors
     ///
     /// Returns an error if the response contains no screener data.
-    pub(crate) fn from_response(raw: serde_json::Value) -> Result<Self, String> {
+    #[doc(hidden)]
+    pub fn from_response(raw: serde_json::Value) -> Result<Self, String> {
         // Deserialize the raw response
         let raw_response: RawScreenersResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse screener response: {}", e))?;
@@ -129,7 +130,8 @@ impl ScreenerResults {
     /// # Errors
     ///
     /// Returns an error if the response contains no screener data or has an error.
-    pub(crate) fn from_custom_response(raw: serde_json::Value) -> Result<Self, String> {
+    #[doc(hidden)]
+    pub fn from_custom_response(raw: serde_json::Value) -> Result<Self, String> {
         // Deserialize the raw response
         let raw_response: RawCustomScreenerResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse custom screener response: {}", e))?;

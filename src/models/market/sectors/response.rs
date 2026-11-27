@@ -436,7 +436,8 @@ pub struct ResearchReport {
 
 impl SectorData {
     /// Parse Yahoo Finance sector response JSON
-    pub(crate) fn from_response(json: serde_json::Value) -> Result<Self, String> {
+    #[doc(hidden)]
+    pub fn from_response(json: serde_json::Value) -> Result<Self, String> {
         let raw: RawSectorResponse = serde_json::from_value(json)
             .map_err(|e| format!("Failed to parse sector response: {}", e))?;
 
