@@ -49,6 +49,7 @@ pub struct ScreenerQuote {
     pub regular_market_previous_close: Option<FormattedValue<f64>>,
     /// Regular market timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub regular_market_time: Option<FormattedValue<i64>>,
 
     // Volume & Market Cap
@@ -142,6 +143,7 @@ pub struct ScreenerQuote {
     pub dividend_rate: Option<FormattedValue<f64>>,
     /// Ex-dividend date timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub dividend_date: Option<FormattedValue<i64>>,
     /// Trailing annual dividend rate
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -176,6 +178,7 @@ pub struct ScreenerQuote {
     pub post_market_change_percent: Option<FormattedValue<f64>>,
     /// Post-market timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub post_market_time: Option<FormattedValue<i64>>,
     /// Pre-market price
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -188,17 +191,21 @@ pub struct ScreenerQuote {
     pub pre_market_change_percent: Option<FormattedValue<f64>>,
     /// Pre-market timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub pre_market_time: Option<FormattedValue<i64>>,
 
     // Earnings Dates
     /// Earnings timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub earnings_timestamp: Option<FormattedValue<i64>>,
     /// Earnings timestamp start
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub earnings_timestamp_start: Option<FormattedValue<i64>>,
     /// Earnings timestamp end
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub earnings_timestamp_end: Option<FormattedValue<i64>>,
 
     // Additional Fields

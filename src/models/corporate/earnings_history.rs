@@ -30,6 +30,7 @@ pub struct EarningsHistoryEntry {
 
     /// Quarter for this earnings report
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub quarter: Option<crate::models::quote::FormattedValue<i64>>,
 
     /// Period identifier (e.g., "-1q", "-2q")

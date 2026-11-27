@@ -215,6 +215,24 @@ fn market_summary_spark_columns() {
 }
 
 #[test]
+fn market_summary_quote_time_is_a_datetime() {
+    use crate::MarketSummaryQuote;
+
+    let quote: MarketSummaryQuote = serde_json::from_value(json!({
+        "symbol": "^GSPC",
+        "regularMarketTime": {"raw": 1794603601, "fmt": "4:00PM EST"}
+    }))
+    .unwrap();
+    let df = quote.to_dataframe().unwrap();
+    let time = df
+        .column("regular_market_time")
+        .unwrap()
+        .datetime()
+        .unwrap();
+    assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
+}
+
+#[test]
 fn market_time_parses_the_rfc3339_time() {
     use crate::models::market::hours::MarketTime;
 

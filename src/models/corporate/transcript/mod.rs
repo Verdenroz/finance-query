@@ -238,6 +238,7 @@ pub struct Word {
 pub struct TranscriptMetadata {
     /// Date of the earnings call (Unix timestamp).
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", nonzero))]
     pub date: i64,
     /// Event ID.
     #[serde(default)]
@@ -268,6 +269,7 @@ pub struct TranscriptMetadata {
     pub transcript_type: String,
     /// Last updated timestamp.
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", nonzero))]
     pub updated: i64,
 }
 

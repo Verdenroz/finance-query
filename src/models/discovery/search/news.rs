@@ -100,6 +100,7 @@ pub struct SearchNews {
     pub link: Option<String>,
     /// Publication timestamp (Unix epoch seconds)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub provider_publish_time: Option<i64>,
     /// Article type (STORY, VIDEO, etc.)
     #[serde(rename = "type")]

@@ -110,10 +110,12 @@ pub struct AssetProfile {
 
     /// Governance epoch date
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub governance_epoch_date: Option<i64>,
 
     /// Compensation as of epoch date
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub compensation_as_of_epoch_date: Option<i64>,
 
     /// Maximum age of this data in seconds
