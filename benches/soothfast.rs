@@ -2457,7 +2457,7 @@ fn df_quote(quote: &Quote) {
 #[bench(
     group = "dataframe",
     setup = parsed_quote_etf,
-    alloc = 1688,
+    alloc = 1691,
     covers = "finance_query::Quote"
 )]
 fn df_quote_etf(quote: &Quote) {
