@@ -380,7 +380,7 @@ pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesAs,
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
-    Tickers, TickersBuilder,
+    SymbolMap, Tickers, TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]

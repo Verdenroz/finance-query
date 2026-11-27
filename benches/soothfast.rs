@@ -2220,6 +2220,34 @@ fn tickers_batch_quote_then_cached(input: &(tokio::runtime::Runtime, Tickers)) {
     keep((first, second));
 }
 
+fn canned_tickers_sized(n: usize) -> (tokio::runtime::Runtime, Tickers) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let tickers = rt
+        .block_on(
+            Tickers::builder((0..n).map(|i| format!("S{i}")))
+                .with_provider_set(canned_provider_set())
+                .build(),
+        )
+        .unwrap();
+    (rt, tickers)
+}
+
+#[bench(
+    group = "tickers",
+    setup_sized = canned_tickers_sized,
+    sizes(125, 250, 500),
+    complexity = "n",
+    covers = "finance_query::Tickers::quotes"
+)]
+fn tickers_batch_quote_large_cached(input: &(tokio::runtime::Runtime, Tickers)) {
+    let (rt, tickers) = input;
+    let first = rt.block_on(tickers.quotes()).unwrap();
+    let second = rt.block_on(tickers.quotes()).unwrap();
+    keep((first, second));
+}
+
 // ── Model (de)serialization (real Yahoo-shaped fixtures) ─────────────────────
 
 static SEARCH_JSON: &str = include_str!("fixtures/search.json");

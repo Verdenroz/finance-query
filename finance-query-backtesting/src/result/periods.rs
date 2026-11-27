@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use chrono::{Datelike, Weekday};
 
@@ -31,7 +31,7 @@ impl BacktestResult {
     /// - **`total_signals` / `executed_signals`**: these fields are `0` in
     ///   period breakdowns because signal records are not partitioned per
     ///   period.  Use [`BacktestResult::signals`] directly if needed.
-    pub fn by_year(&self) -> HashMap<i32, PerformanceMetrics> {
+    pub fn by_year(&self) -> BTreeMap<i32, PerformanceMetrics> {
         self.temporal_metrics(|ts| datetime_from_timestamp(ts).map(|dt| dt.year()))
     }
 
@@ -41,7 +41,7 @@ impl BacktestResult {
     /// Uses the same equity-slicing approach as [`by_year`](Self::by_year);
     /// the same caveats about open positions, partial periods, and signal
     /// counts apply here as well.
-    pub fn by_month(&self) -> HashMap<(i32, u32), PerformanceMetrics> {
+    pub fn by_month(&self) -> BTreeMap<(i32, u32), PerformanceMetrics> {
         self.temporal_metrics(|ts| datetime_from_timestamp(ts).map(|dt| (dt.year(), dt.month())))
     }
 
@@ -125,12 +125,12 @@ impl BacktestResult {
     fn temporal_metrics<K>(
         &self,
         key_fn: impl Fn(i64) -> Option<K>,
-    ) -> HashMap<K, PerformanceMetrics>
+    ) -> BTreeMap<K, PerformanceMetrics>
     where
-        K: std::hash::Hash + Eq + Copy,
+        K: Ord + Copy,
     {
         // Pre-group trades by period key — O(T)
-        let mut trade_groups: HashMap<K, Vec<&Trade>> = HashMap::new();
+        let mut trade_groups: BTreeMap<K, Vec<&Trade>> = BTreeMap::new();
         for trade in &self.trades {
             if let Some(key) = key_fn(trade.exit_timestamp) {
                 trade_groups.entry(key).or_default().push(trade);
@@ -138,7 +138,7 @@ impl BacktestResult {
         }
 
         // Pre-group equity curve by period key — O(N)
-        let mut equity_groups: HashMap<K, Vec<EquityPoint>> = HashMap::new();
+        let mut equity_groups: BTreeMap<K, Vec<EquityPoint>> = BTreeMap::new();
         for p in &self.equity_curve {
             if let Some(key) = key_fn(p.timestamp) {
                 equity_groups.entry(key).or_default().push(p.clone());
