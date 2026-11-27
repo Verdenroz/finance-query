@@ -1,4 +1,4 @@
-use crate::__dataframe::stack_rows;
+use crate::__dataframe::{EpochUnit, epoch_date, stack_rows};
 use crate::ToDataFrame;
 use polars::prelude::{DataFrame, PolarsResult};
 
@@ -58,10 +58,12 @@ macro_rules! delegate_wrapped_rows {
 ///
 /// The period comes from `period_key` (a `{raw}` object, a number or a numeric
 /// string); fields that are neither a number nor a `{raw}` number are skipped.
+/// `epoch_period` reads the period as epoch seconds and types its column as a `Date`.
 fn metric_rows(
     entries: &[serde_json::Value],
     period_key: &str,
     period_column: &str,
+    epoch_period: bool,
 ) -> PolarsResult<DataFrame> {
     use polars::prelude::{NamedFrom, Series};
     use serde_json::Value;
@@ -96,10 +98,21 @@ fn metric_rows(
         }
     }
 
+    let periods = if epoch_period {
+        epoch_date(
+            period_column.to_string(),
+            EpochUnit::Seconds,
+            false,
+            periods.into_iter(),
+        )
+    } else {
+        Series::new(period_column.into(), periods).into()
+    };
+
     DataFrame::new(
         values.len(),
         vec![
-            Series::new(period_column.into(), periods).into(),
+            periods,
             Series::new("metric".into(), metrics).into(),
             Series::new("value".into(), values).into(),
         ],
@@ -107,16 +120,16 @@ fn metric_rows(
 }
 
 macro_rules! impl_metric_rows {
-    ($($ty:ty => $field:ident, $key:literal, $column:literal),* $(,)?) => {
+    ($($ty:ty => $field:ident, $key:literal, $column:literal, $epoch:literal),* $(,)?) => {
         $(
             impl $ty {
                 /// Converts the entries to a long-format polars DataFrame, one row per numeric field.
                 ///
-                /// Columns are the entry's period (i64, null when absent), `metric` (the
+                /// Columns are the entry's period (Date for `end_date`, else i64; null when absent), `metric` (the
                 /// Yahoo field name) and `value` (f64, the `raw` of `{raw, fmt}` fields).
                 /// An empty or missing list yields a zero-row frame with the same columns.
                 pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-                    metric_rows(self.$field.as_deref().unwrap_or_default(), $key, $column)
+                    metric_rows(self.$field.as_deref().unwrap_or_default(), $key, $column, $epoch)
                 }
             }
 
@@ -126,7 +139,7 @@ macro_rules! impl_metric_rows {
                 }
 
                 fn vec_to_dataframe(items: &[Self]) -> PolarsResult<DataFrame> {
-                    stack_rows(metric_rows(&[], $key, $column), items, Self::to_dataframe)
+                    stack_rows(metric_rows(&[], $key, $column, $epoch), items, Self::to_dataframe)
                 }
             }
         )*
@@ -134,13 +147,13 @@ macro_rules! impl_metric_rows {
 }
 
 impl_metric_rows!(
-    crate::models::fundamentals::BalanceSheetHistory => balance_sheet_statements, "endDate", "end_date",
-    crate::models::fundamentals::BalanceSheetHistoryQuarterly => balance_sheet_statements, "endDate", "end_date",
-    crate::models::fundamentals::CashflowStatementHistory => cashflow_statements, "endDate", "end_date",
-    crate::models::fundamentals::CashflowStatementHistoryQuarterly => cashflow_statements, "endDate", "end_date",
-    crate::models::fundamentals::IncomeStatementHistory => income_statement_history, "endDate", "end_date",
-    crate::models::fundamentals::IncomeStatementHistoryQuarterly => income_statement_history, "endDate", "end_date",
-    crate::models::corporate::fund_performance::PastQuarterlyReturns => returns, "year", "year",
+    crate::models::fundamentals::BalanceSheetHistory => balance_sheet_statements, "endDate", "end_date", true,
+    crate::models::fundamentals::BalanceSheetHistoryQuarterly => balance_sheet_statements, "endDate", "end_date", true,
+    crate::models::fundamentals::CashflowStatementHistory => cashflow_statements, "endDate", "end_date", true,
+    crate::models::fundamentals::CashflowStatementHistoryQuarterly => cashflow_statements, "endDate", "end_date", true,
+    crate::models::fundamentals::IncomeStatementHistory => income_statement_history, "endDate", "end_date", true,
+    crate::models::fundamentals::IncomeStatementHistoryQuarterly => income_statement_history, "endDate", "end_date", true,
+    crate::models::corporate::fund_performance::PastQuarterlyReturns => returns, "year", "year", false,
 );
 
 delegate_rows_to_inherent!(
@@ -257,7 +270,7 @@ mod tests {
         let history: IncomeStatementHistory = serde_json::from_value(serde_json::json!({
             "maxAge": 1,
             "incomeStatementHistory": [
-                {"maxAge": 1, "endDate": {"raw": 100, "fmt": "x"},
+                {"maxAge": 1, "endDate": {"raw": 1759017600, "fmt": "x"},
                  "totalRevenue": {"raw": 5.0, "fmt": "5"}, "netIncome": 2, "label": "skip"},
                 {"totalRevenue": {"raw": 6.0}}
             ]
@@ -267,13 +280,15 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                ("end_date", DataType::Int64),
+                ("end_date", DataType::Date),
                 ("metric", DataType::String),
                 ("value", DataType::Float64),
             ])
         );
         assert_eq!(df.height(), 3);
         assert_eq!(df.column("end_date").unwrap().null_count(), 1);
+        let day = df.column("end_date").unwrap().date().unwrap();
+        assert_eq!(day.phys.get(0), Some(20_359));
 
         let empty: IncomeStatementHistory = serde_json::from_value(serde_json::json!({})).unwrap();
         assert_eq!(schema(&empty.to_dataframe().unwrap()), schema(&df));

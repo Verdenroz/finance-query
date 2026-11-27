@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct OptionChain {
     /// Expiration date (Unix timestamp)
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub expiration_date: i64,
 
     /// Whether all data is fetched
@@ -44,5 +45,6 @@ pub struct OptionsQuote {
     pub regular_market_price: Option<f64>,
 
     /// Regular market time (Unix timestamp)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub regular_market_time: Option<i64>,
 }

@@ -208,3 +208,21 @@ fn market_summary_spark_columns() {
     assert!(columns(&nested).iter().any(|c| c.starts_with("spark:list")));
     assert_eq!(quote.spark_dataframe().unwrap().height(), 2);
 }
+
+#[test]
+fn market_summary_quote_time_is_a_datetime() {
+    use crate::MarketSummaryQuote;
+
+    let quote: MarketSummaryQuote = serde_json::from_value(json!({
+        "symbol": "^GSPC",
+        "regularMarketTime": {"raw": 1794603601, "fmt": "4:00PM EST"}
+    }))
+    .unwrap();
+    let df = quote.to_dataframe().unwrap();
+    let time = df
+        .column("regular_market_time")
+        .unwrap()
+        .datetime()
+        .unwrap();
+    assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
+}

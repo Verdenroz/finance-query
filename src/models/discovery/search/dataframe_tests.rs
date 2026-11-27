@@ -1,5 +1,6 @@
 use super::SearchResults;
 use super::news::SearchNews;
+use super::research::ResearchReport;
 use super::thumbnail::{NewsThumbnail, ThumbnailResolution};
 use crate::models::dataframe_test_util::columns;
 use serde_json::json;
@@ -107,4 +108,25 @@ fn search_results_nested_schema_does_not_depend_on_the_data() {
     let full = SearchResults::vec_to_nested_dataframe(&[results]).unwrap();
     let empty = SearchResults::vec_to_nested_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), columns(&full));
+}
+
+#[test]
+fn news_and_report_times_use_their_source_units() {
+    let news: SearchNews = serde_json::from_value(json!({
+        "title": "t", "providerPublishTime": 1794603601
+    }))
+    .unwrap();
+    let df = news.to_dataframe().unwrap();
+    let time = df
+        .column("provider_publish_time")
+        .unwrap()
+        .datetime()
+        .unwrap();
+    assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
+
+    let report: ResearchReport =
+        serde_json::from_value(json!({"reportDate": 1794603601000_i64})).unwrap();
+    let df = report.to_dataframe().unwrap();
+    let time = df.column("report_date").unwrap().datetime().unwrap();
+    assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
 }

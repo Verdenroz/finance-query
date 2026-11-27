@@ -1,5 +1,6 @@
 use super::listings::{StockListing, StockType, TickerChange};
 use super::reference::{ExchangeInfo, ScreenerMatch, SymbolDetails, SymbolMatch};
+use super::screeners::ScreenerQuote;
 use crate::models::dataframe_test_util::columns;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -119,4 +120,26 @@ fn exchange_and_screener_match_columns() {
     assert_eq!(cols.len(), 13);
     assert!(cols.contains(&"beta:f64".to_string()));
     assert!(cols.contains(&"is_etf:bool".to_string()));
+}
+
+#[test]
+fn screener_quote_epochs_are_typed() {
+    let quote: ScreenerQuote = parse(json!({
+        "symbol": "AAPL",
+        "quoteType": "EQUITY",
+        "exchange": "NMS",
+        "regularMarketPrice": {"raw": 1.0},
+        "regularMarketChange": {"raw": 0.1},
+        "regularMarketChangePercent": {"raw": 0.1},
+        "regularMarketTime": {"raw": 1794603601},
+        "dividendDate": {"raw": 1795132800},
+        "earningsTimestamp": {"raw": 1785441600}
+    }));
+    let df = quote.to_dataframe().unwrap();
+    let micros = |name| df.column(name).unwrap().datetime().unwrap().phys.get(0);
+    assert_eq!(micros("regular_market_time"), Some(1_794_603_601_000_000));
+    assert_eq!(micros("earnings_timestamp"), Some(1_785_441_600_000_000));
+    assert_eq!(micros("pre_market_time"), None);
+    let day = df.column("dividend_date").unwrap().date().unwrap();
+    assert_eq!(day.phys.get(0), Some(20_777));
 }
