@@ -135,7 +135,7 @@ Each update yielded by the stream contains:
 | `exchange` | `String` | Exchange code (e.g., `"NMS"`) |
 | `quote_type` | `QuoteType` | Asset type (Equity, Etf, Cryptocurrency, etc.) |
 | `market_hours` | `MarketHoursType` | Session (PreMarket, RegularMarket, PostMarket) |
-| `time` | `i64` | Unix timestamp in milliseconds |
+| `time` | `i64` | Unix timestamp in milliseconds, a `Datetime(us, UTC)` column in frames |
 
 <!-- /soothfast:bind -->
 

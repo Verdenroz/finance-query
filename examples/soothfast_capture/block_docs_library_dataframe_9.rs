@@ -12,10 +12,10 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total = df.height();
 
     // Keep the last six months
-    let cutoff = (Utc::now() - Duration::days(182)).timestamp();
+    let cutoff = (Utc::now() - Duration::days(182)).timestamp_micros();
     let recent = df
         .lazy()
-        .filter(col("timestamp").gt_eq(lit(cutoff)))
+        .filter(col("timestamp").cast(DataType::Int64).gt_eq(lit(cutoff)))
         .collect()?;
     println!("Filtered to fewer rows: {}", recent.height() < total);
     Ok(())

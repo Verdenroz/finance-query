@@ -90,7 +90,7 @@ shape: (23, 7)
 
 <!-- soothfast:bind finance_query::Candle -->
 
-- `timestamp` (i64) - Unix timestamp
+- `timestamp` (Datetime, UTC) - Bar time
 - `open` (f64) - Opening price
 - `high` (f64) - High price
 - `low` (f64) - Low price
@@ -399,8 +399,8 @@ Series: 'daily_return_pct' [f64]
 
 ### Time-based Operations
 
-Timestamp columns are `i64` epoch seconds, so compare them against epoch
-seconds.
+Chart timestamps are `Datetime(us, UTC)` columns. Cast to `Int64` to compare
+against epoch microseconds.
 
 ```rust capture-output feature=dataframe
 use chrono::{Duration, Utc};
@@ -415,10 +415,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total = df.height();
 
     // Keep the last six months
-    let cutoff = (Utc::now() - Duration::days(182)).timestamp();
+    let cutoff = (Utc::now() - Duration::days(182)).timestamp_micros();
     let recent = df
         .lazy()
-        .filter(col("timestamp").gt_eq(lit(cutoff)))
+        .filter(col("timestamp").cast(DataType::Int64).gt_eq(lit(cutoff)))
         .collect()?;
     println!("Filtered to fewer rows: {}", recent.height() < total);
     Ok(())
@@ -429,20 +429,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Filtered to fewer rows: true
 ```
 
-For calendar operations such as `dt().date()` or `group_by_dynamic`, cast the
-column to a datetime first. Polars needs its `dtype-datetime` and `temporal`
-features for this, and `Datetime` takes milliseconds:
-
-```rust ignore
-let df = df
-    .lazy()
-    .with_column(
-        (col("timestamp") * lit(1000))
-            .cast(DataType::Datetime(TimeUnit::Milliseconds, None))
-            .alias("datetime"),
-    )
-    .collect()?;
-```
+Calendar operations such as `dt().date()` or `group_by_dynamic` work on the
+column directly when Polars has its `temporal` feature enabled.
 
 ### Sorting and Ranking
 
@@ -525,7 +513,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Group by (approximate) month and aggregate
     let monthly = df
         .lazy()
-        .with_column((col("timestamp") / lit(86400i64 * 30i64)).alias("month"))
+        .with_column(
+            (col("timestamp").cast(DataType::Int64) / lit(86_400_000_000i64 * 30i64))
+                .alias("month"),
+        )
         .group_by([col("month")])
         .agg([
             col("close").mean().alias("avg_close"),
@@ -711,6 +702,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let price_df = aapl_chart.to_dataframe()?;
     let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
 
+    let price_df = price_df
+        .lazy()
+        .with_column(col("timestamp").cast(DataType::Date))
+        .collect()?;
     let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
     println!("joined shape: {:?}", joined.shape());
     Ok(())
