@@ -118,4 +118,38 @@ mod tests {
         );
         assert_eq!(df.column("pivot_points_pivot").unwrap().null_count(), 1);
     }
+
+    #[derive(crate::ToDataFrame)]
+    #[dataframe(crate = "crate")]
+    struct Generic<F: crate::models::format::Format = crate::format::Both> {
+        #[dataframe(datetime = "s")]
+        time: Option<F::Value<i64>>,
+        #[dataframe(date = "s", nonzero)]
+        day: Option<F::Value<i64>>,
+    }
+
+    #[test]
+    fn format_value_epochs_become_time_columns() {
+        let value = |raw| crate::FormattedValue {
+            fmt: None,
+            long_fmt: None,
+            raw: Some(raw),
+        };
+        let df = Generic::<crate::format::Both> {
+            time: Some(value(1)),
+            day: Some(value(0)),
+        }
+        .to_dataframe()
+        .unwrap();
+        let schema = df.schema();
+        assert_eq!(
+            schema.get("time"),
+            Some(&DataType::Datetime(
+                polars::prelude::TimeUnit::Microseconds,
+                Some(polars::prelude::TimeZone::UTC)
+            ))
+        );
+        assert_eq!(schema.get("day"), Some(&DataType::Date));
+        assert_eq!(df.column("day").unwrap().null_count(), 1);
+    }
 }
