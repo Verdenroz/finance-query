@@ -16,6 +16,7 @@ pub struct GradingAction {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Action date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// The analyst firm issuing the grade.
     pub grading_company: Option<String>,

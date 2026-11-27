@@ -165,8 +165,9 @@ impl CalendarDetail {
 impl MarketCalendarEntry {
     /// Converts the entries to a polars DataFrame, one row per entry.
     ///
-    /// Columns are `symbol`, `date` and `event_type` (strings). The detail
-    /// payload is not expanded because its fields differ per type.
+    /// Columns are `symbol` and `event_type` (strings) and `date` (`Date`,
+    /// from the leading `YYYY-MM-DD`). The detail payload is not expanded
+    /// because its fields differ per type.
     pub fn vec_to_dataframe(
         entries: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
@@ -183,14 +184,10 @@ impl MarketCalendarEntry {
                         .collect::<Vec<_>>(),
                 )
                 .into(),
-                Series::new(
+                crate::__dataframe::str_date(
                     "date".into(),
-                    entries
-                        .iter()
-                        .map(|e| e.date.as_deref())
-                        .collect::<Vec<_>>(),
-                )
-                .into(),
+                    entries.iter().map(|e| e.date.as_deref()),
+                ),
                 Series::new(
                     "event_type".into(),
                     entries

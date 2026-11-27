@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 pub struct ShortInterest {
     /// Settlement date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub settlement_date: Option<String>,
     /// Total shares held short at settlement.
     pub short_interest: Option<f64>,
@@ -28,6 +29,7 @@ pub struct ShortInterest {
 #[non_exhaustive]
 pub struct ShortVolume {
     /// Trade date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Shares sold short.
     pub short_volume: Option<f64>,
@@ -53,6 +55,7 @@ pub struct ShareFloat {
     /// Freely tradable shares as a percentage of shares outstanding (0-100).
     pub float_percent: Option<f64>,
     /// As-of date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
 }
 
@@ -84,7 +87,7 @@ mod tests {
                 "total_volume"
             ]
         );
-        assert_eq!(df.column("date").unwrap().dtype(), &DataType::String);
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
         assert_eq!(
             df.column("total_volume").unwrap().dtype(),
             &DataType::Float64
@@ -92,11 +95,12 @@ mod tests {
         let dates: Vec<_> = df
             .column("date")
             .unwrap()
-            .str()
+            .date()
             .unwrap()
+            .phys
             .into_no_null_iter()
             .collect();
-        assert_eq!(dates, ["2024-01-02", "2024-01-03"]);
+        assert_eq!(dates, [19724, 19725]);
     }
 
     #[test]
@@ -120,6 +124,10 @@ mod tests {
         assert_eq!(
             df.column("days_to_cover").unwrap().dtype(),
             &DataType::Float64
+        );
+        assert_eq!(
+            df.column("settlement_date").unwrap().dtype(),
+            &DataType::Date
         );
     }
 
@@ -146,6 +154,6 @@ mod tests {
             df.column("float_shares").unwrap().dtype(),
             &DataType::Float64
         );
-        assert_eq!(df.column("date").unwrap().dtype(), &DataType::String);
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
     }
 }

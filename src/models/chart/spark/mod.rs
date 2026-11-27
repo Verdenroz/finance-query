@@ -117,12 +117,12 @@ impl Spark {
 impl Spark {
     /// Converts the points to a long-format polars DataFrame, one row per point.
     ///
-    /// Columns are `symbol` (string), `timestamp` (i64), `close` (f64), `interval`
-    /// and `range` (strings, repeated on every row). The shorter of `timestamps`
-    /// and `closes` is padded with nulls. Chart metadata is in
+    /// Columns are `symbol` (string), `timestamp` (`Datetime(us, UTC)`), `close`
+    /// (f64), `interval` and `range` (strings, repeated on every row). The
+    /// shorter of `timestamps` and `closes` is padded with nulls. Chart metadata is in
     /// [`meta_dataframe`](Self::meta_dataframe).
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::__dataframe::padded;
+        use crate::__dataframe::{EpochUnit, epoch_datetime, padded};
         use polars::prelude::*;
 
         let rows = self.timestamps.len().max(self.closes.len());
@@ -130,11 +130,12 @@ impl Spark {
             rows,
             vec![
                 Series::new("symbol".into(), vec![self.symbol.as_str(); rows]).into(),
-                Series::new(
+                epoch_datetime(
                     "timestamp".into(),
-                    padded(self.timestamps.iter().copied().map(Some), rows),
-                )
-                .into(),
+                    EpochUnit::Seconds,
+                    false,
+                    padded(self.timestamps.iter().copied().map(Some), rows).into_iter(),
+                ),
                 Series::new(
                     "close".into(),
                     padded(self.closes.iter().copied().map(Some), rows),
@@ -151,13 +152,19 @@ impl Spark {
     pub fn vec_to_dataframe(
         items: &[Self],
     ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
+        use crate::__dataframe::{EpochUnit, epoch_datetime};
         use polars::prelude::*;
 
         let schema = DataFrame::new(
             0,
             vec![
                 Series::new("symbol".into(), Vec::<&str>::new()).into(),
-                Series::new("timestamp".into(), Vec::<i64>::new()).into(),
+                epoch_datetime(
+                    "timestamp".into(),
+                    EpochUnit::Seconds,
+                    false,
+                    std::iter::empty(),
+                ),
                 Series::new("close".into(), Vec::<f64>::new()).into(),
                 Series::new("interval".into(), Vec::<&str>::new()).into(),
                 Series::new("range".into(), Vec::<&str>::new()).into(),

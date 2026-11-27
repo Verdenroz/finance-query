@@ -110,26 +110,25 @@ impl EventKind {
 impl CalendarEvent {
     /// Converts the events to a polars DataFrame, one row per event.
     ///
-    /// Columns are `timestamp` (i64), `date`, `symbol` and `event_type` (strings).
-    /// The event payload is not expanded because its fields differ per type.
+    /// Columns are `timestamp` (`Datetime(us, UTC)`), `date` (`Date`), `symbol`
+    /// and `event_type` (strings). The event payload is not expanded because
+    /// its fields differ per type.
     pub fn vec_to_dataframe(
         events: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use crate::__dataframe::{EpochUnit, epoch_datetime, str_date};
         use polars::prelude::*;
 
         DataFrame::new(
             events.len(),
             vec![
-                Series::new(
+                epoch_datetime(
                     "timestamp".into(),
-                    events.iter().map(|e| e.timestamp).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "date".into(),
-                    events.iter().map(|e| e.date.as_str()).collect::<Vec<_>>(),
-                )
-                .into(),
+                    EpochUnit::Seconds,
+                    false,
+                    events.iter().map(|e| Some(e.timestamp)),
+                ),
+                str_date("date".into(), events.iter().map(|e| Some(e.date.as_str()))),
                 Series::new(
                     "symbol".into(),
                     events

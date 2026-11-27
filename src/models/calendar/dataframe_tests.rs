@@ -16,7 +16,12 @@ fn calendar_event_frame() {
 
     assert_eq!(
         columns(&df),
-        ["timestamp:i64", "date:str", "symbol:str", "event_type:str"]
+        [
+            "timestamp:datetime[μs, UTC]",
+            "date:date",
+            "symbol:str",
+            "event_type:str"
+        ]
     );
     let types: Vec<_> = df
         .column("event_type")
@@ -44,7 +49,7 @@ fn market_entry_frame() {
     .unwrap();
     let df = MarketCalendarEntry::vec_to_dataframe(&entries).unwrap();
 
-    assert_eq!(columns(&df), ["symbol:str", "date:str", "event_type:str"]);
+    assert_eq!(columns(&df), ["symbol:str", "date:date", "event_type:str"]);
     assert_eq!(df.height(), 2);
     assert_eq!(df.column("date").unwrap().null_count(), 1);
 

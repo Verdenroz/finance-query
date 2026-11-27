@@ -14,6 +14,7 @@ pub struct EarningsSurprise {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Earnings report date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Actual reported EPS.
     pub actual_eps: Option<f64>,
@@ -55,6 +56,7 @@ mod tests {
             ]
         );
         assert_eq!(df.column("symbol").unwrap().dtype(), &DataType::String);
+        assert_eq!(df.column("date").unwrap().dtype(), &DataType::Date);
         assert_eq!(df.column("actual_eps").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.height(), 1);
     }

@@ -30,6 +30,7 @@ pub struct EtfProfile {
     /// Trailing dividend yield, as a fraction.
     pub dividend_yield: Option<f64>,
     /// Inception date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub inception_date: Option<String>,
     /// Portfolio holdings, heaviest first.
     #[cfg_attr(feature = "dataframe", dataframe(nested))]

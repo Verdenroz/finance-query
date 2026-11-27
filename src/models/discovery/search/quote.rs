@@ -105,8 +105,11 @@ pub struct SearchQuote {
     /// Previous company name (for recent name changes)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prev_name: Option<String>,
-    /// Date of name change
+    /// Yahoo's record date for this hit (`YYYY-MM-DD`).
+    ///
+    /// Yahoo sends a recent date on every hit, so this is not the date the name changed.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub name_change_date: Option<String>,
 }
 

@@ -162,6 +162,7 @@ pub struct EdgarSearchHit {
 pub struct EdgarSearchSource {
     /// Filing date (YYYY-MM-DD)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub file_date: Option<String>,
 
     /// Form type (e.g., "10-K", "10-Q", "8-K")
@@ -174,6 +175,7 @@ pub struct EdgarSearchSource {
 
     /// Period ending date
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub period_ending: Option<String>,
 
     /// CIK numbers (as strings)

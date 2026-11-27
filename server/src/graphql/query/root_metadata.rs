@@ -310,7 +310,7 @@ impl RootMetadataQuery {
         }
     }
 
-    /// US Treasury yield curve rates for a calendar year (keyless).
+    /// US Treasury yield curve rates for a calendar year, most recent day first (keyless).
     async fn treasury_yields(
         &self,
         ctx: &Context<'_>,
@@ -332,7 +332,8 @@ impl RootMetadataQuery {
             .await
             .map_err(to_gql_error)?;
         let rows: Vec<GqlTreasuryYield> = from_gql_json(json)?;
-        pagination::paginate(&rows, first, after).await
+        let newest_first: Vec<GqlTreasuryYield> = rows.into_iter().rev().collect();
+        pagination::paginate(&newest_first, first, after).await
     }
 
     /// US Treasury securities auctions, most recent auction date first

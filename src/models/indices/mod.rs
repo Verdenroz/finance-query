@@ -98,6 +98,7 @@ pub struct IndexConstituent {
     /// Headquarters location
     pub headquarters: Option<String>,
     /// Date the company was first added to the index (`YYYY-MM-DD`)
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date_first_added: Option<String>,
     /// SEC CIK number
     pub cik: Option<String>,
@@ -112,6 +113,7 @@ pub struct IndexConstituent {
 #[non_exhaustive]
 pub struct IndexConstituentChange {
     /// Date of the change (`YYYY-MM-DD`)
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Ticker symbol the change concerns
     pub symbol: Option<String>,

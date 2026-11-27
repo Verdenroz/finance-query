@@ -18,7 +18,7 @@ fn spark(timestamps: &[i64], closes: &[f64]) -> Spark {
 fn spark_columns() {
     let expected = [
         "symbol:str",
-        "timestamp:i64",
+        "timestamp:datetime[μs, UTC]",
         "close:f64",
         "interval:str",
         "range:str",
@@ -47,11 +47,11 @@ fn spark_rows_pair_each_timestamp_with_its_close() {
     let spark = Spark::from_response(&result, None, None).unwrap();
     let df = spark.to_dataframe().unwrap();
     assert_eq!(df.height(), 2);
-    let timestamps = df.column("timestamp").unwrap().i64().unwrap();
+    let timestamps = &df.column("timestamp").unwrap().datetime().unwrap().phys;
     let closes = df.column("close").unwrap().f64().unwrap();
     assert_eq!(
         timestamps.into_iter().collect::<Vec<_>>(),
-        [Some(1), Some(3)]
+        [Some(1_000_000), Some(3_000_000)]
     );
     assert_eq!(
         closes.into_iter().collect::<Vec<_>>(),

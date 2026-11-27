@@ -197,9 +197,6 @@ impl FactConcept {
 }
 
 #[cfg(feature = "dataframe")]
-use crate::__dataframe::with_leading_column;
-
-#[cfg(feature = "dataframe")]
 impl FactsByTaxonomy {
     /// Convert every data point of every concept to a long-format polars DataFrame.
     ///
@@ -208,16 +205,10 @@ impl FactsByTaxonomy {
     /// unit's data points in stored order. With no data points the frame has
     /// the same columns and no rows.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        let schema = with_leading_column(FactUnit::vec_to_dataframe(&[])?, "unit", "")?;
-        let mut stacked = with_leading_column(schema, "concept", "")?;
-        for (concept, fact) in &self.0 {
-            for (unit, points) in &fact.units {
-                let frame = with_leading_column(FactUnit::vec_to_dataframe(points)?, "unit", unit)?;
-                stacked.vstack_mut(&with_leading_column(frame, "concept", concept)?)?;
-            }
-        }
-        stacked.rechunk_mut();
-        Ok(stacked)
+        long_frame(
+            ["concept", "unit"],
+            fact_rows(self).map(|(concept, unit, point)| ([concept, unit], point)),
+        )
     }
 }
 
@@ -230,15 +221,51 @@ impl CompanyFacts {
     /// there. `cik` and `entity_name` are not in the frame. With no facts the
     /// frame has the same columns and no rows.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        let schema = FactsByTaxonomy(BTreeMap::new()).to_dataframe()?;
-        let mut stacked = with_leading_column(schema, "taxonomy", "")?;
-        for (taxonomy, facts) in &self.facts {
-            let frame = with_leading_column(facts.to_dataframe()?, "taxonomy", taxonomy)?;
-            stacked.vstack_mut(&frame)?;
-        }
-        stacked.rechunk_mut();
-        Ok(stacked)
+        long_frame(
+            ["taxonomy", "concept", "unit"],
+            self.facts.iter().flat_map(|(taxonomy, facts)| {
+                fact_rows(facts)
+                    .map(move |(concept, unit, point)| ([taxonomy.as_str(), concept, unit], point))
+            }),
+        )
     }
+}
+
+#[cfg(feature = "dataframe")]
+fn fact_rows(facts: &FactsByTaxonomy) -> impl Iterator<Item = (&str, &str, &FactUnit)> {
+    facts.0.iter().flat_map(|(concept, fact)| {
+        fact.units.iter().flat_map(move |(unit, points)| {
+            points
+                .iter()
+                .map(move |point| (concept.as_str(), unit.as_str(), point))
+        })
+    })
+}
+
+/// One string column per key name, then the [`FactUnit`] columns, built in a single pass.
+#[cfg(feature = "dataframe")]
+fn long_frame<'a, const N: usize>(
+    names: [&str; N],
+    rows: impl Iterator<Item = ([&'a str; N], &'a FactUnit)>,
+) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+    use crate::__dataframe::Columns;
+    use ::polars::prelude::*;
+
+    let mut keys: [Vec<&str>; N] = std::array::from_fn(|_| Vec::new());
+    let mut points = Vec::new();
+    for (row_keys, point) in rows {
+        for (column, key) in keys.iter_mut().zip(row_keys) {
+            column.push(key);
+        }
+        points.push(Some(point));
+    }
+    let mut columns: Vec<Column> = names
+        .into_iter()
+        .zip(keys)
+        .map(|(name, values)| Series::new(name.into(), values).into())
+        .collect();
+    columns.extend(FactUnit::columns(&points, ""));
+    DataFrame::new_infer_height(columns)
 }
 
 /// A single data point for an XBRL fact.
@@ -251,10 +278,12 @@ impl CompanyFacts {
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub start: Option<String>,
 
     /// End date of the period (for duration facts) or instant date (for point-in-time facts)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub end: Option<String>,
 
     /// The reported value
@@ -279,6 +308,7 @@ pub struct FactUnit {
 
     /// Date the filing was filed
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filed: Option<String>,
 
     /// Frame identifier (e.g., "CY2023Q4I")

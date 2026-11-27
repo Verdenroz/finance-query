@@ -15,7 +15,7 @@ fn futures_quote_columns() {
             "name:str",
             "underlying:str",
             "exchange:str",
-            "expiration_date:str",
+            "expiration_date:date",
             "price:f64",
             "change:f64",
             "change_percent:f64",
@@ -44,7 +44,7 @@ fn commitments_of_traders_frame() {
     let cols = columns(&df);
     assert_eq!(
         cols[..3],
-        ["symbol:str", "report_date:str", "open_interest:i64"]
+        ["symbol:str", "report_date:date", "open_interest:i64"]
     );
     assert_eq!(df.width(), 18);
     assert_eq!(df.height(), 1);

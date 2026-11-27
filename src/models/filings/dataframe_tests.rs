@@ -44,7 +44,7 @@ fn provider_filings_frame() {
     let expected = [
         "symbol:str",
         "accession_number:str",
-        "filing_date:str",
+        "filing_date:date",
         "filing_type:str",
         "filing_url:str",
         "company_name:str",
@@ -73,7 +73,7 @@ fn section_and_risk_factor_columns() {
     let risks: Vec<RiskFactor> = serde_json::from_value(json!([{"title": "t"}])).unwrap();
     assert_eq!(
         columns(&RiskFactor::vec_to_dataframe(&risks).unwrap()),
-        ["title:str", "text:str", "category:str", "filing_date:str"]
+        ["title:str", "text:str", "category:str", "filing_date:date"]
     );
 }
 
@@ -89,7 +89,7 @@ fn insider_trade_columns() {
     assert_eq!(cols.len(), 19);
     assert!(cols.contains(&"is_director:bool".to_string()));
     assert!(cols.contains(&"shares:f64".to_string()));
-    assert!(cols.contains(&"transaction_date:str".to_string()));
+    assert!(cols.contains(&"transaction_date:date".to_string()));
 }
 
 #[test]
@@ -99,13 +99,15 @@ fn holding_trade_and_ftd_columns() {
     let cols = columns(&InstitutionalHolding::vec_to_dataframe(&holdings).unwrap());
     assert_eq!(cols.len(), 13);
     assert!(cols.contains(&"value:f64".to_string()));
-    assert!(cols.contains(&"report_date:str".to_string()));
+    assert!(cols.contains(&"report_date:date".to_string()));
 
     let trades: Vec<CongressionalTrade> =
         serde_json::from_value(json!([{"symbol": "AAPL", "office": "House"}])).unwrap();
     let cols = columns(&CongressionalTrade::vec_to_dataframe(&trades).unwrap());
     assert_eq!(cols.len(), 11);
     assert_eq!(cols[0], "symbol:str");
+    assert!(cols.contains(&"transaction_date:date".to_string()));
+    assert!(cols.contains(&"disclosure_date:date".to_string()));
 
     let ftd: Vec<FailToDeliver> =
         serde_json::from_value(json!([{"symbol": "AAPL", "quantity": 100.0}])).unwrap();
@@ -113,7 +115,7 @@ fn holding_trade_and_ftd_columns() {
         columns(&FailToDeliver::vec_to_dataframe(&ftd).unwrap()),
         [
             "symbol:str",
-            "date:str",
+            "date:date",
             "quantity:f64",
             "price:f64",
             "name:str",
@@ -132,8 +134,8 @@ fn search_hit_and_file_columns() {
         [
             "accession_number:str",
             "form:str",
-            "filed_date:str",
-            "period_ending:str",
+            "filed_date:date",
+            "period_ending:date",
             "score:f64",
             "url:str",
             "company_names:list[str]",
@@ -172,10 +174,10 @@ fn edgar_search_total_columns() {
 fn edgar_search_source_columns() {
     let row: EdgarSearchSource = serde_json::from_value(json!({})).unwrap();
     let expected = [
-        "file_date:str",
+        "file_date:date",
         "form:str",
         "adsh:str",
-        "period_ending:str",
+        "period_ending:date",
         "ciks:list[str]",
         "display_names:list[str]",
         "root_forms:list[str]",
@@ -228,7 +230,7 @@ fn submissions_nest_the_filing_history() {
     assert_eq!(recent.height(), 2);
     assert_eq!(
         columns(&recent)[..2],
-        ["accession_number:str", "filing_date:str"]
+        ["accession_number:str", "filing_date:date"]
     );
     assert_eq!(filings.files_dataframe().unwrap().height(), 1);
 }
@@ -285,7 +287,7 @@ fn missing_recent_filings_keep_the_row_columns() {
     assert_eq!(recent.height(), 0);
     assert_eq!(
         columns(&recent)[..2],
-        ["accession_number:str", "filing_date:str"]
+        ["accession_number:str", "filing_date:date"]
     );
 }
 
@@ -315,13 +317,16 @@ fn company_facts_long_frame_is_sorted() {
             "taxonomy:str",
             "concept:str",
             "unit:str",
-            "start:str",
-            "end:str"
+            "start:date",
+            "end:date"
         ]
     );
     assert_eq!(df.column("val").unwrap().dtype().to_string(), "f64");
+    assert_eq!(df.column("filed").unwrap().dtype().to_string(), "date");
     let strings = |name: &str| -> Vec<String> {
         df.column(name)
+            .unwrap()
+            .cast(&polars::prelude::DataType::String)
             .unwrap()
             .str()
             .unwrap()
@@ -345,7 +350,7 @@ fn company_facts_long_frame_is_sorted() {
 fn facts_by_taxonomy_drops_the_taxonomy_column() {
     let facts = company_facts();
     let df = facts.us_gaap().unwrap().to_dataframe().unwrap();
-    assert_eq!(columns(&df)[..3], ["concept:str", "unit:str", "start:str"]);
+    assert_eq!(columns(&df)[..3], ["concept:str", "unit:str", "start:date"]);
     assert_eq!(df.height(), 4);
 }
 
@@ -356,4 +361,27 @@ fn empty_company_facts_keep_the_schema() {
     let df = empty.to_dataframe().unwrap();
     assert_eq!(df.height(), 0);
     assert_eq!(columns(&df), columns(&full));
+}
+
+#[test]
+fn company_facts_frame_matches_stacked_unit_frames() {
+    use crate::__dataframe::with_leading_column;
+
+    let facts = company_facts();
+    let schema = with_leading_column(FactUnit::vec_to_dataframe(&[]).unwrap(), "unit", "").unwrap();
+    let schema = with_leading_column(schema, "concept", "").unwrap();
+    let mut stacked = with_leading_column(schema, "taxonomy", "").unwrap();
+    for (taxonomy, by_concept) in &facts.facts {
+        for (concept, fact) in &by_concept.0 {
+            for (unit, points) in &fact.units {
+                let frame = FactUnit::vec_to_dataframe(points).unwrap();
+                let frame = with_leading_column(frame, "unit", unit).unwrap();
+                let frame = with_leading_column(frame, "concept", concept).unwrap();
+                let frame = with_leading_column(frame, "taxonomy", taxonomy).unwrap();
+                stacked.vstack_mut(&frame).unwrap();
+            }
+        }
+    }
+
+    assert!(facts.to_dataframe().unwrap().equals_missing(&stacked));
 }

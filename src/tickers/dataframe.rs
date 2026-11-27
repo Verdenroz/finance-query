@@ -492,7 +492,10 @@ mod tests {
             names(&df),
             ["symbol", "timestamp", "close", "interval", "range"]
         );
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+        );
         assert_eq!(df.height(), 2);
 
         let empty: BatchSparksResponse = response(serde_json::json!({"sparks": {}, "errors": {}}));

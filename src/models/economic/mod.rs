@@ -38,6 +38,7 @@ pub struct EconomicSeries {
 #[non_exhaustive]
 pub struct MacroObservation {
     /// Date of the observation as `YYYY-MM-DD`
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// Observation value. `None` when FRED reports a missing value (`"."`).
     pub value: Option<f64>,
@@ -59,14 +60,15 @@ pub struct MacroSeries {
 /// One day of US Treasury yield curve rates.
 ///
 /// Maturities with no published rate on a given date are `None`.
-/// Obtain via `fred::treasury_yields`.
+/// Obtain via `fred::treasury_yields`, which returns rows oldest first.
 #[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TreasuryYield {
-    /// Date as `MM/DD/YYYY` (Treasury's native format)
+    /// Date as `YYYY-MM-DD`
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// 1-month Treasury yield (%)
     pub y1m: Option<f64>,

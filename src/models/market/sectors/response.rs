@@ -407,6 +407,7 @@ pub struct ResearchReport {
 
     /// Report publication date (ISO 8601)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime))]
     pub report_date: Option<String>,
 
     /// Full report title

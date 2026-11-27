@@ -27,6 +27,7 @@ pub struct ProviderFiling {
     /// SEC accession number (unique filing ID).
     pub accession_number: Option<String>,
     /// Filing date as `YYYY-MM-DD`.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: Option<String>,
     /// Filing type (e.g., `"10-K"`, `"10-Q"`, `"8-K"`).
     pub filing_type: Option<String>,

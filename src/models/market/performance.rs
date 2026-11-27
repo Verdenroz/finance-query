@@ -39,6 +39,7 @@ pub struct SectorPerformance {
 #[non_exhaustive]
 pub struct SectorPerformanceHistory {
     /// Date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Per-sector percentage change on that date, one entry per
     /// (sector, exchange) pair.
@@ -59,6 +60,7 @@ pub struct SectorPe {
     /// Price/earnings ratio.
     pub pe: Option<f64>,
     /// As-of date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
 }
 
@@ -75,6 +77,7 @@ pub struct IndustryPe {
     /// Price/earnings ratio.
     pub pe: Option<f64>,
     /// As-of date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
 }
 
