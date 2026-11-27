@@ -21,6 +21,7 @@ pub(crate) struct CountingProvider {
     events_calls: AtomicUsize,
     options_calls: AtomicUsize,
     failing_events: Option<&'static str>,
+    slow_chart: Option<&'static str>,
 }
 
 impl CountingProvider {
@@ -33,15 +34,31 @@ impl CountingProvider {
         Self::build(Some(symbol))
     }
 
+    /// A provider whose chart fetch for `symbol` finishes after every other symbol's.
+    pub(crate) fn slow_chart(symbol: &'static str) -> Arc<Self> {
+        Arc::new(Self {
+            slow_chart: Some(symbol),
+            ..Self::bare()
+        })
+    }
+
     fn build(failing_events: Option<&'static str>) -> Arc<Self> {
         Arc::new(Self {
+            failing_events,
+            ..Self::bare()
+        })
+    }
+
+    fn bare() -> Self {
+        Self {
             quote_calls: AtomicUsize::new(0),
             chart_calls: AtomicUsize::new(0),
             news_calls: AtomicUsize::new(0),
             events_calls: AtomicUsize::new(0),
             options_calls: AtomicUsize::new(0),
-            failing_events,
-        })
+            failing_events: None,
+            slow_chart: None,
+        }
     }
 
     pub(crate) fn quotes(&self) -> usize {
@@ -89,6 +106,9 @@ impl ChartProvider for CountingProvider {
     ) -> Result<Chart> {
         self.chart_calls.fetch_add(1, Ordering::SeqCst);
         tokio::task::yield_now().await;
+        if self.slow_chart == Some(symbol) {
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
         Ok(Chart {
             symbol: symbol.to_string(),
             meta: ChartMeta::default(),

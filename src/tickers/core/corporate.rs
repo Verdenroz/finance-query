@@ -52,15 +52,15 @@ impl Tickers {
             if let Some(entry) = events_cache.get(symbol) {
                 let all_dividends = entry.value.to_dividends();
                 let filtered = filter_by_range(all_dividends, range);
-                response.dividends.insert(symbol.to_string(), filtered);
+                response.dividends.push(symbol.to_string(), filtered);
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), events_error(&failures, symbol));
+                    .push(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch stock splits for all symbols
@@ -101,15 +101,15 @@ impl Tickers {
             if let Some(entry) = events_cache.get(symbol) {
                 let all_splits = entry.value.to_splits();
                 let filtered = filter_by_range(all_splits, range);
-                response.splits.insert(symbol.to_string(), filtered);
+                response.splits.push(symbol.to_string(), filtered);
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), events_error(&failures, symbol));
+                    .push(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch capital gains for all symbols
@@ -149,15 +149,15 @@ impl Tickers {
             if let Some(entry) = events_cache.get(symbol) {
                 let all_gains = entry.value.to_capital_gains();
                 let filtered = filter_by_range(all_gains, range);
-                response.capital_gains.insert(symbol.to_string(), filtered);
+                response.capital_gains.push(symbol.to_string(), filtered);
             } else {
                 response
                     .errors
-                    .insert(symbol.to_string(), events_error(&failures, symbol));
+                    .push(symbol.to_string(), events_error(&failures, symbol));
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Aggregate upcoming financial events across all symbols into a single

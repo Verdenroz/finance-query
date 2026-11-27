@@ -2,7 +2,7 @@
 
 use async_graphql::{Context, Object, Result};
 
-use super::{GqlTicker, build_gql_options, extract_batch_errors, resolve_gql_lang};
+use super::{GqlTicker, build_gql_options, extract_batch_errors, order_by_input, resolve_gql_lang};
 use crate::AppState;
 use crate::graphql::error::{from_gql_json, to_gql_error};
 use crate::graphql::types::{
@@ -50,7 +50,7 @@ impl RootBatchQuery {
             .await
             .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let quotes_map = json
             .get("quotes")
             .and_then(|v| v.as_object())
@@ -58,13 +58,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let lib_format = finance_query::ValueFormat::from(format);
-        let mut entries: Vec<_> = quotes_map.into_iter().collect();
-        entries.sort_by_key(|(symbol, _)| {
-            symbols
-                .iter()
-                .position(|s| s.eq_ignore_ascii_case(symbol))
-                .unwrap_or(usize::MAX)
-        });
+        let entries = order_by_input(quotes_map, &symbols);
         let mut quotes = Vec::with_capacity(entries.len());
         for (_, v) in entries {
             let v = lib_format.transform(v);
@@ -95,7 +89,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let charts_map = json
             .get("charts")
             .and_then(|v| v.as_object())
@@ -103,7 +97,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut charts = Vec::with_capacity(charts_map.len());
-        for (symbol, v) in charts_map {
+        for (symbol, v) in order_by_input(charts_map, &symbols) {
             let chart: GqlChart = from_gql_json(v)?;
             charts.push(GqlSymbolChart { symbol, chart });
         }
@@ -126,7 +120,7 @@ impl RootBatchQuery {
                 .await
                 .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let sparks_map = json
             .get("sparks")
             .and_then(|v| v.as_object())
@@ -134,7 +128,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut sparks = Vec::with_capacity(sparks_map.len());
-        for (_, v) in sparks_map {
+        for (_, v) in order_by_input(sparks_map, &symbols) {
             let spark: GqlSpark = from_gql_json(v)?;
             sparks.push(spark);
         }
@@ -154,7 +148,7 @@ impl RootBatchQuery {
             .await
             .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let options_map = json
             .get("options")
             .and_then(|v| v.as_object())
@@ -162,7 +156,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut options = Vec::with_capacity(options_map.len());
-        for (symbol, v) in options_map {
+        for (symbol, v) in order_by_input(options_map, &symbols) {
             let opts: finance_query::Options = from_gql_json(v)?;
             options.push(GqlSymbolOptions {
                 symbol,
@@ -190,7 +184,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let splits_map = json
             .get("splits")
             .and_then(|v| v.as_object())
@@ -198,7 +192,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut splits = Vec::with_capacity(splits_map.len());
-        for (symbol, v) in splits_map {
+        for (symbol, v) in order_by_input(splits_map, &symbols) {
             let entries: Vec<GqlSplit> = from_gql_json(v)?;
             splits.push(GqlSymbolSplits {
                 symbol,
@@ -226,7 +220,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let cg_map = json
             .get("capitalGains")
             .and_then(|v| v.as_object())
@@ -234,7 +228,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut capital_gains = Vec::with_capacity(cg_map.len());
-        for (symbol, v) in cg_map {
+        for (symbol, v) in order_by_input(cg_map, &symbols) {
             let entries: Vec<GqlCapitalGain> = from_gql_json(v)?;
             capital_gains.push(GqlSymbolCapitalGains {
                 symbol,
@@ -265,7 +259,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let dividends_map = json
             .get("dividends")
             .and_then(|v| v.as_object())
@@ -273,7 +267,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut dividends = Vec::with_capacity(dividends_map.len());
-        for (symbol, v) in dividends_map {
+        for (symbol, v) in order_by_input(dividends_map, &symbols) {
             let entries: Vec<GqlDividend> = from_gql_json(v)?;
             dividends.push(GqlSymbolDividends {
                 symbol,
@@ -304,7 +298,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let indicators_map = json
             .get("indicators")
             .and_then(|v| v.as_object())
@@ -312,7 +306,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut indicators = Vec::with_capacity(indicators_map.len());
-        for (symbol, v) in indicators_map {
+        for (symbol, v) in order_by_input(indicators_map, &symbols) {
             let flags: GqlIndicatorsSummary = from_gql_json(v)?;
             indicators.push(GqlSymbolIndicators {
                 symbol,
@@ -335,7 +329,7 @@ impl RootBatchQuery {
             .await
             .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let recs_map = json
             .get("recommendations")
             .and_then(|v| v.as_object())
@@ -343,7 +337,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut recommendations = Vec::with_capacity(recs_map.len());
-        for (_, v) in recs_map {
+        for (_, v) in order_by_input(recs_map, &symbols) {
             let rec: GqlRecommendation = from_gql_json(v)?;
             recommendations.push(rec);
         }
@@ -378,7 +372,7 @@ impl RootBatchQuery {
         .await
         .map_err(to_gql_error)?;
 
-        let errors = extract_batch_errors(&json);
+        let errors = extract_batch_errors(&json, &symbols);
         let metric_set: Option<std::collections::HashSet<&str>> = metrics
             .as_ref()
             .map(|m| m.iter().map(|s| s.as_str()).collect());
@@ -389,7 +383,7 @@ impl RootBatchQuery {
             .unwrap_or_default();
 
         let mut financials = Vec::with_capacity(financials_map.len());
-        for (symbol, v) in financials_map {
+        for (symbol, v) in order_by_input(financials_map, &symbols) {
             let fs: finance_query::FinancialStatement = from_gql_json(v)?;
             let items: Vec<GqlFinancialLineItem> = fs
                 .statement

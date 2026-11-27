@@ -30,12 +30,11 @@ impl Tickers {
         // Use HashSet for O(n+m) deduplication instead of O(n*m) linear search
         use std::collections::HashSet;
 
-        let existing: HashSet<&str> = self.symbols.iter().map(|s| &**s).collect();
+        let mut existing: HashSet<Arc<str>> = self.symbols.iter().cloned().collect();
         let to_add: Vec<Arc<str>> = symbols
             .into_iter()
-            .map(Into::into)
-            .filter(|s| !existing.contains(s.as_str()))
-            .map(|s| s.into())
+            .map(|s| Arc::<str>::from(s.into()))
+            .filter(|s| existing.insert(Arc::clone(s)))
             .collect();
 
         self.symbols.extend(to_add);

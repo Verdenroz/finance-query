@@ -28,7 +28,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&(symbol.clone(), interval, range)) {
                         response
                             .charts
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -51,7 +51,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&(symbol.clone(), interval, range)) {
                         response
                             .charts
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -125,11 +125,11 @@ impl Tickers {
             }
         } else {
             for (symbol, chart) in parsed_charts {
-                response.charts.insert(symbol.to_string(), chart);
+                response.charts.push(symbol.to_string(), chart);
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Get a specific chart by symbol
@@ -215,7 +215,7 @@ impl Tickers {
             match result {
                 Ok(data) => {
                     let chart = data;
-                    response.charts.insert(symbol.to_string(), chart);
+                    response.charts.push(symbol.to_string(), chart);
                 }
                 Err(e) => {
                     response.errors.insert(symbol.to_string(), e.to_string());
@@ -223,7 +223,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 
     /// Batch fetch spark data for all symbols in a single request.
@@ -267,7 +267,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&(symbol.clone(), interval, range)) {
                         response
                             .sparks
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -290,7 +290,7 @@ impl Tickers {
                     if let Some(entry) = cache.get(&(symbol.clone(), interval, range)) {
                         response
                             .sparks
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .push(symbol.to_string(), entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -353,7 +353,7 @@ impl Tickers {
             }
         }
 
-        Ok(response)
+        Ok(response.in_symbol_order(&self.symbols))
     }
 }
 

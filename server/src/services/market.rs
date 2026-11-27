@@ -23,7 +23,7 @@ pub async fn get_trending(cache: &Cache, region: Option<Region>) -> ServiceResul
                 // each with a batch quote lookup so name/price/change aren't null.
                 let symbols: Vec<&str> = trending.iter().map(|t| t.symbol.as_str()).collect();
                 let quotes = if symbols.is_empty() {
-                    std::collections::HashMap::new()
+                    finance_query::SymbolMap::new()
                 } else {
                     Tickers::builder(symbols).build().await?.quotes().await?.quotes
                 };

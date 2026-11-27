@@ -1,6 +1,6 @@
 //! Yahoo fundamentals-timeseries response parsing.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::Deserialize;
 
@@ -61,7 +61,7 @@ pub(crate) fn parse_statement(
         });
     }
 
-    let mut statement: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    let mut statement: BTreeMap<String, BTreeMap<String, f64>> = BTreeMap::new();
 
     for result in raw_response.timeseries.result {
         // Get the metric name from meta.type (e.g., "annualTotalRevenue")
@@ -80,7 +80,7 @@ pub(crate) fn parse_statement(
             _ => continue,
         };
 
-        let mut date_values: HashMap<String, f64> = HashMap::new();
+        let mut date_values: BTreeMap<String, f64> = BTreeMap::new();
 
         for point in data_points {
             if point.is_null() {

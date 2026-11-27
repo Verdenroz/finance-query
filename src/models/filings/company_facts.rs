@@ -7,7 +7,7 @@
 //! liabilities, etc.) extracted from 10-K and 10-Q filings.
 
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Deserialize CIK that may come as a number or a zero-padded string.
 fn deserialize_cik<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
@@ -60,7 +60,7 @@ pub struct CompanyFacts {
 
     /// Facts organized by taxonomy (e.g., "us-gaap", "ifrs-full", "dei")
     #[serde(default)]
-    pub facts: HashMap<String, FactsByTaxonomy>,
+    pub facts: BTreeMap<String, FactsByTaxonomy>,
 }
 
 impl CompanyFacts {
@@ -93,7 +93,7 @@ impl CompanyFacts {
 /// Maps concept names (e.g., "Revenue", "Assets") to their [`FactConcept`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FactsByTaxonomy(pub HashMap<String, FactConcept>);
+pub struct FactsByTaxonomy(pub BTreeMap<String, FactConcept>);
 
 /// A single XBRL concept (e.g., "Revenue") with all reported values.
 ///
@@ -111,7 +111,7 @@ pub struct FactConcept {
 
     /// Values organized by unit type (e.g., "USD" -> vec of data points)
     #[serde(default)]
-    pub units: HashMap<String, Vec<FactUnit>>,
+    pub units: BTreeMap<String, Vec<FactUnit>>,
 }
 
 #[cfg(feature = "dataframe")]
@@ -200,13 +200,6 @@ impl FactConcept {
 use crate::__dataframe::with_leading_column;
 
 #[cfg(feature = "dataframe")]
-fn sorted<V>(map: &HashMap<String, V>) -> Vec<(&String, &V)> {
-    let mut entries: Vec<_> = map.iter().collect();
-    entries.sort_by_key(|(key, _)| *key);
-    entries
-}
-
-#[cfg(feature = "dataframe")]
 impl FactsByTaxonomy {
     /// Convert every data point of every concept to a long-format polars DataFrame.
     ///
@@ -217,8 +210,8 @@ impl FactsByTaxonomy {
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         let schema = with_leading_column(FactUnit::vec_to_dataframe(&[])?, "unit", "")?;
         let mut stacked = with_leading_column(schema, "concept", "")?;
-        for (concept, fact) in sorted(&self.0) {
-            for (unit, points) in sorted(&fact.units) {
+        for (concept, fact) in &self.0 {
+            for (unit, points) in &fact.units {
                 let frame = with_leading_column(FactUnit::vec_to_dataframe(points)?, "unit", unit)?;
                 stacked.vstack_mut(&with_leading_column(frame, "concept", concept)?)?;
             }
@@ -237,9 +230,9 @@ impl CompanyFacts {
     /// there. `cik` and `entity_name` are not in the frame. With no facts the
     /// frame has the same columns and no rows.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        let schema = FactsByTaxonomy(HashMap::new()).to_dataframe()?;
+        let schema = FactsByTaxonomy(BTreeMap::new()).to_dataframe()?;
         let mut stacked = with_leading_column(schema, "taxonomy", "")?;
-        for (taxonomy, facts) in sorted(&self.facts) {
+        for (taxonomy, facts) in &self.facts {
             let frame = with_leading_column(facts.to_dataframe()?, "taxonomy", taxonomy)?;
             stacked.vstack_mut(&frame)?;
         }
@@ -300,7 +293,7 @@ mod tests {
     #[test]
     #[cfg(feature = "dataframe")]
     fn test_fact_concept_dataframe_conversion() {
-        let mut units = HashMap::new();
+        let mut units = BTreeMap::new();
         units.insert(
             "USD".to_string(),
             vec![FactUnit {

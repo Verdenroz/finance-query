@@ -423,7 +423,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
                 if stmt
                     .statement
                     .values()
-                    .all(std::collections::HashMap::is_empty)
+                    .all(std::collections::BTreeMap::is_empty)
                 {
                     return Err("every metric has no periods".to_string());
                 }
