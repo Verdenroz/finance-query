@@ -185,7 +185,10 @@ macro_rules! batch_fetch_cached {
                 let mut response = $resp_ty::with_capacity($self.symbols.len());
                 for symbol in &$self.symbols {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
-                        response.$resp_field.insert(symbol.to_string(), entry.value.clone());
+                        response
+                            .$resp_field
+                            .entry(symbol.to_string())
+                            .or_insert_with(|| entry.value.clone());
                     }
                 }
                 drop(cache);
@@ -205,7 +208,10 @@ macro_rules! batch_fetch_cached {
                 let mut response = $resp_ty::with_capacity($self.symbols.len());
                 for symbol in &$self.symbols {
                     if let Some(entry) = cache.get(&cache_key_fn(symbol)) {
-                        response.$resp_field.insert(symbol.to_string(), entry.value.clone());
+                        response
+                            .$resp_field
+                            .entry(symbol.to_string())
+                            .or_insert_with(|| entry.value.clone());
                     }
                 }
                 drop(cache);

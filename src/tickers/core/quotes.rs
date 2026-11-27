@@ -99,7 +99,8 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .entry(symbol.to_string())
+                            .or_insert_with(|| entry.value.clone());
                     }
                 }
                 return Ok(response);
@@ -117,7 +118,8 @@ impl Tickers {
                     if let Some(entry) = cache.get(symbol) {
                         response
                             .quotes
-                            .insert(symbol.to_string(), entry.value.clone());
+                            .entry(symbol.to_string())
+                            .or_insert_with(|| entry.value.clone());
                     }
                 }
                 return Ok(response);
