@@ -143,10 +143,6 @@ components:
       description: "A fired alert, carrying the tick that triggered it."
       type: object
       properties:
-        changePercent:
-          description: Percent change carried by the triggering tick.
-          type: number
-          format: double
         condition:
           description: Condition that fired.
           $ref: "#/components/schemas/AlertCondition"
@@ -154,26 +150,15 @@ components:
           description: "Last price seen before this tick, if any."
           type: number
           format: double
-        price:
-          description: Price on the triggering tick.
-          type: number
-          format: double
         symbol:
           description: Symbol that triggered.
           type: string
-        time:
-          description: Tick timestamp (milliseconds).
-          type: integer
-          format: int64
         update:
           description: The full triggering tick.
           $ref: "#/components/schemas/PriceUpdate"
       required:
         - symbol
         - condition
-        - price
-        - changePercent
-        - time
         - update
     FeedStreamCommand:
       description: "Inbound control message for `/v2/feeds/stream`."

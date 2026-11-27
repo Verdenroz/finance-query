@@ -53,21 +53,9 @@ type GqlAlertEvent {
 	"""
 	threshold: Float!
 	"""
-	Price on the triggering tick.
-	"""
-	price: Float!
-	"""
 	Last price seen before this tick.
 	"""
 	previousPrice: Float
-	"""
-	Percent change carried by the triggering tick.
-	"""
-	changePercent: Float!
-	"""
-	Tick timestamp (milliseconds).
-	"""
-	time: Int!
 	"""
 	The full triggering tick.
 	"""

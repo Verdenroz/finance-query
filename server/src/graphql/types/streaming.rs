@@ -169,14 +169,8 @@ pub struct GqlAlertEvent {
     pub condition: GqlAlertConditionKind,
     /// Threshold the predicate compared against.
     pub threshold: f64,
-    /// Price on the triggering tick.
-    pub price: f64,
     /// Last price seen before this tick.
     pub previous_price: Option<f64>,
-    /// Percent change carried by the triggering tick.
-    pub change_percent: f64,
-    /// Tick timestamp (milliseconds).
-    pub time: i64,
     /// The full triggering tick.
     pub update: GqlPriceUpdate,
 }
@@ -187,10 +181,7 @@ impl From<AlertEvent> for GqlAlertEvent {
             symbol: event.symbol,
             condition: event.condition.kind().into(),
             threshold: event.condition.threshold(),
-            price: event.price,
             previous_price: event.previous_price,
-            change_percent: event.change_percent,
-            time: event.time,
             update: GqlPriceUpdate::from(event.update),
         }
     }

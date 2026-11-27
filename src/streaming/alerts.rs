@@ -201,14 +201,8 @@ pub struct AlertEvent {
     pub symbol: String,
     /// Condition that fired.
     pub condition: AlertCondition,
-    /// Price on the triggering tick.
-    pub price: f64,
     /// Last price seen before this tick, if any.
     pub previous_price: Option<f64>,
-    /// Percent change carried by the triggering tick.
-    pub change_percent: f64,
-    /// Tick timestamp (milliseconds).
-    pub time: i64,
     /// The full triggering tick.
     pub update: PriceUpdate,
 }
@@ -217,8 +211,8 @@ pub struct AlertEvent {
 impl AlertEvent {
     /// Converts the event to a single-row polars DataFrame.
     ///
-    /// Columns are `symbol`, `price`, `previous_price`, `change_percent` and
-    /// `time`, then the columns of [`PriceUpdate`] as `update_{column}`, then
+    /// Columns are `symbol` and `previous_price`, then the columns of
+    /// [`PriceUpdate`] as `update_{column}`, then
     /// `condition_kind` (the [`AlertConditionKind`] name). The condition's
     /// threshold is not in the frame.
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
@@ -250,23 +244,8 @@ impl AlertEvent {
                 )
                 .into(),
                 Series::new(
-                    "price".into(),
-                    items.iter().map(|i| i.price).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
                     "previous_price".into(),
                     items.iter().map(|i| i.previous_price).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "change_percent".into(),
-                    items.iter().map(|i| i.change_percent).collect::<Vec<_>>(),
-                )
-                .into(),
-                Series::new(
-                    "time".into(),
-                    items.iter().map(|i| i.time).collect::<Vec<_>>(),
                 )
                 .into(),
             ],
@@ -355,10 +334,7 @@ impl AlertEvaluator {
                 fired.push(AlertEvent {
                     symbol: update.id.clone(),
                     condition: state.rule.condition,
-                    price: update.price,
                     previous_price: previous,
-                    change_percent: update.change_percent,
-                    time: update.time,
                     update: update.clone(),
                 });
             } else if !holds && state.rule.repeat {
@@ -433,7 +409,7 @@ where
 ///     .alerts([AlertRule::new("AAPL", AlertCondition::CrossesAbove(200.0))]);
 ///
 /// while let Some(alert) = alerts.next().await {
-///     println!("{} crossed at {}", alert.symbol, alert.price);
+///     println!("{} crossed at {}", alert.symbol, alert.update.price);
 /// }
 /// # Ok(())
 /// # }
@@ -612,7 +588,7 @@ mod tests {
             .await;
 
         assert_eq!(alerts.len(), 1);
-        assert_eq!(alerts[0].price, 151.0);
+        assert_eq!(alerts[0].update.price, 151.0);
         assert_eq!(alerts[0].update.id, "AAPL");
     }
 }
