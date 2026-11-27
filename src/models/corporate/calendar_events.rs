@@ -20,10 +20,12 @@ pub struct CalendarEvents {
 
     /// Ex-dividend date (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub ex_dividend_date: Option<FormattedValue<i64>>,
 
     /// Dividend date (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub dividend_date: Option<FormattedValue<i64>>,
 }
 
@@ -35,6 +37,7 @@ pub struct CalendarEvents {
 pub struct EarningsCalendar {
     /// List of earnings dates (usually contains 1-2 dates)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", list))]
     pub earnings_date: Option<Vec<FormattedValue<i64>>>,
 
     /// Average earnings estimate for upcoming quarter

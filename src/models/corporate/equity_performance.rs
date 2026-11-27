@@ -55,6 +55,7 @@ pub struct Benchmark {
 pub struct PerformanceOverview {
     /// Date the performance data is as of (Unix timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub as_of_date: Option<crate::models::quote::FormattedValue<i64>>,
 
     /// 5-day return percentage

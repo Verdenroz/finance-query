@@ -15,8 +15,15 @@ use crate::models::corporate::fund_performance::{
 use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
 use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
 use crate::models::dataframe_test_util::columns;
+use polars::prelude::{DataType, TimeUnit, TimeZone};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
+
+const DT: &str = "datetime[μs, UTC]";
+
+fn utc() -> DataType {
+    DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+}
 
 fn parse<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value).unwrap()
@@ -41,7 +48,7 @@ fn earnings_history_wrapper_frame() {
         columns(&df),
         [
             "max_age:i64",
-            "quarter:i64",
+            "quarter:date",
             "period:str",
             "currency:str",
             "eps_actual:f64",
@@ -122,7 +129,7 @@ fn ownership_wrapper_frames() {
         "position:i64",
         "value:i64",
         "pct_change:f64",
-        "report_date:i64",
+        "report_date:date",
     ];
     let funds: FundOwnership = parse(owners.clone());
     assert_eq!(columns(&funds.to_dataframe().unwrap()), expected);
@@ -181,7 +188,10 @@ fn recommendation_and_grade_wrapper_frames() {
     let grades: UpgradeDowngradeHistory =
         parse(json!({"history": [{"firm": "GS", "currentPriceTarget": 200.0}]}));
     let cols = columns(&grades.to_dataframe().unwrap());
-    assert_eq!(cols[..2], ["epoch_grade_date:i64", "firm:str"]);
+    assert_eq!(
+        cols[..2],
+        ["epoch_grade_date:datetime[μs, UTC]", "firm:str"]
+    );
     assert!(cols.contains(&"current_price_target:f64".to_string()));
 }
 
@@ -195,7 +205,7 @@ fn sec_filings_wrapper_skips_exhibit_list() {
         [
             "max_age:i64",
             "date:str",
-            "epoch_date:i64",
+            "epoch_date:date",
             "filing_type:str",
             "title:str",
             "edgar_url:str",
@@ -276,7 +286,7 @@ fn calendar_events_flattens_earnings() {
     let df = events.to_dataframe().unwrap();
     let cols = columns(&df);
 
-    assert!(cols.contains(&"ex_dividend_date:i64".to_string()));
+    assert!(cols.contains(&"ex_dividend_date:date".to_string()));
     assert!(cols.contains(&"earnings_earnings_average:f64".to_string()));
     assert!(cols.contains(&"earnings_revenue_low:i64".to_string()));
     assert_eq!(df.height(), 1);
@@ -441,13 +451,13 @@ fn transcript_speaker_and_metadata_frames() {
     );
 
     let metadata: Vec<TranscriptMetadata> = parse(json!([{
-        "date": 1, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
-        "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 4
+        "date": 1777582800, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
+        "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 1778932822
     }]));
     assert_eq!(
         columns(&TranscriptMetadata::vec_to_dataframe(&metadata).unwrap()),
         [
-            "date:i64",
+            "date:datetime[μs, UTC]",
             "event_id:i64",
             "event_type:str",
             "fiscal_period:str",
@@ -457,7 +467,7 @@ fn transcript_speaker_and_metadata_frames() {
             "title:str",
             "transcript_id:i64",
             "transcript_type:str",
-            "updated:i64",
+            "updated:datetime[μs, UTC]",
         ]
     );
 
@@ -503,8 +513,8 @@ fn flat_frames_of_nested_types_keep_their_exact_columns() {
             "compensation_risk:i32",
             "shareholder_rights_risk:i32",
             "overall_risk:i32",
-            "governance_epoch_date:i64",
-            "compensation_as_of_epoch_date:i64",
+            "governance_epoch_date:date",
+            "compensation_as_of_epoch_date:date",
             "max_age:i64",
         ]
     );
@@ -544,7 +554,7 @@ fn flat_frames_of_nested_types_keep_their_exact_columns() {
         [
             "max_age:i64",
             "date:str",
-            "epoch_date:i64",
+            "epoch_date:date",
             "filing_type:str",
             "title:str",
             "edgar_url:str",
@@ -653,11 +663,7 @@ fn earnings_wrappers_expose_their_rows() {
     let chart = earnings.earnings_chart_dataframe().unwrap();
     assert_eq!(chart.height(), 1);
     assert_eq!(columns(&chart).last().unwrap(), "quarterly:list[struct[7]]");
-    assert!(
-        !columns(&chart)
-            .iter()
-            .any(|c| c.starts_with("earnings_date"))
-    );
+    assert!(columns(&chart).contains(&format!("earnings_date:list[{DT}]")));
     let quarterly = earnings
         .earnings_chart
         .as_ref()
@@ -698,12 +704,12 @@ fn transcript_wrappers_nest_speakers_and_paragraphs() {
             "transcript": {"paragraphs": [{"speaker": 1, "text": "Hi."}, {"speaker": 2, "text": "Bye."}]}
         },
         "transcriptMetadata": {
-            "date": 1, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
-            "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 4
+            "date": 1777582800, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
+            "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x", "updated": 1778932822
         }
     }));
     let flat = columns(&transcript.to_dataframe().unwrap());
-    assert_eq!(flat[0], "transcript_metadata_date:i64");
+    assert_eq!(flat[0], "transcript_metadata_date:datetime[μs, UTC]");
     assert_eq!(flat.len(), 11);
 
     let content = transcript.transcript_content_dataframe().unwrap();
@@ -751,4 +757,114 @@ fn row_list_wrappers_nest_their_rows() {
         columns(&SecFilings::vec_to_nested_dataframe(&[]).unwrap()),
         columns(&df)
     );
+}
+
+#[test]
+fn calendar_events_time_columns() {
+    let events: CalendarEvents = parse(json!({
+        "exDividendDate": {"raw": 1794528000},
+        "dividendDate": {"raw": 1795132800},
+        "earnings": {"earningsDate": [{"raw": 1785441600}, {"raw": 1785873600}]}
+    }));
+    let df = events.to_dataframe().unwrap();
+    let cols = columns(&df);
+    assert!(cols.contains(&"dividend_date:date".to_string()));
+    assert!(cols.contains(&format!("earnings_earnings_date:list[{DT}]")));
+
+    let day = df.column("ex_dividend_date").unwrap().date().unwrap();
+    assert_eq!(day.phys.get(0), Some(20_770));
+    let dates = df.column("earnings_earnings_date").unwrap().list().unwrap();
+    let first = dates.get_as_series(0).unwrap().cast(&utc()).unwrap();
+    let micros: Vec<_> = first.datetime().unwrap().phys.into_iter().collect();
+    assert_eq!(
+        micros,
+        [Some(1_785_441_600_000_000), Some(1_785_873_600_000_000)]
+    );
+}
+
+#[test]
+fn earnings_chart_dates_are_a_datetime_list() {
+    let chart: super::earnings::EarningsChart =
+        parse(json!({"earningsDate": [{"raw": 1785441600}]}));
+    let df = chart.to_dataframe().unwrap();
+    assert!(columns(&df).contains(&format!("earnings_date:list[{DT}]")));
+    let dates = df.column("earnings_date").unwrap().list().unwrap();
+    let first = dates.get_as_series(0).unwrap().cast(&utc()).unwrap();
+    assert_eq!(
+        first.datetime().unwrap().phys.get(0),
+        Some(1_785_441_600_000_000)
+    );
+}
+
+#[test]
+fn ownership_and_insider_dates_are_days() {
+    let funds: FundOwnership = parse(json!({
+        "ownershipList": [{"organization": "Vanguard", "reportDate": {"raw": 1759190400}}]
+    }));
+    let df = funds.to_dataframe().unwrap();
+    assert_eq!(
+        df.column("report_date")
+            .unwrap()
+            .date()
+            .unwrap()
+            .phys
+            .get(0),
+        Some(20_361)
+    );
+
+    let holders: InsiderHolders = parse(json!({
+        "holders": [{"name": "Cook", "latestTransDate": {"raw": 1759190400}}]
+    }));
+    let df = holders.to_dataframe().unwrap();
+    let cols = columns(&df);
+    assert!(cols.contains(&"latest_trans_date:date".to_string()));
+    assert!(cols.contains(&"position_direct_date:date".to_string()));
+    assert!(cols.contains(&"position_indirect_date:date".to_string()));
+
+    let transactions: InsiderTransactions =
+        parse(json!({"transactions": [{"startDate": {"raw": 1759190400}}]}));
+    let df = transactions.to_dataframe().unwrap();
+    assert_eq!(
+        df.column("start_date").unwrap().date().unwrap().phys.get(0),
+        Some(20_361)
+    );
+}
+
+#[test]
+fn grade_filing_and_profile_epochs() {
+    let grades: UpgradeDowngradeHistory =
+        parse(json!({"history": [{"firm": "GS", "epochGradeDate": 1794603601}]}));
+    let df = grades.to_dataframe().unwrap();
+    let time = df.column("epoch_grade_date").unwrap().datetime().unwrap();
+    assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
+
+    let profile: AssetProfile = parse(json!({
+        "governanceEpochDate": 1794528000, "compensationAsOfEpochDate": 1767139200
+    }));
+    let df = profile.to_dataframe().unwrap();
+    let cols = columns(&df);
+    assert!(cols.contains(&"governance_epoch_date:date".to_string()));
+    assert!(cols.contains(&"compensation_as_of_epoch_date:date".to_string()));
+    assert_eq!(
+        df.column("governance_epoch_date")
+            .unwrap()
+            .date()
+            .unwrap()
+            .phys
+            .get(0),
+        Some(20_770)
+    );
+}
+
+#[test]
+fn transcript_metadata_epochs_are_moments() {
+    let metadata: Vec<TranscriptMetadata> = parse(json!([{
+        "date": 1777582800, "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1",
+        "fiscalYear": 2024, "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3,
+        "type": "x", "updated": 1778932822
+    }]));
+    let df = TranscriptMetadata::vec_to_dataframe(&metadata).unwrap();
+    let micros = |name| df.column(name).unwrap().datetime().unwrap().phys.get(0);
+    assert_eq!(micros("date"), Some(1_777_582_800_000_000));
+    assert_eq!(micros("updated"), Some(1_778_932_822_000_000));
 }

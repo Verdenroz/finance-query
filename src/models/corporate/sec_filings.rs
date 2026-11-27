@@ -34,6 +34,7 @@ pub struct SecFiling {
 
     /// Filing date (epoch timestamp)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub epoch_date: Option<i64>,
 
     /// Type of filing (e.g., "10-K", "10-Q", "8-K")

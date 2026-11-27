@@ -42,6 +42,7 @@ pub struct InsiderHolder {
 
     /// Date of the latest transaction
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub latest_trans_date: Option<crate::models::quote::FormattedValue<i64>>,
 
     /// Number of shares held directly
@@ -50,6 +51,7 @@ pub struct InsiderHolder {
 
     /// Date of the direct position
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub position_direct_date: Option<crate::models::quote::FormattedValue<i64>>,
 
     /// Number of shares held indirectly
@@ -58,6 +60,7 @@ pub struct InsiderHolder {
 
     /// Date of the indirect position
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub position_indirect_date: Option<crate::models::quote::FormattedValue<i64>>,
 }
 

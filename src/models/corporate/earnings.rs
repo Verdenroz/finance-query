@@ -59,6 +59,7 @@ pub struct EarningsChart {
 
     /// Upcoming earnings dates
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", list))]
     pub earnings_date: Vec<crate::models::quote::FormattedValue<i64>>,
 
     /// Whether the earnings date is an estimate
