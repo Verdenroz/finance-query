@@ -11,7 +11,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "3", features = ["dataframe"] }
-    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window"] }
+    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
     ```
 
     The `finance_query::polars` re-export exists so type names in public
@@ -399,8 +399,8 @@ Series: 'daily_return_pct' [f64]
 
 ### Time-based Operations
 
-Chart timestamps are `Datetime(us, UTC)` columns. Cast to `Int64` to compare
-against epoch microseconds.
+Chart timestamps are `Datetime(us, UTC)` columns, so type the literal you
+compare against. The `dt()` namespace needs the Polars `temporal` feature.
 
 ```rust capture-output feature=dataframe
 use chrono::{Duration, Utc};
@@ -415,10 +415,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total = df.height();
 
     // Keep the last six months
-    let cutoff = (Utc::now() - Duration::days(182)).timestamp_micros();
+    let cutoff = lit((Utc::now() - Duration::days(182)).timestamp_micros())
+        .cast(DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC)));
     let recent = df
         .lazy()
-        .filter(col("timestamp").cast(DataType::Int64).gt_eq(lit(cutoff)))
+        .filter(col("timestamp").gt_eq(cutoff))
         .collect()?;
     println!("Filtered to fewer rows: {}", recent.height() < total);
     Ok(())
@@ -430,7 +431,7 @@ Filtered to fewer rows: true
 ```
 
 Calendar operations such as `dt().date()` or `group_by_dynamic` work on the
-column directly when Polars has its `temporal` feature enabled.
+column directly.
 
 ### Sorting and Ranking
 
@@ -510,13 +511,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
 
-    // Group by (approximate) month and aggregate
+    // Group by month and aggregate
     let monthly = df
         .lazy()
-        .with_column(
-            (col("timestamp").cast(DataType::Int64) / lit(86_400_000_000i64 * 30i64))
-                .alias("month"),
-        )
+        .with_column(col("timestamp").dt().truncate(lit("1mo")).alias("month"))
         .group_by([col("month")])
         .agg([
             col("close").mean().alias("avg_close"),
@@ -704,7 +702,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let price_df = price_df
         .lazy()
-        .with_column(col("timestamp").cast(DataType::Date))
+        .with_column(col("timestamp").dt().date())
         .collect()?;
     let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
     println!("joined shape: {:?}", joined.shape());
