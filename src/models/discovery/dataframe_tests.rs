@@ -1,7 +1,7 @@
 use super::listings::{StockListing, StockType, TickerChange};
 use super::reference::{ExchangeInfo, ScreenerMatch, SymbolDetails, SymbolMatch};
 use super::screeners::ScreenerQuote;
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, micros};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -136,10 +136,15 @@ fn screener_quote_epochs_are_typed() {
         "earningsTimestamp": {"raw": 1785441600}
     }));
     let df = quote.to_dataframe().unwrap();
-    let micros = |name| df.column(name).unwrap().datetime().unwrap().phys.get(0);
-    assert_eq!(micros("regular_market_time"), Some(1_794_603_601_000_000));
-    assert_eq!(micros("earnings_timestamp"), Some(1_785_441_600_000_000));
-    assert_eq!(micros("pre_market_time"), None);
+    assert_eq!(
+        micros(&df, "regular_market_time"),
+        Some(1_794_603_601_000_000)
+    );
+    assert_eq!(
+        micros(&df, "earnings_timestamp"),
+        Some(1_785_441_600_000_000)
+    );
+    assert_eq!(micros(&df, "pre_market_time"), None);
     let day = df.column("dividend_date").unwrap().date().unwrap();
     assert_eq!(day.phys.get(0), Some(20_777));
 }

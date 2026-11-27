@@ -1,5 +1,5 @@
 use crate::models::chart::ChartMeta;
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, micros};
 use crate::models::quote::snapshot::MarketSnapshot;
 use crate::models::quote::{Price, Quote, QuoteSummaryResponse, QuoteTypeData};
 use serde_json::json;
@@ -66,13 +66,12 @@ fn price_epoch_seconds_become_datetimes() {
     }))
     .unwrap();
     let df = row.to_dataframe().unwrap();
-    let micros = |name| {
-        let column = df.column(name).unwrap().datetime().unwrap();
-        column.phys.get(0)
-    };
-    assert_eq!(micros("regular_market_time"), Some(1_794_603_601_000_000));
-    assert_eq!(micros("pre_market_time"), Some(1_794_583_200_000_000));
-    assert_eq!(micros("post_market_time"), None);
+    assert_eq!(
+        micros(&df, "regular_market_time"),
+        Some(1_794_603_601_000_000)
+    );
+    assert_eq!(micros(&df, "pre_market_time"), Some(1_794_583_200_000_000));
+    assert_eq!(micros(&df, "post_market_time"), None);
 }
 
 #[test]

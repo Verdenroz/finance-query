@@ -1,4 +1,4 @@
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, days};
 use crate::models::fundamentals::{
     CompanyProfile, DefaultKeyStatistics, EtfCountryWeighting, EtfHolding, EtfProfile,
     EtfSectorWeighting, FinancialData, GradingAction, PriceTargetConsensus, PriceTargetSummary,
@@ -367,10 +367,9 @@ fn summary_detail_epoch_dates_are_utc_days() {
     }))
     .unwrap();
     let df = row.to_dataframe().unwrap();
-    let day = |name| df.column(name).unwrap().date().unwrap().phys.get(0);
-    assert_eq!(day("ex_dividend_date"), Some(20_770));
-    assert_eq!(day("expire_date"), Some(20_810));
-    assert_eq!(day("start_date"), None);
+    assert_eq!(days(&df, "ex_dividend_date"), Some(20_770));
+    assert_eq!(days(&df, "expire_date"), Some(20_810));
+    assert_eq!(days(&df, "start_date"), None);
 }
 
 #[test]
@@ -381,7 +380,6 @@ fn default_key_statistics_epoch_dates_are_utc_days() {
     }))
     .unwrap();
     let df = row.to_dataframe().unwrap();
-    let day = |name| df.column(name).unwrap().date().unwrap().phys.get(0);
-    assert_eq!(day("most_recent_quarter"), Some(20_359));
-    assert_eq!(day("fund_inception_date"), Some(11_709));
+    assert_eq!(days(&df, "most_recent_quarter"), Some(20_359));
+    assert_eq!(days(&df, "fund_inception_date"), Some(11_709));
 }

@@ -14,7 +14,7 @@ use crate::models::corporate::fund_performance::{
 };
 use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
 use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, micros};
 use polars::prelude::{DataType, TimeUnit, TimeZone};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -864,9 +864,8 @@ fn transcript_metadata_epochs_are_moments() {
         "type": "x", "updated": 1778932822
     }]));
     let df = TranscriptMetadata::vec_to_dataframe(&metadata).unwrap();
-    let micros = |name| df.column(name).unwrap().datetime().unwrap().phys.get(0);
-    assert_eq!(micros("date"), Some(1_777_582_800_000_000));
-    assert_eq!(micros("updated"), Some(1_778_932_822_000_000));
+    assert_eq!(micros(&df, "date"), Some(1_777_582_800_000_000));
+    assert_eq!(micros(&df, "updated"), Some(1_778_932_822_000_000));
 }
 
 #[test]
