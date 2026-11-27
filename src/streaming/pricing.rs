@@ -348,6 +348,8 @@ impl PricingData {
 pub struct PriceUpdate {
     pub id: String,
     pub price: f64,
+    /// Milliseconds since the Unix epoch, `0` when not provided.
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", nonzero))]
     pub time: i64,
     pub currency: String,
     pub exchange: String,
@@ -359,6 +361,7 @@ pub struct PriceUpdate {
     pub day_low: f64,
     pub change: f64,
     pub short_name: String,
+    /// Expiry as Yahoo sends it, `0` when not provided.
     pub expire_date: i64,
     pub open_price: f64,
     pub previous_close: f64,

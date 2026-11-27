@@ -2,7 +2,7 @@
 
 mod benchmark;
 #[cfg(feature = "dataframe")]
-mod dataframe;
+pub(crate) mod dataframe;
 #[cfg(test)]
 pub(crate) mod fixtures;
 mod metrics;
@@ -30,6 +30,7 @@ use super::signal::SignalDirection;
 )]
 pub struct EquityPoint {
     /// Timestamp
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Portfolio equity at this point
     pub equity: f64,

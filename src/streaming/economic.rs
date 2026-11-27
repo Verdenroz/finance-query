@@ -36,6 +36,7 @@ pub struct SeriesUpdate {
     /// Series identifier (e.g. `"FEDFUNDS"`, `"CPIAUCSL"`).
     pub series_id: String,
     /// Observation date as `YYYY-MM-DD`.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: String,
     /// Newly published value, or `None` when the source reports a gap.
     pub value: Option<f64>,
@@ -45,6 +46,7 @@ pub struct SeriesUpdate {
     /// `true` when the same observation date was re-published with a new value.
     pub revision: bool,
     /// Unix timestamp (seconds) at which this release was observed.
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub observed_at: i64,
 }
 

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Dividend {
     /// Timestamp (Unix)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Dividend amount per share
     pub amount: f64,

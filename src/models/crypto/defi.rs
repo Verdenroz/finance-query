@@ -60,6 +60,7 @@ pub struct ChainAllocation {
 #[non_exhaustive]
 pub struct TvlPoint {
     /// Unix timestamp (seconds) of the snapshot.
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Total value locked at that moment, in USD.
     pub tvl: f64,

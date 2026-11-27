@@ -1,12 +1,13 @@
 use super::{Dividend, DividendAnalytics, StockBar};
 use crate::models::dataframe_test_util::columns;
+use polars::prelude::DataType;
 use serde_json::json;
 
 #[test]
 fn stock_bar_columns() {
     let row: StockBar = serde_json::from_value(json!({"timestamp_ms": 1, "open": 1.5, "high": 1.5, "low": 1.5, "close": 1.5, "volume": 1.5})).unwrap();
     let expected = [
-        "timestamp_ms:i64",
+        "timestamp_ms:datetime[μs, UTC]",
         "open:f64",
         "high:f64",
         "low:f64",
@@ -29,16 +30,16 @@ fn dividend_analytics_flattens_both_payments() {
     let dividend = |timestamp| -> Dividend {
         serde_json::from_value(json!({"timestamp": timestamp, "amount": 0.5})).unwrap()
     };
-    let analytics = DividendAnalytics::from_dividends(&[dividend(1), dividend(2)]);
+    let analytics = DividendAnalytics::from_dividends(&[dividend(86_400), dividend(172_800)]);
     let expected = [
         "total_paid:f64",
         "payment_count:u64",
         "average_payment:f64",
         "cagr:f64",
-        "last_payment_timestamp:i64",
+        "last_payment_timestamp:datetime[μs, UTC]",
         "last_payment_amount:f64",
         "last_payment_provider_id:str",
-        "first_payment_timestamp:i64",
+        "first_payment_timestamp:datetime[μs, UTC]",
         "first_payment_amount:f64",
         "first_payment_provider_id:str",
     ];
@@ -48,18 +49,22 @@ fn dividend_analytics_flattens_both_payments() {
     assert_eq!(
         df.column("last_payment_timestamp")
             .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap()
             .i64()
             .unwrap()
             .get(0),
-        Some(2)
+        Some(2 * 86_400_000_000)
     );
     assert_eq!(
         df.column("first_payment_timestamp")
             .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap()
             .i64()
             .unwrap()
             .get(0),
-        Some(1)
+        Some(86_400_000_000)
     );
 
     let none = DividendAnalytics::from_dividends(&[])

@@ -24,6 +24,7 @@ pub struct IndexQuote {
     /// Price change percentage
     pub change_percent: Option<f64>,
     /// Unix timestamp of the last update
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: Option<i64>,
 }
 

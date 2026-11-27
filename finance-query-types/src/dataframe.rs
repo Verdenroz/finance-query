@@ -98,9 +98,9 @@ pub mod derive {
     use chrono::{DateTime, NaiveDate};
     use polars::chunked_array::builder::{ListPrimitiveChunkedBuilder, get_list_builder};
     use polars::prelude::{
-        Column, DataFrame, DataType, Int32Chunked, Int32Type, Int64Chunked, Int64Type, IntoColumn,
+        ChunkedArray, Column, DataFrame, DataType, Int32Type, Int64Chunked, Int64Type, IntoColumn,
         IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, NewChunkedArray,
-        PlSmallStr, PolarsResult, Series, TimeUnit, TimeZone,
+        PlSmallStr, PolarsNumericType, PolarsResult, Series, TimeUnit, TimeZone,
     };
 
     use super::ToDataFrame;
@@ -160,7 +160,8 @@ pub mod derive {
 
     const UNIX_EPOCH_FROM_CE_DAYS: i32 = 719_163;
 
-    fn datetime_dtype() -> DataType {
+    /// The dtype of every `Datetime` column: microseconds, UTC.
+    pub fn datetime_dtype() -> DataType {
         DataType::Datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
     }
 
@@ -191,16 +192,37 @@ pub mod derive {
             .and_then(|value| i32::try_from(value.div_euclid(per_day)).ok())
     }
 
-    fn datetime_column(name: String, micros: impl Iterator<Item = Option<i64>>) -> Column {
-        Int64Chunked::from_iter_options(name.into(), micros)
+    /// Pushes into a plain `Vec` until the first null, which is the common case and avoids
+    /// the per-value builder; only a column with a null pays for the validity mask.
+    fn numeric<T: PolarsNumericType>(
+        name: String,
+        mut values: impl Iterator<Item = Option<T::Native>>,
+    ) -> ChunkedArray<T> {
+        let mut dense = Vec::with_capacity(values.size_hint().0);
+        while let Some(value) = values.next() {
+            match value {
+                Some(value) => dense.push(value),
+                None => {
+                    let rest = dense
+                        .into_iter()
+                        .map(Some)
+                        .chain(std::iter::once(None))
+                        .chain(values);
+                    return ChunkedArray::from_iter_options(name.into(), rest);
+                }
+            }
+        }
+        ChunkedArray::from_vec(name.into(), dense)
+    }
+
+    fn datetime_column(micros: Int64Chunked) -> Column {
+        micros
             .into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
             .into_column()
     }
 
     fn date_column(name: String, days: impl Iterator<Item = Option<i32>>) -> Column {
-        Int32Chunked::from_iter_options(name.into(), days)
-            .into_date()
-            .into_column()
+        numeric::<Int32Type>(name, days).into_date().into_column()
     }
 
     /// A `Datetime(us, UTC)` column from epoch integers; overflow and, with `nonzero`, `0` become null.
@@ -210,7 +232,12 @@ pub mod derive {
         nonzero: bool,
         values: impl Iterator<Item = Option<i64>>,
     ) -> Column {
-        datetime_column(name, values.map(|value| epoch_micros(value, unit, nonzero)))
+        // Epoch columns back long candle and stream frames, where building from a slice is far
+        // cheaper per row than the dense push loop, at one extra `Vec` per column.
+        let micros: Vec<Option<i64>> = values
+            .map(|value| epoch_micros(value, unit, nonzero))
+            .collect();
+        datetime_column(Int64Chunked::new(name.into(), &micros))
     }
 
     /// A `Date` column from epoch integers, taking the UTC calendar day.
@@ -255,7 +282,10 @@ pub mod derive {
         name: String,
         values: impl Iterator<Item = Option<&'a str>>,
     ) -> Column {
-        datetime_column(name, values.map(|value| value.and_then(parse_rfc3339)))
+        datetime_column(numeric::<Int64Type>(
+            name,
+            values.map(|value| value.and_then(parse_rfc3339)),
+        ))
     }
 
     /// A `List(Datetime(us, UTC))` column from lists of epoch integers.
@@ -391,13 +421,10 @@ pub mod derive {
 #[cfg(all(test, feature = "dataframe"))]
 mod tests {
     use super::derive::{
-        EpochUnit, date_list, datetime_list, epoch_date, epoch_datetime, rfc3339_datetime, str_date,
+        EpochUnit, date_list, datetime_dtype, datetime_list, epoch_date, epoch_datetime,
+        rfc3339_datetime, str_date,
     };
-    use polars::prelude::{DataType, TimeUnit, TimeZone};
-
-    fn utc() -> DataType {
-        DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
-    }
+    use polars::prelude::DataType;
 
     #[test]
     fn epoch_units_scale_to_microseconds() {
@@ -407,7 +434,7 @@ mod tests {
             false,
             [Some(1_500), Some(-1), None].into_iter(),
         );
-        assert_eq!(column.dtype(), &utc());
+        assert_eq!(column.dtype(), &datetime_dtype());
         let values: Vec<_> = column.datetime().unwrap().phys.iter().collect();
         assert_eq!(values, vec![Some(1), Some(-1), None]);
     }
@@ -445,7 +472,10 @@ mod tests {
     fn list_helpers_keep_null_rows_and_dtypes() {
         let rows = || [Some(vec![Some(0), Some(1)]), None].into_iter();
         let datetimes = datetime_list("t".into(), EpochUnit::Seconds, true, rows());
-        assert_eq!(datetimes.dtype(), &DataType::List(Box::new(utc())));
+        assert_eq!(
+            datetimes.dtype(),
+            &DataType::List(Box::new(datetime_dtype()))
+        );
         assert_eq!(datetimes.null_count(), 1);
         let dates = date_list("d".into(), EpochUnit::Seconds, false, rows());
         assert_eq!(dates.dtype(), &DataType::List(Box::new(DataType::Date)));

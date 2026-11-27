@@ -1,5 +1,6 @@
 use super::{FearAndGreed, FearGreedLabel, SymbolSentiment};
 use crate::models::dataframe_test_util::columns;
+use polars::prelude::DataType;
 use serde_json::json;
 
 #[test]
@@ -18,10 +19,14 @@ fn symbol_sentiment_columns() {
 #[test]
 fn fear_and_greed_columns() {
     let row: FearAndGreed = serde_json::from_value(
-        json!({"value": 20, "classification": "Extreme Fear", "timestamp": 1}),
+        json!({"value": 20, "classification": "Extreme Fear", "timestamp": 1_700_000_000}),
     )
     .unwrap();
-    let expected = ["value:u32", "classification:str", "timestamp:i64"];
+    let expected = [
+        "value:u32",
+        "classification:str",
+        "timestamp:datetime[μs, UTC]",
+    ];
     let df = row.to_dataframe().unwrap();
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 1);
@@ -29,6 +34,12 @@ fn fear_and_greed_columns() {
         df.column("classification").unwrap().str().unwrap().get(0),
         Some("Extreme Fear")
     );
+    let micros = df
+        .column("timestamp")
+        .unwrap()
+        .cast(&DataType::Int64)
+        .unwrap();
+    assert_eq!(micros.i64().unwrap().get(0), Some(1_700_000_000_000_000));
 
     let empty = <FearAndGreed>::vec_to_dataframe(&[]).unwrap();
     assert_eq!(columns(&empty), expected);

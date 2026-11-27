@@ -237,7 +237,7 @@ impl super::BatchIndicatorsResponse {
 mod tests {
     use super::*;
     use crate::models::quote::Quote;
-    use polars::prelude::{DataType, TimeUnit, TimeZone};
+    use polars::prelude::DataType;
 
     fn response<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> T {
         serde_json::from_value(json).unwrap()
@@ -270,13 +270,13 @@ mod tests {
         let mut batch = BatchDividendsResponse::with_capacity(2);
         batch.dividends.insert(
             "MSFT".into(),
-            response(serde_json::json!([{"timestamp": 5, "amount": 0.5}])),
+            response(serde_json::json!([{"timestamp": 432000, "amount": 0.5}])),
         );
         batch.dividends.insert(
             "AAPL".into(),
             response(serde_json::json!([
-                {"timestamp": 1, "amount": 0.1},
-                {"timestamp": 2, "amount": 0.2}
+                {"timestamp": 86400, "amount": 0.1},
+                {"timestamp": 172800, "amount": 0.2}
             ])),
         );
         batch.errors.insert("BAD".into(), "boom".into());
@@ -284,7 +284,10 @@ mod tests {
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
         assert_eq!(df.column("symbol").unwrap().dtype(), &DataType::String);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &crate::__dataframe::datetime_dtype()
+        );
         assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
         let symbols: Vec<_> = df
             .column("symbol")
@@ -297,9 +300,12 @@ mod tests {
         let timestamps: Vec<_> = df
             .column("timestamp")
             .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap()
             .i64()
             .unwrap()
             .into_no_null_iter()
+            .map(|micros| micros / 86_400_000_000)
             .collect();
         assert_eq!(timestamps, [5, 1, 2]);
     }
@@ -430,7 +436,10 @@ mod tests {
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &crate::__dataframe::datetime_dtype()
+        );
         assert_eq!(df.height(), 0);
 
         let charts: BatchChartsResponse = response(serde_json::json!({
@@ -487,7 +496,7 @@ mod tests {
         );
         assert_eq!(
             df.column("timestamp").unwrap().dtype(),
-            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+            &crate::__dataframe::datetime_dtype()
         );
         assert_eq!(df.height(), 2);
 
@@ -502,20 +511,23 @@ mod tests {
         let mut batch = BatchCapitalGainsResponse::with_capacity(2);
         batch.capital_gains.insert(
             "VTSAX".into(),
-            response(serde_json::json!([{"timestamp": 30, "amount": 0.75}])),
+            response(serde_json::json!([{"timestamp": 2592000, "amount": 0.75}])),
         );
         batch.capital_gains.insert(
             "FXAIX".into(),
             response(serde_json::json!([
-                {"timestamp": 10, "amount": 0.1},
-                {"timestamp": 20, "amount": 0.2}
+                {"timestamp": 864000, "amount": 0.1},
+                {"timestamp": 1728000, "amount": 0.2}
             ])),
         );
         batch.errors.insert("BAD".into(), "boom".into());
         let df = batch.to_dataframe().unwrap();
 
         assert_eq!(names(&df)[..3], ["symbol", "timestamp", "amount"]);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &crate::__dataframe::datetime_dtype()
+        );
         assert_eq!(df.column("amount").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.height(), 3);
         let symbols: Vec<_> = df

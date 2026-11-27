@@ -9,6 +9,7 @@ use super::pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 #[cfg(feature = "polygon")]
 use super::trades::TradeTick;
 use crate::models::dataframe_test_util::columns;
+use polars::prelude::DataType;
 use serde_json::json;
 
 #[cfg(any(feature = "polygon", feature = "fred"))]
@@ -61,7 +62,7 @@ fn price_update_columns() {
         [
             "id:str",
             "price:f64",
-            "time:i64",
+            "time:datetime[μs, UTC]",
             "currency:str",
             "exchange:str",
             "quote_type:str",
@@ -78,6 +79,18 @@ fn price_update_columns() {
         "str"
     );
     assert_eq!(PriceUpdate::vec_to_dataframe(&[]).unwrap().width(), 33);
+}
+
+#[test]
+fn price_update_time_is_epoch_millis_as_microseconds() {
+    let update = PriceUpdate {
+        time: 1_700_000_000_000,
+        ..Default::default()
+    };
+    let df = update.to_dataframe().unwrap();
+    let micros = df.column("time").unwrap().cast(&DataType::Int64).unwrap();
+    assert_eq!(micros.i64().unwrap().get(0), Some(1_700_000_000_000_000));
+    assert_eq!(df.column("expire_date").unwrap().dtype(), &DataType::Int64);
 }
 
 #[cfg(feature = "polygon")]
@@ -101,7 +114,7 @@ fn trade_tick_columns_leave_out_conditions() {
             "size:f64",
             "exchange:i32",
             "trade_id:str",
-            "time:i64",
+            "time:datetime[μs, UTC]",
         ],
     );
 }
@@ -115,7 +128,10 @@ fn order_book_nests_both_sides() {
         asks: vec![BookLevel::default()],
         ..Default::default()
     };
-    assert_schema(&book, &["symbol:str", "exchange:i32", "time:i64"]);
+    assert_schema(
+        &book,
+        &["symbol:str", "exchange:i32", "time:datetime[μs, UTC]"],
+    );
     assert_eq!(book.bids_dataframe().unwrap().height(), 2);
     assert_eq!(book.asks_dataframe().unwrap().height(), 1);
 
@@ -150,7 +166,19 @@ fn option_contract_flattens_greeks() {
             "greeks_vega:f64",
         ]
     );
-    assert_eq!(names.last().unwrap(), "time:i64");
+    assert_eq!(names.last().unwrap(), "time:datetime[μs, UTC]");
+    let expiration = OptionContractUpdate {
+        expiration: Some(1_737_072_000),
+        ..Default::default()
+    };
+    let days = expiration
+        .to_dataframe()
+        .unwrap()
+        .column("expiration")
+        .unwrap()
+        .cast(&DataType::Int32)
+        .unwrap();
+    assert_eq!(days.i32().unwrap().get(0), Some(20_105));
     assert_eq!(
         df.column("option_type").unwrap().str().unwrap().get(0),
         Some("PUT")
@@ -175,11 +203,11 @@ fn series_update_columns() {
         },
         &[
             "series_id:str",
-            "date:str",
+            "date:date",
             "value:f64",
             "previous_value:f64",
             "revision:bool",
-            "observed_at:i64",
+            "observed_at:datetime[μs, UTC]",
         ],
     );
 }
@@ -206,4 +234,12 @@ fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
 
     let two = AlertEvent::vec_to_dataframe(&[event.clone(), event]).unwrap();
     assert_eq!(two.height(), 2);
+}
+
+#[test]
+fn zero_stream_times_are_null() {
+    let trade = TradeTick::default().to_dataframe().unwrap();
+    assert_eq!(trade.column("time").unwrap().null_count(), 1);
+    let price = PriceUpdate::default().to_dataframe().unwrap();
+    assert_eq!(price.column("time").unwrap().null_count(), 1);
 }

@@ -13,7 +13,7 @@ fn index_quote_columns() {
             "price:f64",
             "change:f64",
             "change_percent:f64",
-            "timestamp:i64",
+            "timestamp:datetime[μs, UTC]",
         ]
     );
 }

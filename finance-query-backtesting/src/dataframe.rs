@@ -8,6 +8,7 @@ use crate::comparison::{ComparisonReport, ComparisonRow};
 use crate::monte_carlo::MonteCarloResult;
 use crate::optimizer::{OptimizationReport, ParamValue, ParetoReport};
 use crate::portfolio::PortfolioResult;
+use crate::result::dataframe::datetimes;
 use crate::result::{EquityPoint, PerformanceMetrics};
 use crate::walk_forward::WalkForwardReport;
 
@@ -114,14 +115,14 @@ impl PortfolioResult {
 
     /// Converts the combined equity curve to a polars DataFrame, one row per bar.
     ///
-    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown` (f64, a fraction).
+    /// Columns are `timestamp` (datetime, UTC), `equity` (f64) and `drawdown` (f64, a fraction).
     pub fn equity_dataframe(&self) -> PolarsResult<DataFrame> {
         EquityPoint::vec_to_dataframe(&self.portfolio_equity_curve)
     }
 
     /// Converts the allocation history to a long-format polars DataFrame.
     ///
-    /// Columns are `timestamp` (i64), `asset` (string, `cash` or a symbol) and `value`
+    /// Columns are `timestamp` (datetime, UTC), `asset` (string, `cash` or a symbol) and `value`
     /// (f64). Each snapshot emits `cash` first, then its positions sorted by symbol.
     pub fn allocation_dataframe(&self) -> PolarsResult<DataFrame> {
         let (mut timestamps, mut assets, mut values) = (Vec::new(), Vec::new(), Vec::new());
@@ -138,7 +139,7 @@ impl PortfolioResult {
         DataFrame::new(
             values.len(),
             vec![
-                column("timestamp", timestamps),
+                datetimes("timestamp", &timestamps, |timestamp| *timestamp),
                 column("asset", assets),
                 column("value", values),
             ],
@@ -360,8 +361,18 @@ mod tests {
         assert_eq!(names(&allocation), ["timestamp", "asset", "value"]);
         assert_eq!(
             dtypes(&allocation),
-            [DataType::Int64, DataType::String, DataType::Float64]
+            [
+                finance_query_types::__dataframe::datetime_dtype(),
+                DataType::String,
+                DataType::Float64
+            ]
         );
+        let micros = allocation
+            .column("timestamp")
+            .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap();
+        assert_eq!(micros.i64().unwrap().get(0), Some(1_000_000));
         let assets: Vec<_> = allocation
             .column("asset")
             .unwrap()

@@ -1329,7 +1329,7 @@ With the `dataframe` feature enabled, a `BacktestResult` converts to Polars Data
 | `signals_dataframe()` | One per signal | `timestamp`, `price`, `direction`, `strength`, `reason`, `executed` |
 | `metrics.to_dataframe()` | One | One column per `PerformanceMetrics` field |
 
-Timestamps stay as Unix `i64` values, and enum fields such as `side` and `direction` become strings.
+Timestamps become `Datetime(us, UTC)` columns, and enum fields such as `side` and `direction` become strings.
 
 ```rust no_run feature=backtesting,dataframe
 use finance_query::backtesting::SmaCrossover;

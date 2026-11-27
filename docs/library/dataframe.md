@@ -11,7 +11,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "3", features = ["dataframe"] }
-    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window"] }
+    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
     ```
 
     The `finance_query::polars` re-export exists so type names in public
@@ -90,7 +90,7 @@ shape: (23, 7)
 
 <!-- soothfast:bind finance_query::Candle -->
 
-- `timestamp` (i64) - Unix timestamp
+- `timestamp` (Datetime, UTC) - Bar time
 - `open` (f64) - Opening price
 - `high` (f64) - High price
 - `low` (f64) - Low price
@@ -399,8 +399,8 @@ Series: 'daily_return_pct' [f64]
 
 ### Time-based Operations
 
-Timestamp columns are `i64` epoch seconds, so compare them against epoch
-seconds.
+Chart timestamps are `Datetime(us, UTC)` columns, so type the literal you
+compare against. The `dt()` namespace needs the Polars `temporal` feature.
 
 ```rust capture-output feature=dataframe
 use chrono::{Duration, Utc};
@@ -415,10 +415,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total = df.height();
 
     // Keep the last six months
-    let cutoff = (Utc::now() - Duration::days(182)).timestamp();
+    let cutoff = lit((Utc::now() - Duration::days(182)).timestamp_micros())
+        .cast(DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC)));
     let recent = df
         .lazy()
-        .filter(col("timestamp").gt_eq(lit(cutoff)))
+        .filter(col("timestamp").gt_eq(cutoff))
         .collect()?;
     println!("Filtered to fewer rows: {}", recent.height() < total);
     Ok(())
@@ -429,20 +430,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Filtered to fewer rows: true
 ```
 
-For calendar operations such as `dt().date()` or `group_by_dynamic`, cast the
-column to a datetime first. Polars needs its `dtype-datetime` and `temporal`
-features for this, and `Datetime` takes milliseconds:
-
-```rust ignore
-let df = df
-    .lazy()
-    .with_column(
-        (col("timestamp") * lit(1000))
-            .cast(DataType::Datetime(TimeUnit::Milliseconds, None))
-            .alias("datetime"),
-    )
-    .collect()?;
-```
+Calendar operations such as `dt().date()` or `dt().truncate()` work on the
+column directly.
 
 ### Sorting and Ranking
 
@@ -522,10 +511,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
 
-    // Group by (approximate) month and aggregate
+    // Group by month and aggregate
     let monthly = df
         .lazy()
-        .with_column((col("timestamp") / lit(86400i64 * 30i64)).alias("month"))
+        .with_column(col("timestamp").dt().truncate(lit("1mo")).alias("month"))
         .group_by([col("month")])
         .agg([
             col("close").mean().alias("avg_close"),

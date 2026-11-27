@@ -54,5 +54,6 @@ pub struct FearAndGreed {
     /// Human-readable classification of the value
     pub classification: FearGreedLabel,
     /// Unix timestamp (seconds) when this reading was recorded
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
 }

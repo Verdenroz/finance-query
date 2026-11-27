@@ -45,6 +45,7 @@ pub struct OrderBookUpdate {
     /// Exchange identifier, where the venue reports one.
     pub exchange: Option<i32>,
     /// Update timestamp (milliseconds).
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", nonzero))]
     pub time: i64,
 }
 

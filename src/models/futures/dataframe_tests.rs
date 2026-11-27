@@ -21,7 +21,7 @@ fn futures_quote_columns() {
             "change_percent:f64",
             "open_interest:u64",
             "volume:u64",
-            "timestamp:i64",
+            "timestamp:datetime[μs, UTC]",
         ]
     );
 }
