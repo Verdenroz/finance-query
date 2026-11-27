@@ -30,6 +30,7 @@ pub struct SecFiling {
 
     /// Filing date (string format)
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
 
     /// Filing date (epoch timestamp)

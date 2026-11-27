@@ -198,13 +198,13 @@ fn recommendation_and_grade_wrapper_frames() {
 #[test]
 fn sec_filings_wrapper_skips_exhibit_list() {
     let filings: SecFilings = parse(json!({
-        "filings": [{"type": "10-K", "epochDate": 1, "exhibits": [{"type": "EX-1", "url": "u"}]}]
+        "filings": [{"type": "10-K", "date": "2025-10-31", "epochDate": 1, "exhibits": [{"type": "EX-1", "url": "u"}]}]
     }));
     assert_eq!(
         columns(&filings.to_dataframe().unwrap()),
         [
             "max_age:i64",
-            "date:str",
+            "date:date",
             "epoch_date:date",
             "filing_type:str",
             "title:str",
@@ -553,7 +553,7 @@ fn flat_frames_of_nested_types_keep_their_exact_columns() {
         columns(&filing.to_dataframe().unwrap()),
         [
             "max_age:i64",
-            "date:str",
+            "date:date",
             "epoch_date:date",
             "filing_type:str",
             "title:str",
