@@ -22,7 +22,6 @@ pub struct EarningsSurprise {
     /// `actual_eps - estimated_eps`.
     pub surprise: Option<f64>,
     /// Surprise as a percentage of the estimate, in percent points (`3.8` is 3.8%).
-    /// Yahoo reports a fraction instead (`0.038`).
     pub surprise_percent: Option<f64>,
 }
 

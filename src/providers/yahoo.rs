@@ -492,7 +492,10 @@ fn earnings_history_to_surprises(
             actual_eps: e.eps_actual.and_then(|v| v.raw),
             estimated_eps: e.eps_estimate.and_then(|v| v.raw),
             surprise: e.eps_difference.and_then(|v| v.raw),
-            surprise_percent: e.surprise_percent.and_then(|v| v.raw),
+            surprise_percent: e
+                .surprise_percent
+                .map(crate::models::quote::FormattedValue::fraction_to_percent)
+                .and_then(|v| v.raw),
         })
         .collect()
 }
@@ -1580,7 +1583,7 @@ mod tests {
                     "epsActual": {"raw": 1.5, "fmt": "1.50"},
                     "epsEstimate": {"raw": 1.4, "fmt": "1.40"},
                     "epsDifference": {"raw": 0.1, "fmt": "0.10"},
-                    "surprisePercent": {"raw": 7.1, "fmt": "7.10%"}
+                    "surprisePercent": {"raw": 0.0634, "fmt": "6.34%"}
                 }]
             }))
             .unwrap();
@@ -1591,7 +1594,7 @@ mod tests {
         assert_eq!(surprises[0].actual_eps, Some(1.5));
         assert_eq!(surprises[0].estimated_eps, Some(1.4));
         assert_eq!(surprises[0].surprise, Some(0.1));
-        assert_eq!(surprises[0].surprise_percent, Some(7.1));
+        assert!((surprises[0].surprise_percent.unwrap() - 6.34).abs() < 1e-9);
     }
 
     #[test]
