@@ -41,10 +41,6 @@ A fired price alert.
 """
 type GqlAlertEvent {
 	"""
-	Symbol that triggered.
-	"""
-	symbol: String!
-	"""
 	Which predicate fired.
 	"""
 	condition: GqlAlertConditionKind!

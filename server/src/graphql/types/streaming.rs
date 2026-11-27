@@ -163,8 +163,6 @@ impl From<GqlAlertRuleInput> for AlertRule {
 #[derive(SimpleObject, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlAlertEvent {
-    /// Symbol that triggered.
-    pub symbol: String,
     /// Which predicate fired.
     pub condition: GqlAlertConditionKind,
     /// Threshold the predicate compared against.
@@ -178,7 +176,6 @@ pub struct GqlAlertEvent {
 impl From<AlertEvent> for GqlAlertEvent {
     fn from(event: AlertEvent) -> Self {
         Self {
-            symbol: event.symbol,
             condition: event.condition.kind().into(),
             threshold: event.condition.threshold(),
             previous_price: event.previous_price,

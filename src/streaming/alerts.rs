@@ -197,8 +197,6 @@ impl AlertRule {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AlertEvent {
-    /// Symbol that triggered.
-    pub symbol: String,
     /// Condition that fired.
     pub condition: AlertCondition,
     /// Last price seen before this tick, if any.
@@ -211,7 +209,7 @@ pub struct AlertEvent {
 impl AlertEvent {
     /// Converts the event to a single-row polars DataFrame.
     ///
-    /// Columns are `symbol` and `previous_price`, then the columns of
+    /// Columns are `previous_price`, then the columns of
     /// [`PriceUpdate`] as `update_{column}`, then
     /// `condition_kind` (the [`AlertConditionKind`] name). The condition's
     /// threshold is not in the frame.
@@ -238,11 +236,6 @@ impl AlertEvent {
         let head = DataFrame::new(
             items.len(),
             vec![
-                Series::new(
-                    "symbol".into(),
-                    items.iter().map(|i| i.symbol.as_str()).collect::<Vec<_>>(),
-                )
-                .into(),
                 Series::new(
                     "previous_price".into(),
                     items.iter().map(|i| i.previous_price).collect::<Vec<_>>(),
@@ -331,8 +324,9 @@ impl AlertEvaluator {
             let holds = state.rule.condition.holds(update, previous);
             if holds && state.armed {
                 state.armed = false;
+                // A tick almost always fires one rule; skip the 4-slot first allocation.
+                fired.reserve_exact(usize::from(fired.is_empty()));
                 fired.push(AlertEvent {
-                    symbol: update.id.clone(),
                     condition: state.rule.condition,
                     previous_price: previous,
                     update: update.clone(),
@@ -409,7 +403,7 @@ where
 ///     .alerts([AlertRule::new("AAPL", AlertCondition::CrossesAbove(200.0))]);
 ///
 /// while let Some(alert) = alerts.next().await {
-///     println!("{} crossed at {}", alert.symbol, alert.update.price);
+///     println!("{} crossed at {}", alert.update.id, alert.update.price);
 /// }
 /// # Ok(())
 /// # }
@@ -515,8 +509,24 @@ mod tests {
         ]);
         let fired = evaluator.evaluate(&tick("NVDA", 20.0));
         assert_eq!(fired.len(), 1);
-        assert_eq!(fired[0].symbol, "NVDA");
+        assert_eq!(fired[0].update.id, "NVDA");
         assert_eq!(evaluator.symbols(), vec!["AAPL", "NVDA"]);
+    }
+
+    #[test]
+    fn rules_firing_on_one_tick_return_in_rule_order() {
+        let mut evaluator = AlertEvaluator::new([
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(30.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(10.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(500.0)),
+            AlertRule::new("AAPL", AlertCondition::PriceAbove(20.0)),
+        ]);
+        let thresholds: Vec<f64> = evaluator
+            .evaluate(&tick("AAPL", 100.0))
+            .iter()
+            .map(|event| event.condition.threshold())
+            .collect();
+        assert_eq!(thresholds, [30.0, 10.0, 20.0]);
     }
 
     #[test]

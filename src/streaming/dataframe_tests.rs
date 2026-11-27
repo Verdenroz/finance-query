@@ -187,17 +187,13 @@ fn series_update_columns() {
 #[test]
 fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
     let event = AlertEvent {
-        symbol: "AAPL".into(),
         condition: AlertCondition::PriceAbove(1.0),
         previous_price: None,
         update: PriceUpdate::default(),
     };
     let df = event.to_dataframe().unwrap();
-    assert_eq!(
-        columns(&df)[..3],
-        ["symbol:str", "previous_price:f64", "update_id:str",]
-    );
-    assert_eq!(df.width(), 2 + 33 + 1);
+    assert_eq!(columns(&df)[..2], ["previous_price:f64", "update_id:str"]);
+    assert_eq!(df.width(), 1 + 33 + 1);
     assert_eq!(columns(&df).last().unwrap(), "condition_kind:str");
     assert_eq!(
         df.column("condition_kind").unwrap().str().unwrap().get(0),

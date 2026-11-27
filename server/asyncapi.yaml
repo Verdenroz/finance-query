@@ -150,14 +150,10 @@ components:
           description: "Last price seen before this tick, if any."
           type: number
           format: double
-        symbol:
-          description: Symbol that triggered.
-          type: string
         update:
           description: The full triggering tick.
           $ref: "#/components/schemas/PriceUpdate"
       required:
-        - symbol
         - condition
         - update
     FeedStreamCommand:
