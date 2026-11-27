@@ -329,7 +329,10 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                ("timestamp", DataType::Date),
+                (
+                    "timestamp",
+                    DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+                ),
                 ("amount", DataType::Float64),
                 ("provider_id", DataType::String),
             ])

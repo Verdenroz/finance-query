@@ -12,10 +12,6 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let price_df = aapl_chart.to_dataframe()?;
     let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
 
-    let price_df = price_df
-        .lazy()
-        .with_column(col("timestamp").dt().date())
-        .collect()?;
     let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
     println!("joined shape: {:?}", joined.shape());
     Ok(())

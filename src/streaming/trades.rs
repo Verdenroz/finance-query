@@ -37,7 +37,7 @@ pub struct TradeTick {
     /// Provider trade identifier, where one is supplied.
     pub trade_id: Option<String>,
     /// Execution timestamp (milliseconds).
-    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms"))]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", nonzero))]
     pub time: i64,
 }
 

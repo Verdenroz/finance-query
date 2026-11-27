@@ -235,3 +235,13 @@ fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
     let two = AlertEvent::vec_to_dataframe(&[event.clone(), event]).unwrap();
     assert_eq!(two.height(), 2);
 }
+
+#[test]
+fn zero_stream_times_are_null() {
+    use crate::ToDataFrame;
+
+    let trade = TradeTick::default().to_dataframe().unwrap();
+    assert_eq!(trade.column("time").unwrap().null_count(), 1);
+    let price = PriceUpdate::default().to_dataframe().unwrap();
+    assert_eq!(price.column("time").unwrap().null_count(), 1);
+}

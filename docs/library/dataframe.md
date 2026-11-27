@@ -430,7 +430,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Filtered to fewer rows: true
 ```
 
-Calendar operations such as `dt().date()` or `group_by_dynamic` work on the
+Calendar operations such as `dt().date()` or `dt().truncate()` work on the
 column directly.
 
 ### Sorting and Ranking
@@ -702,10 +702,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let price_df = aapl_chart.to_dataframe()?;
     let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
 
-    let price_df = price_df
-        .lazy()
-        .with_column(col("timestamp").dt().date())
-        .collect()?;
     let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
     println!("joined shape: {:?}", joined.shape());
     Ok(())

@@ -36,10 +36,10 @@ fn dividend_analytics_flattens_both_payments() {
         "payment_count:u64",
         "average_payment:f64",
         "cagr:f64",
-        "last_payment_timestamp:date",
+        "last_payment_timestamp:datetime[μs, UTC]",
         "last_payment_amount:f64",
         "last_payment_provider_id:str",
-        "first_payment_timestamp:date",
+        "first_payment_timestamp:datetime[μs, UTC]",
         "first_payment_amount:f64",
         "first_payment_provider_id:str",
     ];
@@ -49,22 +49,22 @@ fn dividend_analytics_flattens_both_payments() {
     assert_eq!(
         df.column("last_payment_timestamp")
             .unwrap()
-            .cast(&DataType::Int32)
+            .cast(&DataType::Int64)
             .unwrap()
-            .i32()
+            .i64()
             .unwrap()
             .get(0),
-        Some(2)
+        Some(2 * 86_400_000_000)
     );
     assert_eq!(
         df.column("first_payment_timestamp")
             .unwrap()
-            .cast(&DataType::Int32)
+            .cast(&DataType::Int64)
             .unwrap()
-            .i32()
+            .i64()
             .unwrap()
             .get(0),
-        Some(1)
+        Some(1 * 86_400_000_000)
     );
 
     let none = DividendAnalytics::from_dividends(&[])

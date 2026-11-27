@@ -84,6 +84,7 @@ pub struct CapitalGainEvent {
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct Split {
     /// Timestamp (Unix)
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Numerator of the split ratio
     pub numerator: f64,
@@ -106,7 +107,7 @@ pub struct Split {
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct CapitalGain {
     /// Timestamp (Unix)
-    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Capital gain amount per share
     pub amount: f64,

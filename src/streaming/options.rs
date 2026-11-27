@@ -88,7 +88,7 @@ pub struct OptionContractUpdate {
     #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub greeks: Option<Greeks>,
     /// Event timestamp (milliseconds).
-    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms"))]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", nonzero))]
     pub time: i64,
 }
 

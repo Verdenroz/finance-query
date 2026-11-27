@@ -242,6 +242,7 @@ pub(crate) fn snapshot_to_update(
         time: quote
             .and_then(|q| q.last_updated)
             .or_else(|| trade.and_then(|t| t.sip_timestamp))
+            .map(|nanos| nanos / 1_000_000)
             .unwrap_or_default(),
     })
 }
@@ -299,7 +300,7 @@ mod tests {
             "implied_volatility": 0.28,
             "open_interest": 4200,
             "day": {"v": 1500.0},
-            "last_quote": {"bid": 3.2, "ask": 3.4, "last_updated": 99}
+            "last_quote": {"bid": 3.2, "ask": 3.4, "last_updated": 1705363200123456789_i64}
         }))
         .expect("fixture should deserialize");
 
@@ -308,7 +309,7 @@ mod tests {
         assert_eq!(update.implied_volatility, Some(0.28));
         assert_eq!(update.greeks.unwrap().delta, Some(0.55));
         assert_eq!(update.volume, Some(1500));
-        assert_eq!(update.time, 99);
+        assert_eq!(update.time, 1_705_363_200_123);
     }
 
     #[test]
