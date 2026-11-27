@@ -362,3 +362,26 @@ fn empty_company_facts_keep_the_schema() {
     assert_eq!(df.height(), 0);
     assert_eq!(columns(&df), columns(&full));
 }
+
+#[test]
+fn company_facts_frame_matches_stacked_unit_frames() {
+    use crate::__dataframe::with_leading_column;
+
+    let facts = company_facts();
+    let schema = with_leading_column(FactUnit::vec_to_dataframe(&[]).unwrap(), "unit", "").unwrap();
+    let schema = with_leading_column(schema, "concept", "").unwrap();
+    let mut stacked = with_leading_column(schema, "taxonomy", "").unwrap();
+    for (taxonomy, by_concept) in &facts.facts {
+        for (concept, fact) in &by_concept.0 {
+            for (unit, points) in &fact.units {
+                let frame = FactUnit::vec_to_dataframe(points).unwrap();
+                let frame = with_leading_column(frame, "unit", unit).unwrap();
+                let frame = with_leading_column(frame, "concept", concept).unwrap();
+                let frame = with_leading_column(frame, "taxonomy", taxonomy).unwrap();
+                stacked.vstack_mut(&frame).unwrap();
+            }
+        }
+    }
+
+    assert!(facts.to_dataframe().unwrap().equals_missing(&stacked));
+}
