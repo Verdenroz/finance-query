@@ -1,6 +1,6 @@
 //! Corporate governance models: executive compensation and employee headcount.
 //!
-//! Served through the [`Capability::CORPORATE`](crate::Capability::CORPORATE)
+//! Served through the [`Capability::CORPORATE`](finance_query_types::Capability::CORPORATE)
 //! route. Both are derived from the company's own SEC filings (DEF 14A proxy
 //! statements and 10-K/10-Q cover pages respectively), so figures are annual
 //! and lag the filing date. EDGAR serves employee counts filed under the

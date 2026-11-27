@@ -4,8 +4,8 @@
 //! ex-dividend/dividend-payment, options expiration, or (with the `fred`
 //! feature) a market-wide economic-data release.
 //!
-//! Construct calendars via [`Ticker::calendar`](crate::Ticker::calendar) and
-//! [`Tickers::calendar`](crate::Tickers::calendar).
+//! Construct calendars via `Ticker::calendar` and
+//! `Tickers::calendar`.
 
 /// Market-wide calendars routed through `Capability::CALENDAR`.
 pub mod market;

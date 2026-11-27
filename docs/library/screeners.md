@@ -77,7 +77,7 @@ The custom screener API uses typed field enums so your IDE can autocomplete fiel
 
 ### Basic Example
 
-```rust no_run covers=finance_query::models::discovery::screeners::fields::EquityField
+```rust no_run covers=finance_query::EquityField
 use finance_query::{finance, EquityScreenerQuery, EquityField, ScreenerFieldExt};
 
 #[tokio::main]
@@ -209,7 +209,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Use `FundScreenerQuery` with `FundField` for mutual funds:
 
-```rust no_run covers=finance_query::models::discovery::screeners::fields::FundField
+```rust no_run covers=finance_query::FundField
 use finance_query::{finance, FundScreenerQuery, FundField, ScreenerFieldExt};
 
 #[tokio::main]
@@ -235,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 **Available `FundField` variants:**
 
-<!-- soothfast:bind finance_query::models::discovery::screeners::fields::FundField -->
+<!-- soothfast:bind finance_query::FundField -->
 
 | Variant | Yahoo Field | Description |
 |---------|------------|-------------|
@@ -255,7 +255,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## `EquityField` Reference
 
-<!-- soothfast:bind finance_query::models::discovery::screeners::fields::EquityField -->
+<!-- soothfast:bind finance_query::EquityField -->
 
 ### Price & Market Cap
 

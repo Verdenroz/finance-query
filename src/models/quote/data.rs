@@ -754,43 +754,43 @@ pub struct Quote<F: Format = Both> {
 
     /// Balance sheet history (annual).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::Balance`] and [`crate::Frequency::Annual`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::Balance`](finance_query_types::constants::StatementType::Balance) and [`Frequency::Annual`](finance_query_types::constants::Frequency::Annual) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_sheet_history: Option<BalanceSheetHistory>,
 
     /// Balance sheet history (quarterly).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::Balance`] and [`crate::Frequency::Quarterly`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::Balance`](finance_query_types::constants::StatementType::Balance) and [`Frequency::Quarterly`](finance_query_types::constants::Frequency::Quarterly) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_sheet_history_quarterly: Option<BalanceSheetHistoryQuarterly>,
 
     /// Cash flow statement history (annual).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::CashFlow`] and [`crate::Frequency::Annual`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::CashFlow`](finance_query_types::constants::StatementType::CashFlow) and [`Frequency::Annual`](finance_query_types::constants::Frequency::Annual) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashflow_statement_history: Option<CashflowStatementHistory>,
 
     /// Cash flow statement history (quarterly).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::CashFlow`] and [`crate::Frequency::Quarterly`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::CashFlow`](finance_query_types::constants::StatementType::CashFlow) and [`Frequency::Quarterly`](finance_query_types::constants::Frequency::Quarterly) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashflow_statement_history_quarterly: Option<CashflowStatementHistoryQuarterly>,
 
     /// Income statement history (annual).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::Income`] and [`crate::Frequency::Annual`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::Income`](finance_query_types::constants::StatementType::Income) and [`Frequency::Annual`](finance_query_types::constants::Frequency::Annual) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub income_statement_history: Option<IncomeStatementHistory>,
 
     /// Income statement history (quarterly).
     ///
-    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
-    /// [`crate::StatementType::Income`] and [`crate::Frequency::Quarterly`] instead.
+    /// Always `None` on `Quote` — use `Ticker::financials` with
+    /// [`StatementType::Income`](finance_query_types::constants::StatementType::Income) and [`Frequency::Quarterly`](finance_query_types::constants::Frequency::Quarterly) instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub income_statement_history_quarterly: Option<IncomeStatementHistoryQuarterly>,
 

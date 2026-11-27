@@ -1,9 +1,9 @@
 //! Provider-routed symbol reference models.
 //!
-//! Returned by the [`Capability::DISCOVERY`](crate::Capability::DISCOVERY)
-//! route via [`Providers::discovery`](crate::Providers::discovery). These are
+//! Returned by the [`Capability::DISCOVERY`](finance_query_types::Capability::DISCOVERY)
+//! route via `Providers::discovery`. These are
 //! provider-neutral shapes — unlike [`SearchResults`](super::search::SearchResults),
-//! which mirrors Yahoo's response for the [`crate::finance::search`] shortcut.
+//! which mirrors Yahoo's response for the `finance::search` shortcut.
 
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub struct SymbolMatch {
     pub symbol: String,
     /// Provider-native identifier, when the provider uses one distinct from
     /// the ticker — e.g. the CoinGecko coin id (`"bitcoin"`), which is what
-    /// [`Providers::crypto`](crate::Providers::crypto) accepts. `None` for
+    /// `Providers::crypto` accepts. `None` for
     /// providers whose ticker *is* the identifier.
     pub id: Option<String>,
     /// Security or company name.
