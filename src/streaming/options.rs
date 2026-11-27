@@ -60,6 +60,7 @@ pub struct OptionContractUpdate {
     /// Underlying symbol parsed from the contract (e.g. `"AAPL"`).
     pub underlying: String,
     /// Expiration date as a Unix timestamp (seconds).
+    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
     pub expiration: Option<i64>,
     /// Strike price.
     pub strike: Option<f64>,
@@ -87,6 +88,7 @@ pub struct OptionContractUpdate {
     #[cfg_attr(feature = "dataframe", dataframe(flatten))]
     pub greeks: Option<Greeks>,
     /// Event timestamp (milliseconds).
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms"))]
     pub time: i64,
 }
 
