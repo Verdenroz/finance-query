@@ -477,6 +477,53 @@ async fn not_supported_is_excluded_from_health_accounting() {
     assert!(health[0].last_error.is_none());
 }
 
+struct UnknownSymbolProvider;
+
+impl ProviderCore for UnknownSymbolProvider {
+    fn id(&self) -> Provider {
+        Provider::Yahoo
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for UnknownSymbolProvider {
+    async fn fetch_chart(
+        &self,
+        symbol: &str,
+        _: crate::Interval,
+        _: crate::TimeRange,
+    ) -> Result<crate::models::chart::Chart> {
+        Err(FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "no such ticker".into(),
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for UnknownSymbolProvider {
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+}
+
+#[tokio::test]
+async fn symbol_not_found_is_excluded_from_health_accounting() {
+    let set = ProviderSet::new(
+        vec![Arc::new(UnknownSymbolProvider) as Arc<dyn ProviderAdapter>],
+        Routes::new(Fetch::Sequential),
+    );
+    for _ in 0..5 {
+        let err = fetch_chart_via(&set).await.unwrap_err();
+        assert!(err.is_not_found(), "got {err:?}");
+    }
+
+    let health = set.health();
+    assert!(health[0].is_healthy);
+    assert_eq!(health[0].recent_failures, 0);
+    assert!(health[0].last_error.is_none());
+}
+
 /// Companion to `tests/provider_wire_format.rs`, which can only name the
 /// variants it hard-codes. The match has no wildcard, so a new variant fails
 /// to compile until it is pinned here.

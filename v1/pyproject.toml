@@ -11,7 +11,7 @@ authors = [
     { name = "Harvey Tseng", email = "harveytseng2@gmail.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.11.5,<4.0"
 dependencies = [
     "fastapi>=0.136.0,<0.139.0",
     "numpy>=2.1.3",
