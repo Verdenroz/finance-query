@@ -30,6 +30,7 @@ use super::signal::SignalDirection;
 )]
 pub struct EquityPoint {
     /// Timestamp
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub timestamp: i64,
     /// Portfolio equity at this point
     pub equity: f64,

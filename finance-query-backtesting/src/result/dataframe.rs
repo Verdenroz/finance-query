@@ -1,6 +1,7 @@
 //! Polars conversions for backtest results.
 
 use super::{BacktestResult, EquityPoint};
+use finance_query_types::__dataframe::{EpochUnit, epoch_datetime};
 use polars::prelude::{Column, DataFrame, NamedFrom, PolarsResult, Series};
 
 fn series<T, U>(name: &str, items: &[T], get: impl Fn(&T) -> U) -> Column
@@ -10,10 +11,19 @@ where
     Series::new(name.into(), items.iter().map(get).collect::<Vec<_>>()).into()
 }
 
+fn datetimes<T>(name: &str, items: &[T], get: impl Fn(&T) -> i64) -> Column {
+    epoch_datetime(
+        name.to_string(),
+        EpochUnit::Seconds,
+        false,
+        items.iter().map(|item| Some(get(item))),
+    )
+}
+
 impl BacktestResult {
     /// Converts the equity curve to a polars DataFrame, one row per bar.
     ///
-    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown` (f64, a fraction).
+    /// Columns are `timestamp` (datetime, UTC), `equity` (f64) and `drawdown` (f64, a fraction).
     pub fn equity_dataframe(&self) -> PolarsResult<DataFrame> {
         EquityPoint::vec_to_dataframe(&self.equity_curve)
     }
@@ -21,7 +31,7 @@ impl BacktestResult {
     /// Converts the trade log to a polars DataFrame, one row per trade, in log order.
     ///
     /// Columns are `side` (string, `LONG` or `SHORT`), `entry_timestamp`, `exit_timestamp`
-    /// (i64), `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`,
+    /// (datetime, UTC), `entry_price`, `exit_price`, `quantity`, `entry_quantity`, `commission`,
     /// `transaction_tax`, `pnl`, `net_return`, `dividend_income`, `unreinvested_dividends`,
     /// `financing_cost` (f64), `is_partial` (bool) and `scale_sequence` (u64). Entry and exit
     /// signals and tags are not included.
@@ -31,8 +41,8 @@ impl BacktestResult {
             t.len(),
             vec![
                 series("side", t, |x| x.side.to_string()),
-                series("entry_timestamp", t, |x| x.entry_timestamp),
-                series("exit_timestamp", t, |x| x.exit_timestamp),
+                datetimes("entry_timestamp", t, |x| x.entry_timestamp),
+                datetimes("exit_timestamp", t, |x| x.exit_timestamp),
                 series("entry_price", t, |x| x.entry_price),
                 series("exit_price", t, |x| x.exit_price),
                 series("quantity", t, |x| x.quantity),
@@ -52,7 +62,7 @@ impl BacktestResult {
 
     /// Converts the generated signals to a polars DataFrame, one row per signal.
     ///
-    /// Columns are `timestamp` (i64), `price` (f64), `direction` (string, the
+    /// Columns are `timestamp` (datetime, UTC), `price` (f64), `direction` (string, the
     /// `SignalDirection` display name), `strength` (f64), `reason` (nullable string)
     /// and `executed` (bool). Tags are not included.
     pub fn signals_dataframe(&self) -> PolarsResult<DataFrame> {
@@ -60,7 +70,7 @@ impl BacktestResult {
         DataFrame::new(
             s.len(),
             vec![
-                series("timestamp", s, |x| x.timestamp),
+                datetimes("timestamp", s, |x| x.timestamp),
                 series("price", s, |x| x.price),
                 series("direction", s, |x| x.direction.to_string()),
                 series("strength", s, |x| x.strength),
@@ -76,7 +86,7 @@ mod tests {
     use super::super::PerformanceMetrics;
     use super::super::fixtures::{equity_point, make_result, make_trade};
     use super::*;
-    use polars::prelude::DataType;
+    use polars::prelude::{DataType, TimeUnit, TimeZone};
 
     fn names(df: &DataFrame) -> Vec<String> {
         df.get_column_names()
@@ -95,7 +105,16 @@ mod tests {
         let df = make_result(vec![], curve).equity_dataframe().unwrap();
 
         assert_eq!(names(&df), ["timestamp", "equity", "drawdown"]);
-        assert_eq!(df.column("timestamp").unwrap().dtype(), &DataType::Int64);
+        assert_eq!(
+            df.column("timestamp").unwrap().dtype(),
+            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+        );
+        let micros = df
+            .column("timestamp")
+            .unwrap()
+            .cast(&DataType::Int64)
+            .unwrap();
+        assert_eq!(micros.i64().unwrap().get(0), Some(1_000_000));
         assert_eq!(df.column("equity").unwrap().dtype(), &DataType::Float64);
         let equity: Vec<_> = df
             .column("equity")
@@ -136,7 +155,7 @@ mod tests {
         assert_eq!(df.column("side").unwrap().dtype(), &DataType::String);
         assert_eq!(
             df.column("entry_timestamp").unwrap().dtype(),
-            &DataType::Int64
+            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
         );
         assert_eq!(df.column("pnl").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.column("is_partial").unwrap().dtype(), &DataType::Boolean);
