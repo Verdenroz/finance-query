@@ -33,6 +33,8 @@ mod fundamentals;
 mod membership;
 mod quotes;
 
+pub use quotes::BatchQuotesAs;
+
 // Type aliases — MapCache wraps values in CacheEntry for TTL support.
 type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
 type ChartCacheKey = (Arc<str>, Interval, TimeRange);
