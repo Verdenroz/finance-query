@@ -34,11 +34,7 @@ pub(crate) async fn fetch_summary(
         .await
         .map_err(|e| e.with_symbol(symbol))?;
     let json: serde_json::Value = resp.json().await?;
-    let response = parse_summary(json, symbol)?;
-    Ok(QuoteSummaryResponse {
-        price: response.price.map(Price::with_percent_changes),
-        ..response
-    })
+    parse_summary(json, symbol)
 }
 
 /// Creates a [`QuoteSummaryResponse`] from raw JSON
@@ -113,9 +109,11 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
         };
     }
 
+    let price: Option<Price> = deserialize_module!("price");
+
     Ok(QuoteSummaryResponse {
         symbol: symbol.to_string(),
-        price: deserialize_module!("price"),
+        price: price.map(Price::with_percent_changes),
         summary_detail: deserialize_module!("summaryDetail"),
         financial_data: deserialize_module!("financialData"),
         default_key_statistics: deserialize_module!("defaultKeyStatistics"),
@@ -212,5 +210,47 @@ mod tests {
         let response = parse_summary(json, "AAPL").unwrap();
         assert!(response.price.is_some());
         assert!(response.financial_data.is_none());
+    }
+
+    #[test]
+    fn summary_and_batch_quotes_agree_on_change_percent() {
+        use crate::adapters::yahoo::quote::quotes::parse_quotes_batch;
+        use crate::models::quote::Quote;
+
+        let summary_json: Value = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/yahoo/quote_summary_price.json"
+        ))
+        .unwrap();
+        let summary = parse_summary(summary_json, "AAPL").unwrap();
+        let from_summary = Quote::from_response(&summary, None, None);
+
+        let batch = parse_quotes_batch(include_bytes!(
+            "../../../../tests/fixtures/yahoo/batch_quote.json"
+        ))
+        .unwrap();
+        let from_batch = Quote::from_response(&batch[0].1, None, None);
+
+        let raw = |v: &Option<crate::models::quote::FormattedValue<f64>>| {
+            v.as_ref().and_then(|v| v.raw).unwrap()
+        };
+        assert!(
+            (raw(&from_summary.regular_market_change_percent)
+                - raw(&from_batch.regular_market_change_percent))
+            .abs()
+                < 1e-6
+        );
+        assert!(
+            (raw(&from_summary.post_market_change_percent)
+                - raw(&from_batch.post_market_change_percent))
+            .abs()
+                < 1e-6
+        );
+        assert_eq!(
+            from_summary
+                .regular_market_change_percent
+                .and_then(|v| v.fmt)
+                .as_deref(),
+            Some("0.39%")
+        );
     }
 }
