@@ -2622,6 +2622,10 @@ fn translate_news_inputs() -> (tokio::runtime::Runtime, Vec<News>, Lang) {
         .unwrap();
     let news: Vec<News> = serde_json::from_str(NEWS_JSON).unwrap();
     let lang = Lang::parse("ja").unwrap();
+    // Backend and memo are process-wide; pin them so bench order cannot change the counts.
+    set_backend(std::sync::Arc::new(EchoBackend));
+    rt.block_on(translate_with(&mut news.clone(), &lang))
+        .unwrap();
     (rt, news, lang)
 }
 

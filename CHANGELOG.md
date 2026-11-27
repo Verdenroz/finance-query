@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- Input-ordered batch maps, sorted statement maps (#745)
 - F64 streaming price fields (#740)
 - Yahoo surprise_percent in percent points (#747)
 - Backtest outputs as fractions (#741)
@@ -114,6 +115,7 @@ ADDED    finance_query::Provider::capabilities
 ADDED    finance_query::Provider::custom
 ADDED    finance_query::StochasticData::to_dataframe
 ADDED    finance_query::SuperTrendData::to_dataframe
+ADDED    finance_query::SymbolMap
 ADDED    finance_query::ThumbnailResolution
 ADDED    finance_query::TimeRange::as_str
 ADDED    finance_query::ToDataFrame
@@ -448,6 +450,7 @@ ADDED    finance_query::ticker::core::Ticker::options
 ADDED    finance_query::tickers::core::Tickers::quotes
 ADDED    finance_query::tickers::core::Tickers::quotes_as
 ADDED    finance_query::tickers::core::quotes::BatchQuotesAs
+ADDED    finance_query::tickers::symbol_map::SymbolMap
 REMOVED  finance_query::backtesting::result::metrics::PerformanceMetrics::max_drawdown_percentage
 REMOVED  finance_query::constants::enums::frequency::Frequency
 REMOVED  finance_query::constants::enums::interval::Interval
@@ -487,13 +490,27 @@ REMOVED  finance_query::providers::provider::Provider::capabilities
 REMOVED  finance_query::providers::provider::Provider::custom
 REMOVED  finance_query::ticker::core::Ticker::dividend_analytics
 REMOVED  finance_query::ticker::core::Ticker::quote
+CHANGED  finance_query::BatchCapitalGainsResponse (signature)
+CHANGED  finance_query::BatchChartsResponse (signature)
+CHANGED  finance_query::BatchDividendsResponse (signature)
+CHANGED  finance_query::BatchFinancialsResponse (signature)
+CHANGED  finance_query::BatchIndicatorsResponse (signature)
+CHANGED  finance_query::BatchNewsResponse (signature)
+CHANGED  finance_query::BatchOptionsResponse (signature)
+CHANGED  finance_query::BatchQuotesResponse (signature)
+CHANGED  finance_query::BatchRecommendationsResponse (signature)
+CHANGED  finance_query::BatchSparksResponse (signature)
+CHANGED  finance_query::BatchSplitsResponse (signature)
 CHANGED  finance_query::ChartEvents (signature)
+CHANGED  finance_query::CompanyFacts (signature)
 CHANGED  finance_query::DividendAnalytics (body)
 CHANGED  finance_query::EarningsSurprise (body)
 CHANGED  finance_query::EdgarFilings (body)
 CHANGED  finance_query::EdgarSearchSource (signature)
 CHANGED  finance_query::EdgarSubmissions (body)
 CHANGED  finance_query::EtfProfile (body)
+CHANGED  finance_query::FactConcept (signature)
+CHANGED  finance_query::FactsByTaxonomy (signature)
 CHANGED  finance_query::FilingSearchHit (signature)
 CHANGED  finance_query::FinancialStatement (signature)
 CHANGED  finance_query::IndicatorsSummary (body)
@@ -532,6 +549,8 @@ CHANGED  finance_query::backtesting::monte_carlo::MonteCarloResult (signature)
 CHANGED  finance_query::backtesting::position::Position (body)
 CHANGED  finance_query::backtesting::position::Position::partial_close (body)
 CHANGED  finance_query::backtesting::position::Trade (signature)
+CHANGED  finance_query::backtesting::result::BacktestResult::by_month (signature)
+CHANGED  finance_query::backtesting::result::BacktestResult::by_year (signature)
 CHANGED  finance_query::backtesting::result::EquityPoint (signature)
 CHANGED  finance_query::backtesting::result::SignalRecord (body)
 CHANGED  finance_query::backtesting::result::benchmark::BenchmarkMetrics (signature)
@@ -583,6 +602,9 @@ CHANGED  finance_query::models::discovery::reference::SymbolMatch (body)
 CHANGED  finance_query::models::discovery::search::news::SearchNews (signature)
 CHANGED  finance_query::models::discovery::search::response::SearchResults (body)
 CHANGED  finance_query::models::discovery::search::thumbnail::NewsThumbnail (body)
+CHANGED  finance_query::models::filings::company_facts::CompanyFacts (signature)
+CHANGED  finance_query::models::filings::company_facts::FactConcept (signature)
+CHANGED  finance_query::models::filings::company_facts::FactsByTaxonomy (signature)
 CHANGED  finance_query::models::filings::filing_index::EdgarFilingIndexDirectory (body)
 CHANGED  finance_query::models::filings::full_text::FilingSearchHit (signature)
 CHANGED  finance_query::models::filings::search::EdgarSearchSource (signature)
@@ -634,6 +656,18 @@ CHANGED  finance_query::streaming::trades::TradeStreamBuilder::build (body)
 CHANGED  finance_query::streaming::trades::TradeTick (body)
 CHANGED  finance_query::ticker::core::Ticker::calendar (body)
 CHANGED  finance_query::ticker::core::Ticker::risk (body)
+CHANGED  finance_query::tickers::core::BatchCapitalGainsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchChartsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchDividendsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchFinancialsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchIndicatorsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchNewsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchOptionsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchQuotesResponse (signature)
+CHANGED  finance_query::tickers::core::BatchRecommendationsResponse (signature)
+CHANGED  finance_query::tickers::core::BatchSparksResponse (signature)
+CHANGED  finance_query::tickers::core::BatchSplitsResponse (signature)
+CHANGED  finance_query::tickers::core::Tickers::charts (body)
 ```
 
 
