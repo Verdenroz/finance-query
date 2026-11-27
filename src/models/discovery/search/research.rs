@@ -50,6 +50,7 @@ impl ResearchReports {
 /// A research report result from search
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct ResearchReport {

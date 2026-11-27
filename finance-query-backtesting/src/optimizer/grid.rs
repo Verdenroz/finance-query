@@ -471,8 +471,8 @@ mod tests {
 
         assert!(!report.results.is_empty());
         if report.results.len() > 1 {
-            let first = report.results[0].result.metrics.max_drawdown_pct;
-            let second = report.results[1].result.metrics.max_drawdown_pct;
+            let first = report.results[0].result.metrics.max_drawdown;
+            let second = report.results[1].result.metrics.max_drawdown;
             assert!(first <= second + 1e-9, "best has smallest drawdown");
         }
     }

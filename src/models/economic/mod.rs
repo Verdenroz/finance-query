@@ -34,6 +34,7 @@ pub struct EconomicSeries {
 /// A single observation in a FRED data series.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct MacroObservation {
     /// Date of the observation as `YYYY-MM-DD`
@@ -62,6 +63,7 @@ pub struct MacroSeries {
 #[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct TreasuryYield {
     /// Date as `MM/DD/YYYY` (Treasury's native format)

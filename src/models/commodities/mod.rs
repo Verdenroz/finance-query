@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via `Providers::commodity``(symbol).quote()`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CommodityQuote {
     /// Commodity symbol (e.g., `"GCUSD"` for gold, `"CLUSD"` for crude oil)

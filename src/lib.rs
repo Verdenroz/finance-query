@@ -333,7 +333,8 @@ pub use providers::{
     OptionsProvider, ProviderAdapter, ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
 pub use providers::{
-    Capability, CustomId, Fetch, Operation, Provider, ProviderHealth, RetryPolicy,
+    Capability, CustomId, Fetch, Operation, PageCursor, Provider, ProviderHealth, ProviderPage,
+    RetryPolicy, StockBarsRequest, StockListingRequest,
 };
 
 /// The attribute every capability trait implementation needs.
@@ -390,15 +391,14 @@ pub use tickers::BatchIndicatorsResponse;
 // ============================================================================
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
 pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
-pub use models::chart::{PriceAdjustment, StockBar, StockBarsRequest};
-pub use models::discovery::listings::{StockListing, StockListingRequest, StockType, TickerChange};
+pub use models::chart::{PriceAdjustment, StockBar};
+pub use models::discovery::listings::{StockListing, StockType, TickerChange};
 pub use models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
 pub use models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
-pub use models::pagination::{PageCursor, ProviderPage};
 
 pub use error::{ErrorCategory, FinanceError, Result};
 

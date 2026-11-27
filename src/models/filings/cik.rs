@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Maps a stock ticker symbol to its SEC CIK number and company name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct CikEntry {
     /// CIK number (unique SEC identifier)

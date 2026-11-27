@@ -73,11 +73,11 @@ impl ComparisonReport {
 impl MonteCarloResult {
     /// Converts the metric distributions to a polars DataFrame, one row per metric.
     ///
-    /// Columns are `metric` (string: `total_return`, `max_drawdown`, `sharpe_ratio`,
+    /// Columns are `metric` (string: `total_return_dist`, `max_drawdown`, `sharpe_ratio`,
     /// `profit_factor`) and `p5`, `p25`, `p50`, `p75`, `p95`, `mean` (f64).
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
         let stats = [
-            ("total_return", &self.total_return),
+            ("total_return_dist", &self.total_return_dist),
             ("max_drawdown", &self.max_drawdown),
             ("sharpe_ratio", &self.sharpe_ratio),
             ("profit_factor", &self.profit_factor),
@@ -114,7 +114,7 @@ impl PortfolioResult {
 
     /// Converts the combined equity curve to a polars DataFrame, one row per bar.
     ///
-    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown_pct` (f64, a fraction).
+    /// Columns are `timestamp` (i64), `equity` (f64) and `drawdown` (f64, a fraction).
     pub fn equity_dataframe(&self) -> PolarsResult<DataFrame> {
         EquityPoint::vec_to_dataframe(&self.portfolio_equity_curve)
     }
@@ -349,7 +349,7 @@ mod tests {
         let df = report.to_dataframe().unwrap();
         assert_eq!(df.height(), 2);
         assert_eq!(df.width(), 40);
-        assert_eq!(names(&df)[..2], ["symbol", "total_return_pct"]);
+        assert_eq!(names(&df)[..2], ["symbol", "total_return"]);
         assert_eq!(
             df.column("symbol").unwrap().str().unwrap().get(0),
             Some("A")
@@ -397,7 +397,7 @@ mod tests {
         let report = MonteCarloResult {
             num_simulations: 10,
             method: MonteCarloMethod::default(),
-            total_return: stats(1.0),
+            total_return_dist: stats(1.0),
             max_drawdown: stats(2.0),
             sharpe_ratio: stats(3.0),
             profit_factor: stats(4.0),
@@ -472,7 +472,7 @@ mod tests {
 
         let df = report.to_dataframe().unwrap();
         assert_eq!(df.height(), 4);
-        assert_eq!(names(&df)[..3], ["window", "sample", "total_return_pct"]);
+        assert_eq!(names(&df)[..3], ["window", "sample", "total_return"]);
         let samples: Vec<_> = df
             .column("sample")
             .unwrap()

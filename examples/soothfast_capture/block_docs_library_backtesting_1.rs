@@ -34,6 +34,6 @@ pub fn main() {
     assert!(result.metrics.total_trades > 0);
     println!(
         "{} trades, total return {:.2}%",
-        result.metrics.total_trades, result.metrics.total_return_pct
+        result.metrics.total_trades, result.metrics.total_return * 100.0
     );
 }

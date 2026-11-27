@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 /// trailing twelve months.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct KeyMetricsTtm {
     /// Ticker symbol.
@@ -156,6 +157,7 @@ pub struct KeyMetricsTtm {
 /// the trailing twelve months.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FinancialRatiosTtm {
     /// Ticker symbol.

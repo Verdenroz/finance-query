@@ -152,7 +152,7 @@ fn doc_block_line_206() {
             None,
         ).await?;
 
-        println!("Return: {:.2}%", result.metrics.total_return_pct);
+        println!("Return: {:.2}%", result.metrics.total_return * 100.0);
         Ok(())
     }
 }

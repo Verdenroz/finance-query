@@ -29,6 +29,7 @@ where
 /// the most recent ~1000 filings inline, with links to older history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarSubmissions {
@@ -99,6 +100,7 @@ pub struct EdgarSubmissions {
 /// Container for recent filings and links to older filing history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilings {
@@ -116,6 +118,7 @@ pub struct EdgarFilings {
 /// Reference to an additional filing history file for older filings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilingFile {
@@ -259,6 +262,7 @@ impl EdgarFilingRecent {
 /// [`to_filings()`](EdgarFilingRecent::to_filings).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EdgarFiling {
     /// Accession number (unique filing identifier, e.g., "0000320193-24-000123")

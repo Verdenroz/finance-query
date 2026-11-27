@@ -27,7 +27,7 @@ macro_rules! rows_to_dataframe {
             fn vec_to_dataframe(
                 items: &[Self],
             ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-                crate::dataframe::stack_rows(
+                crate::__dataframe::stack_rows(
                     <$row>::vec_to_dataframe(&[]),
                     items,
                     <$wrapper>::to_dataframe,
@@ -43,7 +43,7 @@ macro_rules! rows_to_dataframe {
             fn vec_to_nested_dataframe(
                 items: &[Self],
             ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-                crate::dataframe::stack_rows(
+                crate::__dataframe::stack_rows(
                     <$row as crate::ToDataFrame>::vec_to_nested_dataframe(&[]),
                     items,
                     <$wrapper as crate::ToDataFrame>::to_nested_dataframe,

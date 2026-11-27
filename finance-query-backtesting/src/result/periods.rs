@@ -24,7 +24,7 @@ impl BacktestResult {
     ///   are derived from closed trades only.  Strategies with long holding
     ///   periods will show systematically low trade counts per year.
     /// - **Partial years**: the first and last year of a backtest typically
-    ///   cover fewer than 12 months.  `annualized_return_pct`, `calmar_ratio`,
+    ///   cover fewer than 12 months.  `annualized_return`, `calmar_ratio`,
     ///   and `serenity_ratio` are set to `0.0` for slices shorter than half a
     ///   year (`< bars_per_year / 2` bars) to prevent geometric-compounding
     ///   distortion.

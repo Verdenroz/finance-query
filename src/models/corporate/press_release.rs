@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// A company press release.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct PressRelease {
     /// Ticker symbol.

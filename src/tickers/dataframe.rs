@@ -38,7 +38,7 @@ fn stack_by_symbol<T>(
 }
 
 fn with_symbol(frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
-    crate::dataframe::with_leading_column(frame, "symbol", symbol)
+    crate::__dataframe::with_leading_column(frame, "symbol", symbol)
 }
 
 fn rename_symbol(mut frame: DataFrame) -> PolarsResult<DataFrame> {

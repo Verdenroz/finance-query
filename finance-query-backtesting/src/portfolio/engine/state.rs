@@ -36,7 +36,7 @@ pub(super) struct SymbolState<S: Strategy> {
     pub(super) sym_max_leverage: f64,
     /// Expected per-symbol capital allocation (derived from portfolio config at setup time).
     ///
-    /// Used as the baseline for per-symbol equity, total_return_pct, Sharpe, etc.
+    /// Used as the baseline for per-symbol equity, total_return, Sharpe, etc.
     /// so that metrics reflect the actual allocation rather than the full portfolio
     /// initial_capital.
     pub(super) sym_initial_capital: f64,

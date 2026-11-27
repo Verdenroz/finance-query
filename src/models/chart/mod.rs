@@ -5,7 +5,7 @@
 #[cfg(feature = "indicators")]
 pub(crate) mod compute;
 mod stock_bars;
-pub use stock_bars::{PriceAdjustment, StockBar, StockBarsRequest};
+pub use stock_bars::{PriceAdjustment, StockBar};
 mod data;
 pub mod dividend_analytics;
 pub mod events;

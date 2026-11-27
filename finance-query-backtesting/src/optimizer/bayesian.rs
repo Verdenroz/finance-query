@@ -955,7 +955,7 @@ mod tests {
         for (i, (a, b)) in r1.results.iter().zip(r2.results.iter()).enumerate() {
             assert_eq!(a.params, b.params, "params diverged at result {i}");
             assert_eq!(
-                a.result.metrics.total_return_pct, b.result.metrics.total_return_pct,
+                a.result.metrics.total_return, b.result.metrics.total_return,
                 "metrics diverged at result {i}"
             );
         }
@@ -991,8 +991,8 @@ mod tests {
         assert_eq!(r1.n_evaluations, r2.n_evaluations);
         assert_eq!(r1.convergence_curve, r2.convergence_curve);
         assert_eq!(
-            r1.best.result.metrics.total_return_pct,
-            r2.best.result.metrics.total_return_pct
+            r1.best.result.metrics.total_return,
+            r2.best.result.metrics.total_return
         );
     }
 }

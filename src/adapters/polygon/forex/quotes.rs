@@ -80,7 +80,7 @@ fn last_quote_to_canonical(from: &str, to: &str, resp: ForexQuoteResponseDTO) ->
         price: bid.or(ask),
         change: None,
         change_percent: None,
-        timestamp: last.as_ref().and_then(|l| l.timestamp),
+        timestamp: last.as_ref().and_then(|l| l.timestamp).map(|ms| ms / 1_000),
     }
 }
 
@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(quote.bid, Some(1.1050));
         assert_eq!(quote.ask, Some(1.1052));
         assert_eq!(quote.price, Some(1.1050));
-        assert_eq!(quote.timestamp, Some(1705363200000));
+        assert_eq!(quote.timestamp, Some(1705363200));
     }
 
     #[test]
@@ -153,7 +153,7 @@ mod tests {
         assert_eq!(quote.bid, Some(1.1050));
         assert_eq!(quote.ask, Some(1.1052));
         assert_eq!(quote.price, Some(1.1050), "price prefers bid");
-        assert_eq!(quote.timestamp, Some(1705363200000));
+        assert_eq!(quote.timestamp, Some(1705363200));
     }
 
     #[test]

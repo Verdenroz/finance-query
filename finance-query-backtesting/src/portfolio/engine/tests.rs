@@ -442,7 +442,7 @@ fn test_portfolio_time_in_market_uses_union_exposure() {
 
     // Union exposure spans [t0, t3] over total [t0, t4] => 3/4 = 0.75.
     // A per-trade sum approach would overstate this to 1.0 (clipped).
-    let actual = result.portfolio_metrics.time_in_market_pct;
+    let actual = result.portfolio_metrics.time_in_market;
     assert!(
         (actual - 0.75).abs() < 1e-9,
         "expected 0.75 union exposure, got {actual}"
