@@ -29,7 +29,7 @@ fn constituent_columns() {
             "sector:str",
             "sub_sector:str",
             "headquarters:str",
-            "date_first_added:str",
+            "date_first_added:date",
             "cik:str",
             "founded:str",
         ]
@@ -41,7 +41,7 @@ fn constituent_change_columns_and_empty() {
     let rows: Vec<IndexConstituentChange> =
         serde_json::from_value(json!([{"date": "2024-03-18", "symbol": "SMCI"}])).unwrap();
     let expected = [
-        "date:str",
+        "date:date",
         "symbol:str",
         "added_security:str",
         "removed_ticker:str",

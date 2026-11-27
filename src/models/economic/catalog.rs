@@ -24,8 +24,10 @@ pub struct EconomicSeriesMatch {
     /// Seasonal adjustment description.
     pub seasonal_adjustment: Option<String>,
     /// Date of the earliest observation (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub observation_start: Option<String>,
     /// Date of the latest observation (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub observation_end: Option<String>,
     /// Provider popularity score, useful for ranking equally-relevant matches.
     pub popularity: Option<i64>,

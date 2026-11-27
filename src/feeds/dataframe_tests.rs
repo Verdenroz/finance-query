@@ -9,7 +9,7 @@ fn feed_entry_columns() {
     let expected = [
         "title:str",
         "url:str",
-        "published:str",
+        "published:datetime[μs, UTC]",
         "summary:str",
         "source:str",
     ];

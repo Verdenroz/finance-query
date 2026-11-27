@@ -268,10 +268,13 @@ pub struct EdgarFiling {
     /// Accession number (unique filing identifier, e.g., "0000320193-24-000123")
     pub accession_number: String,
     /// Filing date (YYYY-MM-DD)
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: String,
     /// Report date (YYYY-MM-DD)
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub report_date: String,
     /// Acceptance date-time
+    #[cfg_attr(feature = "dataframe", dataframe(datetime))]
     pub acceptance_date_time: String,
     /// Form type (e.g., "10-K", "10-Q", "8-K")
     pub form: String,
@@ -396,6 +399,16 @@ mod tests {
         assert!(col_names.iter().any(|n| n.as_str() == "accession_number"));
         assert!(col_names.iter().any(|n| n.as_str() == "filing_date"));
         assert!(col_names.iter().any(|n| n.as_str() == "form"));
+        let dtype = |name: &str| df.column(name).unwrap().dtype().to_string();
+        assert_eq!(dtype("filing_date"), "date");
+        assert_eq!(dtype("report_date"), "date");
+        assert_eq!(dtype("acceptance_date_time"), "datetime[μs, UTC]");
+        let accepted = df
+            .column("acceptance_date_time")
+            .unwrap()
+            .datetime()
+            .unwrap();
+        assert_eq!(accepted.phys.get(0), Some(1_730_478_600_000_000));
     }
 
     #[test]

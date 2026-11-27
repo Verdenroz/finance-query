@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 pub struct TreasuryAuction {
     /// Date the row was published (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub record_date: String,
     /// CUSIP of the security offered.
     pub cusip: String,
@@ -32,10 +33,13 @@ pub struct TreasuryAuction {
     /// Term as Treasury states it (e.g. `"13-Week"`, `"29-Year 11-Month"`).
     pub security_term: String,
     /// Date the auction was held (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub auction_date: String,
     /// Date the security settles (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub issue_date: String,
     /// Date the security matures (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub maturity_date: String,
     /// Whether the auction reopens an existing security rather than issuing a
     /// new one.
@@ -85,6 +89,7 @@ pub struct TreasuryAuction {
 #[non_exhaustive]
 pub struct UpcomingAuction {
     /// Date the schedule was published (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub record_date: String,
     /// Security class (`"Bill"`, `"Note"`, `"Bond"`, …).
     pub security_type: String,
@@ -97,10 +102,13 @@ pub struct UpcomingAuction {
     /// Par amount to be offered (US dollars), once announced.
     pub offering_amt: Option<f64>,
     /// Date Treasury announces the auction's terms (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub announcement_date: String,
     /// Date the auction will be held (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub auction_date: String,
     /// Date the security will settle (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub issue_date: String,
 }
 

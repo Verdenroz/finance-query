@@ -66,8 +66,10 @@ pub struct FilingSearchHit {
     /// Form type (e.g. `"10-K"`).
     pub form: Option<String>,
     /// Filing date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filed_date: Option<String>,
     /// Period the filing covers (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub period_ending: Option<String>,
     /// Relevance score assigned by the provider's search index.
     pub score: Option<f64>,

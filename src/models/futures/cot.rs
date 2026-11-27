@@ -35,6 +35,7 @@ pub struct CommitmentsOfTraders {
 #[non_exhaustive]
 pub struct CotObservation {
     /// Report date (`YYYY-MM-DD`) — the Tuesday the report is as of.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub report_date: String,
     /// Total open interest, all reporting categories combined.
     pub open_interest: Option<i64>,

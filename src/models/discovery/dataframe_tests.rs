@@ -44,7 +44,7 @@ fn listing_frames() {
             "cik:str",
             "composite_figi:str",
             "share_class_figi:str",
-            "list_date:str",
+            "list_date:date",
             "delisted_utc:str",
         ]
     );
@@ -52,7 +52,7 @@ fn listing_frames() {
     let changes: Vec<TickerChange> = parse(json!([{"date": "2022-06-09", "ticker": "META"}]));
     assert_eq!(
         columns(&TickerChange::vec_to_dataframe(&changes).unwrap()),
-        ["date:str", "ticker:str"]
+        ["date:date", "ticker:str"]
     );
 
     let types: Vec<StockType> = parse(json!([{"code": "CS"}]));
@@ -84,8 +84,8 @@ fn symbol_match_and_details_columns() {
             "market_cap_rank:u32",
             "thumbnail:str",
             "image:str",
-            "ipo_date:str",
-            "delisted_date:str",
+            "ipo_date:date",
+            "delisted_date:date",
         ]
     );
 
@@ -95,6 +95,7 @@ fn symbol_match_and_details_columns() {
     assert!(cols.contains(&"employees:u64".to_string()));
     assert!(cols.contains(&"market_cap:f64".to_string()));
     assert!(cols.contains(&"active:bool".to_string()));
+    assert!(cols.contains(&"list_date:date".to_string()));
 }
 
 #[test]

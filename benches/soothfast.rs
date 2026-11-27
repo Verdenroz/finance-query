@@ -2436,7 +2436,7 @@ fn parsed_sector() -> SectorData {
 #[bench(
     group = "dataframe",
     setup = parsed_sector,
-    alloc = 1526,
+    alloc = 1582,
     covers = "finance_query::SectorData"
 )]
 fn df_sector_nested(sector: &SectorData) {

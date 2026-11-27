@@ -24,7 +24,7 @@ fn sector_performance_columns() {
 #[test]
 fn sector_pe_columns() {
     let row: SectorPe = serde_json::from_value(json!({"sector": "x"})).unwrap();
-    let expected = ["sector:str", "exchange:str", "pe:f64", "date:str"];
+    let expected = ["sector:str", "exchange:str", "pe:f64", "date:date"];
     let df = row.to_dataframe().unwrap();
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 1);
@@ -37,7 +37,7 @@ fn sector_pe_columns() {
 #[test]
 fn industry_pe_columns() {
     let row: IndustryPe = serde_json::from_value(json!({"industry": "x"})).unwrap();
-    let expected = ["industry:str", "exchange:str", "pe:f64", "date:str"];
+    let expected = ["industry:str", "exchange:str", "pe:f64", "date:date"];
     let df = row.to_dataframe().unwrap();
     assert_eq!(columns(&df), expected);
     assert_eq!(df.height(), 1);
@@ -90,7 +90,7 @@ fn sector_data_nests_its_row_lists() {
         "topEtfs": [],
         "topMutualFunds": [],
         "industries": [{"name": "Software"}],
-        "researchReports": []
+        "researchReports": [{"id": "r1", "reportDate": "2026-06-12T22:40:58Z"}]
     }))
     .unwrap();
     let flat = columns(&sector.to_dataframe().unwrap());
@@ -105,6 +105,8 @@ fn sector_data_nests_its_row_lists() {
     assert_eq!(etfs.height(), 0);
     assert_eq!(columns(&etfs)[0], "symbol:str");
     assert_eq!(sector.industries_dataframe().unwrap().height(), 1);
+    let reports = columns(&sector.research_reports_dataframe().unwrap());
+    assert!(reports.contains(&"report_date:datetime[μs, UTC]".to_string()));
     assert!(
         columns(&sector.to_nested_dataframe().unwrap())
             .last()
@@ -119,9 +121,12 @@ fn industry_data_nests_its_row_lists() {
         "name": "Software",
         "key": "software",
         "topCompanies": [{"symbol": "MSFT"}],
-        "topGrowthCompanies": [{"symbol": "NOW"}, {"symbol": "CRM"}]
+        "topGrowthCompanies": [{"symbol": "NOW"}, {"symbol": "CRM"}],
+        "researchReports": [{"reportDate": "2026-06-12T10:33:03Z"}]
     }))
     .unwrap();
+    let reports = columns(&industry.research_reports_dataframe().unwrap());
+    assert!(reports.contains(&"report_date:datetime[μs, UTC]".to_string()));
     assert_eq!(industry.top_companies_dataframe().unwrap().height(), 1);
     assert_eq!(
         industry.top_growth_companies_dataframe().unwrap().height(),
@@ -143,7 +148,7 @@ fn sector_performance_history_nests_the_day() {
         "sectors": [{"sector": "Tech", "change_percent": 1.5}]
     }))
     .unwrap();
-    assert_eq!(columns(&day.to_dataframe().unwrap()), ["date:str"]);
+    assert_eq!(columns(&day.to_dataframe().unwrap()), ["date:date"]);
     let sectors = day.sectors_dataframe().unwrap();
     assert_eq!(
         columns(&sectors),
@@ -181,7 +186,7 @@ fn trend_wrappers_nest_their_estimates() {
 fn market_summary_spark_columns() {
     use crate::{MarketSummaryQuote, SparkData};
 
-    let expected = ["symbol:str", "timestamp:i64", "close:f64"];
+    let expected = ["symbol:str", "timestamp:datetime[μs, UTC]", "close:f64"];
     let row: SparkData = serde_json::from_value(
         json!({"symbol": "^GSPC", "timestamp": [1, 2], "close": [1.5, null]}),
     )
@@ -207,4 +212,25 @@ fn market_summary_spark_columns() {
     assert_eq!(nested.height(), 1);
     assert!(columns(&nested).iter().any(|c| c.starts_with("spark:list")));
     assert_eq!(quote.spark_dataframe().unwrap().height(), 2);
+}
+
+#[test]
+fn market_time_parses_the_rfc3339_time() {
+    use crate::models::market::hours::MarketTime;
+
+    let rows: Vec<MarketTime> = serde_json::from_value(json!([
+        {"id": "us", "name": "U.S. markets", "status": "closed", "time": "2026-03-22T22:07:54Z"},
+        {"id": "jp", "name": "Japan", "status": "open", "time": "not a time"}
+    ]))
+    .unwrap();
+    let df = MarketTime::vec_to_dataframe(&rows).unwrap();
+    let micros: Vec<_> = df
+        .column("time")
+        .unwrap()
+        .datetime()
+        .unwrap()
+        .phys
+        .iter()
+        .collect();
+    assert_eq!(micros, [Some(1_774_217_274_000_000), None]);
 }

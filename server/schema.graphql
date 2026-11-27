@@ -4887,7 +4887,7 @@ type QueryRoot {
 		asOf: String
 	): GqlMacroSeries!
 	"""
-	US Treasury yield curve rates for a calendar year (keyless).
+	US Treasury yield curve rates for a calendar year, most recent day first (keyless).
 	"""
 	treasuryYields(
 		"""

@@ -40,6 +40,7 @@ pub struct ExecutiveCompensation {
     /// Total compensation.
     pub total: Option<f64>,
     /// Filing date of the source document (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: Option<String>,
     /// URL of the source filing.
     pub url: Option<String>,
@@ -60,10 +61,12 @@ pub struct EmployeeCount {
     /// Number of employees reported.
     pub employee_count: Option<i64>,
     /// Period the count is as of (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub period_of_report: Option<String>,
     /// Form the count was reported on (e.g. `"10-K"`).
     pub form_type: Option<String>,
     /// Filing date (`YYYY-MM-DD`).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: Option<String>,
     /// URL of the source filing.
     pub source: Option<String>,
