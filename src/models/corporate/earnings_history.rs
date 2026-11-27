@@ -52,7 +52,7 @@ pub struct EarningsHistoryEntry {
     #[serde(default)]
     pub eps_difference: Option<crate::models::quote::FormattedValue<f64>>,
 
-    /// Surprise percentage
+    /// Surprise as a fraction of the estimate (`0.0634` is 6.34%); `fmt` is the percent string
     #[serde(default)]
     pub surprise_percent: Option<crate::models::quote::FormattedValue<f64>>,
 }

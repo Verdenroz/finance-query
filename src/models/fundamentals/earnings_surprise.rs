@@ -21,7 +21,7 @@ pub struct EarningsSurprise {
     pub estimated_eps: Option<f64>,
     /// `actual_eps - estimated_eps`.
     pub surprise: Option<f64>,
-    /// Surprise as a percentage of the estimate.
+    /// Surprise as a percentage of the estimate, in percent points (`3.8` is 3.8%).
     pub surprise_percent: Option<f64>,
 }
 
