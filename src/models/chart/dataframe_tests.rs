@@ -64,7 +64,7 @@ fn dividend_analytics_flattens_both_payments() {
             .i64()
             .unwrap()
             .get(0),
-        Some(1 * 86_400_000_000)
+        Some(86_400_000_000)
     );
 
     let none = DividendAnalytics::from_dividends(&[])

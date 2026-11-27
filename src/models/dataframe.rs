@@ -184,7 +184,7 @@ delegate_to_inherent!(crate::models::economic::MacroSeries);
 
 #[cfg(test)]
 mod tests {
-    use polars::prelude::{DataFrame, DataType, TimeUnit, TimeZone};
+    use polars::prelude::{DataFrame, DataType};
 
     use crate::{Candle, Dividend, News, Provider};
 
@@ -209,10 +209,7 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                (
-                    "timestamp",
-                    DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
-                ),
+                ("timestamp", crate::__dataframe::datetime_dtype()),
                 ("open", DataType::Float64),
                 ("high", DataType::Float64),
                 ("low", DataType::Float64),
@@ -329,10 +326,7 @@ mod tests {
         assert_eq!(
             schema(&df),
             columns(&[
-                (
-                    "timestamp",
-                    DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
-                ),
+                ("timestamp", crate::__dataframe::datetime_dtype()),
                 ("amount", DataType::Float64),
                 ("provider_id", DataType::String),
             ])

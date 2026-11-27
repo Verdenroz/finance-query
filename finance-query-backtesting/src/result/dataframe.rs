@@ -11,7 +11,7 @@ where
     Series::new(name.into(), items.iter().map(get).collect::<Vec<_>>()).into()
 }
 
-fn datetimes<T>(name: &str, items: &[T], get: impl Fn(&T) -> i64) -> Column {
+pub(crate) fn datetimes<T>(name: &str, items: &[T], get: impl Fn(&T) -> i64) -> Column {
     epoch_datetime(
         name.to_string(),
         EpochUnit::Seconds,
@@ -86,7 +86,7 @@ mod tests {
     use super::super::PerformanceMetrics;
     use super::super::fixtures::{equity_point, make_result, make_trade};
     use super::*;
-    use polars::prelude::{DataType, TimeUnit, TimeZone};
+    use polars::prelude::DataType;
 
     fn names(df: &DataFrame) -> Vec<String> {
         df.get_column_names()
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(names(&df), ["timestamp", "equity", "drawdown"]);
         assert_eq!(
             df.column("timestamp").unwrap().dtype(),
-            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+            &finance_query_types::__dataframe::datetime_dtype()
         );
         let micros = df
             .column("timestamp")
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(df.column("side").unwrap().dtype(), &DataType::String);
         assert_eq!(
             df.column("entry_timestamp").unwrap().dtype(),
-            &DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
+            &finance_query_types::__dataframe::datetime_dtype()
         );
         assert_eq!(df.column("pnl").unwrap().dtype(), &DataType::Float64);
         assert_eq!(df.column("is_partial").unwrap().dtype(), &DataType::Boolean);

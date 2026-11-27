@@ -2,7 +2,7 @@
 
 mod benchmark;
 #[cfg(feature = "dataframe")]
-mod dataframe;
+pub(crate) mod dataframe;
 #[cfg(test)]
 pub(crate) mod fixtures;
 mod metrics;

@@ -348,6 +348,7 @@ impl PricingData {
 pub struct PriceUpdate {
     pub id: String,
     pub price: f64,
+    /// Milliseconds since the Unix epoch, `0` when not provided.
     #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", nonzero))]
     pub time: i64,
     pub currency: String,

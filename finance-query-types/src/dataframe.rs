@@ -160,7 +160,8 @@ pub mod derive {
 
     const UNIX_EPOCH_FROM_CE_DAYS: i32 = 719_163;
 
-    fn datetime_dtype() -> DataType {
+    /// The dtype of every `Datetime` column: microseconds, UTC.
+    pub fn datetime_dtype() -> DataType {
         DataType::Datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
     }
 
@@ -391,13 +392,10 @@ pub mod derive {
 #[cfg(all(test, feature = "dataframe"))]
 mod tests {
     use super::derive::{
-        EpochUnit, date_list, datetime_list, epoch_date, epoch_datetime, rfc3339_datetime, str_date,
+        EpochUnit, date_list, datetime_dtype, datetime_list, epoch_date, epoch_datetime,
+        rfc3339_datetime, str_date,
     };
-    use polars::prelude::{DataType, TimeUnit, TimeZone};
-
-    fn utc() -> DataType {
-        DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC))
-    }
+    use polars::prelude::DataType;
 
     #[test]
     fn epoch_units_scale_to_microseconds() {
@@ -407,7 +405,7 @@ mod tests {
             false,
             [Some(1_500), Some(-1), None].into_iter(),
         );
-        assert_eq!(column.dtype(), &utc());
+        assert_eq!(column.dtype(), &datetime_dtype());
         let values: Vec<_> = column.datetime().unwrap().phys.iter().collect();
         assert_eq!(values, vec![Some(1), Some(-1), None]);
     }
@@ -445,7 +443,10 @@ mod tests {
     fn list_helpers_keep_null_rows_and_dtypes() {
         let rows = || [Some(vec![Some(0), Some(1)]), None].into_iter();
         let datetimes = datetime_list("t".into(), EpochUnit::Seconds, true, rows());
-        assert_eq!(datetimes.dtype(), &DataType::List(Box::new(utc())));
+        assert_eq!(
+            datetimes.dtype(),
+            &DataType::List(Box::new(datetime_dtype()))
+        );
         assert_eq!(datetimes.null_count(), 1);
         let dates = date_list("d".into(), EpochUnit::Seconds, false, rows());
         assert_eq!(dates.dtype(), &DataType::List(Box::new(DataType::Date)));

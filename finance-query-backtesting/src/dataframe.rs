@@ -2,13 +2,13 @@
 
 use std::collections::HashMap;
 
-use finance_query_types::__dataframe::{EpochUnit, epoch_datetime};
 use polars::prelude::{Column, DataFrame, NamedFrom, PolarsResult, Series};
 
 use crate::comparison::{ComparisonReport, ComparisonRow};
 use crate::monte_carlo::MonteCarloResult;
 use crate::optimizer::{OptimizationReport, ParamValue, ParetoReport};
 use crate::portfolio::PortfolioResult;
+use crate::result::dataframe::datetimes;
 use crate::result::{EquityPoint, PerformanceMetrics};
 use crate::walk_forward::WalkForwardReport;
 
@@ -139,12 +139,7 @@ impl PortfolioResult {
         DataFrame::new(
             values.len(),
             vec![
-                epoch_datetime(
-                    "timestamp".to_string(),
-                    EpochUnit::Seconds,
-                    false,
-                    timestamps.into_iter().map(Some),
-                ),
+                datetimes("timestamp", &timestamps, |timestamp| *timestamp),
                 column("asset", assets),
                 column("value", values),
             ],
@@ -273,7 +268,7 @@ impl ParetoReport {
 mod tests {
     use std::collections::HashMap;
 
-    use polars::prelude::{DataType, TimeUnit, TimeZone};
+    use polars::prelude::DataType;
 
     use super::*;
     use crate::monte_carlo::{MonteCarloMethod, PercentileStats};
@@ -367,7 +362,7 @@ mod tests {
         assert_eq!(
             dtypes(&allocation),
             [
-                DataType::Datetime(TimeUnit::Microseconds, Some(TimeZone::UTC)),
+                finance_query_types::__dataframe::datetime_dtype(),
                 DataType::String,
                 DataType::Float64
             ]
