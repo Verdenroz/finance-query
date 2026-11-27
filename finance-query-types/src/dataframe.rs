@@ -215,11 +215,8 @@ pub mod derive {
         ChunkedArray::from_vec(name.into(), dense)
     }
 
-    /// Collects first: `Int64Chunked::new` over a slice is far cheaper per row than the dense
-    /// push loop on long candle and stream frames, at one extra `Vec` per column.
-    fn datetime_column(name: String, micros: impl Iterator<Item = Option<i64>>) -> Column {
-        let micros: Vec<Option<i64>> = micros.collect();
-        Int64Chunked::new(name.into(), &micros)
+    fn datetime_column(micros: Int64Chunked) -> Column {
+        micros
             .into_datetime(DATETIME_UNIT, Some(DATETIME_ZONE))
             .into_column()
     }
@@ -235,7 +232,12 @@ pub mod derive {
         nonzero: bool,
         values: impl Iterator<Item = Option<i64>>,
     ) -> Column {
-        datetime_column(name, values.map(|value| epoch_micros(value, unit, nonzero)))
+        // Epoch columns back long candle and stream frames, where building from a slice is far
+        // cheaper per row than the dense push loop, at one extra `Vec` per column.
+        let micros: Vec<Option<i64>> = values
+            .map(|value| epoch_micros(value, unit, nonzero))
+            .collect();
+        datetime_column(Int64Chunked::new(name.into(), &micros))
     }
 
     /// A `Date` column from epoch integers, taking the UTC calendar day.
@@ -280,7 +282,10 @@ pub mod derive {
         name: String,
         values: impl Iterator<Item = Option<&'a str>>,
     ) -> Column {
-        datetime_column(name, values.map(|value| value.and_then(parse_rfc3339)))
+        datetime_column(numeric::<Int64Type>(
+            name,
+            values.map(|value| value.and_then(parse_rfc3339)),
+        ))
     }
 
     /// A `List(Datetime(us, UTC))` column from lists of epoch integers.
