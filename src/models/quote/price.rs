@@ -36,6 +36,7 @@ pub struct Price<F: Format = Both> {
 
     /// Pre-market time as Unix timestamp
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub pre_market_time: Option<i64>,
 
     /// Pre-market price
@@ -56,6 +57,7 @@ pub struct Price<F: Format = Both> {
 
     /// Post-market time as Unix timestamp
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub post_market_time: Option<i64>,
 
     /// Post-market price
@@ -76,6 +78,7 @@ pub struct Price<F: Format = Both> {
 
     /// Regular market time as Unix timestamp
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub regular_market_time: Option<i64>,
 
     /// Price hint for decimal places
