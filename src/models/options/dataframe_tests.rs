@@ -68,3 +68,18 @@ fn option_epochs_are_typed() {
         .unwrap();
     assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
 }
+
+#[test]
+fn unknown_expirations_are_null() {
+    let chain: OptionChain = serde_json::from_value(json!({
+        "expirationDate": 0,
+        "hasMiniOptions": false,
+        "calls": [{ "contractSymbol": "C1", "strike": 100.0, "expiration": 0 }],
+        "puts": []
+    }))
+    .unwrap();
+    let frame = chain.to_dataframe().unwrap();
+    assert_eq!(frame.column("expiration_date").unwrap().null_count(), 1);
+    let calls = chain.calls_dataframe().unwrap();
+    assert_eq!(calls.column("expiration").unwrap().null_count(), 1);
+}

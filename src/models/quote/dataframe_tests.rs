@@ -76,16 +76,16 @@ fn price_epoch_seconds_become_datetimes() {
 }
 
 #[test]
-fn quote_type_first_trade_date_is_a_utc_day() {
+fn quote_type_first_trade_keeps_the_open_time() {
     let row: QuoteTypeData =
         serde_json::from_value(json!({ "firstTradeDateEpochUtc": 345479400 })).unwrap();
     let df = row.to_dataframe().unwrap();
-    let days = df
+    let time = df
         .column("first_trade_date_epoch_utc")
         .unwrap()
-        .date()
+        .datetime()
         .unwrap();
-    assert_eq!(days.phys.get(0), Some(3998));
+    assert_eq!(time.phys.get(0), Some(345_479_400_000_000));
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn quote_type_data_columns() {
     let row: QuoteTypeData = serde_json::from_value(json!({})).unwrap();
     let expected = [
         "exchange:str",
-        "first_trade_date_epoch_utc:date",
+        "first_trade_date_epoch_utc:datetime[μs, UTC]",
         "gmt_off_set_milliseconds:i64",
         "long_name:str",
         "max_age:i64",
@@ -190,7 +190,7 @@ fn quote_epoch_fields_are_typed() {
     let columns = columns(&df);
     assert!(columns.contains(&"regular_market_time:datetime[μs, UTC]".to_string()));
     assert!(columns.contains(&"ex_dividend_date:date".to_string()));
-    assert!(columns.contains(&"first_trade_date_epoch_utc:date".to_string()));
+    assert!(columns.contains(&"first_trade_date_epoch_utc:datetime[μs, UTC]".to_string()));
     let time = df
         .column("regular_market_time")
         .unwrap()
@@ -210,8 +210,8 @@ fn chart_meta_epoch_fields_are_typed() {
     }))
     .unwrap();
     let df = meta.to_dataframe().unwrap();
-    let day = df.column("first_trade_date").unwrap().date().unwrap();
-    assert_eq!(day.phys.get(0), Some(3998));
+    let first = df.column("first_trade_date").unwrap().datetime().unwrap();
+    assert_eq!(first.phys.get(0), Some(345_479_400_000_000));
     let time = df
         .column("regular_market_time")
         .unwrap()

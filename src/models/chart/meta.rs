@@ -24,7 +24,7 @@ pub struct ChartMeta {
     /// Instrument type
     pub instrument_type: Option<String>,
     /// First trade date (Unix timestamp)
-    #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]
     pub first_trade_date: Option<i64>,
     /// Regular market time (Unix timestamp)
     #[cfg_attr(feature = "dataframe", dataframe(datetime = "s"))]

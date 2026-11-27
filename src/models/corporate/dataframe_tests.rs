@@ -868,3 +868,14 @@ fn transcript_metadata_epochs_are_moments() {
     assert_eq!(micros("date"), Some(1_777_582_800_000_000));
     assert_eq!(micros("updated"), Some(1_778_932_822_000_000));
 }
+
+#[test]
+fn missing_transcript_times_are_null() {
+    let metadata: Vec<TranscriptMetadata> = parse(json!([{
+        "eventId": 2, "eventType": "call", "fiscalPeriod": "Q1", "fiscalYear": 2024,
+        "isLatest": true, "s3Url": "u", "title": "t", "transcriptId": 3, "type": "x"
+    }]));
+    let df = TranscriptMetadata::vec_to_dataframe(&metadata).unwrap();
+    assert_eq!(df.column("date").unwrap().null_count(), 1);
+    assert_eq!(df.column("updated").unwrap().null_count(), 1);
+}
