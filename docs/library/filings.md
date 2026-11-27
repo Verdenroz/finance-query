@@ -9,7 +9,7 @@ The `Filings` domain handle fetches SEC filings for a given symbol. It is backed
 
 Create a `Filings` handle from a [`Providers`](getting-started.md) instance and call `.get()` to fetch the filing data:
 
-```rust no_run covers=finance_query::models::filings::provider::ProviderFiling
+```rust no_run covers=finance_query::ProviderFiling
 use finance_query::{Providers, edgar};
 
 #[tokio::main]
@@ -44,13 +44,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     in the request `User-Agent`. Call `edgar::init("you@example.com")` once before
     fetching, or set the `EDGAR_EMAIL` environment variable.
 
-<!-- soothfast:bind finance_query::models::filings::provider::ProviderFilings -->
+<!-- soothfast:bind finance_query::ProviderFilings -->
 The returned [`ProviderFilings`](https://docs.rs/finance-query/latest/finance_query/models/filings/struct.ProviderFilings.html) value contains the ticker symbol (`symbol`) and a list of individual filing entries (`filings`).
 <!-- /soothfast:bind -->
 
 Each entry is a `ProviderFiling`:
 
-<!-- soothfast:bind finance_query::models::filings::provider::ProviderFiling -->
+<!-- soothfast:bind finance_query::ProviderFiling -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -67,7 +67,7 @@ Each entry is a `ProviderFiling`:
 
 Call `.congressional_trades()` to fetch legislator stock-trade disclosures naming this symbol, filed under the STOCK Act as Periodic Transaction Reports (PTRs):
 
-```rust no_run feature=housetrades,senatetrades covers=finance_query::models::filings::ownership::CongressionalTrade
+```rust no_run feature=housetrades,senatetrades covers=finance_query::CongressionalTrade
 use finance_query::{Capability, Provider, Providers};
 
 #[tokio::main]
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Two keyless sources feed this: the [House Clerk](providers/housetrades.md) (`housetrades` feature) and the [Senate eFD system](providers/senatetrades.md) (`senatetrades` feature), merged by `Provider::CongressTrades` when both are compiled in. Each result row's `office` field says which chamber it came from, `"House"` or `"Senate"`. If the Senate source fails (a network error, or Akamai bot protection blocking the request; see the Senate PTR page for why that happens), the merge drops just those rows and returns House-only results rather than failing the whole call. Only both sources failing (or the single compiled source failing, when just one is enabled) surfaces an error.
 
-<!-- soothfast:bind finance_query::models::filings::ownership::CongressionalTrade -->
+<!-- soothfast:bind finance_query::CongressionalTrade -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -116,7 +116,7 @@ Two keyless sources feed this: the [House Clerk](providers/housetrades.md) (`hou
 
 Call `.sections(accession_number, form)` to fetch the sectioned text of one filing (10-K or 8-K), split into `FilingSection`s by item heading:
 
-```rust no_run covers=finance_query::models::filings::sections::FilingSection
+```rust no_run covers=finance_query::FilingSection
 use finance_query::{FilingSectionForm, Providers};
 
 #[tokio::main]
@@ -147,7 +147,7 @@ This is served by keyless EDGAR (best-effort heading detection over the filing's
 
 Polygon returns Massive's parsed 10-K sections (such as `risk_factors`, `business` and `mda`) or an 8-K's Items text as a single `items` section. Massive indexes this text by issuer rather than accession number, so Polygon searches the handle's symbol first and then the CIK in the accession number, which covers filings submitted by a filing agent as long as the handle names the issuer.
 
-<!-- soothfast:bind finance_query::models::filings::sections::FilingSection -->
+<!-- soothfast:bind finance_query::FilingSection -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -160,7 +160,7 @@ Polygon returns Massive's parsed 10-K sections (such as `risk_factors`, `busines
 
 Call `.risk_factors()` for this symbol's risk factors, extracted from its most recent 10-K:
 
-```rust no_run covers=finance_query::models::filings::sections::RiskFactor
+```rust no_run covers=finance_query::RiskFactor
 use finance_query::Providers;
 
 #[tokio::main]
@@ -175,7 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:bind finance_query::models::filings::sections::RiskFactor -->
+<!-- soothfast:bind finance_query::RiskFactor -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -195,7 +195,7 @@ Polygon classifies each factor with Massive's risk taxonomy: `category` is the b
 
 Call `.fails_to_deliver()` for this symbol's SEC fails-to-deliver history, the settlement-date record of shares that a broker-dealer failed to deliver on time:
 
-```rust no_run feature=secftd covers=finance_query::models::filings::ownership::FailToDeliver
+```rust no_run feature=secftd covers=finance_query::FailToDeliver
 use finance_query::{Providers, edgar};
 
 #[tokio::main]
@@ -219,7 +219,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 This is served by keyless EDGAR (`secftd` feature), which the default `FILINGS` route already puts ahead of Yahoo, so no explicit `.route()` call is required once `secftd` is compiled in. FMP also serves this operation for callers who route `Capability::FILINGS` to it instead.
 
-<!-- soothfast:bind finance_query::models::filings::ownership::FailToDeliver -->
+<!-- soothfast:bind finance_query::FailToDeliver -->
 
 | Field | Type | Description |
 |-------|------|-------------|

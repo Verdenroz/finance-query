@@ -81,7 +81,7 @@ Polygon indices use an `I:<TICKER>` prefix instead of Yahoo's caret form:
 
 Fetch the current snapshot for the index.
 
-```rust no_run covers=finance_query::models::indices::IndexQuote
+```rust no_run covers=finance_query::IndexQuote
 use finance_query::Providers;
 
 #[tokio::main]
@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Fetch OHLCV candles for a specific `Interval` and `TimeRange`.
 
-```rust no_run covers=finance_query::models::chart::data::Chart
+```rust no_run covers=finance_query::Chart
 use finance_query::{Interval, Providers, TimeRange};
 
 #[tokio::main]
@@ -135,7 +135,7 @@ Fetch the current member list of a major index (S&P 500, Nasdaq-100, or Dow Jone
 - **Wikipedia** (`wikipedia` feature, keyless) — S&P 500 only. The Nasdaq-100 and Dow Jones Wikipedia articles list constituents only inside a navbox template rather than a proper table, a thinner shape not worth a bespoke parser for, so those two stay `NotSupported` on this provider.
 - **FMP** (`fmp` feature, keyed) — all three major indices, plus [`constituent_changes()`](#constituent_changes) history that Wikipedia doesn't serve at all.
 
-```rust no_run feature=wikipedia covers=finance_query::models::indices::IndexConstituent
+```rust no_run feature=wikipedia covers=finance_query::IndexConstituent
 use finance_query::{Capability, Provider, Providers};
 
 #[tokio::main]
@@ -174,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Fetch historical additions/removals for a major index. FMP only (`fmp` feature) — Wikipedia carries no constituent-change history table for any index in this set.
 
-```rust no_run feature=fmp covers=finance_query::models::indices::IndexConstituentChange
+```rust no_run feature=fmp covers=finance_query::IndexConstituentChange
 use finance_query::{Capability, Provider, Providers};
 
 #[tokio::main]
@@ -230,7 +230,7 @@ have no natural benchmark to compare against.
 
 ## `IndexQuote` Fields
 
-<!-- soothfast:bind finance_query::models::indices::IndexQuote -->
+<!-- soothfast:bind finance_query::IndexQuote -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -245,7 +245,7 @@ have no natural benchmark to compare against.
 
 ## `Chart` Fields
 
-<!-- soothfast:bind finance_query::models::chart::data::Chart -->
+<!-- soothfast:bind finance_query::Chart -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -297,7 +297,7 @@ close: 5123.45
 
 ## `IndexConstituent` Fields
 
-<!-- soothfast:bind finance_query::models::indices::IndexConstituent -->
+<!-- soothfast:bind finance_query::IndexConstituent -->
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -314,7 +314,7 @@ close: 5123.45
 
 ## `IndexConstituentChange` Fields
 
-<!-- soothfast:bind finance_query::models::indices::IndexConstituentChange -->
+<!-- soothfast:bind finance_query::IndexConstituentChange -->
 
 | Field | Type | Description |
 |-------|------|-------------|

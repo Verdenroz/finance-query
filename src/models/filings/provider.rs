@@ -1,6 +1,6 @@
 //! Provider-based SEC filing data models (Polygon EDGAR integration).
 //!
-//! Unlike [`crate::models::filings::EdgarFiling`] which comes from the direct
+//! Unlike [`EdgarFiling`](super::EdgarFiling) which comes from the direct
 //! EDGAR adapter, these types represent the provider-agnostic canonical shape
 //! returned by the FILINGS capability through ProviderSet.
 
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// A collection of SEC filings from a provider (e.g., Polygon EDGAR).
 ///
-/// Obtain via [`Ticker::filings`](crate::Ticker::filings).
+/// Obtain via `Ticker::filings`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct ProviderFilings {

@@ -1,10 +1,10 @@
 //! Company profile model.
 //!
-//! Served through the [`Capability::FUNDAMENTALS`](crate::Capability::FUNDAMENTALS)
+//! Served through the [`Capability::FUNDAMENTALS`](finance_query_types::Capability::FUNDAMENTALS)
 //! route through Yahoo, Alpha Vantage, or FMP. Scoped to identity
 //! and classification fields — valuation ratios and earnings figures live in
-//! [`KeyMetricsTtm`](crate::KeyMetricsTtm), [`RatingConsensus`](crate::RatingConsensus),
-//! and [`EarningsSurprise`](crate::EarningsSurprise) instead of being duplicated here.
+//! [`KeyMetricsTtm`](super::KeyMetricsTtm), [`RatingConsensus`](super::RatingConsensus),
+//! and [`EarningsSurprise`](super::EarningsSurprise) instead of being duplicated here.
 
 use serde::{Deserialize, Serialize};
 
