@@ -33,11 +33,10 @@ pub struct EquityPoint {
     pub timestamp: i64,
     /// Portfolio equity at this point
     pub equity: f64,
-    /// Current drawdown from peak as a **fraction** (0.0–1.0, not a percentage).
+    /// Current drawdown from peak as a fraction (0.0–1.0).
     ///
     /// `0.0` = equity is at its running all-time high; `0.2` = 20% below peak.
-    /// Multiply by 100 to convert to a conventional percentage.
-    pub drawdown_pct: f64,
+    pub drawdown: f64,
 }
 
 /// Record of a generated signal (for analysis)
@@ -139,9 +138,9 @@ impl BacktestResult {
             self.equity_curve.len(),
             self.initial_capital,
             self.final_equity,
-            self.metrics.total_return_pct,
+            self.metrics.total_return * 100.0,
             self.metrics.sharpe_ratio,
-            self.metrics.max_drawdown_pct * 100.0,
+            self.metrics.max_drawdown * 100.0,
             self.metrics.total_trades,
             self.metrics.win_rate * 100.0,
             self.metrics.profit_factor,

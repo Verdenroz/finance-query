@@ -20,7 +20,7 @@ pub(super) struct TradeStats {
     pub(super) total_dividend_income: f64,
     pub(super) winning_returns: Vec<f64>,
     pub(super) losing_returns: Vec<f64>,
-    /// All trade return percentages (wins + losses + break-even).
+    /// All trade returns as fractions (wins + losses + break-even).
     pub(super) all_returns: Vec<f64>,
 }
 
@@ -49,12 +49,12 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
         if t.is_profitable() {
             stats.winning_trades += 1;
             stats.gross_profit += t.pnl;
-            stats.winning_returns.push(t.return_pct);
+            stats.winning_returns.push(t.net_return);
             stats.largest_win = stats.largest_win.max(t.pnl);
         } else if t.is_loss() {
             stats.losing_trades += 1;
             stats.gross_loss += t.pnl.abs();
-            stats.losing_returns.push(t.return_pct);
+            stats.losing_returns.push(t.net_return);
             stats.largest_loss = stats.largest_loss.min(t.pnl);
         }
         if t.is_long() {
@@ -62,12 +62,12 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
         } else {
             stats.short_trades += 1;
         }
-        stats.total_return_sum += t.return_pct;
+        stats.total_return_sum += t.net_return;
         stats.total_duration += t.duration_secs();
         stats.total_commission += t.commission;
         stats.total_financing_cost += t.financing_cost;
         stats.total_dividend_income += t.dividend_income;
-        stats.all_returns.push(t.return_pct);
+        stats.all_returns.push(t.net_return);
     }
 
     stats
@@ -81,13 +81,13 @@ pub(super) fn analyze_trades(trades: &[Trade]) -> TradeStats {
 /// Delegates to `finance_query_types::perf_metrics::kelly_criterion`, shared with the
 /// standalone `risk` module so both compute the same formula without either
 /// feature depending on the other (see that module's doc comment).
-pub(super) fn calculate_kelly(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
-    finance_query_types::perf_metrics::kelly_criterion(win_rate, avg_win_pct, avg_loss_pct)
+pub(super) fn calculate_kelly(win_rate: f64, avg_win_return: f64, avg_loss_return: f64) -> f64 {
+    finance_query_types::perf_metrics::kelly_criterion(win_rate, avg_win_return, avg_loss_return)
 }
 
 /// Van Tharp's System Quality Number.
 ///
-/// `(mean_R / std_R) * sqrt(n)` over per-trade return percentages.
+/// `(mean_R / std_R) * sqrt(n)` over per-trade returns as fractions.
 /// Uses sample standard deviation (n-1). Returns `0.0` for fewer than 2 trades.
 pub(super) fn calculate_sqn(returns: &[f64]) -> f64 {
     let n = returns.len();
@@ -139,14 +139,14 @@ pub(super) fn calculate_tail_ratio(returns: &[f64]) -> f64 {
     }
 }
 
-/// Ulcer Index: `sqrt(mean(drawdown_pct²))` across all equity curve points,
+/// Ulcer Index: `sqrt(mean(drawdown²))` across all equity curve points,
 /// returned in **percentage** units (0–100) to match standard tool output.
 ///
 /// Delegates to `finance_query_types::perf_metrics::ulcer_index`, which takes plain
 /// drawdown fractions rather than `EquityPoint` so it stays usable from the
 /// standalone `risk` module too.
 pub(super) fn calculate_ulcer_index(equity_curve: &[EquityPoint]) -> f64 {
-    let drawdowns: Vec<f64> = equity_curve.iter().map(|p| p.drawdown_pct).collect();
+    let drawdowns: Vec<f64> = equity_curve.iter().map(|p| p.drawdown).collect();
     finance_query_types::perf_metrics::ulcer_index(&drawdowns)
 }
 
@@ -394,7 +394,7 @@ pub(super) fn infer_bars_per_year(equity_slice: &[EquityPoint], fallback_bpy: f6
 /// year of bars.
 ///
 /// Geometric annualisation of a sub-half-year return magnifies the result
-/// by raising `growth` to a power > 2, making `annualized_return_pct`,
+/// by raising `growth` to a power > 2, making `annualized_return`,
 /// `calmar_ratio`, and `serenity_ratio` misleadingly large for short slices
 /// (e.g. partial first/last years, individual monthly buckets).  Setting
 /// them to `0.0` signals to callers that no reliable annual rate is available
@@ -406,7 +406,7 @@ pub(super) fn partial_period_adjust(
 ) -> PerformanceMetrics {
     let periods = slice_len.saturating_sub(1) as f64;
     if periods / bpy < 0.5 {
-        metrics.annualized_return_pct = 0.0;
+        metrics.annualized_return = 0.0;
         metrics.calmar_ratio = 0.0;
         metrics.serenity_ratio = 0.0;
     }
@@ -451,32 +451,32 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 95.0,
-                drawdown_pct: 0.05,
+                drawdown: 0.05,
             },
             EquityPoint {
                 timestamp: 2,
                 equity: 90.0,
-                drawdown_pct: 0.10,
+                drawdown: 0.10,
             },
             EquityPoint {
                 timestamp: 3,
                 equity: 92.0,
-                drawdown_pct: 0.08,
+                drawdown: 0.08,
             },
             EquityPoint {
                 timestamp: 4,
                 equity: 100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             }, // Recovery
             EquityPoint {
                 timestamp: 5,
                 equity: 98.0,
-                drawdown_pct: 0.02,
+                drawdown: 0.02,
             },
         ];
 
@@ -595,28 +595,28 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 110.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
         assert_eq!(calculate_ulcer_index(&flat), 0.0);
 
-        // drawdown_pct fractions 0.1 and 0.2 → 10% and 20%
+        // drawdown fractions 0.1 and 0.2 → 10% and 20%
         // sqrt((10² + 20²) / 2) = sqrt(250) ≈ 15.811 (percentage units)
         let dd = vec![
             EquityPoint {
                 timestamp: 0,
                 equity: 100.0,
-                drawdown_pct: 0.1,
+                drawdown: 0.1,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 90.0,
-                drawdown_pct: 0.2,
+                drawdown: 0.2,
             },
         ];
         let ui = calculate_ulcer_index(&dd);
@@ -641,9 +641,9 @@ mod tests {
             0.0,
             252.0,
         );
-        assert!(dummy_metrics.annualized_return_pct != 0.0);
+        assert!(dummy_metrics.annualized_return != 0.0);
         let adjusted = partial_period_adjust(dummy_metrics, 10, 252.0);
-        assert_eq!(adjusted.annualized_return_pct, 0.0);
+        assert_eq!(adjusted.annualized_return, 0.0);
         assert_eq!(adjusted.calmar_ratio, 0.0);
         assert_eq!(adjusted.serenity_ratio, 0.0);
     }
@@ -660,9 +660,9 @@ mod tests {
             0.0,
             252.0,
         );
-        let ann_before = metrics.annualized_return_pct;
+        let ann_before = metrics.annualized_return;
         let adjusted = partial_period_adjust(metrics, 252, 252.0);
-        assert_eq!(adjusted.annualized_return_pct, ann_before);
+        assert_eq!(adjusted.annualized_return, ann_before);
     }
 
     #[test]
@@ -698,7 +698,7 @@ mod tests {
             commission: 0.0,
             transaction_tax: 0.0,
             pnl: 25.0,
-            return_pct: 5.0,
+            net_return: 5.0,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             financing_cost: 0.0,
@@ -719,7 +719,7 @@ mod tests {
             commission: 0.0,
             transaction_tax: 0.0,
             pnl: 50.0,
-            return_pct: 10.0,
+            net_return: 10.0,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             financing_cost: 0.0,
@@ -758,7 +758,7 @@ mod tests {
             commission: 0.0,
             transaction_tax: 0.0,
             pnl: 25.0,
-            return_pct: 5.0,
+            net_return: 5.0,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             financing_cost: 0.0,

@@ -246,13 +246,13 @@ impl OptimizeMetric {
     /// Extract the target score from a [`BacktestResult`]. Higher is always better.
     pub(crate) fn score(&self, result: &BacktestResult) -> f64 {
         match self {
-            OptimizeMetric::TotalReturn => result.metrics.total_return_pct,
+            OptimizeMetric::TotalReturn => result.metrics.total_return,
             OptimizeMetric::SharpeRatio => result.metrics.sharpe_ratio,
             OptimizeMetric::SortinoRatio => result.metrics.sortino_ratio,
             OptimizeMetric::CalmarRatio => result.metrics.calmar_ratio,
             OptimizeMetric::ProfitFactor => result.metrics.profit_factor,
             OptimizeMetric::WinRate => result.metrics.win_rate,
-            OptimizeMetric::MinDrawdown => -result.metrics.max_drawdown_pct,
+            OptimizeMetric::MinDrawdown => -result.metrics.max_drawdown,
             OptimizeMetric::OmegaRatio => result.metrics.omega_ratio,
             OptimizeMetric::Expectancy => result.metrics.expectancy,
         }

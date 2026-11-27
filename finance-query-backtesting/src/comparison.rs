@@ -26,7 +26,7 @@
 //!
 //! println!("Winner: {}", report.winner());
 //! for row in report.table() {
-//!     println!("{}: sharpe={:.2} return={:.1}%", row.label, row.sharpe_ratio, row.total_return_pct);
+//!     println!("{}: sharpe={:.2} return={:.1}%", row.label, row.sharpe_ratio, row.total_return * 100.0);
 //! }
 //! # Ok(())
 //! # }
@@ -57,11 +57,11 @@ pub struct ComparisonRow {
     /// Symbol that was tested.
     pub symbol: String,
 
-    /// Total return percentage.
-    pub total_return_pct: f64,
+    /// Total return as a fraction (`0.1652` means +16.52%).
+    pub total_return: f64,
 
-    /// Annualised return percentage.
-    pub annualized_return_pct: f64,
+    /// Annualised return as a fraction.
+    pub annualized_return: f64,
 
     /// Sharpe ratio.
     pub sharpe_ratio: f64,
@@ -73,11 +73,9 @@ pub struct ComparisonRow {
     pub calmar_ratio: f64,
 
     /// Maximum drawdown as a fraction (0.0–1.0).
-    ///
-    /// Multiply by 100 to get a conventional percentage.
-    pub max_drawdown_pct: f64,
+    pub max_drawdown: f64,
 
-    /// Win rate (`winning_trades / total_trades`).
+    /// Win rate as a fraction (0.0-1.0): `winning_trades / total_trades`.
     pub win_rate: f64,
 
     /// Profit factor (`gross_profit / gross_loss`).
@@ -99,7 +97,7 @@ pub struct ComparisonRow {
     pub omega_ratio: f64,
 
     /// Time in market as a fraction (0.0–1.0).
-    pub time_in_market_pct: f64,
+    pub time_in_market: f64,
 
     /// The score on the metric used to rank the comparison.
     pub rank_score: f64,
@@ -116,12 +114,12 @@ impl ComparisonRow {
             label: label.to_owned(),
             strategy_name: result.strategy_name.clone(),
             symbol: result.symbol.clone(),
-            total_return_pct: m.total_return_pct,
-            annualized_return_pct: m.annualized_return_pct,
+            total_return: m.total_return,
+            annualized_return: m.annualized_return,
             sharpe_ratio: m.sharpe_ratio,
             sortino_ratio: m.sortino_ratio,
             calmar_ratio: m.calmar_ratio,
-            max_drawdown_pct: m.max_drawdown_pct,
+            max_drawdown: m.max_drawdown,
             win_rate: m.win_rate,
             profit_factor: m.profit_factor,
             total_trades: m.total_trades,
@@ -129,7 +127,7 @@ impl ComparisonRow {
             sqn: m.sqn,
             expectancy: m.expectancy,
             omega_ratio: m.omega_ratio,
-            time_in_market_pct: m.time_in_market_pct,
+            time_in_market: m.time_in_market,
             rank_score,
             // placeholder; assigned after sorting
             rank: 0,
@@ -177,14 +175,14 @@ impl BacktestComparison {
             .map(|(label, result)| ComparisonRow::from_result(label, result, metric))
             .collect();
 
-        // Sort best-first; use total_return_pct as a tie-breaker.
+        // Sort best-first; use total_return as a tie-breaker.
         rows.sort_by(|a, b| {
             b.rank_score
                 .partial_cmp(&a.rank_score)
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then_with(|| {
-                    b.total_return_pct
-                        .partial_cmp(&a.total_return_pct)
+                    b.total_return
+                        .partial_cmp(&a.total_return)
                         .unwrap_or(std::cmp::Ordering::Equal)
                 })
         });
@@ -252,24 +250,20 @@ mod tests {
     };
 
     /// Build a minimal `PerformanceMetrics` with only the fields under test set.
-    fn metrics_with(
-        total_return_pct: f64,
-        sharpe_ratio: f64,
-        max_drawdown_pct: f64,
-    ) -> PerformanceMetrics {
+    fn metrics_with(total_return: f64, sharpe_ratio: f64, max_drawdown: f64) -> PerformanceMetrics {
         PerformanceMetrics {
-            total_return_pct,
-            annualized_return_pct: total_return_pct,
+            total_return,
+            annualized_return: total_return,
             sharpe_ratio,
             sortino_ratio: 0.0,
             calmar_ratio: 0.0,
-            max_drawdown_pct,
+            max_drawdown,
             max_drawdown_duration: 0,
             win_rate: 0.0,
             profit_factor: 1.0,
-            avg_trade_return_pct: 0.0,
-            avg_win_pct: 0.0,
-            avg_loss_pct: 0.0,
+            avg_trade_return: 0.0,
+            avg_win_return: 0.0,
+            avg_loss_return: 0.0,
             avg_trade_duration: 0.0,
             total_trades: 1,
             winning_trades: 1,
@@ -286,7 +280,7 @@ mod tests {
             executed_signals: 1,
             avg_win_duration: 0.0,
             avg_loss_duration: 0.0,
-            time_in_market_pct: 0.5,
+            time_in_market: 0.5,
             max_idle_period: 0,
             total_dividend_income: 0.0,
             kelly_criterion: 0.0,
@@ -308,13 +302,13 @@ mod tests {
             start_timestamp: 0,
             end_timestamp: 1_000_000,
             initial_capital: 10_000.0,
-            final_equity: 10_000.0 * (1.0 + total_return / 100.0),
+            final_equity: 10_000.0 * (1.0 + total_return),
             metrics: metrics_with(total_return, sharpe, dd),
             trades: vec![],
             equity_curve: vec![EquityPoint {
                 timestamp: 0,
                 equity: 10_000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             }],
             signals: vec![],
             open_position: None,
@@ -335,7 +329,7 @@ mod tests {
 
     #[test]
     fn single_entry_is_winner() {
-        let result = make_result("SMA", 10.0, 1.5, 0.05);
+        let result = make_result("SMA", 0.1, 1.5, 0.05);
         let report = BacktestComparison::new()
             .add("SMA 10/50", result)
             .ranked_by(OptimizeMetric::SharpeRatio);
@@ -347,9 +341,9 @@ mod tests {
 
     #[test]
     fn ranked_by_sharpe() {
-        let r1 = make_result("SMA", 10.0, 0.8, 0.10);
-        let r2 = make_result("MACD", 15.0, 1.5, 0.12);
-        let r3 = make_result("RSI", 5.0, 1.2, 0.08);
+        let r1 = make_result("SMA", 0.1, 0.8, 0.10);
+        let r2 = make_result("MACD", 0.15, 1.5, 0.12);
+        let r3 = make_result("RSI", 0.05, 1.2, 0.08);
 
         let report = BacktestComparison::new()
             .add("SMA 10/50", r1)
@@ -369,8 +363,8 @@ mod tests {
 
     #[test]
     fn ranked_by_total_return() {
-        let r1 = make_result("SMA", 10.0, 0.8, 0.10);
-        let r2 = make_result("MACD", 25.0, 0.6, 0.20);
+        let r1 = make_result("SMA", 0.1, 0.8, 0.10);
+        let r2 = make_result("MACD", 0.25, 0.6, 0.20);
 
         let report = BacktestComparison::new()
             .add("SMA", r1)
@@ -383,8 +377,8 @@ mod tests {
     #[test]
     fn ranked_by_min_drawdown() {
         // Lower drawdown should rank higher.
-        let r1 = make_result("SMA", 10.0, 0.8, 0.20);
-        let r2 = make_result("MACD", 10.0, 0.8, 0.05);
+        let r1 = make_result("SMA", 0.1, 0.8, 0.20);
+        let r2 = make_result("MACD", 0.1, 0.8, 0.05);
 
         let report = BacktestComparison::new()
             .add("High DD", r1)
@@ -397,8 +391,8 @@ mod tests {
     #[test]
     fn tie_broken_by_total_return() {
         // Both have identical Sharpe; higher return should win.
-        let r1 = make_result("A", 20.0, 1.0, 0.10);
-        let r2 = make_result("B", 5.0, 1.0, 0.10);
+        let r1 = make_result("A", 0.2, 1.0, 0.10);
+        let r2 = make_result("B", 0.05, 1.0, 0.10);
 
         let report = BacktestComparison::new()
             .add("A", r1)
@@ -415,7 +409,7 @@ mod tests {
         for i in 0..n {
             comparison = comparison.add(
                 format!("Strategy {i}"),
-                make_result(&format!("S{i}"), i as f64 * 2.0, i as f64 * 0.5, 0.1),
+                make_result(&format!("S{i}"), i as f64 * 0.02, i as f64 * 0.5, 0.1),
             );
         }
         let report = comparison.ranked_by(OptimizeMetric::SharpeRatio);
@@ -425,7 +419,7 @@ mod tests {
 
     #[test]
     fn row_fields_populated_correctly() {
-        let result = make_result("SMA", 12.0, 1.3, 0.07);
+        let result = make_result("SMA", 0.12, 1.3, 0.07);
         let report = BacktestComparison::new()
             .add("My Strategy", result)
             .ranked_by(OptimizeMetric::SharpeRatio);
@@ -434,9 +428,9 @@ mod tests {
         assert_eq!(row.label, "My Strategy");
         assert_eq!(row.strategy_name, "SMA");
         assert_eq!(row.symbol, "TEST");
-        assert!((row.total_return_pct - 12.0).abs() < 1e-10);
+        assert!((row.total_return - 0.12).abs() < 1e-10);
         assert!((row.sharpe_ratio - 1.3).abs() < 1e-10);
-        assert!((row.max_drawdown_pct - 0.07).abs() < 1e-10);
+        assert!((row.max_drawdown - 0.07).abs() < 1e-10);
         assert_eq!(row.rank, 1);
     }
 }

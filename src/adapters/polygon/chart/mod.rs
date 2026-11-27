@@ -117,7 +117,7 @@ fn aggs_to_candles(aggs: AggregateResponseDTO) -> Vec<Candle> {
         .flatten()
         .map(|r| {
             Candle::__new(
-                r.timestamp,
+                r.timestamp / 1_000,
                 r.open,
                 r.high,
                 r.low,
@@ -143,7 +143,7 @@ fn grouped_daily_to_candles(aggs: AggregateResponseDTO) -> Vec<(String, Candle)>
             Some((
                 ticker,
                 Candle::__new(
-                    r.timestamp,
+                    r.timestamp / 1_000,
                     r.open,
                     r.high,
                     r.low,
@@ -284,11 +284,15 @@ mod tests {
 
         let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("AAPL"));
-        let results = resp.results.unwrap();
+        let results = resp.results.clone().unwrap();
         assert_eq!(results.len(), 2);
         assert!((results[0].open - 185.09).abs() < 0.01);
         assert!((results[0].close - 186.19).abs() < 0.01);
         assert_eq!(results[0].timestamp, 1704067200000);
+
+        let candles = aggs_to_candles(resp);
+        assert_eq!(candles[0].timestamp, 1704067200);
+        assert_eq!(candles[1].timestamp, 1704153600);
     }
 
     #[tokio::test]
@@ -330,6 +334,7 @@ mod tests {
         assert!((candles[0].1.close - 186.19).abs() < 0.01);
         assert_eq!(candles[1].0, "MSFT");
         assert!((candles[1].1.close - 383.5).abs() < 0.01);
+        assert_eq!(candles[0].1.timestamp, 1704067200);
     }
 
     #[tokio::test]

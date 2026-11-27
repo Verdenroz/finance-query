@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::adapters::common::keyed::redact_key;
+use crate::adapters::common::ws_tls;
 use crate::error::{FinanceError, Result};
 
 const POLYGON_WEBSOCKET_BASE: &str = "wss://socket.massive.com";
@@ -276,9 +277,15 @@ impl PolygonStreamBuilder {
     pub async fn build(self) -> Result<PolygonStream> {
         let url = format!("{POLYGON_WEBSOCKET_BASE}/{}", self.cluster.as_str());
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
-            .await
-            .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}")))?;
+        let (ws_stream, _) = ws_tls::connect(&url).await.map_err(|e| {
+            if ws_tls::is_permanent(&e) {
+                FinanceError::RuntimeError(std::io::Error::other(format!(
+                    "Polygon WebSocket connect rejected: {e}"
+                )))
+            } else {
+                FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}"))
+            }
+        })?;
 
         let (write, mut read) = futures::StreamExt::split(ws_stream);
         let write = std::sync::Arc::new(tokio::sync::Mutex::new(write));
@@ -464,8 +471,11 @@ where
         ))
     })
     .await
-    .map_err(|_| FinanceError::AuthenticationFailed {
-        context: "Polygon WebSocket authentication timed out".to_string(),
+    .map_err(|_| {
+        FinanceError::ApiError(format!(
+            "Polygon WebSocket authentication timed out after {}s",
+            AUTH_TIMEOUT.as_secs()
+        ))
     })?
 }
 

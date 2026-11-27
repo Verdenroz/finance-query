@@ -7,7 +7,7 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 
 use crate::adapters::polygon::websocket::PolygonMessage;
 use crate::streaming::client::{StreamError, StreamResult};
-use crate::streaming::source::{StreamCommand, StreamSource};
+use crate::streaming::source::{Ready, StreamCommand, StreamSource};
 use crate::streaming::trades::TradeTick;
 
 use super::{AssetClass, Decode, run_polygon_session};
@@ -39,6 +39,7 @@ impl StreamSource<TradeTick> for PolygonTradeSource {
         subscriptions: &Arc<RwLock<HashSet<String>>>,
         broadcast_tx: &broadcast::Sender<TradeTick>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
+        ready: &mut Ready,
     ) -> StreamResult<()> {
         run_polygon_session(
             self.class,
@@ -46,6 +47,7 @@ impl StreamSource<TradeTick> for PolygonTradeSource {
             subscriptions,
             broadcast_tx,
             command_rx,
+            ready,
             Decode(|msg| to_tick(msg).into_iter().collect()),
         )
         .await

@@ -123,7 +123,7 @@ fn walk_forward_windows_are_order_stable() {
             "window {i} diverged"
         );
         assert_eq!(
-            x.out_of_sample.metrics.total_return_pct, y.out_of_sample.metrics.total_return_pct,
+            x.out_of_sample.metrics.total_return, y.out_of_sample.metrics.total_return,
             "window {i} diverged"
         );
         assert_eq!(
@@ -135,7 +135,7 @@ fn walk_forward_windows_are_order_stable() {
             "window {i} diverged"
         );
         assert_eq!(
-            x.in_sample.metrics.total_return_pct, y.in_sample.metrics.total_return_pct,
+            x.in_sample.metrics.total_return, y.in_sample.metrics.total_return,
             "window {i} diverged"
         );
     }

@@ -18,6 +18,6 @@ jobs:
       contents: read
       id-token: write
       pull-requests: write
-    uses: Verdenroz/soothfast/.github/workflows/comment.yml@b774ac5fc1127cacf659446526112c4a098c067c # v0.8.0
+    uses: Verdenroz/soothfast/.github/workflows/comment.yml@fe96a54272b9a506976798d330b8c4617e8a8350 # v0.9.0
     with:
-      soothfast_ref: "b774ac5fc1127cacf659446526112c4a098c067c"
+      soothfast_ref: "fe96a54272b9a506976798d330b8c4617e8a8350"

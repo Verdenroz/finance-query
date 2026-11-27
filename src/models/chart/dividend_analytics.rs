@@ -9,6 +9,7 @@ use super::events::Dividend;
 /// Obtain via [`Ticker::dividend_analytics`](crate::Ticker::dividend_analytics).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct DividendAnalytics {
     /// Total dividends paid in the requested range

@@ -16,6 +16,7 @@ where
 /// Fund holdings including asset allocation, top holdings, and sector weightings
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TopHoldings {
@@ -76,6 +77,7 @@ pub struct TopHoldings {
 /// Individual holding in the fund
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct Holding {
     /// Stock symbol
@@ -94,6 +96,7 @@ pub struct Holding {
 /// Equity holdings valuation metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EquityHoldings {
     /// Price to earnings ratio
@@ -116,6 +119,7 @@ pub struct EquityHoldings {
 /// Bond rating distribution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct BondRating {
     /// US Government bonds percentage
     #[serde(default)]
@@ -161,6 +165,7 @@ pub struct BondRating {
 /// Sector weighting distribution (single sector from Yahoo's array format)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct SectorWeighting {
     /// Real estate sector percentage
     #[serde(default, skip_serializing_if = "Option::is_none")]

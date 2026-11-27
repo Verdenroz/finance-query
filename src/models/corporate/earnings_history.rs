@@ -21,6 +21,7 @@ pub struct EarningsHistory {
 /// Single historical earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsHistoryEntry {
     /// Maximum age of this data in seconds

@@ -20,6 +20,7 @@ pub enum MoverDirection {
 /// A sector's aggregate performance.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SectorPerformance {
     /// Sector name (e.g. `"Technology"`).
@@ -34,6 +35,7 @@ pub struct SectorPerformance {
 /// One day of aggregate performance across every sector and exchange.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SectorPerformanceHistory {
     /// Date (`YYYY-MM-DD`).
@@ -47,6 +49,7 @@ pub struct SectorPerformanceHistory {
 /// A sector's aggregate price/earnings ratio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SectorPe {
     /// Sector name.
@@ -62,6 +65,7 @@ pub struct SectorPe {
 /// An industry's aggregate price/earnings ratio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct IndustryPe {
     /// Industry name.
@@ -77,6 +81,7 @@ pub struct IndustryPe {
 /// A symbol appearing in a market-movers list.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct MoverQuote {
     /// Ticker symbol.

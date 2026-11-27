@@ -19,7 +19,7 @@ impl BacktestEngine {
             equity_curve.push(EquityPoint {
                 timestamp,
                 equity,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             });
         }
 
@@ -34,7 +34,7 @@ impl BacktestEngine {
         };
 
         if let Some(last) = equity_curve.last_mut() {
-            last.drawdown_pct = drawdown;
+            last.drawdown = drawdown;
         }
     }
 }
@@ -53,15 +53,15 @@ pub(super) fn compute_benchmark_metrics(
     bars_per_year: f64,
 ) -> BenchmarkMetrics {
     // Buy-and-hold returns from first to last close
-    let benchmark_return_pct = buy_and_hold_return(benchmark_candles);
-    let buy_and_hold_return_pct = buy_and_hold_return(symbol_candles);
+    let benchmark_return = buy_and_hold_return(benchmark_candles);
+    let buy_and_hold_return = buy_and_hold_return(symbol_candles);
 
     if equity_curve.len() < 2 || benchmark_candles.len() < 2 {
         return BenchmarkMetrics {
             symbol: benchmark_symbol.to_string(),
-            benchmark_return_pct,
-            buy_and_hold_return_pct,
-            alpha: 0.0,
+            benchmark_return,
+            buy_and_hold_return,
+            jensens_alpha: 0.0,
             beta: 0.0,
             information_ratio: 0.0,
             tracking_error: 0.0,
@@ -106,9 +106,9 @@ pub(super) fn compute_benchmark_metrics(
     if aligned_strategy.len() < 2 {
         return BenchmarkMetrics {
             symbol: benchmark_symbol.to_string(),
-            benchmark_return_pct,
-            buy_and_hold_return_pct,
-            alpha: 0.0,
+            benchmark_return,
+            buy_and_hold_return,
+            jensens_alpha: 0.0,
             beta: 0.0,
             information_ratio: 0.0,
             tracking_error: 0.0,
@@ -121,10 +121,8 @@ pub(super) fn compute_benchmark_metrics(
     let strategy_ann = annualized_return_from_periodic(&aligned_strategy, bars_per_year);
     let bench_ann = annualized_return_from_periodic(&aligned_benchmark, bars_per_year);
     // Jensen's Alpha: excess strategy return over what CAPM predicts given beta.
-    // Both strategy_ann and bench_ann are in percentage form (×100), so rf_ann is scaled
-    // to match before applying the CAPM formula: α = R_s - R_f - β(R_b - R_f).
-    let rf_ann = risk_free_rate * 100.0;
-    let alpha = strategy_ann - rf_ann - beta * (bench_ann - rf_ann);
+    // α = R_s - R_f - β(R_b - R_f), all as annual fractions.
+    let alpha = strategy_ann - risk_free_rate - beta * (bench_ann - risk_free_rate);
 
     // Information ratio / tracking error: shared with the standalone `risk`
     // module via `finance_query_types::perf_metrics` (see that module's doc comment for why
@@ -144,26 +142,24 @@ pub(super) fn compute_benchmark_metrics(
 
     BenchmarkMetrics {
         symbol: benchmark_symbol.to_string(),
-        benchmark_return_pct,
-        buy_and_hold_return_pct,
-        alpha,
+        benchmark_return,
+        buy_and_hold_return,
+        jensens_alpha: alpha,
         beta,
         information_ratio: ir,
         tracking_error: te,
     }
 }
 
-/// Buy-and-hold return from first to last candle close (percentage).
+/// Buy-and-hold return from first to last candle close, as a fraction.
 fn buy_and_hold_return(candles: &[Candle]) -> f64 {
     match (candles.first(), candles.last()) {
-        (Some(first), Some(last)) if first.close > 0.0 => {
-            ((last.close / first.close) - 1.0) * 100.0
-        }
+        (Some(first), Some(last)) if first.close > 0.0 => (last.close / first.close) - 1.0,
         _ => 0.0,
     }
 }
 
-/// Annualised return from periodic returns (fractional, e.g. 0.01 for 1%).
+/// Annualised return from periodic returns, as a fraction (0.01 for 1%).
 fn annualized_return_from_periodic(periodic_returns: &[f64], bars_per_year: f64) -> f64 {
     let years = periodic_returns.len() as f64 / bars_per_year;
     if years > 0.0 {
@@ -171,9 +167,9 @@ fn annualized_return_from_periodic(periodic_returns: &[f64], bars_per_year: f64)
             .iter()
             .fold(1.0_f64, |acc, r| acc * (1.0 + *r));
         if growth <= 0.0 {
-            -100.0
+            -1.0
         } else {
-            (growth.powf(1.0 / years) - 1.0) * 100.0
+            growth.powf(1.0 / years) - 1.0
         }
     } else {
         0.0
@@ -271,9 +267,9 @@ mod tests {
         // With identical strategy and benchmark (beta = 1), Jensen's alpha ≈ 0 always.
         // Both should be close to 0, but importantly they should differ when rf != 0.
         // This test ensures the formula uses rf — it catches the old bug where rf was ignored.
-        assert!(bm_no_rf.alpha.is_finite(), "Alpha should be finite");
+        assert!(bm_no_rf.jensens_alpha.is_finite(), "Alpha should be finite");
         assert!(
-            bm_with_rf.alpha.is_finite(),
+            bm_with_rf.jensens_alpha.is_finite(),
             "Alpha should be finite with rf"
         );
 
@@ -281,11 +277,11 @@ mod tests {
         // Same formula result as rf=0 when beta=1; but the formula path is exercised.
         // The key check: alpha is the same sign in both (both near-zero).
         assert!(
-            bm_no_rf.alpha.abs() < 50.0,
+            bm_no_rf.jensens_alpha.abs() < 0.5,
             "Alpha should be small for identical strategy/benchmark"
         );
         assert!(
-            bm_with_rf.alpha.abs() < 50.0,
+            bm_with_rf.jensens_alpha.abs() < 0.5,
             "Alpha should be small for identical strategy/benchmark with rf"
         );
     }
@@ -360,9 +356,17 @@ mod tests {
         assert!((benchmark.beta - 0.0).abs() < 1e-12);
         assert!((benchmark.information_ratio - 0.0).abs() < 1e-12);
         assert!(
-            (benchmark.alpha - 0.0).abs() < 1e-12,
+            (benchmark.jensens_alpha - 0.0).abs() < 1e-12,
             "alpha should be 0.0 with no timestamp overlap, got {}",
-            benchmark.alpha
+            benchmark.jensens_alpha
         );
+    }
+
+    #[test]
+    fn test_buy_and_hold_and_annualized_returns_are_fractions() {
+        let candles = make_candles_with_timestamps(&[100.0, 110.0], &[100, 200]);
+        assert!((buy_and_hold_return(&candles) - 0.1).abs() < 1e-12);
+        assert!((annualized_return_from_periodic(&[0.1], 1.0) - 0.1).abs() < 1e-12);
+        assert_eq!(annualized_return_from_periodic(&[-1.0], 1.0), -1.0);
     }
 }

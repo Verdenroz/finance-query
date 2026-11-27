@@ -35,7 +35,7 @@ use super::{
 /// ```
 ///
 /// Note: This struct is marked `#[non_exhaustive]` and cannot be constructed manually.
-/// Use `Ticker::quote()` or `AsyncTicker::quote()` instead.
+/// Use `Ticker::quote()` instead.
 ///
 /// # Field Precedence
 ///
@@ -52,6 +52,7 @@ use super::{
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct Quote<F: Format = Both> {

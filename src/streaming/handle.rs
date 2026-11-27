@@ -16,8 +16,9 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::stream::Stream;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
+use super::client::{StreamError, StreamResult};
 use super::source::{ReconnectConfig, StreamCommand, StreamSource, run_stream_loop};
 use super::subscription::Subscription;
 
@@ -41,15 +42,48 @@ where
     T: Clone + Send + 'static,
 {
     /// Spawn the source's reconnect loop and return a handle to its output.
-    pub(crate) fn start(
+    ///
+    /// Resolves once the first session has connected, or with the error that
+    /// kept it from connecting.
+    pub(crate) async fn start(
         source: Arc<dyn StreamSource<T>>,
         symbols: Vec<String>,
         reconnect: ReconnectConfig,
         capacity: usize,
-    ) -> Self {
-        Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
-            let _ = run_stream_loop(source, symbols, broadcast_tx, command_rx, reconnect).await;
-        })
+    ) -> StreamResult<Self> {
+        let (first_tx, first_rx) = oneshot::channel();
+        let (last_error_tx, last_error) = watch::channel(None);
+        let stream = Self::spawn(capacity, move |broadcast_tx, command_rx| async move {
+            let _ = run_stream_loop(
+                source,
+                symbols,
+                broadcast_tx,
+                command_rx,
+                reconnect,
+                first_tx,
+                last_error_tx,
+            )
+            .await;
+        });
+        let timeout = reconnect.start_timeout();
+        match tokio::time::timeout(timeout, first_rx).await {
+            Ok(Ok(Ok(()))) => Ok(stream),
+            Ok(Ok(Err(e))) => Err(e),
+            Ok(Err(_)) => Err(StreamError::ConnectionFailed(
+                "stream ended before connecting".to_string(),
+            )),
+            Err(_) => {
+                stream.close().await;
+                let cause = last_error
+                    .borrow()
+                    .as_ref()
+                    .map(|e| format!(": {e}"))
+                    .unwrap_or_default();
+                Err(StreamError::ConnectionFailed(format!(
+                    "no connection within {timeout:?}{cause}"
+                )))
+            }
+        }
     }
 
     /// Spawn an arbitrary background loop behind the same handle API.

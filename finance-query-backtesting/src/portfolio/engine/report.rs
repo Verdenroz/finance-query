@@ -51,7 +51,7 @@ pub(super) fn sync_terminal_equity_point(
         equity_curve.push(EquityPoint {
             timestamp,
             equity,
-            drawdown_pct: 0.0,
+            drawdown: 0.0,
         });
     }
 
@@ -66,7 +66,7 @@ pub(super) fn sync_terminal_equity_point(
     };
 
     if let Some(last) = equity_curve.last_mut() {
-        last.drawdown_pct = drawdown;
+        last.drawdown = drawdown;
     }
 }
 
@@ -150,7 +150,7 @@ pub(super) fn build_portfolio_result<S: Strategy>(
         config.base.risk_free_rate,
         config.base.bars_per_year,
     );
-    portfolio_metrics.time_in_market_pct = compute_portfolio_time_in_market(&allocation_history);
+    portfolio_metrics.time_in_market = compute_portfolio_time_in_market(&allocation_history);
 
     PortfolioResult {
         symbols: symbol_results,

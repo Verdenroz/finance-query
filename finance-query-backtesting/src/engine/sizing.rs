@@ -65,10 +65,10 @@ fn trailing_kelly_inputs(trades: &[Trade], lookback: usize) -> (Option<f64>, Opt
     for t in trades.iter().rev().filter(|t| !t.is_partial) {
         if t.is_profitable() {
             wins += 1;
-            win_sum += t.return_pct;
+            win_sum += t.net_return;
         } else if t.is_loss() {
             losses += 1;
-            loss_sum += t.return_pct.abs();
+            loss_sum += t.net_return.abs();
         }
         seen += 1;
         if seen == lookback.max(1) {
@@ -155,7 +155,7 @@ mod tests {
     use crate::position::{PositionSide, Trade};
     use crate::signal::Signal;
 
-    fn make_trade(pnl: f64, return_pct: f64, is_partial: bool) -> Trade {
+    fn make_trade(pnl: f64, net_return: f64, is_partial: bool) -> Trade {
         Trade {
             side: PositionSide::Long,
             entry_timestamp: 0,
@@ -167,7 +167,7 @@ mod tests {
             commission: 0.0,
             transaction_tax: 0.0,
             pnl,
-            return_pct,
+            net_return,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             financing_cost: 0.0,
@@ -389,9 +389,7 @@ mod tests {
 
         assert_eq!(baseline.trades.len(), explicit.trades.len());
         assert!((baseline.final_equity - explicit.final_equity).abs() < 1e-12);
-        assert!(
-            (baseline.metrics.total_return_pct - explicit.metrics.total_return_pct).abs() < 1e-12
-        );
+        assert!((baseline.metrics.total_return - explicit.metrics.total_return).abs() < 1e-12);
     }
 
     #[test]

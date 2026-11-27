@@ -21,6 +21,7 @@ pub struct SecFilings {
 /// Individual SEC filing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct SecFiling {
     /// Maximum age of this data in seconds
@@ -57,6 +58,7 @@ pub struct SecFiling {
 /// SEC filing exhibit
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct SecExhibit {
     /// Type/number of exhibit (e.g., "EX-21.1", "10-K")

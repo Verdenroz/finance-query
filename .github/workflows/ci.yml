@@ -5,6 +5,8 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  schedule:
+    - cron: "43 6 * * *"
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,20 +18,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
   # Skips downstream jobs a docs-only / single-crate PR can't have broken.
   changes:
     name: Detect Changes
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'soothfast-bot[bot]'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.user.login != 'soothfast-bot[bot]')
     runs-on: ubuntu-latest
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
       server_docker: ${{ steps.filter.outputs.server_docker }}
       mcp_docker: ${{ steps.filter.outputs.mcp_docker }}
       fuzz: ${{ steps.filter.outputs.fuzz }}
+      server_image: ${{ steps.filter.outputs.server_image }}
+      mcp_image: ${{ steps.filter.outputs.mcp_image }}
+      fuzz_inputs: ${{ steps.filter.outputs.fuzz_inputs }}
       deploy_config: ${{ steps.filter.outputs.deploy_config }}
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -81,6 +86,29 @@ jobs:
               - 'fuzz/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+            server_image:
+              - 'server/Dockerfile'
+              - 'docker-compose*.yml'
+              - '.dockerignore'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
+            mcp_image:
+              - 'finance-query-mcp/Dockerfile'
+              - 'docker-compose*.yml'
+              - '.dockerignore'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
+            fuzz_inputs:
+              - 'fuzz/**'
+              - 'src/adapters/**'
+              - 'src/models/**'
+              - 'src/streaming/pricing.rs'
+              - 'finance-query-types/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
             deploy_config:
               - 'Caddyfile'
               - 'docker-compose.yml'
@@ -154,7 +182,7 @@ jobs:
           shared-key: test-suite
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@b774ac5fc1127cacf659446526112c4a098c067c # v0.8.0
+        uses: Verdenroz/soothfast@fe96a54272b9a506976798d330b8c4617e8a8350 # v0.9.0
         with:
           gate: false
           labels: "false"
@@ -180,7 +208,8 @@ jobs:
     name: Test Suite (network)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    # Live providers are too slow and flaky for PRs; master and the nightly run cover them.
+    if: always() && (github.event_name == 'schedule' || (github.event_name == 'push' && needs.changes.outputs.rust == 'true'))
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -225,7 +254,7 @@ jobs:
         run: cargo test --workspace --doc --features finance-query/full
 
   # Keeps the "Test Suite" required-status-check name stable across the
-  # 3-job split. `always()` matters: without it a sub-job failure cascades
+  # 3-job split. The network job is skipped on pull requests. `always()` matters: without it a sub-job failure cascades
   # this to skipped, and GitHub treats a skipped required check as passing.
   test:
     name: Test Suite
@@ -235,15 +264,20 @@ jobs:
     steps:
       - name: Check suite results
         run: |
-          for result in "${{ needs.test-unit.result }}" "${{ needs.test-network.result }}" "${{ needs.test-doctest.result }}"; do
+          for result in "${{ needs.test-unit.result }}" "${{ needs.test-doctest.result }}"; do
             if [ "$result" != "success" ]; then
               echo "A test suite did not succeed: $result"
               exit 1
             fi
           done
+          network_result="${{ needs.test-network.result }}"
+          if [ "$network_result" != "success" ] && [ "$network_result" != "skipped" ]; then
+            echo "Network suite did not succeed: $network_result"
+            exit 1
+          fi
 
-  build-check-server:
-    name: Build Check (server)
+  build-check:
+    name: Build Check
     runs-on: ubuntu-latest
     needs: [fmt, clippy]
     steps:
@@ -253,6 +287,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
@@ -260,44 +295,10 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Check server
         run: cargo check -p finance-query-server --verbose
-
-  build-check-mcp:
-    name: Build Check (mcp)
-    runs-on: ubuntu-latest
-    needs: [fmt, clippy]
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: check
-          save-if: ${{ github.ref == 'refs/heads/master' }}
       # mcp path-deps on server for its in-process GraphQL schema.
       - name: Check mcp
         run: cargo check -p finance-query-mcp --verbose
-
-  # Validates the lib's actual default-feature build (clippy/test force `full`).
-  build-check-lib:
-    name: Build Check (lib)
-    runs-on: ubuntu-latest
-    needs: [fmt, clippy]
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: check-lib-default
-          save-if: ${{ github.ref == 'refs/heads/master' }}
+      # Validates the lib's actual default-feature build (clippy/test force `full`).
       - name: Check lib (default features)
         run: cargo check -p finance-query --verbose
       # Deliberately not --workspace/--all-targets: those unify the server's and
@@ -326,19 +327,9 @@ jobs:
   # features than the item it exports compiles under either, and fails only
   # for a consumer enabling one provider.
   build-check-features:
-    name: Build Check (features ${{ matrix.shard }})
+    name: Build Check (features)
     runs-on: ubuntu-latest
     needs: [fmt, clippy]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - shard: 1
-            features: alphavantage polygon fmp fred crypto worldbank fiscaldata bls frankfurter
-          - shard: 2
-            features: binance kraken finra openfigi defi gdelt cftc nasdaq wikipedia
-          - shard: 3
-            features: secftd housetrades indicators risk dataframe backtesting sentiment translation
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -349,11 +340,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: check-lib-features-${{ matrix.shard }}
+          shared-key: check-lib-features
           save-if: ${{ github.ref == 'refs/heads/master' }}
       - name: Check lib (each feature alone)
         env:
-          FEATURES: ${{ matrix.features }}
+          FEATURES: >-
+            alphavantage polygon fmp fred crypto worldbank fiscaldata bls frankfurter
+            binance kraken finra openfigi defi gdelt cftc nasdaq wikipedia
+            secftd housetrades indicators risk dataframe backtesting sentiment translation
         run: |
           for f in $FEATURES; do
             echo "::group::--features $f"
@@ -401,12 +395,12 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [changes, build-check-server, build-check-mcp, build-check-lib, build-check-features, build-release]
+    needs: [changes, build-check, build-check-features, build-release]
     if: always() && needs.changes.outputs.rust == 'true'
     steps:
       - name: Check build results
         run: |
-          for result in "${{ needs.build-check-server.result }}" "${{ needs.build-check-mcp.result }}" "${{ needs.build-check-lib.result }}" "${{ needs.build-check-features.result }}"; do
+          for result in "${{ needs.build-check.result }}" "${{ needs.build-check-features.result }}"; do
             if [ "$result" != "success" ]; then
               echo "A build check did not succeed: $result"
               exit 1
@@ -453,7 +447,7 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.server_docker == 'true'
+    if: (github.event_name == 'push' && needs.changes.outputs.server_docker == 'true') || (github.event_name == 'pull_request' && needs.changes.outputs.server_image == 'true')
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -512,7 +506,7 @@ jobs:
     name: MCP Docker Build
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.mcp_docker == 'true'
+    if: (github.event_name == 'push' && needs.changes.outputs.mcp_docker == 'true') || (github.event_name == 'pull_request' && needs.changes.outputs.mcp_image == 'true')
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -572,7 +566,7 @@ jobs:
     name: Fuzz
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.fuzz == 'true'
+    if: (github.event_name == 'push' && needs.changes.outputs.fuzz == 'true') || (github.event_name == 'pull_request' && needs.changes.outputs.fuzz_inputs == 'true')
     env:
       FUZZ_SECONDS: ${{ github.event_name == 'push' && 30 || 10 }}
     steps:

@@ -34,10 +34,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_edgar_submissions.walltime.median_ns < 2000000 -->
+<!-- soothfast:claim finance_query::de_edgar_submissions.perfcnt.instructions < 7000000 -->
 - Parsing a company's full submissions index (`edgar::submissions` →
-  `EdgarSubmissions`, roughly a thousand filings) takes **around a
-  millisecond** or less.
+  `EdgarSubmissions`, roughly a thousand filings) costs **under 7 million
+  CPU instructions**.
 
 !!! note "EDGAR requires a contact email"
     EDGAR needs no API key, but SEC's fair-access policy requires a contact email

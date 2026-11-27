@@ -3,7 +3,7 @@ use std::ops::Deref;
 
 /// A collection of option contracts with DataFrame support.
 ///
-/// This wrapper allows `options.calls.to_dataframe()` syntax while still
+/// This wrapper allows `options.calls().to_dataframe()` syntax while still
 /// acting like a `Vec<OptionContract>` for iteration, indexing, etc.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -49,6 +49,7 @@ impl Contracts {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionContract {
     /// Contract symbol (e.g., "AAPL250117C00150000")

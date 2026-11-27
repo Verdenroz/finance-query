@@ -50,6 +50,7 @@ impl SearchQuotes {
 /// A quote result from symbol search
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct SearchQuote {

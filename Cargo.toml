@@ -67,6 +67,8 @@ tracing = "0.1"
 
 # WebSocket streaming support
 tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+rustls-native-certs = "0.8"
 tokio-stream = { version = "0.1", features = ["sync", "time"] }
 prost = "0.14.3"
 base64 = "0.22"
@@ -244,7 +246,7 @@ tokio = { version = "1", features = ["full", "test-util"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
 # never compiled into the published `finance-query` crate.
-soothfast = { version = "0.8.0", features = ["runner"] }
+soothfast = { version = "0.9.0", features = ["runner"] }
 
 [[bench]]
 name = "ticker"

@@ -19,8 +19,10 @@ use tracing::{debug, info, warn};
 
 use crate::adapters::polygon::websocket::{ClusterDTO, PolygonMessage, PolygonStream};
 
+use crate::error::FinanceError;
+
 use super::client::{StreamError, StreamResult};
-use super::source::{StreamCommand, apply_command};
+use super::source::{Ready, StreamCommand, apply_command};
 
 pub(crate) use book::PolygonBookSource;
 pub(crate) use options::PolygonOptionsSource;
@@ -182,6 +184,7 @@ pub(crate) async fn run_polygon_session<T, H>(
     subscriptions: &Arc<RwLock<HashSet<String>>>,
     broadcast_tx: &broadcast::Sender<T>,
     command_rx: &mut mpsc::Receiver<StreamCommand>,
+    ready: &mut Ready,
     mut handler: H,
 ) -> StreamResult<()>
 where
@@ -193,19 +196,37 @@ where
     let channel_refs: Vec<&str> = channels.iter().map(String::as_str).collect();
 
     let mut stream = PolygonStream::from_singleton()
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?
+        .map_err(|e| {
+            ready.permanent();
+            StreamError::ConnectionFailed(e.to_string())
+        })?
         .cluster(class.cluster())
         .subscribe(&channel_refs)
         .build()
         .await
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
+        .map_err(|e| {
+            if matches!(
+                e,
+                FinanceError::AuthenticationFailed { .. } | FinanceError::RuntimeError(_)
+            ) {
+                ready.permanent();
+            }
+            StreamError::ConnectionFailed(e.to_string())
+        })?;
 
     let sender = stream.sender();
     info!("Connected to Polygon {} cluster", class.label());
+    ready.signal();
 
     loop {
         tokio::select! {
-            Some(msg) = stream.next() => {
+            msg = stream.next() => {
+                let Some(msg) = msg else {
+                    return Err(StreamError::WebSocketError(format!(
+                        "{} connection closed",
+                        class.label()
+                    )));
+                };
                 match msg {
                     PolygonMessage::Status(status) => debug!("polygon status: {status}"),
                     PolygonMessage::Unknown(raw) => warn!("unparsed polygon frame: {raw}"),
@@ -217,7 +238,8 @@ where
                 }
             }
 
-            Some(cmd) = command_rx.recv() => {
+            cmd = command_rx.recv() => {
+                let Some(cmd) = cmd else { return Ok(()) };
                 let Some(changed) = apply_command(&cmd, subscriptions).await else {
                     return Ok(());
                 };
@@ -238,16 +260,8 @@ where
                     return Err(StreamError::WebSocketError(e.to_string()));
                 }
             }
-
-            else => break,
         }
     }
-
-    // Upstream ended without a Close command — reconnect.
-    Err(StreamError::WebSocketError(format!(
-        "{} connection closed",
-        class.label()
-    )))
 }
 
 #[cfg(test)]

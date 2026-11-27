@@ -104,8 +104,7 @@ title  = "Markets rally"
 url    = "https://example.com/a"
 ```
 
-<!-- soothfast:claim finance_query::rss_parse.perfcnt.instructions < 100000 -->
-<!-- soothfast:claim finance_query::rss_parse.walltime.median_ns < 30000 -->
+<!-- soothfast:claim finance_query::rss_parse.perfcnt.instructions < 92000 -->
 Cheap enough to re-parse on every poll.
 
 ## `FeedEntry` Fields

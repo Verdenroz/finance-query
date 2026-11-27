@@ -38,6 +38,9 @@ pub(crate) mod periods;
 #[cfg(any(feature = "alphavantage", feature = "fmp"))]
 pub(crate) mod percent;
 
+/// TLS-pinned WebSocket connect shared by the streaming sources.
+pub(crate) mod ws_tls;
+
 /// Characters that must be percent-encoded inside a URL path segment.
 ///
 /// We use a conservative set: the unreserved characters per RFC 3986

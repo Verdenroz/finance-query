@@ -249,6 +249,7 @@ async fn open_hub_stream(
     match state.stream_hub.resubscribe().await {
         Some(stream) => Some(stream),
         None => {
+            state.stream_hub.unsubscribe_symbols(symbols).await;
             let _ = socket.send(error_msg("stream unavailable")).await;
             None
         }

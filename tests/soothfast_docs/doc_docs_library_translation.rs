@@ -92,11 +92,11 @@ fn doc_block_line_106() {
     main();
 }
 
-// line 182: compile-only (no_run)
+// line 181: compile-only (no_run)
 #[cfg(feature = "translation-offline")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_182() {
+fn doc_block_line_181() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         finance_query::translation::preload().await?;

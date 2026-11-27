@@ -76,9 +76,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_fred_series.walltime.median_ns < 300000 -->
+<!-- soothfast:claim finance_query::de_fred_series.perfcnt.instructions < 1700000 -->
 - Parsing a full FRED series response (decades of observations) into
-  `MacroSeries` takes **under 300 µs**.
+  `MacroSeries` costs **under 1.7 million CPU
+  instructions**.
 
 **Common FRED Series IDs:**
 
@@ -228,9 +229,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_treasury_yields.walltime.median_ns < 200000 -->
+<!-- soothfast:claim finance_query::de_treasury_yields.perfcnt.instructions < 1100000 -->
 - Parsing a daily Treasury yield-curve payload (`fred::treasury_yields`)
-  takes **under 200 µs**.
+  costs **under 1.1 million CPU
+  instructions**.
 
 ## Next Steps
 

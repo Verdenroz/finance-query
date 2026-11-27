@@ -18,11 +18,12 @@ use crate::position::Trade;
     dataframe(crate = "finance_query_types")
 )]
 pub struct PerformanceMetrics {
-    /// Total return percentage
-    pub total_return_pct: f64,
+    /// Total return as a fraction (`0.1652` means +16.52%).
+    pub total_return: f64,
 
-    /// Annualized return percentage (assumes 252 trading days)
-    pub annualized_return_pct: f64,
+    /// Annualized return as a fraction (`0.1652` means +16.52%), assuming `bars_per_year`
+    /// bars per year.
+    pub annualized_return: f64,
 
     /// Sharpe ratio (risk-free rate = 0)
     pub sharpe_ratio: f64,
@@ -30,20 +31,17 @@ pub struct PerformanceMetrics {
     /// Sortino ratio (downside deviation)
     pub sortino_ratio: f64,
 
-    /// Maximum drawdown as a fraction (0.0–1.0, **not** a percentage).
+    /// Maximum drawdown as a fraction (0.0–1.0).
     ///
     /// A value of `0.2` means the equity fell 20% from its peak at most.
-    /// Multiply by 100 to get a conventional percentage. See also
-    /// [`max_drawdown_percentage`](Self::max_drawdown_percentage) for a
-    /// pre-scaled convenience accessor.
-    pub max_drawdown_pct: f64,
+    pub max_drawdown: f64,
 
     /// Maximum drawdown duration measured in **bars** (not calendar time).
     ///
     /// Counts the number of consecutive bars from a peak until full recovery.
     pub max_drawdown_duration: i64,
 
-    /// Win rate: `winning_trades / total_trades`.
+    /// Win rate as a fraction (0.0-1.0): `winning_trades / total_trades`.
     ///
     /// The denominator is `total_trades`, which includes break-even trades
     /// (`pnl == 0.0`).  Break-even trades are neither wins nor losses, so they
@@ -58,14 +56,14 @@ pub struct PerformanceMetrics {
     /// is not representable in JSON.
     pub profit_factor: f64,
 
-    /// Average trade return percentage
-    pub avg_trade_return_pct: f64,
+    /// Average trade return as a fraction (see `Trade::net_return`)
+    pub avg_trade_return: f64,
 
-    /// Average winning trade return percentage
-    pub avg_win_pct: f64,
+    /// Average winning trade return as a fraction
+    pub avg_win_return: f64,
 
-    /// Average losing trade return percentage
-    pub avg_loss_pct: f64,
+    /// Average losing trade return as a fraction (negative)
+    pub avg_loss_return: f64,
 
     /// Average trade duration in seconds
     pub avg_trade_duration: f64,
@@ -97,7 +95,7 @@ pub struct PerformanceMetrics {
     /// Maximum consecutive losses
     pub max_consecutive_losses: usize,
 
-    /// Calmar ratio: `annualized_return_pct / max_drawdown_pct_scaled`.
+    /// Calmar ratio: `annualized_return / max_drawdown`.
     ///
     /// Returns `f64::MAX` when max drawdown is zero and the strategy is
     /// profitable (avoids `f64::INFINITY` which cannot be serialized to JSON).
@@ -130,8 +128,8 @@ pub struct PerformanceMetrics {
     /// Average duration of losing trades in seconds
     pub avg_loss_duration: f64,
 
-    /// Fraction of backtest time spent with an open position (0.0 - 1.0)
-    pub time_in_market_pct: f64,
+    /// Fraction of backtest time spent with an open position (0.0-1.0)
+    pub time_in_market: f64,
 
     /// Longest idle period between trades in seconds (0 if fewer than 2 trades)
     pub max_idle_period: i64,
@@ -141,8 +139,8 @@ pub struct PerformanceMetrics {
 
     /// Kelly Criterion: optimal fraction of capital to risk per trade.
     ///
-    /// Computed as `W - (1 - W) / R` where `R` is `avg_win_pct /
-    /// abs(avg_loss_pct)` and `W` is the win rate over decisive
+    /// Computed as `W - (1 - W) / R` where `R` is `avg_win_return /
+    /// abs(avg_loss_return)` and `W` is the win rate over decisive
     /// (non-break-even) trades, unlike [`win_rate`](Self::win_rate) which is
     /// diluted by break-even trades. A positive value suggests the strategy
     /// has an edge; a negative value suggests it does not. Values above 1
@@ -153,7 +151,7 @@ pub struct PerformanceMetrics {
     /// Van Tharp's System Quality Number.
     ///
     /// `SQN = (mean_R / std_R) * sqrt(n_trades)` where `R` is the
-    /// distribution of per-trade return percentages. Interpretation:
+    /// distribution of per-trade returns. Interpretation:
     /// `>1.6` = below average, `>2.0` = average, `>2.5` = good,
     /// `>3.0` = excellent, `>5.0` = superb, `>7.0` = holy grail.
     /// Returns `0.0` when fewer than 2 trades are available.
@@ -161,7 +159,7 @@ pub struct PerformanceMetrics {
     /// **Note:** Van Tharp's original definition uses *R-multiples*
     /// (profit/loss normalised by initial risk per trade, i.e. entry-to-stop
     /// distance). Since the engine does not track per-trade initial risk,
-    /// this implementation uses `return_pct` as a proxy. Values will
+    /// this implementation uses `net_return` as a proxy. Values will
     /// therefore not match Van Tharp's published benchmarks exactly.
     /// At least 30 trades are recommended for statistical reliability.
     pub sqn: f64,
@@ -170,8 +168,8 @@ pub struct PerformanceMetrics {
     ///
     /// `P(win) × avg_win_dollar + P(loss) × avg_loss_dollar` where each
     /// probability is computed independently (`winning_trades / total` and
-    /// `losing_trades / total`). Unlike `avg_trade_return_pct` (which is a
-    /// percentage), this gives the expected monetary gain or loss per trade
+    /// `losing_trades / total`). Unlike `avg_trade_return` (which is a
+    /// fraction), this gives the expected monetary gain or loss per trade
     /// in the same currency as `initial_capital`. A positive value means the
     /// strategy has a statistical edge; e.g. `+$25` means you expect to make
     /// $25 on average per trade taken.
@@ -201,16 +199,17 @@ pub struct PerformanceMetrics {
 
     /// Recovery Factor: net profit relative to maximum drawdown.
     ///
-    /// `total_return_pct / (max_drawdown_pct * 100)`. Measures how
+    /// `total_return / max_drawdown`. Measures how
     /// efficiently the strategy recovers from its worst drawdown. Returns
     /// `f64::MAX` when there is no drawdown, `0.0` when unprofitable.
     pub recovery_factor: f64,
 
     /// Ulcer Index: root-mean-square of drawdown depth across all bars,
     /// expressed as a **percentage** (0–100), consistent with backtesting.py
-    /// and Peter Martin's original 1987 definition.
+    /// and Peter Martin's original 1987 definition. It is the only 0–100 value
+    /// among the metrics; every other return or drawdown is a fraction.
     ///
-    /// `sqrt(mean((drawdown_pct × 100)²))` computed from the equity curve.
+    /// `sqrt(mean((drawdown × 100)²))` computed from the equity curve.
     /// Unlike max drawdown, it penalises both depth and duration — a long
     /// shallow drawdown scores higher than a brief deep one. A lower value
     /// indicates a smoother equity curve.
@@ -219,8 +218,8 @@ pub struct PerformanceMetrics {
     /// Serenity Ratio (Martin Ratio / Ulcer Performance Index): excess
     /// annualised return per unit of Ulcer Index risk.
     ///
-    /// `(annualized_return_pct - risk_free_rate_pct) / ulcer_index` where
-    /// both numerator and denominator are in percentage units. Analogous to
+    /// `(annualized_return - risk_free_rate) * 100 / ulcer_index`, so numerator
+    /// and denominator are both in percentage units. Analogous to
     /// the Sharpe Ratio but uses the Ulcer Index as the risk measure,
     /// penalising prolonged drawdowns more heavily than short-term volatility.
     /// Returns `f64::MAX` when Ulcer Index is zero and excess return is positive.
@@ -228,16 +227,7 @@ pub struct PerformanceMetrics {
 }
 
 impl PerformanceMetrics {
-    /// Maximum drawdown as a conventional percentage (0–100).
-    ///
-    /// Equivalent to `self.max_drawdown_pct * 100.0`. Provided because
-    /// `max_drawdown_pct` is stored as a fraction (0.0–1.0) while most other
-    /// return fields use true percentages.
-    pub fn max_drawdown_percentage(&self) -> f64 {
-        self.max_drawdown_pct * 100.0
-    }
-
-    /// Construct a zero-trades result: all metrics are zero except `total_return_pct`
+    /// Construct a zero-trades result: all metrics are zero except `total_return`
     /// which is derived from the equity curve.
     pub(super) fn empty(
         initial_capital: f64,
@@ -249,19 +239,19 @@ impl PerformanceMetrics {
             .last()
             .map(|e| e.equity)
             .unwrap_or(initial_capital);
-        let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
+        let total_return = (final_equity / initial_capital) - 1.0;
         Self {
-            total_return_pct,
-            annualized_return_pct: 0.0,
+            total_return,
+            annualized_return: 0.0,
             sharpe_ratio: 0.0,
             sortino_ratio: 0.0,
-            max_drawdown_pct: 0.0,
+            max_drawdown: 0.0,
             max_drawdown_duration: 0,
             win_rate: 0.0,
             profit_factor: 0.0,
-            avg_trade_return_pct: 0.0,
-            avg_win_pct: 0.0,
-            avg_loss_pct: 0.0,
+            avg_trade_return: 0.0,
+            avg_win_return: 0.0,
+            avg_loss_return: 0.0,
             avg_trade_duration: 0.0,
             total_trades: 0,
             winning_trades: 0,
@@ -279,7 +269,7 @@ impl PerformanceMetrics {
             executed_signals,
             avg_win_duration: 0.0,
             avg_loss_duration: 0.0,
-            time_in_market_pct: 0.0,
+            time_in_market: 0.0,
             max_idle_period: 0,
             total_dividend_income: 0.0,
             kelly_criterion: 0.0,
@@ -311,10 +301,7 @@ impl PerformanceMetrics {
         bars_per_year: f64,
     ) -> Self {
         // Drawdown metrics
-        let max_drawdown_pct = equity_curve
-            .iter()
-            .map(|e| e.drawdown_pct)
-            .fold(0.0, f64::max);
+        let max_drawdown = equity_curve.iter().map(|e| e.drawdown).fold(0.0, f64::max);
 
         // Total return
         let final_equity = equity_curve
@@ -327,7 +314,7 @@ impl PerformanceMetrics {
         // trades zeroes every remaining metric, so skip the risk block.
         if trades.is_empty()
             && risk_free_rate >= 0.0
-            && max_drawdown_pct == 0.0
+            && max_drawdown == 0.0
             && final_equity == initial_capital
             && equity_curve
                 .first()
@@ -346,7 +333,7 @@ impl PerformanceMetrics {
 
         let max_drawdown_duration = calculate_max_drawdown_duration(equity_curve);
 
-        let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
+        let total_return = (final_equity / initial_capital) - 1.0;
 
         // Annualized return using configured bars_per_year.
         // Use return periods (N-1), not points (N), to avoid overestimating
@@ -354,11 +341,11 @@ impl PerformanceMetrics {
         let num_periods = equity_curve.len().saturating_sub(1);
         let years = num_periods as f64 / bars_per_year;
         let growth = final_equity / initial_capital;
-        let annualized_return_pct = if years > 0.0 {
+        let annualized_return = if years > 0.0 {
             if growth <= 0.0 {
-                -100.0
+                -1.0
             } else {
-                (growth.powf(1.0 / years) - 1.0) * 100.0
+                growth.powf(1.0 / years) - 1.0
             }
         } else {
             0.0
@@ -369,12 +356,12 @@ impl PerformanceMetrics {
         let (sharpe_ratio, sortino_ratio) =
             calculate_risk_ratios(&returns, risk_free_rate, bars_per_year);
 
-        // Calmar ratio = annualised return (%) / max drawdown (%).
+        // Calmar ratio = annualised return / max drawdown.
         // Use f64::MAX instead of INFINITY when drawdown is zero to keep the
         // value JSON-serializable.
-        let calmar_ratio = if max_drawdown_pct > 0.0 {
-            annualized_return_pct / (max_drawdown_pct * 100.0)
-        } else if annualized_return_pct > 0.0 {
+        let calmar_ratio = if max_drawdown > 0.0 {
+            annualized_return / max_drawdown
+        } else if annualized_return > 0.0 {
             f64::MAX
         } else {
             0.0
@@ -383,19 +370,19 @@ impl PerformanceMetrics {
         // Omega uses the same bar-by-bar returns as Sharpe/Sortino; per-trade
         // returns vary by holding period and are incomparable across strategies.
         let omega_ratio = calculate_omega_ratio(&returns);
-        let recovery_factor = if max_drawdown_pct > 0.0 {
-            total_return_pct / (max_drawdown_pct * 100.0)
-        } else if total_return_pct > 0.0 {
+        let recovery_factor = if max_drawdown > 0.0 {
+            total_return / max_drawdown
+        } else if total_return > 0.0 {
             f64::MAX
         } else {
             0.0
         };
         // ulcer_index is already in percentage units (see calculate_ulcer_index).
         let ulcer_index = calculate_ulcer_index(equity_curve);
-        let rf_pct = risk_free_rate * 100.0;
+        let excess_return = annualized_return - risk_free_rate;
         let serenity_ratio = if ulcer_index > 0.0 {
-            (annualized_return_pct - rf_pct) / ulcer_index
-        } else if annualized_return_pct > rf_pct {
+            excess_return * 100.0 / ulcer_index
+        } else if excess_return > 0.0 {
             f64::MAX
         } else {
             0.0
@@ -403,17 +390,17 @@ impl PerformanceMetrics {
 
         if total_trades == 0 {
             return Self {
-                total_return_pct,
-                annualized_return_pct,
+                total_return,
+                annualized_return,
                 sharpe_ratio,
                 sortino_ratio,
-                max_drawdown_pct,
+                max_drawdown,
                 max_drawdown_duration,
                 win_rate: 0.0,
                 profit_factor: 0.0,
-                avg_trade_return_pct: 0.0,
-                avg_win_pct: 0.0,
-                avg_loss_pct: 0.0,
+                avg_trade_return: 0.0,
+                avg_win_return: 0.0,
+                avg_loss_return: 0.0,
                 avg_trade_duration: 0.0,
                 total_trades: 0,
                 winning_trades: 0,
@@ -431,7 +418,7 @@ impl PerformanceMetrics {
                 executed_signals,
                 avg_win_duration: 0.0,
                 avg_loss_duration: 0.0,
-                time_in_market_pct: 0.0,
+                time_in_market: 0.0,
                 max_idle_period: 0,
                 total_dividend_income: 0.0,
                 kelly_criterion: 0.0,
@@ -455,15 +442,15 @@ impl PerformanceMetrics {
             0.0
         };
 
-        let avg_trade_return_pct = stats.total_return_sum / total_trades as f64;
+        let avg_trade_return = stats.total_return_sum / total_trades as f64;
 
-        let avg_win_pct = if !stats.winning_returns.is_empty() {
+        let avg_win_return = if !stats.winning_returns.is_empty() {
             stats.winning_returns.iter().sum::<f64>() / stats.winning_returns.len() as f64
         } else {
             0.0
         };
 
-        let avg_loss_pct = if !stats.losing_returns.is_empty() {
+        let avg_loss_return = if !stats.losing_returns.is_empty() {
             stats.losing_returns.iter().sum::<f64>() / stats.losing_returns.len() as f64
         } else {
             0.0
@@ -476,7 +463,7 @@ impl PerformanceMetrics {
 
         // Trade duration analysis
         let (avg_win_duration, avg_loss_duration) = calculate_win_loss_durations(trades);
-        let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
+        let time_in_market = calculate_time_in_market(trades, equity_curve);
         let max_idle_period = calculate_max_idle_period(trades);
 
         // Extended metrics
@@ -486,11 +473,11 @@ impl PerformanceMetrics {
         } else {
             0.0
         };
-        let kelly_criterion = calculate_kelly(kelly_win_rate, avg_win_pct, avg_loss_pct);
+        let kelly_criterion = calculate_kelly(kelly_win_rate, avg_win_return, avg_loss_return);
         let sqn = calculate_sqn(&stats.all_returns);
         // Dollar expectancy: expected profit per trade in the same currency as
-        // initial_capital. This is distinct from avg_trade_return_pct (which
-        // is a percentage). Break-even trades reduce both probabilities without
+        // initial_capital. This is distinct from avg_trade_return (which
+        // is a fraction). Break-even trades reduce both probabilities without
         // contributing to either avg, so each outcome is weighted independently.
         let loss_rate = stats.losing_trades as f64 / total_trades as f64;
         let avg_win_dollar = if stats.winning_trades > 0 {
@@ -507,17 +494,17 @@ impl PerformanceMetrics {
         let tail_ratio = calculate_tail_ratio(&stats.all_returns);
 
         Self {
-            total_return_pct,
-            annualized_return_pct,
+            total_return,
+            annualized_return,
             sharpe_ratio,
             sortino_ratio,
-            max_drawdown_pct,
+            max_drawdown,
             max_drawdown_duration,
             win_rate,
             profit_factor,
-            avg_trade_return_pct,
-            avg_win_pct,
-            avg_loss_pct,
+            avg_trade_return,
+            avg_win_return,
+            avg_loss_return,
             avg_trade_duration,
             total_trades,
             winning_trades: stats.winning_trades,
@@ -535,7 +522,7 @@ impl PerformanceMetrics {
             executed_signals,
             avg_win_duration,
             avg_loss_duration,
-            time_in_market_pct,
+            time_in_market,
             max_idle_period,
             total_dividend_income: stats.total_dividend_income,
             kelly_criterion,
@@ -561,19 +548,19 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 10100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
 
         let metrics = PerformanceMetrics::calculate(&[], &equity, 10000.0, 0, 0, 0.0, 252.0);
 
         assert_eq!(metrics.total_trades, 0);
-        assert!((metrics.total_return_pct - 1.0).abs() < 0.01);
+        assert!((metrics.total_return - 0.01).abs() < 1e-4);
     }
 
     #[test]
@@ -589,27 +576,27 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 10100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 2,
                 equity: 10050.0,
-                drawdown_pct: 0.005,
+                drawdown: 0.005,
             },
             EquityPoint {
                 timestamp: 3,
                 equity: 10125.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 4,
                 equity: 10150.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
 
@@ -624,39 +611,34 @@ mod tests {
     }
 
     #[test]
-    fn test_max_drawdown_percentage_method() {
-        // Verify the convenience method returns max_drawdown_pct * 100.
-        // Use a trade so the no-trades early-return path is not taken, then
-        // supply an equity curve with a known 10% drawdown point.
-        let trade = make_trade(100.0, 10.0, true);
+    fn test_drawdown_ratios_match_percent_formulas() {
+        let trade = make_trade(100.0, 0.1, true);
         let equity = vec![
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
-                equity: 9000.0,
-                drawdown_pct: 0.1,
+                equity: 9500.0,
+                drawdown: 0.05,
             },
             EquityPoint {
                 timestamp: 2,
-                equity: 10000.0,
-                drawdown_pct: 0.0,
+                equity: 11000.0,
+                drawdown: 0.0,
             },
         ];
-        let metrics = PerformanceMetrics::calculate(&[trade], &equity, 10000.0, 1, 1, 0.0, 252.0);
-        assert!(
-            (metrics.max_drawdown_pct - 0.1).abs() < 1e-9,
-            "max_drawdown_pct should be 0.1 (fraction), got {}",
-            metrics.max_drawdown_pct
-        );
-        assert!(
-            (metrics.max_drawdown_percentage() - 10.0).abs() < 1e-9,
-            "max_drawdown_percentage() should be 10.0, got {}",
-            metrics.max_drawdown_percentage()
-        );
+        let m = PerformanceMetrics::calculate(&[trade], &equity, 10000.0, 1, 1, 0.02, 2.0);
+        assert!((m.max_drawdown - 0.05).abs() < 1e-12);
+        assert!((m.total_return - 0.1).abs() < 1e-12);
+        assert!((m.annualized_return - 0.1).abs() < 1e-12);
+        assert!((m.calmar_ratio - 2.0).abs() < 1e-9);
+        assert!((m.recovery_factor - 2.0).abs() < 1e-9);
+        let ulcer = (25.0f64 / 3.0).sqrt();
+        assert!((m.ulcer_index - ulcer).abs() < 1e-9);
+        assert!((m.serenity_ratio - 8.0 / ulcer).abs() < 1e-9);
     }
 
     #[test]
@@ -671,22 +653,22 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 10100.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 2,
                 equity: 10300.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 3,
                 equity: 10250.0,
-                drawdown_pct: 0.005,
+                drawdown: 0.005,
             },
         ];
         let m = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 3, 3, 0.0, 252.0);
@@ -726,12 +708,12 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 10150.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
 
@@ -754,12 +736,12 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 10005.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
 
@@ -781,28 +763,28 @@ mod tests {
             EquityPoint {
                 timestamp: 0,
                 equity: 10000.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
             EquityPoint {
                 timestamp: 1,
                 equity: 7000.0,
-                drawdown_pct: 0.3,
+                drawdown: 0.3,
             },
             EquityPoint {
                 timestamp: 2,
                 equity: 10500.0,
-                drawdown_pct: 0.0,
+                drawdown: 0.0,
             },
         ];
 
         let metrics = PerformanceMetrics::calculate(&[], &equity, 10000.0, 0, 0, 0.0, 252.0);
 
         assert_eq!(metrics.total_trades, 0);
-        assert!((metrics.total_return_pct - 5.0).abs() < 0.01);
+        assert!((metrics.total_return - 0.05).abs() < 1e-4);
         assert!(
-            (metrics.max_drawdown_pct - 0.3).abs() < 1e-9,
+            (metrics.max_drawdown - 0.3).abs() < 1e-9,
             "expected 0.3, got {}",
-            metrics.max_drawdown_pct
+            metrics.max_drawdown
         );
         assert!(metrics.ulcer_index > 0.0);
     }

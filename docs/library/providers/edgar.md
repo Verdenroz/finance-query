@@ -143,9 +143,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_edgar_submissions.walltime.median_ns < 2000000 -->
+<!-- soothfast:claim finance_query::de_edgar_submissions.perfcnt.instructions < 7000000 -->
 - Parsing a company's full submissions JSON (~1,000 recent filings) into
-  `EdgarSubmissions` takes **under 2 ms**.
+  `EdgarSubmissions` costs **under 7 million CPU
+  instructions**.
 
 ### Submission Structure
 
@@ -221,9 +222,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_edgar_facts.walltime.median_ns < 10000000 -->
+<!-- soothfast:claim finance_query::de_edgar_facts.perfcnt.instructions < 19000000 -->
 - Parsing a complete XBRL company-facts payload (several MB for a large filer)
-  into `CompanyFacts` takes **under 10 ms** — network transfer, not parsing,
+  into `CompanyFacts` costs **under 19 million CPU
+  instructions** — network transfer, not parsing,
   dominates the call.
 
 ### Available Taxonomies

@@ -41,6 +41,7 @@ impl std::fmt::Display for SentimentLabel {
 /// Only present when the `sentiment` feature is enabled.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct Sentiment {
     /// Directional classification.

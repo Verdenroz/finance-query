@@ -7,8 +7,6 @@
 
 // ── Format type parameter ──────────────────────────────────────────────────
 pub mod format;
-/// Bounded provider responses and resumable continuations.
-pub mod pagination;
 
 // ── Capability directories ──────────────────────────────────────────────────
 
@@ -47,6 +45,9 @@ pub mod forex;
 pub mod futures;
 /// Stock market index data models — Yahoo / Polygon / FMP.
 pub mod indices;
+
+#[cfg(feature = "dataframe")]
+mod dataframe;
 
 #[cfg(all(test, feature = "dataframe"))]
 pub(crate) mod dataframe_test_util {

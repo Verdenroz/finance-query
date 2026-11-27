@@ -45,9 +45,9 @@ The series ID is a FRED series identifier such as `"GDP"`, `"FEDFUNDS"`, or `"CP
     ```
     See [FRED Provider Reference](providers/fred.md) for setup details.
 
-<!-- soothfast:claim finance_query::de_fred_series.walltime.median_ns < 500000 -->
+<!-- soothfast:claim finance_query::de_fred_series.perfcnt.instructions < 1700000 -->
 - Deserializing a full FRED series response (`fred::series` →
-  `MacroSeries`) completes in **well under half a millisecond**.
+  `MacroSeries`) costs **under 1.7 million CPU instructions**.
 
 ## `EconomicSeries` Fields
 

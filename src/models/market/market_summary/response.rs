@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// A single market summary quote (index, currency, commodity, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketSummaryQuote {
@@ -97,7 +98,7 @@ impl SparkData {
     /// and `close` (f64). Missing closes stay null, and the shorter series is
     /// padded with nulls. A `None` series is empty.
     pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::dataframe::padded;
+        use crate::__dataframe::padded;
         use polars::prelude::*;
 
         let timestamps = self.timestamp.as_deref().unwrap_or_default();
@@ -132,6 +133,6 @@ impl SparkData {
                 Series::new("close".into(), Vec::<f64>::new()).into(),
             ],
         );
-        crate::dataframe::stack_rows(schema, items, Self::to_dataframe)
+        crate::__dataframe::stack_rows(schema, items, Self::to_dataframe)
     }
 }

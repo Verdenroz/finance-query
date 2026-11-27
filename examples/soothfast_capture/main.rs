@@ -118,26 +118,20 @@ mod block_docs_library_ticker_10;
 mod block_docs_library_ticker_11;
 #[cfg(feature = "indicators")]
 mod block_docs_library_ticker_12;
-#[cfg(feature = "indicators")]
 mod block_docs_library_ticker_13;
-#[cfg(feature = "indicators")]
 mod block_docs_library_ticker_14;
-#[cfg(feature = "risk")]
 mod block_docs_library_ticker_15;
 mod block_docs_library_ticker_16;
 mod block_docs_library_ticker_17;
+#[cfg(feature = "sentiment")]
 mod block_docs_library_ticker_18;
 mod block_docs_library_ticker_19;
 mod block_docs_library_ticker_20;
-#[cfg(feature = "sentiment")]
 mod block_docs_library_ticker_21;
 mod block_docs_library_ticker_22;
 mod block_docs_library_ticker_23;
 mod block_docs_library_ticker_24;
 mod block_docs_library_ticker_25;
-mod block_docs_library_ticker_26;
-mod block_docs_library_ticker_27;
-mod block_docs_library_ticker_28;
 mod block_docs_library_tickers_1;
 mod block_docs_library_tickers_2;
 mod block_docs_library_tickers_3;
@@ -346,34 +340,22 @@ fn main() -> ExitCode {
             "docs_library_ticker_12" => run(block_docs_library_ticker_12::main),
             #[cfg(not(feature = "indicators"))]
             "docs_library_ticker_12" => exit(CAPTURE_DISABLED, &id),
-            #[cfg(feature = "indicators")]
             "docs_library_ticker_13" => run(block_docs_library_ticker_13::main),
-            #[cfg(not(feature = "indicators"))]
-            "docs_library_ticker_13" => exit(CAPTURE_DISABLED, &id),
-            #[cfg(feature = "indicators")]
             "docs_library_ticker_14" => run(block_docs_library_ticker_14::main),
-            #[cfg(not(feature = "indicators"))]
-            "docs_library_ticker_14" => exit(CAPTURE_DISABLED, &id),
-            #[cfg(feature = "risk")]
             "docs_library_ticker_15" => run(block_docs_library_ticker_15::main),
-            #[cfg(not(feature = "risk"))]
-            "docs_library_ticker_15" => exit(CAPTURE_DISABLED, &id),
             "docs_library_ticker_16" => run(block_docs_library_ticker_16::main),
             "docs_library_ticker_17" => run(block_docs_library_ticker_17::main),
+            #[cfg(feature = "sentiment")]
             "docs_library_ticker_18" => run(block_docs_library_ticker_18::main),
+            #[cfg(not(feature = "sentiment"))]
+            "docs_library_ticker_18" => exit(CAPTURE_DISABLED, &id),
             "docs_library_ticker_19" => run(block_docs_library_ticker_19::main),
             "docs_library_ticker_20" => run(block_docs_library_ticker_20::main),
-            #[cfg(feature = "sentiment")]
             "docs_library_ticker_21" => run(block_docs_library_ticker_21::main),
-            #[cfg(not(feature = "sentiment"))]
-            "docs_library_ticker_21" => exit(CAPTURE_DISABLED, &id),
             "docs_library_ticker_22" => run(block_docs_library_ticker_22::main),
             "docs_library_ticker_23" => run(block_docs_library_ticker_23::main),
             "docs_library_ticker_24" => run(block_docs_library_ticker_24::main),
             "docs_library_ticker_25" => run(block_docs_library_ticker_25::main),
-            "docs_library_ticker_26" => run(block_docs_library_ticker_26::main),
-            "docs_library_ticker_27" => run(block_docs_library_ticker_27::main),
-            "docs_library_ticker_28" => run(block_docs_library_ticker_28::main),
             "docs_library_tickers_1" => run(block_docs_library_tickers_1::main),
             "docs_library_tickers_2" => run(block_docs_library_tickers_2::main),
             "docs_library_tickers_3" => run(block_docs_library_tickers_3::main),

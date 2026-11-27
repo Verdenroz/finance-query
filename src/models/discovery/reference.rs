@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// A symbol matched by a search or listing query.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SymbolMatch {
     /// Ticker symbol, uppercased.
@@ -46,6 +47,7 @@ pub struct SymbolMatch {
 /// Detailed reference data for a single symbol.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct SymbolDetails {
     /// Ticker symbol.
@@ -94,6 +96,7 @@ pub struct SymbolDetails {
 /// A tradable exchange.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ExchangeInfo {
     /// Provider-assigned exchange ID.
@@ -117,6 +120,7 @@ pub struct ExchangeInfo {
 /// A symbol matched by a screener query.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct ScreenerMatch {
     /// Ticker symbol.
@@ -253,82 +257,5 @@ impl ScreenerFilters {
     pub fn limit(mut self, limit: u32) -> Self {
         self.limit = Some(limit);
         self
-    }
-
-    /// Render as provider query-string pairs, omitting unset filters.
-    ///
-    /// Uses Financial Modeling Prep's parameter names — the only provider
-    /// currently routed for `Capability::DISCOVERY` screening.
-    #[cfg(feature = "fmp")]
-    pub(crate) fn to_query(&self) -> Vec<(&'static str, String)> {
-        let mut q: Vec<(&'static str, String)> = Vec::new();
-        let mut num = |k: &'static str, v: Option<f64>| {
-            if let Some(v) = v {
-                q.push((k, v.to_string()));
-            }
-        };
-        num("marketCapMoreThan", self.market_cap_min);
-        num("marketCapLowerThan", self.market_cap_max);
-        num("priceMoreThan", self.price_min);
-        num("priceLowerThan", self.price_max);
-        num("volumeMoreThan", self.volume_min);
-        num("betaMoreThan", self.beta_min);
-        num("betaLowerThan", self.beta_max);
-        for (k, v) in [
-            ("sector", &self.sector),
-            ("industry", &self.industry),
-            ("exchange", &self.exchange),
-            ("country", &self.country),
-        ] {
-            if let Some(v) = v {
-                q.push((k, v.clone()));
-            }
-        }
-        if let Some(v) = self.actively_trading {
-            q.push(("isActivelyTrading", v.to_string()));
-        }
-        if let Some(v) = self.is_etf {
-            q.push(("isEtf", v.to_string()));
-        }
-        if let Some(v) = self.is_fund {
-            q.push(("isFund", v.to_string()));
-        }
-        if let Some(v) = self.limit {
-            q.push(("limit", v.to_string()));
-        }
-        q
-    }
-}
-
-// Gated as a whole: every test here exercises `to_query`, which is fmp-only.
-#[cfg(all(test, feature = "fmp"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn empty_filters_render_no_query_params() {
-        assert!(ScreenerFilters::new().to_query().is_empty());
-    }
-
-    #[test]
-    fn set_filters_render_with_provider_parameter_names() {
-        let q = ScreenerFilters::new()
-            .market_cap(Some(1e9), None)
-            .price(None, Some(50.0))
-            .sector("Technology")
-            .actively_trading(true)
-            .limit(25)
-            .to_query();
-
-        assert_eq!(
-            q,
-            vec![
-                ("marketCapMoreThan", "1000000000".to_string()),
-                ("priceLowerThan", "50".to_string()),
-                ("sector", "Technology".to_string()),
-                ("isActivelyTrading", "true".to_string()),
-                ("limit", "25".to_string()),
-            ]
-        );
     }
 }

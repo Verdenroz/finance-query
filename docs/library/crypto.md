@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_crypto_coins.walltime.median_ns < 100000 -->
+<!-- soothfast:claim finance_query::de_crypto_coins.perfcnt.instructions < 480000 -->
 Cheap enough to re-fetch and re-parse on every poll.
 
 ## Single Coin

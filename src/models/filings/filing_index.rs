@@ -27,6 +27,7 @@ pub struct EdgarFilingIndex {
 /// Directory metadata for an EDGAR filing.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EdgarFilingIndexDirectory {
     /// Listing of files for the filing.
@@ -38,6 +39,7 @@ pub struct EdgarFilingIndexDirectory {
 /// Single file entry within an EDGAR filing index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct EdgarFilingIndexItem {
     /// File name (e.g., "aapl-20240928.htm").

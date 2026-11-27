@@ -90,10 +90,10 @@ fn doc_block_line_103() {
     }
 }
 
-// line 175: compile-only (no_run)
+// line 176: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_175() {
+fn doc_block_line_176() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -142,10 +142,10 @@ fn doc_block_line_175() {
     }
 }
 
-// line 264: compile-only (no_run)
+// line 266: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_264() {
+fn doc_block_line_266() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -185,10 +185,10 @@ fn doc_block_line_264() {
     }
 }
 
-// line 306: compile-only (no_run)
+// line 308: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_306() {
+fn doc_block_line_308() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -206,10 +206,10 @@ fn doc_block_line_306() {
     }
 }
 
-// line 326: compile-only (no_run)
+// line 328: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_326() {
+fn doc_block_line_328() {
     use finance_query::edgar;
 
     #[tokio::main]
@@ -229,10 +229,10 @@ fn doc_block_line_326() {
     }
 }
 
-// line 419: compile-only (no_run)
+// line 421: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_419() {
+fn doc_block_line_421() {
     use finance_query::edgar;
 
     async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>> {

@@ -63,10 +63,12 @@ pub(crate) fn check_sl_tp(
             } else {
                 candle.open.max(stop_price)
             };
-            let return_pct = position.unrealized_return_pct(fill_price);
+            let unrealized_return = position.unrealized_return(fill_price);
             return Some(
-                Signal::exit(candle.timestamp, fill_price)
-                    .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct)),
+                Signal::exit(candle.timestamp, fill_price).with_reason(format!(
+                    "Stop-loss triggered ({:.1}%)",
+                    unrealized_return * 100.0
+                )),
             );
         }
     }
@@ -90,10 +92,12 @@ pub(crate) fn check_sl_tp(
             } else {
                 candle.open.min(tp_price)
             };
-            let return_pct = position.unrealized_return_pct(fill_price);
+            let unrealized_return = position.unrealized_return(fill_price);
             return Some(
-                Signal::exit(candle.timestamp, fill_price)
-                    .with_reason(format!("Take-profit triggered ({:.1}%)", return_pct)),
+                Signal::exit(candle.timestamp, fill_price).with_reason(format!(
+                    "Take-profit triggered ({:.1}%)",
+                    unrealized_return * 100.0
+                )),
             );
         }
     }

@@ -5,8 +5,8 @@
 //!
 //! | `F`      | `F::Value<f64>`         | Access pattern            |
 //! |----------|-------------------------|---------------------------|
-//! | [`Both`] | `FormattedValue<f64>`   | `.raw` / `.fmt` / `.long_fmt` |
-//! | [`Raw`]  | `f64`                   | direct — no unwrapping (**default**) |
+//! | [`Both`] | `FormattedValue<f64>`   | `.raw` / `.fmt` / `.long_fmt` (**default**) |
+//! | [`Raw`]  | `f64`                   | direct — no unwrapping |
 //! | [`Pretty`] | `String`              | human-readable string     |
 //!
 //! # Quick start
@@ -15,7 +15,7 @@
 //! use finance_query::{Ticker, format};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // quote() returns Quote<Raw> by default — fields are plain f64/i64
+//! // quote() takes its format from the annotation; a bare `Quote` means `Quote<Both>`
 //! let quote: finance_query::Quote<format::Raw> = Ticker::new("AAPL").await?.quote().await?;
 //! let price: Option<f64> = quote.regular_market_price;
 //! # Ok(())
@@ -54,15 +54,15 @@ pub trait Format: sealed::Sealed + Clone + std::fmt::Debug + PartialEq + 'static
 
 /// Full format — fields hold `FormattedValue<T>` with `raw`, `fmt`, and `long_fmt`.
 ///
-/// Obtain via [`Ticker::quote`](crate::Ticker::quote) with the default `Both`
-/// format parameter. This is the form that can be deserialized directly from
+/// This is the default format parameter, so a bare [`Quote`](crate::Quote) is
+/// `Quote<Both>`. This is the form that can be deserialized directly from
 /// Yahoo Finance JSON.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Both;
 
-/// Raw format — fields hold `T` directly (e.g. `f64`, `i64`). **This is the default.**
+/// Raw format — fields hold `T` directly (e.g. `f64`, `i64`).
 ///
-/// Obtain via [`Ticker::quote()`](crate::Ticker::quote) (the default return type),
+/// Obtain via `Ticker::quote::<Raw>()`,
 /// [`Quote::into_raw`](crate::Quote::into_raw), or
 /// [`Quote::as_raw`](crate::Quote::as_raw). No `Option`-wrapping of the value itself;
 /// the `Option` at the field level reflects missing data from the API.
