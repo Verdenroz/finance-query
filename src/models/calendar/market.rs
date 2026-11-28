@@ -166,8 +166,9 @@ impl MarketCalendarEntry {
     /// Converts the entries to a polars DataFrame, one row per entry.
     ///
     /// Columns are `symbol` and `event_type` (strings) and `date` (`Date`,
-    /// from the leading `YYYY-MM-DD`). The detail payload is not expanded
-    /// because its fields differ per type.
+    /// from the leading `YYYY-MM-DD`), then one nullable column per detail field,
+    /// null for the event types without it. Date-like fields are `Date` columns
+    /// and an earnings release's `time` is `time_of_day`.
     pub fn vec_to_dataframe(
         entries: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
@@ -196,6 +197,79 @@ impl MarketCalendarEntry {
                         .collect::<Vec<_>>(),
                 )
                 .into(),
+                payload_column!(entries, detail, CalendarDetail, eps: f64, Earnings),
+                payload_column!(entries, detail, CalendarDetail, eps_estimated: f64, Earnings),
+                payload_column!(entries, detail, CalendarDetail, revenue: f64, Earnings),
+                payload_column!(entries, detail, CalendarDetail, revenue_estimated: f64, Earnings),
+                crate::__dataframe::str_date(
+                    "fiscal_date_ending".into(),
+                    entries.iter().map(|e| match &e.detail {
+                        CalendarDetail::Earnings {
+                            fiscal_date_ending, ..
+                        } => fiscal_date_ending.as_deref(),
+                        _ => None,
+                    }),
+                ),
+                payload_column!(entries, detail, CalendarDetail, time: String, Earnings)
+                    .with_name("time_of_day".into()),
+                payload_column!(entries, detail, CalendarDetail, company: String, Earnings|Ipo),
+                payload_column!(entries, detail, CalendarDetail, estimate_count: u32, Earnings),
+                payload_column!(entries, detail, CalendarDetail, surprise_percent: f64, Earnings),
+                payload_column!(entries, detail, CalendarDetail, previous_eps: f64, Earnings),
+                crate::__dataframe::str_date(
+                    "previous_report_date".into(),
+                    entries.iter().map(|e| match &e.detail {
+                        CalendarDetail::Earnings {
+                            previous_report_date,
+                            ..
+                        } => previous_report_date.as_deref(),
+                        _ => None,
+                    }),
+                ),
+                payload_column!(entries, detail, CalendarDetail, market_cap: f64, Earnings|Ipo),
+                payload_column!(entries, detail, CalendarDetail, exchange: String, Ipo|MarketHoliday),
+                payload_column!(entries, detail, CalendarDetail, actions: String, Ipo),
+                payload_column!(entries, detail, CalendarDetail, shares: f64, Ipo),
+                payload_column!(entries, detail, CalendarDetail, price_range: String, Ipo),
+                payload_column!(entries, detail, CalendarDetail, dividend: f64, Dividend),
+                payload_column!(entries, detail, CalendarDetail, adj_dividend: f64, Dividend),
+                crate::__dataframe::str_date(
+                    "record_date".into(),
+                    entries.iter().map(|e| match &e.detail {
+                        CalendarDetail::Dividend { record_date, .. } => record_date.as_deref(),
+                        _ => None,
+                    }),
+                ),
+                crate::__dataframe::str_date(
+                    "payment_date".into(),
+                    entries.iter().map(|e| match &e.detail {
+                        CalendarDetail::Dividend { payment_date, .. } => payment_date.as_deref(),
+                        _ => None,
+                    }),
+                ),
+                crate::__dataframe::str_date(
+                    "declaration_date".into(),
+                    entries.iter().map(|e| match &e.detail {
+                        CalendarDetail::Dividend {
+                            declaration_date, ..
+                        } => declaration_date.as_deref(),
+                        _ => None,
+                    }),
+                ),
+                payload_column!(entries, detail, CalendarDetail, numerator: f64, Split),
+                payload_column!(entries, detail, CalendarDetail, denominator: f64, Split),
+                payload_column!(entries, detail, CalendarDetail, name: String, MarketHoliday),
+                payload_column!(entries, detail, CalendarDetail, status: String, MarketHoliday),
+                payload_column!(entries, detail, CalendarDetail, open: String, MarketHoliday),
+                payload_column!(entries, detail, CalendarDetail, close: String, MarketHoliday),
+                payload_column!(entries, detail, CalendarDetail, event: String, Economic),
+                payload_column!(entries, detail, CalendarDetail, country: String, Economic),
+                payload_column!(entries, detail, CalendarDetail, actual: f64, Economic),
+                payload_column!(entries, detail, CalendarDetail, previous: f64, Economic),
+                payload_column!(entries, detail, CalendarDetail, estimate: f64, Economic),
+                payload_column!(entries, detail, CalendarDetail, change: f64, Economic),
+                payload_column!(entries, detail, CalendarDetail, change_percentage: f64, Economic),
+                payload_column!(entries, detail, CalendarDetail, impact: String, Economic),
             ],
         )
     }

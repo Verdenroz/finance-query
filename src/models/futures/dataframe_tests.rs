@@ -43,13 +43,19 @@ fn commitments_of_traders_frame() {
     let df = cot.to_dataframe().unwrap();
     let cols = columns(&df);
     assert_eq!(
-        cols[..3],
-        ["symbol:str", "report_date:date", "open_interest:i64"]
+        cols[..5],
+        [
+            "symbol:str",
+            "market_and_exchange_name:str",
+            "cftc_contract_market_code:str",
+            "report_date:date",
+            "open_interest:i64"
+        ]
     );
-    assert_eq!(df.width(), 18);
+    assert_eq!(df.width(), 20);
     assert_eq!(df.height(), 1);
 
     cot.observations.clear();
     let empty = cot.to_dataframe().unwrap();
-    assert_eq!((empty.height(), empty.width()), (0, 18));
+    assert_eq!((empty.height(), empty.width()), (0, 20));
 }
