@@ -7,7 +7,8 @@
 /// Two forms:
 ///
 /// - `init!(Model { a: x, b, ..base })` starts from `base` and sets the listed
-///   fields. A bare field name is shorthand for `field: field`.
+///   fields. A bare field name is shorthand for `field: field`. `base` is
+///   evaluated first, so a field value cannot use a value that `base` moves.
 /// - `init!(Model { a: x, b })` starts from [`Default::default`], so the model
 ///   must implement [`Default`]. The default value is built in full and then
 ///   overwritten, so a `Default` that allocates still pays for it: on hot
@@ -51,7 +52,7 @@
 #[macro_export]
 macro_rules! init {
     ($ty:path { $( $(#[$m:meta])* $f:ident $(: $v:expr)? , )* .. $base:expr $(,)? }) => {{
-        let mut __v: $ty = $base;
+        let mut __v = $base;
         let $ty { $( $(#[$m])* $f: _, )* .. } = &__v;
         $( $(#[$m])* { __v.$f = $crate::__init_val!($f $(, $v)?); } )*
         __v

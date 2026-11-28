@@ -82,6 +82,11 @@ fn generic_struct() {
     );
     let turbofish = init!(Wrapper::<u8> { inner: Some(3) });
     assert_eq!(turbofish.count, 0);
+    let inferred = init!(Wrapper {
+        count: 4,
+        ..turbofish
+    });
+    assert_eq!((inferred.inner, inferred.count), (Some(3), 4));
 }
 
 #[test]
