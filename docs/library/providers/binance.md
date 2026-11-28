@@ -63,11 +63,13 @@ CoinGecko-style coin ids are recognised for about 25 majors so a route swap betw
 
 ## Response Notes
 
+<!-- soothfast:bind finance_query::CryptoQuote -->
 `CryptoQuote`:
 
 - `volume_24h` is the **quote-asset** volume (dollars for a `*USDT` market), which is the figure comparable to other providers — not the base-asset volume Binance also returns.
 - `market_cap` and `circulating_supply` are always `None`. An exchange knows what trades on it, not how much of an asset exists; route `CRYPTO` to CoinGecko for supply-side figures.
 - `name` is the full coin name for the recognised majors, and the ticker otherwise.
+<!-- /soothfast:bind -->
 
 `Chart`:
 

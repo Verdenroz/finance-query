@@ -66,6 +66,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ETF composition has no other wired source; symbol search and the listing
 universe route through `Capability::DISCOVERY`.
 
+<!-- soothfast:bind finance_query::EtfProfile -->
+`Ticker::etf_profile()` returns an `EtfProfile`: the fund's name, asset type, net assets, expense ratio, turnover, dividend yield and inception date, plus `holdings`, `sector_weightings` and `country_weightings` lists.
+<!-- /soothfast:bind -->
+
 ```rust,ignore
 use finance_query::{Capability, Provider, Providers};
 

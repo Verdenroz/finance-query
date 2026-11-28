@@ -39,6 +39,7 @@ GDELT has no ticker vocabulary of its own, so `Ticker::news()` searches GDELT fo
 
 ## What the Fields Mean
 
+<!-- soothfast:bind finance_query::News -->
 | `News` field | Source |
 |--------------|--------|
 | `title` | Article headline, or empty when GDELT omits it |
@@ -46,6 +47,7 @@ GDELT has no ticker vocabulary of its own, so `Ticker::news()` searches GDELT fo
 | `source` | Publishing domain (e.g. `"reuters.com"`) |
 | `img` | `socialimage`, or empty when GDELT has no thumbnail for the article |
 | `time` | Relative time (`"3 hours ago"`) computed from `seendate`, GDELT's own first-indexed timestamp |
+<!-- /soothfast:bind -->
 
 GDELT sometimes omits a field entirely, rather than sending an empty string, for older or thinly indexed sources, so everything but the URL degrades to an empty string rather than dropping the article.
 

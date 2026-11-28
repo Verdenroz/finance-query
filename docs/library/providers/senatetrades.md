@@ -59,6 +59,7 @@ The browser session is not pooled: each call to `congressional_trades()` launche
 
 ## What the Fields Mean
 
+<!-- soothfast:bind finance_query::CongressionalTrade -->
 | `CongressionalTrade` field | Source |
 |-----------------------------|--------|
 | `symbol` | Ticker column of the report's transaction table |
@@ -68,6 +69,7 @@ The browser session is not pooled: each call to `congressional_trades()` launche
 | `trade_type` / `amount` / `asset_description` | Read directly from the report's transaction table |
 | `transaction_date` / `disclosure_date` | `YYYY-MM-DD` |
 | `link` | Direct URL to the source report page |
+<!-- /soothfast:bind -->
 
 ## Next Steps
 

@@ -60,6 +60,7 @@ Extracting the transaction lines from one encrypted filing PDF takes **under 13 
 
 ## What the Fields Mean
 
+<!-- soothfast:bind finance_query::CongressionalTrade -->
 | `CongressionalTrade` field | Source |
 |-----------------------------|--------|
 | `symbol` | Ticker parsed from the PDF's asset description line |
@@ -70,6 +71,7 @@ Extracting the transaction lines from one encrypted filing PDF takes **under 13 
 | `amount` | Reported range as filed (e.g. `"$1,001 - $15,000"`), unparsed |
 | `transaction_date` / `disclosure_date` | `YYYY-MM-DD` |
 | `link` | Direct URL to the source PDF |
+<!-- /soothfast:bind -->
 
 ## Rate Limits
 

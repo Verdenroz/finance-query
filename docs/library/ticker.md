@@ -3,7 +3,9 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — Ticker](https://docs.rs/finance-query/latest/finance_query/struct.Ticker.html)
 
+<!-- soothfast:bind finance_query::Ticker -->
 The `Ticker` struct is the primary interface for fetching financial data for a single symbol. It provides lazy-loaded, cached access to quotes, charts, financials, and more from your configured data providers (Yahoo Finance by default).
+<!-- /soothfast:bind -->
 
 !!! tip "Multiple Symbols"
     Need to fetch data for multiple symbols? Use the [`Tickers`](tickers.md) struct for efficient batch operations.

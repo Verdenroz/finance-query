@@ -70,11 +70,13 @@ Kraken also answers with a pair name that differs from the one requested (`XBTUS
 
 ## Response Notes
 
+<!-- soothfast:bind finance_query::CryptoQuote -->
 `CryptoQuote`:
 
 - `volume_24h`, `high_24h`, `low_24h` come from the **rolling 24-hour** half of Kraken's `[today, last 24 hours]` arrays, not today's figures.
 - `change_24h` and `change_percent_24h` are measured against **today's opening price** (00:00 UTC). Kraken publishes no price from exactly 24 hours ago, so early in the UTC day this is a shorter-window change than the field name suggests.
 - `market_cap` and `circulating_supply` are always `None` — an exchange knows flow, not supply. Route `CRYPTO` to CoinGecko for those.
+<!-- /soothfast:bind -->
 
 `Chart`:
 
