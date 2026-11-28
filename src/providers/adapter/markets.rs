@@ -275,6 +275,17 @@ pub trait EconomicProvider: ProviderCore {
         Err(self.not_supported(Operation::EconomicReleases))
     }
 
+    /// Fetch scheduled release dates from today onward, ascending.
+    ///
+    /// NOTE: stays FRED-only; no other provider integrated here exposes a
+    /// release schedule.
+    #[cfg(feature = "fred")]
+    async fn fetch_economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        Err(self.not_supported(Operation::EconomicReleaseDates))
+    }
+
     /// Fetch US Treasury securities auctions matching `query`, most recent
     /// auction date first.
     ///

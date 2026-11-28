@@ -83,6 +83,26 @@ fn adapter_for(
     })
 }
 
+/// Routes for a default-built `Ticker`/`Tickers`: sequential, with FRED serving
+/// the release dates that `calendar()` merges in. FRED is registered without
+/// `initialize`, so a missing key only skips those events.
+pub(crate) fn default_equity_routes() -> Routes {
+    let routes = Routes::new(Fetch::Sequential);
+    #[cfg(feature = "fred")]
+    let routes = routes.route(Capability::ECONOMIC, [Provider::Fred]);
+    routes
+}
+
+/// A default-routed set over an already-open Yahoo session.
+pub(crate) fn shared_yahoo_set(session: Arc<LazySession>) -> ProviderSet {
+    #[allow(unused_mut)]
+    let mut providers: Vec<Arc<dyn ProviderAdapter>> =
+        vec![Arc::new(yahoo::YahooProvider::new(Arc::clone(&session)))];
+    #[cfg(feature = "fred")]
+    providers.push(Arc::new(fred::FredProvider));
+    ProviderSet::new(providers, default_equity_routes()).with_yahoo_session(Some(session))
+}
+
 pub(crate) async fn build_providers(
     ids: &[Provider],
     extra: Vec<Arc<dyn ProviderAdapter>>,
@@ -102,6 +122,10 @@ pub(crate) async fn build_providers(
     }
     if needs_edgar_injection(ids) {
         providers.push(Arc::new(edgar::EdgarProvider));
+    }
+    #[cfg(feature = "fred")]
+    if !ids.contains(&Provider::Fred) {
+        providers.push(Arc::new(fred::FredProvider));
     }
     for routed in routes.map.values() {
         for provider in &routed.providers {

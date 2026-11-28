@@ -349,6 +349,22 @@ impl ProviderSet {
         .await
     }
 
+    #[cfg(feature = "fred")]
+    pub(crate) async fn economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        self.fetch(Capability::ECONOMIC, |p| {
+            let p = p.clone();
+            async move {
+                p.as_economic()
+                    .ok_or_else(|| p.not_supported(super::Operation::EconomicReleaseDates))?
+                    .fetch_economic_release_dates()
+                    .await
+            }
+        })
+        .await
+    }
+
     pub(crate) fn adapter(&self, id: super::Provider) -> Option<&Arc<dyn ProviderAdapter>> {
         self.providers.iter().find(|p| p.id() == id)
     }

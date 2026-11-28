@@ -57,6 +57,20 @@ pub struct MacroSeries {
     pub observations: Vec<MacroObservation>,
 }
 
+/// A single scheduled economic-data release date from the FRED
+/// `releases/dates` endpoint.
+#[cfg(feature = "fred")]
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct ReleaseDate {
+    /// FRED release identifier.
+    pub release_id: u64,
+    /// Human-readable release name (e.g. "Consumer Price Index").
+    pub release_name: String,
+    /// Release date as an ISO `YYYY-MM-DD` string.
+    pub date: String,
+}
+
 /// One day of US Treasury yield curve rates.
 ///
 /// Maturities with no published rate on a given date are `None`.

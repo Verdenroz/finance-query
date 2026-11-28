@@ -29,9 +29,8 @@ use crate::models::quote::{
 
 use super::macros::ticker_fetch;
 use crate::providers::types::recommendation_from_similar;
-use crate::providers::yahoo::YahooProvider;
 use crate::providers::{
-    Capability, Fetch, Provider, ProviderAdapter, ProviderSet, Routes, build_providers,
+    Capability, Provider, ProviderSet, build_providers, default_equity_routes, shared_yahoo_set,
 };
 #[cfg(feature = "risk")]
 use crate::risk;
@@ -177,21 +176,14 @@ impl TickerBuilder {
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
-            let yahoo = YahooProvider::new(Arc::clone(&handle.0));
-            Arc::new(
-                ProviderSet::new(
-                    vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
-                    Routes::new(Fetch::Sequential),
-                )
-                .with_yahoo_session(Some(handle.0)),
-            )
+            Arc::new(shared_yahoo_set(handle.0))
         } else {
             Arc::new(
                 build_providers(
                     &[Provider::Yahoo],
                     Vec::new(),
                     &self.config,
-                    Routes::new(Fetch::Sequential),
+                    default_equity_routes(),
                 )
                 .await?,
             )
@@ -1158,7 +1150,7 @@ impl Ticker {
         let (calendar_events, options, releases) = tokio::join!(
             self.calendar_events(),
             self.options(None),
-            crate::adapters::fred::release_dates(),
+            self.providers.economic_release_dates(),
         );
         #[cfg(not(feature = "fred"))]
         let (calendar_events, options) = tokio::join!(self.calendar_events(), self.options(None));
@@ -1193,7 +1185,7 @@ impl Ticker {
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
-            events.extend(crate::adapters::fred::calendar::build_economic_events(
+            events.extend(crate::models::calendar::release::build_economic_events(
                 releases, window,
             ));
         }

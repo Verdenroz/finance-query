@@ -16,8 +16,9 @@ use crate::models::corporate::recommendation::Recommendation;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::Quote;
-use crate::providers::yahoo::YahooProvider;
-use crate::providers::{Fetch, Provider, ProviderAdapter, ProviderSet, Routes, build_providers};
+use crate::providers::{
+    Provider, ProviderSet, build_providers, default_equity_routes, shared_yahoo_set,
+};
 use crate::ticker::ClientHandle;
 use crate::utils::{CacheEntry, CacheMode};
 use std::collections::HashMap;
@@ -280,21 +281,14 @@ impl TickersBuilder {
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
-            let yahoo = YahooProvider::new(Arc::clone(&handle.0));
-            Arc::new(
-                ProviderSet::new(
-                    vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
-                    Routes::new(Fetch::Sequential),
-                )
-                .with_yahoo_session(Some(handle.0)),
-            )
+            Arc::new(shared_yahoo_set(handle.0))
         } else {
             Arc::new(
                 build_providers(
                     &[Provider::Yahoo],
                     Vec::new(),
                     &self.config,
-                    Routes::new(Fetch::Sequential),
+                    default_equity_routes(),
                 )
                 .await?,
             )

@@ -33,7 +33,6 @@
 //! # }
 //! ```
 
-pub(crate) mod calendar;
 pub(crate) mod client;
 pub(crate) mod economic;
 pub mod models;
@@ -215,7 +214,7 @@ fn release_dates_to_calendar_entries(
 ) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
     use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 
-    calendar::drop_phantom_daily_fills(dates)
+    crate::models::calendar::release::drop_phantom_daily_fills(dates)
         .into_iter()
         .map(|rd| MarketCalendarEntry {
             symbol: None,
