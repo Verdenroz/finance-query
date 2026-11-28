@@ -5,6 +5,7 @@ use chrono::{Datelike, NaiveDate};
 use super::models::{NasdaqDividendRow, NasdaqEarningsRow, NasdaqIpoRow, NasdaqSplitRow};
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 use crate::providers::Operation;
 
@@ -224,24 +225,25 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
     MarketCalendarEntry::new(
         row.symbol,
         Some(date.to_string()),
-        CalendarDetail::earnings(
-            amount(&row.eps),
-            amount(&row.eps_forecast),
-            None,
-            None,
-            row.fiscal_quarter_ending
+        init!(CalendarDetail::Earnings {
+            eps: amount(&row.eps),
+            eps_estimated: amount(&row.eps_forecast),
+            fiscal_date_ending: row
+                .fiscal_quarter_ending
                 .as_deref()
                 .and_then(parse_month_year_to_last_day),
             time,
-            row.name.filter(|name| !name.trim().is_empty()),
-            row.no_of_ests
+            company: row.name.filter(|name| !name.trim().is_empty()),
+            estimate_count: row
+                .no_of_ests
                 .as_deref()
                 .and_then(|n| n.trim().parse().ok()),
-            amount(&row.surprise),
-            amount(&row.last_year_eps),
-            row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
-            amount(&row.market_cap),
-        ),
+            surprise_percent: amount(&row.surprise),
+            previous_eps: amount(&row.last_year_eps),
+            previous_report_date: row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
+            market_cap: amount(&row.market_cap),
+            ..CalendarDetail::earnings()
+        }),
     )
 }
 

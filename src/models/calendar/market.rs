@@ -159,36 +159,25 @@ pub enum CalendarDetail {
 }
 
 impl CalendarDetail {
-    /// An [`Earnings`](Self::Earnings) payload. The variant is
-    /// `#[non_exhaustive]`, so outside this crate it can only be built here.
-    #[allow(clippy::too_many_arguments)]
-    pub fn earnings(
-        eps: Option<f64>,
-        eps_estimated: Option<f64>,
-        revenue: Option<f64>,
-        revenue_estimated: Option<f64>,
-        fiscal_date_ending: Option<String>,
-        time: Option<String>,
-        company: Option<String>,
-        estimate_count: Option<u32>,
-        surprise_percent: Option<f64>,
-        previous_eps: Option<f64>,
-        previous_report_date: Option<String>,
-        market_cap: Option<f64>,
-    ) -> Self {
+    /// An [`Earnings`](Self::Earnings) payload with every field `None`.
+    ///
+    /// The variant is `#[non_exhaustive]`, so outside this crate set its fields
+    /// with [`init!`](crate::init) on top of this value:
+    /// `init!(CalendarDetail::Earnings { eps: Some(1.2), ..CalendarDetail::earnings() })`.
+    pub fn earnings() -> Self {
         Self::Earnings {
-            eps,
-            eps_estimated,
-            revenue,
-            revenue_estimated,
-            fiscal_date_ending,
-            time,
-            company,
-            estimate_count,
-            surprise_percent,
-            previous_eps,
-            previous_report_date,
-            market_cap,
+            eps: None,
+            eps_estimated: None,
+            revenue: None,
+            revenue_estimated: None,
+            fiscal_date_ending: None,
+            time: None,
+            company: None,
+            estimate_count: None,
+            surprise_percent: None,
+            previous_eps: None,
+            previous_report_date: None,
+            market_cap: None,
         }
     }
 }

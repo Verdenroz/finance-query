@@ -1,4 +1,4 @@
-use finance_query::{ForexQuote, init};
+use finance_query::{CalendarDetail, ForexQuote, init};
 
 #[derive(Debug, Default, PartialEq)]
 struct Wrapper<T> {
@@ -109,4 +109,26 @@ fn cfg_gated_fields() {
         ..base
     });
     assert_eq!(quote.ask, Some(2.0));
+}
+
+#[test]
+fn non_exhaustive_variant_from_blank_base() {
+    let company = Some("ACME".to_string());
+    let detail = init!(CalendarDetail::Earnings {
+        eps: Some(1.2),
+        company,
+        ..CalendarDetail::earnings()
+    });
+    let CalendarDetail::Earnings {
+        eps,
+        company,
+        revenue,
+        ..
+    } = detail
+    else {
+        panic!("not an earnings detail");
+    };
+    assert_eq!(eps, Some(1.2));
+    assert_eq!(company.as_deref(), Some("ACME"));
+    assert_eq!(revenue, None);
 }
