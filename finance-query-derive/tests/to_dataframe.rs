@@ -81,6 +81,20 @@ struct Attributes {
     inner: Inner,
 }
 
+#[derive(ToDataFrame)]
+struct Prefixed {
+    id: i64,
+    #[dataframe(flatten, prefix = "q")]
+    custom: Inner,
+    #[dataframe(flatten, prefix = "")]
+    bare: Option<Extra>,
+}
+
+#[derive(ToDataFrame)]
+struct Extra {
+    extra: String,
+}
+
 mod renamed {
     use finance_query as fq;
 
@@ -468,5 +482,24 @@ fn trait_nested_methods_default_to_the_flat_frame_without_nested_fields() {
             .unwrap()
             .width(),
         5
+    );
+}
+
+#[test]
+fn flatten_prefix_overrides_or_drops_the_field_prefix() {
+    let row = Prefixed {
+        id: 1,
+        custom: inner(),
+        bare: Some(Extra { extra: "x".into() }),
+    };
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(
+        schema(&df),
+        columns(&[
+            ("id", DataType::Int64),
+            ("q_price", DataType::Float64),
+            ("q_note", DataType::String),
+            ("extra", DataType::String),
+        ])
     );
 }

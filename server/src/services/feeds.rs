@@ -41,10 +41,14 @@ const FEED_SOURCE_SLUGS: &[&str] = &[
     "ritholtz",
 ];
 
+fn normalize_slug(slug: &str) -> String {
+    slug.trim().to_lowercase().replace(['-', '_', ' '], "")
+}
+
 /// Parse one slug into its `FeedSource`, normalizing away `-`/`_`/space so
 /// `"sec-filings"`, `"sec_filings"`, and `"secfilings"` are all accepted.
 fn parse_source_slug(slug: &str, form_type: Option<&str>) -> Option<FeedSource> {
-    match slug.to_lowercase().replace(['-', '_', ' '], "").as_str() {
+    match normalize_slug(slug).as_str() {
         "federalreserve" => Some(FeedSource::FederalReserve),
         "sec" => Some(FeedSource::SecPressReleases),
         "secfilings" => Some(FeedSource::SecFilings(
@@ -91,6 +95,12 @@ pub fn parse_sources(
     slugs: Option<&[String]>,
     form_type: Option<&str>,
 ) -> Result<Vec<FeedSource>, String> {
+    if form_type.is_some()
+        && !slugs.is_some_and(|s| s.iter().any(|s| normalize_slug(s) == "secfilings"))
+    {
+        return Err("formType only applies to the sec-filings source".to_string());
+    }
+
     let default_sources = || {
         vec![
             FeedSource::FederalReserve,
@@ -144,4 +154,90 @@ pub async fn get_feeds(
             },
         )
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn slugs(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn form_type_with_sec_filings_is_applied() {
+        let parsed = parse_sources(Some(&slugs(&["sec-filings"])), Some("8-K")).unwrap();
+        assert!(matches!(parsed.as_slice(), [FeedSource::SecFilings(f)] if f == "8-K"));
+    }
+
+    #[test]
+    fn form_type_without_sec_filings_is_rejected() {
+        let err = parse_sources(Some(&slugs(&["sec"])), Some("8-K")).unwrap_err();
+        assert!(err.contains("sec-filings"), "{err}");
+        assert!(parse_sources(None, Some("8-K")).is_err());
+    }
+
+    #[test]
+    fn omitted_form_type_leaves_sources_unchanged() {
+        assert!(parse_sources(Some(&slugs(&["sec"])), None).is_ok());
+    }
+
+    #[test]
+    fn omitted_or_blank_slugs_use_the_default_sources() {
+        let is_default = |sources: &[FeedSource]| {
+            matches!(
+                sources,
+                [
+                    FeedSource::FederalReserve,
+                    FeedSource::SecPressReleases,
+                    FeedSource::MarketWatch,
+                    FeedSource::Bloomberg
+                ]
+            )
+        };
+        assert!(is_default(&parse_sources(None, None).unwrap()));
+        assert!(is_default(&parse_sources(Some(&[]), None).unwrap()));
+        assert!(is_default(
+            &parse_sources(Some(&slugs(&["", "  "])), None).unwrap()
+        ));
+    }
+
+    #[test]
+    fn slug_spelling_is_normalized() {
+        let parsed = parse_sources(
+            Some(&slugs(&[
+                " Federal-Reserve ",
+                "sec_filings",
+                "HN",
+                "bigpicture",
+            ])),
+            None,
+        )
+        .unwrap();
+        assert!(matches!(
+            parsed.as_slice(),
+            [
+                FeedSource::FederalReserve,
+                FeedSource::SecFilings(f),
+                FeedSource::HackerNews,
+                FeedSource::RitholtzBigPicture
+            ] if f == "10-K"
+        ));
+    }
+
+    #[test]
+    fn unknown_slug_errors_listing_every_valid_slug() {
+        let err = parse_sources(Some(&slugs(&["cnbc", "nope"])), None).unwrap_err();
+        assert!(err.starts_with("Unknown feed source: 'nope'."), "{err}");
+        for slug in FEED_SOURCE_SLUGS {
+            assert!(err.contains(slug), "missing {slug} in {err}");
+        }
+    }
+
+    #[test]
+    fn every_listed_slug_parses() {
+        for slug in FEED_SOURCE_SLUGS {
+            assert!(parse_source_slug(slug, None).is_some(), "{slug}");
+        }
+    }
 }

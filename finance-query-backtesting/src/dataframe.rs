@@ -285,6 +285,7 @@ mod tests {
     use crate::walk_forward::WindowResult;
 
     fn names(df: &DataFrame) -> Vec<String> {
+        finance_query_types::__dataframe::assert_time_naming("frame", df, &[]);
         df.get_column_names()
             .iter()
             .map(|n| n.to_string())

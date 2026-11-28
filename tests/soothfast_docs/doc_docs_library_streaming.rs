@@ -199,3 +199,102 @@ fn doc_block_line_241() {
         stream.close().await;
     }
 }
+
+// line 257: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_257() {
+    use finance_query::streaming::{AlertCondition, AlertExt, AlertRule, PriceStream};
+    use futures::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let mut alerts = PriceStream::subscribe(["AAPL", "NVDA"])
+            .await?
+            .alerts([
+                AlertRule::new("AAPL", AlertCondition::CrossesAbove(200.0)),
+                AlertRule::new("NVDA", AlertCondition::PercentChangeBelow(-3.0)).repeating(),
+            ]);
+
+        while let Some(alert) = alerts.next().await {
+            println!("{} at {}", alert.update.id, alert.update.price);
+        }
+        Ok(())
+    }
+}
+
+// line 298: compile-only (no_run)
+#[cfg(feature = "polygon")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_298() {
+    use finance_query::streaming::DepthStream;
+    use futures::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let mut books = DepthStream::subscribe(["BTC-USD"]).await?;
+
+        while let Some(book) = books.next().await {
+            println!("{} spread {:?} mid {:?}", book.symbol, book.spread(), book.mid());
+        }
+        Ok(())
+    }
+}
+
+// line 333: compile-only (no_run)
+#[cfg(feature = "polygon")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_333() {
+    use finance_query::streaming::TradeStream;
+    use futures::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let mut trades = TradeStream::subscribe(["AAPL"]).await?;
+
+        while let Some(trade) = trades.next().await {
+            println!("{} {} @ {} (notional {:.2})",
+                trade.symbol, trade.size, trade.price, trade.notional());
+        }
+        Ok(())
+    }
+}
+
+// line 369: compile-only (no_run)
+#[cfg(feature = "polygon")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_369() {
+    use finance_query::streaming::OptionsChainStream;
+    use futures::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let mut stream = OptionsChainStream::subscribe(["AAPL"]).await?;
+
+        while let Some(contract) = stream.next().await {
+            println!("{} {:?}/{:?}", contract.contract_symbol, contract.bid, contract.ask);
+        }
+        Ok(())
+    }
+}
+
+// line 413: compile-only (no_run)
+#[cfg(feature = "fred")]
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_413() {
+    use finance_query::streaming::EconomicStream;
+    use futures::StreamExt;
+
+    #[tokio::main]
+    async fn main() {
+        let mut stream = EconomicStream::subscribe(["FEDFUNDS", "CPIAUCSL"]).await;
+
+        while let Some(release) = stream.next().await {
+            println!("{} = {:?} ({})", release.series_id, release.value, release.date);
+        }
+    }
+}
