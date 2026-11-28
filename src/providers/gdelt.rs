@@ -19,7 +19,7 @@ impl CorporateProvider for GdeltProvider {
         &self,
         symbol: &str,
     ) -> Result<Vec<finance_query_models::corporate::news::News>> {
-        crate::adapters::gdelt::fetch_news_response(symbol).await
+        finance_query_adapters_markets::gdelt::fetch_news_response(symbol).await
     }
 
     async fn fetch_events(
@@ -44,7 +44,7 @@ impl CryptoProvider for GdeltProvider {
         &self,
         limit: u32,
     ) -> Result<Vec<finance_query_models::corporate::news::News>> {
-        crate::adapters::gdelt::fetch_crypto_news_response(limit).await
+        finance_query_adapters_markets::gdelt::fetch_crypto_news_response(limit).await
     }
 }
 
@@ -62,7 +62,7 @@ impl ForexProvider for GdeltProvider {
         &self,
         limit: u32,
     ) -> Result<Vec<finance_query_models::corporate::news::News>> {
-        crate::adapters::gdelt::fetch_forex_news_response(limit).await
+        finance_query_adapters_markets::gdelt::fetch_forex_news_response(limit).await
     }
 }
 

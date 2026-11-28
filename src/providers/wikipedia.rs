@@ -24,14 +24,15 @@ impl IndicesProvider for WikipediaProvider {
         &self,
         index: finance_query_models::indices::MajorIndex,
     ) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
-        crate::adapters::wikipedia::fetch_index_constituents_response(index).await
+        finance_query_adapters_markets::wikipedia::fetch_index_constituents_response(index).await
     }
 
     async fn fetch_index_constituent_changes(
         &self,
         index: finance_query_models::indices::MajorIndex,
     ) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
-        crate::adapters::wikipedia::fetch_index_constituent_changes_response(index).await
+        finance_query_adapters_markets::wikipedia::fetch_index_constituent_changes_response(index)
+            .await
     }
 }
 

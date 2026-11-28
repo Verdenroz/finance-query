@@ -140,7 +140,7 @@ pub mod crypto {
     //! [`Market::crypto_trending`](crate::domains::Market::crypto_trending) and
     //! [`crypto_global`](crate::domains::Market::crypto_global) reach the same
     //! data through provider routing when other CRYPTO providers are configured.
-    pub use crate::adapters::coingecko::{
+    pub use finance_query_adapters_markets::coingecko::{
         CoinQuote, coin, coins, fetch_crypto_global_response as global,
         fetch_crypto_trending_response as trending, fetch_symbol_search_response as search,
     };
@@ -155,7 +155,7 @@ pub mod gdelt {
     //! Keyless shortcut for callers that want GDELT specifically;
     //! [`Ticker::news`](crate::Ticker::news) reaches the same data through
     //! `Capability::CORPORATE` when GDELT is routed.
-    pub use crate::adapters::gdelt::fetch_news_response as news;
+    pub use finance_query_adapters_markets::gdelt::fetch_news_response as news;
     pub use finance_query_models::corporate::news::News;
 }
 
@@ -209,22 +209,22 @@ pub mod openfigi {
     /// Returns an empty list when the identifier is well-formed but matches
     /// nothing; a malformed identifier is an error.
     pub async fn resolve_cusip(cusip: &str) -> Result<Vec<SecurityMapping>> {
-        crate::adapters::openfigi::resolve(SecurityIdKind::Cusip, cusip).await
+        finance_query_adapters_markets::openfigi::resolve(SecurityIdKind::Cusip, cusip).await
     }
 
     /// Resolve an ISIN to every instrument carrying it.
     pub async fn resolve_isin(isin: &str) -> Result<Vec<SecurityMapping>> {
-        crate::adapters::openfigi::resolve(SecurityIdKind::Isin, isin).await
+        finance_query_adapters_markets::openfigi::resolve(SecurityIdKind::Isin, isin).await
     }
 
     /// Resolve a SEDOL to every instrument carrying it.
     pub async fn resolve_sedol(sedol: &str) -> Result<Vec<SecurityMapping>> {
-        crate::adapters::openfigi::resolve(SecurityIdKind::Sedol, sedol).await
+        finance_query_adapters_markets::openfigi::resolve(SecurityIdKind::Sedol, sedol).await
     }
 
     /// Resolve an identifier of any supported [`SecurityIdKind`].
     pub async fn resolve(kind: SecurityIdKind, id: &str) -> Result<Vec<SecurityMapping>> {
-        crate::adapters::openfigi::resolve(kind, id).await
+        finance_query_adapters_markets::openfigi::resolve(kind, id).await
     }
 
     /// Resolve many identifiers of the same kind in as few requests as
@@ -236,7 +236,7 @@ pub mod openfigi {
         kind: SecurityIdKind,
         ids: &[&str],
     ) -> Result<Vec<Vec<SecurityMapping>>> {
-        crate::adapters::openfigi::resolve_many(kind, ids).await
+        finance_query_adapters_markets::openfigi::resolve_many(kind, ids).await
     }
 
     /// [`resolve_many`] narrowed to one exchange code, optionally including
@@ -247,7 +247,7 @@ pub mod openfigi {
         ids: &[&str],
         filter: &MappingFilter,
     ) -> Result<Vec<Vec<SecurityMapping>>> {
-        crate::adapters::openfigi::resolve_many_with(kind, ids, filter).await
+        finance_query_adapters_markets::openfigi::resolve_many_with(kind, ids, filter).await
     }
 }
 
@@ -281,7 +281,7 @@ pub mod defi {
 
     /// Fetch aggregate total value locked for every chain, largest first.
     pub async fn chains() -> Result<Vec<ChainTvl>> {
-        crate::adapters::defillama::chains().await
+        finance_query_adapters_markets::defillama::chains().await
     }
 
     /// Fetch circulating supply for every tracked stablecoin, largest first.
@@ -289,7 +289,7 @@ pub mod defi {
     /// Supplies are denominated in the coin's pegged asset — read `peg_type`
     /// before summing across coins pegged to different currencies.
     pub async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
-        crate::adapters::defillama::stablecoins().await
+        finance_query_adapters_markets::defillama::stablecoins().await
     }
 }
 

@@ -30,14 +30,15 @@ impl CryptoProvider for DefiLlamaProvider {
         &self,
         protocol: &str,
     ) -> Result<finance_query_models::crypto::defi::ProtocolTvl> {
-        crate::adapters::defillama::fetch_protocol_tvl_response(protocol).await
+        finance_query_adapters_markets::defillama::fetch_protocol_tvl_response(protocol).await
     }
 
     async fn fetch_protocol_tvl_history(
         &self,
         protocol: &str,
     ) -> Result<Vec<finance_query_models::crypto::defi::TvlPoint>> {
-        crate::adapters::defillama::fetch_protocol_tvl_history_response(protocol).await
+        finance_query_adapters_markets::defillama::fetch_protocol_tvl_history_response(protocol)
+            .await
     }
 }
 

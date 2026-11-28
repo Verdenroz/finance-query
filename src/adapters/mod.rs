@@ -60,42 +60,6 @@ pub(crate) mod polygon;
 #[cfg(feature = "fmp")]
 pub(crate) mod fmp;
 
-/// CoinGecko cryptocurrency data API (keyless, requires `crypto` feature).
-#[cfg(feature = "crypto")]
-pub(crate) mod coingecko;
-
-/// Frankfurter ECB reference exchange rates (keyless, requires `frankfurter` feature).
-#[cfg(feature = "frankfurter")]
-pub(crate) mod frankfurter;
-
-/// Binance public market data (keyless, requires `binance` feature).
-#[cfg(feature = "binance")]
-pub(crate) mod binance;
-
-/// Kraken public market data (keyless, requires `kraken` feature).
-#[cfg(feature = "kraken")]
-pub(crate) mod kraken;
-
-/// OpenFIGI security-identifier mapping (keyless, requires `openfigi` feature).
-#[cfg(feature = "openfigi")]
-pub(crate) mod openfigi;
-
-/// DefiLlama DeFi TVL and stablecoin data (keyless, requires `defi` feature).
-#[cfg(feature = "defi")]
-pub(crate) mod defillama;
-
-/// GDELT DOC 2.0 global news search (keyless, requires `gdelt` feature).
-#[cfg(feature = "gdelt")]
-pub(crate) mod gdelt;
-
-/// Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless, requires `nasdaq` feature).
-#[cfg(feature = "nasdaq")]
-pub(crate) mod nasdaq;
-
-/// Wikipedia S&P 500 index-constituent table scraping (keyless, requires `wikipedia` feature).
-#[cfg(feature = "wikipedia")]
-pub(crate) mod wikipedia;
-
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;
 

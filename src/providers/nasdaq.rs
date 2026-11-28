@@ -31,7 +31,7 @@ impl CalendarProvider for NasdaqProvider {
         ) {
             return Err(self.not_supported(Operation::from_calendar(kind)));
         }
-        crate::adapters::nasdaq::fetch_market_calendar_response(kind, from, to).await
+        finance_query_adapters_markets::nasdaq::fetch_market_calendar_response(kind, from, to).await
     }
 }
 

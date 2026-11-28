@@ -1670,6 +1670,7 @@ dependencies = [
  "ct2rs",
  "finance-query-adapters-core",
  "finance-query-adapters-gov",
+ "finance-query-adapters-markets",
  "finance-query-backtesting",
  "finance-query-derive",
  "finance-query-models",
@@ -1735,6 +1736,24 @@ dependencies = [
  "tokio",
  "tracing",
  "zip",
+]
+
+[[package]]
+name = "finance-query-adapters-markets"
+version = "3.4.0"
+dependencies = [
+ "chrono",
+ "finance-query-adapters-core",
+ "finance-query-models",
+ "finance-query-types",
+ "futures",
+ "mockito",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

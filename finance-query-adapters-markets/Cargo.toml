@@ -1,0 +1,44 @@
+[package]
+name = "finance-query-adapters-markets"
+version = "3.4.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Internal provider adapters (coingecko, binance, kraken, frankfurter, nasdaq, defillama, gdelt, wikipedia, openfigi) for finance-query"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-adapters-markets"
+keywords = ["finance", "market-data", "internal"]
+categories = ["api-bindings", "finance"]
+
+[dependencies]
+finance-query-types = { version = "3.4.0", path = "../finance-query-types" }
+finance-query-models = { version = "3.4.0", path = "../finance-query-models" }
+finance-query-adapters-core = { version = "=3.4.0", path = "../finance-query-adapters-core" }
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+reqwest = { version = "0.13", features = ["json", "cookies", "gzip", "brotli", "query"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "time", "macros", "net"] }
+tracing = "0.1"
+
+[features]
+default = []
+crypto = ["finance-query-types/crypto", "finance-query-models/crypto", "finance-query-adapters-core/crypto"]
+binance = ["finance-query-types/binance"]
+kraken = ["finance-query-types/kraken"]
+frankfurter = ["finance-query-types/frankfurter"]
+nasdaq = ["finance-query-types/nasdaq"]
+defi = ["finance-query-types/defi", "finance-query-models/defi", "finance-query-adapters-core/defi"]
+gdelt = ["finance-query-types/gdelt"]
+wikipedia = ["finance-query-types/wikipedia"]
+openfigi = ["finance-query-models/openfigi"]
+sentiment = ["finance-query-models/sentiment"]
+
+[dev-dependencies]
+mockito = "1"
+serial_test = "3"
+tokio = { version = "1", features = ["full", "test-util"] }
+
+[package.metadata.docs.rs]
+all-features = true
