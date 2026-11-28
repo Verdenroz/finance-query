@@ -330,12 +330,11 @@ impl Chart {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "risk"))]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(feature = "risk")]
     fn returns_match_risk_returns() {
         let candles: Vec<Candle> = [100.0, 110.0, 99.0]
             .into_iter()
