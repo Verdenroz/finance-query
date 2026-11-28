@@ -163,7 +163,12 @@ type Series = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
 
 #[fixture]
 fn series_1000() -> Series {
-    let candles = synthetic_candles(1000);
+    series_sized(1000)
+}
+
+#[fixture]
+fn series_sized(n: usize) -> Series {
+    let candles = synthetic_candles(n);
     let opens = candles.iter().map(|c| c.open).collect();
     let highs = candles.iter().map(|c| c.high).collect();
     let lows = candles.iter().map(|c| c.low).collect();
@@ -185,6 +190,71 @@ fn series_1000() -> Series {
 )]
 fn ind_sma(closes: &[f64]) {
     keep(sma(keep(closes), 20));
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::ema"
+)]
+fn ind_ema(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(ema(keep(closes), 20));
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 2,
+    covers = "finance_query::indicators::rsi"
+)]
+fn ind_rsi(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(rsi(keep(closes), 14)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::adx"
+)]
+fn ind_adx(s: &Series) {
+    let (_, highs, lows, closes, _) = s;
+    keep(adx(keep(highs), keep(lows), keep(closes), 14)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 3,
+    covers = "finance_query::indicators::bollinger_bands"
+)]
+fn ind_bollinger_bands(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(bollinger_bands(keep(closes), 20, 2.0)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::obv"
+)]
+fn ind_obv(s: &Series) {
+    let (_, _, _, closes, volumes) = s;
+    keep(obv(keep(closes), keep(volumes))).unwrap();
 }
 
 #[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::ema")]

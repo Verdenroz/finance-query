@@ -1623,6 +1623,10 @@ Caching is **on by default** and lasts as long as the `Ticker` handle lives. Fet
 
 Use `.cache(Duration)` to bound how long a response is reused, or `.no_cache()` to fetch fresh on every call.
 
+<!-- soothfast:claim finance_query::ticker_quote_polls.asyncexec.polls <= 1 -->
+- A quote request followed by a cached repeat completes in a single poll of the
+  future, so a cache hit never yields back to the executor.
+
 ```rust capture-output
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
