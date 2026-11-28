@@ -40,7 +40,6 @@ pub mod models;
 
 use crate::adapters::singleton::provider_singleton_state;
 use crate::error::{FinanceError, Result};
-use crate::init;
 use crate::rate_limiter::RateLimiter;
 use client::FredClientBuilder;
 use std::sync::Arc;
@@ -180,7 +179,7 @@ pub async fn fetch_economic_series_response(
 /// Map a FRED [`MacroSeries`] to the canonical
 /// [`EconomicSeries`](crate::models::economic::EconomicSeries).
 fn series_to_canonical(series: MacroSeries) -> crate::models::economic::EconomicSeries {
-    init!(crate::models::economic::EconomicSeries {
+    crate::init!(crate::models::economic::EconomicSeries {
         series_id: series.id,
         title: None,
         units: None,
@@ -188,7 +187,7 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
         observations: series
             .observations
             .into_iter()
-            .map(|o| init!(crate::models::economic::MacroObservation {
+            .map(|o| crate::init!(crate::models::economic::MacroObservation {
                 date: o.date,
                 value: o.value,
             }))
