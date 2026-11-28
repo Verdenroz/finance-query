@@ -2624,19 +2624,25 @@ fn de_edgar_facts() {
 
 #[soothfast::measured(
     group = "endpoint_serde",
-    covers = "finance_query::RecommendationTrend"
+    alloc = 5,
+    covers = "finance_query::quote::RecommendationTrend"
 )]
 fn de_recommendation_trend() {
     keep(serde_json::from_str::<RecommendationTrend>(keep(ANALYSIS_JSON)).unwrap());
 }
 
-#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::Exchange")]
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 491,
+    covers = "finance_query::Exchange"
+)]
 fn de_exchanges() {
     keep(serde_json::from_str::<Vec<Exchange>>(keep(EXCHANGES_JSON)).unwrap());
 }
 
 #[soothfast::measured(
     group = "endpoint_serde",
+    alloc = 213,
     covers = "finance_query::quote::InstitutionOwnership"
 )]
 fn de_institution_ownership() {
@@ -2645,23 +2651,36 @@ fn de_institution_ownership() {
 
 #[soothfast::measured(
     group = "endpoint_serde",
+    alloc = 1651,
     covers = "finance_query::BatchQuotesResponse"
 )]
 fn de_indices() {
     keep(serde_json::from_str::<BatchQuotesResponse>(keep(INDICES_JSON)).unwrap());
 }
 
-#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::IndustryData")]
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 204,
+    covers = "finance_query::IndustryData"
+)]
 fn de_industry() {
     keep(serde_json::from_str::<IndustryData>(keep(INDUSTRY_JSON)).unwrap());
 }
 
-#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::LookupResults")]
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 103,
+    covers = "finance_query::LookupResults"
+)]
 fn de_lookup() {
     keep(serde_json::from_str::<LookupResults>(keep(LOOKUP_JSON)).unwrap());
 }
 
-#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::Recommendation")]
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 8,
+    covers = "finance_query::Recommendation"
+)]
 fn de_recommendations() {
     keep(serde_json::from_str::<Recommendation>(keep(RECOMMENDATIONS_JSON)).unwrap());
 }
