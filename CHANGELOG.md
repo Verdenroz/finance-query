@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ Performance
 
+- Pass time lists as slices, not per-row Vecs (#770)
 - Fewer allocations in backtest frames (#766)
 - Fewer allocations for typed time and batch quote frames (#761)
 - Gate nested frames, House PDF and alerts (#728)
@@ -81,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Capture a real secFilings fixture (#771)
 - Read typed timestamps with the micros helper (#767)
 - Cover remaining batch to_dataframe impls (#757)
 - Pin translation bench backend state (#754)
