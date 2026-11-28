@@ -192,7 +192,7 @@ pub async fn fetch_market_calendar_response(
     Ok(match kind {
         // FMP serves neither; dispatch falls through to a provider that does
         // (Polygon for holidays, Alpha Vantage for live status).
-        _ => {
+        CalendarKind::MarketHoliday | CalendarKind::MarketStatus => {
             let operation = Operation::from_calendar(kind);
             return Err(crate::error::FinanceError::NotSupported {
                 provider: crate::Provider::Fmp,
@@ -296,6 +296,14 @@ pub async fn fetch_market_calendar_response(
                 )
             })
             .collect(),
+        _ => {
+            let operation = Operation::from_calendar(kind);
+            return Err(crate::error::FinanceError::NotSupported {
+                provider: crate::Provider::Fmp,
+                operation,
+                candidates: operation.capability().candidate_providers(),
+            });
+        }
     })
 }
 

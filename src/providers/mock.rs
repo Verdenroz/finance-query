@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Result;
 use finance_query_models::chart::events::ChartEvents;
-use finance_query_models::chart::{Chart, ChartMeta};
+use finance_query_models::chart::{Chart, ChartFieldsInit, ChartMeta};
 use finance_query_models::corporate::news::News;
 use finance_query_models::options::Options;
 use finance_query_models::options::response::OptionChainContainer;
@@ -109,14 +109,14 @@ impl ChartProvider for CountingProvider {
         if self.slow_chart == Some(symbol) {
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
         }
-        Ok(Chart {
+        Ok(Chart::from(ChartFieldsInit {
             symbol: symbol.to_string(),
             meta: ChartMeta::default(),
             candles: Vec::new(),
             interval: None,
             range: None,
             provider_id: Some(Provider::Yahoo),
-        })
+        }))
     }
 }
 

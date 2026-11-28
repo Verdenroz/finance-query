@@ -3,7 +3,7 @@ use crate::error::{FinanceError, Result};
 use crate::format::{Both, Raw};
 use crate::providers::Capability;
 use finance_query_models::format::Format;
-use finance_query_models::quote::{Quote, QuoteSummaryResponse};
+use finance_query_models::quote::{Quote, QuoteSummaryResponse, QuoteSummaryResponseFieldsInit};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -358,10 +358,10 @@ mod tests {
     #[test]
     fn batch_quotes_as_converts_by_move_and_keeps_errors() {
         let mut response = BatchQuotesResponse::with_capacity(2);
-        let summary = QuoteSummaryResponse {
+        let summary = QuoteSummaryResponse::from(QuoteSummaryResponseFieldsInit {
             symbol: "AAPL".into(),
             ..Default::default()
-        };
+        });
         response
             .quotes
             .insert("AAPL".into(), Quote::from_response(&summary, None, None));

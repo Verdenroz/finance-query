@@ -273,25 +273,28 @@ mod tests {
 
     #[test]
     fn primary_document_ignores_exhibits_and_xbrl_viewer_pages() {
-        use finance_query_models::filings::EdgarFilingIndex;
         use finance_query_models::filings::filing_index::{
-            EdgarFilingIndexDirectory, EdgarFilingIndexItem,
+            EdgarFilingIndexDirectory, EdgarFilingIndexDirectoryFieldsInit, EdgarFilingIndexItem,
+            EdgarFilingIndexItemFieldsInit,
         };
+        use finance_query_models::filings::{EdgarFilingIndex, EdgarFilingIndexFieldsInit};
 
-        let item = |name: &str, size: u64| EdgarFilingIndexItem {
-            name: name.to_string(),
-            item_type: "text.gif".to_string(),
-            size: Some(size),
+        let item = |name: &str, size: u64| {
+            EdgarFilingIndexItem::from(EdgarFilingIndexItemFieldsInit {
+                name: name.to_string(),
+                item_type: "text.gif".to_string(),
+                size: Some(size),
+            })
         };
-        let index = EdgarFilingIndex {
-            directory: EdgarFilingIndexDirectory {
+        let index = EdgarFilingIndex::from(EdgarFilingIndexFieldsInit {
+            directory: EdgarFilingIndexDirectory::from(EdgarFilingIndexDirectoryFieldsInit {
                 item: vec![
                     item("a8-kex991q3202606272026.htm", 173_484),
                     item("aapl-20260730.htm", 38_350),
                     item("R1.htm", 55_284),
                 ],
-            },
-        };
+            }),
+        });
         assert_eq!(
             primary_document_name(&index),
             Some("aapl-20260730.htm".to_string())

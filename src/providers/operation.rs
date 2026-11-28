@@ -199,6 +199,7 @@ impl Operation {
             CalendarKind::Economic => Self::EconomicCalendar,
             CalendarKind::MarketHoliday => Self::HolidayCalendar,
             CalendarKind::MarketStatus => Self::MarketStatus,
+            // CalendarKind is non_exhaustive across crates; a new kind needs its own arm here.
             _ => Self::EarningsCalendar,
         }
     }

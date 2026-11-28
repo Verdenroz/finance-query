@@ -619,13 +619,15 @@ mod tests {
         assert_eq!(d.free_float, Some(15_000_000_000.0));
         assert_eq!(d.free_float_percent, Some(98.5));
 
-        let share_float = finance_query_models::fundamentals::ShareFloat {
-            symbol: d.ticker,
-            float_shares: d.free_float,
-            outstanding_shares: None,
-            float_percent: d.free_float_percent,
-            date: d.effective_date,
-        };
+        let share_float = finance_query_models::fundamentals::ShareFloat::from(
+            finance_query_models::fundamentals::ShareFloatFieldsInit {
+                symbol: d.ticker,
+                float_shares: d.free_float,
+                outstanding_shares: None,
+                float_percent: d.free_float_percent,
+                date: d.effective_date,
+            },
+        );
         assert_eq!(share_float.float_percent, Some(98.5));
         assert!(share_float.outstanding_shares.is_none());
     }

@@ -19,11 +19,11 @@ use super::{
 use crate::{
     StatementType,
     error::{FinanceError, Result},
-    models::{
-        calendar::market::CalendarKind, discovery::reference::ScreenerFilters, indices::MajorIndex,
-        market::performance::MoverDirection,
-    },
     rate_limiter::RateLimiter,
+};
+use finance_query_models::{
+    calendar::market::CalendarKind, discovery::reference::ScreenerFilters, indices::MajorIndex,
+    market::performance::MoverDirection,
 };
 
 type Check = std::result::Result<(), String>;

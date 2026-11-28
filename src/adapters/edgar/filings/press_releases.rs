@@ -5,7 +5,9 @@ use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symb
 use crate::error::Result;
 use finance_query_models::corporate::press_release::{PressRelease, PressReleaseFieldsInit};
 use finance_query_models::filings::EdgarFiling;
-use finance_query_models::filings::filing_index::EdgarFilingIndexItem;
+use finance_query_models::filings::filing_index::{
+    EdgarFilingIndexItem, EdgarFilingIndexItemFieldsInit,
+};
 
 /// Fetch the symbol's most recent 8-K exhibits tagged `EX-99*`, newest first.
 pub async fn fetch_press_releases_response(symbol: &str, limit: u32) -> Result<Vec<PressRelease>> {
@@ -157,10 +159,12 @@ mod tests {
 
     #[test]
     fn select_exhibit_picks_the_largest_when_multiple_ex99_entries_match() {
-        let item = |name: &str, size: u64| EdgarFilingIndexItem {
-            name: name.to_string(),
-            item_type: "text.gif".to_string(),
-            size: Some(size),
+        let item = |name: &str, size: u64| {
+            EdgarFilingIndexItem::from(EdgarFilingIndexItemFieldsInit {
+                name: name.to_string(),
+                item_type: "text.gif".to_string(),
+                size: Some(size),
+            })
         };
         let items = vec![
             item("aapl-ex99_2.htm", 1_200),

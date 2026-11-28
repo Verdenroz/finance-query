@@ -252,10 +252,12 @@ mod tests {
 
     #[test]
     fn quotes_as_both_frame_matches_batch_quotes_frame() {
-        let summary = finance_query_models::quote::QuoteSummaryResponse {
-            symbol: "AAPL".into(),
-            ..Default::default()
-        };
+        let summary = finance_query_models::quote::QuoteSummaryResponse::from(
+            finance_query_models::quote::QuoteSummaryResponseFieldsInit {
+                symbol: "AAPL".into(),
+                ..Default::default()
+            },
+        );
         let mut batch = BatchQuotesResponse::with_capacity(1);
         batch
             .quotes

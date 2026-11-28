@@ -339,14 +339,16 @@ impl ChartProvider for FlakyChartProvider {
                 retry_after: Some(0),
             });
         }
-        Ok(finance_query_models::chart::Chart {
-            symbol: symbol.to_string(),
-            meta: Default::default(),
-            candles: Vec::new(),
-            interval: None,
-            range: None,
-            provider_id: Some(self.id),
-        })
+        Ok(finance_query_models::chart::Chart::from(
+            finance_query_models::chart::ChartFieldsInit {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles: Vec::new(),
+                interval: None,
+                range: None,
+                provider_id: Some(self.id),
+            },
+        ))
     }
 }
 
@@ -687,14 +689,16 @@ impl ChartProvider for CountingChartProvider {
     ) -> Result<finance_query_models::chart::Chart> {
         self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         tokio::task::yield_now().await;
-        Ok(finance_query_models::chart::Chart {
-            symbol: symbol.to_string(),
-            meta: Default::default(),
-            candles: Vec::new(),
-            interval: None,
-            range: None,
-            provider_id: Some(self.id),
-        })
+        Ok(finance_query_models::chart::Chart::from(
+            finance_query_models::chart::ChartFieldsInit {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles: Vec::new(),
+                interval: None,
+                range: None,
+                provider_id: Some(self.id),
+            },
+        ))
     }
 }
 
@@ -802,14 +806,16 @@ impl ChartProvider for KeyObservingProvider {
         let observed = crate::adapters::keys::scoped_key("fmp").map(|k| k.api_key);
         *self.seen.lock().expect("not poisoned") = Some(observed);
         tokio::task::yield_now().await;
-        Ok(finance_query_models::chart::Chart {
-            symbol: symbol.to_string(),
-            meta: Default::default(),
-            candles: Vec::new(),
-            interval: None,
-            range: None,
-            provider_id: Some(self.id),
-        })
+        Ok(finance_query_models::chart::Chart::from(
+            finance_query_models::chart::ChartFieldsInit {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles: Vec::new(),
+                interval: None,
+                range: None,
+                provider_id: Some(self.id),
+            },
+        ))
     }
 }
 

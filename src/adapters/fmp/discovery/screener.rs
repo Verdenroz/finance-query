@@ -253,20 +253,24 @@ mod tests {
         let matched: Vec<_> = hits
             .into_iter()
             .filter_map(|r| {
-                Some(finance_query_models::discovery::reference::SymbolMatch {
-                    symbol: r.symbol?,
-                    id: None,
-                    name: r.name,
-                    exchange: r.exchange.or(r.exchange_full_name),
-                    asset_type: None,
-                    currency: r.currency,
-                    active: None,
-                    market_cap_rank: None,
-                    thumbnail: None,
-                    image: None,
-                    ipo_date: None,
-                    delisted_date: None,
-                })
+                Some(
+                    finance_query_models::discovery::reference::SymbolMatch::from(
+                        finance_query_models::discovery::reference::SymbolMatchFieldsInit {
+                            symbol: r.symbol?,
+                            id: None,
+                            name: r.name,
+                            exchange: r.exchange.or(r.exchange_full_name),
+                            asset_type: None,
+                            currency: r.currency,
+                            active: None,
+                            market_cap_rank: None,
+                            thumbnail: None,
+                            image: None,
+                            ipo_date: None,
+                            delisted_date: None,
+                        },
+                    ),
+                )
             })
             .collect();
 
