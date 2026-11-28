@@ -79,27 +79,22 @@ const REGISTRY: &[(Provider, Factory)] = &[
     ),
 ];
 
-/// Constructs the adapter for one built-in provider id without initialising it.
-fn adapter_for(
-    id: Provider,
-    config: &ClientConfig,
-    yahoo_session: &mut Option<Arc<LazySession>>,
-) -> Result<Arc<dyn ProviderAdapter>> {
-    if let Some((_, factory)) = REGISTRY.iter().find(|(provider, _)| *provider == id) {
-        return factory(config, yahoo_session);
-    }
-    Err(FinanceError::InvalidParameter {
-        param: "provider".to_string(),
-        reason: match id {
-            Provider::Custom(id) => {
-                format!(
-                    "no adapter registered for custom provider `{}`",
-                    id.as_str()
-                )
-            }
-            other => format!("no adapter registered for provider `{other}`"),
-        },
-    })
+fn factory_for(id: Provider) -> Result<Factory> {
+    REGISTRY
+        .iter()
+        .find_map(|(provider, factory)| (*provider == id).then_some(*factory))
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "provider".to_string(),
+            reason: match id {
+                Provider::Custom(id) => {
+                    format!(
+                        "no adapter registered for custom provider `{}`",
+                        id.as_str()
+                    )
+                }
+                other => format!("no adapter registered for provider `{other}`"),
+            },
+        })
 }
 
 pub(crate) async fn build_providers(
@@ -111,7 +106,7 @@ pub(crate) async fn build_providers(
     let mut providers: Vec<Arc<dyn ProviderAdapter>> = Vec::new();
     let mut yahoo_session: Option<Arc<LazySession>> = None;
     for &id in ids {
-        let adapter = adapter_for(id, config, &mut yahoo_session)?;
+        let adapter = factory_for(id)?(config, &mut yahoo_session)?;
         adapter.initialize().await?;
         providers.push(adapter);
     }
@@ -144,8 +139,8 @@ mod tests {
         for provider in Provider::all() {
             let mut session = None;
             assert!(
-                adapter_for(provider, &config, &mut session).is_ok(),
-                "{provider} has no arm in adapter_for"
+                factory_for(provider).is_ok_and(|build| build(&config, &mut session).is_ok()),
+                "{provider} is not in REGISTRY"
             );
         }
     }
