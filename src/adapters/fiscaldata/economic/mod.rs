@@ -4,6 +4,7 @@
 //! FiscalData returns into the canonical [`EconomicSeries`].
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::economic::{EconomicSeries, MacroObservation};
 
 use super::client::{DATE_FIELD, SeriesQuery};
@@ -175,17 +176,17 @@ pub(super) fn to_canonical(
         .filter_map(|mut row| {
             let date = row.remove(DATE_FIELD)?;
             let value = row.get(&value_field).and_then(|v| parse_value(v));
-            Some(MacroObservation { date, value })
+            Some(init!(MacroObservation { date, value }))
         })
         .collect();
 
-    EconomicSeries {
+    init!(EconomicSeries {
         series_id: series_id.to_string(),
         title,
         units,
         frequency,
         observations,
-    }
+    })
 }
 
 /// Fetch a FiscalData series as the canonical

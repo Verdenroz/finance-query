@@ -5,6 +5,7 @@
 //! by conversion methods on public-facing types in [`crate::models`].
 
 use crate::Provider;
+use crate::init;
 
 // ── Recommendations ───────────────────────────────────────────────
 
@@ -20,9 +21,9 @@ pub(crate) fn recommendation_from_similar(
         items
     };
 
-    crate::models::corporate::recommendation::Recommendation {
+    init!(crate::models::corporate::recommendation::Recommendation {
         symbol: symbol.into(),
         recommendations,
         provider_id,
-    }
+    })
 }

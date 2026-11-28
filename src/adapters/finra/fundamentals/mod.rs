@@ -1,5 +1,6 @@
 //! `FUNDAMENTALS` capability for FINRA — daily short-sale volume.
 
+use crate::init;
 use std::collections::BTreeMap;
 
 use crate::error::Result;
@@ -29,11 +30,13 @@ pub(super) fn consolidate(rows: Vec<RegShoDailyRow>) -> Vec<ShortVolume> {
     for row in rows {
         let entry = by_date
             .entry(row.trade_report_date.clone())
-            .or_insert_with(|| ShortVolume {
-                date: Some(row.trade_report_date.clone()),
-                short_volume: None,
-                short_exempt_volume: None,
-                total_volume: None,
+            .or_insert_with(|| {
+                init!(ShortVolume {
+                    date: Some(row.trade_report_date.clone()),
+                    short_volume: None,
+                    short_exempt_volume: None,
+                    total_volume: None,
+                })
             });
         add(&mut entry.short_volume, row.short_par_quantity);
         add(
@@ -45,11 +48,16 @@ pub(super) fn consolidate(rows: Vec<RegShoDailyRow>) -> Vec<ShortVolume> {
 
     by_date
         .into_values()
-        .map(|v| ShortVolume {
-            short_volume: v.short_volume.map(f64::round),
-            short_exempt_volume: v.short_exempt_volume.map(f64::round),
-            total_volume: v.total_volume.map(f64::round),
-            ..v
+        .map(|v| {
+            let short_volume = v.short_volume.map(f64::round);
+            let short_exempt_volume = v.short_exempt_volume.map(f64::round);
+            let total_volume = v.total_volume.map(f64::round);
+            init!(ShortVolume {
+                short_volume,
+                short_exempt_volume,
+                total_volume,
+                ..v
+            })
         })
         .collect()
 }

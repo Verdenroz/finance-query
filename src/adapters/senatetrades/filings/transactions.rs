@@ -6,6 +6,7 @@
 //! produce no rows here rather than being specially detected, the same
 //! boundary the House adapter draws around non-text-layer PDFs.
 
+use crate::init;
 use chromiumoxide::element::Element;
 
 use crate::models::filings::CongressionalTrade;
@@ -95,7 +96,7 @@ fn normalize_whitespace(raw: &str) -> Option<String> {
 }
 
 fn to_congressional_trade(entry: &SenateFilingEntry, tx: ParsedTransaction) -> CongressionalTrade {
-    CongressionalTrade {
+    init!(CongressionalTrade {
         symbol: tx.symbol,
         first_name: Some(entry.first_name.clone()),
         last_name: Some(entry.last_name.clone()),
@@ -107,7 +108,7 @@ fn to_congressional_trade(entry: &SenateFilingEntry, tx: ParsedTransaction) -> C
         transaction_date: tx.transaction_date,
         disclosure_date: parse_us_date(&entry.filed_date).map(|d| d.to_string()),
         link: Some(format!("{SENATE_BASE}{}", entry.path)),
-    }
+    })
 }
 
 #[cfg(test)]

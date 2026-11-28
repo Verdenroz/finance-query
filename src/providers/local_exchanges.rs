@@ -5,6 +5,7 @@
 
 use super::{DiscoveryProvider, Operation, ProviderAdapter, ProviderCore};
 use crate::error::Result;
+use crate::init;
 use crate::models::discovery::reference::{ExchangeInfo, SymbolMatch};
 
 pub(crate) struct LocalExchangeProvider;
@@ -156,7 +157,7 @@ const EXCHANGES: &[(&str, &str, &str, &str, &str)] = &[
 fn to_exchange_info(
     &(name, mic, operating_mic, locale, url): &(&str, &str, &str, &str, &str),
 ) -> ExchangeInfo {
-    ExchangeInfo {
+    init!(ExchangeInfo {
         id: None,
         name: Some(name.to_string()),
         mic: Some(mic.to_string()),
@@ -165,7 +166,7 @@ fn to_exchange_info(
         locale: Some(locale.to_string()),
         exchange_type: Some(if mic == "OTCM" { "TRF" } else { "exchange" }.to_string()),
         url: Some(url.to_string()),
-    }
+    })
 }
 
 #[cfg(test)]

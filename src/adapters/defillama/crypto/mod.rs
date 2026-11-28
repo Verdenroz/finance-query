@@ -1,5 +1,6 @@
 //! `CRYPTO` capability for DefiLlama — protocol TVL.
 
+use crate::init;
 use std::collections::HashMap;
 
 use crate::error::{FinanceError, Result};
@@ -66,9 +67,11 @@ pub(super) fn chain_allocations(
             true => chains.iter().any(|chain| chain == *key),
             false => !is_breakdown_key(key),
         })
-        .map(|(chain, tvl)| ChainAllocation {
-            chain: chain.clone(),
-            tvl: *tvl,
+        .map(|(chain, tvl)| {
+            init!(ChainAllocation {
+                chain: chain.clone(),
+                tvl: *tvl,
+            })
         })
         .collect();
     // Largest first, and by name on ties so the order is deterministic.
@@ -202,9 +205,11 @@ pub(super) fn to_history(response: &ProtocolResponse) -> Vec<TvlPoint> {
     let mut points: Vec<TvlPoint> = response
         .tvl
         .iter()
-        .map(|snapshot| TvlPoint {
-            timestamp: snapshot.date,
-            tvl: snapshot.total_liquidity_usd,
+        .map(|snapshot| {
+            init!(TvlPoint {
+                timestamp: snapshot.date,
+                tvl: snapshot.total_liquidity_usd,
+            })
         })
         .collect();
     // DefiLlama returns these oldest first, but callers depend on that, so sort
@@ -224,7 +229,7 @@ pub(super) fn to_protocol_tvl(slug: &str, list: &LiteResponse) -> Result<Protoco
         true => tvl_by_chain.iter().map(|a| a.chain.clone()).collect(),
         false => resolved.chains.to_vec(),
     };
-    Ok(ProtocolTvl {
+    Ok(init!(ProtocolTvl {
         slug: slug.to_string(),
         name: resolved.name.map(str::to_string),
         symbol: resolved.symbol.map(str::to_string),
@@ -235,7 +240,7 @@ pub(super) fn to_protocol_tvl(slug: &str, list: &LiteResponse) -> Result<Protoco
         change_1d_percent: resolved.change(Period::Day),
         change_7d_percent: resolved.change(Period::Week),
         market_cap: resolved.mcap,
-    })
+    }))
 }
 
 /// Fetch a protocol's current TVL summary.

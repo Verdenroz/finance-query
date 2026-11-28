@@ -16,6 +16,7 @@
 pub(crate) mod client;
 pub(crate) mod models;
 
+use crate::init;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -61,7 +62,7 @@ fn client() -> Result<OpenFigiClient> {
 
 /// Map an OpenFIGI record onto the public [`SecurityMapping`].
 fn to_mapping(record: FigiRecord) -> SecurityMapping {
-    SecurityMapping {
+    init!(SecurityMapping {
         figi: record.figi,
         ticker: record.ticker,
         name: record.name,
@@ -70,7 +71,7 @@ fn to_mapping(record: FigiRecord) -> SecurityMapping {
         share_class_figi: record.share_class_figi,
         security_type: record.security_type,
         market_sector: record.market_sector,
-    }
+    })
 }
 
 /// Resolve one identifier to every instrument carrying it.

@@ -12,6 +12,7 @@
 //! tracks additions/removals.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::indices::{IndexConstituent, IndexConstituentChange, MajorIndex};
 use crate::scrapers::html;
 
@@ -61,7 +62,7 @@ fn parse_sp500_constituents(page: &str) -> Result<Vec<IndexConstituent>> {
             let cells = html::find_all(row.inner, "td");
             (cells.len() >= 8).then(|| {
                 let text: Vec<String> = cells.iter().map(|c| c.text().trim().to_string()).collect();
-                IndexConstituent {
+                init!(IndexConstituent {
                     symbol: text[0].clone(),
                     name: non_empty(&text[1]),
                     sector: non_empty(&text[2]),
@@ -70,7 +71,7 @@ fn parse_sp500_constituents(page: &str) -> Result<Vec<IndexConstituent>> {
                     date_first_added: non_empty(&text[5]),
                     cik: non_empty(&text[6]),
                     founded: non_empty(&text[7]),
-                }
+                })
             })
         })
         .collect();
@@ -100,14 +101,14 @@ fn parse_sp500_changes(page: &str) -> Result<Vec<IndexConstituentChange>> {
             let cells = html::find_all(row.inner, "td");
             (cells.len() >= 6).then(|| {
                 let text: Vec<String> = cells.iter().map(|c| c.text().trim().to_string()).collect();
-                IndexConstituentChange {
+                init!(IndexConstituentChange {
                     date: parse_wiki_date(&text[0]),
                     symbol: non_empty(&text[1]),
                     added_security: non_empty(&text[2]),
                     removed_ticker: non_empty(&text[3]),
                     removed_security: non_empty(&text[4]),
                     reason: non_empty(&text[5]),
-                }
+                })
             })
         })
         .collect();

@@ -29,6 +29,7 @@ mod client;
 pub(crate) mod discovery; // DISCOVERY
 mod models;
 
+use crate::init;
 use client::CoinGeckoClient;
 use std::sync::OnceLock;
 
@@ -82,7 +83,7 @@ pub async fn fetch_crypto_quote_response(
     vs_currency: &str,
 ) -> Result<crate::models::crypto::CryptoQuote> {
     let quote = coin(id, vs_currency).await?;
-    Ok(crate::models::crypto::CryptoQuote {
+    Ok(init!(crate::models::crypto::CryptoQuote {
         id: quote.id,
         symbol: quote.symbol,
         name: quote.name,
@@ -94,19 +95,19 @@ pub async fn fetch_crypto_quote_response(
         high_24h: None,
         low_24h: None,
         circulating_supply: quote.circulating_supply,
-    })
+    }))
 }
 
 /// Convert one trending-coin wrapper into the canonical [`TrendingCoin`](crate::models::crypto::TrendingCoin).
 fn to_trending_coin(w: models::TrendingCoinWrapperDTO) -> crate::models::crypto::TrendingCoin {
-    crate::models::crypto::TrendingCoin {
+    init!(crate::models::crypto::TrendingCoin {
         id: Some(w.item.id),
         symbol: Some(w.item.symbol.to_ascii_uppercase()),
         name: Some(w.item.name),
         market_cap_rank: w.item.market_cap_rank,
         price_btc: w.item.price_btc,
         score: w.item.score,
-    }
+    })
 }
 
 /// Fetch coins trending in the last 24h as canonical [`TrendingCoin`](crate::models::crypto::TrendingCoin)s.
@@ -117,7 +118,7 @@ pub async fn fetch_crypto_trending_response() -> Result<Vec<crate::models::crypt
 
 /// Convert the raw `/global` payload into canonical [`GlobalCryptoStats`](crate::models::crypto::GlobalCryptoStats).
 fn to_global_crypto_stats(data: models::GlobalDataDTO) -> crate::models::crypto::GlobalCryptoStats {
-    crate::models::crypto::GlobalCryptoStats {
+    init!(crate::models::crypto::GlobalCryptoStats {
         active_cryptocurrencies: data.active_cryptocurrencies,
         markets: data.markets,
         total_market_cap_usd: data.total_market_cap.get("usd").copied(),
@@ -125,7 +126,7 @@ fn to_global_crypto_stats(data: models::GlobalDataDTO) -> crate::models::crypto:
         btc_dominance: data.market_cap_percentage.get("btc").copied(),
         eth_dominance: data.market_cap_percentage.get("eth").copied(),
         market_cap_change_percentage_24h_usd: data.market_cap_change_percentage_24h_usd,
-    }
+    })
 }
 
 /// Fetch aggregate global cryptocurrency market statistics.
