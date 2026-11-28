@@ -86,6 +86,8 @@ use syn::{
 /// - `#[dataframe(rename = "name")]` sets the column name.
 /// - `#[dataframe(flatten)]` on a field whose type also derives `ToDataFrame`
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
+/// - `#[dataframe(flatten, prefix = "name")]` uses `{name}_{column}` instead, and
+///   `prefix = ""` emits the bare `{column}`. `prefix` requires `flatten`.
 /// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
 /// - `#[dataframe(nested)]` on a `Vec<T>`, `Option<Vec<T>>`, `T` or `Option<T>`
 ///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
@@ -247,6 +249,22 @@ use syn::{
 /// struct Parent {
 ///     #[dataframe(nested, flatten)]
 ///     rows: Vec<Row>,
+/// }
+/// ```
+///
+/// `prefix` without `flatten` fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(prefix = "row")]
+///     row: Row,
 /// }
 /// ```
 ///

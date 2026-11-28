@@ -45,6 +45,7 @@ struct FieldAttrs {
     nested: bool,
     nonzero: bool,
     rename: Option<String>,
+    prefix: Option<String>,
     time: Option<TimeAttr>,
 }
 
@@ -157,11 +158,16 @@ fn field_columns(
     let values = quote! { rows.iter().map(|row| row.and_then(|item| #access)) };
 
     if attrs.flatten {
+        let nested_prefix = match attrs.prefix.as_deref() {
+            Some("") => quote! { ::std::string::String::from(prefix) },
+            Some(custom) => quote! { ::std::format!("{}{}_", prefix, #custom) },
+            None => quote! { ::std::format!("{}{}_", prefix, #column) },
+        };
         return Ok(Some(quote! {{
             let nested: ::std::vec::Vec<::core::option::Option<&#inner>> = #values.collect();
             <#inner as #krate::__dataframe::Columns>::columns(
                 &nested,
-                &::std::format!("{}{}_", prefix, #column),
+                &#nested_prefix,
             )
         }}));
     }
@@ -395,6 +401,8 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.nonzero = true;
             } else if meta.path.is_ident("rename") {
                 attrs.rename = Some(meta.value()?.parse::<LitStr>()?.value());
+            } else if meta.path.is_ident("prefix") {
+                attrs.prefix = Some(meta.value()?.parse::<LitStr>()?.value());
             } else if meta.path.is_ident("datetime") || meta.path.is_ident("date") {
                 if attrs.time.is_some() {
                     return Err(meta.error("only one of `datetime` and `date` is allowed"));
@@ -423,7 +431,7 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.time = Some(TimeAttr { kind, unit });
             } else {
                 return Err(meta.error(
-                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date` or `rename = \"...\"`",
+                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date`, `rename = \"...\"` or `prefix = \"...\"`",
                 ));
             }
             Ok(())
@@ -433,6 +441,12 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
         return Err(syn::Error::new_spanned(
             field,
             "`datetime` and `date` cannot be combined with `skip`, `flatten` or `nested`",
+        ));
+    }
+    if attrs.prefix.is_some() && !attrs.flatten {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`prefix` requires `flatten`",
         ));
     }
     if attrs.nonzero && attrs.time.as_ref().is_none_or(|time| time.unit.is_none()) {
