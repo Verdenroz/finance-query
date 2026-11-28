@@ -4,6 +4,7 @@
 //! analyst panel, as opposed to the raw per-analyst grade actions served by
 //! [`estimates`](super::estimates).
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::{build_client, first_or_missing};
@@ -121,20 +122,20 @@ pub(crate) fn to_price_target_consensus(
     dto: PriceTargetConsensusDTO,
     symbol: &str,
 ) -> PriceTargetConsensus {
-    PriceTargetConsensus {
+    init!(PriceTargetConsensus {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         target_high: dto.target_high,
         target_low: dto.target_low,
         target_consensus: dto.target_consensus,
         target_median: dto.target_median,
-    }
+    })
 }
 
 pub(crate) fn to_price_target_summary(
     dto: PriceTargetSummaryDTO,
     symbol: &str,
 ) -> PriceTargetSummary {
-    PriceTargetSummary {
+    init!(PriceTargetSummary {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         last_month_count: dto.last_month,
         last_month_avg: dto.last_month_avg_price_target,
@@ -144,11 +145,11 @@ pub(crate) fn to_price_target_summary(
         last_year_avg: dto.last_year_avg_price_target,
         all_time_count: dto.all_time,
         all_time_avg: dto.all_time_avg_price_target,
-    }
+    })
 }
 
 pub(crate) fn to_rating_consensus(dto: RatingConsensusDTO, symbol: &str) -> RatingConsensus {
-    RatingConsensus {
+    init!(RatingConsensus {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         strong_buy: dto.strong_buy,
         buy: dto.buy,
@@ -156,7 +157,7 @@ pub(crate) fn to_rating_consensus(dto: RatingConsensusDTO, symbol: &str) -> Rati
         sell: dto.sell,
         strong_sell: dto.strong_sell,
         consensus: dto.consensus,
-    }
+    })
 }
 
 /// Fetch the canonical consensus price target for a symbol.

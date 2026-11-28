@@ -1,6 +1,7 @@
 //! FMP price and historical data endpoints.
 
 use crate::error::Result;
+use crate::init;
 
 use crate::adapters::fmp::models::{
     FmpQuoteDTO, HistoricalPriceDTO, HistoricalPriceResponseDTO, IntradayPriceDTO,
@@ -30,7 +31,7 @@ fn quote_to_canonical(
 ) -> crate::models::quote::QuoteSummaryResponse {
     use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
     let q = quotes.first();
-    let price = Price {
+    let price = init!(Price {
         regular_market_price: q.and_then(|q| q.price).map(|v| FormattedValue {
             raw: Some(v),
             fmt: None,
@@ -69,12 +70,12 @@ fn quote_to_canonical(
             }),
         exchange: q.and_then(|q| q.exchange.clone()),
         ..Default::default()
-    };
-    QuoteSummaryResponse {
+    });
+    init!(QuoteSummaryResponse {
         symbol: symbol.to_string(),
         price: Some(price),
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch a canonical quote summary for a symbol.

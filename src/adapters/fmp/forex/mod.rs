@@ -1,6 +1,7 @@
 //! Forex endpoints for Financial Modeling Prep.
 
 use crate::error::Result;
+use crate::init;
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::FmpQuoteDTO;
@@ -14,7 +15,7 @@ fn forex_quote_to_canonical(
 ) -> crate::models::forex::ForexQuote {
     let q = quotes.first();
     let price = q.and_then(|q| q.price);
-    crate::models::forex::ForexQuote {
+    init!(crate::models::forex::ForexQuote {
         symbol: pair.to_string(),
         base_currency: Some(from.to_uppercase()),
         quote_currency: Some(to.to_uppercase()),
@@ -24,7 +25,7 @@ fn forex_quote_to_canonical(
         change: None,
         change_percent: None,
         timestamp: q.and_then(|q| q.timestamp),
-    }
+    })
 }
 
 /// Fetch a canonical forex quote.

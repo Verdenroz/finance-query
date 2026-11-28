@@ -1,6 +1,7 @@
 //! Commodities endpoints for Financial Modeling Prep.
 
 use crate::error::Result;
+use crate::init;
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::FmpQuoteDTO;
@@ -11,7 +12,7 @@ fn commodity_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> crate::models::commodities::CommodityQuote {
     let q = quotes.first();
-    crate::models::commodities::CommodityQuote {
+    init!(crate::models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: q.and_then(|q| q.name.clone()),
         unit: None,
@@ -19,7 +20,7 @@ fn commodity_quote_to_canonical(
         change: q.and_then(|q| q.change),
         change_percent: q.and_then(|q| q.changes_percentage),
         timestamp: None,
-    }
+    })
 }
 
 /// Fetch a canonical commodity quote.

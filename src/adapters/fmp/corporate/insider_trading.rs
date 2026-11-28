@@ -1,5 +1,6 @@
 //! Insider trading, congressional trading, and fail-to-deliver endpoints.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -135,7 +136,7 @@ pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTrad
 /// FMP has no form type, accession number, or ownership flags, so those
 /// default; `transaction_code` is `transaction_type`'s letter prefix.
 fn to_insider_trade(dto: InsiderTradeDTO) -> InsiderTrade {
-    InsiderTrade {
+    init!(InsiderTrade {
         symbol: dto.symbol,
         insider_name: dto.reporting_name,
         insider_cik: dto.reporting_cik,
@@ -151,7 +152,7 @@ fn to_insider_trade(dto: InsiderTradeDTO) -> InsiderTrade {
         price_per_share: dto.price,
         shares_owned_after: dto.securities_owned,
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch canonical insider transactions for a symbol.
@@ -164,7 +165,7 @@ pub async fn fetch_insider_trades_response(symbol: &str, limit: u32) -> Result<V
 }
 
 fn to_congressional_trade(dto: CongressionalTradeDTO) -> CongressionalTrade {
-    CongressionalTrade {
+    init!(CongressionalTrade {
         symbol: dto.symbol,
         first_name: dto.first_name,
         last_name: dto.last_name,
@@ -176,7 +177,7 @@ fn to_congressional_trade(dto: CongressionalTradeDTO) -> CongressionalTrade {
         transaction_date: dto.transaction_date,
         disclosure_date: dto.disclosure_date,
         link: dto.link,
-    }
+    })
 }
 
 /// Fetch canonical congressional trades for a symbol.
@@ -189,14 +190,14 @@ pub async fn fetch_congressional_trades_response(symbol: &str) -> Result<Vec<Con
 }
 
 fn to_fail_to_deliver(dto: FailToDeliverDTO) -> FailToDeliver {
-    FailToDeliver {
+    init!(FailToDeliver {
         symbol: dto.symbol,
         date: dto.date,
         quantity: dto.quantity,
         price: dto.price,
         name: dto.name,
         description: dto.description,
-    }
+    })
 }
 
 /// Fetch canonical fails-to-deliver data for a symbol.

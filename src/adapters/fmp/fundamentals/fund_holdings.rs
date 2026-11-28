@@ -1,5 +1,6 @@
 //! Fund holdings endpoints: ETF sector weightings, country weightings, and holdings.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::percent::strip_percent;
@@ -90,29 +91,29 @@ pub async fn etf_holdings(symbol: &str) -> Result<Vec<EtfHoldingDTO>> {
 /// Convert a holding entry into a canonical [`EtfHolding`]. FMP reports
 /// weight as a percentage (e.g. `12.5`); the canonical field is a fraction.
 fn to_etf_holding(dto: EtfHoldingDTO) -> EtfHolding {
-    EtfHolding {
+    init!(EtfHolding {
         symbol: dto.asset.clone(),
         description: dto.asset,
         weight: dto.weight_percentage.map(|w| w / 100.0),
-    }
+    })
 }
 
 fn to_sector_weighting(dto: EtfSectorWeightingDTO) -> EtfSectorWeighting {
-    EtfSectorWeighting {
+    init!(EtfSectorWeighting {
         sector: dto.sector,
         weight: dto.weight_percentage.map(|w| w / 100.0),
-    }
+    })
 }
 
 fn to_country_weighting(dto: EtfCountryWeightingDTO) -> EtfCountryWeighting {
-    EtfCountryWeighting {
+    init!(EtfCountryWeighting {
         country: dto.country,
         weight: dto
             .weight_percentage
             .as_deref()
             .and_then(strip_percent)
             .map(|w| w / 100.0),
-    }
+    })
 }
 
 /// Fetch the canonical ETF profile for a symbol. FMP has no dedicated
@@ -127,14 +128,14 @@ pub async fn fetch_etf_profile_response(symbol: &str) -> Result<EtfProfile> {
         etf_country_weightings(symbol)
     )?;
     let name = quotes.into_iter().next().and_then(|q| q.name);
-    Ok(EtfProfile {
+    Ok(init!(EtfProfile {
         symbol: Some(symbol.to_string()),
         name,
         holdings: holdings.into_iter().map(to_etf_holding).collect(),
         sector_weightings: sectors.into_iter().map(to_sector_weighting).collect(),
         country_weightings: countries.into_iter().map(to_country_weighting).collect(),
         ..Default::default()
-    })
+    }))
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@
 //! through `Capability::FUNDAMENTALS`, alongside the short-interest data it is
 //! normally read with.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
@@ -46,13 +47,13 @@ fn date_only(raw: Option<String>) -> Option<String> {
 }
 
 pub(crate) fn to_share_float(dto: SharesFloatDTO, symbol: &str) -> ShareFloat {
-    ShareFloat {
+    init!(ShareFloat {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         float_shares: dto.float_shares,
         outstanding_shares: dto.outstanding_shares,
         float_percent: dto.free_float,
         date: date_only(dto.date),
-    }
+    })
 }
 
 /// Fetch the canonical share float for a symbol.

@@ -1,5 +1,6 @@
 //! Index endpoints for Financial Modeling Prep.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -13,14 +14,14 @@ fn index_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> crate::models::indices::IndexQuote {
     let q = quotes.first();
-    crate::models::indices::IndexQuote {
+    init!(crate::models::indices::IndexQuote {
         symbol: symbol.to_string(),
         name: q.and_then(|q| q.name.clone()),
         price: q.and_then(|q| q.price),
         change: q.and_then(|q| q.change),
         change_percent: q.and_then(|q| q.changes_percentage),
         timestamp: None,
-    }
+    })
 }
 
 /// Fetch a canonical index quote.
@@ -105,7 +106,7 @@ pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
 
 /// Convert a constituent DTO into the canonical model.
 fn constituent_to_canonical(c: IndexConstituentDTO) -> crate::models::indices::IndexConstituent {
-    crate::models::indices::IndexConstituent {
+    init!(crate::models::indices::IndexConstituent {
         symbol: c.symbol.unwrap_or_default(),
         name: c.name,
         sector: c.sector,
@@ -114,7 +115,7 @@ fn constituent_to_canonical(c: IndexConstituentDTO) -> crate::models::indices::I
         date_first_added: c.date_first_added,
         cik: c.cik,
         founded: c.founded,
-    }
+    })
 }
 
 /// Fetch canonical constituents for a major index.
@@ -150,13 +151,15 @@ pub async fn fetch_index_constituent_changes_response(
     };
     Ok(dtos
         .into_iter()
-        .map(|c| crate::models::indices::IndexConstituentChange {
-            date: c.date,
-            symbol: c.symbol,
-            added_security: c.added_security,
-            removed_ticker: c.removed_ticker,
-            removed_security: c.removed_security,
-            reason: c.reason,
+        .map(|c| {
+            init!(crate::models::indices::IndexConstituentChange {
+                date: c.date,
+                symbol: c.symbol,
+                added_security: c.added_security,
+                removed_ticker: c.removed_ticker,
+                removed_security: c.removed_security,
+                reason: c.reason,
+            })
         })
         .collect())
 }

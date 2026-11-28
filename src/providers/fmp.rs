@@ -6,6 +6,7 @@ use super::{
     MarketProvider, Operation, Provider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::error::Result;
+use crate::init;
 
 pub(crate) struct FmpProvider;
 
@@ -51,14 +52,14 @@ impl ChartProvider for FmpProvider {
         let (from, to) = range_dates(range);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(crate::models::chart::Chart {
+        Ok(init!(crate::models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles,
             interval: Some(interval),
             range: Some(range),
             provider_id: Some(Provider::Fmp),
-        })
+        }))
     }
 
     async fn fetch_chart_range(
@@ -72,14 +73,14 @@ impl ChartProvider for FmpProvider {
         let to = timestamp_to_date_str(end);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(crate::models::chart::Chart {
+        Ok(init!(crate::models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles,
             interval: Some(interval),
             range: None,
             provider_id: Some(Provider::Fmp),
-        })
+        }))
     }
 }
 

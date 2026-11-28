@@ -1,5 +1,6 @@
 //! Market performance endpoints: sector/industry PE, sector performance, gainers/losers/actives.
 
+use crate::init;
 use futures::future::try_join_all;
 use serde::{Deserialize, Serialize};
 
@@ -199,11 +200,13 @@ pub async fn fetch_sector_performance_response()
 fn to_sector_performance(
     dto: SectorPerformanceDTO,
 ) -> Option<crate::models::market::performance::SectorPerformance> {
-    Some(crate::models::market::performance::SectorPerformance {
-        sector: dto.sector?,
-        exchange: dto.exchange,
-        change_percent: dto.average_change,
-    })
+    Some(init!(
+        crate::models::market::performance::SectorPerformance {
+            sector: dto.sector?,
+            exchange: dto.exchange,
+            change_percent: dto.average_change,
+        }
+    ))
 }
 
 /// Fetch market movers for `direction` and map to provider-neutral entries.
@@ -219,14 +222,14 @@ pub async fn fetch_market_movers_response(
     Ok(movers
         .into_iter()
         .filter_map(|m| {
-            Some(MoverQuote {
+            Some(init!(MoverQuote {
                 symbol: m.symbol?,
                 name: m.name,
                 price: m.price,
                 change: m.change,
                 change_percent: m.changes_percentage,
                 exchange: m.exchange,
-            })
+            }))
         })
         .collect())
 }
@@ -239,12 +242,12 @@ pub async fn fetch_sector_pe_response() -> Result<Vec<crate::models::market::per
         .await?
         .into_iter()
         .filter_map(|s| {
-            Some(SectorPe {
+            Some(init!(SectorPe {
                 sector: s.sector?,
                 exchange: s.exchange,
                 pe: s.pe,
                 date: s.date,
-            })
+            }))
         })
         .collect())
 }
@@ -257,12 +260,12 @@ pub async fn fetch_industry_pe_response()
         .await?
         .into_iter()
         .filter_map(|s| {
-            Some(IndustryPe {
+            Some(init!(IndustryPe {
                 industry: s.industry?,
                 exchange: s.exchange,
                 pe: s.pe,
                 date: s.date,
-            })
+            }))
         })
         .collect())
 }
@@ -292,9 +295,11 @@ fn group_history_by_date(
         .into_iter()
         .rev()
         .take(limit)
-        .map(|(date, sectors)| SectorPerformanceHistory {
-            date: Some(date),
-            sectors,
+        .map(|(date, sectors)| {
+            init!(SectorPerformanceHistory {
+                date: Some(date),
+                sectors,
+            })
         })
         .collect()
 }
