@@ -1,6 +1,6 @@
 //! Financial event calendar models.
 //!
-//! A [`CalendarEvent`] is a single upcoming financial event — earnings,
+//! A [`CalendarEvent`](crate::calendar::CalendarEvent) is a single upcoming financial event — earnings,
 //! ex-dividend/dividend-payment, options expiration, or (with the `fred`
 //! feature) a market-wide economic-data release.
 //!

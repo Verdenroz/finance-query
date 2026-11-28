@@ -2,7 +2,7 @@
 //!
 //! Populated by the DefiLlama adapter. These describe *protocols and chains*
 //! rather than tradable instruments, so they live beside — not inside —
-//! [`CryptoQuote`](super::CryptoQuote).
+//! [`CryptoQuote`](crate::crypto::CryptoQuote).
 
 use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};

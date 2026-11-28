@@ -2,7 +2,7 @@
 //!
 //! Returned by the [`Capability::DISCOVERY`](finance_query_types::Capability::DISCOVERY)
 //! route via `Providers::discovery`. These are
-//! provider-neutral shapes — unlike [`SearchResults`](super::search::SearchResults),
+//! provider-neutral shapes — unlike [`SearchResults`](crate::discovery::search::SearchResults),
 //! which mirrors Yahoo's response for the `finance::search` shortcut.
 
 use finance_query_derive::FieldsInit;

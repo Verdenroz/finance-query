@@ -1,7 +1,7 @@
 //! Earnings-call transcript, provider-neutral shape.
 //!
 //! Served through the [`Capability::CORPORATE`](finance_query_types::Capability::CORPORATE)
-//! route. Distinct from the richer, Yahoo-only [`Transcript`](super::transcript::Transcript)
+//! route. Distinct from the richer, Yahoo-only [`Transcript`](crate::corporate::transcript::Transcript)
 //! returned by `finance::earnings_transcript` —
 //! that one stays a Yahoo-pinned shortcut with its own model; this one is the
 //! flat, cross-provider shape every routed provider maps into.

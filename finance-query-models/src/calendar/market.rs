@@ -2,7 +2,7 @@
 //!
 //! Returned by the [`Capability::CALENDAR`](finance_query_types::Capability::CALENDAR) route
 //! via `Providers::calendar`. These span the whole
-//! market over a date range, unlike [`CalendarEvent`](super::CalendarEvent),
+//! market over a date range, unlike [`CalendarEvent`](crate::calendar::CalendarEvent),
 //! which builds a per-symbol timeline from already-fetched Yahoo quote data.
 
 use finance_query_derive::FieldsInit;
