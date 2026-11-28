@@ -196,6 +196,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Capabilities supported by each provider. Providers that don't support a given capability are automatically skipped during dispatch.
 
+<!-- soothfast:claim finance_query::capability_filter.alloc.allocs <= 0 -->
+<!-- soothfast:claim finance_query::capability_filter.perfcnt.instructions < 100 -->
+- Filtering a registry of capability bitflags for one capability makes **zero
+  allocations** and costs **under 100 CPU instructions**. It measures only that
+  filter over a local list, not a dispatch.
+
 <!-- soothfast:claim finance_query::dispatch_fallthrough.alloc.allocs <= 10 -->
 <!-- soothfast:claim finance_query::dispatch_fallthrough.perfcnt.instructions < 50000 -->
 <!-- soothfast:claim finance_query::dispatch_fallthrough_polls.asyncexec.polls <= 1 -->

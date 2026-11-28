@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 <!-- soothfast:claim finance_query::stream_decode_pricing.perfcnt.instructions < 7000 -->
 <!-- soothfast:claim finance_query::stream_decode_pricing.alloc.allocs <= 5 -->
 - Decoding a base64 protobuf frame captured from Yahoo's WebSocket into a
-  `PriceUpdate` takes **under 7 thousand CPU instructions** and **5 allocations**.
+  `PriceUpdate` takes **under 7 thousand CPU instructions** and **at most 5 allocations**.
 
 ## Subscribing
 
