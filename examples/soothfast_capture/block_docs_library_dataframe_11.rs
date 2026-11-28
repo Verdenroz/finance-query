@@ -9,18 +9,17 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
 
-    // Average close per calendar month, in chart order
-    let with_month = df
+    // Average close per calendar month
+    let monthly = df
         .lazy()
         .with_columns([
             col("timestamp").dt().year().alias("year"),
             col("timestamp").dt().month().alias("month"),
         ])
+        .group_by([col("year"), col("month")])
+        .agg([col("close").mean().alias("close_mean")])
+        .sort(["year", "month"], SortMultipleOptions::default())
         .collect()?;
-    let monthly = with_month
-        .group_by_stable(["year", "month"])?
-        .select(["close"])
-        .mean()?;
 
     println!("{}", monthly);
     Ok(())

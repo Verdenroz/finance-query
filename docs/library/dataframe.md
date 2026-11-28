@@ -11,7 +11,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "3", features = ["dataframe"] }
-    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
+    polars = { version = "0.55", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
     ```
 
     The `finance_query::polars` re-export exists so type names in public
@@ -317,7 +317,7 @@ Series: 'adx_14' [f64]
 
 ## Working with Polars
 
-The examples below use the Polars 0.53 lazy API (`finance-query`'s `dataframe`
+The examples below use the Polars 0.55 lazy API (`finance-query`'s `dataframe`
 feature enables `polars/lazy`). For the full expression reference, see the
 [Polars Documentation](https://docs.pola.rs/).
 
@@ -548,8 +548,8 @@ shape: (10, 59)
 
 ### Aggregations
 
-Polars 0.53 runs a lazy `group_by` on plain column keys through its streaming
-engine, which fails inside a tokio runtime, so this example groups eagerly:
+A lazy `collect()` on a `current_thread` tokio runtime (such as `#[tokio::test]`)
+must run inside `tokio::task::spawn_blocking`.
 
 ```rust capture-output feature=dataframe
 use finance_query::{Interval, Ticker, TimeRange};
@@ -561,18 +561,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
 
-    // Average close per calendar month, in chart order
-    let with_month = df
+    // Average close per calendar month
+    let monthly = df
         .lazy()
         .with_columns([
             col("timestamp").dt().year().alias("year"),
             col("timestamp").dt().month().alias("month"),
         ])
+        .group_by([col("year"), col("month")])
+        .agg([col("close").mean().alias("close_mean")])
+        .sort(["year", "month"], SortMultipleOptions::default())
         .collect()?;
-    let monthly = with_month
-        .group_by_stable(["year", "month"])?
-        .select(["close"])
-        .mean()?;
 
     println!("{}", monthly);
     Ok(())
