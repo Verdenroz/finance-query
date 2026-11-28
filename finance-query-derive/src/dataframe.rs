@@ -152,10 +152,8 @@ fn time_naming_test(
     let mut exempt = Vec::new();
     for field in fields {
         let attrs = field_attrs(field)?;
-        if attrs.time_exempt.is_some() {
-            if let Some(ident) = &field.ident {
-                exempt.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
-            }
+        if let (Some(_), Some(ident)) = (&attrs.time_exempt, &field.ident) {
+            exempt.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
         }
     }
     let module = Ident::new(&format!("__dataframe_time_naming_{name}"), name.span());
