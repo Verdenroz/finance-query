@@ -48,7 +48,10 @@ pub struct QuoteTypeData {
 
     /// First trade date as Unix epoch UTC
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", rename = "first_trade_date"))]
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(datetime = "s", rename = "first_trade_date")
+    )]
     pub first_trade_date_epoch_utc: Option<i64>,
 
     /// GMT offset in milliseconds

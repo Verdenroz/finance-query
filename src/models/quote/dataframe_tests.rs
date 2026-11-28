@@ -79,11 +79,7 @@ fn quote_type_first_trade_keeps_the_open_time() {
     let row: QuoteTypeData =
         serde_json::from_value(json!({ "firstTradeDateEpochUtc": 345479400 })).unwrap();
     let df = row.to_dataframe().unwrap();
-    let time = df
-        .column("first_trade_date")
-        .unwrap()
-        .datetime()
-        .unwrap();
+    let time = df.column("first_trade_date").unwrap().datetime().unwrap();
     assert_eq!(time.phys.get(0), Some(345_479_400_000_000));
 }
 

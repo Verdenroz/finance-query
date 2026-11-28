@@ -26,7 +26,10 @@ pub struct UpgradeDowngradeHistory {
 pub struct GradeChange {
     /// Timestamp of the grade change (epoch)
     #[serde(default)]
-    #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", rename = "grade_date"))]
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(datetime = "s", rename = "grade_date")
+    )]
     pub epoch_grade_date: Option<i64>,
 
     /// Name of the firm making the change

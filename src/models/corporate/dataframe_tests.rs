@@ -188,10 +188,7 @@ fn recommendation_and_grade_wrapper_frames() {
     let grades: UpgradeDowngradeHistory =
         parse(json!({"history": [{"firm": "GS", "currentPriceTarget": 200.0}]}));
     let cols = columns(&grades.to_dataframe().unwrap());
-    assert_eq!(
-        cols[..2],
-        ["grade_date:datetime[μs, UTC]", "firm:str"]
-    );
+    assert_eq!(cols[..2], ["grade_date:datetime[μs, UTC]", "firm:str"]);
     assert!(cols.contains(&"current_price_target:f64".to_string()));
 }
 
