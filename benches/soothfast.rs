@@ -68,6 +68,7 @@ use finance_query::indicators::{
     mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, pivot_points, roc, rsi, sma,
     stochastic, stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma, zigzag,
 };
+use finance_query::quote::{InstitutionOwnership, RecommendationTrend};
 use finance_query::risk::{
     beta, calmar_ratio, historical_cvar, historical_var, information_ratio, kelly_criterion,
     max_drawdown, omega_ratio, parametric_cvar, parametric_var, sharpe_ratio, sortino_ratio,
@@ -80,11 +81,12 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    BatchQuotesResponse, BatchSparksResponse, Candle, Chart, CompanyFacts, Currency, Dividend,
-    EdgarSubmissions, FearAndGreed, Fetch, FinancialStatement, Interval, MarketHours,
-    MarketSummaryQuote, News, Operation, Options, Provider, ProviderAdapter, ProviderSet, Quote,
-    QuoteSummaryResponse, Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker,
-    Tickers, TimeRange, Transcript, TrendingQuote, analyze_sentiment,
+    BatchQuotesResponse, BatchSparksResponse, Candle, Chart, CompanyFacts, CryptoCoin, CryptoQuote,
+    Currency, Dividend, EdgarSubmissions, Exchange, FearAndGreed, Fetch, FinancialStatement,
+    ForexPair, ForexQuote, IndustryData, Interval, LookupResults, MarketHours, MarketSummaryQuote,
+    News, Operation, Options, Provider, ProviderAdapter, ProviderSet, Providers, Quote,
+    QuoteSummaryResponse, Recommendation, Region, Routes, ScreenerResults, SearchResults,
+    SectorData, Ticker, Tickers, TimeRange, Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::collections::BTreeMap;
@@ -164,7 +166,12 @@ type Series = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
 
 #[fixture]
 fn series_1000() -> Series {
-    let candles = synthetic_candles(1000);
+    series_sized(1000)
+}
+
+#[fixture]
+fn series_sized(n: usize) -> Series {
+    let candles = synthetic_candles(n);
     let opens = candles.iter().map(|c| c.open).collect();
     let highs = candles.iter().map(|c| c.high).collect();
     let lows = candles.iter().map(|c| c.low).collect();
@@ -186,6 +193,71 @@ fn series_1000() -> Series {
 )]
 fn ind_sma(closes: &[f64]) {
     keep(sma(keep(closes), 20));
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::ema"
+)]
+fn ind_ema(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(ema(keep(closes), 20));
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 2,
+    covers = "finance_query::indicators::rsi"
+)]
+fn ind_rsi(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(rsi(keep(closes), 14)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::adx"
+)]
+fn ind_adx(s: &Series) {
+    let (_, highs, lows, closes, _) = s;
+    keep(adx(keep(highs), keep(lows), keep(closes), 14)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 3,
+    covers = "finance_query::indicators::bollinger_bands"
+)]
+fn ind_bollinger_bands(s: &Series) {
+    let (_, _, _, closes, _) = s;
+    keep(bollinger_bands(keep(closes), 20, 2.0)).unwrap();
+}
+
+#[bench(
+    group = "indicators",
+    setup_sized = series_sized,
+    sizes(1000, 10000, 100000),
+    complexity = "n",
+    alloc = 1,
+    covers = "finance_query::indicators::obv"
+)]
+fn ind_obv(s: &Series) {
+    let (_, _, _, closes, volumes) = s;
+    keep(obv(keep(closes), keep(volumes))).unwrap();
 }
 
 #[bench(group = "indicators", setup = series_1000, covers = "finance_query::indicators::ema")]
@@ -1950,6 +2022,23 @@ fn stream_decode_pricing(frame: &str) {
     keep(__bench::decode_pricing(keep(frame)).unwrap());
 }
 
+#[fixture]
+fn captured_pricing_frame() -> String {
+    include_str!("../tests/fixtures/yahoo/pricing_frame_btc_usd.b64")
+        .trim()
+        .to_owned()
+}
+
+#[bench(
+    group = "streaming",
+    setup = captured_pricing_frame,
+    alloc = 5,
+    covers = "finance_query::streaming::PriceUpdate"
+)]
+fn stream_decode_pricing_captured(frame: &str) {
+    keep(__bench::decode_pricing(keep(frame)).unwrap());
+}
+
 // ── House PTR PDF parser (internal entrypoint) ───────────────────────────────
 
 static HOUSE_PTR_PDF: &[u8] = include_bytes!("../tests/fixtures/housetrades/ptr_20023717.pdf");
@@ -2194,9 +2283,8 @@ fn canned_ticker() -> (tokio::runtime::Runtime, Ticker) {
     (rt, ticker)
 }
 
-/// First `.quote()` dispatches through the canned provider; the second hits
-/// the module cache — both run every measured iteration, so this gates the
-/// combined dispatch-then-cache-hit cost of the real `Ticker` cache logic.
+/// Cache hit after warm-up: setup builds the `Ticker`, and the warm-up run
+/// fills its module cache, so measured runs only exercise the hit path.
 #[bench(
     group = "ticker",
     setup = canned_ticker,
@@ -2291,6 +2379,22 @@ fn dispatch_fallthrough(input: &(tokio::runtime::Runtime, Ticker)) {
     );
 }
 
+#[fixture]
+fn fallthrough_ticker_only() -> Ticker {
+    fallthrough_ticker().1
+}
+
+/// Awaited on the counting executor, so the claim gates polls to completion
+/// when the first provider falls through.
+#[bench(
+    group = "dispatch",
+    setup = fallthrough_ticker_only,
+    covers = "finance_query::Ticker::quote"
+)]
+async fn dispatch_fallthrough_polls(ticker: &Ticker) {
+    keep(ticker.quote::<finance_query::format::Raw>().await.unwrap());
+}
+
 #[bench(
     group = "dispatch",
     setup = parallel_ticker,
@@ -2303,6 +2407,119 @@ fn dispatch_parallel(input: &(tokio::runtime::Runtime, Ticker)) {
         rt.block_on(ticker.quote::<finance_query::format::Raw>())
             .unwrap(),
     );
+}
+
+struct CannedMarkets;
+
+impl finance_query::ProviderCore for CannedMarkets {
+    fn id(&self) -> Provider {
+        Provider::custom("canned_markets")
+    }
+}
+
+#[async_trait::async_trait]
+impl finance_query::CryptoProvider for CannedMarkets {
+    async fn fetch_crypto_quote(
+        &self,
+        id: &str,
+        _vs_currency: &str,
+    ) -> finance_query::Result<CryptoQuote> {
+        Ok(serde_json::from_value(serde_json::json!({
+            "id": id,
+            "symbol": "BTC",
+            "name": "Bitcoin",
+            "price": 59889.99,
+            "market_cap": 1_204_978_320_000.0,
+            "volume_24h": 29_613_387_776.0,
+            "change_24h": -1440.70,
+            "change_percent_24h": -2.35,
+            "high_24h": 60164.19,
+            "low_24h": 59838.65,
+            "circulating_supply": 20_117_924.0,
+        }))
+        .unwrap())
+    }
+}
+
+#[async_trait::async_trait]
+impl finance_query::ForexProvider for CannedMarkets {
+    async fn fetch_forex_quote(&self, from: &str, to: &str) -> finance_query::Result<ForexQuote> {
+        Ok(serde_json::from_value(serde_json::json!({
+            "symbol": format!("{from}{to}"),
+            "base_currency": from,
+            "quote_currency": to,
+            "bid": 1.0842,
+            "ask": 1.0844,
+            "price": 1.0843,
+            "change": 0.0012,
+            "change_percent": 0.11,
+            "timestamp": 1_700_000_000_i64,
+        }))
+        .unwrap())
+    }
+}
+
+impl ProviderAdapter for CannedMarkets {
+    fn as_crypto(&self) -> Option<&dyn finance_query::CryptoProvider> {
+        Some(self)
+    }
+
+    fn as_forex(&self) -> Option<&dyn finance_query::ForexProvider> {
+        Some(self)
+    }
+}
+
+fn canned_markets() -> Providers {
+    Providers::from_set(Arc::new(ProviderSet::new(
+        vec![Arc::new(CannedMarkets) as Arc<dyn ProviderAdapter>],
+        Routes::new(Fetch::Sequential)
+            .route(Capability::CRYPTO, [Provider::custom("canned_markets")])
+            .route(Capability::FOREX, [Provider::custom("canned_markets")]),
+    )))
+}
+
+#[fixture]
+fn canned_crypto_coin() -> (tokio::runtime::Runtime, CryptoCoin) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    (rt, canned_markets().crypto("bitcoin"))
+}
+
+#[fixture]
+fn canned_forex_pair() -> (tokio::runtime::Runtime, ForexPair) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    (rt, canned_markets().forex("EUR", "USD"))
+}
+
+/// Cache hit after warm-up: the handle from setup is already filled.
+#[bench(
+    group = "crypto",
+    setup = canned_crypto_coin,
+    alloc = 10,
+    covers = "finance_query::CryptoCoin::quote"
+)]
+fn crypto_coin_quote_then_cached(input: &(tokio::runtime::Runtime, CryptoCoin)) {
+    let (rt, coin) = input;
+    let first = rt.block_on(coin.quote("usd")).unwrap();
+    let second = rt.block_on(coin.quote("usd")).unwrap();
+    keep((first, second));
+}
+
+/// Cache hit after warm-up: the handle from setup is already filled.
+#[bench(
+    group = "forex",
+    setup = canned_forex_pair,
+    alloc = 6,
+    covers = "finance_query::ForexPair::quote"
+)]
+fn forex_pair_quote_then_cached(input: &(tokio::runtime::Runtime, ForexPair)) {
+    let (rt, pair) = input;
+    let first = rt.block_on(pair.quote()).unwrap();
+    let second = rt.block_on(pair.quote()).unwrap();
+    keep((first, second));
 }
 
 #[fixture]
@@ -2320,7 +2537,7 @@ fn canned_tickers() -> (tokio::runtime::Runtime, Tickers) {
     (rt, tickers)
 }
 
-/// Batch dispatch (one provider call for all symbols) then a cache hit.
+/// Cache hit after warm-up: the batch from setup is already filled.
 #[bench(
     group = "tickers",
     setup = canned_tickers,
@@ -2358,6 +2575,165 @@ fn tickers_batch_quote_large_cached(input: &(tokio::runtime::Runtime, Tickers)) 
     let (rt, tickers) = input;
     let first = rt.block_on(tickers.quotes()).unwrap();
     let second = rt.block_on(tickers.quotes()).unwrap();
+    keep((first, second));
+}
+
+// ── Cold handles: dispatch, then cache hit ──────────────────────────────────
+//
+// Setup runs once and the body is warmed before measuring, so a handle built
+// in setup only serves cache hits. These take the provider set from setup and
+// build a fresh handle per run, so every run dispatches once and then hits.
+
+#[fixture]
+fn cold_ticker_set() -> (tokio::runtime::Runtime, Arc<ProviderSet>) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    (rt, canned_provider_set())
+}
+
+async fn fresh_ticker(set: &Arc<ProviderSet>) -> Ticker {
+    Ticker::builder("AAPL")
+        .with_provider_set(Arc::clone(set))
+        .build()
+        .await
+        .unwrap()
+}
+
+#[bench(
+    group = "ticker",
+    setup = cold_ticker_set,
+    covers = "finance_query::Ticker::quote"
+)]
+fn ticker_quote_then_cached_cold(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let ticker = rt.block_on(fresh_ticker(set));
+    let first = rt
+        .block_on(ticker.quote::<finance_query::format::Raw>())
+        .unwrap();
+    let second = rt
+        .block_on(ticker.quote::<finance_query::format::Raw>())
+        .unwrap();
+    keep((first, second));
+}
+
+#[bench(
+    group = "ticker",
+    setup = cold_ticker_set,
+    covers = "finance_query::Ticker::chart"
+)]
+fn ticker_chart_then_cached_cold(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let ticker = rt.block_on(fresh_ticker(set));
+    let first = rt
+        .block_on(ticker.chart(Interval::OneDay, TimeRange::OneMonth))
+        .unwrap();
+    let second = rt
+        .block_on(ticker.chart(Interval::OneDay, TimeRange::OneMonth))
+        .unwrap();
+    keep((first, second));
+}
+
+#[fixture]
+fn cold_crypto() -> (tokio::runtime::Runtime, Providers) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    (rt, canned_markets())
+}
+
+#[bench(
+    group = "crypto",
+    setup = cold_crypto,
+    alloc = 36,
+    covers = "finance_query::CryptoCoin::quote"
+)]
+fn crypto_coin_quote_then_cached_cold(input: &(tokio::runtime::Runtime, Providers)) {
+    let (rt, providers) = input;
+    let coin = providers.crypto("bitcoin");
+    let first = rt.block_on(coin.quote("usd")).unwrap();
+    let second = rt.block_on(coin.quote("usd")).unwrap();
+    keep((first, second));
+}
+
+#[bench(
+    group = "forex",
+    setup = cold_crypto,
+    alloc = 29,
+    covers = "finance_query::ForexPair::quote"
+)]
+fn forex_pair_quote_then_cached_cold(input: &(tokio::runtime::Runtime, Providers)) {
+    let (rt, providers) = input;
+    let pair = providers.forex("EUR", "USD");
+    let first = rt.block_on(pair.quote()).unwrap();
+    let second = rt.block_on(pair.quote()).unwrap();
+    keep((first, second));
+}
+
+fn fresh_tickers(
+    rt: &tokio::runtime::Runtime,
+    set: &Arc<ProviderSet>,
+    symbols: impl IntoIterator<Item = String>,
+) -> Tickers {
+    rt.block_on(
+        Tickers::builder(symbols)
+            .with_provider_set(Arc::clone(set))
+            .build(),
+    )
+    .unwrap()
+}
+
+#[bench(
+    group = "tickers",
+    setup = cold_ticker_set,
+    covers = "finance_query::Tickers::quotes"
+)]
+fn tickers_batch_quote_then_cached_cold(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let tickers = fresh_tickers(rt, set, ["AAPL", "MSFT", "GOOGL"].map(String::from));
+    let first = rt.block_on(tickers.quotes()).unwrap();
+    let second = rt.block_on(tickers.quotes()).unwrap();
+    keep((first, second));
+}
+
+fn cold_tickers_sized(n: usize) -> (tokio::runtime::Runtime, Arc<ProviderSet>, usize) {
+    let (rt, set) = cold_ticker_set();
+    (rt, set, n)
+}
+
+#[bench(
+    group = "tickers",
+    setup_sized = cold_tickers_sized,
+    sizes(125, 250, 500),
+    complexity = "n",
+    covers = "finance_query::Tickers::quotes"
+)]
+fn tickers_batch_quote_large_cached_cold(
+    input: &(tokio::runtime::Runtime, Arc<ProviderSet>, usize),
+) {
+    let (rt, set, n) = input;
+    let tickers = fresh_tickers(rt, set, (0..*n).map(|i| format!("S{i}")));
+    let first = rt.block_on(tickers.quotes()).unwrap();
+    let second = rt.block_on(tickers.quotes()).unwrap();
+    keep((first, second));
+}
+
+#[fixture]
+fn cold_set() -> Arc<ProviderSet> {
+    canned_provider_set()
+}
+
+/// Awaited directly so it runs on the counting executor. Gates how many times
+/// the build-dispatch-cache-hit future is polled.
+#[bench(
+    group = "ticker",
+    setup = cold_set,
+    covers = "finance_query::Ticker::quote"
+)]
+async fn ticker_quote_polls_cold(set: &Arc<ProviderSet>) {
+    let ticker = fresh_ticker(set).await;
+    let first = ticker.quote::<finance_query::format::Raw>().await.unwrap();
+    let second = ticker.quote::<finance_query::format::Raw>().await.unwrap();
     keep((first, second));
 }
 
@@ -2441,8 +2817,15 @@ static SCREENER_JSON: &str = include_str!("fixtures/screener.json");
 static EDGAR_SUBMISSIONS_JSON: &str = include_str!("fixtures/edgar_submissions.json");
 static EDGAR_FACTS_JSON: &str = include_str!("fixtures/edgar_facts.json");
 static SECTOR_JSON: &str = include_str!("fixtures/sector.json");
+static ANALYSIS_JSON: &str = include_str!("fixtures/analysis.json");
+static EXCHANGES_JSON: &str = include_str!("fixtures/exchanges.json");
+static HOLDERS_JSON: &str = include_str!("fixtures/holders.json");
+static INDICES_JSON: &str = include_str!("fixtures/indices.json");
+static INDUSTRY_JSON: &str = include_str!("fixtures/industry.json");
+static LOOKUP_JSON: &str = include_str!("fixtures/lookup.json");
+static RECOMMENDATIONS_JSON: &str = include_str!("fixtures/recommendations.json");
 
-#[soothfast::measured(group = "endpoint_serde", p99 = "3ms", covers = "finance_query::Quote")]
+#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::Quote")]
 fn de_quote() {
     keep(serde_json::from_str::<Quote>(keep(QUOTE_JSON)).unwrap());
 }
@@ -2480,6 +2863,69 @@ fn de_edgar_submissions() {
 #[soothfast::measured(group = "endpoint_serde", covers = "finance_query::CompanyFacts")]
 fn de_edgar_facts() {
     keep(serde_json::from_str::<CompanyFacts>(keep(EDGAR_FACTS_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 5,
+    covers = "finance_query::quote::RecommendationTrend"
+)]
+fn de_recommendation_trend() {
+    keep(serde_json::from_str::<RecommendationTrend>(keep(ANALYSIS_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 491,
+    covers = "finance_query::Exchange"
+)]
+fn de_exchanges() {
+    keep(serde_json::from_str::<Vec<Exchange>>(keep(EXCHANGES_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 213,
+    covers = "finance_query::quote::InstitutionOwnership"
+)]
+fn de_institution_ownership() {
+    keep(serde_json::from_str::<InstitutionOwnership>(keep(HOLDERS_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 1651,
+    covers = "finance_query::BatchQuotesResponse"
+)]
+fn de_indices() {
+    keep(serde_json::from_str::<BatchQuotesResponse>(keep(INDICES_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 204,
+    covers = "finance_query::IndustryData"
+)]
+fn de_industry() {
+    keep(serde_json::from_str::<IndustryData>(keep(INDUSTRY_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 103,
+    covers = "finance_query::LookupResults"
+)]
+fn de_lookup() {
+    keep(serde_json::from_str::<LookupResults>(keep(LOOKUP_JSON)).unwrap());
+}
+
+#[soothfast::measured(
+    group = "endpoint_serde",
+    alloc = 8,
+    covers = "finance_query::Recommendation"
+)]
+fn de_recommendations() {
+    keep(serde_json::from_str::<Recommendation>(keep(RECOMMENDATIONS_JSON)).unwrap());
 }
 
 // ── Polars DataFrame conversions (feature: dataframe) ────────────────────────
@@ -2641,6 +3087,20 @@ static YAHOO_BATCH_QUOTE_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/b
 #[bench(group = "wire_serde", alloc = 69, covers = "finance_query::Quote")]
 fn de_yahoo_quote_batch() {
     keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)).unwrap());
+}
+
+static YAHOO_CHART_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/chart.json");
+static YAHOO_QUOTE_SUMMARY_JSON: &[u8] =
+    include_bytes!("../tests/fixtures/yahoo/quote_summary_price.json");
+
+#[bench(group = "wire_serde", alloc = 165, covers = "finance_query::Chart")]
+fn de_yahoo_chart() {
+    keep(__bench::parse_chart(keep(YAHOO_CHART_JSON)).unwrap());
+}
+
+#[bench(group = "wire_serde", alloc = 88, covers = "finance_query::Quote")]
+fn de_yahoo_quote_summary() {
+    keep(__bench::parse_quote_summary(keep(YAHOO_QUOTE_SUMMARY_JSON)).unwrap());
 }
 
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────
@@ -2824,13 +3284,18 @@ fn score_news(titles: &[String]) {
     );
 }
 
-#[soothfast::measured(
+#[fixture]
+fn sentiment_transcript() -> Transcript {
+    serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap()
+}
+
+#[bench(
     group = "sentiment",
+    setup = sentiment_transcript,
     covers = "finance_query::Transcript::overall_sentiment"
 )]
-fn score_transcript() {
-    let t: Transcript = serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap();
-    keep(keep(&t).overall_sentiment().score);
+fn score_transcript(t: &Transcript) {
+    keep(keep(t).overall_sentiment().score);
 }
 
 #[fixture]
@@ -2846,9 +3311,9 @@ fn canned_ticker_only() -> Ticker {
         .unwrap()
 }
 
-/// The same dispatch-then-cache-hit path as `ticker_quote_then_cached`, but
-/// awaited directly so it runs on the counting executor. Gates how many
-/// times the quote future is polled, which instruction counts cannot see.
+/// The cache-hit path of `ticker_quote_then_cached`, awaited directly so it
+/// runs on the counting executor. Gates how many times the quote future is
+/// polled, which instruction counts cannot see.
 #[bench(
     group = "ticker",
     setup = canned_ticker_only,

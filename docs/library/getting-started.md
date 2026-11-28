@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-<!-- soothfast:claim finance_query::de_quote.perfcnt.instructions < 13000000 -->
+<!-- soothfast:claim finance_query::de_quote.perfcnt.instructions < 11000000 -->
 The network round-trip dominates each call — deserialization is far from the bottleneck.
 
 ## Multi-Provider Data Sources
