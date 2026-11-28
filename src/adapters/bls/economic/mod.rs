@@ -33,7 +33,7 @@ pub(super) fn resolve_period(year: &str, period: &str) -> Option<Period> {
             frequency: "Quarterly",
         }),
         "S" if (1..=2).contains(&n) => Some(Period {
-            date: periods::half_start(year, n),
+            date: half_start(year, n),
             frequency: "Semiannual",
         }),
         "A" => Some(Period {
@@ -44,6 +44,10 @@ pub(super) fn resolve_period(year: &str, period: &str) -> Option<Period> {
         // code this adapter does not know how to date.
         _ => None,
     }
+}
+
+fn half_start(year: &str, half: u32) -> String {
+    periods::month_start(year, (half - 1) * 6 + 1)
 }
 
 /// Parse a BLS value string. `"-"` marks a figure BLS could not publish.
@@ -91,4 +95,15 @@ pub(super) fn to_canonical(series_id: &str, series: BlsSeries) -> EconomicSeries
 pub(crate) async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicSeries> {
     let series = super::client()?.series(series_id).await?;
     Ok(to_canonical(series_id, series))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn halves_start_in_january_and_july() {
+        assert_eq!(half_start("2026", 1), "2026-01-01");
+        assert_eq!(half_start("2026", 2), "2026-07-01");
+    }
 }

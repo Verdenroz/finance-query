@@ -1687,6 +1687,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "soothfast",
+ "syn 2.0.119",
  "thiserror 2.0.21",
  "tokio",
  "tokio-stream",

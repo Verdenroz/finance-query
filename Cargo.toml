@@ -243,6 +243,7 @@ tokio-test = "0.4"
 mockito = "1"
 serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
+syn = { version = "2", features = ["full", "visit"] }
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
