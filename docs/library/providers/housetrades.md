@@ -55,6 +55,9 @@ There is no per-symbol or per-filing-type query endpoint on `disclosures-clerk.h
 !!! info "PDF text extraction carries no dependency"
     Text comes out of a purpose-built extractor covering the slice fd.house.gov emits: PDF 1.4, a classic cross-reference table, RC4-128 encryption under an empty user password, and CIDFontType2 subsets carrying `ToUnicode` CMaps. Column positions come from the text and graphics matrices plus the `/W` glyph advances the font already declares, so no font program is parsed. A filing outside that shape is reported rather than read as empty, since zero rows would otherwise be indistinguishable from a member disclosing no trades.
 
+<!-- soothfast:claim finance_query::parse_house_ptr.perfcnt.instructions < 13000000 -->
+Extracting the transaction lines from one encrypted filing PDF takes **under 13 million CPU instructions**.
+
 ## What the Fields Mean
 
 | `CongressionalTrade` field | Source |
