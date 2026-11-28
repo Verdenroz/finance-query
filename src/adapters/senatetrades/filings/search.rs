@@ -10,6 +10,7 @@ use super::super::client::{
     SENATE_BASE, SenateTradesClient, find_element_if_present, wait_for_element, wait_for_elements,
 };
 use super::super::models::SenateFilingEntry;
+use super::cell_text;
 
 /// Rows per DataTable page once bumped up via its own JS API — the default
 /// is 25; the largest built-in option is 100, which keeps every recent
@@ -71,15 +72,81 @@ pub(super) async fn search_recent_ptrs(
 
 async fn parse_row(row: &Element) -> Option<SenateFilingEntry> {
     let cells = row.find_elements("td").await.ok()?;
-    let first_name = cells.first()?.inner_text().await.ok()??;
-    let last_name = cells.get(1)?.inner_text().await.ok()??;
-    let filed_date = cells.get(4)?.inner_text().await.ok()??;
+    let texts = [
+        cell_text(&cells, 0).await?,
+        cell_text(&cells, 1).await?,
+        cell_text(&cells, 4).await?,
+    ];
+    if texts.iter().any(Option::is_none) {
+        return None;
+    }
     let link = cells.get(3)?.find_element("a").await.ok()?;
-    let path = link.attribute("href").await.ok()??;
+    let href = link.attribute("href").await.ok()?;
+    entry_from_cells(&texts, href)
+}
+
+/// `cells` holds the first name, last name and filed date, in that order.
+fn entry_from_cells(
+    cells: &[Option<String>; 3],
+    href: Option<String>,
+) -> Option<SenateFilingEntry> {
+    let [first_name, last_name, filed_date] = cells;
     Some(SenateFilingEntry {
-        first_name: first_name.trim().to_string(),
-        last_name: last_name.trim().to_string(),
-        filed_date: filed_date.trim().to_string(),
-        path,
+        first_name: first_name.as_deref()?.trim().to_string(),
+        last_name: last_name.as_deref()?.trim().to_string(),
+        filed_date: filed_date.as_deref()?.trim().to_string(),
+        path: href?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use super::super::cells;
+
+    #[test]
+    fn entry_from_cells_reads_name_date_and_link() {
+        let row = cells([" Jane ", "Doe", " 03/14/2025 "]);
+        let entry = entry_from_cells(&row, Some("/search/view/ptr/abc/".into())).unwrap();
+        assert_eq!(entry.first_name, "Jane");
+        assert_eq!(entry.last_name, "Doe");
+        assert_eq!(entry.filed_date, "03/14/2025");
+        assert_eq!(entry.path, "/search/view/ptr/abc/");
+    }
+
+    #[test]
+    fn entry_from_cells_rejects_missing_link() {
+        assert!(entry_from_cells(&cells(["Jane", "Doe", "03/14/2025"]), None).is_none());
+    }
+
+    #[test]
+    fn entry_from_cells_rejects_empty_cell_text() {
+        let mut row = cells(["Jane", "Doe", "03/14/2025"]);
+        row[1] = None;
+        assert!(entry_from_cells(&row, Some("/x/".into())).is_none());
+    }
+
+    #[test]
+    fn parses_us_date() {
+        assert_eq!(
+            parse_us_date("03/14/2025"),
+            NaiveDate::from_ymd_opt(2025, 3, 14)
+        );
+    }
+
+    #[test]
+    fn parse_us_date_trims_whitespace() {
+        assert_eq!(
+            parse_us_date("  12/01/2024\n"),
+            NaiveDate::from_ymd_opt(2024, 12, 1)
+        );
+    }
+
+    #[test]
+    fn parse_us_date_rejects_non_us_formats() {
+        assert_eq!(parse_us_date("2025-03-14"), None);
+        assert_eq!(parse_us_date("14/03/2025"), None);
+        assert_eq!(parse_us_date(""), None);
+    }
 }

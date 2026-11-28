@@ -142,7 +142,7 @@ pub async fn get_batch_charts(
     let mut symbols = symbols;
     symbols.sort();
     let patterns_str = if patterns { "1" } else { "0" };
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key(
         "charts",
         &[
@@ -202,7 +202,7 @@ pub async fn get_spark(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("spark", &[&symbols_key, interval.as_str(), range.as_str()]);
 
     cache
