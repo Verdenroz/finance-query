@@ -311,7 +311,8 @@ fn time_columns(
             #name,
             #unit,
             #nonzero,
-            #values.map(|v| v.map(|list| list.iter().map(#each).collect::<::std::vec::Vec<_>>())),
+            #values.map(|v| v.map(|list| list.as_slice())),
+            #each,
         )]
     })
 }

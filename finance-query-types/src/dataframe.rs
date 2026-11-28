@@ -289,19 +289,20 @@ pub mod derive {
     }
 
     /// A `List(Datetime(us, UTC))` column from lists of epoch integers.
-    pub fn datetime_list(
+    pub fn datetime_list<'a, S: 'a>(
         name: String,
         unit: EpochUnit,
         nonzero: bool,
-        values: impl Iterator<Item = Option<Vec<Option<i64>>>>,
+        values: impl Iterator<Item = Option<&'a [S]>>,
+        each: impl Fn(&S) -> Option<i64>,
     ) -> Column {
         let mut builder =
             ListPrimitiveChunkedBuilder::<Int64Type>::new(name.into(), 0, 0, datetime_dtype());
         for list in values {
             match list {
                 Some(list) => builder.append_iter(
-                    list.into_iter()
-                        .map(|value| epoch_micros(value, unit, nonzero)),
+                    list.iter()
+                        .map(|value| epoch_micros(each(value), unit, nonzero)),
                 ),
                 None => builder.append_null(),
             }
@@ -310,19 +311,20 @@ pub mod derive {
     }
 
     /// A `List(Date)` column from lists of epoch integers.
-    pub fn date_list(
+    pub fn date_list<'a, S: 'a>(
         name: String,
         unit: EpochUnit,
         nonzero: bool,
-        values: impl Iterator<Item = Option<Vec<Option<i64>>>>,
+        values: impl Iterator<Item = Option<&'a [S]>>,
+        each: impl Fn(&S) -> Option<i64>,
     ) -> Column {
         let mut builder =
             ListPrimitiveChunkedBuilder::<Int32Type>::new(name.into(), 0, 0, DataType::Date);
         for list in values {
             match list {
                 Some(list) => builder.append_iter(
-                    list.into_iter()
-                        .map(|value| epoch_day(value, unit, nonzero)),
+                    list.iter()
+                        .map(|value| epoch_day(each(value), unit, nonzero)),
                 ),
                 None => builder.append_null(),
             }
@@ -470,14 +472,15 @@ mod tests {
 
     #[test]
     fn list_helpers_keep_null_rows_and_dtypes() {
-        let rows = || [Some(vec![Some(0), Some(1)]), None].into_iter();
-        let datetimes = datetime_list("t".into(), EpochUnit::Seconds, true, rows());
+        let lists = [Some(vec![0_i64, 1]), None];
+        let rows = || lists.iter().map(|list| list.as_deref());
+        let datetimes = datetime_list("t".into(), EpochUnit::Seconds, true, rows(), |v| Some(*v));
         assert_eq!(
             datetimes.dtype(),
             &DataType::List(Box::new(datetime_dtype()))
         );
         assert_eq!(datetimes.null_count(), 1);
-        let dates = date_list("d".into(), EpochUnit::Seconds, false, rows());
+        let dates = date_list("d".into(), EpochUnit::Seconds, false, rows(), |v| Some(*v));
         assert_eq!(dates.dtype(), &DataType::List(Box::new(DataType::Date)));
         assert_eq!(dates.null_count(), 1);
     }
