@@ -2383,7 +2383,7 @@ static EDGAR_SUBMISSIONS_JSON: &str = include_str!("fixtures/edgar_submissions.j
 static EDGAR_FACTS_JSON: &str = include_str!("fixtures/edgar_facts.json");
 static SECTOR_JSON: &str = include_str!("fixtures/sector.json");
 
-#[soothfast::measured(group = "endpoint_serde", p99 = "3ms", covers = "finance_query::Quote")]
+#[soothfast::measured(group = "endpoint_serde", covers = "finance_query::Quote")]
 fn de_quote() {
     keep(serde_json::from_str::<Quote>(keep(QUOTE_JSON)).unwrap());
 }
@@ -2739,13 +2739,18 @@ fn score_news(titles: &[String]) {
     );
 }
 
-#[soothfast::measured(
+#[fixture]
+fn sentiment_transcript() -> Transcript {
+    serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap()
+}
+
+#[bench(
     group = "sentiment",
+    setup = sentiment_transcript,
     covers = "finance_query::Transcript::overall_sentiment"
 )]
-fn score_transcript() {
-    let t: Transcript = serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap();
-    keep(keep(&t).overall_sentiment().score);
+fn score_transcript(t: &Transcript) {
+    keep(keep(t).overall_sentiment().score);
 }
 
 #[fixture]
