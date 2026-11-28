@@ -224,6 +224,11 @@ impl FundamentalsProvider for YahooProvider {
         )
         .await?;
         stmt.provider_id = Some(super::Provider::Yahoo);
+        stmt.statement = super::statement_metrics::canonicalize(
+            super::Provider::Yahoo,
+            stmt_type,
+            stmt.statement,
+        );
         Ok(stmt)
     }
 

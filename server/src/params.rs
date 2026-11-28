@@ -717,7 +717,7 @@ pub struct FinancialsQuery {
     pub frequency: Frequency,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
-    /// Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome")
+    /// Comma-separated list of metric names to include in the statement (e.g. "total_revenue,net_income")
     pub metrics: Option<String>,
 }
 
@@ -734,7 +734,7 @@ pub struct BatchFinancialsQuery {
     pub frequency: Frequency,
     /// Comma-separated list of fields to include in response
     pub fields: Option<String>,
-    /// Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome")
+    /// Comma-separated list of metric names to include in the statement (e.g. "total_revenue,net_income")
     pub metrics: Option<String>,
 }
 

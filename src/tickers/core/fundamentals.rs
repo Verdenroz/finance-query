@@ -31,7 +31,7 @@ impl Tickers {
     /// let financials = tickers.financials(StatementType::Income, Frequency::Annual).await?;
     ///
     /// for (symbol, stmt) in &financials.financials {
-    ///     if let Some(revenue) = stmt.statement.get("TotalRevenue") {
+    ///     if let Some(revenue) = stmt.statement.get("total_revenue") {
     ///         println!("{}: {:?}", symbol, revenue);
     ///     }
     /// }
@@ -239,7 +239,7 @@ mod tests {
             assert!(!stmt.statement.is_empty());
 
             // Common income statement fields
-            if let Some(revenue) = stmt.statement.get("TotalRevenue") {
+            if let Some(revenue) = stmt.statement.get("total_revenue") {
                 assert!(!revenue.is_empty());
             }
         }

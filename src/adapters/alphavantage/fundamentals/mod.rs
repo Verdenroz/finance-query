@@ -434,7 +434,7 @@ pub async fn fetch_financials_response(
 
     Ok(crate::providers::build_financial_statement(
         symbol.to_string(),
-        stmt_type.as_str().to_string(),
+        stmt_type,
         frequency.as_str().to_string(),
         crate::Provider::AlphaVantage,
         data,
@@ -442,7 +442,8 @@ pub async fn fetch_financials_response(
 }
 
 /// Pivot Alpha Vantage FinancialReportDTO entries into the canonical
-/// `HashMap<String, HashMap<String, serde_json::Value>>` format.
+/// `HashMap<String, HashMap<String, serde_json::Value>>` format. Values stay as sent
+/// (numbers arrive as strings, missing ones as `"None"`); the statement builder parses them.
 fn pivot_av_reports(
     reports: &[FinancialReportDTO],
 ) -> HashMap<String, HashMap<String, serde_json::Value>> {
@@ -451,10 +452,6 @@ fn pivot_av_reports(
     for report in reports {
         let date = &report.fiscal_date_ending;
         for (key, value) in &report.fields {
-            // Only include numeric values
-            if !value.is_number() {
-                continue;
-            }
             data.entry(key.clone())
                 .or_default()
                 .insert(date.clone(), value.clone());
@@ -567,5 +564,29 @@ mod tests {
         let events = parse_dividend_csv(&csv).unwrap();
         assert_eq!(events.len(), 1);
         assert!((events[0].amount.unwrap() - 0.24).abs() < 0.001);
+    }
+
+    #[test]
+    fn statement_values_sent_as_strings_are_parsed() {
+        let report: FinancialReportDTO = serde_json::from_value(serde_json::json!({
+            "fiscal_date_ending": "2024-09-30",
+            "reported_currency": "USD",
+            "totalRevenue": "391035000000",
+            "grossProfit": "180683000000",
+            "researchAndDevelopment": "None"
+        }))
+        .unwrap();
+
+        let statement = crate::providers::build_financial_statement(
+            "AAPL".into(),
+            crate::StatementType::Income,
+            "annual".into(),
+            crate::Provider::AlphaVantage,
+            pivot_av_reports(&[report]),
+        );
+
+        assert_eq!(statement.statement["total_revenue"]["2024-09-30"], 391035e6);
+        assert_eq!(statement.statement["gross_profit"]["2024-09-30"], 180683e6);
+        assert!(!statement.statement.contains_key("research_and_development"));
     }
 }
