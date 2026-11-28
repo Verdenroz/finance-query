@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "risk")]
-    fn returns_match_risk_returns() {
+    fn chart_returns_match_free_function() {
         let candles: Vec<Candle> = [100.0, 110.0, 99.0]
             .into_iter()
             .map(|c| Candle::__new(0, c, c, c, c, 1, None, None))
