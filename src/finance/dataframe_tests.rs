@@ -60,7 +60,7 @@ fn earnings_calendar_entry_columns() {
         "symbol:str",
         "name:str",
         "report_date:date",
-        "fiscal_date_ending:str",
+        "fiscal_date_ending:date",
         "estimate:f64",
         "currency:str",
     ];

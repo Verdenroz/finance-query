@@ -111,9 +111,9 @@ use syn::{
 ///
 /// When the crate being compiled has a name starting with `finance-query` (except `finance-query-derive`), the derive
 /// also emits a `#[cfg(test)]` test that checks the empty frame's time naming: a name
-/// ending in `date`, `time`, `timestamp`, `expiration` or `at` must be a `Date`
+/// ending in `date`, `time`, `timestamp`, `expiration`, `ending` or `at` must be a `Date`
 /// or `Datetime` column (or a list of either), and a `Date` or `Datetime` column must
-/// carry one of those words or `start`, `end`, `ending`, `filed`, `published`, `updated`,
+/// carry one of those words or `start`, `end`, `filed`, `published`, `updated`,
 /// `quarter`, `year` or `period` in its name. Other crates get no test. The test lives
 /// in a child module and names the type through `super`, so a type checked by it must
 /// be declared at module level, not inside a function body.

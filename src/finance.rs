@@ -856,6 +856,7 @@ pub struct EarningsCalendarEntry {
     #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub report_date: Option<String>,
     /// Fiscal date ending.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub fiscal_date_ending: Option<String>,
     /// Estimated EPS.
     pub estimate: Option<f64>,

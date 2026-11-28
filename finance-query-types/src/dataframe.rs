@@ -406,11 +406,10 @@ pub mod derive {
         }
     }
 
-    const STRONG_TIME_TOKENS: &[&str] = &["date", "time", "timestamp", "expiration"];
+    const STRONG_TIME_TOKENS: &[&str] = &["date", "time", "timestamp", "expiration", "ending"];
     const WEAK_TIME_TOKENS: &[&str] = &[
         "start",
         "end",
-        "ending",
         "filed",
         "published",
         "updated",
@@ -428,9 +427,9 @@ pub mod derive {
 
     /// Asserts that a column is time-typed exactly when its name says it is a point in time.
     ///
-    /// A name ending in `date`, `time`, `timestamp`, `expiration` or `at` must be `Date` or
+    /// A name ending in `date`, `time`, `timestamp`, `expiration`, `ending` or `at` must be `Date` or
     /// `Datetime` (or a list of either). A `Date` or `Datetime` column must have one of those
-    /// tokens anywhere, or one of `start`, `end`, `ending`, `filed`, `published`, `updated`,
+    /// tokens anywhere, or one of `start`, `end`, `filed`, `published`, `updated`,
     /// `quarter`, `year` or `period`. `exempt` names columns checked by neither rule.
     pub fn assert_time_naming(ty: &str, frame: &DataFrame, exempt: &[&str]) {
         let violations: Vec<String> = frame
