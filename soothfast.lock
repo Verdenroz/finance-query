@@ -60,7 +60,7 @@
     "finance_query::risk::beta::beta": "0dfd56b8cbadb56d",
     "finance_query::risk::ratios::sharpe_ratio": "25ed949fa65a8abe",
     "finance_query::streaming::news::NewsStream": "f46aacaf8fa4065a",
-    "finance_query::streaming::pricing::PriceUpdate": "841fa4039f45db07",
+    "finance_query::streaming::pricing::PriceUpdate": "277d365f81688bb0",
     "finance_query::tickers::core::BatchQuotesResponse": "37f9b9aceb68a87f",
     "finance_query::tickers::core::TickersBuilder": "d52af89eba0a1c09",
     "finance_query::translation::backend::TranslationBackend": "9af696e0efb0cbc0",

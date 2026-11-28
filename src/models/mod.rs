@@ -63,7 +63,14 @@ pub(crate) mod dataframe_test_util {
         df.column(name).unwrap().date().unwrap().phys.get(0)
     }
 
+    /// Lists `name:dtype` per column after checking the frame's time naming.
     pub(crate) fn columns(df: &DataFrame) -> Vec<String> {
+        columns_exempt(df, &[])
+    }
+
+    /// Like [`columns`], skipping the time naming check for the named columns.
+    pub(crate) fn columns_exempt(df: &DataFrame, exempt: &[&str]) -> Vec<String> {
+        crate::__dataframe::assert_time_naming("frame", df, exempt);
         df.schema()
             .iter()
             .map(|(name, dtype)| format!("{name}:{dtype}"))
