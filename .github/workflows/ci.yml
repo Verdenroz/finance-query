@@ -36,6 +36,7 @@ jobs:
       mcp_image: ${{ steps.filter.outputs.mcp_image }}
       fuzz_inputs: ${{ steps.filter.outputs.fuzz_inputs }}
       deploy_config: ${{ steps.filter.outputs.deploy_config }}
+      features: ${{ steps.features.outputs.changed }}
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -43,6 +44,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The per-feature check only catches cfg mismatches, so a PR runs it
+      # when a manifest or a `feature = "..."` gate changed; master always does.
+      - name: Detect feature-gate edits
+        id: features
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          if git diff --name-only "$BASE_SHA" HEAD | grep -qE '(^|/)Cargo\.toml$' \
+            || git diff -U0 "$BASE_SHA" HEAD -- '*.rs' | grep -qE '^[+-].*feature *= *"'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -160,6 +176,36 @@ jobs:
       # covered by the Docker jobs instead).
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --features finance-query/full -- -D warnings
+      - name: Check server
+        run: cargo check -p finance-query-server --verbose
+      # mcp path-deps on server for its in-process GraphQL schema.
+      - name: Check mcp
+        run: cargo check -p finance-query-mcp --verbose
+      # Validates the lib's actual default-feature build (clippy/test force `full`).
+      - name: Check lib (default features)
+        run: cargo check -p finance-query --verbose
+      # Deliberately not --workspace/--all-targets: those unify the server's and
+      # dev-deps' wider feature sets over the library's, hiding a feature a
+      # crates.io consumer would need.
+      - name: Check lib (full features, no workspace unification)
+        run: cargo check -p finance-query --features full --verbose
+      # The test job runs with `full`, so a test that assumes a feature-gated
+      # item exists passes there and fails for anyone running the documented
+      # `cargo test -p finance-query`. Covers tests/ too: the wire-format pin
+      # is an integration test, so --lib would leave it unguarded.
+      - name: Test lib (default features)
+        run: cargo test -p finance-query --tests --verbose
+      # `cargo test --doc` compiles examples but never resolves intra-doc
+      # links, so a broken one ships as dead text on docs.rs with nothing
+      # failing. This is the only job that builds rustdoc. The deny lives here
+      # rather than in lib.rs: a link to a feature-gated item is unresolvable
+      # without that feature, so a crate attribute would break `cargo doc` for
+      # every consumer not building `full`.
+      - name: Build rustdoc (deny broken links)
+        env:
+          RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
+        run: cargo doc -p finance-query -p finance-query-types -p finance-query-backtesting --no-deps --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe
+
 
   test-unit:
     name: Test Suite (unit)
@@ -194,9 +240,9 @@ jobs:
           key: soothfast-tests-${{ github.sha }}
           restore-keys: soothfast-tests-
       # `full` excludes translation-offline (native CTranslate2 build,
-      # covered by the Docker jobs instead). Doc tests have their own job.
-      - name: Run unit tests (full features)
-        run: cargo soothfast test ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '--all' }} --no-doc --features finance-query/full
+      # covered by the Docker jobs instead). Doc tests run here too, scoped like the rest.
+      - name: Run unit and doc tests (full features)
+        run: cargo soothfast test ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '--all' }} --features finance-query/full
       - name: Save stored test passes
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -230,98 +276,26 @@ jobs:
       - name: Run network integration tests
         run: cargo nextest run --workspace --profile ci-network --run-ignored ignored-only
 
-  test-doctest:
-    name: Test Suite (doctest)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.rust == 'true'
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: test-suite
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      # `full` excludes translation-offline (native CTranslate2 build,
-      # covered by the Docker jobs instead).
-      - name: Run doctests
-        run: cargo test --workspace --doc --features finance-query/full
-
   # Keeps the "Test Suite" required-status-check name stable across the
-  # 3-job split. The network job is skipped on pull requests. `always()` matters: without it a sub-job failure cascades
+  # split. The network job is skipped on pull requests. `always()` matters: without it a sub-job failure cascades
   # this to skipped, and GitHub treats a skipped required check as passing.
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    needs: [changes, test-unit, test-network, test-doctest]
+    needs: [changes, test-unit, test-network]
     if: always() && needs.changes.outputs.rust == 'true'
     steps:
       - name: Check suite results
         run: |
-          for result in "${{ needs.test-unit.result }}" "${{ needs.test-doctest.result }}"; do
-            if [ "$result" != "success" ]; then
-              echo "A test suite did not succeed: $result"
-              exit 1
-            fi
-          done
+          if [ "${{ needs.test-unit.result }}" != "success" ]; then
+            echo "Unit suite did not succeed: ${{ needs.test-unit.result }}"
+            exit 1
+          fi
           network_result="${{ needs.test-network.result }}"
           if [ "$network_result" != "success" ] && [ "$network_result" != "skipped" ]; then
             echo "Network suite did not succeed: $network_result"
             exit 1
           fi
-
-  build-check:
-    name: Build Check
-    runs-on: ubuntu-latest
-    needs: [fmt, clippy]
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: check
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Check server
-        run: cargo check -p finance-query-server --verbose
-      # mcp path-deps on server for its in-process GraphQL schema.
-      - name: Check mcp
-        run: cargo check -p finance-query-mcp --verbose
-      # Validates the lib's actual default-feature build (clippy/test force `full`).
-      - name: Check lib (default features)
-        run: cargo check -p finance-query --verbose
-      # Deliberately not --workspace/--all-targets: those unify the server's and
-      # dev-deps' wider feature sets over the library's, hiding a feature a
-      # crates.io consumer would need.
-      - name: Check lib (full features, no workspace unification)
-        run: cargo check -p finance-query --features full --verbose
-      # The test job runs with `full`, so a test that assumes a feature-gated
-      # item exists passes there and fails for anyone running the documented
-      # `cargo test -p finance-query`. Covers tests/ too: the wire-format pin
-      # is an integration test, so --lib would leave it unguarded.
-      - name: Test lib (default features)
-        run: cargo test -p finance-query --tests --verbose
-      # `cargo test --doc` compiles examples but never resolves intra-doc
-      # links, so a broken one ships as dead text on docs.rs with nothing
-      # failing. This is the only job that builds rustdoc. The deny lives here
-      # rather than in lib.rs: a link to a feature-gated item is unresolvable
-      # without that feature, so a crate attribute would break `cargo doc` for
-      # every consumer not building `full`.
-      - name: Build rustdoc (deny broken links)
-        env:
-          RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
-        run: cargo doc -p finance-query -p finance-query-types -p finance-query-backtesting --no-deps --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe
 
   # Default and full both hide cfg mismatches: a re-export gated on fewer
   # features than the item it exports compiles under either, and fails only
@@ -329,7 +303,8 @@ jobs:
   build-check-features:
     name: Build Check (features)
     runs-on: ubuntu-latest
-    needs: [fmt, clippy]
+    needs: [changes, fmt, clippy]
+    if: github.event_name != 'pull_request' || needs.changes.outputs.features == 'true'
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -395,17 +370,20 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [changes, build-check, build-check-features, build-release]
+    needs: [changes, clippy, build-check-features, build-release]
     if: always() && needs.changes.outputs.rust == 'true'
     steps:
       - name: Check build results
         run: |
-          for result in "${{ needs.build-check.result }}" "${{ needs.build-check-features.result }}"; do
-            if [ "$result" != "success" ]; then
-              echo "A build check did not succeed: $result"
-              exit 1
-            fi
-          done
+          if [ "${{ needs.clippy.result }}" != "success" ]; then
+            echo "Clippy and build checks did not succeed: ${{ needs.clippy.result }}"
+            exit 1
+          fi
+          features_result="${{ needs.build-check-features.result }}"
+          if [ "$features_result" != "success" ] && [ "$features_result" != "skipped" ]; then
+            echo "Build Check (features) did not succeed: $features_result"
+            exit 1
+          fi
           release_result="${{ needs.build-release.result }}"
           if [ "$release_result" != "success" ] && [ "$release_result" != "skipped" ]; then
             echo "Build Release (binaries) did not succeed: $release_result"
