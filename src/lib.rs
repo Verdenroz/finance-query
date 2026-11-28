@@ -683,6 +683,20 @@ pub mod __bench {
             .collect())
     }
 
+    /// Parse a Yahoo chart body into a [`Chart`](crate::Chart).
+    pub fn parse_chart(body: &[u8]) -> crate::Result<crate::Chart> {
+        crate::adapters::yahoo::chart::parse_chart_data(serde_json::from_slice(body)?, "AAPL")
+    }
+
+    /// Parse a Yahoo quote-summary body and convert it to a [`Quote`].
+    pub fn parse_quote_summary(body: &[u8]) -> crate::Result<Quote> {
+        let response = crate::adapters::yahoo::quote::summary::parse_summary(
+            serde_json::from_slice(body)?,
+            "AAPL",
+        )?;
+        Ok(Quote::from_response(&response, None, None))
+    }
+
     /// Extract the text lines of a House PTR disclosure PDF.
     #[cfg(feature = "housetrades")]
     pub fn house_ptr_lines(pdf: &[u8]) -> Option<Vec<String>> {

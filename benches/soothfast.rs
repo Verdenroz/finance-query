@@ -2796,6 +2796,20 @@ fn de_yahoo_quote_batch() {
     keep(__bench::parse_quote_batch(keep(YAHOO_BATCH_QUOTE_JSON)).unwrap());
 }
 
+static YAHOO_CHART_JSON: &[u8] = include_bytes!("../tests/fixtures/yahoo/chart.json");
+static YAHOO_QUOTE_SUMMARY_JSON: &[u8] =
+    include_bytes!("../tests/fixtures/yahoo/quote_summary_price.json");
+
+#[bench(group = "wire_serde", alloc = 165, covers = "finance_query::Chart")]
+fn de_yahoo_chart() {
+    keep(__bench::parse_chart(keep(YAHOO_CHART_JSON)).unwrap());
+}
+
+#[bench(group = "wire_serde", alloc = 88, covers = "finance_query::Quote")]
+fn de_yahoo_quote_summary() {
+    keep(__bench::parse_quote_summary(keep(YAHOO_QUOTE_SUMMARY_JSON)).unwrap());
+}
+
 // ── FRED economic series + Treasury yield curve (feature: fred) ───────────────
 
 static FRED_SERIES_JSON: &str = include_str!("fixtures/fred_series.json");
