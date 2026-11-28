@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
+members = ["server", "finance-query-models", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
 resolver = "2"
 
 [package]

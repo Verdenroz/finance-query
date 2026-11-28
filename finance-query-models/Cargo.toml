@@ -1,0 +1,19 @@
+[package]
+name = "finance-query-models"
+version = "3.4.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Response models for the finance-query library"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+homepage = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-models"
+keywords = ["finance", "market-data", "models"]
+categories = ["api-bindings", "finance"]
+
+[dependencies]
+finance-query-types = { version = "3.4.0", path = "../finance-query-types" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2.0.18"
+chrono = { version = "0.4", features = ["serde"] }
