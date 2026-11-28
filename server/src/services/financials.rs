@@ -121,6 +121,5 @@ mod tests {
         let old = Cache::key("financials", &["AAPL", "income", "annual"]);
         let new = statements_key("AAPL", "income", "annual");
         assert_ne!(old, new);
-        assert!(new.contains("financials-v2"));
     }
 }

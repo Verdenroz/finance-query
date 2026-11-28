@@ -2,8 +2,10 @@
 //!
 //! Canonical names are Yahoo's field names in snake_case. Each other provider maps its own
 //! names onto them through a per-statement table. A metric with no canonical equivalent keeps
-//! its own name in snake_case, so no data is dropped. Values follow Yahoo's sign convention
-//! (cash outflows negative); a provider that reports them positive lists those keys as negated.
+//! its own name in snake_case, so no data is dropped; if that name is already taken, by a
+//! canonical name or another unmapped key, the mapped value keeps it and the unmapped metric
+//! keeps its own spelling. Values follow Yahoo's sign convention (cash outflows negative); a
+//! provider that reports them positive marks those entries with `negate`.
 
 #[cfg(feature = "alphavantage")]
 mod alphavantage;
@@ -18,39 +20,53 @@ use crate::constants::StatementType;
 use finance_query_types::Provider;
 
 type Metrics = BTreeMap<String, BTreeMap<String, f64>>;
-type Table = &'static [(&'static str, &'static str)];
+type Table = &'static [Entry];
 
-const YAHOO_CASHFLOW: Table = &[("ChangesinCash", "changes_in_cash")];
+struct Entry {
+    from: &'static str,
+    to: &'static str,
+    negate: bool,
+}
+
+const fn rename(from: &'static str, to: &'static str) -> Entry {
+    Entry {
+        from,
+        to,
+        negate: false,
+    }
+}
+
+#[cfg(feature = "alphavantage")]
+const fn negate(from: &'static str, to: &'static str) -> Entry {
+    Entry {
+        from,
+        to,
+        negate: true,
+    }
+}
+
+const YAHOO_CASHFLOW: Table = &[rename("ChangesinCash", "changes_in_cash")];
 
 /// Rewrites a statement's metric names to the canonical vocabulary.
-///
-/// When an unmapped key's snake_case name is already taken, by a canonical name or another
-/// unmapped key, the mapped value keeps the name and the unmapped one keeps its own spelling.
 pub(crate) fn canonicalize(
     provider: Provider,
     statement_type: StatementType,
     metrics: Metrics,
 ) -> Metrics {
     let table = table(provider, statement_type);
-    let negated = negated(provider, statement_type);
-    #[allow(unused_mut)] // only the polygon feature derives metrics
-    let mut derived = Metrics::new();
-    #[cfg(feature = "polygon")]
-    if provider == Provider::Polygon && statement_type == StatementType::Income {
-        derived.extend(polygon::derive_net_income(&metrics));
-    }
+    let derived = derived(provider, statement_type, &metrics);
 
     let mut out = Metrics::new();
     let mut unmapped = Vec::new();
     for (key, values) in metrics {
-        match table.iter().find(|(from, _)| *from == key) {
-            Some((_, canonical)) => {
-                let values = if negated.contains(&key.as_str()) {
+        match table.iter().find(|entry| entry.from == key) {
+            Some(entry) => {
+                let values = if entry.negate {
                     values.into_iter().map(|(date, v)| (date, -v)).collect()
                 } else {
                     values
                 };
-                out.insert((*canonical).to_string(), values);
+                out.insert(entry.to.to_string(), values);
             }
             None => unmapped.push((key, values)),
         }
@@ -64,26 +80,42 @@ pub(crate) fn canonicalize(
     out
 }
 
-#[cfg_attr(not(feature = "alphavantage"), allow(unused_variables))]
-fn negated(provider: Provider, statement_type: StatementType) -> &'static [&'static str] {
-    match provider {
+fn table(provider: Provider, statement_type: StatementType) -> Table {
+    match (provider, statement_type) {
+        (Provider::Yahoo, StatementType::CashFlow) => YAHOO_CASHFLOW,
+        #[cfg(feature = "fmp")]
+        (Provider::Fmp, StatementType::Income) => fmp::INCOME,
+        #[cfg(feature = "fmp")]
+        (Provider::Fmp, StatementType::Balance) => fmp::BALANCE,
+        #[cfg(feature = "fmp")]
+        (Provider::Fmp, StatementType::CashFlow) => fmp::CASHFLOW,
+        #[cfg(feature = "polygon")]
+        (Provider::Polygon, StatementType::Income) => polygon::INCOME,
+        #[cfg(feature = "polygon")]
+        (Provider::Polygon, StatementType::Balance) => polygon::BALANCE,
+        #[cfg(feature = "polygon")]
+        (Provider::Polygon, StatementType::CashFlow) => polygon::CASHFLOW,
         #[cfg(feature = "alphavantage")]
-        Provider::AlphaVantage => alphavantage::negated(statement_type),
+        (Provider::AlphaVantage, StatementType::Income) => alphavantage::INCOME,
+        #[cfg(feature = "alphavantage")]
+        (Provider::AlphaVantage, StatementType::Balance) => alphavantage::BALANCE,
+        #[cfg(feature = "alphavantage")]
+        (Provider::AlphaVantage, StatementType::CashFlow) => alphavantage::CASHFLOW,
         _ => &[],
     }
 }
 
-fn table(provider: Provider, statement_type: StatementType) -> Table {
-    match provider {
-        Provider::Yahoo if statement_type == StatementType::CashFlow => YAHOO_CASHFLOW,
-        #[cfg(feature = "fmp")]
-        Provider::Fmp => fmp::table(statement_type),
-        #[cfg(feature = "polygon")]
-        Provider::Polygon => polygon::table(statement_type),
-        #[cfg(feature = "alphavantage")]
-        Provider::AlphaVantage => alphavantage::table(statement_type),
-        _ => &[],
+#[cfg(feature = "polygon")]
+fn derived(provider: Provider, statement_type: StatementType, metrics: &Metrics) -> Metrics {
+    match (provider, statement_type) {
+        (Provider::Polygon, StatementType::Income) => polygon::derive_net_income(metrics),
+        _ => Metrics::new(),
     }
+}
+
+#[cfg(not(feature = "polygon"))]
+fn derived(_: Provider, _: StatementType, _: &Metrics) -> Metrics {
+    Metrics::new()
 }
 
 /// `TotalRevenue` -> `total_revenue`, `DilutedEPS` -> `diluted_eps`, `totalRevenue` ->
@@ -233,7 +265,7 @@ mod tests {
         let vocabulary = vocabulary(statement_type);
         let mut sources = BTreeSet::new();
         let mut targets = BTreeSet::new();
-        for (from, to) in table {
+        for Entry { from, to, .. } in table {
             assert!(vocabulary.contains(*to), "{name} {statement_type:?}: {to}");
             assert!(sources.insert(*from), "{name} {statement_type:?}: {from}");
             assert!(targets.insert(*to), "{name} {statement_type:?}: {to} twice");
@@ -252,6 +284,17 @@ mod tests {
             .collect()
     }
 
+    #[cfg(any(feature = "fmp", feature = "polygon"))]
+    fn assert_dtos_cover_table(provider: Provider, name: &str, dtos: [BTreeSet<String>; 3]) {
+        for (statement_type, keys) in STATEMENTS.into_iter().zip(dtos) {
+            let table = table(provider, statement_type);
+            assert_table_is_canonical(name, statement_type, table);
+            for Entry { from, .. } in table {
+                assert!(keys.contains(*from), "{statement_type:?}: {from}");
+            }
+        }
+    }
+
     #[cfg(feature = "fmp")]
     mod fmp {
         use super::*;
@@ -266,13 +309,7 @@ mod tests {
                 dto_keys::<BalanceSheetDTO>(),
                 dto_keys::<CashFlowDTO>(),
             ];
-            for (statement_type, keys) in STATEMENTS.into_iter().zip(dtos) {
-                let table = table(Provider::Fmp, statement_type);
-                assert_table_is_canonical("fmp", statement_type, table);
-                for (from, _) in table {
-                    assert!(keys.contains(*from), "{statement_type:?}: {from}");
-                }
-            }
+            assert_dtos_cover_table(Provider::Fmp, "fmp", dtos);
         }
 
         #[test]
@@ -338,13 +375,7 @@ mod tests {
                 dto_keys::<BalanceSheetDTO>(),
                 dto_keys::<CashFlowStatementDTO>(),
             ];
-            for (statement_type, keys) in STATEMENTS.into_iter().zip(dtos) {
-                let table = table(Provider::Polygon, statement_type);
-                assert_table_is_canonical("polygon", statement_type, table);
-                for (from, _) in table {
-                    assert!(keys.contains(*from), "{statement_type:?}: {from}");
-                }
-            }
+            assert_dtos_cover_table(Provider::Polygon, "polygon", dtos);
         }
 
         #[test]
@@ -431,14 +462,6 @@ mod tests {
             assert_eq!(out["capital_expenditure"]["2024-09-30"], -9447.0);
             assert_eq!(out["cash_dividends_paid"]["2024-09-30"], -15234.0);
             assert_eq!(out["operating_cash_flow"]["2024-09-30"], 118.0);
-        }
-
-        #[test]
-        fn negated_keys_are_mapped() {
-            let table = table(Provider::AlphaVantage, StatementType::CashFlow);
-            for key in negated(Provider::AlphaVantage, StatementType::CashFlow) {
-                assert!(table.iter().any(|(from, _)| from == key), "{key}");
-            }
         }
 
         #[test]

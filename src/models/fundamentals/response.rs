@@ -7,11 +7,9 @@ use std::collections::BTreeMap;
 
 /// A flattened, user-friendly financial statement
 ///
-/// Metric names are the same whichever provider served the data: Yahoo's field names in
-/// snake_case (`total_revenue`, `net_income`, `diluted_eps`, `operating_cash_flow`). A
-/// provider metric with no canonical equivalent keeps its own name converted to snake_case,
-/// so no data is dropped, but such names are provider-specific. A name that collides with an
-/// existing key keeps its own provider spelling. Cash outflows are negative.
+/// Metric names are canonical: the same, with the same signs, whichever provider served the
+/// data. They are Yahoo's field names in snake_case (`total_revenue`, `net_income`,
+/// `diluted_eps`, `operating_cash_flow`); the rules live in `providers::statement_metrics`.
 ///
 /// [`to_dataframe`](Self::to_dataframe) and [`to_wide_dataframe`](Self::to_wide_dataframe) use
 /// the `statement` keys verbatim: canonical for a fetched statement, while a hand-built or
