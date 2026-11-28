@@ -131,7 +131,7 @@ impl RootMetadataQuery {
         after: Option<String>,
     ) -> Result<Page<GqlTrendingCoin>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::crypto::get_trending(&state.cache)
+        let json = crate::services::crypto::get_trending(&state.cache, &state.providers)
             .await
             .map_err(to_gql_error)?;
         let coins: Vec<GqlTrendingCoin> = from_gql_json(json)?;
@@ -161,7 +161,11 @@ impl RootMetadataQuery {
     /// Aggregate global cryptocurrency market statistics (CoinGecko).
     async fn crypto_global(&self, ctx: &Context<'_>) -> Result<GqlGlobalCryptoStats> {
         let state = ctx.data::<AppState>()?;
-        exec_gql(crate::services::crypto::get_global(&state.cache)).await
+        exec_gql(crate::services::crypto::get_global(
+            &state.cache,
+            &state.providers,
+        ))
+        .await
     }
 
     /// Market-wide crypto news (currently FMP only, requires `FMP_API_KEY`).

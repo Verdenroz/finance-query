@@ -346,8 +346,8 @@ impl ProvidersBuilder {
     ///
     /// Only HTTPS and loopback HTTP origins are accepted, and continuations cannot
     /// leave the origin. No global endpoint is modified. Requires an explicit
-    /// [`api_key`](Self::api_key), except for the keyless FiscalData and
-    /// DefiLlama, and a provider whose adapter
+    /// [`api_key`](Self::api_key), except for the keyless FiscalData,
+    /// DefiLlama and CoinGecko, and a provider whose adapter
     /// [accepts an endpoint](crate::ProviderAdapter::accepts_endpoint).
     pub fn endpoint(mut self, provider: Provider, base_url: impl Into<String>) -> Self {
         self.endpoints.insert(provider.as_str(), base_url.into());
@@ -499,7 +499,7 @@ impl ProvidersBuilder {
 
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
-        let keyless = ["fiscaldata", "defillama"];
+        let keyless = ["fiscaldata", "defillama", "coingecko"];
         let needs_key = self.request_limits.keys().chain(
             self.endpoints
                 .keys()

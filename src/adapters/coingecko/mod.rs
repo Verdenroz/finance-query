@@ -30,7 +30,10 @@ pub(crate) mod discovery; // DISCOVERY
 mod models;
 
 use client::CoinGeckoClient;
+use std::borrow::Cow;
 use std::sync::OnceLock;
+
+use crate::adapters::singleton::keyless_limiter;
 
 use crate::error::Result;
 pub use crate::models::crypto::CoinQuote;
@@ -39,11 +42,25 @@ pub use discovery::fetch_symbol_search_response;
 /// Process-global CoinGecko client (initialized lazily on first use).
 static COINGECKO_CLIENT: OnceLock<CoinGeckoClient> = OnceLock::new();
 
-fn client() -> Result<&'static CoinGeckoClient> {
-    if COINGECKO_CLIENT.get().is_none() {
-        let _ = COINGECKO_CLIENT.set(CoinGeckoClient::new()?);
+keyless_limiter!(rate = client::COINGECKO_RATE_PER_SEC);
+
+/// The shared client, or a fresh one against the scoped endpoint. The scoped
+/// client is not cached: each `Providers` owns its own origin.
+fn client() -> Result<Cow<'static, CoinGeckoClient>> {
+    if let Some(origin) =
+        crate::adapters::keys::scoped_key("coingecko").and_then(|scoped| scoped.base_url)
+    {
+        return Ok(Cow::Owned(CoinGeckoClient::new(&origin, shared_limiter())?));
     }
-    Ok(COINGECKO_CLIENT.get().expect("just set above"))
+    if COINGECKO_CLIENT.get().is_none() {
+        let _ = COINGECKO_CLIENT.set(CoinGeckoClient::new(
+            client::COINGECKO_ORIGIN,
+            shared_limiter(),
+        )?);
+    }
+    Ok(Cow::Borrowed(
+        COINGECKO_CLIENT.get().expect("just set above"),
+    ))
 }
 
 /// Fetch the top `count` cryptocurrencies by market cap.
