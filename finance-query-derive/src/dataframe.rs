@@ -51,7 +51,7 @@ struct FieldAttrs {
 }
 
 pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let (krate, explicit_crate) = crate_path(input)?;
+    let krate = crate_path(input)?;
     let fields = named_fields(input)?;
     let format_param = format_param(input);
     let name = &input.ident;
@@ -59,7 +59,9 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
         Some(_) => quote! { #name<#krate::format::Both> },
         None => quote! { #name },
     };
-    let time_naming_test = if explicit_crate {
+    let checked_crate = std::env::var("CARGO_PKG_NAME")
+        .is_ok_and(|n| n.starts_with("finance-query") && n != "finance-query-derive");
+    let time_naming_test = if checked_crate {
         time_naming_test(name, &impl_ty, fields, &krate)?
     } else {
         TokenStream::new()
@@ -513,9 +515,8 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
     Ok(attrs)
 }
 
-fn crate_path(input: &DeriveInput) -> syn::Result<(Path, bool)> {
+fn crate_path(input: &DeriveInput) -> syn::Result<Path> {
     let mut krate = syn::parse_quote!(::finance_query);
-    let mut explicit = false;
     for attr in input
         .attrs
         .iter()
@@ -524,14 +525,13 @@ fn crate_path(input: &DeriveInput) -> syn::Result<(Path, bool)> {
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("crate") {
                 krate = meta.value()?.parse::<LitStr>()?.parse()?;
-                explicit = true;
                 Ok(())
             } else {
                 Err(meta.error("expected `crate = \"...\"`"))
             }
         })?;
     }
-    Ok((krate, explicit))
+    Ok(krate)
 }
 
 fn named_fields(

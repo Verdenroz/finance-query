@@ -102,12 +102,18 @@ use syn::{
 ///   `Vec<T>` child frames stay flat. It cannot be combined with `skip`, `list`
 ///   or `flatten`.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
-///   `finance_query` re-exported under another path, and adds a `#[cfg(test)]` test
-///   that checks the empty frame's time naming: a name ending in `date`, `time`,
-///   `timestamp`, `expiration` or `at` must be a `Date` or `Datetime` column (or a
-///   list of either), and a `Date` or `Datetime` column must carry one of those
-///   words or `start`, `end`, `ending`, `filed`, `published`, `updated`, `quarter`,
-///   `year` or `period` in its name.
+///   `finance_query` re-exported under another path.
+///
+/// # Time naming test
+///
+/// When the crate being compiled has a name starting with `finance-query` (except `finance-query-derive`), the derive
+/// also emits a `#[cfg(test)]` test that checks the empty frame's time naming: a name
+/// ending in `date`, `time`, `timestamp`, `expiration` or `at` must be a `Date`
+/// or `Datetime` column (or a list of either), and a `Date` or `Datetime` column must
+/// carry one of those words or `start`, `end`, `ending`, `filed`, `published`, `updated`,
+/// `quarter`, `year` or `period` in its name. Other crates get no test. The test lives
+/// in a child module and names the type through `super`, so a type checked by it must
+/// be declared at module level, not inside a function body.
 ///
 /// # Time columns
 ///
