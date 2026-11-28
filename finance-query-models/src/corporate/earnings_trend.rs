@@ -62,27 +62,27 @@ pub struct EarningsTrendPeriod {
 pub struct EarningsEstimate {
     /// Average estimate
     #[serde(default)]
-    pub avg: Option<crate::models::quote::FormattedValue<f64>>,
+    pub avg: Option<crate::quote::FormattedValue<f64>>,
 
     /// Low estimate
     #[serde(default)]
-    pub low: Option<crate::models::quote::FormattedValue<f64>>,
+    pub low: Option<crate::quote::FormattedValue<f64>>,
 
     /// High estimate
     #[serde(default)]
-    pub high: Option<crate::models::quote::FormattedValue<f64>>,
+    pub high: Option<crate::quote::FormattedValue<f64>>,
 
     /// Year-ago EPS
     #[serde(default)]
-    pub year_ago_eps: Option<crate::models::quote::FormattedValue<f64>>,
+    pub year_ago_eps: Option<crate::quote::FormattedValue<f64>>,
 
     /// Number of analysts providing estimates
     #[serde(default)]
-    pub number_of_analysts: Option<crate::models::quote::FormattedValue<i64>>,
+    pub number_of_analysts: Option<crate::quote::FormattedValue<i64>>,
 
     /// Expected growth rate
     #[serde(default)]
-    pub growth: Option<crate::models::quote::FormattedValue<f64>>,
+    pub growth: Option<crate::quote::FormattedValue<f64>>,
 
     /// Currency for earnings
     #[serde(default)]
@@ -97,27 +97,27 @@ pub struct EarningsEstimate {
 pub struct RevenueEstimate {
     /// Average estimate
     #[serde(default)]
-    pub avg: Option<crate::models::quote::FormattedValue<i64>>,
+    pub avg: Option<crate::quote::FormattedValue<i64>>,
 
     /// Low estimate
     #[serde(default)]
-    pub low: Option<crate::models::quote::FormattedValue<i64>>,
+    pub low: Option<crate::quote::FormattedValue<i64>>,
 
     /// High estimate
     #[serde(default)]
-    pub high: Option<crate::models::quote::FormattedValue<i64>>,
+    pub high: Option<crate::quote::FormattedValue<i64>>,
 
     /// Number of analysts providing estimates
     #[serde(default)]
-    pub number_of_analysts: Option<crate::models::quote::FormattedValue<i64>>,
+    pub number_of_analysts: Option<crate::quote::FormattedValue<i64>>,
 
     /// Year-ago revenue
     #[serde(default)]
-    pub year_ago_revenue: Option<crate::models::quote::FormattedValue<i64>>,
+    pub year_ago_revenue: Option<crate::quote::FormattedValue<i64>>,
 
     /// Expected growth rate
     #[serde(default)]
-    pub growth: Option<crate::models::quote::FormattedValue<f64>>,
+    pub growth: Option<crate::quote::FormattedValue<f64>>,
 }
 
 /// EPS trend over time
@@ -128,27 +128,27 @@ pub struct RevenueEstimate {
 pub struct EpsTrend {
     /// Current EPS
     #[serde(default)]
-    pub current: Option<crate::models::quote::FormattedValue<f64>>,
+    pub current: Option<crate::quote::FormattedValue<f64>>,
 
     /// EPS 7 days ago
     #[serde(default)]
     #[serde(rename = "7daysAgo")]
-    pub seven_days_ago: Option<crate::models::quote::FormattedValue<f64>>,
+    pub seven_days_ago: Option<crate::quote::FormattedValue<f64>>,
 
     /// EPS 30 days ago
     #[serde(default)]
     #[serde(rename = "30daysAgo")]
-    pub thirty_days_ago: Option<crate::models::quote::FormattedValue<f64>>,
+    pub thirty_days_ago: Option<crate::quote::FormattedValue<f64>>,
 
     /// EPS 60 days ago
     #[serde(default)]
     #[serde(rename = "60daysAgo")]
-    pub sixty_days_ago: Option<crate::models::quote::FormattedValue<f64>>,
+    pub sixty_days_ago: Option<crate::quote::FormattedValue<f64>>,
 
     /// EPS 90 days ago
     #[serde(default)]
     #[serde(rename = "90daysAgo")]
-    pub ninety_days_ago: Option<crate::models::quote::FormattedValue<f64>>,
+    pub ninety_days_ago: Option<crate::quote::FormattedValue<f64>>,
 }
 
 /// EPS revision data
@@ -159,24 +159,24 @@ pub struct EpsTrend {
 pub struct EpsRevisions {
     /// Number of upward revisions in last 7 days
     #[serde(default)]
-    pub up_last7days: Option<crate::models::quote::FormattedValue<i64>>,
+    pub up_last7days: Option<crate::quote::FormattedValue<i64>>,
 
     /// Number of upward revisions in last 30 days
     #[serde(default)]
-    pub up_last30days: Option<crate::models::quote::FormattedValue<i64>>,
+    pub up_last30days: Option<crate::quote::FormattedValue<i64>>,
 
     /// Number of downward revisions in last 7 days
     #[serde(default)]
     #[serde(rename = "downLast7Days")]
-    pub down_last7_days: Option<crate::models::quote::FormattedValue<i64>>,
+    pub down_last7_days: Option<crate::quote::FormattedValue<i64>>,
 
     /// Number of downward revisions in last 30 days
     #[serde(default)]
-    pub down_last30days: Option<crate::models::quote::FormattedValue<i64>>,
+    pub down_last30days: Option<crate::quote::FormattedValue<i64>>,
 
     /// Number of downward revisions in last 90 days
     #[serde(default)]
-    pub down_last90days: Option<crate::models::quote::FormattedValue<i64>>,
+    pub down_last90days: Option<crate::quote::FormattedValue<i64>>,
 
     /// Currency for EPS revisions
     #[serde(default)]

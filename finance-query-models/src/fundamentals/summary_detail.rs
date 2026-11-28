@@ -1,4 +1,4 @@
-use crate::models::format::{Both, Format};
+use crate::format::{Both, Format};
 use finance_query_derive::FormatConvert;
 /// Summary Detail module
 ///

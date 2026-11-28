@@ -1,6 +1,9 @@
 //! Data models for finance-query responses.
 //!
-//! This module contains all the data structures returned by the library's API
+//! This crate backs the `finance-query` facade, which re-exports every public
+//! item at its documented path. Depend on `finance-query` instead.
+//!
+//! It contains all the data structures returned by the library's API
 //! methods. Types are organized by capability. Yahoo-backed capabilities
 //! compile unconditionally; provider-specific capabilities are gated behind
 //! the corresponding feature flag.
@@ -48,6 +51,11 @@ pub mod indices;
 
 #[cfg(feature = "dataframe")]
 mod dataframe;
+
+// The `ToDataFrame` derive resolves its helpers through `dataframe(crate = "crate")`.
+#[cfg(feature = "dataframe")]
+#[doc(hidden)]
+pub use finance_query_types::{__dataframe, ToDataFrame, polars};
 
 #[cfg(all(test, feature = "dataframe"))]
 pub(crate) mod dataframe_test_util {

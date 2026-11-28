@@ -1,5 +1,5 @@
 use super::contract::{Contracts, OptionContract};
-use crate::Provider;
+use finance_query_types::Provider;
 /// Options Response module
 ///
 /// Handles parsing of Yahoo Finance options API responses.
@@ -293,15 +293,14 @@ mod tests {
 
     #[test]
     fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
-        let contract =
-            |symbol: &str, expiration: Option<i64>| -> crate::models::options::OptionContract {
-                serde_json::from_value(serde_json::json!({
-                    "contractSymbol": symbol,
-                    "strike": 1.0,
-                    "expiration": expiration,
-                }))
-                .unwrap()
-            };
+        let contract = |symbol: &str, expiration: Option<i64>| -> crate::options::OptionContract {
+            serde_json::from_value(serde_json::json!({
+                "contractSymbol": symbol,
+                "strike": 1.0,
+                "expiration": expiration,
+            }))
+            .unwrap()
+        };
         let options = crate::providers::build_options(
             "X".into(),
             Provider::Yahoo,

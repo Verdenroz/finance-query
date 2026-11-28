@@ -1,5 +1,5 @@
 use super::{Dividend, DividendAnalytics, StockBar};
-use crate::models::dataframe_test_util::{columns, micros};
+use crate::dataframe_test_util::{columns, micros};
 use serde_json::json;
 
 #[test]

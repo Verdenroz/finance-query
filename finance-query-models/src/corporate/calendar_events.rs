@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 
 /// Calendar events including earnings and dividend dates
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

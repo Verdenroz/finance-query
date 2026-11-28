@@ -13,8 +13,8 @@ pub mod market;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::models::options::Options;
-use crate::models::quote::{CalendarEvents, DefaultKeyStatistics};
+use crate::options::Options;
+use crate::quote::{CalendarEvents, DefaultKeyStatistics};
 
 /// A single upcoming financial event.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

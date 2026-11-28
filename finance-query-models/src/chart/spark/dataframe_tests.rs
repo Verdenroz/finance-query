@@ -1,5 +1,5 @@
 use super::Spark;
-use crate::models::dataframe_test_util::columns;
+use crate::dataframe_test_util::columns;
 use serde_json::json;
 
 fn spark(timestamps: &[i64], closes: &[f64]) -> Spark {

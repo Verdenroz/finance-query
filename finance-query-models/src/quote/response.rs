@@ -2,7 +2,7 @@
 //!
 //! Handles parsing of Yahoo Finance quoteSummary API responses
 
-use crate::models::quote::*;
+use crate::quote::*;
 
 /// Response from the quoteSummary endpoint
 ///

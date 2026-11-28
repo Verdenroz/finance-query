@@ -1,5 +1,5 @@
-use crate::models::dataframe_test_util::{columns, days};
-use crate::models::fundamentals::{
+use crate::dataframe_test_util::{columns, days};
+use crate::fundamentals::{
     CompanyProfile, DefaultKeyStatistics, EtfCountryWeighting, EtfHolding, EtfProfile,
     EtfSectorWeighting, FinancialData, GradingAction, PriceTargetConsensus, PriceTargetSummary,
     RatingConsensus, SummaryDetail,

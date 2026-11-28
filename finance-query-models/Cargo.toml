@@ -13,7 +13,30 @@ categories = ["api-bindings", "finance"]
 
 [dependencies]
 finance-query-types = { version = "3.4.0", path = "../finance-query-types" }
+finance-query-derive = { version = "3.4.0", path = "../finance-query-derive" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "2.0.18"
 chrono = { version = "0.4", features = ["serde"] }
+polars = { version = "0.55.2", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-struct", "dtype-datetime", "dtype-date", "timezones", "streaming"] }
+vader_sentiment = { version = "0.1", optional = true }
+
+[features]
+default = []
+full = ["dataframe", "indicators", "risk", "sentiment", "fred", "crypto", "defi", "cftc", "fiscaldata", "openfigi"]
+dataframe = ["dep:polars", "finance-query-types/dataframe"]
+indicators = ["finance-query-types/indicators"]
+risk = ["indicators"]
+sentiment = ["dep:vader_sentiment"]
+fred = ["finance-query-types/fred"]
+crypto = ["finance-query-types/crypto"]
+defi = ["finance-query-types/defi"]
+cftc = ["finance-query-types/cftc"]
+fiscaldata = ["finance-query-types/fiscaldata"]
+openfigi = []
+
+[dev-dependencies]
+finance-query = { path = "..", features = ["full"] }
+mockito = "1"
+
+[package.metadata.docs.rs]
+all-features = true

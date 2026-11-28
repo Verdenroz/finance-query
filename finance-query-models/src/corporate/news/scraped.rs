@@ -31,7 +31,7 @@ pub struct News {
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     #[cfg_attr(feature = "dataframe", dataframe(flatten))]
-    pub sentiment: Option<crate::models::sentiment::Sentiment>,
+    pub sentiment: Option<crate::sentiment::Sentiment>,
 }
 
 impl News {

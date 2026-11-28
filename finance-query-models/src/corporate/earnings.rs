@@ -39,7 +39,7 @@ pub struct EarningsChart {
 
     /// Current quarter estimate
     #[serde(default)]
-    pub current_quarter_estimate: Option<crate::models::quote::FormattedValue<f64>>,
+    pub current_quarter_estimate: Option<crate::quote::FormattedValue<f64>>,
 
     /// Current quarter estimate date
     #[serde(default)]
@@ -60,7 +60,7 @@ pub struct EarningsChart {
     /// Upcoming earnings dates
     #[serde(default)]
     #[cfg_attr(feature = "dataframe", dataframe(datetime = "s", list))]
-    pub earnings_date: Vec<crate::models::quote::FormattedValue<i64>>,
+    pub earnings_date: Vec<crate::quote::FormattedValue<i64>>,
 
     /// Whether the earnings date is an estimate
     #[serde(default)]
@@ -79,11 +79,11 @@ pub struct QuarterlyEarnings {
 
     /// Actual EPS
     #[serde(default)]
-    pub actual: Option<crate::models::quote::FormattedValue<f64>>,
+    pub actual: Option<crate::quote::FormattedValue<f64>>,
 
     /// Estimated EPS
     #[serde(default)]
-    pub estimate: Option<crate::models::quote::FormattedValue<f64>>,
+    pub estimate: Option<crate::quote::FormattedValue<f64>>,
 
     /// Difference between actual and estimate (string format)
     #[serde(default)]
@@ -131,11 +131,11 @@ pub struct YearlyFinancials {
 
     /// Revenue
     #[serde(default)]
-    pub revenue: Option<crate::models::quote::FormattedValue<i64>>,
+    pub revenue: Option<crate::quote::FormattedValue<i64>>,
 
     /// Earnings
     #[serde(default)]
-    pub earnings: Option<crate::models::quote::FormattedValue<i64>>,
+    pub earnings: Option<crate::quote::FormattedValue<i64>>,
 }
 
 /// Quarterly financial data entry
@@ -150,9 +150,9 @@ pub struct QuarterlyFinancials {
 
     /// Revenue
     #[serde(default)]
-    pub revenue: Option<crate::models::quote::FormattedValue<i64>>,
+    pub revenue: Option<crate::quote::FormattedValue<i64>>,
 
     /// Earnings
     #[serde(default)]
-    pub earnings: Option<crate::models::quote::FormattedValue<i64>>,
+    pub earnings: Option<crate::quote::FormattedValue<i64>>,
 }

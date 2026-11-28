@@ -1747,6 +1747,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance-query-models"
+version = "3.4.0"
+dependencies = [
+ "chrono",
+ "finance-query",
+ "finance-query-derive",
+ "finance-query-types",
+ "mockito",
+ "polars",
+ "serde",
+ "serde_json",
+ "vader_sentiment",
+]
+
+[[package]]
 name = "finance-query-server"
 version = "3.4.0"
 dependencies = [

@@ -156,13 +156,13 @@ pub struct CompanyOfficer {
 
     /// Total compensation/pay
     #[serde(default)]
-    pub total_pay: Option<crate::models::quote::FormattedValue<i64>>,
+    pub total_pay: Option<crate::quote::FormattedValue<i64>>,
 
     /// Value of exercised options
     #[serde(default)]
-    pub exercised_value: Option<crate::models::quote::FormattedValue<i64>>,
+    pub exercised_value: Option<crate::quote::FormattedValue<i64>>,
 
     /// Value of unexercised options
     #[serde(default)]
-    pub unexercised_value: Option<crate::models::quote::FormattedValue<i64>>,
+    pub unexercised_value: Option<crate::quote::FormattedValue<i64>>,
 }

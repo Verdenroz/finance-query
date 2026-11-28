@@ -2,7 +2,7 @@ use super::SearchResults;
 use super::news::SearchNews;
 use super::research::ResearchReport;
 use super::thumbnail::{NewsThumbnail, ThumbnailResolution};
-use crate::models::dataframe_test_util::columns;
+use crate::dataframe_test_util::columns;
 use serde_json::json;
 
 #[test]

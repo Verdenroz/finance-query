@@ -2,9 +2,9 @@
 ///
 /// Contains the fully typed Chart structure for historical data.
 use super::{Candle, ChartMeta};
-use crate::Provider;
-use crate::constants::{Interval, TimeRange};
 use finance_query_derive::FieldsInit;
+use finance_query_types::Provider;
+use finance_query_types::constants::{Interval, TimeRange};
 use serde::{Deserialize, Serialize};
 
 /// Fully typed chart data
@@ -99,7 +99,7 @@ impl Chart {
     /// # }
     /// ```
     pub fn sma(&self, period: usize) -> Vec<Option<f64>> {
-        crate::indicators::sma(&self.close_prices(), period)
+        finance_query_types::indicators::sma(&self.close_prices(), period)
     }
 
     /// Calculate Exponential Moving Average (EMA) on close prices.
@@ -118,7 +118,7 @@ impl Chart {
     /// # }
     /// ```
     pub fn ema(&self, period: usize) -> Vec<Option<f64>> {
-        crate::indicators::ema(&self.close_prices(), period)
+        finance_query_types::indicators::ema(&self.close_prices(), period)
     }
 
     /// Calculate Relative Strength Index (RSI) on close prices.
@@ -139,8 +139,8 @@ impl Chart {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn rsi(&self, period: usize) -> crate::indicators::Result<Vec<Option<f64>>> {
-        crate::indicators::rsi(&self.close_prices(), period)
+    pub fn rsi(&self, period: usize) -> finance_query_types::indicators::Result<Vec<Option<f64>>> {
+        finance_query_types::indicators::rsi(&self.close_prices(), period)
     }
 
     /// Calculate Moving Average Convergence Divergence (MACD).
@@ -168,8 +168,8 @@ impl Chart {
         fast_period: usize,
         slow_period: usize,
         signal_period: usize,
-    ) -> crate::indicators::Result<crate::indicators::MacdResult> {
-        crate::indicators::macd(
+    ) -> finance_query_types::indicators::Result<finance_query_types::indicators::MacdResult> {
+        finance_query_types::indicators::macd(
             &self.close_prices(),
             fast_period,
             slow_period,
@@ -201,8 +201,13 @@ impl Chart {
         &self,
         period: usize,
         std_dev_multiplier: f64,
-    ) -> crate::indicators::Result<crate::indicators::BollingerBands> {
-        crate::indicators::bollinger_bands(&self.close_prices(), period, std_dev_multiplier)
+    ) -> finance_query_types::indicators::Result<finance_query_types::indicators::BollingerBands>
+    {
+        finance_query_types::indicators::bollinger_bands(
+            &self.close_prices(),
+            period,
+            std_dev_multiplier,
+        )
     }
 
     /// Calculate Average True Range (ATR).
@@ -222,8 +227,8 @@ impl Chart {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn atr(&self, period: usize) -> crate::indicators::Result<Vec<Option<f64>>> {
-        crate::indicators::atr(
+    pub fn atr(&self, period: usize) -> finance_query_types::indicators::Result<Vec<Option<f64>>> {
+        finance_query_types::indicators::atr(
             &self.high_prices(),
             &self.low_prices(),
             &self.close_prices(),
@@ -257,8 +262,8 @@ impl Chart {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn patterns(&self) -> Vec<Option<crate::indicators::CandlePattern>> {
-        crate::indicators::patterns(&self.candles)
+    pub fn patterns(&self) -> Vec<Option<finance_query_types::indicators::CandlePattern>> {
+        finance_query_types::indicators::patterns(&self.candles)
     }
 
     /// Calculate classic (standard) Pivot Points.
@@ -267,8 +272,10 @@ impl Chart {
     /// high/low/close; the first bar is `None`.
     pub fn pivot_points(
         &self,
-    ) -> crate::indicators::Result<Vec<Option<crate::indicators::PivotPoints>>> {
-        crate::indicators::pivot_points(
+    ) -> finance_query_types::indicators::Result<
+        Vec<Option<finance_query_types::indicators::PivotPoints>>,
+    > {
+        finance_query_types::indicators::pivot_points(
             &self.high_prices(),
             &self.low_prices(),
             &self.close_prices(),
@@ -282,8 +289,10 @@ impl Chart {
     /// support/resistance levels.
     pub fn fibonacci_pivot_points(
         &self,
-    ) -> crate::indicators::Result<Vec<Option<crate::indicators::PivotPoints>>> {
-        crate::indicators::fibonacci_pivot_points(
+    ) -> finance_query_types::indicators::Result<
+        Vec<Option<finance_query_types::indicators::PivotPoints>>,
+    > {
+        finance_query_types::indicators::fibonacci_pivot_points(
             &self.high_prices(),
             &self.low_prices(),
             &self.close_prices(),
@@ -295,8 +304,8 @@ impl Chart {
     /// Smooths price action to make the prevailing trend easier to read.
     /// Volume, timestamp, adjusted close, and provider id pass through
     /// unchanged — only open/high/low/close are recomputed.
-    pub fn heikin_ashi(&self) -> crate::indicators::Result<Vec<crate::Candle>> {
-        crate::indicators::heikin_ashi(&self.candles)
+    pub fn heikin_ashi(&self) -> finance_query_types::indicators::Result<Vec<Candle>> {
+        finance_query_types::indicators::heikin_ashi(&self.candles)
     }
 
     /// Calculate ZigZag swing points using a percentage reversal threshold.
@@ -306,8 +315,13 @@ impl Chart {
     pub fn zigzag(
         &self,
         deviation_pct: f64,
-    ) -> crate::indicators::Result<Vec<crate::indicators::ZigZagPoint>> {
-        crate::indicators::zigzag(&self.high_prices(), &self.low_prices(), deviation_pct)
+    ) -> finance_query_types::indicators::Result<Vec<finance_query_types::indicators::ZigZagPoint>>
+    {
+        finance_query_types::indicators::zigzag(
+            &self.high_prices(),
+            &self.low_prices(),
+            deviation_pct,
+        )
     }
 
     /// Calculate rolling Fibonacci Retracement levels over a `period`-bar
@@ -315,19 +329,36 @@ impl Chart {
     pub fn fibonacci_retracement(
         &self,
         period: usize,
-    ) -> crate::indicators::Result<Vec<Option<crate::indicators::FibonacciLevels>>> {
-        crate::indicators::fibonacci_retracement(&self.high_prices(), &self.low_prices(), period)
+    ) -> finance_query_types::indicators::Result<
+        Vec<Option<finance_query_types::indicators::FibonacciLevels>>,
+    > {
+        finance_query_types::indicators::fibonacci_retracement(
+            &self.high_prices(),
+            &self.low_prices(),
+            period,
+        )
     }
+}
+
+/// Simple close-to-close returns of a candle series, one fewer than `candles`.
+///
+/// `close` is not dividend-adjusted, so returns exclude dividends.
+#[cfg(feature = "risk")]
+pub fn returns(candles: &[Candle]) -> Vec<f64> {
+    candles
+        .windows(2)
+        .map(|w| (w[1].close - w[0].close) / w[0].close)
+        .collect()
 }
 
 #[cfg(feature = "risk")]
 impl Chart {
     /// Simple close-to-close returns of the candles, one fewer than
-    /// `candles`. See [`risk::returns`](crate::risk::returns).
+    /// `candles`. See [`returns`].
     ///
     /// `close` is not dividend-adjusted, so returns exclude dividends.
     pub fn returns(&self) -> Vec<f64> {
-        crate::risk::returns(&self.candles)
+        returns(&self.candles)
     }
 }
 
@@ -364,7 +395,7 @@ mod tests {
             range: None,
             provider_id: None,
         };
-        assert_eq!(chart.returns(), crate::risk::returns(&chart.candles));
+        assert_eq!(chart.returns(), returns(&chart.candles));
         assert_eq!(chart.returns().len(), 2);
     }
 }

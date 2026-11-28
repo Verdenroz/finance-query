@@ -3,8 +3,8 @@
 //! Contains detailed pricing data for a stock including pre/post market data,
 //! exchange information, and market state.
 
-use crate::models::format::{Both, Format};
-use crate::models::quote::FormattedValue;
+use crate::format::{Both, Format};
+use crate::quote::FormattedValue;
 use finance_query_derive::{FieldsInit, FormatConvert};
 use serde::{Deserialize, Serialize};
 

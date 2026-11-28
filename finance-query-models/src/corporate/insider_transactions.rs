@@ -30,11 +30,11 @@ pub struct InsiderTransaction {
 
     /// Number of shares involved
     #[serde(default)]
-    pub shares: Option<crate::models::quote::FormattedValue<i64>>,
+    pub shares: Option<crate::quote::FormattedValue<i64>>,
 
     /// Total value of the transaction
     #[serde(default)]
-    pub value: Option<crate::models::quote::FormattedValue<i64>>,
+    pub value: Option<crate::quote::FormattedValue<i64>>,
 
     /// Name of the filer
     #[serde(default)]
@@ -55,7 +55,7 @@ pub struct InsiderTransaction {
     /// Start date of the transaction
     #[serde(default)]
     #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
-    pub start_date: Option<crate::models::quote::FormattedValue<i64>>,
+    pub start_date: Option<crate::quote::FormattedValue<i64>>,
 
     /// Ownership type ("D" for direct, "I" for indirect)
     #[serde(default)]

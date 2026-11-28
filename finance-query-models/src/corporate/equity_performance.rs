@@ -56,51 +56,51 @@ pub struct PerformanceOverview {
     /// Date the performance data is as of (Unix timestamp)
     #[serde(default)]
     #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
-    pub as_of_date: Option<crate::models::quote::FormattedValue<i64>>,
+    pub as_of_date: Option<crate::quote::FormattedValue<i64>>,
 
     /// 5-day return percentage
     #[serde(default)]
-    pub five_days_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub five_days_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 1-month return percentage
     #[serde(default)]
-    pub one_month_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub one_month_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 3-month return percentage
     #[serde(default)]
-    pub three_month_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub three_month_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 6-month return percentage
     #[serde(default)]
-    pub six_month_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub six_month_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// Year-to-date return percentage
     #[serde(default)]
-    pub ytd_return_pct: Option<crate::models::quote::FormattedValue<f64>>,
+    pub ytd_return_pct: Option<crate::quote::FormattedValue<f64>>,
 
     /// 1-year total return percentage
     #[serde(default)]
-    pub one_year_total_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub one_year_total_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 2-year total return percentage
     #[serde(default)]
-    pub two_year_total_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub two_year_total_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 3-year total return percentage
     #[serde(default)]
-    pub three_year_total_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub three_year_total_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 5-year total return percentage
     #[serde(default)]
-    pub five_year_total_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub five_year_total_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// 10-year total return percentage
     #[serde(default)]
-    pub ten_year_total_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub ten_year_total_return: Option<crate::quote::FormattedValue<f64>>,
 
     /// Maximum return percentage (all-time)
     #[serde(default)]
-    pub max_return: Option<crate::models::quote::FormattedValue<f64>>,
+    pub max_return: Option<crate::quote::FormattedValue<f64>>,
 }
 
 impl EquityPerformance {
@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_equity_performance_vs_benchmark() {
-        use crate::models::quote::FormattedValue;
+        use crate::quote::FormattedValue;
 
         let equity_performance = EquityPerformance {
             max_age: Some(1),

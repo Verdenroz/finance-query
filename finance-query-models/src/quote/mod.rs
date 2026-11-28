@@ -21,14 +21,14 @@ pub use formatted_value::FormattedValue;
 // ── Re-exports from new canonical locations (backward compat within crate) ───
 
 // From fundamentals/
-pub use crate::models::fundamentals::{
+pub use crate::fundamentals::{
     BalanceSheetHistory, BalanceSheetHistoryQuarterly, CashflowStatementHistory,
     CashflowStatementHistoryQuarterly, DefaultKeyStatistics, FinancialData, IncomeStatementHistory,
     IncomeStatementHistoryQuarterly, SummaryDetail,
 };
 
 // From corporate/
-pub use crate::models::corporate::{
+pub use crate::corporate::{
     AssetProfile, CalendarEvents, CompanyOfficer, Earnings, EarningsHistory, EarningsTrend,
     EquityPerformance, FundOwnership, FundPerformance, FundProfile, InsiderHolders,
     InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
@@ -36,7 +36,7 @@ pub use crate::models::corporate::{
 };
 
 // From market/
-pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+pub use crate::market::{IndexTrend, IndustryTrend, SectorTrend};
 
 // Internal re-exports for crate use
 pub use price::Price;

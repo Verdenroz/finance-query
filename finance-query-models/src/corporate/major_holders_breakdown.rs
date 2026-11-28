@@ -13,19 +13,19 @@ use serde::{Deserialize, Serialize};
 pub struct MajorHoldersBreakdown {
     /// Percentage of shares held by insiders
     #[serde(default)]
-    pub insiders_percent_held: Option<crate::models::quote::FormattedValue<f64>>,
+    pub insiders_percent_held: Option<crate::quote::FormattedValue<f64>>,
 
     /// Number of institutions holding shares
     #[serde(default)]
-    pub institutions_count: Option<crate::models::quote::FormattedValue<i64>>,
+    pub institutions_count: Option<crate::quote::FormattedValue<i64>>,
 
     /// Percentage of float held by institutions
     #[serde(default)]
-    pub institutions_float_percent_held: Option<crate::models::quote::FormattedValue<f64>>,
+    pub institutions_float_percent_held: Option<crate::quote::FormattedValue<f64>>,
 
     /// Percentage of total shares held by institutions
     #[serde(default)]
-    pub institutions_percent_held: Option<crate::models::quote::FormattedValue<f64>>,
+    pub institutions_percent_held: Option<crate::quote::FormattedValue<f64>>,
 
     /// Maximum age of this data in seconds
     #[serde(default)]

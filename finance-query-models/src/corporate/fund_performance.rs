@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 
 /// Fund performance data including returns, risk metrics, and historical performance
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

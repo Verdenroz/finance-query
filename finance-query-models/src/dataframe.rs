@@ -142,53 +142,53 @@ macro_rules! impl_metric_rows {
 }
 
 impl_metric_rows!(
-    crate::models::fundamentals::BalanceSheetHistory => balance_sheet_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::fundamentals::BalanceSheetHistoryQuarterly => balance_sheet_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::fundamentals::CashflowStatementHistory => cashflow_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::fundamentals::CashflowStatementHistoryQuarterly => cashflow_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::fundamentals::IncomeStatementHistory => income_statement_history, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::fundamentals::IncomeStatementHistoryQuarterly => income_statement_history, "endDate", "end_date", Some(EpochUnit::Seconds),
-    crate::models::corporate::fund_performance::PastQuarterlyReturns => returns, "year", "year", None,
+    crate::fundamentals::BalanceSheetHistory => balance_sheet_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::fundamentals::BalanceSheetHistoryQuarterly => balance_sheet_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::fundamentals::CashflowStatementHistory => cashflow_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::fundamentals::CashflowStatementHistoryQuarterly => cashflow_statements, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::fundamentals::IncomeStatementHistory => income_statement_history, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::fundamentals::IncomeStatementHistoryQuarterly => income_statement_history, "endDate", "end_date", Some(EpochUnit::Seconds),
+    crate::corporate::fund_performance::PastQuarterlyReturns => returns, "year", "year", None,
 );
 
 delegate_rows_to_inherent!(
-    crate::CalendarEvent,
-    crate::MarketCalendarEntry,
-    crate::models::chart::spark::Spark,
-    crate::SparkData,
-    crate::EdgarSearchHit,
+    crate::calendar::CalendarEvent,
+    crate::calendar::market::MarketCalendarEntry,
+    crate::chart::spark::Spark,
+    crate::market::market_summary::SparkData,
+    crate::filings::EdgarSearchHit,
 );
 
 delegate_to_inherent!(
-    crate::Chart,
-    crate::CompanyFacts,
-    crate::Contracts,
-    crate::EconomicSeries,
-    crate::EdgarFilingIndex,
-    crate::FactConcept,
-    crate::FactsByTaxonomy,
-    crate::FinancialStatement,
-    crate::LookupResults,
-    crate::MarketHours,
-    crate::Options,
-    crate::ProviderFilings,
-    crate::Recommendation,
-    crate::ScreenerResults,
+    crate::chart::Chart,
+    crate::filings::CompanyFacts,
+    crate::options::Contracts,
+    crate::economic::EconomicSeries,
+    crate::filings::filing_index::EdgarFilingIndex,
+    crate::filings::FactConcept,
+    crate::filings::FactsByTaxonomy,
+    crate::fundamentals::FinancialStatement,
+    crate::discovery::lookup::LookupResults,
+    crate::market::hours::MarketHours,
+    crate::options::Options,
+    crate::filings::ProviderFilings,
+    crate::corporate::recommendation::Recommendation,
+    crate::discovery::screeners::ScreenerResults,
 );
 
 delegate_wrapped_rows!(
-    crate::EdgarFilingRecent => crate::EdgarFiling,
-    crate::EdgarSearchHitsContainer => crate::EdgarSearchHit,
-    crate::EdgarSearchResults => crate::EdgarSearchHit,
-    crate::ResearchReports => crate::ResearchReport,
-    crate::SearchQuotes => crate::SearchQuote,
+    crate::filings::EdgarFilingRecent => crate::filings::EdgarFiling,
+    crate::filings::EdgarSearchHitsContainer => crate::filings::EdgarSearchHit,
+    crate::filings::EdgarSearchResults => crate::filings::EdgarSearchHit,
+    crate::discovery::search::ResearchReports => crate::discovery::search::ResearchReport,
+    crate::discovery::search::SearchQuotes => crate::discovery::search::SearchQuote,
 );
 
 #[cfg(feature = "cftc")]
-delegate_to_inherent!(crate::models::futures::cot::CommitmentsOfTraders);
+delegate_to_inherent!(crate::futures::cot::CommitmentsOfTraders);
 
 #[cfg(feature = "fred")]
-delegate_to_inherent!(crate::models::economic::MacroSeries);
+delegate_to_inherent!(crate::economic::MacroSeries);
 
 #[cfg(test)]
 mod tests {
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn vec_and_slice_convert_with_method_syntax() {
-        use crate::prelude::*;
+        use crate::ToDataFrame;
 
         let candles: Vec<Candle> = (0..3)
             .map(|i| Candle::__new(i, 1.0, 2.0, 0.5, 1.5, 10, None, None))
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn empty_vec_keeps_the_row_schema() {
-        use crate::prelude::*;
+        use crate::ToDataFrame;
 
         let empty: Vec<Candle> = Vec::new();
         let df = empty.to_dataframe().unwrap();
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn statement_entries_convert_to_long_metric_rows() {
-        use crate::models::fundamentals::IncomeStatementHistory;
+        use crate::fundamentals::IncomeStatementHistory;
 
         let history: IncomeStatementHistory = serde_json::from_value(serde_json::json!({
             "maxAge": 1,
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn past_quarterly_returns_use_the_year_as_period() {
-        use crate::models::corporate::fund_performance::PastQuarterlyReturns;
+        use crate::corporate::fund_performance::PastQuarterlyReturns;
 
         let returns: PastQuarterlyReturns = serde_json::from_value(serde_json::json!({
             "returns": [{"year": "2024", "q1": {"raw": 0.1, "fmt": "10%"}, "q2": {"raw": 0.2}}]
@@ -321,7 +321,7 @@ mod tests {
         let candle = Candle::__new(1_794_603_601, 0.0, 0.0, 0.0, 0.0, 0, None, None);
         let df = candle.to_dataframe().unwrap();
         assert_eq!(
-            crate::models::dataframe_test_util::micros(&df, "timestamp"),
+            crate::dataframe_test_util::micros(&df, "timestamp"),
             Some(1_794_603_601_000_000)
         );
     }
@@ -382,7 +382,7 @@ mod tests {
         );
         assert_eq!(schema(&news.to_dataframe().unwrap())[6..], sentiment);
 
-        let search = crate::SearchNews::vec_to_dataframe(&[]).unwrap();
+        let search = crate::discovery::search::SearchNews::vec_to_dataframe(&[]).unwrap();
         let search = schema(&search);
         assert_eq!(search[search.len() - 4..search.len() - 1], sentiment);
         assert_eq!(
@@ -396,28 +396,35 @@ mod tests {
 
     #[test]
     fn default_vec_to_dataframe_skips_items_without_columns() {
-        let concepts: Vec<crate::FactConcept> = serde_json::from_value(serde_json::json!([
-            {"label": "Revenue", "units": {"USD": [{"end": "2024-12-31", "val": 1.0}]}},
-            {"label": "Unitless"},
-        ]))
-        .unwrap();
-        let df = <crate::FactConcept as crate::ToDataFrame>::vec_to_dataframe(&concepts).unwrap();
+        let concepts: Vec<crate::filings::FactConcept> =
+            serde_json::from_value(serde_json::json!([
+                {"label": "Revenue", "units": {"USD": [{"end": "2024-12-31", "val": 1.0}]}},
+                {"label": "Unitless"},
+            ]))
+            .unwrap();
+        let df = <crate::filings::FactConcept as crate::ToDataFrame>::vec_to_dataframe(&concepts)
+            .unwrap();
         assert_eq!(df.height(), 1);
         let unitless =
-            <crate::FactConcept as crate::ToDataFrame>::vec_to_dataframe(&concepts[1..]).unwrap();
+            <crate::filings::FactConcept as crate::ToDataFrame>::vec_to_dataframe(&concepts[1..])
+                .unwrap();
         assert_eq!(unitless.width(), 0);
     }
 
     #[test]
     fn calendar_rows_keep_schema_through_the_trait() {
-        let events = <crate::CalendarEvent as crate::ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+        let events =
+            <crate::calendar::CalendarEvent as crate::ToDataFrame>::vec_to_dataframe(&[]).unwrap();
         assert_eq!(
             schema(&events),
-            schema(&crate::CalendarEvent::vec_to_dataframe(&[]).unwrap())
+            schema(&crate::calendar::CalendarEvent::vec_to_dataframe(&[]).unwrap())
         );
         assert!(events.width() > 0);
         let entries =
-            <crate::MarketCalendarEntry as crate::ToDataFrame>::vec_to_dataframe(&[]).unwrap();
+            <crate::calendar::market::MarketCalendarEntry as crate::ToDataFrame>::vec_to_dataframe(
+                &[],
+            )
+            .unwrap();
         assert!(entries.width() > 0);
     }
 
@@ -426,7 +433,7 @@ mod tests {
         fn frame<T: crate::ToDataFrame>(value: &T) -> DataFrame {
             value.to_dataframe().unwrap()
         }
-        let history: crate::quote::EarningsHistory =
+        let history: crate::corporate::EarningsHistory =
             serde_json::from_value(serde_json::json!({"history": []})).unwrap();
         assert_eq!(
             schema(&frame(&history)),

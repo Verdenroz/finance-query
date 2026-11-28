@@ -1,7 +1,7 @@
 use super::listings::{StockListing, StockType, TickerChange};
 use super::reference::{ExchangeInfo, ScreenerMatch, SymbolDetails, SymbolMatch};
 use super::screeners::ScreenerQuote;
-use crate::models::dataframe_test_util::{columns, micros};
+use crate::dataframe_test_util::{columns, micros};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 

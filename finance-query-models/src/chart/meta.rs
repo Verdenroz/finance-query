@@ -1,4 +1,4 @@
-use crate::Provider;
+use finance_query_types::Provider;
 /// Chart Metadata module
 ///
 /// Contains metadata about chart data including symbol, exchange, timezone, and price information.

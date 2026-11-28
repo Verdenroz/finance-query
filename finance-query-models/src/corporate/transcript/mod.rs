@@ -56,7 +56,7 @@ impl Transcript {
     pub fn score_sentiment(&mut self) {
         if let Some(t) = self.transcript_content.transcript.as_mut() {
             for p in t.paragraphs.iter_mut() {
-                p.sentiment = Some(crate::models::sentiment::analyze(&p.text));
+                p.sentiment = Some(crate::sentiment::analyze(&p.text));
             }
         }
     }
@@ -66,15 +66,15 @@ impl Transcript {
     /// Returns a neutral, zero-confidence score for an empty transcript. Only
     /// available when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
-    pub fn overall_sentiment(&self) -> crate::models::sentiment::Sentiment {
+    pub fn overall_sentiment(&self) -> crate::sentiment::Sentiment {
         let texts: Vec<&str> = self
             .transcript_content
             .transcript
             .as_ref()
             .map(|t| t.paragraphs.iter().map(|p| p.text.as_str()).collect())
             .unwrap_or_default();
-        crate::models::sentiment::aggregate_weighted(&texts)
-            .unwrap_or_else(crate::models::sentiment::Sentiment::neutral)
+        crate::sentiment::aggregate_weighted(&texts)
+            .unwrap_or_else(crate::sentiment::Sentiment::neutral)
     }
 
     /// Get all paragraphs with speaker names resolved.
@@ -185,7 +185,7 @@ pub struct Paragraph {
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     #[cfg_attr(feature = "dataframe", dataframe(flatten))]
-    pub sentiment: Option<crate::models::sentiment::Sentiment>,
+    pub sentiment: Option<crate::sentiment::Sentiment>,
 }
 
 /// A sentence within a paragraph.

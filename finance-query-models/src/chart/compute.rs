@@ -1,5 +1,5 @@
 use super::Chart;
-use crate::indicators::{self, Indicator, IndicatorResult, Result};
+use finance_query_types::indicators::{self, Indicator, IndicatorResult, Result};
 
 /// Compute a single [`Indicator`] over a [`Chart`].
 ///

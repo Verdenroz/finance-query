@@ -61,5 +61,5 @@ pub struct CompanyProfile {
     pub ipo_date: Option<String>,
     /// Provider that supplied this profile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<crate::Provider>,
+    pub provider_id: Option<finance_query_types::Provider>,
 }

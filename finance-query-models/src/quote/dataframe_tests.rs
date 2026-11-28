@@ -1,7 +1,7 @@
-use crate::models::chart::ChartMeta;
-use crate::models::dataframe_test_util::{columns, micros};
-use crate::models::quote::snapshot::MarketSnapshot;
-use crate::models::quote::{Price, Quote, QuoteSummaryResponse, QuoteTypeData};
+use crate::chart::ChartMeta;
+use crate::dataframe_test_util::{columns, micros};
+use crate::quote::snapshot::MarketSnapshot;
+use crate::quote::{Price, Quote, QuoteSummaryResponse, QuoteTypeData};
 use serde_json::json;
 
 #[test]

@@ -184,7 +184,7 @@ impl ScreenerResults {
 }
 
 fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote, String> {
-    use crate::models::quote::FormattedValue;
+    use crate::quote::FormattedValue;
 
     let mut record = match record {
         serde_json::Value::Object(map) => map,

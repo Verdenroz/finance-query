@@ -3,18 +3,14 @@ use super::press_release::PressRelease;
 use super::transcript::*;
 use super::*;
 use crate::ToDataFrame;
-use crate::models::corporate::asset_profile::CompanyOfficer;
-use crate::models::corporate::earnings::Earnings;
-use crate::models::corporate::earnings::{
-    QuarterlyEarnings, QuarterlyFinancials, YearlyFinancials,
-};
-use crate::models::corporate::earnings_transcript::EarningsTranscript;
-use crate::models::corporate::fund_performance::{
-    AnnualReturn, RiskOverviewStatisticsCat, RiskStatistic,
-};
-use crate::models::corporate::sec_filings::{SecExhibit, SecFiling};
-use crate::models::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
-use crate::models::dataframe_test_util::{columns, micros};
+use crate::corporate::asset_profile::CompanyOfficer;
+use crate::corporate::earnings::Earnings;
+use crate::corporate::earnings::{QuarterlyEarnings, QuarterlyFinancials, YearlyFinancials};
+use crate::corporate::earnings_transcript::EarningsTranscript;
+use crate::corporate::fund_performance::{AnnualReturn, RiskOverviewStatisticsCat, RiskStatistic};
+use crate::corporate::sec_filings::{SecExhibit, SecFiling};
+use crate::corporate::top_holdings::{BondRating, EquityHoldings, Holding};
+use crate::dataframe_test_util::{columns, micros};
 use polars::prelude::{DataType, TimeUnit, TimeZone};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};

@@ -2,7 +2,7 @@
 //!
 //! Contains the fully typed Quote struct for serialization and API responses.
 
-use crate::models::format::{Both, Format};
+use crate::format::{Both, Format};
 use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 
 /// Flattens Yahoo's array of single-sector objects into one struct. Also accepts the
 /// flattened map form that `Serialize` writes, so serialized quotes read back.

@@ -2,8 +2,8 @@
 //!
 //! Contains dividend, split, and capital gain data structures.
 
-use crate::Provider;
 pub use finance_query_types::Dividend;
+use finance_query_types::Provider;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;

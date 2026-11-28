@@ -93,7 +93,7 @@ pub struct SymbolDetails {
     pub delisted_utc: Option<String>,
     /// Provider that supplied these details.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<crate::Provider>,
+    pub provider_id: Option<finance_query_types::Provider>,
 }
 
 /// A tradable exchange.

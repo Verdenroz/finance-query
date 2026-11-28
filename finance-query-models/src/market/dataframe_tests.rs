@@ -1,11 +1,11 @@
-use crate::models::dataframe_test_util::columns;
-use crate::models::market::index_trend::TrendEstimate;
-use crate::models::market::industries::IndustryData;
-use crate::models::market::performance::{
+use crate::dataframe_test_util::columns;
+use crate::market::index_trend::TrendEstimate;
+use crate::market::industries::IndustryData;
+use crate::market::performance::{
     IndustryPe, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
-use crate::models::market::sectors::SectorData;
-use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+use crate::market::sectors::SectorData;
+use crate::market::{IndexTrend, IndustryTrend, SectorTrend};
 use serde_json::json;
 
 #[test]
@@ -234,7 +234,7 @@ fn market_summary_quote_time_is_a_datetime() {
 
 #[test]
 fn market_time_parses_the_rfc3339_time() {
-    use crate::models::market::hours::MarketTime;
+    use crate::market::hours::MarketTime;
 
     let rows: Vec<MarketTime> = serde_json::from_value(json!([
         {"id": "us", "name": "U.S. markets", "status": "closed", "time": "2026-03-22T22:07:54Z"},

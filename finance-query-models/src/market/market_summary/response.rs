@@ -2,7 +2,7 @@
 //!
 //! Represents market summary quotes from Yahoo Finance
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
 /// A single market summary quote (index, currency, commodity, etc.)

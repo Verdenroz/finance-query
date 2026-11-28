@@ -18,6 +18,8 @@ pub mod result;
 pub mod spark;
 
 pub use data::Chart;
+#[cfg(feature = "risk")]
+pub use data::returns;
 pub use dividend_analytics::DividendAnalytics;
 pub use events::{CapitalGain, Dividend, Split};
 pub use finance_query_types::Candle;

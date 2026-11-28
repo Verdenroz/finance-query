@@ -1,5 +1,5 @@
 use super::*;
-use crate::models::dataframe_test_util::columns;
+use crate::dataframe_test_util::columns;
 
 #[test]
 fn commodity_quote_columns() {

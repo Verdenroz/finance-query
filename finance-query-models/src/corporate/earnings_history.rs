@@ -31,7 +31,7 @@ pub struct EarningsHistoryEntry {
     /// Quarter for this earnings report
     #[serde(default)]
     #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
-    pub quarter: Option<crate::models::quote::FormattedValue<i64>>,
+    pub quarter: Option<crate::quote::FormattedValue<i64>>,
 
     /// Period identifier (e.g., "-1q", "-2q")
     #[serde(default)]
@@ -43,19 +43,19 @@ pub struct EarningsHistoryEntry {
 
     /// Actual EPS reported
     #[serde(default)]
-    pub eps_actual: Option<crate::models::quote::FormattedValue<f64>>,
+    pub eps_actual: Option<crate::quote::FormattedValue<f64>>,
 
     /// Estimated EPS
     #[serde(default)]
-    pub eps_estimate: Option<crate::models::quote::FormattedValue<f64>>,
+    pub eps_estimate: Option<crate::quote::FormattedValue<f64>>,
 
     /// Difference between actual and estimate
     #[serde(default)]
-    pub eps_difference: Option<crate::models::quote::FormattedValue<f64>>,
+    pub eps_difference: Option<crate::quote::FormattedValue<f64>>,
 
     /// Surprise as a fraction of the estimate (`0.0634` is 6.34%); `fmt` is the percent string
     #[serde(default)]
-    pub surprise_percent: Option<crate::models::quote::FormattedValue<f64>>,
+    pub surprise_percent: Option<crate::quote::FormattedValue<f64>>,
 }
 
 #[cfg(feature = "dataframe")]

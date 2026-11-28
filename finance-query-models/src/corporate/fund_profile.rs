@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 
 /// Fund profile information including management, fees, and expenses
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

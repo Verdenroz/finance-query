@@ -34,24 +34,24 @@ pub struct InstitutionOwner {
 
     /// Percentage of shares held
     #[serde(default)]
-    pub pct_held: Option<crate::models::quote::FormattedValue<f64>>,
+    pub pct_held: Option<crate::quote::FormattedValue<f64>>,
 
     /// Number of shares held
     #[serde(default)]
-    pub position: Option<crate::models::quote::FormattedValue<i64>>,
+    pub position: Option<crate::quote::FormattedValue<i64>>,
 
     /// Total value of holdings
     #[serde(default)]
-    pub value: Option<crate::models::quote::FormattedValue<i64>>,
+    pub value: Option<crate::quote::FormattedValue<i64>>,
 
     /// Percentage change in position
     #[serde(default)]
-    pub pct_change: Option<crate::models::quote::FormattedValue<f64>>,
+    pub pct_change: Option<crate::quote::FormattedValue<f64>>,
 
     /// Date of report
     #[serde(default)]
     #[cfg_attr(feature = "dataframe", dataframe(date = "s"))]
-    pub report_date: Option<crate::models::quote::FormattedValue<i64>>,
+    pub report_date: Option<crate::quote::FormattedValue<i64>>,
 }
 
 #[cfg(feature = "dataframe")]

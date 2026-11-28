@@ -1,4 +1,4 @@
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
 /// Index trend data (growth estimates for the index)

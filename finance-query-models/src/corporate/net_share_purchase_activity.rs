@@ -17,43 +17,43 @@ pub struct NetSharePurchaseActivity {
 
     /// Number of buy transactions
     #[serde(default)]
-    pub buy_info_count: Option<crate::models::quote::FormattedValue<i64>>,
+    pub buy_info_count: Option<crate::quote::FormattedValue<i64>>,
 
     /// Total shares bought
     #[serde(default)]
-    pub buy_info_shares: Option<crate::models::quote::FormattedValue<i64>>,
+    pub buy_info_shares: Option<crate::quote::FormattedValue<i64>>,
 
     /// Buy amount as percentage of insider shares
     #[serde(default)]
-    pub buy_percent_insider_shares: Option<crate::models::quote::FormattedValue<f64>>,
+    pub buy_percent_insider_shares: Option<crate::quote::FormattedValue<f64>>,
 
     /// Number of sell transactions
     #[serde(default)]
-    pub sell_info_count: Option<crate::models::quote::FormattedValue<i64>>,
+    pub sell_info_count: Option<crate::quote::FormattedValue<i64>>,
 
     /// Total shares sold
     #[serde(default)]
-    pub sell_info_shares: Option<crate::models::quote::FormattedValue<i64>>,
+    pub sell_info_shares: Option<crate::quote::FormattedValue<i64>>,
 
     /// Sell amount as percentage of insider shares
     #[serde(default)]
-    pub sell_percent_insider_shares: Option<crate::models::quote::FormattedValue<f64>>,
+    pub sell_percent_insider_shares: Option<crate::quote::FormattedValue<f64>>,
 
     /// Net transaction count (buys - sells)
     #[serde(default)]
-    pub net_info_count: Option<crate::models::quote::FormattedValue<i64>>,
+    pub net_info_count: Option<crate::quote::FormattedValue<i64>>,
 
     /// Net shares (bought - sold)
     #[serde(default)]
-    pub net_info_shares: Option<crate::models::quote::FormattedValue<i64>>,
+    pub net_info_shares: Option<crate::quote::FormattedValue<i64>>,
 
     /// Net amount as percentage of insider shares
     #[serde(default)]
-    pub net_percent_insider_shares: Option<crate::models::quote::FormattedValue<f64>>,
+    pub net_percent_insider_shares: Option<crate::quote::FormattedValue<f64>>,
 
     /// Total shares held by insiders
     #[serde(default)]
-    pub total_insider_shares: Option<crate::models::quote::FormattedValue<i64>>,
+    pub total_insider_shares: Option<crate::quote::FormattedValue<i64>>,
 
     /// Maximum age of this data in seconds
     #[serde(default)]

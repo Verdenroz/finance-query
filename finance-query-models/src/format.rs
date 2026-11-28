@@ -22,7 +22,7 @@
 //! # }
 //! ```
 
-use crate::models::quote::FormattedValue;
+use crate::quote::FormattedValue;
 
 mod sealed {
     /// Blocks external crates from implementing [`Format`](super::Format);
