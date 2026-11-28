@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "fmp")]
 use crate::providers::fmp::FmpProvider;
+#[cfg(feature = "polygon")]
+use crate::providers::polygon::PolygonProvider;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::providers::{Capability, Fetch, Operation, ProviderAdapter, ProviderSet, Routes};
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
@@ -728,42 +730,13 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 /// Fetch sentiment analysis for a symbol based on recent Polygon.io news.
 #[cfg(feature = "polygon")]
 pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::SymbolSentiment> {
-    use crate::adapters::polygon;
-    let paginated = polygon::stock_news(&[("ticker", symbol), ("limit", "10")]).await?;
-    let articles = paginated.results.unwrap_or_default();
-
-    let mut positive = 0u32;
-    let mut negative = 0u32;
-    let total = articles.len().max(1) as f64;
-    for article in &articles {
-        if let Some(ref insights) = article.insights {
-            for insight in insights {
-                if insight.ticker.as_deref() == Some(symbol) {
-                    match insight.sentiment.as_deref() {
-                        Some("positive") => positive += 1,
-                        Some("negative") => negative += 1,
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-
-    let (score, label): (Option<f64>, Option<String>) = if total > 0.0 {
-        let s = (positive as f64 - negative as f64) / total;
-        let l = if s > 0.2 {
-            "positive"
-        } else if s < -0.2 {
-            "negative"
-        } else {
-            "neutral"
-        };
-        (Some(s), Some(l.to_string()))
-    } else {
-        (None, None)
-    };
-
-    Ok(crate::models::sentiment::SymbolSentiment { score, label })
+    via(PolygonProvider, Capability::CORPORATE, |p| async move {
+        p.as_corporate()
+            .ok_or_else(|| p.not_supported(Operation::SymbolSentiment))?
+            .fetch_symbol_sentiment(symbol)
+            .await
+    })
+    .await
 }
 
 // ── Alpha Vantage ───────────────────────────────────────────────────

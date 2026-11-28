@@ -270,6 +270,15 @@ pub trait CorporateProvider: ProviderCore {
         Err(self.not_supported(Operation::Recommendations))
     }
 
+    /// Score one symbol from the sentiment insights on its recent news.
+    #[cfg(feature = "polygon")]
+    async fn fetch_symbol_sentiment(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::sentiment::SymbolSentiment> {
+        Err(self.not_supported(Operation::SymbolSentiment))
+    }
+
     /// Fetch the company's own press releases.
     async fn fetch_press_releases(
         &self,

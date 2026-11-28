@@ -169,6 +169,9 @@ pub enum Operation {
     /// Analyst buy/hold/sell rating counts.
     #[cfg(feature = "fmp")]
     AnalystRecommendations,
+    /// News-derived sentiment score for one symbol.
+    #[cfg(feature = "polygon")]
+    SymbolSentiment,
     /// Most recent observation of a macro series.
     #[cfg(feature = "fred")]
     EconomicLatestObservation,
@@ -296,6 +299,8 @@ impl Operation {
             Self::EconomicReleaseDates => "economic_release_dates",
             #[cfg(feature = "fred")]
             Self::EconomicLatestObservation => "economic_latest_observation",
+            #[cfg(feature = "polygon")]
+            Self::SymbolSentiment => "symbol_sentiment",
             #[cfg(feature = "fmp")]
             Self::AnalystEstimates => "analyst_estimates",
             #[cfg(feature = "fmp")]
@@ -372,6 +377,8 @@ impl Operation {
             Self::EconomicReleaseDates | Self::EconomicLatestObservation => Capability::ECONOMIC,
             #[cfg(feature = "fmp")]
             Self::AnalystEstimates | Self::AnalystRecommendations => Capability::FUNDAMENTALS,
+            #[cfg(feature = "polygon")]
+            Self::SymbolSentiment => Capability::CORPORATE,
             #[cfg(feature = "fiscaldata")]
             Self::TreasuryAuctions | Self::UpcomingAuctions => Capability::ECONOMIC,
             Self::ForexQuote | Self::ForexNews => Capability::FOREX,
