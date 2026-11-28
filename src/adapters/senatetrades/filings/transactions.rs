@@ -12,6 +12,7 @@ use crate::models::filings::CongressionalTrade;
 
 use super::super::client::{SENATE_BASE, SenateTradesClient, wait_for_elements};
 use super::super::models::SenateFilingEntry;
+use super::cell_text;
 use super::search::parse_us_date;
 
 struct ParsedTransaction {
@@ -58,19 +59,33 @@ pub(super) async fn matching_transactions(
 
 async fn parse_row(row: &Element) -> Option<ParsedTransaction> {
     let cells = row.find_elements("td").await.ok()?;
-    let transaction_date = cells.get(1)?.inner_text().await.ok()??;
-    let ticker = cells.get(3)?.inner_text().await.ok()?.unwrap_or_default();
-    let asset_name = cells.get(4)?.inner_text().await.ok()??;
-    let trade_type = cells.get(6)?.inner_text().await.ok()??;
-    let amount = cells.get(7)?.inner_text().await.ok()??;
+    let texts = [
+        cell_text(&cells, 1).await?,
+        cell_text(&cells, 3).await?,
+        cell_text(&cells, 4).await?,
+        cell_text(&cells, 6).await?,
+        cell_text(&cells, 7).await?,
+    ];
+    transaction_from_cells(&texts)
+}
+
+/// `cells` holds the transaction date, ticker, asset name, type and amount,
+/// in that order.
+fn transaction_from_cells(cells: &[Option<String>; 5]) -> Option<ParsedTransaction> {
+    let [transaction_date, ticker, asset_name, trade_type, amount] = cells;
+    let transaction_date = transaction_date.as_deref()?;
+    let ticker = ticker.as_deref().unwrap_or_default();
+    let asset_name = asset_name.as_deref()?;
+    let trade_type = trade_type.as_deref()?;
+    let amount = amount.as_deref()?;
 
     let ticker = ticker.trim();
     Some(ParsedTransaction {
         symbol: (!ticker.is_empty() && ticker != "--").then(|| ticker.to_uppercase()),
-        asset_description: normalize_whitespace(&asset_name),
-        trade_type: normalize_whitespace(&trade_type),
-        transaction_date: parse_us_date(&transaction_date).map(|d| d.to_string()),
-        amount: normalize_whitespace(&amount),
+        asset_description: normalize_whitespace(asset_name),
+        trade_type: normalize_whitespace(trade_type),
+        transaction_date: parse_us_date(transaction_date).map(|d| d.to_string()),
+        amount: normalize_whitespace(amount),
     })
 }
 
@@ -92,5 +107,116 @@ fn to_congressional_trade(entry: &SenateFilingEntry, tx: ParsedTransaction) -> C
         transaction_date: tx.transaction_date,
         disclosure_date: parse_us_date(&entry.filed_date).map(|d| d.to_string()),
         link: Some(format!("{SENATE_BASE}{}", entry.path)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry() -> SenateFilingEntry {
+        SenateFilingEntry {
+            first_name: "Jane".into(),
+            last_name: "Doe".into(),
+            filed_date: "03/14/2025".into(),
+            path: "/search/view/ptr/abc/".into(),
+        }
+    }
+
+    use super::super::cells;
+
+    #[test]
+    fn transaction_from_cells_reads_columns() {
+        let row = cells([
+            "03/10/2025",
+            " aapl ",
+            "Apple  Inc.\n Common Stock",
+            "Purchase",
+            "$1,001 - $15,000",
+        ]);
+        let tx = transaction_from_cells(&row).unwrap();
+        assert_eq!(tx.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(
+            tx.asset_description.as_deref(),
+            Some("Apple Inc. Common Stock")
+        );
+        assert_eq!(tx.trade_type.as_deref(), Some("Purchase"));
+        assert_eq!(tx.transaction_date.as_deref(), Some("2025-03-10"));
+        assert_eq!(tx.amount.as_deref(), Some("$1,001 - $15,000"));
+    }
+
+    #[test]
+    fn transaction_from_cells_treats_dashes_and_blank_ticker_as_no_symbol() {
+        for ticker in ["--", "", "  "] {
+            let row = cells(["03/10/2025", ticker, "Bond", "Sale", "$1 - $2"]);
+            assert_eq!(transaction_from_cells(&row).unwrap().symbol, None);
+        }
+    }
+
+    #[test]
+    fn transaction_from_cells_missing_ticker_text_is_no_symbol() {
+        let mut row = cells(["03/10/2025", "x", "Bond", "Sale", "$1 - $2"]);
+        row[1] = None;
+        assert_eq!(transaction_from_cells(&row).unwrap().symbol, None);
+    }
+
+    #[test]
+    fn transaction_from_cells_bad_date_keeps_row_without_date() {
+        let row = cells(["soon", "AAPL", "Apple", "Sale", "$1 - $2"]);
+        assert_eq!(transaction_from_cells(&row).unwrap().transaction_date, None);
+    }
+
+    #[test]
+    fn transaction_from_cells_rejects_missing_amount_text() {
+        let mut row = cells(["03/10/2025", "AAPL", "Apple", "Sale", "x"]);
+        row[4] = None;
+        assert!(transaction_from_cells(&row).is_none());
+    }
+
+    #[test]
+    fn normalize_whitespace_collapses_runs() {
+        assert_eq!(
+            normalize_whitespace("  Apple \n  Inc.\t Common "),
+            Some("Apple Inc. Common".to_string())
+        );
+    }
+
+    #[test]
+    fn normalize_whitespace_drops_blank() {
+        assert_eq!(normalize_whitespace(" \n\t"), None);
+    }
+
+    #[test]
+    fn trade_carries_filing_metadata() {
+        let tx = ParsedTransaction {
+            symbol: Some("AAPL".into()),
+            asset_description: Some("Apple Inc.".into()),
+            trade_type: Some("Purchase".into()),
+            transaction_date: Some("2025-03-10".into()),
+            amount: Some("$1,001 - $15,000".into()),
+        };
+        let trade = to_congressional_trade(&entry(), tx);
+        assert_eq!(trade.symbol.as_deref(), Some("AAPL"));
+        assert_eq!(trade.office.as_deref(), Some("Senate"));
+        assert_eq!(trade.district, None);
+        assert_eq!(trade.disclosure_date.as_deref(), Some("2025-03-14"));
+        assert_eq!(
+            trade.link.as_deref(),
+            Some("https://efdsearch.senate.gov/search/view/ptr/abc/")
+        );
+    }
+
+    #[test]
+    fn trade_with_unparseable_filed_date_has_no_disclosure_date() {
+        let mut filing = entry();
+        filing.filed_date = "not a date".into();
+        let tx = ParsedTransaction {
+            symbol: None,
+            asset_description: None,
+            trade_type: None,
+            transaction_date: None,
+            amount: None,
+        };
+        assert_eq!(to_congressional_trade(&filing, tx).disclosure_date, None);
     }
 }
