@@ -23,6 +23,7 @@ macro_rules! plain {
 }
 
 /// Yahoo shares its lazy session with the set, so factories receive the slot.
+/// A provider appears at most once; `registry_has_no_duplicate_ids` enforces it.
 const REGISTRY: &[(Provider, Factory)] = &[
     (Provider::Yahoo, |config, yahoo_session| {
         let session = Arc::new(LazySession::new(config.clone()));
