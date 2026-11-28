@@ -220,6 +220,31 @@ fn sec_filings_wrapper_skips_exhibit_list() {
 }
 
 #[test]
+fn captured_sec_filings_dates_match_epochs() {
+    let body: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/yahoo/quote_summary_sec_filings.json"
+    ))
+    .unwrap();
+    let filings: SecFilings = parse(body["quoteSummary"]["result"][0]["secFilings"].clone());
+    let df = filings.to_dataframe().unwrap();
+
+    let cols = columns(&df);
+    assert!(cols.contains(&"date:date".to_string()));
+    assert!(cols.contains(&"epoch_date:date".to_string()));
+    let days = |name: &str| -> Vec<Option<i32>> {
+        df.column(name)
+            .unwrap()
+            .date()
+            .unwrap()
+            .phys
+            .iter()
+            .collect()
+    };
+    assert_eq!(days("date"), [Some(20_760), Some(20_759), Some(20_665)]);
+    assert_eq!(days("date"), days("epoch_date"));
+}
+
+#[test]
 fn single_row_quote_summary_frames() {
     let holders: MajorHoldersBreakdown =
         parse(json!({"insidersPercentHeld": fv(0.02), "institutionsCount": fvi(5)}));
