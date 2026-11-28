@@ -425,6 +425,14 @@ pub mod derive {
         }
     }
 
+    fn is_foreign_datetime(dtype: &DataType) -> bool {
+        match dtype {
+            DataType::List(inner) => is_foreign_datetime(inner),
+            DataType::Datetime(..) => *dtype != datetime_dtype(),
+            _ => false,
+        }
+    }
+
     /// Asserts that a column is time-typed exactly when its name says it is a point in time.
     ///
     /// A name ending in `date`, `time`, `timestamp`, `expiration`, `ending` or `at` must be `Date` or
@@ -445,18 +453,24 @@ pub mod derive {
                     || tokens
                         .iter()
                         .any(|t| STRONG_TIME_TOKENS.contains(t) || WEAK_TIME_TOKENS.contains(t));
+                if is_foreign_datetime(dtype) {
+                    return Some(format!(
+                        "{ty}.{name}: {dtype} has the wrong datetime unit or zone, expected {}",
+                        datetime_dtype()
+                    ));
+                }
                 let time = is_time_dtype(dtype);
-                (strong && !time)
-                    .then(|| {
-                        format!("{ty}.{name}: {dtype} is named like a time but is not typed as one")
-                    })
-                    .or_else(|| {
-                        (time && !weak).then(|| {
-                            format!(
-                                "{ty}.{name}: {dtype} is a time column without a time-like name"
-                            )
-                        })
-                    })
+                if strong && !time {
+                    Some(format!(
+                        "{ty}.{name}: {dtype} is named like a time but is not typed as one"
+                    ))
+                } else if time && !weak {
+                    Some(format!(
+                        "{ty}.{name}: {dtype} is a time column without a time-like name"
+                    ))
+                } else {
+                    None
+                }
             })
             .collect();
         assert!(violations.is_empty(), "{}", violations.join("\n"));
@@ -482,7 +496,7 @@ mod tests {
         EpochUnit, assert_time_naming, date_list, datetime_dtype, datetime_list, epoch_date,
         epoch_datetime, rfc3339_datetime, str_date,
     };
-    use polars::prelude::{DataFrame, DataType, NamedFrom, Series};
+    use polars::prelude::{DataFrame, DataType, NamedFrom, Series, TimeUnit};
 
     #[test]
     fn epoch_units_scale_to_microseconds() {
@@ -572,6 +586,13 @@ mod tests {
     #[should_panic(expected = "without a time-like name")]
     fn time_naming_rejects_time_columns_with_other_names() {
         assert_time_naming("T", &frame("day", &DataType::Date), &[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "wrong datetime unit or zone")]
+    fn time_naming_rejects_other_datetime_units() {
+        let dtype = DataType::Datetime(TimeUnit::Nanoseconds, None);
+        assert_time_naming("T", &frame("created_at", &dtype), &[]);
     }
 
     #[test]
