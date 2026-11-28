@@ -164,6 +164,9 @@ fn time_naming_test(
         #[cfg(test)]
         #[allow(non_snake_case)]
         mod #module {
+            #[allow(unused_imports)]
+            use super::*;
+
             #[test]
             fn time_columns_are_named_and_typed() {
                 let frame = <super::#impl_ty>::vec_to_dataframe(&[]).unwrap();
