@@ -1,6 +1,7 @@
 //! Fundamental data endpoints: company overview, financials, earnings, dividends, splits, calendars.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 use std::collections::HashMap;
 
 use super::build_client;
@@ -85,7 +86,7 @@ pub(crate) async fn fetch_company_profile_response(
     symbol: &str,
 ) -> Result<crate::models::fundamentals::CompanyProfile> {
     let dto = company_overview(symbol).await?;
-    Ok(crate::models::fundamentals::CompanyProfile {
+    Ok(init!(crate::models::fundamentals::CompanyProfile {
         symbol: Some(dto.symbol),
         name: dto.name,
         description: dto.description,
@@ -105,7 +106,7 @@ pub(crate) async fn fetch_company_profile_response(
         cik: None,
         ipo_date: None,
         provider_id: Some(crate::Provider::AlphaVantage),
-    })
+    }))
 }
 
 /// Fetch ETF profile and top holdings.
@@ -266,13 +267,15 @@ pub(crate) async fn fetch_earnings_surprises_response(
     Ok(history
         .quarterly_earnings
         .into_iter()
-        .map(|e| crate::models::fundamentals::EarningsSurprise {
-            symbol: Some(history.symbol.clone()),
-            date: e.reported_date.or(e.fiscal_date_ending),
-            actual_eps: e.reported_eps,
-            estimated_eps: e.estimated_eps,
-            surprise: e.surprise,
-            surprise_percent: e.surprise_percentage,
+        .map(|e| {
+            init!(crate::models::fundamentals::EarningsSurprise {
+                symbol: Some(history.symbol.clone()),
+                date: e.reported_date.or(e.fiscal_date_ending),
+                actual_eps: e.reported_eps,
+                estimated_eps: e.estimated_eps,
+                surprise: e.surprise,
+                surprise_percent: e.surprise_percentage,
+            })
         })
         .collect())
 }

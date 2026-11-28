@@ -1,6 +1,7 @@
 //! Economic indicator endpoints: GDP, CPI, Treasury yield, unemployment, etc.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -170,7 +171,7 @@ fn dto_to_series(
     func_name: &str,
     dto: EconomicSeriesDTO,
 ) -> crate::models::economic::EconomicSeries {
-    crate::models::economic::EconomicSeries {
+    init!(crate::models::economic::EconomicSeries {
         series_id: func_name.to_string(),
         title: Some(dto.name),
         units: if dto.unit.is_empty() {
@@ -186,12 +187,12 @@ fn dto_to_series(
         observations: dto
             .data
             .into_iter()
-            .map(|dp| crate::models::economic::MacroObservation {
+            .map(|dp| init!(crate::models::economic::MacroObservation {
                 date: dp.date,
                 value: dp.value,
-            })
+            }))
             .collect(),
-    }
+    })
 }
 
 #[cfg(test)]

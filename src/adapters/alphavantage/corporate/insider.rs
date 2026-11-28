@@ -9,6 +9,7 @@
 
 use crate::adapters::alphavantage::models::InsiderTransactionDTO;
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::filings::InsiderTrade;
 
 use super::super::build_client;
@@ -43,7 +44,7 @@ pub async fn insider_transactions(symbol: &str) -> Result<Vec<InsiderTransaction
 /// director/officer/10%-owner flags, shares owned after, derivative flag)
 /// are left at their `None`/`false` defaults.
 fn to_insider_trade(dto: InsiderTransactionDTO) -> InsiderTrade {
-    InsiderTrade {
+    init!(InsiderTrade {
         symbol: dto.ticker,
         insider_name: dto.executive,
         officer_title: dto.executive_title,
@@ -53,7 +54,7 @@ fn to_insider_trade(dto: InsiderTransactionDTO) -> InsiderTrade {
         shares: dto.shares,
         price_per_share: dto.share_price,
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch canonical insider transactions for a symbol, newest filing first as
