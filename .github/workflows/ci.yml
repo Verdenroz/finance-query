@@ -106,16 +106,12 @@ jobs:
               - 'server/Dockerfile'
               - 'docker-compose*.yml'
               - '.dockerignore'
-              - 'Cargo.toml'
               - 'Cargo.lock'
-              - '.github/workflows/ci.yml'
             mcp_image:
               - 'finance-query-mcp/Dockerfile'
               - 'docker-compose*.yml'
               - '.dockerignore'
-              - 'Cargo.toml'
               - 'Cargo.lock'
-              - '.github/workflows/ci.yml'
             fuzz_inputs:
               - 'fuzz/**'
               - 'src/adapters/**'
