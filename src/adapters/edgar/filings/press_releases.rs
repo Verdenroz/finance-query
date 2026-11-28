@@ -5,9 +5,7 @@ use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symb
 use crate::error::Result;
 use finance_query_models::corporate::press_release::{PressRelease, PressReleaseFieldsInit};
 use finance_query_models::filings::EdgarFiling;
-use finance_query_models::filings::filing_index::{
-    EdgarFilingIndexItem, EdgarFilingIndexItemFieldsInit,
-};
+use finance_query_models::filings::filing_index::EdgarFilingIndexItem;
 
 /// Fetch the symbol's most recent 8-K exhibits tagged `EX-99*`, newest first.
 pub async fn fetch_press_releases_response(symbol: &str, limit: u32) -> Result<Vec<PressRelease>> {
@@ -118,6 +116,7 @@ fn strip_leading_chrome(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use finance_query_models::filings::filing_index::EdgarFilingIndexItemFieldsInit;
 
     #[test]
     fn title_is_the_first_non_empty_line_of_the_exhibit_text() {

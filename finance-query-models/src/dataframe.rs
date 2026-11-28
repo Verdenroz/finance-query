@@ -194,7 +194,9 @@ delegate_to_inherent!(crate::economic::MacroSeries);
 mod tests {
     use polars::prelude::{DataFrame, DataType};
 
-    use crate::{Candle, Dividend, News, Provider};
+    use crate::chart::{Candle, Dividend};
+    use crate::corporate::news::News;
+    use finance_query_types::Provider;
 
     fn schema(df: &DataFrame) -> Vec<(String, DataType)> {
         df.schema()

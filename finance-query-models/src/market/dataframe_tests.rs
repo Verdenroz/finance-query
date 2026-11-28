@@ -184,7 +184,7 @@ fn trend_wrappers_nest_their_estimates() {
 
 #[test]
 fn market_summary_spark_columns() {
-    use crate::{MarketSummaryQuote, SparkData};
+    use crate::market::market_summary::{MarketSummaryQuote, SparkData};
 
     let expected = ["symbol:str", "timestamp:datetime[μs, UTC]", "close:f64"];
     let row: SparkData = serde_json::from_value(
@@ -216,7 +216,7 @@ fn market_summary_spark_columns() {
 
 #[test]
 fn market_summary_quote_time_is_a_datetime() {
-    use crate::MarketSummaryQuote;
+    use crate::market::market_summary::MarketSummaryQuote;
 
     let quote: MarketSummaryQuote = serde_json::from_value(json!({
         "symbol": "^GSPC",

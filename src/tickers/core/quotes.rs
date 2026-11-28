@@ -3,7 +3,7 @@ use crate::error::{FinanceError, Result};
 use crate::format::{Both, Raw};
 use crate::providers::Capability;
 use finance_query_models::format::Format;
-use finance_query_models::quote::{Quote, QuoteSummaryResponse, QuoteSummaryResponseFieldsInit};
+use finance_query_models::quote::{Quote, QuoteSummaryResponse};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -354,6 +354,7 @@ impl Tickers {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use finance_query_models::quote::QuoteSummaryResponseFieldsInit;
 
     #[test]
     fn batch_quotes_as_converts_by_move_and_keeps_errors() {
