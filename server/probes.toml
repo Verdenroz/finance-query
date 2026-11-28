@@ -37,6 +37,14 @@ assert = [
 name = "quotes-batch"
 shape = false
 path = "/v2/quotes?symbols=AAPL,MSFT"
+sometimes = [
+  "quotes[].preMarket*",
+  "quotes[].postMarket*",
+  "quotes[].bid",
+  "quotes[].bidSize",
+  "quotes[].ask",
+  "quotes[].askSize",
+]
 assert = ["quotes[].regularMarketPrice > 0"]
 
 [[probe]]
