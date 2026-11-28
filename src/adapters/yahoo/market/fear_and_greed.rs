@@ -3,7 +3,6 @@
 //! No authentication required. Returns the current market sentiment index
 //! (Alternative.me's index specifically reflects crypto/Bitcoin sentiment).
 
-use crate::init;
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -97,11 +96,11 @@ fn parse_entry(entry: FearAndGreedEntry) -> Result<FearAndGreed> {
                 context: format!("Cannot parse '{}' as i64", entry.timestamp),
             })?;
 
-    Ok(init!(FearAndGreed {
+    Ok(FearAndGreed {
         value,
         classification,
         timestamp,
-    }))
+    })
 }
 
 fn parse_classification(s: &str) -> Result<FearGreedLabel> {

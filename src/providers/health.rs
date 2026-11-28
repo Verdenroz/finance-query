@@ -2,7 +2,6 @@
 //! exposed via [`crate::Providers::health`].
 
 use super::Provider;
-use crate::init;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
@@ -16,7 +15,7 @@ const WINDOW: usize = 20;
 /// outcomes recorded in-process by [`super::ProviderSet`]; it is not a
 /// circuit breaker and does not itself change dispatch behavior (routing and
 /// [`RetryPolicy`](super::retry::RetryPolicy) are unaffected by it).
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct ProviderHealth {
     /// The provider this snapshot describes.
@@ -82,7 +81,7 @@ impl HealthTracker {
         let state = guard.get(&provider);
         let total = state.map_or(0, |s| s.outcomes.len());
         let successes = state.map_or(0, |s| s.outcomes.iter().filter(|o| **o).count());
-        init!(ProviderHealth {
+        ProviderHealth {
             provider,
             // No calls recorded yet reads as healthy (0 >= 0), the optimistic default.
             is_healthy: successes * 2 >= total,
@@ -90,7 +89,7 @@ impl HealthTracker {
             recent_failures: (total - successes) as u32,
             last_error: state.and_then(|s| s.last_error.clone()),
             requests_remaining_estimate: None,
-        })
+        }
     }
 }
 
