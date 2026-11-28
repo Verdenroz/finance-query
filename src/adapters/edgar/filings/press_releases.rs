@@ -3,6 +3,7 @@
 use crate::adapters::edgar::filings::sections::html_to_text;
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
 use crate::error::Result;
+use crate::init;
 use crate::models::corporate::press_release::PressRelease;
 use crate::models::filings::EdgarFiling;
 use crate::models::filings::filing_index::EdgarFilingIndexItem;
@@ -47,12 +48,12 @@ async fn fetch_one(symbol: &str, filing: EdgarFiling) -> Option<PressRelease> {
         return None;
     }
 
-    Some(PressRelease {
+    Some(init!(PressRelease {
         symbol: Some(symbol.to_string()),
         date: Some(filing.filing_date),
         title: extract_title(&body),
         text: Some(body),
-    })
+    }))
 }
 
 /// index.json's `type` field is a file-icon class (e.g. "text.gif"), not the
@@ -157,10 +158,12 @@ mod tests {
 
     #[test]
     fn select_exhibit_picks_the_largest_when_multiple_ex99_entries_match() {
-        let item = |name: &str, size: u64| EdgarFilingIndexItem {
-            name: name.to_string(),
-            item_type: "text.gif".to_string(),
-            size: Some(size),
+        let item = |name: &str, size: u64| {
+            init!(EdgarFilingIndexItem {
+                name: name.to_string(),
+                item_type: "text.gif".to_string(),
+                size: Some(size),
+            })
         };
         let items = vec![
             item("aapl-ex99_2.htm", 1_200),

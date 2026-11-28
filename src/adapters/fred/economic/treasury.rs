@@ -3,6 +3,7 @@
 //! Fetches the daily Treasury yield curve from the US Treasury Department.
 //! No API key required. Data published daily on business days.
 
+use crate::init;
 use std::time::Duration;
 
 use chrono::NaiveDate;
@@ -68,7 +69,7 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
 
         let parse_col = |i: usize| -> Option<f64> { record.get(i)?.trim().parse::<f64>().ok() };
 
-        yields.push(TreasuryYield {
+        yields.push(init!(TreasuryYield {
             date,
             y1m: parse_col(1),
             y2m: parse_col(2),
@@ -83,7 +84,7 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
             y10: parse_col(11),
             y20: parse_col(12),
             y30: parse_col(13),
-        });
+        }));
     }
 
     yields.sort_by(|a, b| a.date.cmp(&b.date));

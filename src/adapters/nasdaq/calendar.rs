@@ -221,44 +221,42 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
         _ => None,
     };
     let amount = |value: &Option<String>| value.as_deref().and_then(parse_currency);
-    MarketCalendarEntry {
-        symbol: row.symbol,
-        date: Some(date.to_string()),
-        detail: CalendarDetail::Earnings {
-            eps: amount(&row.eps),
-            eps_estimated: amount(&row.eps_forecast),
-            revenue: None,
-            revenue_estimated: None,
-            fiscal_date_ending: row
-                .fiscal_quarter_ending
+    MarketCalendarEntry::new(
+        row.symbol,
+        Some(date.to_string()),
+        CalendarDetail::earnings(
+            amount(&row.eps),
+            amount(&row.eps_forecast),
+            None,
+            None,
+            row.fiscal_quarter_ending
                 .as_deref()
                 .and_then(parse_month_year_to_last_day),
             time,
-            company: row.name.filter(|name| !name.trim().is_empty()),
-            estimate_count: row
-                .no_of_ests
+            row.name.filter(|name| !name.trim().is_empty()),
+            row.no_of_ests
                 .as_deref()
                 .and_then(|n| n.trim().parse().ok()),
-            surprise_percent: amount(&row.surprise),
-            previous_eps: amount(&row.last_year_eps),
-            previous_report_date: row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
-            market_cap: amount(&row.market_cap),
-        },
-    }
+            amount(&row.surprise),
+            amount(&row.last_year_eps),
+            row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
+            amount(&row.market_cap),
+        ),
+    )
 }
 
 fn dividend_entry(row: NasdaqDividendRow) -> MarketCalendarEntry {
-    MarketCalendarEntry {
-        symbol: row.symbol,
-        date: row.ex_date.as_deref().and_then(parse_mdy),
-        detail: CalendarDetail::Dividend {
+    MarketCalendarEntry::new(
+        row.symbol,
+        row.ex_date.as_deref().and_then(parse_mdy),
+        CalendarDetail::Dividend {
             dividend: row.dividend_rate,
             adj_dividend: None,
             record_date: row.record_date.as_deref().and_then(parse_mdy),
             payment_date: row.payment_date.as_deref().and_then(parse_mdy),
             declaration_date: row.announcement_date.as_deref().and_then(parse_mdy),
         },
-    }
+    )
 }
 
 /// Nasdaq answers a split query with every split from `date` onwards, so a
@@ -277,14 +275,14 @@ fn split_entry(row: NasdaqSplitRow) -> MarketCalendarEntry {
         .and_then(parse_ratio)
         .map(|(n, d)| (Some(n), Some(d)))
         .unwrap_or((None, None));
-    MarketCalendarEntry {
-        symbol: row.symbol,
-        date: row.execution_date.as_deref().and_then(parse_mdy),
-        detail: CalendarDetail::Split {
+    MarketCalendarEntry::new(
+        row.symbol,
+        row.execution_date.as_deref().and_then(parse_mdy),
+        CalendarDetail::Split {
             numerator,
             denominator,
         },
-    }
+    )
 }
 
 fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
@@ -295,10 +293,10 @@ fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
         .or(row.withdraw_date.as_deref())
         .or(row.filed_date.as_deref())
         .and_then(parse_mdy);
-    MarketCalendarEntry {
-        symbol: row.proposed_ticker_symbol,
+    MarketCalendarEntry::new(
+        row.proposed_ticker_symbol,
         date,
-        detail: CalendarDetail::Ipo {
+        CalendarDetail::Ipo {
             company: row.company_name,
             exchange: row.proposed_exchange,
             actions: Some(action.to_string()),
@@ -306,7 +304,7 @@ fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
             price_range: row.proposed_share_price,
             market_cap: None,
         },
-    }
+    )
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@
 //! the filing's XML document, so each filing costs one index lookup plus one
 //! document fetch on top of the shared submissions call.
 
+use crate::init;
 use futures::stream::{self, StreamExt};
 
 use super::xml::{self, XmlNode};
@@ -28,7 +29,7 @@ fn flag(node: &XmlNode, path: &[&str]) -> bool {
 
 /// Map one `<nonDerivativeTransaction>` / `<derivativeTransaction>` element.
 fn transaction_to_trade(tx: &XmlNode, header: &InsiderTrade, is_derivative: bool) -> InsiderTrade {
-    InsiderTrade {
+    init!(InsiderTrade {
         security_title: tx.text_at(&["securityTitle", "value"]),
         transaction_date: tx.text_at(&["transactionDate", "value"]),
         transaction_code: tx.text_at(&["transactionCoding", "transactionCode"]),
@@ -48,7 +49,7 @@ fn transaction_to_trade(tx: &XmlNode, header: &InsiderTrade, is_derivative: bool
         ]),
         is_derivative,
         ..header.clone()
-    }
+    })
 }
 
 /// Parse one ownership document into its transaction lines.
@@ -63,7 +64,7 @@ pub(crate) fn parse_ownership_document(
     let doc = xml::parse(bytes)?;
 
     let owner = doc.child("reportingOwner");
-    let header = InsiderTrade {
+    let header = init!(InsiderTrade {
         symbol: doc.text_at(&["issuer", "issuerTradingSymbol"]),
         issuer_name: doc.text_at(&["issuer", "issuerName"]),
         insider_name: owner.and_then(|o| o.text_at(&["reportingOwnerId", "rptOwnerName"])),
@@ -78,7 +79,7 @@ pub(crate) fn parse_ownership_document(
         accession_number,
         url,
         ..Default::default()
-    };
+    });
 
     let mut trades = Vec::new();
     for (table, derivative) in [("nonDerivativeTable", false), ("derivativeTable", true)] {

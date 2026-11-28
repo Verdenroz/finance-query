@@ -1,6 +1,7 @@
 //! Sectioned filing text and risk factors from 10-K/8-K HTML documents.
 //! Heuristic heading detection; returns best-effort results on malformed filings.
 
+use crate::init;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -115,10 +116,10 @@ fn slice_sections(text: &str, heading: &Regex) -> Vec<FilingSection> {
                 .unwrap_or(text.len());
             let content_end = matches.get(i + 1).map(|(_, s)| *s).unwrap_or(text.len());
             let content = text[heading_end..content_end].trim();
-            FilingSection {
+            init!(FilingSection {
                 section: Some(format!("item_{}", label.to_lowercase().replace('.', "_"))),
                 content: (!content.is_empty()).then(|| content.to_string()),
-            }
+            })
         })
         .collect()
 }
@@ -184,12 +185,12 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
     for line in content.lines().map(str::trim).filter(|l| !l.is_empty()) {
         if looks_like_heading(line) {
             if title.is_some() || !body.is_empty() {
-                factors.push(RiskFactor {
+                factors.push(init!(RiskFactor {
                     title: title.take(),
                     text: (!body.is_empty()).then(|| body.trim().to_string()),
                     category: None,
                     filing_date: filing_date.map(str::to_string),
-                });
+                }));
                 body.clear();
             }
             title = Some(line.to_string());
@@ -201,12 +202,12 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
         }
     }
     if title.is_some() || !body.is_empty() {
-        factors.push(RiskFactor {
+        factors.push(init!(RiskFactor {
             title,
             text: (!body.is_empty()).then(|| body.trim().to_string()),
             category: None,
             filing_date: filing_date.map(str::to_string),
-        });
+        }));
     }
     factors
 }
@@ -273,20 +274,22 @@ mod tests {
             EdgarFilingIndexDirectory, EdgarFilingIndexItem,
         };
 
-        let item = |name: &str, size: u64| EdgarFilingIndexItem {
-            name: name.to_string(),
-            item_type: "text.gif".to_string(),
-            size: Some(size),
+        let item = |name: &str, size: u64| {
+            init!(EdgarFilingIndexItem {
+                name: name.to_string(),
+                item_type: "text.gif".to_string(),
+                size: Some(size),
+            })
         };
-        let index = EdgarFilingIndex {
-            directory: EdgarFilingIndexDirectory {
+        let index = init!(EdgarFilingIndex {
+            directory: init!(EdgarFilingIndexDirectory {
                 item: vec![
                     item("a8-kex991q3202606272026.htm", 173_484),
                     item("aapl-20260730.htm", 38_350),
                     item("R1.htm", 55_284),
                 ],
-            },
-        };
+            }),
+        });
         assert_eq!(
             primary_document_name(&index),
             Some("aapl-20260730.htm".to_string())
