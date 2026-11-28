@@ -655,7 +655,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 The `date` column is a polars `Date` sorted ascending. Metric names are
 the same in both frames and in the statement map itself (`income.statement`):
 every provider's revenue is `total_revenue`. A metric with no canonical
-equivalent keeps the provider's own name in snake_case.
+equivalent keeps the provider's own name in snake_case. Both frames use the
+`statement` keys verbatim: canonical for a fetched statement, while a
+hand-built or deserialized one keeps whatever keys it holds.
 
 ## Exporting Data
 

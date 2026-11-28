@@ -169,10 +169,10 @@ mod tests {
 
     #[test]
     fn build_metrics_arg_formats_a_gql_list_when_metrics_present() {
-        let metrics = vec!["revenue".to_string(), "netIncome".to_string()];
+        let metrics = vec!["total_revenue".to_string(), "net_income".to_string()];
         assert_eq!(
             build_metrics_arg(Some(&metrics)),
-            ", metrics: [\"revenue\", \"netIncome\"]"
+            ", metrics: [\"total_revenue\", \"net_income\"]"
         );
     }
 

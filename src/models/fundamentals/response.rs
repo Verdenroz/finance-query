@@ -10,7 +10,12 @@ use std::collections::BTreeMap;
 /// Metric names are the same whichever provider served the data: Yahoo's field names in
 /// snake_case (`total_revenue`, `net_income`, `diluted_eps`, `operating_cash_flow`). A
 /// provider metric with no canonical equivalent keeps its own name converted to snake_case,
-/// so no data is dropped, but such names are provider-specific.
+/// so no data is dropped, but such names are provider-specific. A name that collides with an
+/// existing key keeps its own provider spelling. Cash outflows are negative.
+///
+/// [`to_dataframe`](Self::to_dataframe) and [`to_wide_dataframe`](Self::to_wide_dataframe) use
+/// the `statement` keys verbatim: canonical for a fetched statement, while a hand-built or
+/// deserialized one keeps whatever keys it holds.
 /// ```json
 /// {
 ///   "symbol": "AAPL",
