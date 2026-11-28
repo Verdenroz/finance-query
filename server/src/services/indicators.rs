@@ -43,7 +43,7 @@ pub async fn get_batch_indicators(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("indicators", &[&symbols_key, interval_str, range_str]);
 
     cache
