@@ -381,6 +381,24 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
 
 Both need an explicit key, and `build()` rejects them for a provider that is not configured or does not support them. Polygon and FMP support both; Alpha Vantage supports a request budget. The keyless FiscalData and DefiLlama support `endpoint` alone and need no key; DefiLlama's protocol and stablecoin requests both go to the one origin.
 
+Yahoo is keyless too, and its one origin serves every Yahoo host, so a mock must also serve `/v1/test/getcrumb`. Requests to an unknown Yahoo host fail rather than reach live Yahoo, and a redirect is never followed. `finance::fear_and_greed` reads alternative.me, which `endpoint` does not cover.
+
+`Providers::scope(future)` applies an instance's keys and endpoints to code that takes no `Providers`: the `finance::*` functions, `Ticker::new` and `builder`, and `Tickers::new` and `builder`. The scope does not cross `tokio::spawn`; a handle keeps the origin it captured when it was built.
+
+```rust no_run
+use finance_query::{Provider, Providers, finance};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let providers = Providers::builder()
+        .endpoint(Provider::Yahoo, "http://127.0.0.1:8080")
+        .build()
+        .await?;
+    let trending = providers.scope(finance::trending(None)).await?;
+    Ok(())
+}
+```
+
 ```rust no_run feature=polygon
 use finance_query::{Capability, Provider, Providers};
 
