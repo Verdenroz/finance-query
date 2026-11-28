@@ -91,6 +91,7 @@ A ticker resolves to the instrument that holds it now. For a delisted company wh
 
 ## `SecurityMapping` Fields
 
+<!-- soothfast:bind finance_query::openfigi::SecurityMapping -->
 | Field | Description |
 |-------|-------------|
 | `figi` | This instrument's Financial Instrument Global Identifier |
@@ -101,6 +102,7 @@ A ticker resolves to the instrument that holds it now. For a delisted company wh
 | `share_class_figi` | FIGI shared by every listing of this share class worldwide |
 | `security_type` | e.g. `"Common Stock"`, `"ETP"` |
 | `market_sector` | e.g. `"Equity"`, `"Corp"`, `"Govt"` |
+<!-- /soothfast:bind -->
 
 ## Rate Limits
 

@@ -22,11 +22,11 @@ fn doc_block_line_14() {
     }
 }
 
-// line 48: compile-only (no_run)
+// line 50: compile-only (no_run)
 #[cfg(feature = "full")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_48() {
+fn doc_block_line_50() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]

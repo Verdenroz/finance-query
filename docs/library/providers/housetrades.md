@@ -57,6 +57,7 @@ There is no per-symbol or per-filing-type query endpoint on `disclosures-clerk.h
 
 ## What the Fields Mean
 
+<!-- soothfast:bind finance_query::CongressionalTrade -->
 | `CongressionalTrade` field | Source |
 |-----------------------------|--------|
 | `symbol` | Ticker parsed from the PDF's asset description line |
@@ -67,6 +68,7 @@ There is no per-symbol or per-filing-type query endpoint on `disclosures-clerk.h
 | `amount` | Reported range as filed (e.g. `"$1,001 - $15,000"`), unparsed |
 | `transaction_date` / `disclosure_date` | `YYYY-MM-DD` |
 | `link` | Direct URL to the source PDF |
+<!-- /soothfast:bind -->
 
 ## Rate Limits
 

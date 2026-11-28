@@ -44,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 FINRA reports each symbol **once per reporting facility per day** — the Nasdaq (`Q`), NYSE (`N`), and OTC (`B`) trade reporting facilities each file separately. A listed name therefore has three raw rows for a single trading day.
 
+<!-- soothfast:bind finance_query::ShortVolume -->
 The adapter sums them into one figure per date, reproducing the consolidated numbers FINRA itself publishes in its daily `CNMSshvol` file:
 
 | `ShortVolume` field | Source |
@@ -54,6 +55,7 @@ The adapter sums them into one figure per date, reproducing the consolidated num
 | `total_volume` | Sum of `totalParQuantity` |
 
 A field no facility reported stays `None` rather than becoming `0.0`.
+<!-- /soothfast:bind -->
 
 !!! info "Short volume is not short interest"
     Short *volume* is how many shares were sold short on a given day — much of it market-maker hedging that closes intraday. Short *interest* is the open short position at a settlement date. For the latter, use `Ticker::short_interest()`, which Yahoo and Polygon serve.
