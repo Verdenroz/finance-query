@@ -344,6 +344,7 @@ mod tests {
                 BTreeMap::from([
                     ("2024-09-30".to_string(), 100.0),
                     ("2023-09-30".to_string(), 86.0),
+                    ("2022-09-30".to_string(), 80.0),
                 ])
             );
             assert_eq!(out["net_income_common_stockholders"]["2024-09-30"], 98.0);
@@ -352,11 +353,21 @@ mod tests {
         }
 
         #[test]
-        fn net_income_is_omitted_without_both_inputs() {
+        fn net_income_without_noncontrolling_interest_is_consolidated() {
             let out = canonicalize(
                 Provider::Polygon,
                 StatementType::Income,
-                metrics(&[("consolidated_net_income_loss", &[("2024-09-30", 110.0)])]),
+                metrics(&[("consolidated_net_income_loss", &[("2024-09-30", 93.7)])]),
+            );
+            assert_eq!(out["net_income"]["2024-09-30"], 93.7);
+        }
+
+        #[test]
+        fn net_income_is_omitted_without_consolidated() {
+            let out = canonicalize(
+                Provider::Polygon,
+                StatementType::Income,
+                metrics(&[("noncontrolling_interest", &[("2024-09-30", 10.0)])]),
             );
             assert!(!out.contains_key("net_income"));
         }

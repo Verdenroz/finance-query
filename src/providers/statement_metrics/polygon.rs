@@ -12,17 +12,20 @@ pub(super) fn table(statement: StatementType) -> &'static [(&'static str, &'stat
 
 /// Polygon reports no plain net income. Yahoo's `net_income` is net income attributable to
 /// the parent before preferred dividends: consolidated net income minus the non-controlling
-/// interest, derived only for periods where both are present.
+/// interest, which Polygon leaves null for companies without one.
 pub(super) fn derive_net_income(
     metrics: &BTreeMap<String, BTreeMap<String, f64>>,
 ) -> Option<(String, BTreeMap<String, f64>)> {
     let consolidated = metrics.get("consolidated_net_income_loss")?;
-    let noncontrolling = metrics.get("noncontrolling_interest")?;
-    let net_income: BTreeMap<String, f64> = consolidated
+    let noncontrolling = metrics.get("noncontrolling_interest");
+    let net_income = consolidated
         .iter()
-        .filter_map(|(period, total)| Some((period.clone(), total - noncontrolling.get(period)?)))
+        .map(|(period, total)| {
+            let minority = noncontrolling.and_then(|nci| nci.get(period)).copied();
+            (period.clone(), total - minority.unwrap_or(0.0))
+        })
         .collect();
-    (!net_income.is_empty()).then(|| ("net_income".to_string(), net_income))
+    Some(("net_income".to_string(), net_income))
 }
 
 const INCOME: &[(&str, &str)] = &[
