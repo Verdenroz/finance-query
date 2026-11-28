@@ -1,16 +1,25 @@
 //! Core code must not reach into provider adapters, and `adapters/common`
 //! must not know which providers exist.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
-const ADAPTERS_NEUTRAL: &[&str] = &["common", "keys", "singleton", "yahoo"];
+use syn::meta::ParseNestedMeta;
+use syn::punctuated::Punctuated;
+use syn::visit::Visit;
+use syn::{Attribute, Expr, Item, ItemFn, ItemMod, ItemUse, LitStr, Macro, Token, UseTree};
 
-/// Everything in `src/providers` that is not a provider bridge.
+/// Modules of `src/adapters` that are not provider adapters. Edgar and Yahoo
+/// stay in core by design.
+const ADAPTERS_NEUTRAL: &[&str] = &["common", "keys", "singleton", "edgar", "yahoo"];
+
+/// Modules of `src/providers` that are not provider bridges. Edgar and Yahoo
+/// stay in core by design; the helper functions re-exported at the root are not
+/// modules, so they never count.
 const PROVIDERS_NEUTRAL: &[&str] = &[
     "adapter",
     "build",
-    "build_options",
-    "build_providers",
     "config",
     "convert",
     "edgar",
@@ -34,22 +43,50 @@ const PROVIDERS_NEUTRAL: &[&str] = &[
 
 const ALLOWED_DIRS: &[&str] = &["src/streaming/polygon/"];
 
-/// `src/lib.rs` may re-export adapters (`pub use`) and wrap them in the
-/// `__fuzz_*` and `__bench` items. These public wrappers are the rest.
-const LIB_WRAPPERS: &[&str] = &["adapters::openfigi", "adapters::defillama"];
+/// `src/lib.rs` may re-export adapters (`pub use`) and wrap them in `__` items.
+/// These public wrappers, with their reference counts, are the rest.
+const LIB_WRAPPERS: &[(&str, usize)] = &[("adapters::openfigi", 6), ("adapters::defillama", 2)];
 
-/// These modules stay feature-gated until `adapters/common` becomes
-/// `core::support` (`#[doc(hidden)] pub`), which removes their dead-code lints.
-const COMMON_PENDING: &[&str] = &["src/adapters/common/keyed.rs", "src/adapters/common/mod.rs"];
-
-/// Files still calling provider adapters directly. Remove entries as they are
-/// fixed; never add one.
-const PENDING: &[&str] = &[
-    "src/finance.rs",
-    "src/streaming/economic.rs",
-    "src/ticker/core.rs",
-    "src/tickers/core/corporate.rs",
+/// Files in `adapters/common` that still name a provider or provider feature,
+/// with their violation counts. These modules stay feature-gated until
+/// `adapters/common` becomes `core::support` (`#[doc(hidden)] pub`), which
+/// removes their dead-code lints. Lower a count when it shrinks; never raise one.
+const COMMON_PENDING: &[(&str, usize)] = &[
+    ("src/adapters/common/keyed.rs", 18),
+    ("src/adapters/common/mod.rs", 15),
 ];
+
+/// Files still calling provider adapters directly, with their reference counts.
+/// Lower a count when it shrinks; never raise one or add a file.
+const PENDING: &[(&str, usize)] = &[
+    ("src/finance.rs", 20),
+    ("src/streaming/economic.rs", 1),
+    ("src/ticker/core.rs", 2),
+    ("src/tickers/core/corporate.rs", 2),
+];
+
+#[derive(Default)]
+struct Names {
+    adapters: BTreeSet<String>,
+    providers: BTreeSet<String>,
+    /// Public `lib.rs` modules that re-export a provider adapter (`crate::fred`).
+    reexports: BTreeSet<String>,
+    /// Cargo features gating a provider adapter or bridge.
+    features: BTreeSet<String>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Mode {
+    Core,
+    Common,
+    Lib,
+}
+
+enum End {
+    Plain,
+    Glob,
+    Rename,
+}
 
 fn manifest(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(relative)
@@ -79,140 +116,308 @@ fn relative(path: &Path) -> String {
         .replace('\\', "/")
 }
 
-fn is_ident(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '_'
+fn parse(source: &str) -> syn::File {
+    syn::parse_file(source).expect("source file parses")
 }
 
-fn leading_ident(text: &str) -> &str {
-    let end = text.find(|c| !is_ident(c)).unwrap_or(text.len());
-    &text[..end]
+fn parse_at(relative: &str) -> syn::File {
+    parse(&std::fs::read_to_string(manifest(relative)).expect("source file is readable"))
 }
 
-/// First segment of every item in a `{a::b, c}` group, nested groups included.
-fn group_heads(group: &str) -> Vec<&str> {
-    let mut heads = Vec::new();
-    let mut depth = 0;
-    let mut expecting = false;
-    let mut skip_to = 0;
-    for (at, c) in group.char_indices() {
-        if at < skip_to {
-            continue;
-        }
-        match c {
-            '{' => {
-                depth += 1;
-                expecting = depth == 1;
-            }
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    break;
-                }
-            }
-            ',' => expecting = depth == 1,
-            c if expecting && is_ident(c) => {
-                let head = leading_ident(&group[at..]);
-                heads.push(head);
-                skip_to = at + head.len();
-                expecting = false;
-            }
-            _ => {}
-        }
+fn collect_features(meta: ParseNestedMeta, out: &mut Vec<String>) -> syn::Result<()> {
+    if meta.path.is_ident("feature") {
+        out.push(meta.value()?.parse::<LitStr>()?.value());
+    } else if meta.input.peek(syn::token::Paren) {
+        meta.parse_nested_meta(|inner| collect_features(inner, out))?;
+    } else if meta.input.peek(Token![=]) {
+        meta.value()?.parse::<Expr>()?;
     }
-    heads
+    Ok(())
 }
 
-/// `(line, "<module>::<name>")` for each provider adapter or bridge a source
-/// file names. Paths into other crates' modules of the same name
-/// (`tokio_stream::adapters::`) do not count.
-fn provider_refs(source: &str) -> Vec<(usize, String)> {
-    let mut found = module_refs(source, "adapters", ADAPTERS_NEUTRAL);
-    found.extend(module_refs(source, "providers", PROVIDERS_NEUTRAL));
-    found.sort_by_key(|(line, _)| *line);
-    found
+fn cfg_features(attr: &Attribute, out: &mut Vec<String>) {
+    if attr.path().is_ident("cfg") || attr.path().is_ident("cfg_attr") {
+        attr.parse_nested_meta(|meta| collect_features(meta, out))
+            .expect("cfg attribute parses");
+    }
 }
 
-fn module_refs(source: &str, module: &str, neutral: &[&str]) -> Vec<(usize, String)> {
-    let marker = format!("{module}::");
-    let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(offset) = source[from..].find(&marker) {
-        let at = from + offset;
-        from = at + marker.len();
-        let before = &source[..at];
-        let local =
-            !before.ends_with("::") || before.ends_with("crate::") || before.ends_with("super::");
-        if !local || before.ends_with(is_ident) {
-            continue;
+fn flatten(tree: &UseTree, prefix: &mut Vec<String>, out: &mut Vec<(Vec<String>, End)>) {
+    let mut leaf = |ident: &syn::Ident, end| {
+        let mut segments = prefix.clone();
+        if ident != "self" {
+            segments.push(ident.to_string());
         }
-        let rest = &source[from..];
-        let names = if rest.starts_with('{') {
-            group_heads(rest)
-        } else {
-            vec![leading_ident(rest)]
-        };
-        let line = before.matches('\n').count() + 1;
-        for name in names {
-            let is_module = name.starts_with(|c: char| c.is_ascii_lowercase());
-            if is_module && name != "self" && !neutral.contains(&name) {
-                found.push((line, format!("{marker}{name}")));
+        out.push((segments, end));
+    };
+    match tree {
+        UseTree::Path(path) => {
+            prefix.push(path.ident.to_string());
+            flatten(&path.tree, prefix, out);
+            prefix.pop();
+        }
+        UseTree::Name(name) => leaf(&name.ident, End::Plain),
+        UseTree::Rename(rename) => leaf(&rename.ident, End::Rename),
+        UseTree::Glob(_) => out.push((prefix.clone(), End::Glob)),
+        UseTree::Group(group) => {
+            for item in &group.items {
+                flatten(item, prefix, out);
             }
         }
     }
-    found
 }
 
-fn refs_in(path: &Path) -> Vec<(usize, String)> {
-    let source = std::fs::read_to_string(path).expect("source file is readable");
-    provider_refs(&source)
+fn use_paths(item: &ItemUse) -> Vec<(Vec<String>, End)> {
+    let mut out = Vec::new();
+    flatten(&item.tree, &mut Vec::new(), &mut out);
+    out
 }
 
-/// The `__` items must stay last in `src/lib.rs`; everything after the first is exempt.
-fn lib_refs() -> Vec<(usize, String)> {
-    let source = std::fs::read_to_string(manifest("src/lib.rs")).expect("lib.rs is readable");
-    let lines: Vec<&str> = source.lines().collect();
-    let hidden_items = lines
+fn bridges(relative: &str, neutral: &[&str]) -> Vec<(String, Vec<String>)> {
+    parse_at(relative)
+        .items
         .iter()
-        .position(|line| line.starts_with("pub fn __") || line.starts_with("pub mod __"))
-        .expect("lib.rs has __ items");
-    provider_refs(&source)
-        .into_iter()
-        .filter(|(line, name)| {
-            *line <= hidden_items
-                && !lines[line - 1].trim_start().starts_with("pub use")
-                && !LIB_WRAPPERS.contains(&name.as_str())
+        .filter_map(|item| match item {
+            Item::Mod(module)
+                if module.content.is_none()
+                    && !neutral.contains(&module.ident.to_string().as_str()) =>
+            {
+                let mut features = Vec::new();
+                for attr in &module.attrs {
+                    cfg_features(attr, &mut features);
+                }
+                Some((module.ident.to_string(), features))
+            }
+            _ => None,
         })
         .collect()
 }
 
-/// Lines that name a feature, whether in `cfg`, `cfg_attr`, `any` or `all`.
-fn feature_lines(source: &str) -> Vec<(usize, String)> {
-    source
-        .lines()
-        .enumerate()
-        .filter(|(_, line)| line.contains("feature = \""))
-        .map(|(index, line)| (index + 1, line.trim().to_string()))
+impl Names {
+    fn derive() -> Self {
+        let mut names = Names::default();
+        for (module, neutral, set) in [
+            ("src/adapters/mod.rs", ADAPTERS_NEUTRAL, true),
+            ("src/providers/mod.rs", PROVIDERS_NEUTRAL, false),
+        ] {
+            for (name, features) in bridges(module, neutral) {
+                names.features.extend(features);
+                if set {
+                    names.adapters.insert(name);
+                } else {
+                    names.providers.insert(name);
+                }
+            }
+        }
+        for item in &parse_at("src/lib.rs").items {
+            let Item::Mod(module) = item else { continue };
+            let Some((_, items)) = &module.content else {
+                continue;
+            };
+            let reexports_adapter = items.iter().any(|inner| match inner {
+                Item::Use(item) => use_paths(item).iter().any(|(segments, _)| {
+                    matches!(segments.as_slice(), [root, adapters, name, ..]
+                        if root == "crate" && adapters == "adapters" && names.adapters.contains(name))
+                }),
+                _ => false,
+            });
+            if reexports_adapter {
+                names.reexports.insert(module.ident.to_string());
+            }
+        }
+        names
+    }
+
+    fn resolve(&self, segments: &[String], end: &End, mode: Mode) -> Option<String> {
+        let lead = segments
+            .iter()
+            .take_while(|segment| matches!(segment.as_str(), "crate" | "self" | "super"))
+            .count();
+        let (head, rest) = segments.split_at(lead);
+        let anchored = head.first().is_some_and(|segment| segment == "crate");
+        let from_super = head.iter().any(|segment| segment == "super");
+        let first = rest.first()?.as_str();
+        match (first, rest.get(1)) {
+            ("adapters", Some(name)) if self.adapters.contains(name) => {
+                Some(format!("adapters::{name}"))
+            }
+            ("providers", Some(name)) if self.providers.contains(name) => {
+                Some(format!("providers::{name}"))
+            }
+            ("adapters" | "providers", None) => match end {
+                End::Glob => Some(format!("{first}::*")),
+                End::Rename => Some(format!("{first} as alias")),
+                End::Plain => None,
+            },
+            _ if anchored && self.reexports.contains(first) => Some(format!("crate::{first}")),
+            _ if from_super && mode == Mode::Common && self.adapters.contains(first) => {
+                Some(format!("adapters::{first}"))
+            }
+            _ => None,
+        }
+    }
+}
+
+fn names() -> &'static Names {
+    static NAMES: OnceLock<Names> = OnceLock::new();
+    NAMES.get_or_init(Names::derive)
+}
+
+struct Scanner<'a> {
+    names: &'a Names,
+    mode: Mode,
+    found: Vec<String>,
+}
+
+impl Scanner<'_> {
+    fn is_exempt(&self, ident: &syn::Ident) -> bool {
+        self.mode == Mode::Lib && ident.to_string().starts_with("__")
+    }
+}
+
+impl<'ast> Visit<'ast> for Scanner<'_> {
+    fn visit_item_use(&mut self, item: &'ast ItemUse) {
+        if self.mode == Mode::Lib && matches!(item.vis, syn::Visibility::Public(_)) {
+            return;
+        }
+        let mut seen = BTreeSet::new();
+        for (segments, end) in use_paths(item) {
+            if let Some(name) = self.names.resolve(&segments, &end, self.mode)
+                && seen.insert(name.clone())
+            {
+                self.found.push(name);
+            }
+        }
+    }
+
+    fn visit_item_fn(&mut self, item: &'ast ItemFn) {
+        if !self.is_exempt(&item.sig.ident) {
+            syn::visit::visit_item_fn(self, item);
+        }
+    }
+
+    fn visit_item_mod(&mut self, item: &'ast ItemMod) {
+        if !self.is_exempt(&item.ident) {
+            syn::visit::visit_item_mod(self, item);
+        }
+    }
+
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        let segments: Vec<String> = path.segments.iter().map(|s| s.ident.to_string()).collect();
+        if let Some(name) = self.names.resolve(&segments, &End::Plain, self.mode) {
+            self.found.push(name);
+        }
+        syn::visit::visit_path(self, path);
+    }
+
+    fn visit_attribute(&mut self, attr: &'ast Attribute) {
+        if self.mode == Mode::Common {
+            let mut features = Vec::new();
+            cfg_features(attr, &mut features);
+            self.record_features(features);
+        }
+    }
+
+    fn visit_macro(&mut self, mac: &'ast Macro) {
+        self.visit_path(&mac.path);
+        if mac.path.is_ident("cfg") {
+            if self.mode == Mode::Common {
+                let mut features = Vec::new();
+                mac.parse_body_with(syn::meta::parser(|meta| {
+                    collect_features(meta, &mut features)
+                }))
+                .expect("cfg! body parses");
+                self.record_features(features);
+            }
+        } else if let Ok(args) =
+            mac.parse_body_with(Punctuated::<Expr, Token![,]>::parse_terminated)
+        {
+            for arg in &args {
+                self.visit_expr(arg);
+            }
+        }
+    }
+}
+
+impl Scanner<'_> {
+    fn record_features(&mut self, features: Vec<String>) {
+        for feature in features {
+            if self.names.features.contains(&feature) {
+                self.found.push(format!("feature \"{feature}\""));
+            }
+        }
+    }
+}
+
+fn scan(source: &str, names: &Names, mode: Mode) -> Vec<String> {
+    let mut scanner = Scanner {
+        names,
+        mode,
+        found: Vec::new(),
+    };
+    scanner.visit_file(&parse(source));
+    scanner.found
+}
+
+fn scan_at(relative: &str, mode: Mode) -> Vec<String> {
+    let source = std::fs::read_to_string(manifest(relative)).expect("source file is readable");
+    scan(&source, names(), mode)
+}
+
+fn lookup(list: &[(&str, usize)], key: &str) -> usize {
+    list.iter()
+        .find(|(name, _)| *name == key)
+        .map_or(0, |(_, count)| *count)
+}
+
+fn tally(found: &[String]) -> BTreeMap<&str, usize> {
+    let mut counts = BTreeMap::new();
+    for name in found {
+        *counts.entry(name.as_str()).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn lowered(list: &[(&str, usize)], actual: impl Fn(&str) -> usize) -> Vec<String> {
+    list.iter()
+        .filter_map(|(key, allowed)| {
+            let now = actual(key);
+            (now < *allowed).then(|| format!("{key}: lower the count to {now}"))
+        })
         .collect()
 }
 
-fn describe(path: &str, refs: Vec<(usize, String)>) -> Vec<String> {
-    refs.into_iter()
-        .map(|(line, name)| format!("{path}:{line}: {name}"))
-        .collect()
+fn exceeded(rel: &str, found: &[String], allowed: usize) -> Option<String> {
+    (found.len() > allowed).then(|| {
+        format!(
+            "{rel}: {} found, {allowed} allowed: {}",
+            found.len(),
+            found.join(", ")
+        )
+    })
 }
 
 #[test]
 fn core_code_does_not_call_provider_adapters() {
-    let mut offenders = describe("src/lib.rs", lib_refs());
+    let mut offenders = Vec::new();
+    let lib = scan_at("src/lib.rs", Mode::Lib);
+    for (name, count) in tally(&lib) {
+        let allowed = lookup(LIB_WRAPPERS, name);
+        if count > allowed {
+            offenders.push(format!(
+                "src/lib.rs: {name} {count} found, {allowed} allowed"
+            ));
+        }
+    }
     for path in files_under("src") {
         let rel = relative(&path);
         let exempt = rel == "src/lib.rs"
             || rel.starts_with("src/adapters/")
             || rel.starts_with("src/providers/")
-            || ALLOWED_DIRS.iter().any(|dir| rel.starts_with(dir))
-            || PENDING.contains(&rel.as_str());
+            || ALLOWED_DIRS.iter().any(|dir| rel.starts_with(dir));
         if !exempt {
-            offenders.extend(describe(&rel, refs_in(&path)));
+            let found = scan_at(&rel, Mode::Core);
+            offenders.extend(exceeded(&rel, &found, lookup(PENDING, &rel)));
         }
     }
     assert!(
@@ -224,16 +429,8 @@ fn core_code_does_not_call_provider_adapters() {
 
 #[test]
 fn pending_files_still_call_provider_adapters() {
-    let fixed: Vec<&str> = PENDING
-        .iter()
-        .copied()
-        .filter(|rel| refs_in(&manifest(rel)).is_empty())
-        .collect();
-    assert!(
-        fixed.is_empty(),
-        "remove from PENDING, no longer coupled:\n{}",
-        fixed.join("\n")
-    );
+    let fixed = lowered(PENDING, |rel| scan_at(rel, Mode::Core).len());
+    assert!(fixed.is_empty(), "PENDING shrank:\n{}", fixed.join("\n"));
 }
 
 #[test]
@@ -241,15 +438,8 @@ fn adapters_common_is_provider_neutral() {
     let mut offenders = Vec::new();
     for path in files_under("src/adapters/common") {
         let rel = relative(&path);
-        let source = std::fs::read_to_string(&path).expect("source file is readable");
-        if !COMMON_PENDING.contains(&rel.as_str()) {
-            offenders.extend(
-                feature_lines(&source)
-                    .into_iter()
-                    .map(|(line, text)| format!("{rel}:{line}: {text}")),
-            );
-        }
-        offenders.extend(describe(&rel, provider_refs(&source)));
+        let found = scan_at(&rel, Mode::Common);
+        offenders.extend(exceeded(&rel, &found, lookup(COMMON_PENDING, &rel)));
     }
     assert!(
         offenders.is_empty(),
@@ -260,52 +450,61 @@ fn adapters_common_is_provider_neutral() {
 
 #[test]
 fn common_pending_files_are_still_feature_gated() {
-    let fixed: Vec<&str> = COMMON_PENDING
-        .iter()
-        .copied()
-        .filter(|rel| {
-            let source = std::fs::read_to_string(manifest(rel)).expect("source file is readable");
-            feature_lines(&source).is_empty()
-        })
-        .collect();
+    let fixed = lowered(COMMON_PENDING, |rel| scan_at(rel, Mode::Common).len());
     assert!(
         fixed.is_empty(),
-        "remove from COMMON_PENDING, no longer feature-gated:\n{}",
+        "COMMON_PENDING shrank:\n{}",
         fixed.join("\n")
     );
 }
 
 #[test]
 fn lib_wrappers_still_call_their_adapters() {
-    let source = std::fs::read_to_string(manifest("src/lib.rs")).expect("lib.rs is readable");
-    let called = names(&source);
-    let fixed: Vec<&str> = LIB_WRAPPERS
-        .iter()
-        .copied()
-        .filter(|wrapper| !called.iter().any(|name| name == wrapper))
-        .collect();
+    let lib = scan_at("src/lib.rs", Mode::Lib);
+    let counts = tally(&lib);
+    let fixed = lowered(LIB_WRAPPERS, |name| counts.get(name).copied().unwrap_or(0));
     assert!(
         fixed.is_empty(),
-        "remove from LIB_WRAPPERS, no longer called:\n{}",
+        "LIB_WRAPPERS shrank:\n{}",
         fixed.join("\n")
     );
 }
 
-fn names(source: &str) -> Vec<String> {
-    provider_refs(source)
-        .into_iter()
-        .map(|(_, name)| name)
-        .collect()
+fn fixture() -> Names {
+    let set = |items: &[&str]| items.iter().map(|s| s.to_string()).collect();
+    Names {
+        adapters: set(&["fmp", "polygon", "fred"]),
+        providers: set(&["fmp", "bls", "kraken", "polygon"]),
+        reexports: set(&["fred", "crypto"]),
+        features: set(&["fmp", "crypto"]),
+    }
+}
+
+fn found(source: &str) -> Vec<String> {
+    scan(source, &fixture(), Mode::Core)
+}
+
+fn found_in_common(source: &str) -> Vec<String> {
+    scan(source, &fixture(), Mode::Common)
+}
+
+#[test]
+fn derived_names_cover_providers_and_reexports() {
+    let names = names();
+    assert!(names.adapters.contains("fmp") && !names.adapters.contains("edgar"));
+    assert!(names.providers.contains("fmp") && !names.providers.contains("yahoo"));
+    assert!(names.reexports.contains("fred") && !names.reexports.contains("edgar"));
+    assert!(names.features.contains("fmp") && !names.features.contains("dataframe"));
 }
 
 #[test]
 fn scanner_flags_a_path() {
     assert_eq!(
-        names("let x = crate::adapters::fmp::quote();"),
+        found("fn f() { crate::adapters::fmp::quote(); }"),
         ["adapters::fmp"]
     );
     assert_eq!(
-        names("use super::super::adapters::polygon::x;"),
+        found("use super::super::adapters::polygon::x;"),
         ["adapters::polygon"]
     );
 }
@@ -313,49 +512,132 @@ fn scanner_flags_a_path() {
 #[test]
 fn scanner_flags_every_name_in_a_group() {
     assert_eq!(
-        names("use crate::adapters::{fmp, polygon};"),
+        found("use crate::adapters::{fmp, polygon};"),
         ["adapters::fmp", "adapters::polygon"]
-    );
-    assert_eq!(
-        names("use crate::adapters::{\n    fred::{a, b},\n    edgar::x::{y, z},\n};"),
-        ["adapters::fred", "adapters::edgar"]
     );
 }
 
 #[test]
-fn scanner_flags_a_bare_module_import() {
+fn scanner_flags_nested_groups_once_per_module() {
     assert_eq!(
-        names("use crate::adapters;\nlet x = adapters::fmp::y();"),
+        found("use crate::adapters::{fred::{a, b}, yahoo::x::{y, z}, polygon::q};"),
+        ["adapters::fred", "adapters::polygon"]
+    );
+}
+
+#[test]
+fn scanner_flags_a_glob_of_the_module() {
+    assert_eq!(found("use crate::adapters::*;"), ["adapters::*"]);
+    assert_eq!(found("use crate::providers::*;"), ["providers::*"]);
+    assert_eq!(found("use crate::adapters::fmp::*;"), ["adapters::fmp"]);
+}
+
+#[test]
+fn scanner_flags_an_alias_of_the_module() {
+    assert_eq!(found("use crate::adapters as a;"), ["adapters as alias"]);
+    assert_eq!(
+        found("use crate::providers::{self as p};"),
+        ["providers as alias"]
+    );
+}
+
+#[test]
+fn scanner_flags_a_bare_module_import_by_its_use() {
+    assert_eq!(
+        found("use crate::adapters;\nfn f() { adapters::fmp::y(); }"),
         ["adapters::fmp"]
     );
 }
 
 #[test]
+fn scanner_ignores_comments_inside_groups() {
+    assert_eq!(
+        found("use crate::adapters::{\n    // fmp, not this one\n    polygon,\n};"),
+        ["adapters::polygon"]
+    );
+    assert!(found("use crate::adapters::{\n    /* fmp */\n    yahoo,\n};").is_empty());
+}
+
+#[test]
+fn scanner_ignores_docs_comments_and_strings() {
+    assert!(
+        found(
+            "/// See [`crate::adapters::fmp`].\n// crate::providers::bls\nfn f() -> &'static str { \"crate::adapters::fmp::x\" }"
+        )
+        .is_empty()
+    );
+}
+
+#[test]
+fn scanner_flags_a_reexport_path() {
+    assert_eq!(found("fn f() { crate::fred::series(); }"), ["crate::fred"]);
+    assert_eq!(found("use crate::crypto::{a, b};"), ["crate::crypto"]);
+}
+
+#[test]
+fn scanner_flags_paths_in_macro_arguments() {
+    assert_eq!(
+        found("fn f() { println!(\"{}\", crate::adapters::fmp::x()); }"),
+        ["adapters::fmp"]
+    );
+}
+
+#[test]
+fn scanner_flags_super_provider_only_from_common() {
+    assert_eq!(
+        found_in_common("use super::fmp::Client;"),
+        ["adapters::fmp"]
+    );
+    assert!(found("use super::fmp::Client;").is_empty());
+}
+
+#[test]
+fn scanner_flags_provider_features_in_common_only() {
+    assert_eq!(
+        found_in_common("#[cfg(feature = \"fmp\")]\nfn f() {}"),
+        ["feature \"fmp\""]
+    );
+    assert_eq!(
+        found_in_common("#[cfg(any(test, not(feature = \"crypto\")))]\nfn f() {}"),
+        ["feature \"crypto\""]
+    );
+    assert_eq!(
+        found_in_common("#[cfg_attr(feature = \"fmp\", derive(Debug))]\nstruct S;"),
+        ["feature \"fmp\""]
+    );
+    assert_eq!(
+        found_in_common("fn f() -> bool { cfg!(feature = \"fmp\") }"),
+        ["feature \"fmp\""]
+    );
+    assert!(found_in_common("#[cfg(feature = \"dataframe\")]\nfn f() {}").is_empty());
+    assert!(found("#[cfg(feature = \"fmp\")]\nfn f() {}").is_empty());
+}
+
+#[test]
 fn scanner_passes_neutral_and_foreign_paths() {
-    assert!(names("use crate::adapters::yahoo::x;").is_empty());
-    assert!(names("use crate::adapters::{common, keys::y};").is_empty());
-    assert!(names("use tokio_stream::adapters::ChunksTimeout;").is_empty());
+    assert!(found("use crate::adapters::yahoo::x;").is_empty());
+    assert!(found("use crate::adapters::{common, keys::y, edgar};").is_empty());
+    assert!(found("use tokio_stream::adapters::ChunksTimeout;").is_empty());
+    assert!(found("use crate::providers::{Capability, Operation, build_providers};").is_empty());
+    assert!(found("use crate::providers::{set::X, yahoo::Y, mock::M};").is_empty());
 }
 
 #[test]
 fn scanner_flags_provider_bridges() {
     assert_eq!(
-        names("let p = crate::providers::fmp::FmpProvider::new();"),
+        found("fn f() { crate::providers::fmp::FmpProvider::new(); }"),
         ["providers::fmp"]
     );
     assert_eq!(
-        names("use crate::providers::{Capability, bls::BlsProvider, polygon};"),
+        found("use crate::providers::{Capability, bls::BlsProvider, polygon};"),
         ["providers::bls", "providers::polygon"]
-    );
-    assert_eq!(
-        names("use crate::providers;\nlet p = providers::kraken::K;"),
-        ["providers::kraken"]
     );
 }
 
 #[test]
-fn scanner_passes_neutral_provider_modules() {
-    assert!(names("use crate::providers::{Capability, Operation, ProviderSet};").is_empty());
-    assert!(names("use crate::providers::mock::MockProvider;").is_empty());
-    assert!(names("use crate::providers::{set::X, yahoo::Y, build_providers};").is_empty());
+fn lib_scan_exempts_pub_use_and_hidden_items() {
+    let source = "pub mod fmp { pub use crate::adapters::fmp::init; }\n\
+                  pub fn __fuzz() { crate::adapters::fmp::x(); }\n\
+                  pub fn wrap() { crate::adapters::polygon::x(); }";
+    assert_eq!(scan(source, &fixture(), Mode::Lib), ["adapters::polygon"]);
 }
