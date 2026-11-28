@@ -145,6 +145,10 @@ impl DiscoveryProvider for EdgarProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for EdgarProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
         Some(self)
     }

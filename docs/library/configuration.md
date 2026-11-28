@@ -381,7 +381,7 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
 
 Both need an explicit key, and `build()` rejects them for a provider that is not configured or does not support them. Polygon and FMP support both; Alpha Vantage supports a request budget. FRED also supports `endpoint` and keeps the key requirement. The keyless FiscalData, DefiLlama and CoinGecko support `endpoint` alone and need no key; DefiLlama's protocol and stablecoin requests both go to the one origin.
 
-Yahoo is keyless too, and its one origin serves every Yahoo host, so a mock must also serve `/v1/test/getcrumb`. Requests to an unknown Yahoo host fail rather than reach live Yahoo, and a redirect is never followed. `finance::fear_and_greed` reads alternative.me, which `endpoint` does not cover.
+Yahoo is keyless too, and its one origin serves every Yahoo host, so a mock must also serve `/v1/test/getcrumb`. EDGAR is keyless as well, and its one origin serves `www.sec.gov`, `data.sec.gov` and `efts.sec.gov` (their paths do not overlap). It still needs the contact email from `edgar::init` or `EDGAR_EMAIL`. Under an endpoint EDGAR does not share its CIK cache, follows no redirects and refuses other SEC hosts such as `xbrl.sec.gov`. Requests to an unknown Yahoo host fail rather than reach live Yahoo, and a redirect is never followed. `finance::fear_and_greed` reads alternative.me, which `endpoint` does not cover.
 
 `Providers::scope(future)` applies an instance's keys and endpoints to code that takes no `Providers`: the `finance::*` functions, `Ticker::new` and `builder`, and `Tickers::new` and `builder`. The scope does not cross `tokio::spawn`; a handle keeps the origin it captured when it was built.
 
