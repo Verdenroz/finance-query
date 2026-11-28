@@ -393,7 +393,7 @@ pub struct IndicatorsSummary {
     pub parabolic_sar: Option<f64>,
     /// Bull Bear Power (13-period EMA based)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten, prefix = ""))]
     pub bull_bear_power: Option<BullBearPowerData>,
     /// Elder Ray Index (13-period EMA based)
     #[serde(skip_serializing_if = "Option::is_none")]

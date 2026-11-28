@@ -96,7 +96,7 @@ mod tests {
             ("aroon_up", DataType::Float64),
             ("supertrend_trend", DataType::String),
             ("ichimoku_lagging_span", DataType::Float64),
-            ("bull_bear_power_bear_power", DataType::Float64),
+            ("bear_power", DataType::Float64),
             ("elder_ray_index_bull_power", DataType::Float64),
             ("bollinger_bands_upper", DataType::Float64),
             ("keltner_channels_lower", DataType::Float64),
