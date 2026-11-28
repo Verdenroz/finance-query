@@ -87,6 +87,7 @@ use finance_query::{
     Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 soothfast::bench_main!();
@@ -1960,6 +1961,80 @@ static HOUSE_PTR_PDF: &[u8] = include_bytes!("../tests/fixtures/housetrades/ptr_
 )]
 fn parse_house_ptr() {
     keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)).unwrap());
+}
+
+// ── Statement metric canonicalization (FMP cash flow, mapped and passthrough keys) ──
+
+const FMP_CASHFLOW_KEYS: [&str; 43] = [
+    "netIncome",
+    "depreciationAndAmortization",
+    "deferredIncomeTax",
+    "stockBasedCompensation",
+    "changeInWorkingCapital",
+    "accountsReceivables",
+    "inventory",
+    "accountsPayables",
+    "otherWorkingCapital",
+    "otherNonCashItems",
+    "operatingCashFlow",
+    "investmentsInPropertyPlantAndEquipment",
+    "capitalExpenditure",
+    "acquisitionsNet",
+    "purchasesOfInvestments",
+    "salesMaturitiesOfInvestments",
+    "otherInvestingActivities",
+    "netCashProvidedByInvestingActivities",
+    "netDebtIssuance",
+    "longTermNetDebtIssuance",
+    "shortTermNetDebtIssuance",
+    "netCommonStockIssuance",
+    "commonStockIssuance",
+    "commonStockRepurchased",
+    "netDividendsPaid",
+    "commonDividendsPaid",
+    "otherFinancingActivities",
+    "netCashProvidedByFinancingActivities",
+    "effectOfForexChangesOnCash",
+    "netChangeInCash",
+    "cashAtEndOfPeriod",
+    "cashAtBeginningOfPeriod",
+    "freeCashFlow",
+    "netCashProvidedByOperatingActivities",
+    "netStockIssuance",
+    "netPreferredStockIssuance",
+    "preferredDividendsPaid",
+    "incomeTaxesPaid",
+    "interestPaid",
+    "acquisitionOfIntangibles",
+    "otherFundingActivities",
+    "restructuringCharges",
+    "SegmentRevenue",
+];
+
+#[fixture]
+fn fmp_cashflow(periods: usize) -> BTreeMap<String, BTreeMap<String, f64>> {
+    FMP_CASHFLOW_KEYS
+        .iter()
+        .enumerate()
+        .map(|(i, key)| {
+            let by_period = (0..periods)
+                .map(|p| (format!("{}-09-30", 2024 - p), (i * 1000 + p) as f64))
+                .collect();
+            (key.to_string(), by_period)
+        })
+        .collect()
+}
+
+#[bench(
+    group = "providers",
+    setup_sized = fmp_cashflow,
+    sizes(5, 50, 500),
+    complexity = "n",
+    alloc = 23700,
+    covers = "finance_query::__bench::canonicalize_fmp_cashflow"
+)]
+fn canonicalize_statement(metrics: &BTreeMap<String, BTreeMap<String, f64>>) {
+    keep(__bench::canonicalize_fmp_cashflow(keep(metrics)));
 }
 
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────

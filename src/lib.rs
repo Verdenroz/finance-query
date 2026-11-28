@@ -714,6 +714,18 @@ pub mod __bench {
             .collect())
     }
 
+    /// Canonicalize an FMP cash-flow statement's metric map.
+    #[cfg(feature = "fmp")]
+    pub fn canonicalize_fmp_cashflow(
+        metrics: &std::collections::BTreeMap<String, std::collections::BTreeMap<String, f64>>,
+    ) -> std::collections::BTreeMap<String, std::collections::BTreeMap<String, f64>> {
+        crate::providers::statement_metrics::canonicalize(
+            crate::Provider::Fmp,
+            crate::StatementType::CashFlow,
+            metrics.clone(),
+        )
+    }
+
     /// Extract the text lines of a House PTR disclosure PDF.
     #[cfg(feature = "housetrades")]
     pub fn house_ptr_lines(pdf: &[u8]) -> Option<Vec<String>> {
