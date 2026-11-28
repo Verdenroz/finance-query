@@ -24,10 +24,10 @@ fn doc_block_line_10() {
     }
 }
 
-// line 42: compile-only (no_run)
+// line 47: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_42() {
+fn doc_block_line_47() {
     use finance_query::streaming::PriceStream;
 
     #[tokio::main]
@@ -37,10 +37,10 @@ fn doc_block_line_42() {
     }
 }
 
-// line 54: compile-only (no_run)
+// line 59: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_54() {
+fn doc_block_line_59() {
     use finance_query::streaming::PriceStreamBuilder;
     use std::time::Duration;
 
@@ -55,10 +55,10 @@ fn doc_block_line_54() {
     }
 }
 
-// line 73: compile-only (no_run)
+// line 78: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_73() {
+fn doc_block_line_78() {
     use finance_query::streaming::PriceStream;
 
     #[tokio::main]
@@ -74,10 +74,10 @@ fn doc_block_line_73() {
     }
 }
 
-// line 93: compile-only (no_run)
+// line 98: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_93() {
+fn doc_block_line_98() {
     use finance_query::streaming::PriceStream;
     use futures::StreamExt;
 
@@ -100,10 +100,10 @@ fn doc_block_line_93() {
     }
 }
 
-// line 144: compile-only (no_run)
+// line 149: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_144() {
+fn doc_block_line_149() {
     use finance_query::streaming::{MarketHoursType, PriceStream};
     use futures::StreamExt;
 
@@ -121,10 +121,10 @@ fn doc_block_line_144() {
     }
 }
 
-// line 164: compile-only (no_run)
+// line 169: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_164() {
+fn doc_block_line_169() {
     use finance_query::streaming::PriceStream;
 
     #[tokio::main]
@@ -138,10 +138,10 @@ fn doc_block_line_164() {
     }
 }
 
-// line 190: compile-only (no_run)
+// line 195: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_190() {
+fn doc_block_line_195() {
     use finance_query::streaming::NewsStream;
     use finance_query::feeds::FeedSource;
     use futures::StreamExt;
@@ -157,10 +157,10 @@ fn doc_block_line_190() {
     }
 }
 
-// line 211
+// line 216
 #[rustfmt::skip]
 #[test]
-fn doc_block_line_211() {
+fn doc_block_line_216() {
     use finance_query::streaming::NewsStreamBuilder;
     use finance_query::feeds::FeedSource;
     use std::time::Duration;
@@ -180,10 +180,10 @@ fn doc_block_line_211() {
     main();
 }
 
-// line 236: compile-only (no_run)
+// line 241: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_236() {
+fn doc_block_line_241() {
     use finance_query::streaming::NewsStream;
     use finance_query::feeds::FeedSource;
 
