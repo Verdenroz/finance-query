@@ -71,15 +71,95 @@ pub(super) async fn search_recent_ptrs(
 
 async fn parse_row(row: &Element) -> Option<SenateFilingEntry> {
     let cells = row.find_elements("td").await.ok()?;
-    let first_name = cells.first()?.inner_text().await.ok()??;
-    let last_name = cells.get(1)?.inner_text().await.ok()??;
-    let filed_date = cells.get(4)?.inner_text().await.ok()??;
-    let link = cells.get(3)?.find_element("a").await.ok()?;
-    let path = link.attribute("href").await.ok()??;
+    let mut texts = Vec::with_capacity(cells.len());
+    for cell in &cells {
+        texts.push(cell.inner_text().await.ok()?);
+    }
+    let href = match cells.get(3) {
+        Some(cell) => match cell.find_element("a").await {
+            Ok(link) => link.attribute("href").await.ok()?,
+            Err(_) => None,
+        },
+        None => None,
+    };
+    entry_from_cells(&texts, href)
+}
+
+fn entry_from_cells(cells: &[Option<String>], href: Option<String>) -> Option<SenateFilingEntry> {
+    let first_name = cells.first()?.as_deref()?;
+    let last_name = cells.get(1)?.as_deref()?;
+    let filed_date = cells.get(4)?.as_deref()?;
     Some(SenateFilingEntry {
         first_name: first_name.trim().to_string(),
         last_name: last_name.trim().to_string(),
         filed_date: filed_date.trim().to_string(),
-        path,
+        path: href?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cells(texts: &[&str]) -> Vec<Option<String>> {
+        texts.iter().map(|t| Some(t.to_string())).collect()
+    }
+
+    #[test]
+    fn entry_from_cells_reads_name_date_and_link() {
+        let row = cells(&[
+            " Jane ",
+            "Doe",
+            "Doe, Jane (Senator)",
+            "Report",
+            " 03/14/2025 ",
+        ]);
+        let entry = entry_from_cells(&row, Some("/search/view/ptr/abc/".into())).unwrap();
+        assert_eq!(entry.first_name, "Jane");
+        assert_eq!(entry.last_name, "Doe");
+        assert_eq!(entry.filed_date, "03/14/2025");
+        assert_eq!(entry.path, "/search/view/ptr/abc/");
+    }
+
+    #[test]
+    fn entry_from_cells_rejects_short_row() {
+        let row = cells(&["Jane", "Doe", "Doe, Jane"]);
+        assert!(entry_from_cells(&row, Some("/x/".into())).is_none());
+    }
+
+    #[test]
+    fn entry_from_cells_rejects_missing_link() {
+        let row = cells(&["Jane", "Doe", "x", "y", "03/14/2025"]);
+        assert!(entry_from_cells(&row, None).is_none());
+    }
+
+    #[test]
+    fn entry_from_cells_rejects_empty_cell_text() {
+        let mut row = cells(&["Jane", "Doe", "x", "y", "03/14/2025"]);
+        row[1] = None;
+        assert!(entry_from_cells(&row, Some("/x/".into())).is_none());
+    }
+
+    #[test]
+    fn parses_us_date() {
+        assert_eq!(
+            parse_us_date("03/14/2025"),
+            NaiveDate::from_ymd_opt(2025, 3, 14)
+        );
+    }
+
+    #[test]
+    fn parse_us_date_trims_whitespace() {
+        assert_eq!(
+            parse_us_date("  12/01/2024\n"),
+            NaiveDate::from_ymd_opt(2024, 12, 1)
+        );
+    }
+
+    #[test]
+    fn parse_us_date_rejects_non_us_formats() {
+        assert_eq!(parse_us_date("2025-03-14"), None);
+        assert_eq!(parse_us_date("14/03/2025"), None);
+        assert_eq!(parse_us_date(""), None);
+    }
 }
