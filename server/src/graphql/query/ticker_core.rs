@@ -164,7 +164,7 @@ impl TickerCoreQuery {
         statement: GqlStatementType,
         #[graphql(default_with = "GqlFrequency::Annual")] frequency: GqlFrequency,
         #[graphql(
-            desc = "Filter to specific metric names (e.g. [\"TotalRevenue\",\"NetIncome\"]). Omitted = all metrics."
+            desc = "Filter to specific metric names (e.g. [\"total_revenue\",\"net_income\"]). Omitted = all metrics."
         )]
         metrics: Option<Vec<String>>,
     ) -> Result<Vec<GqlFinancialLineItem>> {

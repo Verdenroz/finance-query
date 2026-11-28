@@ -224,6 +224,11 @@ impl FundamentalsProvider for YahooProvider {
         )
         .await?;
         stmt.provider_id = Some(super::Provider::Yahoo);
+        stmt.statement = super::statement_metrics::canonicalize(
+            super::Provider::Yahoo,
+            stmt_type,
+            stmt.statement,
+        );
         Ok(stmt)
     }
 
@@ -1132,6 +1137,9 @@ impl OptionsProvider for YahooProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for YahooProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
     fn as_quote(&self) -> Option<&dyn QuoteProvider> {
         Some(self)
     }

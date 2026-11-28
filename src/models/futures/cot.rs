@@ -75,13 +75,26 @@ pub struct CotObservation {
 impl CommitmentsOfTraders {
     /// Converts the observations to a polars DataFrame, one row per weekly report.
     ///
-    /// Columns are `symbol` followed by the columns of `CotObservation::to_dataframe`.
+    /// Columns are `symbol`, `market_and_exchange_name` and `cftc_contract_market_code`
+    /// followed by the columns of `CotObservation::to_dataframe`.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         use polars::prelude::*;
 
         let mut frame = CotObservation::vec_to_dataframe(&self.observations)?;
-        let symbol = Series::new("symbol".into(), vec![self.symbol.as_str(); frame.height()]);
-        frame.insert_column(0, symbol.into())?;
+        let height = frame.height();
+        for (index, (name, value)) in [
+            ("symbol", &self.symbol),
+            ("market_and_exchange_name", &self.market_and_exchange_name),
+            ("cftc_contract_market_code", &self.cftc_contract_market_code),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            frame.insert_column(
+                index,
+                Series::new(name.into(), vec![value.as_str(); height]).into(),
+            )?;
+        }
         Ok(frame)
     }
 }

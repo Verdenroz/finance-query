@@ -109,7 +109,8 @@ cpu = "portable"
 features = "bench-gate"
 
 [docs]
-package = ["finance-query"]
+# The last package owns the generated docs tests and capture examples.
+package = ["finance-query-types", "finance-query-backtesting", "finance-query"]
 
 # The minimum lives here because a released CLI rejects it under [docs].
 [package.finance-query.docs]
@@ -169,4 +170,4 @@ files = ["src/**", "tests/**", "benches/**", "examples/**", "docs/**", "soothfas
 
 [bot]
 labels = true
-update_all = true
+update_all = false

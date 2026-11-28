@@ -13,6 +13,8 @@ permissions:
 
 env:
   EDGAR_EMAIL: harveytseng2@gmail.com
+  # Every probe comes from one IP, past the server's default per-client quota.
+  RATE_LIMIT_PER_MINUTE: "100000"
 
 concurrency:
   group: io-probe
@@ -49,7 +51,7 @@ jobs:
           shared-key: io-probe
           cache-on-failure: true
       - name: Install cargo-soothfast
-        uses: Verdenroz/soothfast@78ff082afdf6139b61731e73aede79bfc13a15e9 # master, after v0.9.1
+        uses: Verdenroz/soothfast@b01b08e2127c3dab574bae40086f6e8b2efe377e # v0.10.0
         with:
           gate: false
           labels: "false"

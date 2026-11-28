@@ -206,6 +206,10 @@ impl ProviderSet {
         }
     }
 
+    pub(crate) async fn scope<F: std::future::Future>(&self, f: F) -> F::Output {
+        crate::adapters::keys::scope(Arc::clone(&self.api_keys), f).await
+    }
+
     pub(crate) async fn fetch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
     where
         F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,

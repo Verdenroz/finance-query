@@ -84,6 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Response Shape
 
+<!-- soothfast:bind finance_query::EconomicSeries -->
 Results come back as the provider-neutral [`EconomicSeries`](../economic.md), the same type FRED, Alpha Vantage, and Polygon return:
 
 | Field | Value from World Bank |
@@ -93,6 +94,7 @@ Results come back as the provider-neutral [`EconomicSeries`](../economic.md), th
 | `units` | The API's `unit` field when it is populated (usually empty — most indicators state their unit in the title) |
 | `frequency` | `"Annual"`, `"Quarterly"`, or `"Monthly"`, inferred from the period labels |
 | `observations` | Chronological (oldest first), with `value: None` for periods the World Bank has no figure for |
+<!-- /soothfast:bind -->
 
 World Bank period labels (`2023`, `2023Q1`, `2023M04`) are normalised to the `YYYY-MM-DD` **start** of the period so dates sort and parse like every other provider's.
 

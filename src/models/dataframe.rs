@@ -154,8 +154,6 @@ impl_metric_rows!(
 delegate_rows_to_inherent!(
     crate::CalendarEvent,
     crate::MarketCalendarEntry,
-    crate::models::chart::spark::Spark,
-    crate::SparkData,
     crate::EdgarSearchHit,
 );
 
@@ -405,7 +403,8 @@ mod tests {
         assert_eq!(df.height(), 1);
         let unitless =
             <crate::FactConcept as crate::ToDataFrame>::vec_to_dataframe(&concepts[1..]).unwrap();
-        assert_eq!(unitless.width(), 0);
+        assert_eq!(unitless.height(), 0);
+        assert_eq!(schema(&unitless), schema(&df));
     }
 
     #[test]

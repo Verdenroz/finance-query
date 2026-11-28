@@ -6,7 +6,7 @@ use super::{
     BatchQuotesResponse, BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse,
     SymbolMap,
 };
-use crate::__dataframe::Columns;
+use crate::__dataframe::{Columns, stack_keyed};
 use crate::models::chart::spark::Spark;
 use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
@@ -16,25 +16,6 @@ use crate::models::options::{Contracts, Options};
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::BTreeMap;
 
-fn stack_by_symbol<T>(
-    items: &SymbolMap<T>,
-    convert: impl Fn(&T) -> PolarsResult<DataFrame>,
-    empty: impl FnOnce() -> PolarsResult<DataFrame>,
-) -> PolarsResult<DataFrame> {
-    let mut frames = items
-        .iter()
-        .map(|(symbol, item)| with_symbol(convert(item)?, symbol));
-    let Some(first) = frames.next() else {
-        return with_symbol(empty()?, "");
-    };
-    let mut stacked = first?;
-    for frame in frames {
-        stacked.vstack_mut(&frame?)?;
-    }
-    stacked.rechunk_mut();
-    Ok(stacked)
-}
-
 /// One row per symbol for single-row item types, built in one pass with no per-item frames to stack.
 fn rows_by_symbol<T: Columns>(items: &SymbolMap<T>) -> PolarsResult<DataFrame> {
     let rows: Vec<Option<&T>> = items.values().map(Some).collect();
@@ -42,10 +23,6 @@ fn rows_by_symbol<T: Columns>(items: &SymbolMap<T>) -> PolarsResult<DataFrame> {
     let symbols: Vec<&str> = items.keys().map(String::as_str).collect();
     frame.insert_column(0, Series::new("symbol".into(), symbols).into())?;
     Ok(frame)
-}
-
-fn with_symbol(frame: DataFrame, symbol: &str) -> PolarsResult<DataFrame> {
-    crate::__dataframe::with_leading_column(frame, "symbol", symbol)
 }
 
 fn rename_symbol(mut frame: DataFrame) -> PolarsResult<DataFrame> {
@@ -81,7 +58,7 @@ impl BatchChartsResponse {
     /// Rows are grouped by symbol in input order, candles in chart order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.charts, Chart::to_dataframe, || {
+        stack_keyed("symbol", &self.charts, Chart::to_dataframe, || {
             Candle::vec_to_dataframe(&[])
         })
     }
@@ -94,11 +71,8 @@ impl BatchSparksResponse {
     /// Rows are grouped by symbol in input order, points in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
-            &self.sparks,
-            |spark| spark.to_dataframe()?.drop("symbol"),
-            || Spark::vec_to_dataframe(&[])?.drop("symbol"),
-        )
+        let rows: Vec<Option<&Spark>> = self.sparks.values().map(Some).collect();
+        DataFrame::new_infer_height(Spark::columns(&rows, ""))
     }
 }
 
@@ -109,7 +83,8 @@ impl BatchDividendsResponse {
     /// Rows are grouped by symbol in input order, dividends in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.dividends,
             |items| Dividend::vec_to_dataframe(items),
             || Dividend::vec_to_dataframe(&[]),
@@ -124,7 +99,8 @@ impl BatchSplitsResponse {
     /// Rows are grouped by symbol in input order, splits in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.splits,
             |items| Split::vec_to_dataframe(items),
             || Split::vec_to_dataframe(&[]),
@@ -139,7 +115,8 @@ impl BatchCapitalGainsResponse {
     /// Rows are grouped by symbol in input order, gains in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.capital_gains,
             |items| CapitalGain::vec_to_dataframe(items),
             || CapitalGain::vec_to_dataframe(&[]),
@@ -154,7 +131,8 @@ impl BatchFinancialsResponse {
     /// Rows are grouped by symbol in input order, then sorted by metric and date.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.financials,
             |statement| statement.to_dataframe()?.drop("symbol"),
             || {
@@ -179,7 +157,8 @@ impl BatchNewsResponse {
     /// Rows are grouped by symbol in input order, articles in stored order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.news,
             |items| News::vec_to_dataframe(items),
             || News::vec_to_dataframe(&[]),
@@ -194,7 +173,8 @@ impl BatchRecommendationsResponse {
     /// Rows are grouped by queried symbol in input order, recommendations in
     /// stored order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.recommendations,
             |recommendation| rename_symbol(recommendation.to_dataframe()?),
             || rename_symbol(SimilarSymbol::vec_to_dataframe(&[])?),
@@ -209,7 +189,7 @@ impl BatchOptionsResponse {
     /// including `option_type`. Rows are grouped by symbol in input order.
     /// Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(&self.options, Options::to_dataframe, || {
+        stack_keyed("symbol", &self.options, Options::to_dataframe, || {
             let mut frame = Contracts(Vec::new()).to_dataframe()?;
             let option_type = Series::new("option_type".into(), Vec::<&str>::new());
             frame.with_column(option_type.into())?;
@@ -225,7 +205,8 @@ impl super::BatchIndicatorsResponse {
     /// Columns are `symbol` followed by the columns of `IndicatorsSummary::to_dataframe`.
     /// Rows follow input symbol order. Failed symbols in `errors` are omitted.
     pub fn to_dataframe(&self) -> PolarsResult<DataFrame> {
-        stack_by_symbol(
+        stack_keyed(
+            "symbol",
             &self.indicators,
             crate::indicators::IndicatorsSummary::to_dataframe,
             || crate::indicators::IndicatorsSummary::vec_to_dataframe(&[]),
@@ -364,8 +345,8 @@ mod tests {
                 "statementType": "income",
                 "frequency": "annual",
                 "statement": {
-                    "TotalRevenue": {"2024-09-30": revenue, "2023-09-30": revenue / 2.0},
-                    "NetIncome": {"2024-09-30": revenue / 4.0}
+                    "total_revenue": {"2024-09-30": revenue, "2023-09-30": revenue / 2.0},
+                    "net_income": {"2024-09-30": revenue / 4.0}
                 }
             })
         };
@@ -668,7 +649,8 @@ mod tests {
             response(serde_json::json!({"symbol": "BRK-B"})),
         );
 
-        let stacked = stack_by_symbol(
+        let stacked = stack_keyed(
+            "symbol",
             &batch.quotes,
             |quote| quote.to_dataframe()?.drop("symbol"),
             || <Quote>::vec_to_dataframe(&[])?.drop("symbol"),

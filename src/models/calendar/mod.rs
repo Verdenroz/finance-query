@@ -7,6 +7,23 @@
 //! Construct calendars via `Ticker::calendar` and
 //! `Tickers::calendar`.
 
+/// One nullable column of a detail enum's field, `None` for the variants without it.
+#[cfg(feature = "dataframe")]
+macro_rules! payload_column {
+    ($rows:expr, $detail:ident, $kind:ident, $field:ident: $ty:ty, $($variant:ident)|+) => {
+        ::polars::prelude::Column::from(::polars::prelude::Series::new(
+            stringify!($field).into(),
+            $rows
+                .iter()
+                .map(|row| match &row.$detail {
+                    $($kind::$variant { $field, .. })|+ => $field.clone(),
+                    _ => None,
+                })
+                .collect::<Vec<Option<$ty>>>(),
+        ))
+    };
+}
+
 /// Market-wide calendars routed through `Capability::CALENDAR`.
 pub mod market;
 
@@ -111,8 +128,11 @@ impl CalendarEvent {
     /// Converts the events to a polars DataFrame, one row per event.
     ///
     /// Columns are `timestamp` (`Datetime(us, UTC)`), `date` (`Date`), `symbol`
-    /// and `event_type` (strings). The event payload is not expanded because
-    /// its fields differ per type.
+    /// and `event_type` (strings), then one nullable column per payload field
+    /// (`eps_estimate_low`, `eps_estimate_avg`, `eps_estimate_high`,
+    /// `revenue_estimate_avg`, `is_estimate`, `amount`, `contract_count`, and
+    /// with the `fred` feature `name` and `series_id`), null for the event
+    /// types without it.
     pub fn vec_to_dataframe(
         events: &[Self],
     ) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
@@ -142,6 +162,61 @@ impl CalendarEvent {
                     events
                         .iter()
                         .map(|e| e.event.type_name())
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                payload_column!(events, event, EventKind, eps_estimate_low: f64, Earnings),
+                payload_column!(events, event, EventKind, eps_estimate_avg: f64, Earnings),
+                payload_column!(events, event, EventKind, eps_estimate_high: f64, Earnings),
+                payload_column!(events, event, EventKind, revenue_estimate_avg: i64, Earnings),
+                Series::new(
+                    "is_estimate".into(),
+                    events
+                        .iter()
+                        .map(|e| match &e.event {
+                            EventKind::Earnings { is_estimate, .. } => Some(*is_estimate),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                payload_column!(events, event, EventKind, amount: f64, ExDividend | DividendPayment),
+                Series::new(
+                    "contract_count".into(),
+                    events
+                        .iter()
+                        .map(|e| match &e.event {
+                            EventKind::OptionsExpiration { contract_count } => {
+                                contract_count.map(|n| n as u64)
+                            }
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                #[cfg(feature = "fred")]
+                Series::new(
+                    "name".into(),
+                    events
+                        .iter()
+                        .map(|e| match &e.event {
+                            EventKind::EconomicRelease { name, .. } => Some(name.as_str()),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .into(),
+                #[cfg(feature = "fred")]
+                Series::new(
+                    "series_id".into(),
+                    events
+                        .iter()
+                        .map(|e| match &e.event {
+                            EventKind::EconomicRelease { series_id, .. } => {
+                                Some(series_id.as_str())
+                            }
+                            _ => None,
+                        })
                         .collect::<Vec<_>>(),
                 )
                 .into(),

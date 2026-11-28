@@ -70,6 +70,7 @@ mod operation;
 mod page;
 mod routes;
 mod set;
+pub(crate) mod statement_metrics;
 mod stock_bars;
 pub(crate) mod stock_listing;
 

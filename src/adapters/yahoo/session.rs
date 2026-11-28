@@ -21,6 +21,7 @@ pub(crate) struct SessionKey {
     proxy: Option<String>,
     lang: String,
     region: String,
+    origin: Option<Arc<str>>,
 }
 
 pub(crate) fn key_for(config: &ClientConfig) -> SessionKey {
@@ -30,6 +31,7 @@ pub(crate) fn key_for(config: &ClientConfig) -> SessionKey {
         proxy: config.proxy.clone(),
         lang: config.lang.clone(),
         region: config.region.clone(),
+        origin: config.origin.clone(),
     }
 }
 
@@ -125,6 +127,16 @@ mod tests {
 
         assert_eq!(key_for(&a), key_for(&a));
         assert_ne!(key_for(&a), key_for(&b));
+    }
+
+    #[tokio::test]
+    async fn key_includes_origin() {
+        let live = ClientConfig::default();
+        let mock = ClientConfig {
+            origin: Some(Arc::from("http://127.0.0.1:9")),
+            ..ClientConfig::default()
+        };
+        assert_ne!(key_for(&live), key_for(&mock));
     }
 
     #[test]

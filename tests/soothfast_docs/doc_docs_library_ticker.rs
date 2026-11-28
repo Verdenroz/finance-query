@@ -2,10 +2,10 @@
 // source: docs/library/ticker.md
 #![allow(unused)]
 
-// line 34: compile-only (no_run)
+// line 36: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_34() {
+fn doc_block_line_36() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Ticker, Region};
@@ -37,11 +37,11 @@ fn doc_block_line_34() {
     }
 }
 
-// line 86: compile-only (no_run)
+// line 88: compile-only (no_run)
 #[cfg(all(feature = "polygon", feature = "fmp"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_86() {
+fn doc_block_line_88() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Capability, Fetch, Provider, Providers};
@@ -61,11 +61,11 @@ fn doc_block_line_86() {
     }
 }
 
-// line 660: compile-only (no_run)
+// line 662: compile-only (no_run)
 #[cfg(feature = "indicators")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_660() {
+fn doc_block_line_662() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Interval, Ticker, TimeRange};
@@ -94,11 +94,11 @@ fn doc_block_line_660() {
     }
 }
 
-// line 696: compile-only (no_run)
+// line 698: compile-only (no_run)
 #[cfg(feature = "indicators")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_696() {
+fn doc_block_line_698() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::indicators::{rsi, sma};
@@ -121,11 +121,11 @@ fn doc_block_line_696() {
     }
 }
 
-// line 837: compile-only (no_run)
+// line 839: compile-only (no_run)
 #[cfg(feature = "risk")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_837() {
+fn doc_block_line_839() {
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use finance_query::{Interval, Ticker, TimeRange};
@@ -157,10 +157,10 @@ fn doc_block_line_837() {
     }
 }
 
-// line 1865: compile-only (no_run)
+// line 1867: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1865() {
+fn doc_block_line_1867() {
         #[tokio::main]
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use finance_query::{Ticker, Interval, TimeRange};

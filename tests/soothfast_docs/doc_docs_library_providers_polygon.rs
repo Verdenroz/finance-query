@@ -24,11 +24,11 @@ fn doc_block_line_25() {
     }
 }
 
-// line 74: compile-only (no_run)
+// line 76: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_74() {
+fn doc_block_line_76() {
     use finance_query::{
         Capability, Interval, PageCursor, PriceAdjustment, Provider, Providers, StockBarsRequest,
         StockListingRequest,

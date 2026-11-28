@@ -180,11 +180,6 @@ impl FactConcept {
             }
         }
 
-        if facts.is_empty() {
-            // Return empty DataFrame with correct schema
-            return Ok(DataFrame::empty());
-        }
-
         // Convert facts to DataFrame
         let mut df = FactUnit::vec_to_dataframe(&facts)?;
 
@@ -319,6 +314,20 @@ pub struct FactUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "dataframe")]
+    fn empty_concept_frame_keeps_its_columns() {
+        let concept = FactConcept {
+            label: None,
+            description: None,
+            units: BTreeMap::new(),
+        };
+        let df = concept.to_dataframe().unwrap();
+        assert_eq!(df.height(), 0);
+        assert_eq!(df.get_column_names()[0].as_str(), "unit");
+        assert!(df.column("val").is_ok());
+    }
 
     #[test]
     #[cfg(feature = "dataframe")]

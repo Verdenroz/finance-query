@@ -200,7 +200,7 @@ translation-offline = ["translation", "dep:ct2rs", "dep:zip", "reqwest/blocking"
 # Regression-gate aggregate: every feature whose representative work is pure-Rust
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; translation-offline is excluded (native build).
-bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "dataframe", "housetrades", "bench-internals"]
+bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "dataframe", "housetrades", "fmp", "bench-internals"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the
@@ -247,7 +247,7 @@ tokio = { version = "1", features = ["full", "test-util"] }
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 # Measured, gated benchmarks + living docs (`cargo soothfast`). Dev-only —
 # never compiled into the published `finance-query` crate.
-soothfast = { version = "0.9.1", features = ["runner"] }
+soothfast = { version = "0.10.0", features = ["runner"] }
 
 [[bench]]
 name = "ticker"

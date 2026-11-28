@@ -85,7 +85,7 @@ impl TickerBuilder {
     fn new(symbol: impl Into<String>) -> Self {
         Self {
             symbol: symbol.into().into(),
-            config: ClientConfig::default(),
+            config: ClientConfig::ambient(),
             shared_client: None,
             injected_providers: None,
             cache_mode: CacheMode::default(),

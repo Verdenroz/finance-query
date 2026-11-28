@@ -1843,10 +1843,10 @@ mod param_tests {
     fn financials_params_preserves_metrics_and_fields() {
         let p: FinancialsParams = serde_json::from_value(json!({
             "symbols": "AAPL", "statement": "balance", "frequency": "quarterly",
-            "metrics": "totalRevenue,netIncome", "fields": "reportDate"
+            "metrics": "total_revenue,net_income", "fields": "reportDate"
         }))
         .unwrap();
-        assert_eq!(p.metrics, Some("totalRevenue,netIncome".to_string()));
+        assert_eq!(p.metrics, Some("total_revenue,net_income".to_string()));
         assert_eq!(p.frequency, Some(Frequency::Quarterly));
     }
 

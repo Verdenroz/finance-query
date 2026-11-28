@@ -62,7 +62,9 @@ Anything not in this table is treated as a literal CFTC contract code already: t
 
 ## What the Numbers Mean
 
+<!-- soothfast:bind finance_query::CotObservation -->
 Each weekly `CotObservation` breaks total open interest down by trader category: commercial hedgers (producer/merchant), swap dealers, managed money (large speculators), other reportables, and the nonreportable residual below CFTC's reporting thresholds. A field the report doesn't carry for that week stays `None` rather than becoming `0`.
+<!-- /soothfast:bind -->
 
 Observations come back oldest-first, matching every other history-shaped model in the library, even though the Socrata API itself answers newest-first.
 

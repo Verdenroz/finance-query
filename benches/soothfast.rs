@@ -81,14 +81,15 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    BatchQuotesResponse, Candle, Chart, CompanyFacts, CryptoCoin, CryptoQuote, Currency, Dividend,
-    EdgarSubmissions, Exchange, FearAndGreed, Fetch, FinancialStatement, ForexPair, ForexQuote,
-    IndustryData, Interval, LookupResults, MarketHours, MarketSummaryQuote, News, Operation,
-    Options, Provider, ProviderAdapter, ProviderSet, Providers, Quote, QuoteSummaryResponse,
-    Recommendation, Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers,
-    TimeRange, Transcript, TrendingQuote, analyze_sentiment,
+    BatchQuotesResponse, BatchSparksResponse, Candle, Chart, CompanyFacts, CryptoCoin, CryptoQuote,
+    Currency, Dividend, EdgarSubmissions, Exchange, FearAndGreed, Fetch, FinancialStatement,
+    ForexPair, ForexQuote, IndustryData, Interval, LookupResults, MarketHours, MarketSummaryQuote,
+    News, Operation, Options, Provider, ProviderAdapter, ProviderSet, Providers, Quote,
+    QuoteSummaryResponse, Recommendation, Region, Routes, ScreenerResults, SearchResults,
+    SectorData, Ticker, Tickers, TimeRange, Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 soothfast::bench_main!();
@@ -2051,6 +2052,80 @@ fn parse_house_ptr() {
     keep(__bench::house_ptr_lines(keep(HOUSE_PTR_PDF)).unwrap());
 }
 
+// ── Statement metric canonicalization (FMP cash flow, mapped and passthrough keys) ──
+
+const FMP_CASHFLOW_KEYS: [&str; 43] = [
+    "netIncome",
+    "depreciationAndAmortization",
+    "deferredIncomeTax",
+    "stockBasedCompensation",
+    "changeInWorkingCapital",
+    "accountsReceivables",
+    "inventory",
+    "accountsPayables",
+    "otherWorkingCapital",
+    "otherNonCashItems",
+    "operatingCashFlow",
+    "investmentsInPropertyPlantAndEquipment",
+    "capitalExpenditure",
+    "acquisitionsNet",
+    "purchasesOfInvestments",
+    "salesMaturitiesOfInvestments",
+    "otherInvestingActivities",
+    "netCashProvidedByInvestingActivities",
+    "netDebtIssuance",
+    "longTermNetDebtIssuance",
+    "shortTermNetDebtIssuance",
+    "netCommonStockIssuance",
+    "commonStockIssuance",
+    "commonStockRepurchased",
+    "netDividendsPaid",
+    "commonDividendsPaid",
+    "otherFinancingActivities",
+    "netCashProvidedByFinancingActivities",
+    "effectOfForexChangesOnCash",
+    "netChangeInCash",
+    "cashAtEndOfPeriod",
+    "cashAtBeginningOfPeriod",
+    "freeCashFlow",
+    "netCashProvidedByOperatingActivities",
+    "netStockIssuance",
+    "netPreferredStockIssuance",
+    "preferredDividendsPaid",
+    "incomeTaxesPaid",
+    "interestPaid",
+    "acquisitionOfIntangibles",
+    "otherFundingActivities",
+    "restructuringCharges",
+    "SegmentRevenue",
+];
+
+#[fixture]
+fn fmp_cashflow(periods: usize) -> BTreeMap<String, BTreeMap<String, f64>> {
+    FMP_CASHFLOW_KEYS
+        .iter()
+        .enumerate()
+        .map(|(i, key)| {
+            let by_period = (0..periods)
+                .map(|p| (format!("{}-09-30", 2024 - p), (i * 1000 + p) as f64))
+                .collect();
+            (key.to_string(), by_period)
+        })
+        .collect()
+}
+
+#[bench(
+    group = "providers",
+    setup_sized = fmp_cashflow,
+    sizes(5, 50, 500),
+    complexity = "n",
+    alloc = 23700,
+    covers = "finance_query::__bench::canonicalize_fmp_cashflow"
+)]
+fn canonicalize_statement(metrics: &BTreeMap<String, BTreeMap<String, f64>>) {
+    keep(__bench::canonicalize_fmp_cashflow(keep(metrics)));
+}
+
 // ── Provider capability dispatch (the per-fetch selection) ───────────────────
 
 #[fixture]
@@ -2944,6 +3019,32 @@ fn batch_quotes() -> BatchQuotesResponse {
     covers = "finance_query::BatchQuotesResponse::to_dataframe"
 )]
 fn df_batch_quotes(batch: &BatchQuotesResponse) {
+    keep(keep(batch).to_dataframe().unwrap());
+}
+
+#[fixture]
+fn batch_sparks() -> BatchSparksResponse {
+    let spark = |symbol: String| {
+        serde_json::json!({
+            "symbol": symbol, "meta": {"symbol": "AAPL"},
+            "timestamps": (0..500).collect::<Vec<i64>>(),
+            "closes": (0..500).map(f64::from).collect::<Vec<f64>>(),
+            "interval": "5m", "range": "1d"
+        })
+    };
+    let sparks: serde_json::Map<String, serde_json::Value> = (0..10)
+        .map(|i| (format!("SYM{i}"), spark(format!("SYM{i}"))))
+        .collect();
+    serde_json::from_value(serde_json::json!({ "sparks": sparks, "errors": {} })).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = batch_sparks,
+    alloc = 42,
+    covers = "finance_query::BatchSparksResponse::to_dataframe"
+)]
+fn df_batch_sparks(batch: &BatchSparksResponse) {
     keep(keep(batch).to_dataframe().unwrap());
 }
 

@@ -186,7 +186,7 @@ fn trend_wrappers_nest_their_estimates() {
 fn market_summary_spark_columns() {
     use crate::{MarketSummaryQuote, SparkData};
 
-    let expected = ["symbol:str", "timestamp:datetime[μs, UTC]", "close:f64"];
+    let expected = ["close:f64", "timestamp:datetime[μs, UTC]", "symbol:str"];
     let row: SparkData = serde_json::from_value(
         json!({"symbol": "^GSPC", "timestamp": [1, 2], "close": [1.5, null]}),
     )
@@ -212,6 +212,22 @@ fn market_summary_spark_columns() {
     assert_eq!(nested.height(), 1);
     assert!(columns(&nested).iter().any(|c| c.starts_with("spark:list")));
     assert_eq!(quote.spark_dataframe().unwrap().height(), 2);
+}
+
+#[test]
+fn market_summary_spark_pads_the_shorter_series() {
+    use crate::SparkData;
+
+    let row: SparkData =
+        serde_json::from_value(json!({"timestamp": [1, 2, 3], "close": [1.5]})).unwrap();
+    let df = row.to_dataframe().unwrap();
+    assert_eq!(df.height(), 3);
+    assert_eq!(df.column("close").unwrap().null_count(), 2);
+    assert_eq!(df.column("timestamp").unwrap().null_count(), 0);
+    assert_eq!(df.column("symbol").unwrap().null_count(), 3);
+
+    let none: SparkData = serde_json::from_value(json!({})).unwrap();
+    assert_eq!(none.to_dataframe().unwrap().height(), 0);
 }
 
 #[test]
