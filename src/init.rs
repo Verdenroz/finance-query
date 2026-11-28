@@ -95,7 +95,7 @@ macro_rules! init {
 #[macro_export]
 macro_rules! __init_set {
     ($v:ident, $ty:path { $( $(#[$m:meta])* $f:ident $(: $val:expr)? ),* }) => {
-        #[allow(unreachable_patterns)]
+        #[allow(unreachable_patterns, clippy::unneeded_wildcard_pattern)]
         match &$v {
             $ty { $( $(#[$m])* $f: _, )* .. } => {}
             _ => ::core::debug_assert!(false, "init! base is not the named variant"),
