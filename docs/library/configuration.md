@@ -379,7 +379,7 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
 - `requests_per_minute(provider, limit)` sets the key's request budget. Instances using the same key share one budget: the most recently built instance that sets it wins, and instances that leave it unset keep the current rate.
 - `endpoint(provider, origin)` sends the provider's requests to a compatible HTTPS service or a local HTTP fixture without changing process-wide settings. Credentials, query strings, paths and non-loopback HTTP origins are rejected, and page continuations cannot leave the origin.
 
-Both need an explicit key, and `build()` rejects them for a provider that is not configured or does not support them. Polygon and FMP support both; Alpha Vantage supports a request budget.
+Both need an explicit key, and `build()` rejects them for a provider that is not configured or does not support them. Polygon and FMP support both; Alpha Vantage supports a request budget. The keyless FiscalData and DefiLlama support `endpoint` alone and need no key; DefiLlama's protocol and stablecoin requests both go to the one origin.
 
 ```rust no_run feature=polygon
 use finance_query::{Capability, Provider, Providers};

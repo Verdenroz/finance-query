@@ -31,9 +31,17 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 keyless_limiter!(rate = FISCALDATA_RATE_PER_SEC);
 
-/// Build a client against the live API, reusing the shared token bucket.
+/// Build a client against the live API, or the scoped endpoint's origin,
+/// reusing the shared token bucket.
 fn client() -> Result<FiscalDataClient> {
-    FiscalDataClient::new(DEFAULT_TIMEOUT, shared_limiter(), client::FISCALDATA_BASE)
+    let origin = crate::adapters::keys::scoped_key("fiscaldata")
+        .and_then(|scoped| scoped.base_url)
+        .unwrap_or_else(|| client::FISCALDATA_ORIGIN.to_string());
+    FiscalDataClient::new(
+        DEFAULT_TIMEOUT,
+        shared_limiter(),
+        format!("{origin}{}", client::FISCALDATA_PATH),
+    )
 }
 
 pub(crate) use economic::{
