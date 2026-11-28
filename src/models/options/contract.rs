@@ -45,7 +45,7 @@ impl Contracts {
 
 /// An options contract (call or put)
 ///
-/// Note: This struct cannot be manually constructed - obtain via `Ticker::options()`.
+/// Obtain via `Ticker::options()`, or build one with `init!`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

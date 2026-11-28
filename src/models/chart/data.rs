@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// This is the recommended type for serialization and API responses.
 /// Used for both single symbol and batch historical data requests.
 ///
-/// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
+/// Obtain via `Ticker::chart()`, or build one with `init!`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Chart {

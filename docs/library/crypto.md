@@ -88,7 +88,7 @@ cannot drift from the type:
 ```rust capture-output feature=crypto covers=finance_query::crypto::CoinQuote
 use finance_query::crypto::CoinQuote;
 
-// `CoinQuote` is #[non_exhaustive] outside the crate, so construct via
+// `CoinQuote` is #[non_exhaustive] and has no `Default`, so construct via
 // serde. With live data: `crypto::coin("bitcoin", "usd").await?`.
 let coin: CoinQuote = serde_json::from_value(serde_json::json!({
     "id": "bitcoin",
@@ -182,24 +182,23 @@ where the price field is `price` (not `current_price`):
 <!-- /soothfast:bind -->
 
 ```rust capture-output feature=crypto covers=finance_query::CryptoQuote
-use finance_query::CryptoQuote;
+use finance_query::{CryptoQuote, init};
 
-// `CryptoQuote` is #[non_exhaustive] outside the crate, so construct via
-// serde. With live data: `providers.crypto("BTC").quote("usd").await?`.
-let quote: CryptoQuote = serde_json::from_value(serde_json::json!({
-    "id": "BTC",
-    "symbol": "BTC",
-    "name": "Bitcoin",
-    "price": 67234.50,
-    "market_cap": 1_325_000_000_000.0,
-    "volume_24h": 28_400_000_000.0,
-    "change_24h": 1540.20,
-    "change_percent_24h": 2.35,
-    "high_24h": 67800.0,
-    "low_24h": 65500.0,
-    "circulating_supply": 19_700_000.0,
-}))
-.unwrap();
+// `CryptoQuote` is #[non_exhaustive] outside the crate, so build it with `init!`.
+// With live data: `providers.crypto("BTC").quote("usd").await?`.
+let quote = init!(CryptoQuote {
+    id: "BTC".to_string(),
+    symbol: "BTC".to_string(),
+    name: "Bitcoin".to_string(),
+    price: Some(67234.50),
+    market_cap: Some(1_325_000_000_000.0),
+    volume_24h: Some(28_400_000_000.0),
+    change_24h: Some(1540.20),
+    change_percent_24h: Some(2.35),
+    high_24h: Some(67800.0),
+    low_24h: Some(65500.0),
+    circulating_supply: Some(19_700_000.0),
+});
 
 fn verify_crypto_quote_price(q: CryptoQuote) {
     let _: Option<f64> = q.price;

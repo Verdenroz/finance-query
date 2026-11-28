@@ -72,24 +72,23 @@ This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
 ```rust capture-output covers=finance_query::FuturesQuote
-use finance_query::FuturesQuote;
+use finance_query::{FuturesQuote, init};
 
-// `FuturesQuote` is #[non_exhaustive] outside the crate, so construct via
-// serde. With live data: `providers.futures("ES=F").quote().await?`.
-let quote: FuturesQuote = serde_json::from_value(serde_json::json!({
-    "symbol": "ESM26",
-    "name": "E-mini S&P 500 Jun 2026",
-    "underlying": "S&P 500",
-    "exchange": "CME",
-    "expiration_date": "2026-06-19",
-    "price": 5432.25,
-    "change": 12.50,
-    "change_percent": 0.23,
-    "open_interest": 1_850_000_u64,
-    "volume": 920_000_u64,
-    "timestamp": 1_718_000_000_i64,
-}))
-.unwrap();
+// `FuturesQuote` is #[non_exhaustive] outside the crate, so build it with `init!`.
+// With live data: `providers.futures("ES=F").quote().await?`.
+let quote = init!(FuturesQuote {
+    symbol: "ESM26".to_string(),
+    name: Some("E-mini S&P 500 Jun 2026".to_string()),
+    underlying: Some("S&P 500".to_string()),
+    exchange: Some("CME".to_string()),
+    expiration_date: Some("2026-06-19".to_string()),
+    price: Some(5432.25),
+    change: Some(12.50),
+    change_percent: Some(0.23),
+    open_interest: Some(1_850_000),
+    volume: Some(920_000),
+    timestamp: Some(1_718_000_000),
+});
 
 fn verify_futures_quote_fields(q: FuturesQuote) {
     let _: String = q.symbol;

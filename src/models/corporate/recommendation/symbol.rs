@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// A similar/recommended symbol with score
 ///
-/// Note: This struct cannot be manually constructed - obtain via `Ticker::recommendations()`.
+/// Obtain via `Ticker::recommendations()`, or build one with `init!`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]

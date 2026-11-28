@@ -95,22 +95,21 @@ This field-verification helper compiles as a real test, so the table above
 cannot drift from the type:
 
 ```rust capture-output feature=alphavantage covers=finance_query::ForexQuote
-use finance_query::ForexQuote;
+use finance_query::{ForexQuote, init};
 
-// `ForexQuote` is #[non_exhaustive] outside the crate, so construct via
-// serde. With live data: `providers.forex("EUR", "USD").quote().await?`.
-let quote: ForexQuote = serde_json::from_value(serde_json::json!({
-    "symbol": "EURUSD",
-    "base_currency": "EUR",
-    "quote_currency": "USD",
-    "bid": 1.084250,
-    "ask": 1.084400,
-    "price": 1.084325,
-    "change": 0.001200,
-    "change_percent": 0.1108,
-    "timestamp": 1_718_000_000_i64,
-}))
-.unwrap();
+// `ForexQuote` is #[non_exhaustive] outside the crate, so build it with `init!`.
+// With live data: `providers.forex("EUR", "USD").quote().await?`.
+let quote = init!(ForexQuote {
+    symbol: "EURUSD".to_string(),
+    base_currency: Some("EUR".to_string()),
+    quote_currency: Some("USD".to_string()),
+    bid: Some(1.084250),
+    ask: Some(1.084400),
+    price: Some(1.084325),
+    change: Some(0.001200),
+    change_percent: Some(0.1108),
+    timestamp: Some(1_718_000_000),
+});
 
 fn verify_forex_quote_fields(q: ForexQuote) {
     let _: String = q.symbol;

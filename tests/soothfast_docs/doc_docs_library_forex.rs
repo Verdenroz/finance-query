@@ -55,11 +55,11 @@ fn doc_block_line_46() {
     }
 }
 
-// line 143: compile-only (no_run)
+// line 142: compile-only (no_run)
 #[cfg(feature = "alphavantage")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_143() {
+fn doc_block_line_142() {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
     #[tokio::main]
@@ -85,11 +85,11 @@ fn doc_block_line_143() {
     }
 }
 
-// line 177: compile-only (no_run)
+// line 176: compile-only (no_run)
 #[cfg(feature = "alphavantage")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_177() {
+fn doc_block_line_176() {
     use finance_query::{Capability, Provider, Providers, TimeRange};
 
     #[tokio::main]
@@ -111,11 +111,11 @@ fn doc_block_line_177() {
     }
 }
 
-// line 210: compile-only (no_run)
+// line 209: compile-only (no_run)
 #[cfg(all(feature = "risk", feature = "alphavantage"))]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_210() {
+fn doc_block_line_209() {
     use finance_query::indicators::Indicator;
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
@@ -145,11 +145,11 @@ fn doc_block_line_210() {
     }
 }
 
-// line 250: compile-only (no_run)
+// line 249: compile-only (no_run)
 #[cfg(feature = "alphavantage")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_250() {
+fn doc_block_line_249() {
     use finance_query::{Capability, Provider, Providers};
     use std::time::Duration;
 

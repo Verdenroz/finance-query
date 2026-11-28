@@ -3,7 +3,7 @@
 pub fn main() {
     use finance_query::crypto::CoinQuote;
 
-    // `CoinQuote` is #[non_exhaustive] outside the crate, so construct via
+    // `CoinQuote` is #[non_exhaustive] and has no `Default`, so construct via
     // serde. With live data: `crypto::coin("bitcoin", "usd").await?`.
     let coin: CoinQuote = serde_json::from_value(serde_json::json!({
         "id": "bitcoin",
