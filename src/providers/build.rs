@@ -118,7 +118,7 @@ pub(crate) fn shared_yahoo_set(session: Arc<LazySession>) -> ProviderSet {
 /// A set holding only `id`, routed for `cap`. The adapter is not initialized,
 /// so a missing key surfaces from the call that needs it.
 pub(crate) fn solo_set(id: Provider, cap: Capability) -> Result<ProviderSet> {
-    let adapter = adapter_for(id, &ClientConfig::default(), &mut None)?;
+    let adapter = factory_for(id)?(&ClientConfig::default(), &mut None)?;
     Ok(ProviderSet::new(
         vec![adapter],
         Routes::new(Fetch::Sequential).route(cap, [id]),

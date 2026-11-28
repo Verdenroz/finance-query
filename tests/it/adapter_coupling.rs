@@ -58,12 +58,7 @@ const COMMON_PENDING: &[(&str, usize)] = &[
 
 /// Files still calling provider adapters directly, with their reference counts.
 /// Lower a count when it shrinks; never raise one or add a file.
-const PENDING: &[(&str, usize)] = &[
-    ("src/finance.rs", 20),
-    ("src/streaming/economic.rs", 1),
-    ("src/ticker/core.rs", 2),
-    ("src/tickers/core/corporate.rs", 2),
-];
+const PENDING: &[(&str, usize)] = &[];
 
 #[derive(Default)]
 struct Names {
