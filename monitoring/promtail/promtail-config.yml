@@ -24,3 +24,9 @@ scrape_configs:
         target_label: container_name
       - source_labels: ["__meta_docker_container_log_stream"]
         target_label: stream
+    pipeline_stages:
+      - drop:
+          expression: '"level":"(DEBUG|debug|TRACE|trace)"'
+      # Caddy access log lines for health and metrics polling.
+      - drop:
+          expression: '"uri":"/(v[12]/)?(health|metrics)[^"]*"'
