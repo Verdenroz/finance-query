@@ -11,7 +11,10 @@ use crate::constants::sectors::Sector;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
 use finance_query_models::chart::Candle;
-use finance_query_models::market::performance::{SectorPerformance, SectorPerformanceHistory};
+use finance_query_models::market::performance::{
+    SectorPerformance, SectorPerformanceFieldsInit, SectorPerformanceHistory,
+    SectorPerformanceHistoryFieldsInit,
+};
 use std::collections::BTreeMap;
 
 fn range_for_limit(limit: u32) -> TimeRange {
@@ -47,11 +50,14 @@ fn pivot_to_history(
     let mut by_date: BTreeMap<String, Vec<SectorPerformance>> = BTreeMap::new();
     for (sector, changes) in per_sector {
         for (date, change_percent) in changes {
-            by_date.entry(date).or_default().push(SectorPerformance {
-                sector: sector.display_name().to_string(),
-                exchange: None,
-                change_percent: Some(change_percent),
-            });
+            by_date
+                .entry(date)
+                .or_default()
+                .push(SectorPerformance::from(SectorPerformanceFieldsInit {
+                    sector: sector.display_name().to_string(),
+                    exchange: None,
+                    change_percent: Some(change_percent),
+                }));
         }
     }
 
@@ -59,9 +65,11 @@ fn pivot_to_history(
         .into_iter()
         .rev()
         .take(limit as usize)
-        .map(|(date, sectors)| SectorPerformanceHistory {
-            date: Some(date),
-            sectors,
+        .map(|(date, sectors)| {
+            SectorPerformanceHistory::from(SectorPerformanceHistoryFieldsInit {
+                date: Some(date),
+                sectors,
+            })
         })
         .collect()
 }

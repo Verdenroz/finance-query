@@ -127,6 +127,7 @@ impl StockBarsRequest {
         let adjustment = match self.adjustment {
             PriceAdjustment::Unadjusted => "unadjusted",
             PriceAdjustment::SplitAdjusted => "split",
+            _ => "other",
         };
         serde_json::json!([
             self.symbol,

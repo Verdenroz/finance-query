@@ -179,20 +179,26 @@ pub async fn fetch_economic_series_response(
 /// Map a FRED [`MacroSeries`] to the canonical
 /// [`EconomicSeries`](finance_query_models::economic::EconomicSeries).
 fn series_to_canonical(series: MacroSeries) -> finance_query_models::economic::EconomicSeries {
-    finance_query_models::economic::EconomicSeries {
-        series_id: series.id,
-        title: None,
-        units: None,
-        frequency: None,
-        observations: series
-            .observations
-            .into_iter()
-            .map(|o| finance_query_models::economic::MacroObservation {
-                date: o.date,
-                value: o.value,
-            })
-            .collect(),
-    }
+    finance_query_models::economic::EconomicSeries::from(
+        finance_query_models::economic::EconomicSeriesFieldsInit {
+            series_id: series.id,
+            title: None,
+            units: None,
+            frequency: None,
+            observations: series
+                .observations
+                .into_iter()
+                .map(|o| {
+                    finance_query_models::economic::MacroObservation::from(
+                        finance_query_models::economic::MacroObservationFieldsInit {
+                            date: o.date,
+                            value: o.value,
+                        },
+                    )
+                })
+                .collect(),
+        },
+    )
 }
 
 /// Fetch scheduled economic-data releases over `[from, to]` and map them to
@@ -213,23 +219,27 @@ pub async fn fetch_market_calendar_response(
 fn release_dates_to_calendar_entries(
     dates: Vec<ReleaseDate>,
 ) -> Vec<finance_query_models::calendar::market::MarketCalendarEntry> {
-    use finance_query_models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+    use finance_query_models::calendar::market::{
+        CalendarDetail, MarketCalendarEntry, MarketCalendarEntryFieldsInit,
+    };
 
     calendar::drop_phantom_daily_fills(dates)
         .into_iter()
-        .map(|rd| MarketCalendarEntry {
-            symbol: None,
-            date: Some(rd.date),
-            detail: CalendarDetail::Economic {
-                event: Some(rd.release_name),
-                country: Some("US".to_string()),
-                actual: None,
-                previous: None,
-                estimate: None,
-                change: None,
-                change_percentage: None,
-                impact: None,
-            },
+        .map(|rd| {
+            MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
+                symbol: None,
+                date: Some(rd.date),
+                detail: CalendarDetail::Economic {
+                    event: Some(rd.release_name),
+                    country: Some("US".to_string()),
+                    actual: None,
+                    previous: None,
+                    estimate: None,
+                    change: None,
+                    change_percentage: None,
+                    impact: None,
+                },
+            })
         })
         .collect()
 }

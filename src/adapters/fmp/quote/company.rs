@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 use crate::error::{FinanceError, Result};
-use finance_query_models::discovery::reference::SymbolMatch;
+use finance_query_models::discovery::reference::{SymbolMatch, SymbolMatchFieldsInit};
 
 // ============================================================================
 // Response types
@@ -66,12 +66,14 @@ fn stock_peers_to_canonical(
     let mut symbols: Vec<finance_query_models::corporate::recommendation::SimilarSymbol> = peers
         .into_iter()
         .filter_map(|p| p.symbol)
-        .map(
-            |s| finance_query_models::corporate::recommendation::SimilarSymbol {
-                symbol: s,
-                score: 0.0,
-            },
-        )
+        .map(|s| {
+            finance_query_models::corporate::recommendation::SimilarSymbol::from(
+                finance_query_models::corporate::recommendation::SimilarSymbolFieldsInit {
+                    symbol: s,
+                    score: 0.0,
+                },
+            )
+        })
         .collect();
     symbols.truncate(limit);
     symbols
@@ -251,7 +253,7 @@ fn delisted_symbols(rows: Vec<DelistedCompanyDTO>) -> Result<Vec<SymbolMatch>> {
 /// Convert a delisted-company record into a canonical [`SymbolMatch`],
 /// dropping entries without a symbol.
 fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
-    Some(SymbolMatch {
+    Some(SymbolMatch::from(SymbolMatchFieldsInit {
         symbol: dto.symbol?,
         id: None,
         name: dto.company_name,
@@ -264,7 +266,7 @@ fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
         image: None,
         ipo_date: dto.ipo_date,
         delisted_date: dto.delisted_date,
-    })
+    }))
 }
 
 /// Fetch canonical delisted-security listing status

@@ -2,7 +2,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use finance_query_models::forex::ForexQuote;
+use finance_query_models::forex::{ForexQuote, ForexQuoteFieldsInit};
 use serde::{Deserialize, Serialize};
 
 use super::super::build_client;
@@ -71,7 +71,7 @@ fn last_quote_to_canonical(from: &str, to: &str, resp: ForexQuoteResponseDTO) ->
     let last = resp.last;
     let bid = last.as_ref().and_then(|l| l.bid);
     let ask = last.as_ref().and_then(|l| l.ask);
-    ForexQuote {
+    ForexQuote::from(ForexQuoteFieldsInit {
         symbol: format!("{}{}", from.to_uppercase(), to.to_uppercase()),
         base_currency: Some(from.to_string()),
         quote_currency: Some(to.to_string()),
@@ -81,7 +81,7 @@ fn last_quote_to_canonical(from: &str, to: &str, resp: ForexQuoteResponseDTO) ->
         change: None,
         change_percent: None,
         timestamp: last.as_ref().and_then(|l| l.timestamp).map(|ms| ms / 1_000),
-    }
+    })
 }
 
 #[cfg(test)]

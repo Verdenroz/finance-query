@@ -2,7 +2,9 @@
 
 use crate::adapters::common::periods;
 use crate::error::Result;
-use finance_query_models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{
+    EconomicSeries, EconomicSeriesFieldsInit, MacroObservation, MacroObservationFieldsInit,
+};
 
 use super::models::WorldBankObservation;
 
@@ -85,14 +87,16 @@ pub(crate) fn to_canonical(series_id: &str, raw: Vec<WorldBankObservation>) -> E
 
     let mut observations: Vec<MacroObservation> = raw
         .into_iter()
-        .map(|o| MacroObservation {
-            date: normalize_date(&o.date),
-            value: o.value,
+        .map(|o| {
+            MacroObservation::from(MacroObservationFieldsInit {
+                date: normalize_date(&o.date),
+                value: o.value,
+            })
         })
         .collect();
     observations.reverse();
 
-    EconomicSeries {
+    EconomicSeries::from(EconomicSeriesFieldsInit {
         series_id: series_id.to_string(),
         // The indicator name alone ("GDP (current US$)") doesn't say which
         // country it describes, and the series id may have defaulted to WLD.
@@ -104,7 +108,7 @@ pub(crate) fn to_canonical(series_id: &str, raw: Vec<WorldBankObservation>) -> E
         units,
         frequency,
         observations,
-    }
+    })
 }
 
 /// Fetch a World Bank indicator series as the canonical

@@ -13,14 +13,16 @@ fn index_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> finance_query_models::indices::IndexQuote {
     let q = quotes.first();
-    finance_query_models::indices::IndexQuote {
-        symbol: symbol.to_string(),
-        name: q.and_then(|q| q.name.clone()),
-        price: q.and_then(|q| q.price),
-        change: q.and_then(|q| q.change),
-        change_percent: q.and_then(|q| q.changes_percentage),
-        timestamp: None,
-    }
+    finance_query_models::indices::IndexQuote::from(
+        finance_query_models::indices::IndexQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: q.and_then(|q| q.name.clone()),
+            price: q.and_then(|q| q.price),
+            change: q.and_then(|q| q.change),
+            change_percent: q.and_then(|q| q.changes_percentage),
+            timestamp: None,
+        },
+    )
 }
 
 /// Fetch a canonical index quote.
@@ -107,16 +109,18 @@ pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
 fn constituent_to_canonical(
     c: IndexConstituentDTO,
 ) -> finance_query_models::indices::IndexConstituent {
-    finance_query_models::indices::IndexConstituent {
-        symbol: c.symbol.unwrap_or_default(),
-        name: c.name,
-        sector: c.sector,
-        sub_sector: c.sub_sector,
-        headquarters: c.head_quarter,
-        date_first_added: c.date_first_added,
-        cik: c.cik,
-        founded: c.founded,
-    }
+    finance_query_models::indices::IndexConstituent::from(
+        finance_query_models::indices::IndexConstituentFieldsInit {
+            symbol: c.symbol.unwrap_or_default(),
+            name: c.name,
+            sector: c.sector,
+            sub_sector: c.sub_sector,
+            headquarters: c.head_quarter,
+            date_first_added: c.date_first_added,
+            cik: c.cik,
+            founded: c.founded,
+        },
+    )
 }
 
 /// Fetch canonical constituents for a major index.
@@ -128,6 +132,12 @@ pub async fn fetch_index_constituents_response(
         MajorIndex::Sp500 => sp500_constituents().await?,
         MajorIndex::Nasdaq100 => nasdaq_constituents().await?,
         MajorIndex::DowJones => dow_constituents().await?,
+        other => {
+            return Err(crate::error::FinanceError::InvalidParameter {
+                param: "index".into(),
+                reason: format!("FMP provides no constituent list for {other}"),
+            });
+        }
     };
     Ok(dtos.into_iter().map(constituent_to_canonical).collect())
 }
@@ -152,13 +162,17 @@ pub async fn fetch_index_constituent_changes_response(
     };
     Ok(dtos
         .into_iter()
-        .map(|c| finance_query_models::indices::IndexConstituentChange {
-            date: c.date,
-            symbol: c.symbol,
-            added_security: c.added_security,
-            removed_ticker: c.removed_ticker,
-            removed_security: c.removed_security,
-            reason: c.reason,
+        .map(|c| {
+            finance_query_models::indices::IndexConstituentChange::from(
+                finance_query_models::indices::IndexConstituentChangeFieldsInit {
+                    date: c.date,
+                    symbol: c.symbol,
+                    added_security: c.added_security,
+                    removed_ticker: c.removed_ticker,
+                    removed_security: c.removed_security,
+                    reason: c.reason,
+                },
+            )
         })
         .collect())
 }

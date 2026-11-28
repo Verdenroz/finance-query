@@ -3,7 +3,7 @@
 use crate::adapters::edgar::filings::sections::html_to_text;
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
 use crate::error::Result;
-use finance_query_models::corporate::press_release::PressRelease;
+use finance_query_models::corporate::press_release::{PressRelease, PressReleaseFieldsInit};
 use finance_query_models::filings::EdgarFiling;
 use finance_query_models::filings::filing_index::EdgarFilingIndexItem;
 
@@ -47,12 +47,12 @@ async fn fetch_one(symbol: &str, filing: EdgarFiling) -> Option<PressRelease> {
         return None;
     }
 
-    Some(PressRelease {
+    Some(PressRelease::from(PressReleaseFieldsInit {
         symbol: Some(symbol.to_string()),
         date: Some(filing.filing_date),
         title: extract_title(&body),
         text: Some(body),
-    })
+    }))
 }
 
 /// index.json's `type` field is a file-icon class (e.g. "text.gif"), not the

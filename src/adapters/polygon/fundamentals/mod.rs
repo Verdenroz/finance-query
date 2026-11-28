@@ -435,11 +435,15 @@ pub async fn fetch_short_interest_response(
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|d| finance_query_models::fundamentals::ShortInterest {
-            settlement_date: d.settlement_date,
-            short_interest: d.short_interest,
-            avg_daily_volume: d.avg_daily_volume,
-            days_to_cover: d.days_to_cover,
+        .map(|d| {
+            finance_query_models::fundamentals::ShortInterest::from(
+                finance_query_models::fundamentals::ShortInterestFieldsInit {
+                    settlement_date: d.settlement_date,
+                    short_interest: d.short_interest,
+                    avg_daily_volume: d.avg_daily_volume,
+                    days_to_cover: d.days_to_cover,
+                },
+            )
         })
         .collect())
 }
@@ -453,11 +457,15 @@ pub async fn fetch_short_volume_response(
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|d| finance_query_models::fundamentals::ShortVolume {
-            date: d.date,
-            short_volume: d.short_volume,
-            short_exempt_volume: d.exempt_volume,
-            total_volume: d.total_volume,
+        .map(|d| {
+            finance_query_models::fundamentals::ShortVolume::from(
+                finance_query_models::fundamentals::ShortVolumeFieldsInit {
+                    date: d.date,
+                    short_volume: d.short_volume,
+                    short_exempt_volume: d.exempt_volume,
+                    total_volume: d.total_volume,
+                },
+            )
         })
         .collect())
 }
@@ -476,15 +484,17 @@ pub async fn fetch_share_float_response(
             field: "results".into(),
             context: format!("no float data returned for {symbol}"),
         })?;
-    Ok(finance_query_models::fundamentals::ShareFloat {
-        symbol: d.ticker.or_else(|| Some(symbol.to_string())),
-        float_shares: d.free_float,
-        // Massive's float endpoint reports no shares-outstanding figure, and
-        // `free_float_percent` is rounded to 2dp, so a derived one is a guess.
-        outstanding_shares: None,
-        float_percent: d.free_float_percent,
-        date: d.effective_date,
-    })
+    Ok(finance_query_models::fundamentals::ShareFloat::from(
+        finance_query_models::fundamentals::ShareFloatFieldsInit {
+            symbol: d.ticker.or_else(|| Some(symbol.to_string())),
+            float_shares: d.free_float,
+            // Massive's float endpoint reports no shares-outstanding figure, and
+            // `free_float_percent` is rounded to 2dp, so a derived one is a guess.
+            outstanding_shares: None,
+            float_percent: d.free_float_percent,
+            date: d.effective_date,
+        },
+    ))
 }
 
 #[cfg(test)]

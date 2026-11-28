@@ -3,7 +3,9 @@
 use crate::adapters::common::numbers::parse_number;
 use crate::adapters::common::periods;
 use crate::error::Result;
-use finance_query_models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{
+    EconomicSeries, EconomicSeriesFieldsInit, MacroObservation, MacroObservationFieldsInit,
+};
 
 use super::models::BlsSeries;
 
@@ -67,15 +69,15 @@ pub(super) fn to_canonical(series_id: &str, series: BlsSeries) -> EconomicSeries
             // The first datable row settles the frequency; BLS never mixes
             // base frequencies within one series id.
             frequency.get_or_insert(period.frequency);
-            Some(MacroObservation {
+            Some(MacroObservation::from(MacroObservationFieldsInit {
                 date: period.date,
                 value: parse_value(&point.value),
-            })
+            }))
         })
         .collect();
     observations.sort_by(|a, b| a.date.cmp(&b.date));
 
-    EconomicSeries {
+    EconomicSeries::from(EconomicSeriesFieldsInit {
         series_id: series_id.to_string(),
         title,
         // BLS reports no unit field; the unit is implied by the series id and
@@ -83,7 +85,7 @@ pub(super) fn to_canonical(series_id: &str, series: BlsSeries) -> EconomicSeries
         units: None,
         frequency: frequency.map(str::to_string),
         observations,
-    }
+    })
 }
 
 /// Fetch a BLS series as the canonical

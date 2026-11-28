@@ -6,7 +6,7 @@
 use super::xml::{self, XmlNode};
 use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::{FinanceError, Result};
-use finance_query_models::filings::InstitutionalHolding;
+use finance_query_models::filings::{InstitutionalHolding, InstitutionalHoldingFieldsInit};
 
 /// Forms carrying an information table. `13F-NT` (notice) never does.
 const HOLDINGS_FORMS: [&str; 2] = ["13F-HR", "13F-HR/A"];
@@ -16,7 +16,7 @@ fn info_table_to_holding(
     accession_number: &Option<String>,
     report_date: &Option<String>,
 ) -> InstitutionalHolding {
-    InstitutionalHolding {
+    InstitutionalHolding::from(InstitutionalHoldingFieldsInit {
         issuer_name: row.text_at(&["nameOfIssuer"]),
         title_of_class: row.text_at(&["titleOfClass"]),
         cusip: row.text_at(&["cusip"]),
@@ -30,7 +30,7 @@ fn info_table_to_holding(
         voting_none: row.number_at(&["votingAuthority", "None"]),
         accession_number: accession_number.clone(),
         report_date: report_date.clone(),
-    }
+    })
 }
 
 /// Parse a 13F information table into its position rows.

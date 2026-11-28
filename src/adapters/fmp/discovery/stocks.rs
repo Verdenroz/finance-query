@@ -1,6 +1,7 @@
 use crate::adapters::fmp::blank_as_none;
 use crate::adapters::fmp::client::ResponseLimits;
 use crate::{FinanceError, Result, SymbolMatch};
+use finance_query_models::discovery::reference::SymbolMatchFieldsInit;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -37,14 +38,14 @@ pub(crate) async fn fetch_stock_list(active_only: bool) -> Result<Vec<SymbolMatc
                     context: "FMP directory contains a blank symbol".into(),
                 });
             }
-            Ok(SymbolMatch {
+            Ok(SymbolMatch::from(SymbolMatchFieldsInit {
                 symbol: row.symbol,
                 name: row.name,
                 exchange: row.exchange,
                 asset_type: row.stock_type,
                 active: active_only.then_some(true),
                 ..Default::default()
-            })
+            }))
         })
         .collect()
 }

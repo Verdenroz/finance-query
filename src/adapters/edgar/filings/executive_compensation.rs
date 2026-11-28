@@ -12,7 +12,9 @@ use regex::Regex;
 use crate::adapters::edgar::{build_client, submissions_for_symbol};
 use crate::error::{FinanceError, Result};
 use crate::scrapers::html;
-use finance_query_models::corporate::governance::ExecutiveCompensation;
+use finance_query_models::corporate::governance::{
+    ExecutiveCompensation, ExecutiveCompensationFieldsInit,
+};
 
 /// Block-level boundaries produce no text-flow separator when tags are
 /// stripped, so `Name<br/>Position` or `<div>Stock</div><div>Awards</div>`
@@ -157,10 +159,10 @@ fn parse_summary_compensation_table(page: &str) -> Result<Vec<ExecutiveCompensat
             current_name = Some(cells[0].clone());
         }
 
-        let mut comp = ExecutiveCompensation {
+        let mut comp = ExecutiveCompensation::from(ExecutiveCompensationFieldsInit {
             name_and_position: current_name.clone(),
             ..Default::default()
-        };
+        });
         for (col, cell) in columns[offset..].iter().zip(cells.iter()) {
             match col {
                 Column::Year => comp.year = cell.parse().ok(),

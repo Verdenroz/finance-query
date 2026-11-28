@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
 use crate::error::Result;
-use finance_query_models::corporate::governance::{EmployeeCount, ExecutiveCompensation};
+use finance_query_models::corporate::governance::{
+    EmployeeCount, EmployeeCountFieldsInit, ExecutiveCompensation, ExecutiveCompensationFieldsInit,
+};
 
 // ============================================================================
 // Response types
@@ -114,7 +116,7 @@ pub(crate) fn to_executive_compensation(
     dto: ExecutiveCompensationDTO,
     symbol: &str,
 ) -> ExecutiveCompensation {
-    ExecutiveCompensation {
+    ExecutiveCompensation::from(ExecutiveCompensationFieldsInit {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         cik: dto.cik,
         company_name: dto.company_name,
@@ -129,11 +131,11 @@ pub(crate) fn to_executive_compensation(
         total: dto.total,
         filing_date: dto.filing_date,
         url: dto.url,
-    }
+    })
 }
 
 pub(crate) fn to_employee_count(dto: EmployeeCountDTO, symbol: &str) -> EmployeeCount {
-    EmployeeCount {
+    EmployeeCount::from(EmployeeCountFieldsInit {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         cik: dto.cik,
         company_name: dto.company_name,
@@ -142,7 +144,7 @@ pub(crate) fn to_employee_count(dto: EmployeeCountDTO, symbol: &str) -> Employee
         form_type: dto.form_type,
         filing_date: dto.filing_date,
         source: dto.source,
-    }
+    })
 }
 
 /// Fetch canonical executive compensation, most recent fiscal year first.

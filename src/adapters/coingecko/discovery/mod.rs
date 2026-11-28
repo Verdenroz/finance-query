@@ -3,7 +3,7 @@
 //! alongside FMP/Polygon/Alpha Vantage.
 
 use crate::error::Result;
-use finance_query_models::discovery::reference::SymbolMatch;
+use finance_query_models::discovery::reference::{SymbolMatch, SymbolMatchFieldsInit};
 
 use super::models::SearchCoinDTO;
 
@@ -15,7 +15,7 @@ use super::models::SearchCoinDTO;
 /// aren't tied to one listing exchange or quote currency, so
 /// `exchange`/`currency` stay `None`; a returned coin is presumed tradable.
 fn to_symbol_match(dto: SearchCoinDTO) -> SymbolMatch {
-    SymbolMatch {
+    SymbolMatch::from(SymbolMatchFieldsInit {
         // Fall back to the id only when CoinGecko omits the ticker outright —
         // `symbol` is non-optional and an empty string would be worse.
         symbol: dto
@@ -33,7 +33,7 @@ fn to_symbol_match(dto: SearchCoinDTO) -> SymbolMatch {
         image: dto.large,
         ipo_date: None,
         delisted_date: None,
-    }
+    })
 }
 
 /// Search CoinGecko's coin catalog by free-text query, as canonical

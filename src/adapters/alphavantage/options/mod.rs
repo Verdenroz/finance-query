@@ -112,23 +112,25 @@ pub async fn fetch_options_response(
         let exp_ts = parse_av_date(&contract.expiration).unwrap_or(0);
         expiration_dates_set.insert(exp_ts);
 
-        let contract_data = finance_query_models::options::OptionContract {
-            contract_symbol: contract.contractid,
-            strike: contract.strike,
-            currency: None,
-            last_price: contract.last,
-            change: None,
-            percent_change: None,
-            volume: contract.volume.map(|v| v as i64),
-            open_interest: contract.open_interest.map(|v| v as i64),
-            bid: contract.bid,
-            ask: contract.ask,
-            contract_size: None,
-            expiration: Some(exp_ts),
-            last_trade_date: None,
-            implied_volatility: contract.implied_volatility,
-            in_the_money: None,
-        };
+        let contract_data = finance_query_models::options::OptionContract::from(
+            finance_query_models::options::OptionContractFieldsInit {
+                contract_symbol: contract.contractid,
+                strike: contract.strike,
+                currency: None,
+                last_price: contract.last,
+                change: None,
+                percent_change: None,
+                volume: contract.volume.map(|v| v as i64),
+                open_interest: contract.open_interest.map(|v| v as i64),
+                bid: contract.bid,
+                ask: contract.ask,
+                contract_size: None,
+                expiration: Some(exp_ts),
+                last_trade_date: None,
+                implied_volatility: contract.implied_volatility,
+                in_the_money: None,
+            },
+        );
 
         if contract.option_type == "call" {
             calls.push(contract_data);

@@ -470,7 +470,9 @@ pub(crate) async fn company_facts_for_symbol(symbol: &str) -> Result<CompanyFact
 pub async fn fetch_filings_response(
     symbol: &str,
 ) -> Result<finance_query_models::filings::ProviderFilings> {
-    use finance_query_models::filings::{ProviderFiling, ProviderFilings};
+    use finance_query_models::filings::{
+        ProviderFiling, ProviderFilingFieldsInit, ProviderFilings, ProviderFilingsFieldsInit,
+    };
 
     let subs = submissions_for_symbol(symbol).await?;
 
@@ -497,21 +499,21 @@ pub async fn fetch_filings_response(
             } else {
                 None
             };
-            ProviderFiling {
+            ProviderFiling::from(ProviderFilingFieldsInit {
                 accession_number: Some(f.accession_number),
                 filing_date: Some(f.filing_date),
                 filing_type: Some(f.form),
                 filing_url: url,
                 company_name: company_name.clone(),
                 cik: Some(cik.clone()),
-            }
+            })
         })
         .collect();
 
-    Ok(ProviderFilings {
+    Ok(ProviderFilings::from(ProviderFilingsFieldsInit {
         symbol: symbol.to_string(),
         filings,
-    })
+    }))
 }
 
 #[cfg(test)]

@@ -6,7 +6,10 @@ use super::models::{NasdaqDividendRow, NasdaqEarningsRow, NasdaqIpoRow, NasdaqSp
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::{FinanceError, Result};
 use crate::providers::Operation;
-use finance_query_models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+use finance_query_models::calendar::market::{
+    CalendarDetail, CalendarKind, EarningsDetailFieldsInit, MarketCalendarEntry,
+    MarketCalendarEntryFieldsInit,
+};
 
 /// Earnings/dividends/splits are fetched one day at a time; cap the range so
 /// a broad request doesn't fan out into hundreds of HTTP calls.
@@ -221,10 +224,10 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
         _ => None,
     };
     let amount = |value: &Option<String>| value.as_deref().and_then(parse_currency);
-    MarketCalendarEntry {
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: row.symbol,
         date: Some(date.to_string()),
-        detail: CalendarDetail::Earnings {
+        detail: CalendarDetail::from(EarningsDetailFieldsInit {
             eps: amount(&row.eps),
             eps_estimated: amount(&row.eps_forecast),
             revenue: None,
@@ -243,12 +246,12 @@ fn earnings_entry(date: &str, row: NasdaqEarningsRow) -> MarketCalendarEntry {
             previous_eps: amount(&row.last_year_eps),
             previous_report_date: row.last_year_rpt_dt.as_deref().and_then(parse_mdy),
             market_cap: amount(&row.market_cap),
-        },
-    }
+        }),
+    })
 }
 
 fn dividend_entry(row: NasdaqDividendRow) -> MarketCalendarEntry {
-    MarketCalendarEntry {
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: row.symbol,
         date: row.ex_date.as_deref().and_then(parse_mdy),
         detail: CalendarDetail::Dividend {
@@ -258,7 +261,7 @@ fn dividend_entry(row: NasdaqDividendRow) -> MarketCalendarEntry {
             payment_date: row.payment_date.as_deref().and_then(parse_mdy),
             declaration_date: row.announcement_date.as_deref().and_then(parse_mdy),
         },
-    }
+    })
 }
 
 /// Nasdaq answers a split query with every split from `date` onwards, so a
@@ -277,14 +280,14 @@ fn split_entry(row: NasdaqSplitRow) -> MarketCalendarEntry {
         .and_then(parse_ratio)
         .map(|(n, d)| (Some(n), Some(d)))
         .unwrap_or((None, None));
-    MarketCalendarEntry {
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: row.symbol,
         date: row.execution_date.as_deref().and_then(parse_mdy),
         detail: CalendarDetail::Split {
             numerator,
             denominator,
         },
-    }
+    })
 }
 
 fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
@@ -295,7 +298,7 @@ fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
         .or(row.withdraw_date.as_deref())
         .or(row.filed_date.as_deref())
         .and_then(parse_mdy);
-    MarketCalendarEntry {
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: row.proposed_ticker_symbol,
         date,
         detail: CalendarDetail::Ipo {
@@ -306,7 +309,7 @@ fn ipo_entry(action: &str, row: NasdaqIpoRow) -> MarketCalendarEntry {
             price_range: row.proposed_share_price,
             market_cap: None,
         },
-    }
+    })
 }
 
 #[cfg(test)]

@@ -8,7 +8,7 @@
 
 use chromiumoxide::element::Element;
 
-use finance_query_models::filings::CongressionalTrade;
+use finance_query_models::filings::{CongressionalTrade, CongressionalTradeFieldsInit};
 
 use super::super::client::{SENATE_BASE, SenateTradesClient, wait_for_elements};
 use super::super::models::SenateFilingEntry;
@@ -80,7 +80,7 @@ fn normalize_whitespace(raw: &str) -> Option<String> {
 }
 
 fn to_congressional_trade(entry: &SenateFilingEntry, tx: ParsedTransaction) -> CongressionalTrade {
-    CongressionalTrade {
+    CongressionalTrade::from(CongressionalTradeFieldsInit {
         symbol: tx.symbol,
         first_name: Some(entry.first_name.clone()),
         last_name: Some(entry.last_name.clone()),
@@ -92,5 +92,5 @@ fn to_congressional_trade(entry: &SenateFilingEntry, tx: ParsedTransaction) -> C
         transaction_date: tx.transaction_date,
         disclosure_date: parse_us_date(&entry.filed_date).map(|d| d.to_string()),
         link: Some(format!("{SENATE_BASE}{}", entry.path)),
-    }
+    })
 }

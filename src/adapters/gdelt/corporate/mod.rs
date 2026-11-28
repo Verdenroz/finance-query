@@ -5,7 +5,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 use crate::error::Result;
-use finance_query_models::corporate::news::News;
+use finance_query_models::corporate::news::{News, NewsFieldsInit};
 
 use super::models::GdeltArticle;
 
@@ -66,7 +66,7 @@ pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
 /// Map one GDELT article onto the canonical [`News`] model, with `now` as the
 /// reference point for the relative `time` string.
 pub(crate) fn to_news_at(article: GdeltArticle, now: DateTime<Utc>) -> News {
-    News {
+    News::from(NewsFieldsInit {
         title: article.title.unwrap_or_default(),
         link: article.url,
         source: article.domain.unwrap_or_default(),
@@ -79,7 +79,7 @@ pub(crate) fn to_news_at(article: GdeltArticle, now: DateTime<Utc>) -> News {
         provider_id: Some(crate::Provider::Gdelt),
         #[cfg(feature = "sentiment")]
         sentiment: None,
-    }
+    })
 }
 
 /// Convert a GDELT `seendate` into a relative time string (`"3 hours ago"`),

@@ -101,15 +101,17 @@ fn series_to_quote(
             }
         }
     };
-    finance_query_models::commodities::CommodityQuote {
-        symbol: symbol.to_string(),
-        name: Some(series.name),
-        unit: Some(series.unit),
-        price,
-        change,
-        change_percent,
-        timestamp: None,
-    }
+    finance_query_models::commodities::CommodityQuote::from(
+        finance_query_models::commodities::CommodityQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: Some(series.name),
+            unit: Some(series.unit),
+            price,
+            change,
+            change_percent,
+            timestamp: None,
+        },
+    )
 }
 
 #[cfg(test)]

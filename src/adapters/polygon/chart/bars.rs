@@ -1,5 +1,7 @@
 //! Resumable minute and daily stock-bar pages.
 
+use finance_query_models::chart::StockBarFieldsInit;
+
 use crate::adapters::polygon::client::PathRule;
 use crate::adapters::polygon::models::{AggBarDTO, AggregateResponseDTO};
 use crate::adapters::polygon::{build_client, invalid_page};
@@ -15,7 +17,7 @@ fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
     {
         return Err(invalid_page("bar"));
     }
-    Ok(StockBar {
+    Ok(StockBar::from(StockBarFieldsInit {
         timestamp_ms: row.timestamp,
         open: row.open,
         high: row.high,
@@ -24,7 +26,7 @@ fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
         volume: row.volume,
         transactions: row.transactions,
         vwap: row.vwap,
-    })
+    }))
 }
 
 pub(crate) async fn fetch_stock_bars_page(

@@ -11,15 +11,17 @@ fn commodity_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> finance_query_models::commodities::CommodityQuote {
     let q = quotes.first();
-    finance_query_models::commodities::CommodityQuote {
-        symbol: symbol.to_string(),
-        name: q.and_then(|q| q.name.clone()),
-        unit: None,
-        price: q.and_then(|q| q.price),
-        change: q.and_then(|q| q.change),
-        change_percent: q.and_then(|q| q.changes_percentage),
-        timestamp: None,
-    }
+    finance_query_models::commodities::CommodityQuote::from(
+        finance_query_models::commodities::CommodityQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: q.and_then(|q| q.name.clone()),
+            unit: None,
+            price: q.and_then(|q| q.price),
+            change: q.and_then(|q| q.change),
+            change_percent: q.and_then(|q| q.changes_percentage),
+            timestamp: None,
+        },
+    )
 }
 
 /// Fetch a canonical commodity quote.

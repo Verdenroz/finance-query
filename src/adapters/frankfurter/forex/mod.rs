@@ -1,7 +1,7 @@
 //! `FOREX` capability for Frankfurter (ECB reference rates).
 
 use crate::error::Result;
-use finance_query_models::forex::ForexQuote;
+use finance_query_models::forex::{ForexQuote, ForexQuoteFieldsInit};
 
 /// Midnight UTC of an ISO `YYYY-MM-DD` date, as a unix timestamp.
 ///
@@ -26,7 +26,7 @@ pub(super) fn to_quote(from: &str, to: &str, series: &[(String, f64)]) -> Option
         .filter(|(_, prev)| *prev != 0.0)
         .map(|(_, prev)| (price - prev) / prev * 100.0);
 
-    Some(ForexQuote {
+    Some(ForexQuote::from(ForexQuoteFieldsInit {
         symbol: format!("{from}{to}"),
         base_currency: Some(from.to_string()),
         quote_currency: Some(to.to_string()),
@@ -36,13 +36,13 @@ pub(super) fn to_quote(from: &str, to: &str, series: &[(String, f64)]) -> Option
         change,
         change_percent,
         timestamp: date_to_timestamp(date),
-    })
+    }))
 }
 
 /// A pair of identical currencies, which Frankfurter rejects outright (HTTP
 /// 422) rather than answering with the trivially correct rate of 1.
 fn identity_quote(currency: &str) -> ForexQuote {
-    ForexQuote {
+    ForexQuote::from(ForexQuoteFieldsInit {
         symbol: format!("{currency}{currency}"),
         base_currency: Some(currency.to_string()),
         quote_currency: Some(currency.to_string()),
@@ -52,7 +52,7 @@ fn identity_quote(currency: &str) -> ForexQuote {
         change: Some(0.0),
         change_percent: Some(0.0),
         timestamp: Some(chrono::Utc::now().timestamp()),
-    }
+    })
 }
 
 /// Fetch the current ECB reference rate for `from`→`to`.

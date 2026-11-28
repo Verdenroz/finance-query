@@ -152,28 +152,32 @@ impl FundamentalsProvider for YahooProvider {
 
         let mut out = Vec::new();
         if let Some(shares) = stats.shares_short.as_ref().and_then(|v| v.raw) {
-            out.push(finance_query_models::fundamentals::ShortInterest {
-                settlement_date: stats
-                    .date_short_interest
-                    .as_ref()
-                    .and_then(|v| v.raw)
-                    .and_then(epoch_to_date),
-                short_interest: Some(shares as f64),
-                avg_daily_volume: None,
-                days_to_cover: stats.short_ratio.as_ref().and_then(|v| v.raw),
-            });
+            out.push(finance_query_models::fundamentals::ShortInterest::from(
+                finance_query_models::fundamentals::ShortInterestFieldsInit {
+                    settlement_date: stats
+                        .date_short_interest
+                        .as_ref()
+                        .and_then(|v| v.raw)
+                        .and_then(epoch_to_date),
+                    short_interest: Some(shares as f64),
+                    avg_daily_volume: None,
+                    days_to_cover: stats.short_ratio.as_ref().and_then(|v| v.raw),
+                },
+            ));
         }
         if let Some(shares) = stats.shares_short_prior_month.as_ref().and_then(|v| v.raw) {
-            out.push(finance_query_models::fundamentals::ShortInterest {
-                settlement_date: stats
-                    .shares_short_previous_month_date
-                    .as_ref()
-                    .and_then(|v| v.raw)
-                    .and_then(epoch_to_date),
-                short_interest: Some(shares as f64),
-                avg_daily_volume: None,
-                days_to_cover: None,
-            });
+            out.push(finance_query_models::fundamentals::ShortInterest::from(
+                finance_query_models::fundamentals::ShortInterestFieldsInit {
+                    settlement_date: stats
+                        .shares_short_previous_month_date
+                        .as_ref()
+                        .and_then(|v| v.raw)
+                        .and_then(epoch_to_date),
+                    short_interest: Some(shares as f64),
+                    avg_daily_volume: None,
+                    days_to_cover: None,
+                },
+            ));
         }
         Ok(out)
     }
@@ -193,21 +197,23 @@ impl FundamentalsProvider for YahooProvider {
                 context: format!("no key statistics returned for {symbol}"),
             }
         })?;
-        Ok(finance_query_models::fundamentals::ShareFloat {
-            symbol: Some(symbol.to_string()),
-            float_percent: None,
-            float_shares: stats
-                .float_shares
-                .as_ref()
-                .and_then(|v| v.raw)
-                .map(|r| r as f64),
-            outstanding_shares: stats
-                .shares_outstanding
-                .as_ref()
-                .and_then(|v| v.raw)
-                .map(|r| r as f64),
-            date: None,
-        })
+        Ok(finance_query_models::fundamentals::ShareFloat::from(
+            finance_query_models::fundamentals::ShareFloatFieldsInit {
+                symbol: Some(symbol.to_string()),
+                float_percent: None,
+                float_shares: stats
+                    .float_shares
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .map(|r| r as f64),
+                outstanding_shares: stats
+                    .shares_outstanding
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .map(|r| r as f64),
+                date: None,
+            },
+        ))
     }
 
     async fn fetch_financials(
@@ -351,15 +357,17 @@ fn recommendation_trend_to_rating_consensus(
             .into_iter()
             .find(|p| p.period.as_deref() == Some("0m"))
     });
-    finance_query_models::fundamentals::RatingConsensus {
-        symbol: Some(symbol.to_string()),
-        strong_buy: period.as_ref().and_then(|p| p.strong_buy).map(i64::from),
-        buy: period.as_ref().and_then(|p| p.buy).map(i64::from),
-        hold: period.as_ref().and_then(|p| p.hold).map(i64::from),
-        sell: period.as_ref().and_then(|p| p.sell).map(i64::from),
-        strong_sell: period.as_ref().and_then(|p| p.strong_sell).map(i64::from),
-        consensus: None,
-    }
+    finance_query_models::fundamentals::RatingConsensus::from(
+        finance_query_models::fundamentals::RatingConsensusFieldsInit {
+            symbol: Some(symbol.to_string()),
+            strong_buy: period.as_ref().and_then(|p| p.strong_buy).map(i64::from),
+            buy: period.as_ref().and_then(|p| p.buy).map(i64::from),
+            hold: period.as_ref().and_then(|p| p.hold).map(i64::from),
+            sell: period.as_ref().and_then(|p| p.sell).map(i64::from),
+            strong_sell: period.as_ref().and_then(|p| p.strong_sell).map(i64::from),
+            consensus: None,
+        },
+    )
 }
 
 fn profile_and_price_to_company_profile(
@@ -367,35 +375,37 @@ fn profile_and_price_to_company_profile(
     profile: Option<finance_query_models::corporate::AssetProfile>,
     price: Option<finance_query_models::quote::price::Price>,
 ) -> finance_query_models::fundamentals::CompanyProfile {
-    finance_query_models::fundamentals::CompanyProfile {
-        symbol: Some(symbol.to_string()),
-        name: price
-            .as_ref()
-            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        description: profile
-            .as_ref()
-            .and_then(|p| p.long_business_summary.clone()),
-        asset_type: price.as_ref().and_then(|p| p.quote_type.clone()),
-        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
-        currency: price.as_ref().and_then(|p| p.currency.clone()),
-        country: profile.as_ref().and_then(|p| p.country.clone()),
-        sector: profile.as_ref().and_then(|p| p.sector.clone()),
-        industry: profile.as_ref().and_then(|p| p.industry.clone()),
-        market_capitalization: price
-            .as_ref()
-            .and_then(|p| p.market_cap.as_ref())
-            .and_then(|v| v.raw)
-            .map(|v| v as f64),
-        isin: None,
-        cusip: None,
-        active: None,
-        is_etf: None,
-        is_adr: None,
-        is_fund: None,
-        cik: None,
-        ipo_date: None,
-        provider_id: Some(crate::Provider::Yahoo),
-    }
+    finance_query_models::fundamentals::CompanyProfile::from(
+        finance_query_models::fundamentals::CompanyProfileFieldsInit {
+            symbol: Some(symbol.to_string()),
+            name: price
+                .as_ref()
+                .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+            description: profile
+                .as_ref()
+                .and_then(|p| p.long_business_summary.clone()),
+            asset_type: price.as_ref().and_then(|p| p.quote_type.clone()),
+            exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
+            currency: price.as_ref().and_then(|p| p.currency.clone()),
+            country: profile.as_ref().and_then(|p| p.country.clone()),
+            sector: profile.as_ref().and_then(|p| p.sector.clone()),
+            industry: profile.as_ref().and_then(|p| p.industry.clone()),
+            market_capitalization: price
+                .as_ref()
+                .and_then(|p| p.market_cap.as_ref())
+                .and_then(|v| v.raw)
+                .map(|v| v as f64),
+            isin: None,
+            cusip: None,
+            active: None,
+            is_etf: None,
+            is_adr: None,
+            is_fund: None,
+            cik: None,
+            ipo_date: None,
+            provider_id: Some(crate::Provider::Yahoo),
+        },
+    )
 }
 
 fn profile_and_price_to_symbol_details(
@@ -406,58 +416,62 @@ fn profile_and_price_to_symbol_details(
 ) -> finance_query_models::discovery::reference::SymbolDetails {
     let company_profile =
         profile_and_price_to_company_profile(symbol, profile.clone(), price.clone());
-    finance_query_models::discovery::reference::SymbolDetails {
-        symbol: symbol.to_string(),
-        name: company_profile.name,
-        description: company_profile.description,
-        exchange: company_profile.exchange,
-        asset_type: company_profile.asset_type,
-        market_cap: company_profile.market_capitalization,
-        cik: None,
-        sic_code: None,
-        sic_description: None,
-        homepage_url: profile.as_ref().and_then(|p| p.website.clone()),
-        employees: profile
-            .as_ref()
-            .and_then(|p| p.full_time_employees)
-            .map(|v| v as u64),
-        list_date: None,
-        shares_outstanding: key_stats
-            .as_ref()
-            .and_then(|k| k.shares_outstanding.as_ref())
-            .and_then(|v| v.raw)
-            .map(|v| v as f64),
-        composite_figi: None,
-        share_class_figi: None,
-        active: None,
-        delisted_utc: None,
-        provider_id: Some(crate::Provider::Yahoo),
-    }
+    finance_query_models::discovery::reference::SymbolDetails::from(
+        finance_query_models::discovery::reference::SymbolDetailsFieldsInit {
+            symbol: symbol.to_string(),
+            name: company_profile.name,
+            description: company_profile.description,
+            exchange: company_profile.exchange,
+            asset_type: company_profile.asset_type,
+            market_cap: company_profile.market_capitalization,
+            cik: None,
+            sic_code: None,
+            sic_description: None,
+            homepage_url: profile.as_ref().and_then(|p| p.website.clone()),
+            employees: profile
+                .as_ref()
+                .and_then(|p| p.full_time_employees)
+                .map(|v| v as u64),
+            list_date: None,
+            shares_outstanding: key_stats
+                .as_ref()
+                .and_then(|k| k.shares_outstanding.as_ref())
+                .and_then(|v| v.raw)
+                .map(|v| v as f64),
+            composite_figi: None,
+            share_class_figi: None,
+            active: None,
+            delisted_utc: None,
+            provider_id: Some(crate::Provider::Yahoo),
+        },
+    )
 }
 
 fn financial_data_to_price_target_consensus(
     symbol: &str,
     data: Option<finance_query_models::quote::FinancialData>,
 ) -> finance_query_models::fundamentals::PriceTargetConsensus {
-    finance_query_models::fundamentals::PriceTargetConsensus {
-        symbol: Some(symbol.to_string()),
-        target_high: data
-            .as_ref()
-            .and_then(|d| d.target_high_price.as_ref())
-            .and_then(|v| v.raw),
-        target_low: data
-            .as_ref()
-            .and_then(|d| d.target_low_price.as_ref())
-            .and_then(|v| v.raw),
-        target_consensus: data
-            .as_ref()
-            .and_then(|d| d.target_mean_price.as_ref())
-            .and_then(|v| v.raw),
-        target_median: data
-            .as_ref()
-            .and_then(|d| d.target_median_price.as_ref())
-            .and_then(|v| v.raw),
-    }
+    finance_query_models::fundamentals::PriceTargetConsensus::from(
+        finance_query_models::fundamentals::PriceTargetConsensusFieldsInit {
+            symbol: Some(symbol.to_string()),
+            target_high: data
+                .as_ref()
+                .and_then(|d| d.target_high_price.as_ref())
+                .and_then(|v| v.raw),
+            target_low: data
+                .as_ref()
+                .and_then(|d| d.target_low_price.as_ref())
+                .and_then(|v| v.raw),
+            target_consensus: data
+                .as_ref()
+                .and_then(|d| d.target_mean_price.as_ref())
+                .and_then(|v| v.raw),
+            target_median: data
+                .as_ref()
+                .and_then(|d| d.target_median_price.as_ref())
+                .and_then(|v| v.raw),
+        },
+    )
 }
 
 fn upgrade_downgrade_history_to_grading_actions(
@@ -468,12 +482,16 @@ fn upgrade_downgrade_history_to_grading_actions(
         .map(|h| h.history)
         .unwrap_or_default()
         .into_iter()
-        .map(|g| finance_query_models::fundamentals::GradingAction {
-            symbol: Some(symbol.to_string()),
-            date: g.epoch_grade_date.and_then(epoch_to_date),
-            grading_company: g.firm,
-            previous_grade: g.from_grade,
-            new_grade: g.to_grade,
+        .map(|g| {
+            finance_query_models::fundamentals::GradingAction::from(
+                finance_query_models::fundamentals::GradingActionFieldsInit {
+                    symbol: Some(symbol.to_string()),
+                    date: g.epoch_grade_date.and_then(epoch_to_date),
+                    grading_company: g.firm,
+                    previous_grade: g.from_grade,
+                    new_grade: g.to_grade,
+                },
+            )
         })
         .collect()
 }
@@ -486,16 +504,20 @@ fn earnings_history_to_surprises(
         .map(|h| h.history)
         .unwrap_or_default()
         .into_iter()
-        .map(|e| finance_query_models::fundamentals::EarningsSurprise {
-            symbol: Some(symbol.to_string()),
-            date: e.quarter.and_then(|v| v.raw).and_then(epoch_to_date),
-            actual_eps: e.eps_actual.and_then(|v| v.raw),
-            estimated_eps: e.eps_estimate.and_then(|v| v.raw),
-            surprise: e.eps_difference.and_then(|v| v.raw),
-            surprise_percent: e
-                .surprise_percent
-                .map(finance_query_models::quote::FormattedValue::fraction_to_percent)
-                .and_then(|v| v.raw),
+        .map(|e| {
+            finance_query_models::fundamentals::EarningsSurprise::from(
+                finance_query_models::fundamentals::EarningsSurpriseFieldsInit {
+                    symbol: Some(symbol.to_string()),
+                    date: e.quarter.and_then(|v| v.raw).and_then(epoch_to_date),
+                    actual_eps: e.eps_actual.and_then(|v| v.raw),
+                    estimated_eps: e.eps_estimate.and_then(|v| v.raw),
+                    surprise: e.eps_difference.and_then(|v| v.raw),
+                    surprise_percent: e
+                        .surprise_percent
+                        .map(finance_query_models::quote::FormattedValue::fraction_to_percent)
+                        .and_then(|v| v.raw),
+                },
+            )
         })
         .collect()
 }
@@ -516,44 +538,50 @@ fn fund_modules_to_etf_profile(
         None => (Vec::new(), None),
     };
 
-    finance_query_models::fundamentals::EtfProfile {
-        symbol: Some(symbol.to_string()),
-        name: price
-            .as_ref()
-            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        asset_type,
-        // Yahoo reports total net assets in millions; the canonical field is
-        // an absolute value (confirmed against Alpha Vantage's own mapping).
-        net_assets: fees
-            .as_ref()
-            .and_then(|f| f.total_net_assets.as_ref())
-            .and_then(|v| v.raw)
-            .map(|millions| millions * 1_000_000.0),
-        net_expense_ratio: fees
-            .as_ref()
-            .and_then(|f| f.annual_report_expense_ratio.as_ref())
-            .and_then(|v| v.raw),
-        portfolio_turnover: fees
-            .as_ref()
-            .and_then(|f| f.annual_holdings_turnover.as_ref())
-            .and_then(|v| v.raw),
-        dividend_yield: summary_detail
-            .and_then(|s| s.dividend_yield)
-            .and_then(|v| v.raw),
-        inception_date: None,
-        holdings: holdings
-            .into_iter()
-            .map(|h| finance_query_models::fundamentals::EtfHolding {
-                symbol: h.symbol,
-                description: h.holding_name,
-                weight: h.holding_percent.and_then(|v| v.raw),
-            })
-            .collect(),
-        sector_weightings: sector_weightings
-            .map(sector_weighting_rows)
-            .unwrap_or_default(),
-        country_weightings: Vec::new(),
-    }
+    finance_query_models::fundamentals::EtfProfile::from(
+        finance_query_models::fundamentals::EtfProfileFieldsInit {
+            symbol: Some(symbol.to_string()),
+            name: price
+                .as_ref()
+                .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+            asset_type,
+            // Yahoo reports total net assets in millions; the canonical field is
+            // an absolute value (confirmed against Alpha Vantage's own mapping).
+            net_assets: fees
+                .as_ref()
+                .and_then(|f| f.total_net_assets.as_ref())
+                .and_then(|v| v.raw)
+                .map(|millions| millions * 1_000_000.0),
+            net_expense_ratio: fees
+                .as_ref()
+                .and_then(|f| f.annual_report_expense_ratio.as_ref())
+                .and_then(|v| v.raw),
+            portfolio_turnover: fees
+                .as_ref()
+                .and_then(|f| f.annual_holdings_turnover.as_ref())
+                .and_then(|v| v.raw),
+            dividend_yield: summary_detail
+                .and_then(|s| s.dividend_yield)
+                .and_then(|v| v.raw),
+            inception_date: None,
+            holdings: holdings
+                .into_iter()
+                .map(|h| {
+                    finance_query_models::fundamentals::EtfHolding::from(
+                        finance_query_models::fundamentals::EtfHoldingFieldsInit {
+                            symbol: h.symbol,
+                            description: h.holding_name,
+                            weight: h.holding_percent.and_then(|v| v.raw),
+                        },
+                    )
+                })
+                .collect(),
+            sector_weightings: sector_weightings
+                .map(sector_weighting_rows)
+                .unwrap_or_default(),
+            country_weightings: Vec::new(),
+        },
+    )
 }
 
 fn sector_weighting_rows(
@@ -575,12 +603,14 @@ fn sector_weighting_rows(
     ]
     .into_iter()
     .filter_map(|(sector, weight)| {
-        weight
-            .and_then(|v| v.raw)
-            .map(|w| finance_query_models::fundamentals::EtfSectorWeighting {
-                sector: Some(sector.display_name().to_string()),
-                weight: Some(w),
-            })
+        weight.and_then(|v| v.raw).map(|w| {
+            finance_query_models::fundamentals::EtfSectorWeighting::from(
+                finance_query_models::fundamentals::EtfSectorWeightingFieldsInit {
+                    sector: Some(sector.display_name().to_string()),
+                    weight: Some(w),
+                },
+            )
+        })
     })
     .collect()
 }
@@ -611,30 +641,32 @@ fn price_and_summary_to_futures_quote(
     price: Option<finance_query_models::quote::price::Price>,
     summary_detail: Option<finance_query_models::quote::SummaryDetail>,
 ) -> finance_query_models::futures::FuturesQuote {
-    finance_query_models::futures::FuturesQuote {
-        symbol: symbol.to_string(),
-        name: price
-            .as_ref()
-            .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        underlying: None,
-        exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
-        expiration_date: None,
-        price: price.as_ref().and_then(|p| p.current_price()),
-        change: price.as_ref().and_then(|p| p.day_change()),
-        change_percent: price.as_ref().and_then(|p| p.day_change_percent()),
-        // summaryDetail's openInterest is loosely typed (serde_json::Value);
-        // every other numeric field on this module uses the {raw, fmt} shape,
-        // so assume the same here rather than retyping it without a live check.
-        open_interest: summary_detail
-            .and_then(|s| s.open_interest)
-            .and_then(|v| v.get("raw").and_then(|r| r.as_u64())),
-        volume: price
-            .as_ref()
-            .and_then(|p| p.regular_market_volume.as_ref())
-            .and_then(|v| v.raw)
-            .map(|v| v as u64),
-        timestamp: price.and_then(|p| p.regular_market_time),
-    }
+    finance_query_models::futures::FuturesQuote::from(
+        finance_query_models::futures::FuturesQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: price
+                .as_ref()
+                .and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+            underlying: None,
+            exchange: price.as_ref().and_then(|p| p.exchange_name.clone()),
+            expiration_date: None,
+            price: price.as_ref().and_then(|p| p.current_price()),
+            change: price.as_ref().and_then(|p| p.day_change()),
+            change_percent: price.as_ref().and_then(|p| p.day_change_percent()),
+            // summaryDetail's openInterest is loosely typed (serde_json::Value);
+            // every other numeric field on this module uses the {raw, fmt} shape,
+            // so assume the same here rather than retyping it without a live check.
+            open_interest: summary_detail
+                .and_then(|s| s.open_interest)
+                .and_then(|v| v.get("raw").and_then(|r| r.as_u64())),
+            volume: price
+                .as_ref()
+                .and_then(|p| p.regular_market_volume.as_ref())
+                .and_then(|v| v.raw)
+                .map(|v| v as u64),
+            timestamp: price.and_then(|p| p.regular_market_time),
+        },
+    )
 }
 
 #[async_trait::async_trait]
@@ -680,13 +712,13 @@ impl CorporateProvider for YahooProvider {
         )
         .await?;
         Ok(
-            finance_query_models::corporate::earnings_transcript::EarningsTranscript {
+            finance_query_models::corporate::earnings_transcript::EarningsTranscript::from(finance_query_models::corporate::earnings_transcript::EarningsTranscriptFieldsInit {
                 symbol: Some(symbol.to_string()),
                 quarter: Some(transcript.quarter().to_string()),
                 year: Some(transcript.year()),
                 date: None,
                 text: transcript.text().to_string(),
-            },
+            }),
         )
     }
 }
@@ -707,6 +739,7 @@ impl MarketProvider for YahooProvider {
             MoverDirection::Gainers => Screener::DayGainers,
             MoverDirection::Losers => Screener::DayLosers,
             MoverDirection::MostActive => Screener::MostActives,
+            _ => return Err(self.not_supported(Operation::MarketMovers)),
         };
         let results = crate::adapters::yahoo::discovery::screeners::fetch(
             &*self.client().await?,
@@ -783,12 +816,14 @@ impl MarketProvider for YahooProvider {
                 .size(SAMPLE_SIZE);
             match crate::adapters::yahoo::discovery::screeners::fetch_custom(client, query).await {
                 Ok(results) => median_trailing_pe(&results.quotes).map(|pe| {
-                    finance_query_models::market::performance::SectorPe {
-                        sector: sector.display_name().to_string(),
-                        exchange: None,
-                        pe: Some(pe),
-                        date: None,
-                    }
+                    finance_query_models::market::performance::SectorPe::from(
+                        finance_query_models::market::performance::SectorPeFieldsInit {
+                            sector: sector.display_name().to_string(),
+                            exchange: None,
+                            pe: Some(pe),
+                            date: None,
+                        },
+                    )
                 }),
                 Err(err) => {
                     tracing::warn!("failed to fetch {sector:?} sector P/E: {err}");
@@ -830,14 +865,16 @@ fn median_trailing_pe(
 fn sector_data_to_performance(
     data: finance_query_models::market::sectors::SectorData,
 ) -> finance_query_models::market::performance::SectorPerformance {
-    finance_query_models::market::performance::SectorPerformance {
-        sector: data.name,
-        exchange: None,
-        change_percent: data
-            .performance
-            .and_then(|p| p.day_change_percent)
-            .and_then(|v| v.raw),
-    }
+    finance_query_models::market::performance::SectorPerformance::from(
+        finance_query_models::market::performance::SectorPerformanceFieldsInit {
+            sector: data.name,
+            exchange: None,
+            change_percent: data
+                .performance
+                .and_then(|p| p.day_change_percent)
+                .and_then(|v| v.raw),
+        },
+    )
 }
 
 /// Map screener rows to canonical mover quotes.
@@ -847,15 +884,19 @@ fn screener_quotes_to_movers(
     results
         .quotes
         .into_iter()
-        .map(|q| finance_query_models::market::performance::MoverQuote {
-            name: Some(q.short_name.clone())
-                .filter(|s| !s.is_empty())
-                .or(q.long_name),
-            symbol: q.symbol,
-            price: q.regular_market_price.raw,
-            change: q.regular_market_change.raw,
-            change_percent: q.regular_market_change_percent.raw,
-            exchange: None,
+        .map(|q| {
+            finance_query_models::market::performance::MoverQuote::from(
+                finance_query_models::market::performance::MoverQuoteFieldsInit {
+                    name: Some(q.short_name.clone())
+                        .filter(|s| !s.is_empty())
+                        .or(q.long_name),
+                    symbol: q.symbol,
+                    price: q.regular_market_price.raw,
+                    change: q.regular_market_change.raw,
+                    change_percent: q.regular_market_change_percent.raw,
+                    exchange: None,
+                },
+            )
         })
         .collect()
 }
@@ -880,14 +921,16 @@ fn price_to_index_quote(
     symbol: &str,
     price: Option<&finance_query_models::quote::price::Price>,
 ) -> finance_query_models::indices::IndexQuote {
-    finance_query_models::indices::IndexQuote {
-        symbol: symbol.to_string(),
-        name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        price: price.and_then(|p| p.current_price()),
-        change: price.and_then(|p| p.day_change()),
-        change_percent: price.and_then(|p| p.day_change_percent()),
-        timestamp: price.and_then(|p| p.regular_market_time),
-    }
+    finance_query_models::indices::IndexQuote::from(
+        finance_query_models::indices::IndexQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+            price: price.and_then(|p| p.current_price()),
+            change: price.and_then(|p| p.day_change()),
+            change_percent: price.and_then(|p| p.day_change_percent()),
+            timestamp: price.and_then(|p| p.regular_market_time),
+        },
+    )
 }
 
 #[async_trait::async_trait]
@@ -910,15 +953,17 @@ fn price_to_commodity_quote(
     symbol: &str,
     price: Option<&finance_query_models::quote::price::Price>,
 ) -> finance_query_models::commodities::CommodityQuote {
-    finance_query_models::commodities::CommodityQuote {
-        symbol: symbol.to_string(),
-        name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
-        unit: None,
-        price: price.and_then(|p| p.current_price()),
-        change: price.and_then(|p| p.day_change()),
-        change_percent: price.and_then(|p| p.day_change_percent()),
-        timestamp: price.and_then(|p| p.regular_market_time),
-    }
+    finance_query_models::commodities::CommodityQuote::from(
+        finance_query_models::commodities::CommodityQuoteFieldsInit {
+            symbol: symbol.to_string(),
+            name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
+            unit: None,
+            price: price.and_then(|p| p.current_price()),
+            change: price.and_then(|p| p.day_change()),
+            change_percent: price.and_then(|p| p.day_change_percent()),
+            timestamp: price.and_then(|p| p.regular_market_time),
+        },
+    )
 }
 
 #[async_trait::async_trait]
@@ -1042,22 +1087,24 @@ fn search_quotes_to_symbol_matches(
 ) -> Vec<finance_query_models::discovery::reference::SymbolMatch> {
     quotes
         .into_iter()
-        .map(
-            |q| finance_query_models::discovery::reference::SymbolMatch {
-                symbol: q.symbol,
-                id: None,
-                name: q.short_name.or(q.long_name),
-                exchange: q.exchange,
-                asset_type: q.quote_type,
-                currency: None,
-                active: None,
-                market_cap_rank: None,
-                thumbnail: q.logo_url.clone(),
-                image: q.logo_url,
-                ipo_date: None,
-                delisted_date: None,
-            },
-        )
+        .map(|q| {
+            finance_query_models::discovery::reference::SymbolMatch::from(
+                finance_query_models::discovery::reference::SymbolMatchFieldsInit {
+                    symbol: q.symbol,
+                    id: None,
+                    name: q.short_name.or(q.long_name),
+                    exchange: q.exchange,
+                    asset_type: q.quote_type,
+                    currency: None,
+                    active: None,
+                    market_cap_rank: None,
+                    thumbnail: q.logo_url.clone(),
+                    image: q.logo_url,
+                    ipo_date: None,
+                    delisted_date: None,
+                },
+            )
+        })
         .collect()
 }
 
@@ -1066,26 +1113,28 @@ fn screener_quotes_to_screener_matches(
 ) -> Vec<finance_query_models::discovery::reference::ScreenerMatch> {
     quotes
         .into_iter()
-        .map(
-            |q| finance_query_models::discovery::reference::ScreenerMatch {
-                symbol: q.symbol,
-                name: Some(q.short_name).filter(|s| !s.is_empty()).or(q.long_name),
-                price: q.regular_market_price.raw,
-                market_cap: q.market_cap.and_then(|v| v.raw).map(|v| v as f64),
-                sector: None,
-                industry: None,
-                beta: None,
-                volume: q
-                    .regular_market_volume
-                    .and_then(|v| v.raw)
-                    .map(|v| v as f64),
-                exchange: Some(q.exchange),
-                country: None,
-                is_etf: Some(q.quote_type == "ETF"),
-                is_actively_trading: None,
-                is_fund: Some(q.quote_type == "MUTUALFUND"),
-            },
-        )
+        .map(|q| {
+            finance_query_models::discovery::reference::ScreenerMatch::from(
+                finance_query_models::discovery::reference::ScreenerMatchFieldsInit {
+                    symbol: q.symbol,
+                    name: Some(q.short_name).filter(|s| !s.is_empty()).or(q.long_name),
+                    price: q.regular_market_price.raw,
+                    market_cap: q.market_cap.and_then(|v| v.raw).map(|v| v as f64),
+                    sector: None,
+                    industry: None,
+                    beta: None,
+                    volume: q
+                        .regular_market_volume
+                        .and_then(|v| v.raw)
+                        .map(|v| v as f64),
+                    exchange: Some(q.exchange),
+                    country: None,
+                    is_etf: Some(q.quote_type == "ETF"),
+                    is_actively_trading: None,
+                    is_fund: Some(q.quote_type == "MUTUALFUND"),
+                },
+            )
+        })
         .collect()
 }
 
@@ -1114,19 +1163,21 @@ fn market_times_to_calendar_entries(
 ) -> Vec<finance_query_models::calendar::market::MarketCalendarEntry> {
     markets
         .into_iter()
-        .map(
-            |m| finance_query_models::calendar::market::MarketCalendarEntry {
-                symbol: None,
-                date: None,
-                detail: finance_query_models::calendar::market::CalendarDetail::MarketHoliday {
-                    name: Some(m.name),
-                    exchange: None,
-                    status: Some(m.status),
-                    open: m.open,
-                    close: m.close,
+        .map(|m| {
+            finance_query_models::calendar::market::MarketCalendarEntry::from(
+                finance_query_models::calendar::market::MarketCalendarEntryFieldsInit {
+                    symbol: None,
+                    date: None,
+                    detail: finance_query_models::calendar::market::CalendarDetail::MarketHoliday {
+                        name: Some(m.name),
+                        exchange: None,
+                        status: Some(m.status),
+                        open: m.open,
+                        close: m.close,
+                    },
                 },
-            },
-        )
+            )
+        })
         .collect()
 }
 

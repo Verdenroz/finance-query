@@ -1,6 +1,7 @@
 use crate::adapters::fmp::blank_as_none;
 use crate::adapters::fmp::client::ResponseLimits;
 use crate::{CompanyProfile, FinanceError, Provider, Result};
+use finance_query_models::fundamentals::CompanyProfileFieldsInit;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -142,7 +143,7 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
     let ipo_date = row
         .ipo_date
         .filter(|date| crate::providers::stock_listing::date(date).is_ok());
-    Ok(CompanyProfile {
+    Ok(CompanyProfile::from(CompanyProfileFieldsInit {
         symbol: Some(row.symbol),
         name: row.company_name,
         description: row.description,
@@ -162,5 +163,5 @@ fn into_profile(row: Profile) -> Result<CompanyProfile> {
         cik: row.cik,
         ipo_date,
         provider_id: Some(Provider::Fmp),
-    })
+    }))
 }

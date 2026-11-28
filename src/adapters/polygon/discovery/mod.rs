@@ -2,9 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use finance_query_models::discovery::reference::SymbolDetailsFieldsInit;
+
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use finance_query_models::corporate::recommendation::SimilarSymbol;
+use finance_query_models::corporate::recommendation::{SimilarSymbol, SimilarSymbolFieldsInit};
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -250,9 +252,11 @@ pub async fn fetch_similar_symbols_response(
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|r| SimilarSymbol {
-            symbol: r.ticker.unwrap_or_default(),
-            score: 0.0,
+        .map(|r| {
+            SimilarSymbol::from(SimilarSymbolFieldsInit {
+                symbol: r.ticker.unwrap_or_default(),
+                score: 0.0,
+            })
         })
         .collect())
 }
@@ -262,7 +266,7 @@ pub async fn fetch_symbol_search_response(
     query: &str,
     limit: u32,
 ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
-    use finance_query_models::discovery::reference::SymbolMatch;
+    use finance_query_models::discovery::reference::{SymbolMatch, SymbolMatchFieldsInit};
     let limit_str = limit.to_string();
     let paginated =
         all_tickers(&[("search", query), ("active", "true"), ("limit", &limit_str)]).await?;
@@ -271,7 +275,7 @@ pub async fn fetch_symbol_search_response(
         .unwrap_or_default()
         .into_iter()
         .filter_map(|t| {
-            Some(SymbolMatch {
+            Some(SymbolMatch::from(SymbolMatchFieldsInit {
                 symbol: t.ticker?,
                 id: None,
                 name: t.name,
@@ -284,7 +288,7 @@ pub async fn fetch_symbol_search_response(
                 image: None,
                 ipo_date: None,
                 delisted_date: None,
-            })
+            }))
         })
         .collect())
 }
@@ -308,7 +312,7 @@ pub(super) fn details_to_canonical(
             field: "results".to_string(),
             context: format!("No ticker details returned for {symbol}"),
         })?;
-    Ok(SymbolDetails {
+    Ok(SymbolDetails::from(SymbolDetailsFieldsInit {
         symbol: d.ticker.unwrap_or_else(|| symbol.to_string()),
         name: d.name,
         description: d.description,
@@ -329,27 +333,29 @@ pub(super) fn details_to_canonical(
         active: d.active,
         delisted_utc: d.delisted_utc,
         provider_id: Some(crate::Provider::Polygon),
-    })
+    }))
 }
 
 /// Fetch the tradable exchange listing (canonical).
 pub async fn fetch_exchanges_response()
 -> Result<Vec<finance_query_models::discovery::reference::ExchangeInfo>> {
-    use finance_query_models::discovery::reference::ExchangeInfo;
+    use finance_query_models::discovery::reference::{ExchangeInfo, ExchangeInfoFieldsInit};
     let paginated = exchanges(&[]).await?;
     Ok(paginated
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|e| ExchangeInfo {
-            id: e.id,
-            name: e.name,
-            mic: e.mic,
-            operating_mic: e.operating_mic,
-            asset_class: e.asset_class,
-            locale: e.locale,
-            exchange_type: e.exchange_type,
-            url: e.url,
+        .map(|e| {
+            ExchangeInfo::from(ExchangeInfoFieldsInit {
+                id: e.id,
+                name: e.name,
+                mic: e.mic,
+                operating_mic: e.operating_mic,
+                asset_class: e.asset_class,
+                locale: e.locale,
+                exchange_type: e.exchange_type,
+                url: e.url,
+            })
         })
         .collect())
 }
@@ -400,8 +406,10 @@ pub async fn fetch_market_holidays_response()
 fn holiday_to_canonical(
     h: MarketHolidayDTO,
 ) -> finance_query_models::calendar::market::MarketCalendarEntry {
-    use finance_query_models::calendar::market::{CalendarDetail, MarketCalendarEntry};
-    MarketCalendarEntry {
+    use finance_query_models::calendar::market::{
+        CalendarDetail, MarketCalendarEntry, MarketCalendarEntryFieldsInit,
+    };
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: None,
         date: h.date,
         detail: CalendarDetail::MarketHoliday {
@@ -411,7 +419,7 @@ fn holiday_to_canonical(
             open: h.open,
             close: h.close,
         },
-    }
+    })
 }
 
 #[cfg(test)]

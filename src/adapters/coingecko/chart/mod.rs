@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::constants::{Interval, TimeRange};
 use crate::error::{FinanceError, Result};
 use crate::providers::Provider;
-use finance_query_models::chart::{Candle, Chart};
+use finance_query_models::chart::{Candle, Chart, ChartFieldsInit};
 
 /// `/coins/{id}/ohlc` rows are `[timestamp_ms, open, high, low, close]`.
 #[derive(Debug, Clone, Deserialize)]
@@ -79,14 +79,14 @@ pub async fn fetch_chart_response(
         .ohlc(&id, &vs_currency, range_to_days(range))
         .await?;
 
-    Ok(Chart {
+    Ok(Chart::from(ChartFieldsInit {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles: rows_to_candles(rows),
         interval: Some(interval),
         range: Some(range),
         provider_id: Some(Provider::CoinGecko),
-    })
+    }))
 }
 
 #[cfg(test)]

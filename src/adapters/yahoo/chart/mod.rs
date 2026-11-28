@@ -553,19 +553,23 @@ pub(crate) fn parse_chart_data(
         })
         .collect();
 
-    let chart_meta = finance_query_models::chart::ChartMeta {
-        provider_id: Some(Provider::Yahoo),
-        ..meta.clone()
-    };
+    let chart_meta = finance_query_models::chart::ChartMeta::from(
+        finance_query_models::chart::ChartMetaFieldsInit {
+            provider_id: Some(Provider::Yahoo),
+            ..finance_query_models::chart::ChartMetaFieldsInit::from(meta.clone())
+        },
+    );
 
-    Ok(finance_query_models::chart::Chart {
-        symbol: symbol.to_string(),
-        meta: chart_meta,
-        candles,
-        interval: None,
-        range: None,
-        provider_id: Some(Provider::Yahoo),
-    })
+    Ok(finance_query_models::chart::Chart::from(
+        finance_query_models::chart::ChartFieldsInit {
+            symbol: symbol.to_string(),
+            meta: chart_meta,
+            candles,
+            interval: None,
+            range: None,
+            provider_id: Some(Provider::Yahoo),
+        },
+    ))
 }
 
 /// Fetch chart data and return a canonical `Chart` model.

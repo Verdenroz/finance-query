@@ -6,7 +6,7 @@
 
 use crate::adapters::edgar::company_facts_for_symbol;
 use crate::error::{FinanceError, Result};
-use finance_query_models::corporate::governance::EmployeeCount;
+use finance_query_models::corporate::governance::{EmployeeCount, EmployeeCountFieldsInit};
 use finance_query_models::filings::{CompanyFacts, FactUnit};
 
 fn to_employee_count(
@@ -15,7 +15,7 @@ fn to_employee_count(
     cik: Option<u64>,
     company_name: &Option<String>,
 ) -> EmployeeCount {
-    EmployeeCount {
+    EmployeeCount::from(EmployeeCountFieldsInit {
         symbol: Some(symbol.to_string()),
         cik: cik.map(|c| c.to_string()),
         company_name: company_name.clone(),
@@ -30,7 +30,7 @@ fn to_employee_count(
             )),
             _ => None,
         },
-    }
+    })
 }
 
 fn dei_employee_counts(facts: &CompanyFacts, symbol: &str) -> Result<Vec<EmployeeCount>> {

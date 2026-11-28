@@ -177,21 +177,22 @@ pub async fn fetch_market_calendar_response(
     to: &str,
 ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
     use finance_query_models::calendar::market::{
-        CalendarDetail, CalendarKind, MarketCalendarEntry,
+        CalendarDetail, CalendarKind, EarningsDetailFieldsInit, MarketCalendarEntry,
+        MarketCalendarEntryFieldsInit,
     };
 
     let entry = |symbol: Option<String>, date: Option<String>, detail: CalendarDetail| {
-        MarketCalendarEntry {
+        MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
             symbol,
             date,
             detail,
-        }
+        })
     };
 
     Ok(match kind {
         // FMP serves neither; dispatch falls through to a provider that does
         // (Polygon for holidays, Alpha Vantage for live status).
-        CalendarKind::MarketHoliday | CalendarKind::MarketStatus => {
+        _ => {
             let operation = Operation::from_calendar(kind);
             return Err(crate::error::FinanceError::NotSupported {
                 provider: crate::Provider::Fmp,
@@ -208,7 +209,7 @@ pub async fn fetch_market_calendar_response(
                     e.date,
                     // FMP's stable earnings calendar reports neither the fiscal
                     // period end nor the bmo/amc announcement time.
-                    CalendarDetail::Earnings {
+                    CalendarDetail::from(EarningsDetailFieldsInit {
                         eps: e.eps,
                         eps_estimated: e.eps_estimated,
                         revenue: e.revenue,
@@ -221,7 +222,7 @@ pub async fn fetch_market_calendar_response(
                         previous_eps: None,
                         previous_report_date: None,
                         market_cap: None,
-                    },
+                    }),
                 )
             })
             .collect(),

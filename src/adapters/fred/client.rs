@@ -6,7 +6,9 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use tracing::debug;
 
-use super::models::{MacroObservation, MacroSeries, ReleaseDate};
+use super::models::{
+    MacroObservation, MacroObservationFieldsInit, MacroSeries, MacroSeriesFieldsInit, ReleaseDate,
+};
 use crate::adapters::common::keyed::{is_auth_error, redact_key, transport_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
@@ -187,14 +189,17 @@ impl FredClient {
                 } else {
                     raw.parse::<f64>().ok()
                 };
-                Some(MacroObservation { date, value })
+                Some(MacroObservation::from(MacroObservationFieldsInit {
+                    date,
+                    value,
+                }))
             })
             .collect();
 
-        Ok(MacroSeries {
+        Ok(MacroSeries::from(MacroSeriesFieldsInit {
             id: series_id.to_string(),
             observations,
-        })
+        }))
     }
 
     /// Fetch scheduled economic-data release dates over `[from, to]`.

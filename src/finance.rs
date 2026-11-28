@@ -833,7 +833,9 @@ pub async fn symbol_sentiment(
         (None, None)
     };
 
-    Ok(finance_query_models::sentiment::SymbolSentiment { score, label })
+    Ok(finance_query_models::sentiment::SymbolSentiment::from(
+        finance_query_models::sentiment::SymbolSentimentFieldsInit { score, label },
+    ))
 }
 
 // ── Alpha Vantage ───────────────────────────────────────────────────

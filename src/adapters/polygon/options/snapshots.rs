@@ -6,8 +6,8 @@ use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 use crate::providers::build_options;
-use finance_query_models::options::OptionContract;
 use finance_query_models::options::Options;
+use finance_query_models::options::{OptionContract, OptionContractFieldsInit};
 
 use super::super::build_client;
 use super::super::models::*;
@@ -161,7 +161,7 @@ fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
     let day = s.day.as_ref();
     let last_trade = s.last_trade.as_ref();
     let last_quote = s.last_quote.as_ref();
-    OptionContract {
+    OptionContract::from(OptionContractFieldsInit {
         contract_symbol: details.and_then(|d| d.ticker.clone()).unwrap_or_default(),
         strike: details.and_then(|d| d.strike_price).unwrap_or(0.0),
         currency: None,
@@ -185,7 +185,7 @@ fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
         last_trade_date: None,
         implied_volatility: s.implied_volatility,
         in_the_money: None,
-    }
+    })
 }
 
 /// Fetch options chain (canonical) for a stock ticker.

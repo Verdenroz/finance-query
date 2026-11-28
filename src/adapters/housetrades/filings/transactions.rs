@@ -19,7 +19,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use finance_query_models::filings::CongressionalTrade;
+use finance_query_models::filings::{CongressionalTrade, CongressionalTradeFieldsInit};
 
 use super::super::models::PtrIndexEntry;
 use super::index::parse_us_date;
@@ -141,7 +141,7 @@ pub(super) fn to_congressional_trade(
     year: i32,
     tx: ParsedTransaction,
 ) -> CongressionalTrade {
-    CongressionalTrade {
+    CongressionalTrade::from(CongressionalTradeFieldsInit {
         symbol: tx.symbol,
         first_name: Some(entry.first.clone()),
         last_name: Some(entry.last.clone()),
@@ -156,7 +156,7 @@ pub(super) fn to_congressional_trade(
             "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/{year}/{}.pdf",
             entry.doc_id
         )),
-    }
+    })
 }
 
 #[cfg(test)]

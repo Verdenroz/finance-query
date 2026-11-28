@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Provider;
 use crate::error::Result;
-use finance_query_models::corporate::news::News;
+use finance_query_models::corporate::news::{News, NewsFieldsInit};
 
 use super::super::build_client;
 use super::super::models::PaginatedResponseDTO;
@@ -81,15 +81,17 @@ pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
         .results
         .into_iter()
         .flatten()
-        .map(|a| News {
-            title: a.title.unwrap_or_default(),
-            link: a.article_url.unwrap_or_default(),
-            source: a.publisher.and_then(|p| p.name).unwrap_or_default(),
-            img: String::new(),
-            time: a.published_utc.unwrap_or_default(),
-            provider_id: Some(Provider::Polygon),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|a| {
+            News::from(NewsFieldsInit {
+                title: a.title.unwrap_or_default(),
+                link: a.article_url.unwrap_or_default(),
+                source: a.publisher.and_then(|p| p.name).unwrap_or_default(),
+                img: String::new(),
+                time: a.published_utc.unwrap_or_default(),
+                provider_id: Some(Provider::Polygon),
+                #[cfg(feature = "sentiment")]
+                sentiment: None,
+            })
         })
         .collect())
 }

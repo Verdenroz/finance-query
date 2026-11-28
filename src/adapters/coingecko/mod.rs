@@ -82,33 +82,37 @@ pub async fn fetch_crypto_quote_response(
     vs_currency: &str,
 ) -> Result<finance_query_models::crypto::CryptoQuote> {
     let quote = coin(id, vs_currency).await?;
-    Ok(finance_query_models::crypto::CryptoQuote {
-        id: quote.id,
-        symbol: quote.symbol,
-        name: quote.name,
-        price: quote.current_price,
-        market_cap: quote.market_cap,
-        volume_24h: quote.total_volume,
-        change_24h: None,
-        change_percent_24h: quote.price_change_percentage_24h,
-        high_24h: None,
-        low_24h: None,
-        circulating_supply: quote.circulating_supply,
-    })
+    Ok(finance_query_models::crypto::CryptoQuote::from(
+        finance_query_models::crypto::CryptoQuoteFieldsInit {
+            id: quote.id,
+            symbol: quote.symbol,
+            name: quote.name,
+            price: quote.current_price,
+            market_cap: quote.market_cap,
+            volume_24h: quote.total_volume,
+            change_24h: None,
+            change_percent_24h: quote.price_change_percentage_24h,
+            high_24h: None,
+            low_24h: None,
+            circulating_supply: quote.circulating_supply,
+        },
+    ))
 }
 
 /// Convert one trending-coin wrapper into the canonical [`TrendingCoin`](finance_query_models::crypto::TrendingCoin).
 fn to_trending_coin(
     w: models::TrendingCoinWrapperDTO,
 ) -> finance_query_models::crypto::TrendingCoin {
-    finance_query_models::crypto::TrendingCoin {
-        id: Some(w.item.id),
-        symbol: Some(w.item.symbol.to_ascii_uppercase()),
-        name: Some(w.item.name),
-        market_cap_rank: w.item.market_cap_rank,
-        price_btc: w.item.price_btc,
-        score: w.item.score,
-    }
+    finance_query_models::crypto::TrendingCoin::from(
+        finance_query_models::crypto::TrendingCoinFieldsInit {
+            id: Some(w.item.id),
+            symbol: Some(w.item.symbol.to_ascii_uppercase()),
+            name: Some(w.item.name),
+            market_cap_rank: w.item.market_cap_rank,
+            price_btc: w.item.price_btc,
+            score: w.item.score,
+        },
+    )
 }
 
 /// Fetch coins trending in the last 24h as canonical [`TrendingCoin`](finance_query_models::crypto::TrendingCoin)s.
@@ -122,15 +126,17 @@ pub async fn fetch_crypto_trending_response()
 fn to_global_crypto_stats(
     data: models::GlobalDataDTO,
 ) -> finance_query_models::crypto::GlobalCryptoStats {
-    finance_query_models::crypto::GlobalCryptoStats {
-        active_cryptocurrencies: data.active_cryptocurrencies,
-        markets: data.markets,
-        total_market_cap_usd: data.total_market_cap.get("usd").copied(),
-        total_volume_usd: data.total_volume.get("usd").copied(),
-        btc_dominance: data.market_cap_percentage.get("btc").copied(),
-        eth_dominance: data.market_cap_percentage.get("eth").copied(),
-        market_cap_change_percentage_24h_usd: data.market_cap_change_percentage_24h_usd,
-    }
+    finance_query_models::crypto::GlobalCryptoStats::from(
+        finance_query_models::crypto::GlobalCryptoStatsFieldsInit {
+            active_cryptocurrencies: data.active_cryptocurrencies,
+            markets: data.markets,
+            total_market_cap_usd: data.total_market_cap.get("usd").copied(),
+            total_volume_usd: data.total_volume.get("usd").copied(),
+            btc_dominance: data.market_cap_percentage.get("btc").copied(),
+            eth_dominance: data.market_cap_percentage.get("eth").copied(),
+            market_cap_change_percentage_24h_usd: data.market_cap_change_percentage_24h_usd,
+        },
+    )
 }
 
 /// Fetch aggregate global cryptocurrency market statistics.

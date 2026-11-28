@@ -6,7 +6,7 @@
 
 use crate::constants::{Interval, TimeRange};
 use crate::providers::Provider;
-use finance_query_models::chart::{Candle, Chart, ChartMeta};
+use finance_query_models::chart::{Candle, Chart, ChartFieldsInit, ChartMeta, ChartMetaFieldsInit};
 
 /// How an exchange names itself in canonical chart metadata.
 pub(crate) struct CryptoExchange {
@@ -30,9 +30,9 @@ pub(crate) fn crypto_chart(
     interval: Option<Interval>,
     range: Option<TimeRange>,
 ) -> Chart {
-    Chart {
+    Chart::from(ChartFieldsInit {
         symbol: symbol.to_string(),
-        meta: ChartMeta {
+        meta: ChartMeta::from(ChartMetaFieldsInit {
             symbol: symbol.to_string(),
             currency: quote_currency,
             exchange_name: Some(exchange.code.to_string()),
@@ -45,10 +45,10 @@ pub(crate) fn crypto_chart(
             range: range.map(|r| r.as_str().to_string()),
             provider_id: Some(exchange.provider),
             ..Default::default()
-        },
+        }),
         candles,
         interval,
         range,
         provider_id: Some(exchange.provider),
-    }
+    })
 }

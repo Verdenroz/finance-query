@@ -5,7 +5,10 @@
 //! `upcoming_auctions` holds the forward schedule.
 
 use crate::error::{FinanceError, Result};
-use finance_query_models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
+use finance_query_models::economic::{
+    TreasuryAuction, TreasuryAuctionFieldsInit, TreasuryAuctionQuery, UpcomingAuction,
+    UpcomingAuctionFieldsInit,
+};
 
 use super::super::client::{DATE_FIELD, RowQuery};
 use super::super::models::FiscalRow;
@@ -109,7 +112,7 @@ fn flag(row: &FiscalRow, field: &str) -> Option<bool> {
 }
 
 fn to_auction(row: &FiscalRow) -> Option<TreasuryAuction> {
-    Some(TreasuryAuction {
+    Some(TreasuryAuction::from(TreasuryAuctionFieldsInit {
         record_date: text(row, DATE_FIELD)?,
         cusip: text(row, "cusip")?,
         security_type: text(row, "security_type")?,
@@ -134,11 +137,11 @@ fn to_auction(row: &FiscalRow) -> Option<TreasuryAuction> {
         comp_accepted: number(row, "comp_accepted"),
         noncomp_accepted: number(row, "noncomp_accepted"),
         soma_accepted: number(row, "soma_accepted"),
-    })
+    }))
 }
 
 fn to_upcoming(row: &FiscalRow) -> Option<UpcomingAuction> {
-    Some(UpcomingAuction {
+    Some(UpcomingAuction::from(UpcomingAuctionFieldsInit {
         record_date: text(row, DATE_FIELD)?,
         security_type: text(row, "security_type")?,
         security_term: text(row, "security_term")?,
@@ -148,7 +151,7 @@ fn to_upcoming(row: &FiscalRow) -> Option<UpcomingAuction> {
         announcement_date: text(row, "announcemt_date")?,
         auction_date: text(row, "auction_date")?,
         issue_date: text(row, "issue_date")?,
-    })
+    }))
 }
 
 /// Fetch auctions matching `query`, most recent auction date first.

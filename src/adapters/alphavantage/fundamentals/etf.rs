@@ -5,14 +5,16 @@
 
 use crate::adapters::alphavantage::models::{EtfHoldingDTO, EtfProfileDTO};
 use crate::error::Result;
-use finance_query_models::fundamentals::{EtfHolding, EtfProfile};
+use finance_query_models::fundamentals::{
+    EtfHolding, EtfHoldingFieldsInit, EtfProfile, EtfProfileFieldsInit,
+};
 
 pub(crate) fn to_etf_holding(dto: EtfHoldingDTO) -> EtfHolding {
-    EtfHolding {
+    EtfHolding::from(EtfHoldingFieldsInit {
         symbol: dto.symbol,
         description: dto.description,
         weight: dto.weight,
-    }
+    })
 }
 
 pub(crate) fn to_etf_profile(dto: EtfProfileDTO) -> EtfProfile {
@@ -25,7 +27,7 @@ pub(crate) fn to_etf_profile(dto: EtfProfileDTO) -> EtfProfile {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    EtfProfile {
+    EtfProfile::from(EtfProfileFieldsInit {
         symbol: Some(dto.symbol),
         name: dto.name,
         asset_type: dto.asset_type,
@@ -38,7 +40,7 @@ pub(crate) fn to_etf_profile(dto: EtfProfileDTO) -> EtfProfile {
         // Alpha Vantage's ETF_PROFILE has no sector/country breakdown.
         sector_weightings: Vec::new(),
         country_weightings: Vec::new(),
-    }
+    })
 }
 
 /// Fetch the canonical ETF profile and holdings for a symbol.

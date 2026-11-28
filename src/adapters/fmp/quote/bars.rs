@@ -9,6 +9,8 @@ use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone, Weekday};
 use chrono_tz::America::New_York;
 use serde::{Deserialize, Serialize};
 
+use finance_query_models::chart::StockBarFieldsInit;
+
 use crate::adapters::fmp::models::{HistoricalPriceDTO, IntradayPriceDTO};
 use crate::error::FinanceError;
 use crate::{PageCursor, Provider, ProviderPage, Result, SortType, StockBar, StockBarsRequest};
@@ -118,7 +120,7 @@ fn bar(
     {
         return Err(invalid_row("a bar with non-finite values"));
     }
-    Ok(StockBar {
+    Ok(StockBar::from(StockBarFieldsInit {
         timestamp_ms,
         open,
         high,
@@ -127,7 +129,7 @@ fn bar(
         volume,
         transactions: None,
         vwap: None,
-    })
+    }))
 }
 
 fn minute_bars(

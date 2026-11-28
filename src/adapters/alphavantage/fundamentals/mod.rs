@@ -85,27 +85,29 @@ pub(crate) async fn fetch_company_profile_response(
     symbol: &str,
 ) -> Result<finance_query_models::fundamentals::CompanyProfile> {
     let dto = company_overview(symbol).await?;
-    Ok(finance_query_models::fundamentals::CompanyProfile {
-        symbol: Some(dto.symbol),
-        name: dto.name,
-        description: dto.description,
-        asset_type: dto.asset_type,
-        exchange: dto.exchange,
-        currency: dto.currency,
-        country: dto.country,
-        sector: dto.sector,
-        industry: dto.industry,
-        market_capitalization: dto.market_capitalization,
-        isin: None,
-        cusip: None,
-        active: None,
-        is_etf: None,
-        is_adr: None,
-        is_fund: None,
-        cik: None,
-        ipo_date: None,
-        provider_id: Some(crate::Provider::AlphaVantage),
-    })
+    Ok(finance_query_models::fundamentals::CompanyProfile::from(
+        finance_query_models::fundamentals::CompanyProfileFieldsInit {
+            symbol: Some(dto.symbol),
+            name: dto.name,
+            description: dto.description,
+            asset_type: dto.asset_type,
+            exchange: dto.exchange,
+            currency: dto.currency,
+            country: dto.country,
+            sector: dto.sector,
+            industry: dto.industry,
+            market_capitalization: dto.market_capitalization,
+            isin: None,
+            cusip: None,
+            active: None,
+            is_etf: None,
+            is_adr: None,
+            is_fund: None,
+            cik: None,
+            ipo_date: None,
+            provider_id: Some(crate::Provider::AlphaVantage),
+        },
+    ))
 }
 
 /// Fetch ETF profile and top holdings.
@@ -266,13 +268,17 @@ pub(crate) async fn fetch_earnings_surprises_response(
     Ok(history
         .quarterly_earnings
         .into_iter()
-        .map(|e| finance_query_models::fundamentals::EarningsSurprise {
-            symbol: Some(history.symbol.clone()),
-            date: e.reported_date.or(e.fiscal_date_ending),
-            actual_eps: e.reported_eps,
-            estimated_eps: e.estimated_eps,
-            surprise: e.surprise,
-            surprise_percent: e.surprise_percentage,
+        .map(|e| {
+            finance_query_models::fundamentals::EarningsSurprise::from(
+                finance_query_models::fundamentals::EarningsSurpriseFieldsInit {
+                    symbol: Some(history.symbol.clone()),
+                    date: e.reported_date.or(e.fiscal_date_ending),
+                    actual_eps: e.reported_eps,
+                    estimated_eps: e.estimated_eps,
+                    surprise: e.surprise,
+                    surprise_percent: e.surprise_percentage,
+                },
+            )
         })
         .collect())
 }

@@ -11,7 +11,8 @@ use serde::Deserialize;
 use crate::adapters::fred::build_client;
 use crate::error::Result;
 use finance_query_models::economic::{
-    EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch, MacroObservation,
+    EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesFieldsInit,
+    EconomicSeriesMatch, MacroObservation, MacroObservationFieldsInit,
 };
 
 // ============================================================================
@@ -69,11 +70,13 @@ pub struct ObservationDTO {
 pub(crate) fn to_observations(dto: ObservationsResponseDTO) -> Vec<MacroObservation> {
     dto.observations
         .into_iter()
-        .map(|o| MacroObservation {
-            date: o.date,
-            // "." is FRED's missing marker; anything unparseable is treated the
-            // same way rather than dropping the observation's date entirely.
-            value: (o.value != ".").then(|| o.value.parse().ok()).flatten(),
+        .map(|o| {
+            MacroObservation::from(MacroObservationFieldsInit {
+                date: o.date,
+                // "." is FRED's missing marker; anything unparseable is treated the
+                // same way rather than dropping the observation's date entirely.
+                value: (o.value != ".").then(|| o.value.parse().ok()).flatten(),
+            })
         })
         .collect()
 }
@@ -130,13 +133,13 @@ pub async fn series_as_of(series_id: &str, date: &str) -> Result<EconomicSeries>
         )
         .await?;
 
-    Ok(EconomicSeries {
+    Ok(EconomicSeries::from(EconomicSeriesFieldsInit {
         series_id: series_id.to_string(),
         title: None,
         units: None,
         frequency: None,
         observations: to_observations(resp),
-    })
+    }))
 }
 
 #[cfg(test)]

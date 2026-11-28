@@ -14,17 +14,19 @@ fn forex_quote_to_canonical(
 ) -> finance_query_models::forex::ForexQuote {
     let q = quotes.first();
     let price = q.and_then(|q| q.price);
-    finance_query_models::forex::ForexQuote {
-        symbol: pair.to_string(),
-        base_currency: Some(from.to_uppercase()),
-        quote_currency: Some(to.to_uppercase()),
-        bid: price,
-        ask: None,
-        price,
-        change: None,
-        change_percent: None,
-        timestamp: q.and_then(|q| q.timestamp),
-    }
+    finance_query_models::forex::ForexQuote::from(
+        finance_query_models::forex::ForexQuoteFieldsInit {
+            symbol: pair.to_string(),
+            base_currency: Some(from.to_uppercase()),
+            quote_currency: Some(to.to_uppercase()),
+            bid: price,
+            ask: None,
+            price,
+            change: None,
+            change_percent: None,
+            timestamp: q.and_then(|q| q.timestamp),
+        },
+    )
 }
 
 /// Fetch a canonical forex quote.

@@ -5,8 +5,8 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::{FinanceError, Result};
-use finance_query_models::quote::QuoteSummaryResponse;
 use finance_query_models::quote::price::Price;
+use finance_query_models::quote::{QuoteSummaryResponse, QuoteSummaryResponseFieldsInit};
 use serde_json::Value;
 use tracing::info;
 
@@ -111,7 +111,7 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
 
     let price: Option<Price> = deserialize_module!("price");
 
-    Ok(QuoteSummaryResponse {
+    Ok(QuoteSummaryResponse::from(QuoteSummaryResponseFieldsInit {
         symbol: symbol.to_string(),
         price: price.map(Price::with_percent_changes),
         summary_detail: deserialize_module!("summaryDetail"),
@@ -140,7 +140,7 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
         industry_trend: deserialize_module!("industryTrend"),
         sector_trend: deserialize_module!("sectorTrend"),
         equity_performance: deserialize_module!("equityPerformance"),
-    })
+    }))
 }
 
 #[cfg(test)]

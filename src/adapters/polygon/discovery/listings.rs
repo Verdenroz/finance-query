@@ -10,6 +10,9 @@ use crate::{
     FinanceError, PageCursor, Provider, ProviderPage, Result, StockListing, StockListingRequest,
     StockType, SymbolDetails, TickerChange,
 };
+use finance_query_models::discovery::listings::{
+    StockListingFieldsInit, StockTypeFieldsInit, TickerChangeFieldsInit,
+};
 
 fn validate_delisting(value: Option<&str>) -> Result<()> {
     if let Some(value) = value
@@ -32,7 +35,7 @@ fn listing_to_canonical(row: TickerRefDTO) -> Result<StockListing> {
         date(list_date).map_err(|_| invalid_page("list_date"))?;
     }
     validate_delisting(row.delisted_utc.as_deref())?;
-    Ok(StockListing {
+    Ok(StockListing::from(StockListingFieldsInit {
         symbol,
         name: row.name,
         exchange: row.primary_exchange,
@@ -44,19 +47,19 @@ fn listing_to_canonical(row: TickerRefDTO) -> Result<StockListing> {
         share_class_figi: row.share_class_figi,
         list_date: row.list_date,
         delisted_utc: row.delisted_utc,
-    })
+    }))
 }
 
 fn stock_type_to_canonical(row: StockTypeDTO) -> Result<StockType> {
     if row.code.is_empty() {
         return Err(invalid_page("code"));
     }
-    Ok(StockType {
+    Ok(StockType::from(StockTypeFieldsInit {
         code: row.code,
         description: row.description,
         asset_class: row.asset_class,
         locale: row.locale,
-    })
+    }))
 }
 
 /// Polygon omits `results` on an empty page, so absence is only valid when a
@@ -199,7 +202,9 @@ pub(crate) async fn fetch_ticker_changes(id: &str) -> Result<Vec<TickerChange>> 
                 .and_then(|change| change.ticker)
                 .filter(|t| !t.is_empty());
             match (date, ticker) {
-                (Some(date), Some(ticker)) => Ok(TickerChange { date, ticker }),
+                (Some(date), Some(ticker)) => {
+                    Ok(TickerChange::from(TickerChangeFieldsInit { date, ticker }))
+                }
                 _ => Err(invalid_page("ticker_change")),
             }
         })

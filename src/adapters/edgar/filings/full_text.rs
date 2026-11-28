@@ -8,6 +8,7 @@ use crate::adapters::edgar::build_client;
 use crate::error::Result;
 use finance_query_models::filings::{
     EdgarSearchHit, EdgarSearchResults, FilingSearchFilters, FilingSearchHit,
+    FilingSearchHitFieldsInit,
 };
 
 /// EFTS refuses page sizes above 100.
@@ -48,7 +49,7 @@ pub(crate) fn to_search_hit(hit: EdgarSearchHit) -> FilingSearchHit {
         ),
         None => (None, None, None, None, Vec::new(), Vec::new()),
     };
-    FilingSearchHit {
+    FilingSearchHit::from(FilingSearchHitFieldsInit {
         accession_number,
         form,
         filed_date,
@@ -57,7 +58,7 @@ pub(crate) fn to_search_hit(hit: EdgarSearchHit) -> FilingSearchHit {
         url: hit_url(hit._id.as_deref(), &ciks),
         ciks,
         score: hit._score,
-    }
+    })
 }
 
 pub(crate) fn to_search_hits(results: EdgarSearchResults) -> Vec<FilingSearchHit> {

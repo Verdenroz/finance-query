@@ -5,7 +5,9 @@
 //! `NotSupported` for a plain futures quote.
 
 use crate::error::{FinanceError, Result};
-use finance_query_models::futures::cot::{CommitmentsOfTraders, CotObservation};
+use finance_query_models::futures::cot::{
+    CommitmentsOfTraders, CommitmentsOfTradersFieldsInit, CotObservation, CotObservationFieldsInit,
+};
 
 use super::models::CotRow;
 
@@ -61,7 +63,7 @@ fn report_date(row: &CotRow) -> String {
 }
 
 fn to_observation(row: &CotRow) -> CotObservation {
-    CotObservation {
+    CotObservation::from(CotObservationFieldsInit {
         report_date: report_date(row),
         open_interest: parse_i64(&row.open_interest_all),
         producer_merchant_long: parse_i64(&row.prod_merc_positions_long),
@@ -79,7 +81,7 @@ fn to_observation(row: &CotRow) -> CotObservation {
         total_reportable_short: parse_i64(&row.tot_rept_positions_short),
         nonreportable_long: parse_i64(&row.nonrept_positions_long_all),
         nonreportable_short: parse_i64(&row.nonrept_positions_short_all),
-    }
+    })
 }
 
 /// Map raw rows (newest-first, the API's own order) onto the canonical
@@ -105,12 +107,12 @@ pub(crate) fn to_canonical(symbol: &str, mut rows: Vec<CotRow>) -> Result<Commit
         .unwrap_or_default();
     let observations = rows.iter().map(to_observation).collect();
 
-    Ok(CommitmentsOfTraders {
+    Ok(CommitmentsOfTraders::from(CommitmentsOfTradersFieldsInit {
         symbol: symbol.to_string(),
         market_and_exchange_name,
         cftc_contract_market_code,
         observations,
-    })
+    }))
 }
 
 /// Fetch the canonical Commitments of Traders series for a futures symbol.

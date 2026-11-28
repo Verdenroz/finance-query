@@ -10,7 +10,7 @@ use super::xml::{self, XmlNode};
 use crate::adapters::edgar::client::EdgarClient;
 use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::Result;
-use finance_query_models::filings::InsiderTrade;
+use finance_query_models::filings::{InsiderTrade, InsiderTradeFieldsInit};
 
 /// Forms that report insider ownership changes, amendments included.
 const OWNERSHIP_FORMS: [&str; 6] = ["3", "4", "5", "3/A", "4/A", "5/A"];
@@ -28,7 +28,7 @@ fn flag(node: &XmlNode, path: &[&str]) -> bool {
 
 /// Map one `<nonDerivativeTransaction>` / `<derivativeTransaction>` element.
 fn transaction_to_trade(tx: &XmlNode, header: &InsiderTrade, is_derivative: bool) -> InsiderTrade {
-    InsiderTrade {
+    InsiderTrade::from(InsiderTradeFieldsInit {
         security_title: tx.text_at(&["securityTitle", "value"]),
         transaction_date: tx.text_at(&["transactionDate", "value"]),
         transaction_code: tx.text_at(&["transactionCoding", "transactionCode"]),
@@ -47,8 +47,8 @@ fn transaction_to_trade(tx: &XmlNode, header: &InsiderTrade, is_derivative: bool
             "value",
         ]),
         is_derivative,
-        ..header.clone()
-    }
+        ..InsiderTradeFieldsInit::from(header.clone())
+    })
 }
 
 /// Parse one ownership document into its transaction lines.
@@ -63,7 +63,7 @@ pub(crate) fn parse_ownership_document(
     let doc = xml::parse(bytes)?;
 
     let owner = doc.child("reportingOwner");
-    let header = InsiderTrade {
+    let header = InsiderTrade::from(InsiderTradeFieldsInit {
         symbol: doc.text_at(&["issuer", "issuerTradingSymbol"]),
         issuer_name: doc.text_at(&["issuer", "issuerName"]),
         insider_name: owner.and_then(|o| o.text_at(&["reportingOwnerId", "rptOwnerName"])),
@@ -78,7 +78,7 @@ pub(crate) fn parse_ownership_document(
         accession_number,
         url,
         ..Default::default()
-    };
+    });
 
     let mut trades = Vec::new();
     for (table, derivative) in [("nonDerivativeTable", false), ("derivativeTable", true)] {

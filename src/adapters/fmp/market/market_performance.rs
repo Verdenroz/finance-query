@@ -200,11 +200,13 @@ fn to_sector_performance(
     dto: SectorPerformanceDTO,
 ) -> Option<finance_query_models::market::performance::SectorPerformance> {
     Some(
-        finance_query_models::market::performance::SectorPerformance {
-            sector: dto.sector?,
-            exchange: dto.exchange,
-            change_percent: dto.average_change,
-        },
+        finance_query_models::market::performance::SectorPerformance::from(
+            finance_query_models::market::performance::SectorPerformanceFieldsInit {
+                sector: dto.sector?,
+                exchange: dto.exchange,
+                change_percent: dto.average_change,
+            },
+        ),
     )
 }
 
@@ -212,23 +214,30 @@ fn to_sector_performance(
 pub async fn fetch_market_movers_response(
     direction: finance_query_models::market::performance::MoverDirection,
 ) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
-    use finance_query_models::market::performance::{MoverDirection, MoverQuote};
+    use finance_query_models::market::performance::{
+        MoverDirection, MoverQuote, MoverQuoteFieldsInit,
+    };
     let movers = match direction {
         MoverDirection::Gainers => stock_market_gainers().await?,
         MoverDirection::Losers => stock_market_losers().await?,
         MoverDirection::MostActive => stock_market_most_active().await?,
+        _ => {
+            return Err(
+                crate::providers::Operation::MarketMovers.not_supported(crate::Provider::Fmp)
+            );
+        }
     };
     Ok(movers
         .into_iter()
         .filter_map(|m| {
-            Some(MoverQuote {
+            Some(MoverQuote::from(MoverQuoteFieldsInit {
                 symbol: m.symbol?,
                 name: m.name,
                 price: m.price,
                 change: m.change,
                 change_percent: m.changes_percentage,
                 exchange: m.exchange,
-            })
+            }))
         })
         .collect())
 }
@@ -236,17 +245,17 @@ pub async fn fetch_market_movers_response(
 /// Fetch sector price/earnings ratios and map to provider-neutral entries.
 pub async fn fetch_sector_pe_response()
 -> Result<Vec<finance_query_models::market::performance::SectorPe>> {
-    use finance_query_models::market::performance::SectorPe;
+    use finance_query_models::market::performance::{SectorPe, SectorPeFieldsInit};
     Ok(sectors_pe()
         .await?
         .into_iter()
         .filter_map(|s| {
-            Some(SectorPe {
+            Some(SectorPe::from(SectorPeFieldsInit {
                 sector: s.sector?,
                 exchange: s.exchange,
                 pe: s.pe,
                 date: s.date,
-            })
+            }))
         })
         .collect())
 }
@@ -254,17 +263,17 @@ pub async fn fetch_sector_pe_response()
 /// Fetch industry price/earnings ratios and map to provider-neutral entries.
 pub async fn fetch_industry_pe_response()
 -> Result<Vec<finance_query_models::market::performance::IndustryPe>> {
-    use finance_query_models::market::performance::IndustryPe;
+    use finance_query_models::market::performance::{IndustryPe, IndustryPeFieldsInit};
     Ok(industries_pe()
         .await?
         .into_iter()
         .filter_map(|s| {
-            Some(IndustryPe {
+            Some(IndustryPe::from(IndustryPeFieldsInit {
                 industry: s.industry?,
                 exchange: s.exchange,
                 pe: s.pe,
                 date: s.date,
-            })
+            }))
         })
         .collect())
 }
@@ -277,7 +286,9 @@ fn group_history_by_date(
     rows: Vec<SectorPerformanceDTO>,
     limit: usize,
 ) -> Vec<finance_query_models::market::performance::SectorPerformanceHistory> {
-    use finance_query_models::market::performance::{SectorPerformance, SectorPerformanceHistory};
+    use finance_query_models::market::performance::{
+        SectorPerformance, SectorPerformanceHistory, SectorPerformanceHistoryFieldsInit,
+    };
 
     let mut by_date = std::collections::BTreeMap::<String, Vec<SectorPerformance>>::new();
     for row in rows {
@@ -294,9 +305,11 @@ fn group_history_by_date(
         .into_iter()
         .rev()
         .take(limit)
-        .map(|(date, sectors)| SectorPerformanceHistory {
-            date: Some(date),
-            sectors,
+        .map(|(date, sectors)| {
+            SectorPerformanceHistory::from(SectorPerformanceHistoryFieldsInit {
+                date: Some(date),
+                sectors,
+            })
         })
         .collect()
 }

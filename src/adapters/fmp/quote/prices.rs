@@ -28,9 +28,12 @@ fn quote_to_canonical(
     symbol: &str,
     quotes: &[FmpQuoteDTO],
 ) -> finance_query_models::quote::QuoteSummaryResponse {
-    use finance_query_models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+    use finance_query_models::quote::{
+        FormattedValue, Price, PriceFieldsInit, QuoteSummaryResponse,
+        QuoteSummaryResponseFieldsInit,
+    };
     let q = quotes.first();
-    let price = Price {
+    let price = Price::from(PriceFieldsInit {
         regular_market_price: q.and_then(|q| q.price).map(|v| FormattedValue {
             raw: Some(v),
             fmt: None,
@@ -69,12 +72,12 @@ fn quote_to_canonical(
             }),
         exchange: q.and_then(|q| q.exchange.clone()),
         ..Default::default()
-    };
-    QuoteSummaryResponse {
+    });
+    QuoteSummaryResponse::from(QuoteSummaryResponseFieldsInit {
         symbol: symbol.to_string(),
         price: Some(price),
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch a canonical quote summary for a symbol.

@@ -12,21 +12,23 @@ fn crypto_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> finance_query_models::crypto::CryptoQuote {
     let q = quotes.first();
-    finance_query_models::crypto::CryptoQuote {
-        id: id.to_string(),
-        symbol: q
-            .map(|q| q.symbol.clone())
-            .unwrap_or_else(|| id.to_uppercase()),
-        name: q.and_then(|q| q.name.clone()).unwrap_or_default(),
-        price: q.and_then(|q| q.price),
-        market_cap: q.and_then(|q| q.market_cap),
-        volume_24h: q.and_then(|q| q.volume),
-        change_24h: q.and_then(|q| q.change),
-        change_percent_24h: q.and_then(|q| q.changes_percentage),
-        high_24h: q.and_then(|q| q.day_high),
-        low_24h: q.and_then(|q| q.day_low),
-        circulating_supply: None,
-    }
+    finance_query_models::crypto::CryptoQuote::from(
+        finance_query_models::crypto::CryptoQuoteFieldsInit {
+            id: id.to_string(),
+            symbol: q
+                .map(|q| q.symbol.clone())
+                .unwrap_or_else(|| id.to_uppercase()),
+            name: q.and_then(|q| q.name.clone()).unwrap_or_default(),
+            price: q.and_then(|q| q.price),
+            market_cap: q.and_then(|q| q.market_cap),
+            volume_24h: q.and_then(|q| q.volume),
+            change_24h: q.and_then(|q| q.change),
+            change_percent_24h: q.and_then(|q| q.changes_percentage),
+            high_24h: q.and_then(|q| q.day_high),
+            low_24h: q.and_then(|q| q.day_low),
+            circulating_supply: None,
+        },
+    )
 }
 
 /// Fetch a canonical crypto quote.

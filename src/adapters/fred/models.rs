@@ -2,7 +2,10 @@
 //!
 //! Re-exports canonical types from `finance_query_models::economic`.
 
-pub use finance_query_models::economic::{MacroObservation, MacroSeries, TreasuryYield};
+pub use finance_query_models::economic::{
+    MacroObservation, MacroObservationFieldsInit, MacroSeries, MacroSeriesFieldsInit,
+    TreasuryYield, TreasuryYieldFieldsInit,
+};
 
 /// A single scheduled economic-data release date from the FRED
 /// `releases/dates` endpoint.

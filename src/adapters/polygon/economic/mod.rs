@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use finance_query_models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{
+    EconomicSeries, EconomicSeriesFieldsInit, MacroObservation, MacroObservationFieldsInit,
+};
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -103,7 +105,7 @@ pub async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicS
 
 /// Map economic data points to the canonical [`EconomicSeries`].
 fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>) -> EconomicSeries {
-    EconomicSeries {
+    EconomicSeries::from(EconomicSeriesFieldsInit {
         series_id: series_id.to_string(),
         title: None,
         units: None,
@@ -111,18 +113,20 @@ fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>)
         observations: results
             .unwrap_or_default()
             .into_iter()
-            .map(|d| MacroObservation {
-                date: d.date.unwrap_or_default(),
-                value: match series_id {
-                    "inflation" => d.cpi_year_over_year.or(d.cpi),
-                    "inflation_expectations" => d.market_10_year.or(d.model_10_year),
-                    "labor_market" => d.unemployment_rate,
-                    "treasury_yields" => d.yield_10_year,
-                    _ => None,
-                },
+            .map(|d| {
+                MacroObservation::from(MacroObservationFieldsInit {
+                    date: d.date.unwrap_or_default(),
+                    value: match series_id {
+                        "inflation" => d.cpi_year_over_year.or(d.cpi),
+                        "inflation_expectations" => d.market_10_year.or(d.model_10_year),
+                        "labor_market" => d.unemployment_rate,
+                        "treasury_yields" => d.yield_10_year,
+                        _ => None,
+                    },
+                })
             })
             .collect(),
-    }
+    })
 }
 
 #[cfg(test)]

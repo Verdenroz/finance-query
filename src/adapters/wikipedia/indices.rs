@@ -13,7 +13,10 @@
 
 use crate::error::{FinanceError, Result};
 use crate::scrapers::html;
-use finance_query_models::indices::{IndexConstituent, IndexConstituentChange, MajorIndex};
+use finance_query_models::indices::{
+    IndexConstituent, IndexConstituentChange, IndexConstituentChangeFieldsInit,
+    IndexConstituentFieldsInit, MajorIndex,
+};
 
 const SP500_ARTICLE: &str = "List_of_S%26P_500_companies";
 const SP500_CHANGES_ARTICLE: &str = "Historical_components_of_the_S%26P_500";
@@ -26,10 +29,8 @@ pub(crate) async fn fetch_index_constituents_response(
             let page = super::client()?.page_html(SP500_ARTICLE).await?;
             parse_sp500_constituents(&page)
         }
-        MajorIndex::Nasdaq100 | MajorIndex::DowJones => {
-            Err(crate::providers::Operation::IndexConstituents
-                .not_supported(crate::Provider::Wikipedia))
-        }
+        _ => Err(crate::providers::Operation::IndexConstituents
+            .not_supported(crate::Provider::Wikipedia)),
     }
 }
 
@@ -41,10 +42,8 @@ pub(crate) async fn fetch_index_constituent_changes_response(
             let page = super::client()?.page_html(SP500_CHANGES_ARTICLE).await?;
             parse_sp500_changes(&page)
         }
-        MajorIndex::Nasdaq100 | MajorIndex::DowJones => {
-            Err(crate::providers::Operation::IndexConstituentChanges
-                .not_supported(crate::Provider::Wikipedia))
-        }
+        _ => Err(crate::providers::Operation::IndexConstituentChanges
+            .not_supported(crate::Provider::Wikipedia)),
     }
 }
 
@@ -61,7 +60,7 @@ fn parse_sp500_constituents(page: &str) -> Result<Vec<IndexConstituent>> {
             let cells = html::find_all(row.inner, "td");
             (cells.len() >= 8).then(|| {
                 let text: Vec<String> = cells.iter().map(|c| c.text().trim().to_string()).collect();
-                IndexConstituent {
+                IndexConstituent::from(IndexConstituentFieldsInit {
                     symbol: text[0].clone(),
                     name: non_empty(&text[1]),
                     sector: non_empty(&text[2]),
@@ -70,7 +69,7 @@ fn parse_sp500_constituents(page: &str) -> Result<Vec<IndexConstituent>> {
                     date_first_added: non_empty(&text[5]),
                     cik: non_empty(&text[6]),
                     founded: non_empty(&text[7]),
-                }
+                })
             })
         })
         .collect();
@@ -100,14 +99,14 @@ fn parse_sp500_changes(page: &str) -> Result<Vec<IndexConstituentChange>> {
             let cells = html::find_all(row.inner, "td");
             (cells.len() >= 6).then(|| {
                 let text: Vec<String> = cells.iter().map(|c| c.text().trim().to_string()).collect();
-                IndexConstituentChange {
+                IndexConstituentChange::from(IndexConstituentChangeFieldsInit {
                     date: parse_wiki_date(&text[0]),
                     symbol: non_empty(&text[1]),
                     added_security: non_empty(&text[2]),
                     removed_ticker: non_empty(&text[3]),
                     removed_security: non_empty(&text[4]),
                     reason: non_empty(&text[5]),
-                }
+                })
             })
         })
         .collect();

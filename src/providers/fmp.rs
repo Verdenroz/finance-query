@@ -51,14 +51,16 @@ impl ChartProvider for FmpProvider {
         let (from, to) = range_dates(range);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(finance_query_models::chart::Chart {
-            symbol: symbol.to_string(),
-            meta: Default::default(),
-            candles,
-            interval: Some(interval),
-            range: Some(range),
-            provider_id: Some(Provider::Fmp),
-        })
+        Ok(finance_query_models::chart::Chart::from(
+            finance_query_models::chart::ChartFieldsInit {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles,
+                interval: Some(interval),
+                range: Some(range),
+                provider_id: Some(Provider::Fmp),
+            },
+        ))
     }
 
     async fn fetch_chart_range(
@@ -72,14 +74,16 @@ impl ChartProvider for FmpProvider {
         let to = timestamp_to_date_str(end);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(finance_query_models::chart::Chart {
-            symbol: symbol.to_string(),
-            meta: Default::default(),
-            candles,
-            interval: Some(interval),
-            range: None,
-            provider_id: Some(Provider::Fmp),
-        })
+        Ok(finance_query_models::chart::Chart::from(
+            finance_query_models::chart::ChartFieldsInit {
+                symbol: symbol.to_string(),
+                meta: Default::default(),
+                candles,
+                interval: Some(interval),
+                range: None,
+                provider_id: Some(Provider::Fmp),
+            },
+        ))
     }
 }
 

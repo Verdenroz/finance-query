@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::Deserialize;
 
 use crate::error::{FinanceError, Result};
-use finance_query_models::sentiment::{FearAndGreed, FearGreedLabel};
+use finance_query_models::sentiment::{FearAndGreed, FearAndGreedFieldsInit, FearGreedLabel};
 
 const BASE_URL: &str = "https://api.alternative.me/fng";
 
@@ -96,11 +96,11 @@ fn parse_entry(entry: FearAndGreedEntry) -> Result<FearAndGreed> {
                 context: format!("Cannot parse '{}' as i64", entry.timestamp),
             })?;
 
-    Ok(FearAndGreed {
+    Ok(FearAndGreed::from(FearAndGreedFieldsInit {
         value,
         classification,
         timestamp,
-    })
+    }))
 }
 
 fn parse_classification(s: &str) -> Result<FearGreedLabel> {

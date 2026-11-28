@@ -1,7 +1,7 @@
 //! `CRYPTO` capability for Binance public market data.
 
 use crate::error::Result;
-use finance_query_models::crypto::CryptoQuote;
+use finance_query_models::crypto::{CryptoQuote, CryptoQuoteFieldsInit};
 
 use super::models::Ticker24hr;
 use super::symbols;
@@ -21,7 +21,7 @@ pub(super) fn to_quote(id: &str, ticker: Ticker24hr) -> CryptoQuote {
 
     let num = |s: &str| s.parse::<f64>().ok();
 
-    CryptoQuote {
+    CryptoQuote::from(CryptoQuoteFieldsInit {
         id: id.to_string(),
         symbol: base,
         name,
@@ -33,7 +33,7 @@ pub(super) fn to_quote(id: &str, ticker: Ticker24hr) -> CryptoQuote {
         high_24h: num(&ticker.high_price),
         low_24h: num(&ticker.low_price),
         circulating_supply: None,
-    }
+    })
 }
 
 /// Fetch a Binance spot quote for `id` priced in `vs_currency`.

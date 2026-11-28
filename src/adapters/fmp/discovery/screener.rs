@@ -102,12 +102,12 @@ pub async fn fetch_symbol_search_response(
     query: &str,
     limit: u32,
 ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
-    use finance_query_models::discovery::reference::SymbolMatch;
+    use finance_query_models::discovery::reference::{SymbolMatch, SymbolMatchFieldsInit};
     let results = symbol_search(query, Some(limit), None).await?;
     Ok(results
         .into_iter()
         .filter_map(|r| {
-            Some(SymbolMatch {
+            Some(SymbolMatch::from(SymbolMatchFieldsInit {
                 symbol: r.symbol?,
                 id: None,
                 name: r.name,
@@ -121,7 +121,7 @@ pub async fn fetch_symbol_search_response(
                 image: None,
                 ipo_date: None,
                 delisted_date: None,
-            })
+            }))
         })
         .collect())
 }
@@ -169,14 +169,14 @@ fn screener_query(filters: &ScreenerFilters) -> Vec<(&'static str, String)> {
 pub async fn fetch_screener_response(
     filters: &finance_query_models::discovery::reference::ScreenerFilters,
 ) -> Result<Vec<finance_query_models::discovery::reference::ScreenerMatch>> {
-    use finance_query_models::discovery::reference::ScreenerMatch;
+    use finance_query_models::discovery::reference::{ScreenerMatch, ScreenerMatchFieldsInit};
     let owned = screener_query(filters);
     let params: Vec<(&str, &str)> = owned.iter().map(|(k, v)| (*k, v.as_str())).collect();
     let results = stock_screener(&params).await?;
     Ok(results
         .into_iter()
         .filter_map(|r| {
-            Some(ScreenerMatch {
+            Some(ScreenerMatch::from(ScreenerMatchFieldsInit {
                 symbol: r.symbol?,
                 name: r.company_name,
                 price: r.price,
@@ -190,7 +190,7 @@ pub async fn fetch_screener_response(
                 is_etf: r.is_etf,
                 is_actively_trading: r.is_actively_trading,
                 is_fund: r.is_fund,
-            })
+            }))
         })
         .collect())
 }

@@ -170,28 +170,34 @@ fn dto_to_series(
     func_name: &str,
     dto: EconomicSeriesDTO,
 ) -> finance_query_models::economic::EconomicSeries {
-    finance_query_models::economic::EconomicSeries {
-        series_id: func_name.to_string(),
-        title: Some(dto.name),
-        units: if dto.unit.is_empty() {
-            None
-        } else {
-            Some(dto.unit)
+    finance_query_models::economic::EconomicSeries::from(
+        finance_query_models::economic::EconomicSeriesFieldsInit {
+            series_id: func_name.to_string(),
+            title: Some(dto.name),
+            units: if dto.unit.is_empty() {
+                None
+            } else {
+                Some(dto.unit)
+            },
+            frequency: if dto.interval.is_empty() {
+                None
+            } else {
+                Some(dto.interval)
+            },
+            observations: dto
+                .data
+                .into_iter()
+                .map(|dp| {
+                    finance_query_models::economic::MacroObservation::from(
+                        finance_query_models::economic::MacroObservationFieldsInit {
+                            date: dp.date,
+                            value: dp.value,
+                        },
+                    )
+                })
+                .collect(),
         },
-        frequency: if dto.interval.is_empty() {
-            None
-        } else {
-            Some(dto.interval)
-        },
-        observations: dto
-            .data
-            .into_iter()
-            .map(|dp| finance_query_models::economic::MacroObservation {
-                date: dp.date,
-                value: dp.value,
-            })
-            .collect(),
-    }
+    )
 }
 
 #[cfg(test)]

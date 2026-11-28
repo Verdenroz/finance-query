@@ -13,7 +13,7 @@ use chrono::{Datelike, NaiveDate, Utc};
 
 use crate::adapters::edgar::build_client;
 use crate::error::{FinanceError, Result};
-use finance_query_models::filings::FailToDeliver;
+use finance_query_models::filings::{FailToDeliver, FailToDeliverFieldsInit};
 
 const SEC_WWW_BASE: &str = "https://www.sec.gov";
 
@@ -70,14 +70,14 @@ fn parse_rows(text: &str, symbol: &str) -> Vec<FailToDeliver> {
             let description = cols.next()?;
             let price = cols.next()?;
             let name = description.trim();
-            Some(FailToDeliver {
+            Some(FailToDeliver::from(FailToDeliverFieldsInit {
                 symbol: Some(sym.to_string()),
                 date: format_settlement_date(date),
                 quantity: quantity.trim().parse().ok(),
                 price: price.trim().parse().ok(),
                 name: (!name.is_empty()).then(|| name.to_string()),
                 description: None,
-            })
+            }))
         })
         .collect()
 }

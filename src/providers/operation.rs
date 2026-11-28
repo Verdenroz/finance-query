@@ -199,6 +199,7 @@ impl Operation {
             CalendarKind::Economic => Self::EconomicCalendar,
             CalendarKind::MarketHoliday => Self::HolidayCalendar,
             CalendarKind::MarketStatus => Self::MarketStatus,
+            _ => Self::EarningsCalendar,
         }
     }
 

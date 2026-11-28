@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::polygon::build_client;
 use crate::error::{FinanceError, Result};
-use finance_query_models::quote::snapshot::{AssetClass, MarketSnapshot};
+use finance_query_models::quote::snapshot::{AssetClass, MarketSnapshot, MarketSnapshotFieldsInit};
 
 /// Polygon caps `ticker.any_of` at 250 symbols per request.
 const MAX_SYMBOLS: usize = 250;
@@ -133,7 +133,7 @@ fn parse_asset_class(raw: Option<&str>) -> Option<AssetClass> {
 
 pub(crate) fn to_market_snapshot(dto: UnifiedSnapshotDTO) -> MarketSnapshot {
     let session = dto.session;
-    MarketSnapshot {
+    MarketSnapshot::from(MarketSnapshotFieldsInit {
         symbol: dto.ticker,
         name: dto.name,
         asset_class: parse_asset_class(dto.asset_type.as_deref()),
@@ -151,7 +151,7 @@ pub(crate) fn to_market_snapshot(dto: UnifiedSnapshotDTO) -> MarketSnapshot {
         change_percent: session.and_then(|s| s.change_percent),
         error: dto.error,
         message: dto.message,
-    }
+    })
 }
 
 /// Fetch canonical cross-market snapshots for a mixed list of symbols.

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
 use crate::error::{FinanceError, Result};
-use finance_query_models::fundamentals::ShareFloat;
+use finance_query_models::fundamentals::{ShareFloat, ShareFloatFieldsInit};
 
 /// Share float entry (`/stable/shares-float`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,13 +46,13 @@ fn date_only(raw: Option<String>) -> Option<String> {
 }
 
 pub(crate) fn to_share_float(dto: SharesFloatDTO, symbol: &str) -> ShareFloat {
-    ShareFloat {
+    ShareFloat::from(ShareFloatFieldsInit {
         symbol: dto.symbol.or_else(|| Some(symbol.to_string())),
         float_shares: dto.float_shares,
         outstanding_shares: dto.outstanding_shares,
         float_percent: dto.free_float,
         date: date_only(dto.date),
-    }
+    })
 }
 
 /// Fetch the canonical share float for a symbol.

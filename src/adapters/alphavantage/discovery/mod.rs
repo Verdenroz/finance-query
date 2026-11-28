@@ -4,10 +4,12 @@ use std::collections::BTreeSet;
 
 use crate::adapters::alphavantage::models::{ListingEntryDTO, SymbolMatchDTO};
 use crate::error::Result;
-use finance_query_models::discovery::reference::{ExchangeInfo, SymbolMatch};
+use finance_query_models::discovery::reference::{
+    ExchangeInfo, ExchangeInfoFieldsInit, SymbolMatch, SymbolMatchFieldsInit,
+};
 
 pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
-    SymbolMatch {
+    SymbolMatch::from(SymbolMatchFieldsInit {
         symbol: dto.symbol,
         id: None,
         name: Some(dto.name),
@@ -21,7 +23,7 @@ pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
         image: None,
         ipo_date: None,
         delisted_date: None,
-    }
+    })
 }
 
 /// Search Alpha Vantage's symbol universe.
@@ -39,7 +41,7 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         .status
         .as_deref()
         .map(|s| s.eq_ignore_ascii_case("active"));
-    SymbolMatch {
+    SymbolMatch::from(SymbolMatchFieldsInit {
         symbol: dto.symbol,
         id: None,
         name: dto.name,
@@ -52,7 +54,7 @@ pub(crate) fn to_symbol_match_from_listing(dto: ListingEntryDTO) -> SymbolMatch 
         image: None,
         ipo_date: dto.ipo_date,
         delisted_date: dto.delisting_date,
-    }
+    })
 }
 
 /// Derive the distinct venue list from the listing-status universe.
@@ -69,9 +71,11 @@ pub(crate) fn listings_to_exchanges(listings: Vec<ListingEntryDTO>) -> Vec<Excha
 
     names
         .into_iter()
-        .map(|name| ExchangeInfo {
-            name: Some(name),
-            ..Default::default()
+        .map(|name| {
+            ExchangeInfo::from(ExchangeInfoFieldsInit {
+                name: Some(name),
+                ..Default::default()
+            })
         })
         .collect()
 }

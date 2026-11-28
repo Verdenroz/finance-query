@@ -146,19 +146,21 @@ fn series_to_quote(series: CryptoTimeSeriesDTO) -> finance_query_models::crypto:
             (None, None, None, None, None, None)
         };
 
-    finance_query_models::crypto::CryptoQuote {
-        id: series.symbol.clone(),
-        symbol: series.symbol,
-        name: String::new(),
-        price,
-        market_cap: None,
-        volume_24h,
-        change_24h,
-        change_percent_24h,
-        high_24h,
-        low_24h,
-        circulating_supply: None,
-    }
+    finance_query_models::crypto::CryptoQuote::from(
+        finance_query_models::crypto::CryptoQuoteFieldsInit {
+            id: series.symbol.clone(),
+            symbol: series.symbol,
+            name: String::new(),
+            price,
+            market_cap: None,
+            volume_24h,
+            change_24h,
+            change_percent_24h,
+            high_24h,
+            low_24h,
+            circulating_supply: None,
+        },
+    )
 }
 
 #[cfg(test)]

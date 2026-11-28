@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use finance_query_models::fundamentals::{EarningsSurprise, GradingAction};
+use finance_query_models::fundamentals::{
+    EarningsSurprise, EarningsSurpriseFieldsInit, GradingAction, GradingActionFieldsInit,
+};
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::Period;
@@ -184,14 +186,14 @@ fn to_earnings_surprise(dto: EarningsSurpriseDTO) -> EarningsSurprise {
         (Some(s), Some(estimated)) if estimated != 0.0 => Some(s / estimated.abs() * 100.0),
         _ => None,
     };
-    EarningsSurprise {
+    EarningsSurprise::from(EarningsSurpriseFieldsInit {
         symbol: dto.symbol,
         date: dto.date,
         actual_eps: dto.actual_earning_result,
         estimated_eps: dto.estimated_earning,
         surprise,
         surprise_percent,
-    }
+    })
 }
 
 /// Fetch canonical earnings-surprise history for a symbol.
@@ -204,13 +206,13 @@ pub async fn fetch_earnings_surprises_response(symbol: &str) -> Result<Vec<Earni
 }
 
 fn to_grading_action(dto: StockGradeDTO) -> GradingAction {
-    GradingAction {
+    GradingAction::from(GradingActionFieldsInit {
         symbol: dto.symbol,
         date: dto.date,
         grading_company: dto.grading_company,
         previous_grade: dto.previous_grade,
         new_grade: dto.new_grade,
-    }
+    })
 }
 
 /// Fetch canonical grade-action history for a symbol.

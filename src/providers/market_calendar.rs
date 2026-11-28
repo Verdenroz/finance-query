@@ -10,7 +10,9 @@ use super::{CalendarProvider, ProviderAdapter, ProviderCore};
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::Result;
 use crate::providers::Operation;
-use finance_query_models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+use finance_query_models::calendar::market::{
+    CalendarDetail, CalendarKind, MarketCalendarEntry, MarketCalendarEntryFieldsInit,
+};
 
 pub(crate) struct LocalMarketCalendarProvider;
 
@@ -79,7 +81,7 @@ fn holiday_entry(
     status: &'static str,
     close: Option<&'static str>,
 ) -> MarketCalendarEntry {
-    MarketCalendarEntry {
+    MarketCalendarEntry::from(MarketCalendarEntryFieldsInit {
         symbol: None,
         date: Some(date.format("%Y-%m-%d").to_string()),
         detail: CalendarDetail::MarketHoliday {
@@ -89,7 +91,7 @@ fn holiday_entry(
             open: None,
             close: close.map(str::to_string),
         },
-    }
+    })
 }
 
 type Holidays = Vec<(NaiveDate, &'static str)>;

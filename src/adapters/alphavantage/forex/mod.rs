@@ -96,17 +96,19 @@ fn rate_to_canonical(rate: ExchangeRateDTO) -> finance_query_models::forex::Fore
         rate.from_currency_code.to_uppercase(),
         rate.to_currency_code.to_uppercase()
     );
-    finance_query_models::forex::ForexQuote {
-        symbol,
-        base_currency: Some(rate.from_currency_code),
-        quote_currency: Some(rate.to_currency_code),
-        bid: Some(rate.bid_price),
-        ask: Some(rate.ask_price),
-        price: Some(rate.bid_price),
-        change: None,
-        change_percent: None,
-        timestamp,
-    }
+    finance_query_models::forex::ForexQuote::from(
+        finance_query_models::forex::ForexQuoteFieldsInit {
+            symbol,
+            base_currency: Some(rate.from_currency_code),
+            quote_currency: Some(rate.to_currency_code),
+            bid: Some(rate.bid_price),
+            ask: Some(rate.ask_price),
+            price: Some(rate.bid_price),
+            change: None,
+            change_percent: None,
+            timestamp,
+        },
+    )
 }
 
 /// Parse an Alpha Vantage datetime string (e.g. "2024-01-15 14:30:00") to a Unix timestamp.

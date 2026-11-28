@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use chrono::NaiveDate;
 
-use super::super::models::TreasuryYield;
+use super::super::models::{TreasuryYield, TreasuryYieldFieldsInit};
 use crate::error::{FinanceError, Result};
 use tracing::info;
 
@@ -68,7 +68,7 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
 
         let parse_col = |i: usize| -> Option<f64> { record.get(i)?.trim().parse::<f64>().ok() };
 
-        yields.push(TreasuryYield {
+        yields.push(TreasuryYield::from(TreasuryYieldFieldsInit {
             date,
             y1m: parse_col(1),
             y2m: parse_col(2),
@@ -83,7 +83,7 @@ fn parse_csv(text: &str, year: u32) -> Result<Vec<TreasuryYield>> {
             y10: parse_col(11),
             y20: parse_col(12),
             y30: parse_col(13),
-        });
+        }));
     }
 
     yields.sort_by(|a, b| a.date.cmp(&b.date));

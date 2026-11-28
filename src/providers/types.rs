@@ -20,9 +20,11 @@ pub(crate) fn recommendation_from_similar(
         items
     };
 
-    finance_query_models::corporate::recommendation::Recommendation {
-        symbol: symbol.into(),
-        recommendations,
-        provider_id,
-    }
+    finance_query_models::corporate::recommendation::Recommendation::from(
+        finance_query_models::corporate::recommendation::RecommendationFieldsInit {
+            symbol: symbol.into(),
+            recommendations,
+            provider_id,
+        },
+    )
 }

@@ -7,7 +7,9 @@ use regex::Regex;
 
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
 use crate::error::{FinanceError, Result};
-use finance_query_models::filings::{FilingSection, FilingSectionForm, RiskFactor};
+use finance_query_models::filings::{
+    FilingSection, FilingSectionFieldsInit, FilingSectionForm, RiskFactor, RiskFactorFieldsInit,
+};
 
 /// Block-level tags become line breaks; inline tags are stripped without breaks
 /// to keep words split across them adjacent.
@@ -115,10 +117,10 @@ fn slice_sections(text: &str, heading: &Regex) -> Vec<FilingSection> {
                 .unwrap_or(text.len());
             let content_end = matches.get(i + 1).map(|(_, s)| *s).unwrap_or(text.len());
             let content = text[heading_end..content_end].trim();
-            FilingSection {
+            FilingSection::from(FilingSectionFieldsInit {
                 section: Some(format!("item_{}", label.to_lowercase().replace('.', "_"))),
                 content: (!content.is_empty()).then(|| content.to_string()),
-            }
+            })
         })
         .collect()
 }
@@ -147,9 +149,14 @@ pub async fn fetch_filing_sections_response(
     let client = build_client()?;
     let index = client.filing_index(accession_number).await?;
 
-    let form_str = match form {
-        FilingSectionForm::TenK => "10-K",
-        FilingSectionForm::EightK => "8-K",
+    let (form_str, heading) = match form {
+        FilingSectionForm::TenK => ("10-K", &*TEN_K_ITEM),
+        FilingSectionForm::EightK => ("8-K", &*EIGHT_K_ITEM),
+        _ => {
+            return Err(
+                crate::providers::Operation::FilingSections.not_supported(crate::Provider::Edgar)
+            );
+        }
     };
     let filename =
         primary_document_name(&index).ok_or_else(|| FinanceError::ResponseStructureError {
@@ -163,10 +170,6 @@ pub async fn fetch_filing_sections_response(
     let bytes = client.get_document(&url).await?;
     let text = html_to_text(&String::from_utf8_lossy(&bytes));
 
-    let heading = match form {
-        FilingSectionForm::TenK => &*TEN_K_ITEM,
-        FilingSectionForm::EightK => &*EIGHT_K_ITEM,
-    };
     Ok(slice_sections(&text, heading))
 }
 
@@ -186,12 +189,12 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
     for line in content.lines().map(str::trim).filter(|l| !l.is_empty()) {
         if looks_like_heading(line) {
             if title.is_some() || !body.is_empty() {
-                factors.push(RiskFactor {
+                factors.push(RiskFactor::from(RiskFactorFieldsInit {
                     title: title.take(),
                     text: (!body.is_empty()).then(|| body.trim().to_string()),
                     category: None,
                     filing_date: filing_date.map(str::to_string),
-                });
+                }));
                 body.clear();
             }
             title = Some(line.to_string());
@@ -203,12 +206,12 @@ fn split_risk_factors(content: &str, filing_date: Option<&str>) -> Vec<RiskFacto
         }
     }
     if title.is_some() || !body.is_empty() {
-        factors.push(RiskFactor {
+        factors.push(RiskFactor::from(RiskFactorFieldsInit {
             title,
             text: (!body.is_empty()).then(|| body.trim().to_string()),
             category: None,
             filing_date: filing_date.map(str::to_string),
-        });
+        }));
     }
     factors
 }

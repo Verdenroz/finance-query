@@ -157,13 +157,15 @@ pub(crate) async fn fetch_earnings_transcript_response(
     let av_quarter = format!("{year}Q{}", quarter.trim_start_matches(['Q', 'q']));
     let dto = earnings_call_transcript(symbol, &av_quarter).await?;
     Ok(
-        finance_query_models::corporate::earnings_transcript::EarningsTranscript {
-            symbol: Some(dto.symbol),
-            quarter: Some(quarter.to_string()),
-            year: Some(year),
-            date: None,
-            text: dto.transcript,
-        },
+        finance_query_models::corporate::earnings_transcript::EarningsTranscript::from(
+            finance_query_models::corporate::earnings_transcript::EarningsTranscriptFieldsInit {
+                symbol: Some(dto.symbol),
+                quarter: Some(quarter.to_string()),
+                year: Some(year),
+                date: None,
+                text: dto.transcript,
+            },
+        ),
     )
 }
 
@@ -230,15 +232,19 @@ pub async fn fetch_news_response(
     let articles = news_sentiment(Some(&[symbol]), None, Some(50)).await?;
     Ok(articles
         .into_iter()
-        .map(|a| finance_query_models::corporate::news::News {
-            title: a.title,
-            link: a.url,
-            source: a.source,
-            img: String::new(),
-            time: a.time_published,
-            provider_id: Some(crate::Provider::AlphaVantage),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|a| {
+            finance_query_models::corporate::news::News::from(
+                finance_query_models::corporate::news::NewsFieldsInit {
+                    title: a.title,
+                    link: a.url,
+                    source: a.source,
+                    img: String::new(),
+                    time: a.time_published,
+                    provider_id: Some(crate::Provider::AlphaVantage),
+                    #[cfg(feature = "sentiment")]
+                    sentiment: None,
+                },
+            )
         })
         .collect())
 }
@@ -321,21 +327,26 @@ fn movers_to_canonical(
     movers: crate::adapters::alphavantage::models::TopMoversDTO,
     direction: finance_query_models::market::performance::MoverDirection,
 ) -> Vec<finance_query_models::market::performance::MoverQuote> {
-    use finance_query_models::market::performance::{MoverDirection, MoverQuote};
+    use finance_query_models::market::performance::{
+        MoverDirection, MoverQuote, MoverQuoteFieldsInit,
+    };
 
     let list = match direction {
         MoverDirection::Gainers => movers.top_gainers,
         MoverDirection::Losers => movers.top_losers,
         MoverDirection::MostActive => movers.most_actively_traded,
+        _ => Vec::new(),
     };
     list.into_iter()
-        .map(|t| MoverQuote {
-            symbol: t.ticker,
-            name: None,
-            price: strip_percent(&t.price),
-            change: strip_percent(&t.change_amount),
-            change_percent: strip_percent(&t.change_percentage),
-            exchange: None,
+        .map(|t| {
+            MoverQuote::from(MoverQuoteFieldsInit {
+                symbol: t.ticker,
+                name: None,
+                price: strip_percent(&t.price),
+                change: strip_percent(&t.change_amount),
+                change_percent: strip_percent(&t.change_percentage),
+                exchange: None,
+            })
         })
         .collect()
 }

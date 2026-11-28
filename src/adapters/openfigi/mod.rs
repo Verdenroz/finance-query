@@ -22,7 +22,9 @@ use std::time::Duration;
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 use client::OpenFigiClient;
-use finance_query_models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
+use finance_query_models::discovery::figi::{
+    MappingFilter, SecurityIdKind, SecurityMapping, SecurityMappingFieldsInit,
+};
 use models::{FigiRecord, MappingJob};
 
 const OPENFIGI_ANONYMOUS_RATE_PER_SEC: f64 = 25.0 / 60.0;
@@ -61,7 +63,7 @@ fn client() -> Result<OpenFigiClient> {
 
 /// Map an OpenFIGI record onto the public [`SecurityMapping`].
 fn to_mapping(record: FigiRecord) -> SecurityMapping {
-    SecurityMapping {
+    SecurityMapping::from(SecurityMappingFieldsInit {
         figi: record.figi,
         ticker: record.ticker,
         name: record.name,
@@ -70,7 +72,7 @@ fn to_mapping(record: FigiRecord) -> SecurityMapping {
         share_class_figi: record.share_class_figi,
         security_type: record.security_type,
         market_sector: record.market_sector,
-    }
+    })
 }
 
 /// Resolve one identifier to every instrument carrying it.

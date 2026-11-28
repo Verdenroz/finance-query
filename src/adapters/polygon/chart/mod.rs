@@ -5,7 +5,7 @@ use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 use crate::{Interval, TimeRange};
 use chrono::Datelike;
-use finance_query_models::chart::{Candle, Chart};
+use finance_query_models::chart::{Candle, Chart, ChartFieldsInit};
 
 use super::build_client;
 use super::models::*;
@@ -174,14 +174,14 @@ pub async fn fetch_chart_response(
     let (mult, timespan) = interval_to_polygon(interval);
     let aggs = stock_aggregates(symbol, mult, timespan, &from, &to, None).await?;
     let candles = aggs_to_candles(aggs);
-    Ok(Chart {
+    Ok(Chart::from(ChartFieldsInit {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles,
         interval: Some(interval),
         range: Some(range),
         provider_id: Some(Provider::Polygon),
-    })
+    }))
 }
 
 /// Fetch chart data (canonical) for a stock ticker by explicit date range.
@@ -196,14 +196,14 @@ pub async fn fetch_chart_range_response(
     let (mult, timespan) = interval_to_polygon(interval);
     let aggs = stock_aggregates(symbol, mult, timespan, &from, &to, None).await?;
     let candles = aggs_to_candles(aggs);
-    Ok(Chart {
+    Ok(Chart::from(ChartFieldsInit {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles,
         interval: None,
         range: None,
         provider_id: Some(Provider::Polygon),
-    })
+    }))
 }
 
 /// Fetch grouped daily bars for the entire stock market on a given date.
