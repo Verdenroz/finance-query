@@ -61,3 +61,18 @@ pub async fn translate<T>(_value: &mut T, _lang: Option<&str>) -> Result<(), Ser
 pub fn lang_key(lang: Option<&str>) -> &str {
     lang.unwrap_or("en")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::lang_key;
+
+    #[test]
+    fn untranslated_requests_share_the_en_key() {
+        assert_eq!(lang_key(None), "en");
+    }
+
+    #[test]
+    fn explicit_language_is_kept() {
+        assert_eq!(lang_key(Some("fr")), "fr");
+    }
+}

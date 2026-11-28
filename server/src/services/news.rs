@@ -96,3 +96,30 @@ fn truncate_array(mut value: serde_json::Value, count: usize) -> serde_json::Val
     }
     value
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn truncates_arrays_to_count() {
+        assert_eq!(truncate_array(json!([1, 2, 3]), 2), json!([1, 2]));
+    }
+
+    #[test]
+    fn count_above_length_keeps_everything() {
+        assert_eq!(truncate_array(json!([1, 2]), 10), json!([1, 2]));
+    }
+
+    #[test]
+    fn zero_count_empties_the_array() {
+        assert_eq!(truncate_array(json!([1, 2]), 0), json!([]));
+    }
+
+    #[test]
+    fn non_arrays_pass_through() {
+        assert_eq!(truncate_array(json!({"a": 1}), 0), json!({"a": 1}));
+    }
+}
