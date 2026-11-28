@@ -199,8 +199,15 @@ Capabilities supported by each provider. Providers that don't support a given ca
 <!-- soothfast:claim finance_query::dispatch_select.alloc.allocs <= 0 -->
 <!-- soothfast:claim finance_query::dispatch_select.perfcnt.instructions < 100 -->
 - Filtering a registry of capability bitflags for one capability makes **zero
-  allocations** and costs **under 100 CPU instructions**. It measures
-  only that filter over a local list, not a full dispatch.
+  allocations** and costs **under 100 CPU instructions**. It measures only that
+  filter over a local list, not a dispatch.
+
+<!-- soothfast:claim finance_query::dispatch_fallthrough.alloc.allocs <= 10 -->
+<!-- soothfast:claim finance_query::dispatch_fallthrough.perfcnt.instructions < 70000 -->
+<!-- soothfast:claim finance_query::dispatch_fallthrough_polls.asyncexec.polls <= 1 -->
+- A quote whose first provider lacks the capability falls through to the next
+  one in **under 50,000 CPU instructions** with **at most 10 allocations**,
+  and the future completes in a single poll.
 
 This table is printed by the program below rather than maintained by hand, so
 it cannot fall behind `Provider::capabilities()`.

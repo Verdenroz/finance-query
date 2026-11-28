@@ -1,3 +1,4 @@
+mod adapter_coupling;
 mod backtesting_margin_leverage;
 mod custom_provider;
 mod custom_stock_adapter;

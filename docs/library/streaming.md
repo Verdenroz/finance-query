@@ -35,6 +35,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 <!-- soothfast:claim finance_query::stream_deserialize.perfcnt.instructions < 21000 -->
 - Decoding a JSON tick back into a `PriceUpdate` also stays **under 21 thousand CPU instructions**.
 
+<!-- soothfast:claim finance_query::stream_decode_pricing_captured.perfcnt.instructions < 7000 -->
+<!-- soothfast:claim finance_query::stream_decode_pricing_captured.alloc.allocs <= 5 -->
+- Decoding a base64 protobuf frame captured from Yahoo's WebSocket into a
+  `PriceUpdate` takes **under 7 thousand CPU instructions** and **at most 5 allocations**.
+
 ## Subscribing
 
 ### Simple Subscribe
