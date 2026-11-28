@@ -23,9 +23,9 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: Verdenroz/soothfast/.github/workflows/run.yml@78ff082afdf6139b61731e73aede79bfc13a15e9 # master, after v0.9.1
+    uses: Verdenroz/soothfast/.github/workflows/run.yml@b01b08e2127c3dab574bae40086f6e8b2efe377e # v0.10.0
     with:
-      soothfast_ref: "78ff082afdf6139b61731e73aede79bfc13a15e9"
+      soothfast_ref: "b01b08e2127c3dab574bae40086f6e8b2efe377e"
       bot: true
   pages:
     needs: soothfast
@@ -33,4 +33,4 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    uses: Verdenroz/soothfast/.github/workflows/pages.yml@78ff082afdf6139b61731e73aede79bfc13a15e9 # master, after v0.9.1
+    uses: Verdenroz/soothfast/.github/workflows/pages.yml@b01b08e2127c3dab574bae40086f6e8b2efe377e # v0.10.0
