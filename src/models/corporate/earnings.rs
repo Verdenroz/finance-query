@@ -43,6 +43,10 @@ pub struct EarningsChart {
 
     /// Current quarter estimate date
     #[serde(default)]
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(rename = "current_quarter_estimate_quarter")
+    )]
     pub current_quarter_estimate_date: Option<String>,
 
     /// Current quarter estimate year

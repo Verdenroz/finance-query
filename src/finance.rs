@@ -592,8 +592,10 @@ pub struct InsiderTransaction {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Filing date (YYYY-MM-DD).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub filing_date: Option<String>,
     /// Transaction date (YYYY-MM-DD).
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub transaction_date: Option<String>,
     /// Reporting person name.
     pub reporting_name: Option<String>,
@@ -654,6 +656,7 @@ pub struct AnalystEstimate {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Estimate date.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Estimated revenue low.
     pub estimated_revenue_low: Option<f64>,
@@ -725,6 +728,7 @@ pub struct AnalystRecommendation {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Recommendation date.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub date: Option<String>,
     /// Number of buy ratings.
     pub analyst_ratings_buy: Option<i32>,
@@ -845,6 +849,7 @@ pub struct EarningsCalendarEntry {
     /// Company name.
     pub name: Option<String>,
     /// Report date.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub report_date: Option<String>,
     /// Fiscal date ending.
     pub fiscal_date_ending: Option<String>,
@@ -881,6 +886,7 @@ pub struct IpoCalendarEntry {
     /// Company name.
     pub name: Option<String>,
     /// IPO date.
+    #[cfg_attr(feature = "dataframe", dataframe(date))]
     pub ipo_date: Option<String>,
     /// Price range (e.g., `"$15-$17"`).
     pub price_range: Option<String>,
