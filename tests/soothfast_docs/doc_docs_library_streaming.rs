@@ -200,10 +200,10 @@ fn doc_block_line_241() {
     }
 }
 
-// line 257: compile-only (no_run)
+// line 262: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_257() {
+fn doc_block_line_262() {
     use finance_query::streaming::{AlertCondition, AlertExt, AlertRule, PriceStream};
     use futures::StreamExt;
 
@@ -223,11 +223,11 @@ fn doc_block_line_257() {
     }
 }
 
-// line 298: compile-only (no_run)
+// line 303: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_298() {
+fn doc_block_line_303() {
     use finance_query::streaming::DepthStream;
     use futures::StreamExt;
 
@@ -242,11 +242,11 @@ fn doc_block_line_298() {
     }
 }
 
-// line 333: compile-only (no_run)
+// line 338: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_333() {
+fn doc_block_line_338() {
     use finance_query::streaming::TradeStream;
     use futures::StreamExt;
 
@@ -262,11 +262,11 @@ fn doc_block_line_333() {
     }
 }
 
-// line 369: compile-only (no_run)
+// line 374: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_369() {
+fn doc_block_line_374() {
     use finance_query::streaming::OptionsChainStream;
     use futures::StreamExt;
 
@@ -281,11 +281,11 @@ fn doc_block_line_369() {
     }
 }
 
-// line 413: compile-only (no_run)
+// line 418: compile-only (no_run)
 #[cfg(feature = "fred")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_413() {
+fn doc_block_line_418() {
     use finance_query::streaming::EconomicStream;
     use futures::StreamExt;
 
