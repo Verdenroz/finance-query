@@ -1623,7 +1623,7 @@ Caching is **on by default** and lasts as long as the `Ticker` handle lives. Fet
 
 Use `.cache(Duration)` to bound how long a response is reused, or `.no_cache()` to fetch fresh on every call.
 
-<!-- soothfast:claim finance_query::ticker_quote_polls.asyncexec.polls <= 1 -->
+<!-- soothfast:claim finance_query::ticker_quote_polls_cold.asyncexec.polls <= 1 -->
 - Building a `Ticker`, fetching a quote through the provider and repeating it
   from the cache completes in a single poll of the future, so neither path
   yields back to the executor.
