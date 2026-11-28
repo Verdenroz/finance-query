@@ -17,8 +17,8 @@ use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
-pub(super) const FISCALDATA_BASE: &str =
-    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service";
+pub(super) const FISCALDATA_ORIGIN: &str = "https://api.fiscaldata.treasury.gov";
+pub(super) const FISCALDATA_PATH: &str = "/services/api/fiscal_service";
 
 /// How this API names itself in errors.
 const API: &str = "US Treasury FiscalData";

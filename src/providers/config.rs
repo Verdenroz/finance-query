@@ -90,6 +90,32 @@ impl Providers {
             .with_provider_set(Arc::clone(&self.set))
     }
 
+    /// Run `f` with this instance's API keys and endpoints applied to code that
+    /// takes no [`Providers`]: the [`finance`](crate::finance) functions,
+    /// [`Ticker::new`](crate::Ticker::new) and [`Ticker::builder`](crate::Ticker::builder),
+    /// and [`Tickers::new`](crate::Tickers::new) and [`Tickers::builder`](crate::Tickers::builder).
+    ///
+    /// The scope does not cross [`tokio::spawn`]. A handle built inside it keeps
+    /// the origin it captured at construction, so it keeps working after the
+    /// scope ends.
+    ///
+    /// ```no_run
+    /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Provider, Providers, finance};
+    ///
+    /// let providers = Providers::builder()
+    ///     .endpoint(Provider::Yahoo, "http://127.0.0.1:8080")
+    ///     .build()
+    ///     .await?;
+    /// let trending = providers.scope(finance::trending(None)).await?;
+    /// # let _ = trending;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn scope<F: std::future::Future>(&self, f: F) -> F::Output {
+        self.set.scope(f).await
+    }
+
     /// Create a [`TickersBuilder`](crate::TickersBuilder) pre-wired to this provider set.
     ///
     /// The returned builder accepts the same optional configuration as
@@ -346,7 +372,8 @@ impl ProvidersBuilder {
     ///
     /// Only HTTPS and loopback HTTP origins are accepted, and continuations cannot
     /// leave the origin. No global endpoint is modified. Requires an explicit
-    /// [`api_key`](Self::api_key) and a provider whose adapter
+    /// [`api_key`](Self::api_key), except for the keyless FiscalData, DefiLlama
+    /// and Yahoo, and a provider whose adapter
     /// [accepts an endpoint](crate::ProviderAdapter::accepts_endpoint).
     pub fn endpoint(mut self, provider: Provider, base_url: impl Into<String>) -> Self {
         self.endpoints.insert(provider.as_str(), base_url.into());
@@ -497,8 +524,14 @@ impl ProvidersBuilder {
     }
 
     /// Build the [`Providers`] instance, initialising all configured providers.
-    pub async fn build(self) -> Result<Providers> {
-        for provider in self.request_limits.keys().chain(self.endpoints.keys()) {
+    pub async fn build(mut self) -> Result<Providers> {
+        let keyless = ["fiscaldata", "defillama", "yahoo"];
+        let needs_key = self.request_limits.keys().chain(
+            self.endpoints
+                .keys()
+                .filter(|provider| !keyless.contains(provider)),
+        );
+        for provider in needs_key {
             if !self.api_keys.contains_key(provider) {
                 return Err(crate::FinanceError::InvalidParameter {
                     param: "provider_options".into(),
@@ -561,6 +594,10 @@ impl ProvidersBuilder {
                 });
             }
         }
+        self.config.origin = self
+            .endpoints
+            .get("yahoo")
+            .map(|endpoint| Arc::from(endpoint.trim_end_matches('/')));
         let lang = self.config.lang.clone();
         let mut keys = crate::adapters::keys::KeyMap::new();
         for (provider_key, api_key) in self.api_keys {
@@ -572,11 +609,14 @@ impl ProvidersBuilder {
             }
             let mut key = crate::adapters::keys::ScopedKey::new(api_key, self.config.timeout);
             key.rpm = self.request_limits.get(provider_key).copied();
-            key.base_url = self
-                .endpoints
-                .get(provider_key)
-                .map(|s| s.trim_end_matches('/').to_string());
             keys.insert(provider_key, key);
+        }
+        for (provider_key, endpoint) in &self.endpoints {
+            keys.entry(provider_key)
+                .or_insert_with(|| {
+                    crate::adapters::keys::ScopedKey::new(String::new(), self.config.timeout)
+                })
+                .base_url = Some(endpoint.trim_end_matches('/').to_string());
         }
         // `initialize` builds each keyed client, so the scope has to cover
         // construction as well as dispatch.

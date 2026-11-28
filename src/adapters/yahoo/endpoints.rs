@@ -3,6 +3,33 @@
 //! Internal module for constructing Yahoo Finance API URLs.
 
 use crate::constants::screeners::Screener;
+use crate::error::{FinanceError, Result};
+use std::borrow::Cow;
+
+const HOSTS: [&str; 4] = [
+    base::YAHOO_FINANCE_QUERY1,
+    base::YAHOO_FINANCE_QUERY2,
+    base::YAHOO_FC,
+    "https://finance.yahoo.com",
+];
+
+/// Swap the Yahoo host in `url` for `origin`, leaving the URL untouched when
+/// there is no origin. A host outside the known set is refused so an override
+/// never lets a request fall through to live Yahoo.
+pub(crate) fn resolve<'a>(origin: Option<&str>, url: &'a str) -> Result<Cow<'a, str>> {
+    let Some(origin) = origin else {
+        return Ok(Cow::Borrowed(url));
+    };
+    HOSTS
+        .iter()
+        .find_map(|host| url.strip_prefix(host))
+        .filter(|rest| matches!(rest.chars().next(), None | Some('/' | '?')))
+        .map(|rest| Cow::Owned(format!("{origin}{rest}")))
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "endpoint".into(),
+            reason: format!("`{url}` is not a Yahoo URL the endpoint override can serve"),
+        })
+}
 
 /// Yahoo Finance API base URLs
 pub mod base {
@@ -130,5 +157,75 @@ pub mod builders {
             "{}/v1/finance/industries/{}?formatted=true&withReturns=false&lang=en-US&region=US",
             YAHOO_FINANCE_QUERY1, industry_key
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ORIGIN: &str = "http://127.0.0.1:9";
+
+    #[test]
+    fn no_origin_returns_every_url_unchanged() {
+        let urls = [
+            api::CRUMB_QUERY1.to_string(),
+            api::quote_summary("AAPL"),
+            api::QUOTES.to_string(),
+            api::chart("AAPL"),
+            api::SEARCH.to_string(),
+            api::LOOKUP.to_string(),
+            api::financials("AAPL"),
+            api::recommendations("AAPL"),
+            api::quote_type("AAPL"),
+            api::options("AAPL"),
+            api::MARKET_TIME.to_string(),
+            api::CURRENCIES.to_string(),
+            api::MARKET_SUMMARY.to_string(),
+            api::trending("US"),
+            api::SPARK.to_string(),
+            builders::screener(Screener::DayGainers, 5),
+            builders::custom_screener(),
+            builders::sector("technology"),
+            builders::industry("software"),
+            base::YAHOO_FC.to_string(),
+            "https://finance.yahoo.com/xhr/transcript".to_string(),
+        ];
+        for url in &urls {
+            assert_eq!(resolve(None, url).unwrap(), url.as_str());
+        }
+    }
+
+    #[test]
+    fn every_known_host_swaps_to_the_origin() {
+        assert_eq!(
+            resolve(Some(ORIGIN), &api::chart("AAPL")).unwrap(),
+            "http://127.0.0.1:9/v8/finance/chart/AAPL"
+        );
+        assert_eq!(
+            resolve(Some(ORIGIN), &api::quote_summary("AAPL")).unwrap(),
+            "http://127.0.0.1:9/v10/finance/quoteSummary/AAPL"
+        );
+        assert_eq!(resolve(Some(ORIGIN), base::YAHOO_FC).unwrap(), ORIGIN);
+        assert_eq!(
+            resolve(Some(ORIGIN), "https://finance.yahoo.com/xhr/transcript").unwrap(),
+            "http://127.0.0.1:9/xhr/transcript"
+        );
+        assert_eq!(
+            resolve(Some(ORIGIN), &builders::sector("energy")).unwrap(),
+            "http://127.0.0.1:9/v1/finance/sectors/energy?formatted=true&withReturns=false&lang=en-US&region=US"
+        );
+    }
+
+    #[test]
+    fn an_unknown_host_is_an_error() {
+        assert!(resolve(Some(ORIGIN), "https://example.com/v8/finance/chart/AAPL").is_err());
+    }
+
+    #[test]
+    fn no_rewrite_across_a_non_boundary() {
+        assert!(resolve(Some(ORIGIN), "https://query1.finance.yahoo.com.evil/x").is_err());
+        assert!(resolve(Some(ORIGIN), "https://fc.yahoo.comx").is_err());
+        assert!(resolve(Some(ORIGIN), "https://finance.yahoo.com@evil.test/").is_err());
     }
 }

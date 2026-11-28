@@ -193,11 +193,28 @@ fn doc_block_line_350() {
     }
 }
 
-// line 384: compile-only (no_run)
+// line 388: compile-only (no_run)
+#[rustfmt::skip]
+#[allow(dead_code)]
+fn doc_block_line_388() {
+    use finance_query::{Provider, Providers, finance};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let providers = Providers::builder()
+            .endpoint(Provider::Yahoo, "http://127.0.0.1:8080")
+            .build()
+            .await?;
+        let trending = providers.scope(finance::trending(None)).await?;
+        Ok(())
+    }
+}
+
+// line 402: compile-only (no_run)
 #[cfg(feature = "polygon")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_384() {
+fn doc_block_line_402() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
@@ -213,10 +230,10 @@ fn doc_block_line_384() {
     }
 }
 
-// line 409: compile-only (no_run)
+// line 427: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_409() {
+fn doc_block_line_427() {
         use finance_query::{Region, Ticker, format::Raw};
 
         #[tokio::main]
@@ -253,10 +270,10 @@ fn doc_block_line_409() {
         }
 }
 
-// line 454: compile-only (no_run)
+// line 472: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_454() {
+fn doc_block_line_472() {
         use finance_query::Ticker;
         use std::time::Duration;
 

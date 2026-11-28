@@ -1,6 +1,7 @@
 use super::auth::YahooAuth;
 use crate::constants::{Interval, Region, TimeRange};
 use crate::error::{FinanceError, Result};
+use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
 
@@ -34,6 +35,8 @@ pub struct ClientConfig {
     pub lang: String,
     /// Region code for API requests (e.g., "US", "JP", "DE")
     pub region: String,
+    /// Origin that replaces every Yahoo host, set by a provider endpoint override.
+    pub(crate) origin: Option<Arc<str>>,
 }
 
 impl Default for ClientConfig {
@@ -43,6 +46,20 @@ impl Default for ClientConfig {
             proxy: None,
             lang: DEFAULT_LANG.to_string(),
             region: DEFAULT_REGION.to_string(),
+            origin: None,
+        }
+    }
+}
+
+impl ClientConfig {
+    /// The default config plus the Yahoo endpoint of the enclosing
+    /// [`Providers::scope`](crate::Providers::scope), when there is one.
+    pub(crate) fn ambient() -> Self {
+        Self {
+            origin: crate::adapters::keys::scoped_key("yahoo")
+                .and_then(|key| key.base_url)
+                .map(Arc::from),
+            ..Self::default()
         }
     }
 }
@@ -198,6 +215,7 @@ impl YahooClient {
     /// - Includes cookies via reqwest's cookie store
     /// - Sets proper headers
     pub async fn request_with_crumb(&self, url: &str) -> Result<reqwest::Response> {
+        let url = &*super::endpoints::resolve(self.config.origin.as_deref(), url)?;
         debug!("Making request to {}", url);
 
         let send = || async {
@@ -300,6 +318,7 @@ impl YahooClient {
         url: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
+        let url = &*super::endpoints::resolve(self.config.origin.as_deref(), url)?;
         let send = || async {
             let crumb = self.auth.crumb();
             let url_with_crumb = format!(
@@ -340,6 +359,7 @@ impl YahooClient {
         url: &str,
         params: &T,
     ) -> Result<reqwest::Response> {
+        let url = &*super::endpoints::resolve(self.config.origin.as_deref(), url)?;
         debug!(
             "Making request to {} (lang={}, region={})",
             url, self.config.lang, self.config.region
@@ -1189,6 +1209,21 @@ impl YahooClient {
 
 #[cfg(test)]
 mod tests {
+    use crate::adapters::keys::{KeyMap, ScopedKey, scope};
+
+    #[tokio::test]
+    async fn ambient_has_no_origin_outside_a_scope() {
+        assert!(ClientConfig::ambient().origin.is_none());
+    }
+
+    #[tokio::test]
+    async fn ambient_reads_the_scoped_yahoo_endpoint() {
+        let mut key = ScopedKey::new(String::new(), DEFAULT_TIMEOUT);
+        key.base_url = Some("http://127.0.0.1:9".to_string());
+        let keys = Arc::new(KeyMap::from([("yahoo", key)]));
+        let origin = scope(keys, async { ClientConfig::ambient().origin }).await;
+        assert_eq!(origin.as_deref(), Some("http://127.0.0.1:9"));
+    }
 
     #[test]
     fn stale_crumb_statuses_map_to_auth_failure() {

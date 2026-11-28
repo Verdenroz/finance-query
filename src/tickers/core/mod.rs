@@ -143,7 +143,7 @@ impl TickersBuilder {
                     .filter(|s| seen.insert(Arc::clone(s)))
                     .collect()
             },
-            config: ClientConfig::default(),
+            config: ClientConfig::ambient(),
             shared_client: None,
             injected_providers: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,

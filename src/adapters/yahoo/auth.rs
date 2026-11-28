@@ -1,7 +1,8 @@
 use super::client::ClientConfig;
-use crate::adapters::yahoo::endpoints::{api, base};
+use crate::adapters::yahoo::endpoints::{api, base, resolve};
 use crate::error::{FinanceError, Result};
 use reqwest::Proxy;
+use std::borrow::Cow;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -24,6 +25,7 @@ pub struct YahooAuth {
     refresh_guard: tokio::sync::Mutex<()>,
     /// HTTP client with cookies
     pub(crate) http_client: reqwest::Client,
+    origin: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for YahooAuth {
@@ -32,6 +34,13 @@ impl std::fmt::Debug for YahooAuth {
             .field("crumb", &&*self.crumb())
             .finish()
     }
+}
+
+fn urls(origin: Option<&str>) -> Result<(Cow<'static, str>, Cow<'static, str>)> {
+    Ok((
+        resolve(origin, base::YAHOO_FC)?,
+        resolve(origin, api::CRUMB_QUERY1)?,
+    ))
 }
 
 impl YahooAuth {
@@ -49,14 +58,15 @@ impl YahooAuth {
             return Ok(());
         }
 
+        let (fc, crumb_url) = urls(self.origin.as_deref())?;
         self.http_client
-            .get(base::YAHOO_FC)
+            .get(fc.as_ref())
             .send()
             .await
             .map_err(|e| {
                 FinanceError::InternalError(format!("Failed to establish session: {}", e))
             })?;
-        let crumb = get_crumb(&self.http_client, api::CRUMB_QUERY1)
+        let crumb = get_crumb(&self.http_client, &crumb_url)
             .await
             .map_err(|e| FinanceError::AuthenticationFailed {
                 context: format!("Failed to refresh crumb: {}", e),
@@ -80,6 +90,9 @@ impl YahooAuth {
             .timeout(config.timeout)
             .connect_timeout(AUTH_TIMEOUT)
             .user_agent(USER_AGENT);
+        if config.origin.is_some() {
+            builder = builder.redirect(reqwest::redirect::Policy::none());
+        }
 
         // Apply proxy if configured
         if let Some(proxy_url) = &config.proxy {
@@ -94,14 +107,15 @@ impl YahooAuth {
         })?;
 
         // Visit fc.yahoo.com to establish session
-        debug!("Visiting {} to establish session", base::YAHOO_FC);
-        client.get(base::YAHOO_FC).send().await.map_err(|e| {
+        let (fc, crumb_url) = urls(config.origin.as_deref())?;
+        debug!("Visiting {} to establish session", fc);
+        client.get(fc.as_ref()).send().await.map_err(|e| {
             FinanceError::InternalError(format!("Failed to establish session: {}", e))
         })?;
 
         // Try to get crumb from query1
         debug!("Attempting to fetch crumb from query1");
-        let crumb = get_crumb(&client, api::CRUMB_QUERY1).await.map_err(|e| {
+        let crumb = get_crumb(&client, &crumb_url).await.map_err(|e| {
             warn!("Failed to fetch crumb: {}", e);
             FinanceError::AuthenticationFailed {
                 context: format!("Failed to fetch crumb: {}", e),
@@ -113,6 +127,7 @@ impl YahooAuth {
             crumb: RwLock::new(crumb.into()),
             refresh_guard: tokio::sync::Mutex::new(()),
             http_client: client,
+            origin: config.origin.clone(),
         })
     }
 }
