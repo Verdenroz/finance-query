@@ -1,4 +1,7 @@
-use crate::providers::{Capability, Operation, Provider};
+//! Error types and result definitions.
+
+use crate::operation::Operation;
+use finance_query_types::{Capability, Provider};
 use thiserror::Error;
 
 fn join_providers(providers: &[Provider]) -> String {
@@ -134,7 +137,7 @@ pub enum FinanceError {
     /// Indicator calculation error
     #[cfg(feature = "indicators")]
     #[error("Indicator calculation error: {0}")]
-    IndicatorError(#[from] crate::indicators::IndicatorError),
+    IndicatorError(#[from] finance_query_types::indicators::IndicatorError),
 
     /// Error from an external (non-Yahoo) data API
     #[error("External API error from '{api}': HTTP {status}")]

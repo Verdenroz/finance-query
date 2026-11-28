@@ -39,8 +39,8 @@ pub(crate) mod indices; // INDICES
 pub(crate) mod market; // CALENDAR + MARKET
 pub(crate) mod quote; // QUOTE
 
-use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::{FinanceError, Result};
+use finance_query_adapters_core::{provider_build_client, provider_singleton_state};
 use std::time::Duration;
 
 pub use models::*;

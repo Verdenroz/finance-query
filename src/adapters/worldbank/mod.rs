@@ -19,9 +19,9 @@ pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::WorldBankClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. The World Bank documents no quota but does throttle
 /// abusive clients, so stay well under a burst.

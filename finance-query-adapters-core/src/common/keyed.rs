@@ -4,9 +4,8 @@
 ///
 /// Redirects are refused so a key carried in the query string never follows a
 /// redirect to another origin.
-#[cfg(any(feature = "polygon", feature = "fmp"))]
-pub(crate) fn http_client(
-    scoped: Option<&crate::adapters::keys::ScopedKey>,
+pub fn http_client(
+    scoped: Option<&crate::keys::ScopedKey>,
     provider: &'static str,
     timeout: std::time::Duration,
 ) -> reqwest::Result<reqwest::Client> {
@@ -28,14 +27,12 @@ pub(crate) fn http_client(
 }
 
 /// HTTP 429, honouring the provider's `Retry-After` and defaulting to a minute.
-#[cfg(any(feature = "polygon", feature = "fmp"))]
-pub(crate) fn rate_limited(headers: &reqwest::header::HeaderMap) -> crate::FinanceError {
-    crate::FinanceError::RateLimited {
+pub fn rate_limited(headers: &reqwest::header::HeaderMap) -> crate::error::FinanceError {
+    crate::error::FinanceError::RateLimited {
         retry_after: retry_after_at(headers, chrono::Utc::now()).or(Some(60)),
     }
 }
 
-#[cfg(any(feature = "polygon", feature = "fmp"))]
 fn retry_after_at(
     headers: &reqwest::header::HeaderMap,
     now: chrono::DateTime<chrono::Utc>,
@@ -53,13 +50,12 @@ fn retry_after_at(
     })
 }
 
-#[cfg(any(feature = "polygon", feature = "fmp"))]
-pub(crate) async fn bounded_body(
+pub async fn bounded_body(
     mut response: reqwest::Response,
     limit: usize,
     api: &str,
     timeout: std::time::Duration,
-) -> crate::Result<Vec<u8>> {
+) -> crate::error::Result<Vec<u8>> {
     let mut bytes = Vec::new();
     while let Some(chunk) = response
         .chunk()
@@ -67,7 +63,7 @@ pub(crate) async fn bounded_body(
         .map_err(|error| transport_error(api, timeout, &error))?
     {
         if chunk.len() > limit.saturating_sub(bytes.len()) {
-            return Err(crate::FinanceError::ResponseStructureError {
+            return Err(crate::error::FinanceError::ResponseStructureError {
                 field: "response".into(),
                 context: "provider response exceeds byte limit".into(),
             });
@@ -82,13 +78,7 @@ pub(crate) async fn bounded_body(
 /// A `reqwest::Error` renders the full request URL in both its `Display` and
 /// its `Debug` impl, so wrapping one puts the query string, and with it the
 /// API key, into every log line that formats the error.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "fred",
-    feature = "polygon"
-))]
-pub(crate) fn transport_error(
+pub fn transport_error(
     api: &str,
     timeout: std::time::Duration,
     error: &reqwest::Error,
@@ -109,7 +99,7 @@ pub(crate) fn transport_error(
 ///
 /// Several providers quote the submitted key back in their authentication
 /// failures, which would otherwise be forwarded verbatim into an error.
-pub(crate) fn redact_key(message: &str, api_key: &str) -> String {
+pub fn redact_key(message: &str, api_key: &str) -> String {
     if api_key.trim().is_empty() {
         return message.to_string();
     }
@@ -120,13 +110,7 @@ pub(crate) fn redact_key(message: &str, api_key: &str) -> String {
 ///
 /// Callers with extra provider-specific phrasing (e.g. "not entitled") should
 /// OR this with their own checks rather than restate the base set.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "fred",
-    feature = "polygon"
-))]
-pub(crate) fn is_auth_error(normalized_message: &str) -> bool {
+pub fn is_auth_error(normalized_message: &str) -> bool {
     normalized_message.contains("api key")
         || normalized_message.contains("apikey")
         || normalized_message.contains("api_key")
@@ -136,11 +120,10 @@ pub(crate) fn is_auth_error(normalized_message: &str) -> bool {
 mod tests {
     use super::*;
 
-    #[cfg(any(feature = "polygon", feature = "fmp"))]
     #[test]
     fn rate_limited_reads_retry_after_seconds_and_http_dates() {
         let delay = |headers: &reqwest::header::HeaderMap| match rate_limited(headers) {
-            crate::FinanceError::RateLimited { retry_after } => retry_after,
+            crate::error::FinanceError::RateLimited { retry_after } => retry_after,
             other => panic!("unexpected {other:?}"),
         };
         let mut headers = reqwest::header::HeaderMap::new();

@@ -26,26 +26,26 @@ fn is_void(tag: &[u8]) -> bool {
 }
 
 /// One matched HTML element.
-pub(crate) struct Element<'a> {
+pub struct Element<'a> {
     open_tag: &'a [u8],
-    pub(crate) inner: &'a str,
+    pub inner: &'a str,
 }
 
 impl Element<'_> {
     /// The value of `name` on this element's opening tag, if present.
-    pub(crate) fn attr(&self, name: &str) -> Option<String> {
+    pub fn attr(&self, name: &str) -> Option<String> {
         find_attr(self.open_tag, name.as_bytes())
     }
 
     /// Concatenated text content, tags stripped, entities decoded.
-    pub(crate) fn text(&self) -> String {
+    pub fn text(&self) -> String {
         strip_tags(self.inner.as_bytes())
     }
 }
 
 /// Find the first `<tag ...>` in `scope` and return it with its content
 /// span. Tag matching is case-insensitive, like real HTML.
-pub(crate) fn find_first<'a>(scope: &'a str, tag: &str) -> Option<Element<'a>> {
+pub fn find_first<'a>(scope: &'a str, tag: &str) -> Option<Element<'a>> {
     let bytes = scope.as_bytes();
     let start = find_tag_open(bytes, tag.as_bytes())?;
     parse_element(bytes, start, tag.as_bytes()).map(|(el, _)| el)
@@ -55,7 +55,7 @@ pub(crate) fn find_first<'a>(scope: &'a str, tag: &str) -> Option<Element<'a>> {
 /// tags nested inside other matches of the same name (matching
 /// `document.select(&Selector::parse("tag"))`'s "all descendants"
 /// semantics).
-pub(crate) fn find_all<'a>(scope: &'a str, tag: &str) -> Vec<Element<'a>> {
+pub fn find_all<'a>(scope: &'a str, tag: &str) -> Vec<Element<'a>> {
     let bytes = scope.as_bytes();
     let tag = tag.as_bytes();
     let mut out = Vec::new();
@@ -76,11 +76,7 @@ pub(crate) fn find_all<'a>(scope: &'a str, tag: &str) -> Vec<Element<'a>> {
 }
 
 /// Find the first `<tag>` in `scope` whose opening tag carries `attr`.
-pub(crate) fn find_first_with_attr<'a>(
-    scope: &'a str,
-    tag: &str,
-    attr: &str,
-) -> Option<Element<'a>> {
+pub fn find_first_with_attr<'a>(scope: &'a str, tag: &str, attr: &str) -> Option<Element<'a>> {
     find_all(scope, tag)
         .into_iter()
         .find(|el| el.attr(attr).is_some())

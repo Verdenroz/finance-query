@@ -3,7 +3,7 @@
 /// Parse a percent-formatted string (e.g. `"29.50%"` or `"29.50"`) into its
 /// raw numeric value (`29.5`). Callers convert to a fraction themselves when
 /// their canonical field expects one.
-pub(crate) fn strip_percent(s: &str) -> Option<f64> {
+pub fn strip_percent(s: &str) -> Option<f64> {
     s.trim().trim_end_matches('%').trim().parse().ok()
 }
 

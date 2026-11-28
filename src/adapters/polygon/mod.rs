@@ -46,8 +46,8 @@ pub(crate) mod options; // OPTIONS
 
 pub(crate) mod websocket;
 
-use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::{FinanceError, Result};
+use finance_query_adapters_core::{provider_build_client, provider_singleton_state};
 use std::time::Duration;
 
 fn invalid_page(field: &str) -> FinanceError {

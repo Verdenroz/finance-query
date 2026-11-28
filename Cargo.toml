@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-models", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
+members = ["server", "finance-query-adapters-core", "finance-query-models", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
 resolver = "2"
 
 [package]
@@ -79,6 +79,7 @@ polars = { version = "0.55.2", optional = true, default-features = false, featur
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 finance-query-types = { version = "3.4.0", path = "finance-query-types" }
 finance-query-models = { version = "3.4.0", path = "finance-query-models" }
+finance-query-adapters-core = { version = "=3.4.0", path = "finance-query-adapters-core" }
 finance-query-backtesting = { version = "3.4.0", path = "finance-query-backtesting", optional = true }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
@@ -132,17 +133,17 @@ full = [
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars", "finance-query-types/dataframe", "finance-query-models/dataframe", "finance-query-backtesting?/dataframe"]
 # Enable technical analysis indicators
-indicators = ["finance-query-types/indicators", "finance-query-models/indicators"]
+indicators = ["finance-query-types/indicators", "finance-query-models/indicators", "finance-query-adapters-core/indicators"]
 # Enable backtesting engine for strategy simulation (requires indicators)
 backtesting = ["indicators", "dep:finance-query-backtesting"]
 # Enable FRED API and US Treasury yield curve
 fred = ["dep:csv", "finance-query-types/fred", "finance-query-models/fred"]
 # Enable CoinGecko cryptocurrency data
-crypto = ["finance-query-types/crypto", "finance-query-models/crypto"]
+crypto = ["finance-query-types/crypto", "finance-query-models/crypto", "finance-query-adapters-core/crypto"]
 # Enable World Bank Open Data global macro indicators (keyless)
 worldbank = ["finance-query-types/worldbank"]
 # Enable US Treasury FiscalData federal debt/interest statistics (keyless)
-fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata"]
+fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata", "finance-query-adapters-core/fiscaldata"]
 # Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
 bls = ["finance-query-types/bls"]
 # Enable Frankfurter ECB reference exchange rates (keyless forex)
@@ -156,11 +157,11 @@ finra = ["finance-query-types/finra"]
 # Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
 openfigi = ["finance-query-models/openfigi"]
 # Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
-defi = ["finance-query-types/defi", "finance-query-models/defi"]
+defi = ["finance-query-types/defi", "finance-query-models/defi", "finance-query-adapters-core/defi"]
 # Enable GDELT DOC 2.0 global news search (keyless)
 gdelt = ["finance-query-types/gdelt"]
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
-cftc = ["finance-query-types/cftc", "finance-query-models/cftc"]
+cftc = ["finance-query-types/cftc", "finance-query-models/cftc", "finance-query-adapters-core/cftc"]
 # Enable Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless)
 nasdaq = ["finance-query-types/nasdaq"]
 # Enable Wikipedia S&P 500 index-constituent table scraping (keyless)
@@ -189,7 +190,7 @@ fmp = ["dep:csv", "dep:chrono-tz", "finance-query-types/fmp"]
 risk = ["indicators", "finance-query-models/risk"]
 # Enable translation of human-readable response fields: built-in dictionary
 # for finite finance terms + pluggable ML backend (pure Rust, no heavy deps)
-translation = []
+translation = ["finance-query-adapters-core/translation"]
 # Add the fully local CPU machine-translation backend (opus-mt bilingual
 # models via CTranslate2, distributed as Argos packages). Heavy native build:
 # compiles CTranslate2 + SentencePiece from source (needs cmake + a C++

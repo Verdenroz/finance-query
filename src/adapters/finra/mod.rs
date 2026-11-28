@@ -19,9 +19,9 @@ pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::FinraClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. FINRA's anonymous tier is metered per day rather than
 /// per second; this only keeps a burst from looking abusive.

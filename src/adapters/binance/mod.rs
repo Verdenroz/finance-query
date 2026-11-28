@@ -25,9 +25,9 @@ pub(crate) mod symbols;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::BinanceClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. Binance meters by request weight (6000/minute per IP);
 /// the endpoints used here are weight 1–2, so this stays far inside the quota.

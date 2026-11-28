@@ -16,9 +16,9 @@ mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::NasdaqClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. Nasdaq documents no quota; requests fan out per
 /// day/month in a range so keep this conservative.

@@ -7,23 +7,22 @@
 //! that convention so the adapters cannot drift from it.
 
 /// `YYYY-MM-DD` start of the `month`th month (1-12) of `year`.
-pub(crate) fn month_start(year: &str, month: u32) -> String {
+pub fn month_start(year: &str, month: u32) -> String {
     format!("{year}-{month:02}-01")
 }
 
 /// `YYYY-MM-DD` start of the `quarter`th quarter (1-4) of `year`.
-pub(crate) fn quarter_start(year: &str, quarter: u32) -> String {
+pub fn quarter_start(year: &str, quarter: u32) -> String {
     month_start(year, (quarter - 1) * 3 + 1)
 }
 
 /// `YYYY-MM-DD` start of the `half`th half-year (1-2) of `year`.
-#[cfg(feature = "bls")]
-pub(crate) fn half_start(year: &str, half: u32) -> String {
+pub fn half_start(year: &str, half: u32) -> String {
     month_start(year, (half - 1) * 6 + 1)
 }
 
 /// `YYYY-01-01`, the start of `year`.
-pub(crate) fn year_start(year: &str) -> String {
+pub fn year_start(year: &str) -> String {
     format!("{year}-01-01")
 }
 
@@ -45,7 +44,6 @@ mod tests {
         assert_eq!(year_start("2026"), "2026-01-01");
     }
 
-    #[cfg(feature = "bls")]
     #[test]
     fn halves_start_in_january_and_july() {
         assert_eq!(half_start("2026", 1), "2026-01-01");

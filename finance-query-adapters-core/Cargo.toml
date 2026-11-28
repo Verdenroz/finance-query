@@ -1,0 +1,39 @@
+[package]
+name = "finance-query-adapters-core"
+version = "3.4.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Internal shared plumbing for the finance-query provider adapters"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-adapters-core"
+keywords = ["finance", "market-data", "internal"]
+categories = ["api-bindings", "finance"]
+
+[dependencies]
+finance-query-types = { version = "3.4.0", path = "../finance-query-types" }
+finance-query-models = { version = "3.4.0", path = "../finance-query-models" }
+reqwest = { version = "0.13", features = ["json", "cookies", "gzip", "brotli", "query"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "time", "macros", "net"] }
+serde_json = "1"
+thiserror = "2.0.18"
+chrono = { version = "0.4", features = ["serde"] }
+percent-encoding = "2"
+tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+rustls-native-certs = "0.8"
+
+[features]
+default = []
+indicators = ["finance-query-types/indicators"]
+translation = []
+crypto = ["finance-query-types/crypto"]
+defi = ["finance-query-types/defi"]
+cftc = ["finance-query-types/cftc"]
+fiscaldata = ["finance-query-types/fiscaldata"]
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+
+[package.metadata.docs.rs]
+all-features = true

@@ -62,8 +62,8 @@ extern crate self as finance_query;
 // Public modules
 /// External data source adapters (internal — use the public API modules).
 pub(crate) mod adapters;
-/// Error types and result definitions.
-pub mod error;
+#[doc(inline)]
+pub use finance_query_adapters_core::error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
 pub mod finance;
 pub mod edgar {
@@ -83,7 +83,7 @@ use finance_query_types::constants;
 #[cfg(feature = "risk")]
 use finance_query_types::perf_metrics;
 mod providers;
-pub(crate) mod rate_limiter;
+pub(crate) use finance_query_adapters_core::rate_limiter;
 mod scrapers;
 mod ticker;
 mod tickers;

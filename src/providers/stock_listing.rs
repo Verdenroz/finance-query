@@ -1,20 +1,8 @@
 //! Historical stock-directory requests.
 
 use crate::{FinanceError, Result};
+pub(crate) use finance_query_adapters_core::stock_listing::date;
 use serde::Serialize;
-
-pub(crate) fn date(value: &str) -> Result<()> {
-    if chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
-        .is_ok_and(|d| d.format("%Y-%m-%d").to_string() == value)
-    {
-        Ok(())
-    } else {
-        Err(FinanceError::InvalidParameter {
-            param: "date".into(),
-            reason: "expected a valid YYYY-MM-DD date".into(),
-        })
-    }
-}
 
 /// A stock directory snapshot; independent of free-text search.
 #[derive(Debug, Clone, Serialize)]

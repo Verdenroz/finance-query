@@ -18,7 +18,7 @@
 /// Call `set_singleton(api_key, timeout)` from the provider's own
 /// `init_with_timeout` to keep that function's public doc comment
 /// hand-written and provider-specific.
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! provider_singleton_state {
     (
         name = $struct_name:ident,
@@ -30,7 +30,7 @@ macro_rules! provider_singleton_state {
         struct $struct_name {
             api_key: ::std::string::String,
             timeout: ::std::time::Duration,
-            limiter: ::std::sync::Arc<crate::rate_limiter::RateLimiter>,
+            limiter: ::std::sync::Arc<$crate::rate_limiter::RateLimiter>,
         }
 
         static $static_name: ::std::sync::OnceLock<$struct_name> = ::std::sync::OnceLock::new();
@@ -40,10 +40,10 @@ macro_rules! provider_singleton_state {
         fn set_singleton(
             api_key: impl Into<::std::string::String>,
             timeout: ::std::time::Duration,
-        ) -> crate::error::Result<()> {
+        ) -> $crate::error::Result<()> {
             let api_key = api_key.into();
             if api_key.trim().is_empty() {
-                return Err(crate::error::FinanceError::InvalidParameter {
+                return Err($crate::error::FinanceError::InvalidParameter {
                     param: $provider_key.to_string(),
                     reason: "API key must not be empty".to_string(),
                 });
@@ -52,11 +52,11 @@ macro_rules! provider_singleton_state {
                 .set($struct_name {
                     api_key,
                     timeout,
-                    limiter: ::std::sync::Arc::new(crate::rate_limiter::RateLimiter::new(
+                    limiter: ::std::sync::Arc::new($crate::rate_limiter::RateLimiter::new(
                         $rate_const,
                     )),
                 })
-                .map_err(|_| crate::error::FinanceError::InvalidParameter {
+                .map_err(|_| $crate::error::FinanceError::InvalidParameter {
                     param: $provider_key.to_string(),
                     reason: $already_init_reason.to_string(),
                 })
@@ -65,8 +65,8 @@ macro_rules! provider_singleton_state {
         /// The shared rate limiter backing this provider's singleton, for
         /// health/budget introspection. `None` before `init`/
         /// `init_with_timeout` has been called.
-        pub(crate) fn rate_limiter()
-        -> ::std::option::Option<::std::sync::Arc<crate::rate_limiter::RateLimiter>> {
+        pub fn rate_limiter()
+        -> ::std::option::Option<::std::sync::Arc<$crate::rate_limiter::RateLimiter>> {
             $static_name
                 .get()
                 .map(|s| ::std::sync::Arc::clone(&s.limiter))
@@ -78,10 +78,10 @@ macro_rules! provider_singleton_state {
 /// client is constructed via `$builder::new(api_key).timeout(t).build_with_limiter(limiter)`.
 ///
 /// `build_client()` resolves the key in order: a key scoped to the running
-/// dispatch (see [`crate::adapters::keys`]), the singleton set by [`init`]/
+/// dispatch (see [`keys`](crate::keys)), the singleton set by [`init`]/
 /// [`init_with_timeout`], then `$env_var`. It then builds a fresh client. Requires [`provider_singleton_state!`] to have been
 /// invoked first in the same module (uses its `$struct_name`/`$static_name`).
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! provider_build_client {
     (
         name = $struct_name:ident,
@@ -96,8 +96,8 @@ macro_rules! provider_build_client {
         /// Build a fresh client from the singleton state.
         ///
         /// Used internally by all query functions.
-        pub(crate) fn build_client() -> crate::error::Result<$client_ty> {
-            if let Some(scoped) = crate::adapters::keys::scoped_key($provider_key) {
+        pub fn build_client() -> $crate::error::Result<$client_ty> {
+            if let Some(scoped) = $crate::keys::scoped_key($provider_key) {
                 let limiter = scoped.limiter($provider_key, $rate_const);
                 return <$builder>::new(&scoped.api_key)
                     .timeout(scoped.timeout)
@@ -110,18 +110,17 @@ macro_rules! provider_build_client {
                 let _ = $static_name.set($struct_name {
                     api_key: key,
                     timeout: ::std::time::Duration::from_secs(30),
-                    limiter: ::std::sync::Arc::new(crate::rate_limiter::RateLimiter::new(
+                    limiter: ::std::sync::Arc::new($crate::rate_limiter::RateLimiter::new(
                         $rate_const,
                     )),
                 });
             }
-            let s =
-                $static_name
-                    .get()
-                    .ok_or_else(|| crate::error::FinanceError::InvalidParameter {
-                        param: $provider_key.to_string(),
-                        reason: $env_missing_reason.to_string(),
-                    })?;
+            let s = $static_name.get().ok_or_else(|| {
+                $crate::error::FinanceError::InvalidParameter {
+                    param: $provider_key.to_string(),
+                    reason: $env_missing_reason.to_string(),
+                }
+            })?;
             <$builder>::new(&s.api_key)
                 .timeout(s.timeout)
                 .build_with_limiter(::std::sync::Arc::clone(&s.limiter))
@@ -129,12 +128,12 @@ macro_rules! provider_build_client {
 
         /// Build a test client pointing at a mock server URL.
         #[cfg(test)]
-        pub(crate) fn build_test_client(base_url: &str) -> crate::error::Result<$client_ty> {
+        pub fn build_test_client(base_url: &str) -> $crate::error::Result<$client_ty> {
             <$builder>::new("test-key")
                 .timeout(::std::time::Duration::from_secs(5))
                 .base_url(base_url)
                 .build_with_limiter(::std::sync::Arc::new(
-                    crate::rate_limiter::RateLimiter::new(100.0),
+                    $crate::rate_limiter::RateLimiter::new(100.0),
                 ))
         }
     };
@@ -146,26 +145,19 @@ macro_rules! provider_build_client {
 /// outlive a single call is the token bucket. As with the keyed singletons the
 /// `reqwest::Client` is deliberately *not* cached: it is runtime-bound and a
 /// client built on a dropped runtime yields hyper `DispatchGone` errors.
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! keyless_limiter {
     (rate = $rate_const:expr $(,)?) => {
         static SHARED_LIMITER: ::std::sync::OnceLock<
-            ::std::sync::Arc<crate::rate_limiter::RateLimiter>,
+            ::std::sync::Arc<$crate::rate_limiter::RateLimiter>,
         > = ::std::sync::OnceLock::new();
 
         /// The process-global token bucket shared by every client this adapter
         /// builds, so pacing is respected across calls.
-        pub(crate) fn shared_limiter() -> ::std::sync::Arc<crate::rate_limiter::RateLimiter> {
+        pub fn shared_limiter() -> ::std::sync::Arc<$crate::rate_limiter::RateLimiter> {
             ::std::sync::Arc::clone(SHARED_LIMITER.get_or_init(|| {
-                ::std::sync::Arc::new(crate::rate_limiter::RateLimiter::new($rate_const))
+                ::std::sync::Arc::new($crate::rate_limiter::RateLimiter::new($rate_const))
             }))
         }
     };
 }
-
-#[allow(unused_imports)]
-pub(crate) use keyless_limiter;
-#[allow(unused_imports)]
-pub(crate) use provider_build_client;
-#[allow(unused_imports)]
-pub(crate) use provider_singleton_state;

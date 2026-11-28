@@ -20,9 +20,9 @@ pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::{BlsClient, Tier};
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. BLS caps by the day, not the second, so this only
 /// keeps a burst from looking abusive — the daily quota is the real limit.

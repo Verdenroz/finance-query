@@ -1,6 +1,6 @@
 //! Minimal element-tree reader for EDGAR's ownership and 13F XML documents.
 //!
-//! Deliberately dependency-free for the same reason [`crate::feeds::parser`]
+//! Deliberately dependency-free for the same reason `feeds::parser`
 //! is (RUSTSEC-2026-0195 lived in a third-party XML crate's namespace
 //! handling): these documents need element nesting and text, nothing else —
 //! no DTDs, no entity expansion beyond the five predefined entities, no
@@ -8,7 +8,7 @@
 //! because EDGAR ownership/13F schemas have no colliding local names.
 
 use crate::error::{FinanceError, Result};
-use crate::feeds::parser::{find, find_byte, trim_ascii, unescape};
+use finance_query_adapters_core::xml::{find, find_byte, trim_ascii, unescape};
 
 /// One element: its local name, its own text, and its child elements.
 #[derive(Debug, Default, Clone)]

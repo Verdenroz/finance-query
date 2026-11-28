@@ -48,7 +48,7 @@ const COIN_IDS: &[(&str, &str, &str)] = &[
 ///
 /// Unknown ids are uppercased and passed through rather than rejected, so a
 /// coin missing from the table still reaches the exchange.
-pub(crate) fn resolve_ticker(id: &str) -> String {
+pub fn resolve_ticker(id: &str) -> String {
     let id = id.trim();
     COIN_IDS
         .iter()
@@ -58,7 +58,7 @@ pub(crate) fn resolve_ticker(id: &str) -> String {
 }
 
 /// The display name for a ticker, when it is one of the majors.
-pub(crate) fn asset_name(ticker: &str) -> Option<&'static str> {
+pub fn asset_name(ticker: &str) -> Option<&'static str> {
     COIN_IDS
         .iter()
         .find(|(_, t, _)| t.eq_ignore_ascii_case(ticker))
@@ -71,7 +71,7 @@ pub(crate) fn asset_name(ticker: &str) -> Option<&'static str> {
 /// `quotes` must be ordered longest-first, or `BTCUSDT` splits as `BTCUSD`/`T`.
 /// Returns `None` when the symbol ends in no listed quote asset, or is nothing
 /// but a quote asset.
-pub(crate) fn split_on_quote<'a>(symbol: &'a str, quotes: &[&str]) -> Option<(&'a str, &'a str)> {
+pub fn split_on_quote<'a>(symbol: &'a str, quotes: &[&str]) -> Option<(&'a str, &'a str)> {
     quotes
         .iter()
         .find(|q| symbol.len() > q.len() && symbol.ends_with(*q))

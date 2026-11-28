@@ -27,9 +27,9 @@ pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::CftcClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. Socrata's anonymous tier throttles by rolling-hour
 /// count rather than per-second; this only keeps a burst from looking

@@ -19,7 +19,7 @@ struct TokenState {
 ///
 /// Tokens are consumed on each request and refilled at a steady rate.
 /// When no tokens are available, [`acquire`](Self::acquire) sleeps until one is ready.
-pub(crate) struct RateLimiter {
+pub struct RateLimiter {
     state: Mutex<TokenState>,
     /// Tokens per second as `f64` bits, so [`set_rate`](Self::set_rate) needs no lock.
     rate: AtomicU64,
@@ -81,7 +81,7 @@ impl RateLimiter {
     /// blocking: a momentary contention with a concurrent `acquire` just
     /// yields `None` instead of stalling a synchronous health snapshot.
     #[allow(dead_code)] // used by fmp/alphavantage/polygon/fred feature-gated providers
-    pub(crate) fn available_estimate(&self) -> Option<f64> {
+    pub fn available_estimate(&self) -> Option<f64> {
         let state = self.state.try_lock().ok()?;
         let elapsed = Instant::now()
             .duration_since(state.last_refill)
@@ -92,7 +92,7 @@ impl RateLimiter {
 
     /// Replace the refill rate; takes effect on the next acquire.
     #[allow(dead_code)] // used by the keyed adapters' shared per-key buckets
-    pub(crate) fn set_rate(&self, max_per_second: f64) {
+    pub fn set_rate(&self, max_per_second: f64) {
         self.rate.store(max_per_second.to_bits(), Ordering::Relaxed);
     }
 }

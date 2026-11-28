@@ -6,40 +6,28 @@ use reqwest::StatusCode;
 use crate::error::{FinanceError, Result};
 
 /// Coin id / ticker vocabulary shared by the keyless crypto exchanges.
-#[cfg(any(feature = "binance", feature = "kraken"))]
-pub(crate) mod coins;
+pub mod coins;
 
 /// Canonical chart assembly shared by the keyless crypto exchanges.
-#[cfg(any(feature = "binance", feature = "kraken"))]
-pub(crate) mod crypto_chart;
+pub mod crypto_chart;
 
 /// `YYYY-MM-DD` date-range parsing shared by calendar-style adapters.
-pub(crate) mod date_range;
+pub mod date_range;
 
 /// Error hygiene shared by the adapters that carry an API key.
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "bls",
-    feature = "fmp",
-    feature = "fred",
-    feature = "polygon"
-))]
-pub(crate) mod keyed;
+pub mod keyed;
 
 /// Numeric parsing shared by the macro-data adapters.
-#[cfg(any(feature = "bls", feature = "fiscaldata"))]
-pub(crate) mod numbers;
+pub mod numbers;
 
 /// Period-label resolution shared by the macro-data adapters.
-#[cfg(any(feature = "bls", feature = "worldbank"))]
-pub(crate) mod periods;
+pub mod periods;
 
 /// Percent-string parsing shared by the adapters that report `"N%"` values.
-#[cfg(any(feature = "alphavantage", feature = "fmp"))]
-pub(crate) mod percent;
+pub mod percent;
 
 /// TLS-pinned WebSocket connect shared by the streaming sources.
-pub(crate) mod ws_tls;
+pub mod ws_tls;
 
 /// Characters that must be percent-encoded inside a URL path segment.
 ///
@@ -89,7 +77,7 @@ const PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
 /// Use whenever a user-supplied symbol/ticker/CIK is interpolated into a
 /// URL path via `format!`.
 #[allow(dead_code)] // unused when no URL-building adapter feature is enabled
-pub(crate) fn encode_path_segment(segment: &str) -> String {
+pub fn encode_path_segment(segment: &str) -> String {
     utf8_percent_encode(segment, PATH_SEGMENT_ENCODE_SET).to_string()
 }
 
@@ -97,7 +85,7 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
 /// public APIs (World Bank, FiscalData, Stooq, …) throttle or reject clients
 /// that send no identifiable agent.
 #[allow(dead_code)] // used by the keyless adapter modules
-pub(crate) fn user_agent() -> String {
+pub fn user_agent() -> String {
     format!(
         "finance-query/{} (https://github.com/Verdenroz/finance-query)",
         env!("CARGO_PKG_VERSION")
@@ -108,7 +96,7 @@ pub(crate) fn user_agent() -> String {
 /// a `reqwest::Client` is bound to the runtime that first drives it, so a
 /// cached one fails with hyper `DispatchGone` once that runtime is dropped.
 #[allow(dead_code)] // used by the keyless adapter modules
-pub(crate) fn keyless_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
+pub fn keyless_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
         .timeout(timeout)
         .user_agent(user_agent())
@@ -122,7 +110,7 @@ pub(crate) fn keyless_http_client(timeout: std::time::Duration) -> Result<reqwes
 /// this handle the tail, so every adapter reports the same shape for the
 /// statuses none of them special-case.
 #[allow(dead_code)] // used by the keyless adapter modules
-pub(crate) fn status_error(api: &'static str, status: StatusCode) -> FinanceError {
+pub fn status_error(api: &'static str, status: StatusCode) -> FinanceError {
     match status {
         StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
         s => FinanceError::ExternalApiError {
@@ -134,7 +122,7 @@ pub(crate) fn status_error(api: &'static str, status: StatusCode) -> FinanceErro
 
 /// Fail a non-2xx response via [`status_error`]; succeed on any 2xx.
 #[allow(dead_code)] // used by the keyless adapter modules
-pub(crate) fn check_status(api: &'static str, status: StatusCode) -> Result<()> {
+pub fn check_status(api: &'static str, status: StatusCode) -> Result<()> {
     if status.is_success() {
         return Ok(());
     }

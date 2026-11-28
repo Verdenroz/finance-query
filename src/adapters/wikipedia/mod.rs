@@ -14,9 +14,9 @@ pub(crate) mod indices;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::WikipediaClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. These are static, rarely-changing pages — there's no
 /// reason to hit them often even discounting Wikipedia's own tolerance.

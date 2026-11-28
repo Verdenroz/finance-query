@@ -41,8 +41,8 @@ pub(crate) mod fundamentals;
 pub(crate) mod options;
 pub(crate) mod quote;
 
-use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::Result;
+use finance_query_adapters_core::{provider_build_client, provider_singleton_state};
 use std::time::Duration;
 
 // Re-export public query functions (used by alphavantage provider)

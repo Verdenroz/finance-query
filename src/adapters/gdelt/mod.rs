@@ -31,9 +31,9 @@ pub(crate) mod models;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::GdeltClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing: GDELT asks callers to keep requests to roughly one
 /// every 5 seconds.

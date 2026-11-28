@@ -4,12 +4,12 @@
 //! converts its own), but the surrounding [`ChartMeta`] is identical apart from
 //! the exchange's identity, so it is built in one place.
 
-use crate::constants::{Interval, TimeRange};
-use crate::providers::Provider;
 use finance_query_models::chart::{Candle, Chart, ChartFieldsInit, ChartMeta, ChartMetaFieldsInit};
+use finance_query_types::Provider;
+use finance_query_types::constants::{Interval, TimeRange};
 
 /// How an exchange names itself in canonical chart metadata.
-pub(crate) struct CryptoExchange {
+pub struct CryptoExchange {
     /// The routed provider the candles came from.
     pub provider: Provider,
     /// Uppercase exchange code (e.g. `"BINANCE"`).
@@ -22,7 +22,7 @@ pub(crate) struct CryptoExchange {
 ///
 /// `quote_currency` is the pair's quote asset in the library's spelling — each
 /// exchange derives it from its own market symbol before calling.
-pub(crate) fn crypto_chart(
+pub fn crypto_chart(
     exchange: &CryptoExchange,
     symbol: &str,
     quote_currency: Option<String>,

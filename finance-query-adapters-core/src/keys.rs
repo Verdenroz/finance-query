@@ -1,4 +1,4 @@
-//! API keys scoped to one [`Providers`](crate::Providers) instance.
+//! API keys scoped to one `Providers` instance.
 //!
 //! The keyed adapters read their credentials from process-global
 //! [`OnceLock`](std::sync::OnceLock) singletons, which allows exactly one key
@@ -21,11 +21,11 @@ use std::time::Duration;
 use crate::rate_limiter::RateLimiter;
 
 #[derive(Clone)]
-pub(crate) struct ScopedKey {
-    pub(crate) api_key: String,
-    pub(crate) timeout: Duration,
-    pub(crate) base_url: Option<String>,
-    pub(crate) rpm: Option<u32>,
+pub struct ScopedKey {
+    pub api_key: String,
+    pub timeout: Duration,
+    pub base_url: Option<String>,
+    pub rpm: Option<u32>,
     limiter: Arc<OnceLock<Arc<RateLimiter>>>,
     http_clients: Arc<Mutex<RuntimeClients>>,
 }
@@ -34,7 +34,7 @@ type RuntimeClients = HashMap<(tokio::runtime::Id, &'static str), reqwest::Clien
 
 impl ScopedKey {
     /// Connection pools are bound to the runtime that created them.
-    pub(crate) fn http_client(
+    pub fn http_client(
         &self,
         kind: &'static str,
         build: impl FnOnce() -> reqwest::Result<reqwest::Client>,
@@ -52,7 +52,7 @@ impl ScopedKey {
         Ok(client)
     }
 
-    pub(crate) fn new(api_key: String, timeout: Duration) -> Self {
+    pub fn new(api_key: String, timeout: Duration) -> Self {
         Self {
             api_key,
             timeout,
@@ -65,11 +65,7 @@ impl ScopedKey {
 
     /// Rate limits are enforced per API key upstream, so each distinct key gets
     /// its own bucket rather than sharing the singleton's.
-    pub(crate) fn limiter(
-        &self,
-        provider_key: &'static str,
-        default_rate: f64,
-    ) -> Arc<RateLimiter> {
+    pub fn limiter(&self, provider_key: &'static str, default_rate: f64) -> Arc<RateLimiter> {
         Arc::clone(self.limiter.get_or_init(|| {
             let explicit = self.rpm.map(|rpm| f64::from(rpm) / 60.0);
             shared_limiter(provider_key, &self.api_key, default_rate, explicit)
@@ -77,7 +73,7 @@ impl ScopedKey {
     }
 }
 
-pub(crate) type KeyMap = HashMap<&'static str, ScopedKey>;
+pub type KeyMap = HashMap<&'static str, ScopedKey>;
 
 tokio::task_local! {
     static SCOPED: Arc<KeyMap>;
@@ -122,14 +118,14 @@ fn shared_limiter(
     limiter
 }
 
-pub(crate) fn scoped_key(provider_key: &str) -> Option<ScopedKey> {
+pub fn scoped_key(provider_key: &str) -> Option<ScopedKey> {
     SCOPED
         .try_with(|keys| keys.get(provider_key).cloned())
         .ok()
         .flatten()
 }
 
-pub(crate) async fn scope<F>(keys: Arc<KeyMap>, f: F) -> F::Output
+pub async fn scope<F>(keys: Arc<KeyMap>, f: F) -> F::Output
 where
     F: std::future::Future,
 {

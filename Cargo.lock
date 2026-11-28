@@ -1669,6 +1669,7 @@ dependencies = [
  "criterion",
  "csv",
  "ct2rs",
+ "finance-query-adapters-core",
  "finance-query-backtesting",
  "finance-query-derive",
  "finance-query-models",
@@ -1695,6 +1696,23 @@ dependencies = [
  "tokio-tungstenite 0.28.0",
  "tracing",
  "zip",
+]
+
+[[package]]
+name = "finance-query-adapters-core"
+version = "3.4.0"
+dependencies = [
+ "chrono",
+ "finance-query-models",
+ "finance-query-types",
+ "percent-encoding",
+ "reqwest 0.13.5",
+ "rustls",
+ "rustls-native-certs",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-tungstenite 0.28.0",
 ]
 
 [[package]]

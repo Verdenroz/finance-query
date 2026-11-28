@@ -46,9 +46,7 @@
 //! - Error mapping to [`crate::FinanceError`] variants
 //! - Full mockito test coverage (no API key needed to run tests)
 
-pub(crate) mod common;
-pub(crate) mod keys;
-pub(crate) mod singleton;
+pub(crate) use finance_query_adapters_core::{common, keys};
 
 /// Alpha Vantage financial data API (requires `alphavantage` feature).
 #[cfg(feature = "alphavantage")]

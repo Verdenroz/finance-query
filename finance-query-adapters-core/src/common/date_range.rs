@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use crate::error::{FinanceError, Result};
 
 /// Parse and validate a `from`/`to` date-range pair as `YYYY-MM-DD`.
-pub(crate) fn parse_date_range(from: &str, to: &str) -> Result<(NaiveDate, NaiveDate)> {
+pub fn parse_date_range(from: &str, to: &str) -> Result<(NaiveDate, NaiveDate)> {
     let start = NaiveDate::parse_from_str(from, "%Y-%m-%d").map_err(|_| {
         FinanceError::InvalidParameter {
             param: "from".to_string(),

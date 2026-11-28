@@ -10,7 +10,7 @@ type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 /// Client config pinned to the aws-lc-rs provider, so connecting never
 /// depends on a process-default provider the application may not have set.
-pub(crate) fn client_config() -> Result<Arc<ClientConfig>, tungstenite::Error> {
+pub fn client_config() -> Result<Arc<ClientConfig>, tungstenite::Error> {
     static CONFIG: OnceLock<Result<Arc<ClientConfig>, String>> = OnceLock::new();
     CONFIG
         .get_or_init(|| {
@@ -29,7 +29,7 @@ pub(crate) fn client_config() -> Result<Arc<ClientConfig>, tungstenite::Error> {
 
 /// `true` when retrying the same connect cannot succeed: a bad URL, a TLS
 /// setup or certificate failure, or a client-error HTTP upgrade response.
-pub(crate) fn is_permanent(error: &tungstenite::Error) -> bool {
+pub fn is_permanent(error: &tungstenite::Error) -> bool {
     match error {
         tungstenite::Error::Url(_) | tungstenite::Error::Tls(_) => true,
         tungstenite::Error::Http(response) => {
@@ -43,7 +43,7 @@ pub(crate) fn is_permanent(error: &tungstenite::Error) -> bool {
 }
 
 /// Open a WebSocket to `url` over TLS using [`client_config`].
-pub(crate) async fn connect(url: &str) -> Result<(WsStream, Response), tungstenite::Error> {
+pub async fn connect(url: &str) -> Result<(WsStream, Response), tungstenite::Error> {
     let connector = Connector::Rustls(client_config()?);
     tokio_tungstenite::connect_async_tls_with_config(url, None, false, Some(connector)).await
 }

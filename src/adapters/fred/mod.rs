@@ -38,10 +38,10 @@ pub(crate) mod client;
 pub(crate) mod economic;
 pub mod models;
 
-use crate::adapters::singleton::provider_singleton_state;
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 use client::FredClientBuilder;
+use finance_query_adapters_core::provider_singleton_state;
 use std::sync::Arc;
 use std::time::Duration;
 

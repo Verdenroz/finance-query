@@ -1,13 +1,13 @@
 //! The [`Operation`] enum: one variant per adapter method.
 
-use super::{Capability, Provider};
 use crate::error::FinanceError;
 use finance_query_models::calendar::market::CalendarKind;
+use finance_query_types::{Capability, Provider};
 
 /// A single provider-adapter operation — finer-grained than [`Capability`]
 /// (e.g. `Chart`, `ChartRange`, and `Spark` all fall under `Capability::CHART`).
 ///
-/// Used in [`crate::FinanceError::NotSupported`] to say exactly which method a
+/// Used in [`crate::error::FinanceError::NotSupported`] to say exactly which method a
 /// provider doesn't implement; [`Operation::capability`] recovers the coarser
 /// bit for computing which other providers could satisfy it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -190,7 +190,7 @@ pub enum Operation {
 
 impl Operation {
     /// The operation a calendar kind dispatches as.
-    pub(crate) fn from_calendar(kind: CalendarKind) -> Self {
+    pub fn from_calendar(kind: CalendarKind) -> Self {
         match kind {
             CalendarKind::Earnings => Self::EarningsCalendar,
             CalendarKind::Ipo => Self::IpoCalendar,
@@ -390,7 +390,7 @@ impl Operation {
     /// Adapters reach for this when they detect the gap before dispatch has a
     /// `&dyn ProviderAdapter` to hand (e.g. a symbol an exchange cannot name);
     /// `ProviderCore::not_supported` is the same error built from an instance.
-    pub(crate) fn not_supported(self, provider: Provider) -> FinanceError {
+    pub fn not_supported(self, provider: Provider) -> FinanceError {
         FinanceError::NotSupported {
             provider,
             operation: self,

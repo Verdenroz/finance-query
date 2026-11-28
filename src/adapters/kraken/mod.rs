@@ -23,9 +23,9 @@ pub(crate) mod symbols;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::KrakenClient;
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. Kraken's public counter allows roughly one call per
 /// second sustained for unauthenticated clients.

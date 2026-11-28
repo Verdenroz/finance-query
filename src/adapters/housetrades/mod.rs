@@ -22,9 +22,9 @@ pub(crate) mod pdf;
 
 use std::time::Duration;
 
-use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
 use client::{HOUSE_BASE, HouseTradesClient};
+use finance_query_adapters_core::keyless_limiter;
 
 /// Self-imposed pacing. The House Clerk site publishes no documented rate
 /// limit; this only keeps a symbol lookup's burst of PDF fetches polite.
