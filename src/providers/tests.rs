@@ -1033,13 +1033,13 @@ mod injected_fred {
     }
 
     #[tokio::test]
-    async fn an_economic_route_decides_who_serves_release_dates() {
+    async fn a_route_without_release_dates_falls_back_to_fred() {
         let routes = Routes::new(Fetch::Sequential).route(Capability::ECONOMIC, [Provider::Yahoo]);
         let set = set_with(routes).await.unwrap();
 
-        let err = set.economic_release_dates().await.unwrap_err();
+        let releases = set.economic_release_dates().await.unwrap();
 
-        assert!(is_yahoo_unsupported(&err));
+        assert_eq!(releases[0].release_id, 10);
     }
 
     #[tokio::test]

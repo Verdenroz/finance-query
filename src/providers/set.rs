@@ -363,7 +363,14 @@ impl ProviderSet {
             }
         };
         if self.routes.map.contains_key(&Capability::ECONOMIC) {
-            return self.fetch(Capability::ECONOMIC, call).await;
+            match self.fetch(Capability::ECONOMIC, &call).await {
+                Err(
+                    FinanceError::NotSupported { .. }
+                    | FinanceError::NoProviderSupports { .. }
+                    | FinanceError::NoProviderAvailable { .. },
+                ) => {}
+                routed => return routed,
+            }
         }
         let fred = self
             .adapter(Provider::Fred)
