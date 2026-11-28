@@ -2006,7 +2006,9 @@ fn alerts_evaluate(input: &(Vec<AlertRule>, Vec<PriceUpdate>)) {
 
 #[fixture]
 fn pricing_frame() -> String {
-    __bench::pricing_frame()
+    include_str!("../tests/fixtures/yahoo/pricing_frame_btc_usd.b64")
+        .trim()
+        .to_owned()
 }
 
 #[bench(
