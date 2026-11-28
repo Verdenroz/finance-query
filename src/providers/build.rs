@@ -146,6 +146,16 @@ mod tests {
     }
 
     #[test]
+    fn registry_has_no_duplicate_ids() {
+        for (i, (id, _)) in REGISTRY.iter().enumerate() {
+            assert!(
+                REGISTRY[..i].iter().all(|(earlier, _)| earlier != id),
+                "{id} is registered twice"
+            );
+        }
+    }
+
+    #[test]
     fn edgar_is_injected_unless_configured_explicitly() {
         assert!(needs_edgar_injection(&[Provider::Yahoo]));
         assert!(!needs_edgar_injection(&[Provider::Yahoo, Provider::Edgar]));
