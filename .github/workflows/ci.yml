@@ -318,7 +318,7 @@ jobs:
           FEATURES: >-
             alphavantage polygon fmp fred crypto worldbank fiscaldata bls frankfurter
             binance kraken finra openfigi defi gdelt cftc nasdaq wikipedia
-            secftd housetrades indicators risk dataframe backtesting sentiment translation
+            secftd housetrades senatetrades indicators risk dataframe backtesting sentiment translation
         run: |
           for f in $FEATURES; do
             echo "::group::--features $f"
