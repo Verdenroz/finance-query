@@ -38,6 +38,10 @@ const ALLOWED_DIRS: &[&str] = &["src/streaming/polygon/"];
 /// `__fuzz_*` and `__bench` items. These public wrappers are the rest.
 const LIB_WRAPPERS: &[&str] = &["adapters::openfigi", "adapters::defillama"];
 
+/// These modules stay feature-gated until `adapters/common` becomes
+/// `core::support` (`#[doc(hidden)] pub`), which removes their dead-code lints.
+const COMMON_PENDING: &[&str] = &["src/adapters/common/keyed.rs", "src/adapters/common/mod.rs"];
+
 /// Files still calling provider adapters directly. Remove entries as they are
 /// fixed; never add one.
 const PENDING: &[&str] = &[
@@ -181,6 +185,16 @@ fn lib_refs() -> Vec<(usize, String)> {
         .collect()
 }
 
+/// Lines that name a feature, whether in `cfg`, `cfg_attr`, `any` or `all`.
+fn feature_lines(source: &str) -> Vec<(usize, String)> {
+    source
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| line.contains("feature = \""))
+        .map(|(index, line)| (index + 1, line.trim().to_string()))
+        .collect()
+}
+
 fn describe(path: &str, refs: Vec<(usize, String)>) -> Vec<String> {
     refs.into_iter()
         .map(|(line, name)| format!("{path}:{line}: {name}"))
@@ -228,10 +242,12 @@ fn adapters_common_is_provider_neutral() {
     for path in files_under("src/adapters/common") {
         let rel = relative(&path);
         let source = std::fs::read_to_string(&path).expect("source file is readable");
-        for (index, line) in source.lines().enumerate() {
-            if line.contains("cfg(feature = ") {
-                offenders.push(format!("{rel}:{}: {}", index + 1, line.trim()));
-            }
+        if !COMMON_PENDING.contains(&rel.as_str()) {
+            offenders.extend(
+                feature_lines(&source)
+                    .into_iter()
+                    .map(|(line, text)| format!("{rel}:{line}: {text}")),
+            );
         }
         offenders.extend(describe(&rel, provider_refs(&source)));
     }
@@ -239,6 +255,39 @@ fn adapters_common_is_provider_neutral() {
         offenders.is_empty(),
         "adapters/common names a provider:\n{}",
         offenders.join("\n")
+    );
+}
+
+#[test]
+fn common_pending_files_are_still_feature_gated() {
+    let fixed: Vec<&str> = COMMON_PENDING
+        .iter()
+        .copied()
+        .filter(|rel| {
+            let source = std::fs::read_to_string(manifest(rel)).expect("source file is readable");
+            feature_lines(&source).is_empty()
+        })
+        .collect();
+    assert!(
+        fixed.is_empty(),
+        "remove from COMMON_PENDING, no longer feature-gated:\n{}",
+        fixed.join("\n")
+    );
+}
+
+#[test]
+fn lib_wrappers_still_call_their_adapters() {
+    let source = std::fs::read_to_string(manifest("src/lib.rs")).expect("lib.rs is readable");
+    let called = names(&source);
+    let fixed: Vec<&str> = LIB_WRAPPERS
+        .iter()
+        .copied()
+        .filter(|wrapper| !called.iter().any(|name| name == wrapper))
+        .collect();
+    assert!(
+        fixed.is_empty(),
+        "remove from LIB_WRAPPERS, no longer called:\n{}",
+        fixed.join("\n")
     );
 }
 
