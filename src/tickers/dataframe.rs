@@ -244,7 +244,7 @@ mod tests {
     }
 
     fn names(df: &DataFrame) -> Vec<String> {
-        crate::__dataframe::assert_time_naming("frame", df, &[]);
+        crate::__dataframe::assert_time_naming("frame", df, &["time"]);
         df.get_column_names()
             .iter()
             .map(|n| n.to_string())
