@@ -44,7 +44,7 @@ groups:
 
       - alert: RateLimitRejecting
         expr: sum(increase(finance_query_rate_limit_rejections_total[5m])) > 0
-        for: 5m
+        for: 1m
         labels:
           severity: warning
           service: finance-query-v2

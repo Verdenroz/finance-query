@@ -30,7 +30,7 @@ pub async fn get_batch_options(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let date_str = date
         .map(|d| d.to_string())
         .unwrap_or_else(|| "latest".to_string());

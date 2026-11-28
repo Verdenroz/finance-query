@@ -181,4 +181,63 @@ mod tests {
     fn omitted_form_type_leaves_sources_unchanged() {
         assert!(parse_sources(Some(&slugs(&["sec"])), None).is_ok());
     }
+
+    #[test]
+    fn omitted_or_blank_slugs_use_the_default_sources() {
+        let is_default = |sources: &[FeedSource]| {
+            matches!(
+                sources,
+                [
+                    FeedSource::FederalReserve,
+                    FeedSource::SecPressReleases,
+                    FeedSource::MarketWatch,
+                    FeedSource::Bloomberg
+                ]
+            )
+        };
+        assert!(is_default(&parse_sources(None, None).unwrap()));
+        assert!(is_default(&parse_sources(Some(&[]), None).unwrap()));
+        assert!(is_default(
+            &parse_sources(Some(&slugs(&["", "  "])), None).unwrap()
+        ));
+    }
+
+    #[test]
+    fn slug_spelling_is_normalized() {
+        let parsed = parse_sources(
+            Some(&slugs(&[
+                " Federal-Reserve ",
+                "sec_filings",
+                "HN",
+                "bigpicture",
+            ])),
+            None,
+        )
+        .unwrap();
+        assert!(matches!(
+            parsed.as_slice(),
+            [
+                FeedSource::FederalReserve,
+                FeedSource::SecFilings(f),
+                FeedSource::HackerNews,
+                FeedSource::RitholtzBigPicture
+            ] if f == "10-K"
+        ));
+    }
+
+    #[test]
+    fn unknown_slug_errors_listing_every_valid_slug() {
+        let err = parse_sources(Some(&slugs(&["cnbc", "nope"])), None).unwrap_err();
+        assert!(err.starts_with("Unknown feed source: 'nope'."), "{err}");
+        for slug in FEED_SOURCE_SLUGS {
+            assert!(err.contains(slug), "missing {slug} in {err}");
+        }
+    }
+
+    #[test]
+    fn every_listed_slug_parses() {
+        for slug in FEED_SOURCE_SLUGS {
+            assert!(parse_source_slug(slug, None).is_some(), "{slug}");
+        }
+    }
 }

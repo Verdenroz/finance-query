@@ -93,10 +93,10 @@ mod tests {
             ("stochastic_rsi_d", DataType::Float64),
             ("macd_macd", DataType::Float64),
             ("macd_histogram", DataType::Float64),
-            ("aroon_aroon_up", DataType::Float64),
+            ("aroon_up", DataType::Float64),
             ("supertrend_trend", DataType::String),
             ("ichimoku_lagging_span", DataType::Float64),
-            ("bull_bear_power_bear_power", DataType::Float64),
+            ("bear_power", DataType::Float64),
             ("elder_ray_index_bull_power", DataType::Float64),
             ("bollinger_bands_upper", DataType::Float64),
             ("keltner_channels_lower", DataType::Float64),
@@ -124,7 +124,7 @@ mod tests {
     struct Generic<F: crate::models::format::Format = crate::format::Both> {
         #[dataframe(datetime = "s")]
         time: Option<F::Value<i64>>,
-        #[dataframe(date = "s", nonzero)]
+        #[dataframe(date = "s", nonzero, time_exempt = "test fixture")]
         day: Option<F::Value<i64>>,
     }
 

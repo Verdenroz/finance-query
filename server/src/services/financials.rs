@@ -43,7 +43,7 @@ pub async fn get_batch_financials(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("financials", &[&symbols_key, statement_str, frequency_str]);
 
     cache

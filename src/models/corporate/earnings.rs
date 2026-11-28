@@ -43,6 +43,10 @@ pub struct EarningsChart {
 
     /// Current quarter estimate date
     #[serde(default)]
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(rename = "current_quarter_estimate_quarter")
+    )]
     pub current_quarter_estimate_date: Option<String>,
 
     /// Current quarter estimate year
@@ -75,6 +79,7 @@ pub struct EarningsChart {
 pub struct QuarterlyEarnings {
     /// Date/quarter identifier
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(rename = "quarter"))]
     pub date: Option<String>,
 
     /// Actual EPS
@@ -127,6 +132,7 @@ pub struct FinancialsChart {
 pub struct YearlyFinancials {
     /// Date
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(rename = "year"))]
     pub date: Option<i64>,
 
     /// Revenue
@@ -146,6 +152,7 @@ pub struct YearlyFinancials {
 pub struct QuarterlyFinancials {
     /// Date
     #[serde(default)]
+    #[cfg_attr(feature = "dataframe", dataframe(rename = "quarter"))]
     pub date: Option<String>,
 
     /// Revenue

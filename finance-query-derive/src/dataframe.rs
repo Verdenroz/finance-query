@@ -45,6 +45,8 @@ struct FieldAttrs {
     nested: bool,
     nonzero: bool,
     rename: Option<String>,
+    prefix: Option<String>,
+    time_exempt: Option<LitStr>,
     time: Option<TimeAttr>,
 }
 
@@ -56,6 +58,13 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
     let impl_ty = match format_param {
         Some(_) => quote! { #name<#krate::format::Both> },
         None => quote! { #name },
+    };
+    let checked_crate = std::env::var("CARGO_PKG_NAME")
+        .is_ok_and(|n| n.starts_with("finance-query") && n != "finance-query-derive");
+    let time_naming_test = if checked_crate {
+        time_naming_test(name, &impl_ty, fields, &krate)?
+    } else {
+        TokenStream::new()
     };
     let columns = fields
         .iter()
@@ -81,6 +90,8 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
     };
 
     Ok(quote! {
+        #time_naming_test
+
         impl #impl_ty {
             #nested_methods
 
@@ -133,6 +144,38 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
     })
 }
 
+/// Emits a test that checks the empty frame's column names against its time dtypes.
+fn time_naming_test(
+    name: &Ident,
+    impl_ty: &TokenStream,
+    fields: &syn::punctuated::Punctuated<Field, syn::Token![,]>,
+    krate: &Path,
+) -> syn::Result<TokenStream> {
+    let mut exempt = Vec::new();
+    for field in fields {
+        let attrs = field_attrs(field)?;
+        if let (Some(_), Some(ident)) = (&attrs.time_exempt, &field.ident) {
+            exempt.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
+        }
+    }
+    let module = Ident::new(&format!("__dataframe_time_naming_{name}"), name.span());
+    let label = name.to_string();
+    Ok(quote! {
+        #[cfg(test)]
+        #[allow(non_snake_case)]
+        mod #module {
+            #[allow(unused_imports)]
+            use super::*;
+
+            #[test]
+            fn time_columns_are_named_and_typed() {
+                let frame = <super::#impl_ty>::vec_to_dataframe(&[]).unwrap();
+                #krate::__dataframe::assert_time_naming(#label, &frame, &[#(#exempt),*]);
+            }
+        }
+    })
+}
+
 /// Builds the expression yielding a field's columns, or `None` when the field is skipped.
 fn field_columns(
     field: &Field,
@@ -157,11 +200,16 @@ fn field_columns(
     let values = quote! { rows.iter().map(|row| row.and_then(|item| #access)) };
 
     if attrs.flatten {
+        let nested_prefix = match attrs.prefix.as_deref() {
+            Some("") => quote! { ::std::string::String::from(prefix) },
+            Some(custom) => quote! { ::std::format!("{}{}_", prefix, #custom) },
+            None => quote! { ::std::format!("{}{}_", prefix, #column) },
+        };
         return Ok(Some(quote! {{
             let nested: ::std::vec::Vec<::core::option::Option<&#inner>> = #values.collect();
             <#inner as #krate::__dataframe::Columns>::columns(
                 &nested,
-                &::std::format!("{}{}_", prefix, #column),
+                &#nested_prefix,
             )
         }}));
     }
@@ -395,6 +443,24 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.nonzero = true;
             } else if meta.path.is_ident("rename") {
                 attrs.rename = Some(meta.value()?.parse::<LitStr>()?.value());
+            } else if meta.path.is_ident("time_exempt") {
+                let reason = meta.value()?.parse::<LitStr>()?;
+                if reason.value().trim().is_empty() {
+                    return Err(syn::Error::new_spanned(
+                        &reason,
+                        "`time_exempt` needs a non-empty reason",
+                    ));
+                }
+                attrs.time_exempt = Some(reason);
+            } else if meta.path.is_ident("prefix") {
+                let prefix = meta.value()?.parse::<LitStr>()?;
+                if prefix.value().ends_with('_') {
+                    return Err(syn::Error::new_spanned(
+                        &prefix,
+                        "`prefix` must not end in `_`, the derive appends it",
+                    ));
+                }
+                attrs.prefix = Some(prefix.value());
             } else if meta.path.is_ident("datetime") || meta.path.is_ident("date") {
                 if attrs.time.is_some() {
                     return Err(meta.error("only one of `datetime` and `date` is allowed"));
@@ -423,7 +489,7 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.time = Some(TimeAttr { kind, unit });
             } else {
                 return Err(meta.error(
-                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date` or `rename = \"...\"`",
+                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date`, `rename = \"...\"`, `prefix = \"...\"` or `time_exempt = \"...\"`",
                 ));
             }
             Ok(())
@@ -433,6 +499,18 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
         return Err(syn::Error::new_spanned(
             field,
             "`datetime` and `date` cannot be combined with `skip`, `flatten` or `nested`",
+        ));
+    }
+    if attrs.time_exempt.is_some() && (attrs.skip || attrs.flatten || attrs.nested) {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`time_exempt` cannot be combined with `skip`, `flatten` or `nested`",
+        ));
+    }
+    if attrs.prefix.is_some() && !attrs.flatten {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`prefix` requires `flatten`",
         ));
     }
     if attrs.nonzero && attrs.time.as_ref().is_none_or(|time| time.unit.is_none()) {

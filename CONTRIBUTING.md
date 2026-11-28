@@ -10,6 +10,7 @@ Thank you for your interest in contributing to FinanceQuery. This document cover
 - [Suggesting Features](#suggesting-features)
 - [Development Setup](#development-setup)
 - [Building and Testing](#building-and-testing)
+- [Design Principles](#design-principles)
 - [Code Style](#code-style)
 - [Submitting a Pull Request](#submitting-a-pull-request)
 - [Commit Message Format](#commit-message-format)
@@ -116,6 +117,16 @@ cargo clippy --all-targets --all-features -- -D warnings
 - **Doctests** — `no_run` examples in the public API; compiled with `--all-features`.
 
 All tests must pass before a PR is merged.
+
+---
+
+## Design Principles
+
+Developer experience and maintainability are the two goals every change is weighed against. When they conflict, these rules decide, in order:
+
+1. **The user-facing API comes first.** Users depend on `finance-query` alone. Paths, feature flags and behavior stay stable within a major version, and internal crates are never part of the public surface.
+2. **Everyday changes stay simple.** Adding a field, a provider, or a feature should touch as few files as it does today. A change that makes this harder needs a measured benefit to justify it.
+3. **Claimed gains are measured.** Compile-time, performance, and maintainability improvements are backed by numbers (`cargo build --timings`, soothfast claims and gates), not estimates.
 
 ---
 

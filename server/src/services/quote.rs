@@ -45,7 +45,7 @@ pub async fn get_quotes(
     let mut symbols = symbols;
     symbols.sort();
     let logo_str = if logo { "1" } else { "0" };
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("quotes", &[&symbols_key, logo_str, lang_key(lang)]);
     let lang = lang.map(str::to_string);
 
