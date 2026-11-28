@@ -453,7 +453,14 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 }
                 attrs.time_exempt = Some(reason);
             } else if meta.path.is_ident("prefix") {
-                attrs.prefix = Some(meta.value()?.parse::<LitStr>()?.value());
+                let prefix = meta.value()?.parse::<LitStr>()?;
+                if prefix.value().ends_with('_') {
+                    return Err(syn::Error::new_spanned(
+                        &prefix,
+                        "`prefix` must not end in `_`, the derive appends it",
+                    ));
+                }
+                attrs.prefix = Some(prefix.value());
             } else if meta.path.is_ident("datetime") || meta.path.is_ident("date") {
                 if attrs.time.is_some() {
                     return Err(meta.error("only one of `datetime` and `date` is allowed"));
@@ -492,6 +499,12 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
         return Err(syn::Error::new_spanned(
             field,
             "`datetime` and `date` cannot be combined with `skip`, `flatten` or `nested`",
+        ));
+    }
+    if attrs.time_exempt.is_some() && (attrs.skip || attrs.flatten || attrs.nested) {
+        return Err(syn::Error::new_spanned(
+            field,
+            "`time_exempt` cannot be combined with `skip`, `flatten` or `nested`",
         ));
     }
     if attrs.prefix.is_some() && !attrs.flatten {

@@ -87,9 +87,12 @@ use syn::{
 /// - `#[dataframe(flatten)]` on a field whose type also derives `ToDataFrame`
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
 /// - `#[dataframe(flatten, prefix = "name")]` uses `{name}_{column}` instead, and
-///   `prefix = ""` emits the bare `{column}`. `prefix` requires `flatten`.
+///   `prefix = ""` emits the bare `{column}`. `prefix` requires `flatten` and must not
+///   end in `_`.
 /// - `#[dataframe(time_exempt = "reason")]` exempts a column from the time naming test
-///   below. The reason must not be empty.
+///   below. The reason must not be empty. It cannot be combined with `skip`,
+///   `flatten` or `nested`; a parent that flattens a child must exempt the child's
+///   columns itself.
 /// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
 /// - `#[dataframe(nested)]` on a `Vec<T>`, `Option<Vec<T>>`, `T` or `Option<T>`
 ///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
@@ -289,6 +292,38 @@ use syn::{
 /// struct Row {
 ///     #[dataframe(time_exempt = "")]
 ///     time: String,
+/// }
+/// ```
+///
+/// `time_exempt` on a flattened field fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(flatten, time_exempt = "reason")]
+///     row: Row,
+/// }
+/// ```
+///
+/// A `prefix` ending in `_` fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(flatten, prefix = "row_")]
+///     row: Row,
 /// }
 /// ```
 ///
