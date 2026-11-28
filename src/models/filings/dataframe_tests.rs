@@ -330,7 +330,7 @@ fn company_facts_long_frame_is_sorted() {
             .unwrap()
             .str()
             .unwrap()
-            .into_iter()
+            .iter()
             .map(|value| value.unwrap_or_default().to_string())
             .collect()
     };

@@ -185,7 +185,8 @@ mod tests {
                 .unwrap()
                 .str()
                 .unwrap()
-                .into_no_null_iter()
+                .iter()
+                .map(Option::unwrap)
                 .map(String::from)
                 .collect()
         }

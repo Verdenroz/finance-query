@@ -393,7 +393,7 @@ fn vec_to_nested_dataframe_spans_parents() {
         .unwrap()
         .list()
         .unwrap()
-        .into_iter()
+        .iter()
         .map(|list| list.unwrap().len())
         .collect();
     assert_eq!(lens, [3, 0, 1]);

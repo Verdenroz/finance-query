@@ -11,7 +11,7 @@ Finance Query provides optional Polars DataFrame conversion for data analysis wo
     ```toml
     [dependencies]
     finance-query = { version = "3", features = ["dataframe"] }
-    polars = { version = "0.53", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
+    polars = { version = "0.55", default-features = false, features = ["lazy", "csv", "parquet", "json", "rolling_window", "temporal"] }
     ```
 
     The `finance_query::polars` re-export exists so type names in public
@@ -66,24 +66,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-shape: (23, 7)
-┌────────────┬────────────┬────────────┬────────────┬────────────┬──────────┬────────────┐
-│ timestamp  ┆ open       ┆ high       ┆ low        ┆ close      ┆ volume   ┆ adj_close  │
-│ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---      ┆ ---        │
-│ i64        ┆ f64        ┆ f64        ┆ f64        ┆ f64        ┆ i64      ┆ f64        │
-╞════════════╪════════════╪════════════╪════════════╪════════════╪══════════╪════════════╡
-│ 1783517400 ┆ 311.910004 ┆ 314.820007 ┆ 307.049988 ┆ 313.390015 ┆ 41323500 ┆ 313.390015 │
-│ 1783603800 ┆ 310.51001  ┆ 316.529999 ┆ 308.160004 ┆ 316.220001 ┆ 48124500 ┆ 316.220001 │
-│ 1783690200 ┆ 314.720001 ┆ 316.910004 ┆ 312.170013 ┆ 315.320007 ┆ 34132300 ┆ 315.320007 │
-│ 1783949400 ┆ 317.019989 ┆ 323.450012 ┆ 315.779999 ┆ 317.309998 ┆ 43257800 ┆ 317.309998 │
-│ 1784035800 ┆ 313.76001  ┆ 316.190002 ┆ 311.910004 ┆ 314.859985 ┆ 36336800 ┆ 314.859985 │
-│ …          ┆ …          ┆ …          ┆ …          ┆ …          ┆ …        ┆ …          │
-│ 1785763800 ┆ 309.579987 ┆ 311.799988 ┆ 302.559998 ┆ 303.420013 ┆ 75052000 ┆ 303.420013 │
-│ 1785850200 ┆ 302.730011 ┆ 310.420013 ┆ 301.320007 ┆ 309.380005 ┆ 68001000 ┆ 309.380005 │
-│ 1785936600 ┆ 309.359985 ┆ 311.709991 ┆ 305.670013 ┆ 311.0      ┆ 49438800 ┆ 311.0      │
-│ 1786023000 ┆ 314.339996 ┆ 316.290009 ┆ 309.230011 ┆ 312.410004 ┆ 46139900 ┆ 312.410004 │
-│ 1786109400 ┆ 311.450012 ┆ 314.809998 ┆ 310.73999  ┆ 313.329987 ┆ 34407100 ┆ 313.329987 │
-└────────────┴────────────┴────────────┴────────────┴────────────┴──────────┴────────────┘
+shape: (21, 8)
+┌────────────┬────────────┬────────────┬────────────┬───────────┬──────────┬───────────┬───────────┐
+│ timestamp  ┆ open       ┆ high       ┆ low        ┆ close     ┆ volume   ┆ adj_close ┆ provider_ │
+│ ---        ┆ ---        ┆ ---        ┆ ---        ┆ ---       ┆ ---      ┆ ---       ┆ id        │
+│ datetime[μ ┆ f64        ┆ f64        ┆ f64        ┆ f64       ┆ i64      ┆ f64       ┆ ---       │
+│ s, UTC]    ┆            ┆            ┆            ┆           ┆          ┆           ┆ str       │
+╞════════════╪════════════╪════════════╪════════════╪═══════════╪══════════╪═══════════╪═══════════╡
+│ 2026-10-28 ┆ 346.920013 ┆ 347.179993 ┆ 343.519989 ┆ 343.82998 ┆ 35714300 ┆ 343.56893 ┆ yahoo     │
+│ 13:30:00   ┆            ┆            ┆            ┆ 7         ┆          ┆ 9         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-10-29 ┆ 348.0      ┆ 351.429993 ┆ 347.299988 ┆ 348.91000 ┆ 42582100 ┆ 348.64511 ┆ yahoo     │
+│ 13:30:00   ┆            ┆            ┆            ┆ 4         ┆          ┆ 1         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-10-30 ┆ 346.720001 ┆ 349.190002 ┆ 334.350006 ┆ 344.63000 ┆ 67841600 ┆ 344.36834 ┆ yahoo     │
+│ 13:30:00   ┆            ┆            ┆            ┆ 5         ┆          ┆ 7         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-02 ┆ 342.670013 ┆ 343.799988 ┆ 335.820007 ┆ 338.32000 ┆ 64757700 ┆ 338.06314 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 7         ┆          ┆ 1         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-03 ┆ 325.579987 ┆ 334.5      ┆ 325.329987 ┆ 331.89999 ┆ 63160000 ┆ 331.64801 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 4         ┆          ┆           ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ …          ┆ …          ┆ …          ┆ …          ┆ …         ┆ …        ┆ …         ┆ …         │
+│ 2026-11-19 ┆ 352.910004 ┆ 355.279999 ┆ 346.470001 ┆ 349.20999 ┆ 40906900 ┆ 349.20999 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 1         ┆          ┆ 1         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-20 ┆ 352.869995 ┆ 354.339996 ┆ 340.559998 ┆ 342.55999 ┆ 80692500 ┆ 342.55999 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 8         ┆          ┆ 8         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-23 ┆ 347.869995 ┆ 352.600006 ┆ 345.440002 ┆ 349.07998 ┆ 58588700 ┆ 349.07998 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 7         ┆          ┆ 7         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-24 ┆ 348.059998 ┆ 354.399994 ┆ 345.880005 ┆ 354.07000 ┆ 41270400 ┆ 354.07000 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 7         ┆          ┆ 7         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+│ 2026-11-25 ┆ 353.480011 ┆ 356.75     ┆ 345.130005 ┆ 355.57998 ┆ 54285300 ┆ 355.57998 ┆ yahoo     │
+│ 14:30:00   ┆            ┆            ┆            ┆ 7         ┆          ┆ 7         ┆           │
+│ UTC        ┆            ┆            ┆            ┆           ┆          ┆           ┆           │
+└────────────┴────────────┴────────────┴────────────┴───────────┴──────────┴───────────┴───────────┘
 ```
 
 **Chart DataFrame Columns:**
@@ -125,9 +146,9 @@ shape: (1, 154)
 │ symbol ┆ logo_url ┆ company_lo ┆ short_name ┆ … ┆ most_recen ┆ price_hin ┆ tradeable ┆ financial │
 │ ---    ┆ ---      ┆ go_url     ┆ ---        ┆   ┆ t_quarter  ┆ t         ┆ ---       ┆ _currency │
 │ str    ┆ str      ┆ ---        ┆ str        ┆   ┆ ---        ┆ ---       ┆ bool      ┆ ---       │
-│        ┆          ┆ str        ┆            ┆   ┆ i64        ┆ i64       ┆           ┆ str       │
+│        ┆          ┆ str        ┆            ┆   ┆ date       ┆ i64       ┆           ┆ str       │
 ╞════════╪══════════╪════════════╪════════════╪═══╪════════════╪═══════════╪═══════════╪═══════════╡
-│ NVDA   ┆ null     ┆ null       ┆ NVIDIA Cor ┆ … ┆ 1777161600 ┆ 2         ┆ false     ┆ USD       │
+│ NVDA   ┆ null     ┆ null       ┆ NVIDIA Cor ┆ … ┆ 2026-10-25 ┆ 2         ┆ false     ┆ USD       │
 │        ┆          ┆            ┆ poration   ┆   ┆            ┆           ┆           ┆           │
 └────────┴──────────┴────────────┴────────────┴───┴────────────┴───────────┴───────────┴───────────┘
 ```
@@ -174,9 +195,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-dividends: (4, 2)
-splits: (5, 4)
-capital gains: (0, 2)
+dividends: (4, 3)
+splits: (5, 5)
+capital gains: (0, 3)
 ```
 
 ### Screener Results
@@ -203,34 +224,50 @@ shape: (50, 59)
 │ symbol ┆ short_name ┆ long_name  ┆ display_na ┆ … ┆ earnings_ ┆ earnings_ ┆ earnings_ ┆ currency │
 │ ---    ┆ ---        ┆ ---        ┆ me         ┆   ┆ timestamp ┆ timestamp ┆ timestamp ┆ ---      │
 │ str    ┆ str        ┆ str        ┆ ---        ┆   ┆ ---       ┆ _start    ┆ _end      ┆ str      │
-│        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
-│        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
+│        ┆            ┆            ┆ str        ┆   ┆ datetime[ ┆ ---       ┆ ---       ┆          │
+│        ┆            ┆            ┆            ┆   ┆ μs, UTC]  ┆ datetime[ ┆ datetime[ ┆          │
+│        ┆            ┆            ┆            ┆   ┆           ┆ μs, UTC]  ┆ μs, UTC]  ┆          │
 ╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
-│ TEAM   ┆ Atlassian  ┆ Atlassian  ┆ Atlassian  ┆ … ┆ 178604640 ┆ 179330400 ┆ 179330400 ┆ USD      │
-│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ n          ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
-│ DOCS   ┆ Doximity,  ┆ Doximity,  ┆ Doximity   ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ FIGS   ┆ FIGS, Inc. ┆ FIGS, Inc. ┆ FIGS       ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
-│        ┆            ┆            ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ TWLO   ┆ Twilio     ┆ Twilio     ┆ Twilio     ┆ … ┆ 178604640 ┆ 179330400 ┆ 179330400 ┆ USD      │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ BTG    ┆ B2Gold     ┆ B2Gold     ┆ B2Gold     ┆ … ┆ 178604640 ┆ 179382240 ┆ 179382240 ┆ USD      │
-│        ┆ Corp       ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ …      ┆ …          ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …        │
-│ PLSE   ┆ Pulse Bios ┆ Pulse Bios ┆ Pulse Bios ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
-│        ┆ ciences,   ┆ ciences,   ┆ ciences    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc        ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ WGS    ┆ GeneDx     ┆ GeneDx     ┆ GeneDx     ┆ … ┆ 178578720 ┆ 179313120 ┆ 179313120 ┆ USD      │
-│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ GUNN   ┆ Gunnison   ┆ Gunnison   ┆ Gunnison   ┆ … ┆ null      ┆ null      ┆ null      ┆ USD      │
+│        ┆ Copper     ┆ Copper     ┆ Copper     ┆   ┆           ┆           ┆           ┆          │
 │        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆           ┆           ┆           ┆          │
-│ ARIS   ┆ Aris       ┆ Aris       ┆ Aris       ┆ … ┆ 178535520 ┆ 179321760 ┆ 179321760 ┆ USD      │
-│        ┆ Mining Cor ┆ Mining Cor ┆ Mining     ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ poration   ┆ poration   ┆            ┆   ┆           ┆           ┆           ┆          │
-│ SSRM   ┆ SSR Mining ┆ SSR Mining ┆ SSR Mining ┆ … ┆ 178587360 ┆ 179373600 ┆ 179373600 ┆ USD      │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ ERO    ┆ Ero Copper ┆ Ero Copper ┆ Ero Copper ┆ … ┆ 178596000 ┆ 179373600 ┆ 179373600 ┆ USD      │
-│        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
+│ XP     ┆ XP Inc.    ┆ XP Inc.    ┆ XP         ┆ … ┆ 2026-11-1 ┆ 2027-02-1 ┆ 2027-02-1 ┆ USD      │
+│        ┆            ┆            ┆            ┆   ┆ 6         ┆ 1         ┆ 1         ┆          │
+│        ┆            ┆            ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ VERA   ┆ Vera Thera ┆ Vera Thera ┆ Vera Thera ┆ … ┆ 2026-11-0 ┆ 2026-11-0 ┆ 2026-11-0 ┆ USD      │
+│        ┆ peutics,   ┆ peutics,   ┆ peutics    ┆   ┆ 5         ┆ 5         ┆ 5         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ SNDK   ┆ Sandisk    ┆ Sandisk    ┆ Sandisk    ┆ … ┆ 2026-10-2 ┆ 2027-02-1 ┆ 2027-02-1 ┆ USD      │
+│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 9         ┆ 5         ┆ 5         ┆          │
+│        ┆ n          ┆ n          ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ AYA    ┆ Aya Gold & ┆ Aya Gold & ┆ Aya Gold & ┆ … ┆ 2026-11-1 ┆ 2026-11-1 ┆ 2026-11-1 ┆ USD      │
+│        ┆ Silver     ┆ Silver     ┆ Silver     ┆   ┆ 2         ┆ 2         ┆ 2         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 13:30:00  ┆ 13:30:00  ┆ 13:30:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ …      ┆ …          ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …        │
+│ NTSK   ┆ Netskope,  ┆ Netskope,  ┆ Netskope   ┆ … ┆ 2026-12-0 ┆ 2026-12-0 ┆ 2026-12-0 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 2         ┆ 2         ┆ 2         ┆          │
+│        ┆            ┆            ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ MU     ┆ Micron Tec ┆ Micron Tec ┆ Micron     ┆ … ┆ 2026-12-1 ┆ 2026-12-1 ┆ 2026-12-1 ┆ USD      │
+│        ┆ hnology,   ┆ hnology,   ┆            ┆   ┆ 7         ┆ 7         ┆ 7         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ NXT    ┆ Nextpower  ┆ Nextpower  ┆ Nextpower  ┆ … ┆ 2026-10-2 ┆ 2027-01-2 ┆ 2027-01-2 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 8         ┆ 7         ┆ 7         ┆          │
+│        ┆            ┆            ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ SKHY   ┆ SK hynix   ┆ SK hynix   ┆ SK hynix   ┆ … ┆ 2026-10-2 ┆ 2027-01-2 ┆ 2027-01-2 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 7         ┆ 7         ┆ 7         ┆          │
+│        ┆            ┆            ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ AEM    ┆ Agnico     ┆ Agnico     ┆ Agnico     ┆ … ┆ 2026-10-2 ┆ 2027-02-1 ┆ 2027-02-1 ┆ USD      │
+│        ┆ Eagle      ┆ Eagle      ┆ Eagle      ┆   ┆ 8         ┆ 1         ┆ 1         ┆          │
+│        ┆ Mines      ┆ Mines      ┆ Mines      ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆ Limited    ┆ Limited    ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
 └────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
@@ -266,21 +303,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-RSI(14): Scalar(ScalarColumn { name: "rsi_14", scalar: Scalar { dtype: Float64, value: Float64(47.64980926070213) }, length: 1, materialized: OnceLock(shape: (1,)
+RSI(14): Scalar(ScalarColumn { name: "rsi_14", scalar: Scalar { dtype: Float64, value: Float64(50.379332821543464) }, length: 1, materialized: OnceLock(shape: (1,)
 Series: 'rsi_14' [f64]
 [
-	47.649809
+	50.379333
 ]) })
-ADX(14): Scalar(ScalarColumn { name: "adx_14", scalar: Scalar { dtype: Float64, value: Float64(30.896739718155665) }, length: 1, materialized: OnceLock(shape: (1,)
+ADX(14): Scalar(ScalarColumn { name: "adx_14", scalar: Scalar { dtype: Float64, value: Float64(11.338209049151558) }, length: 1, materialized: OnceLock(shape: (1,)
 Series: 'adx_14' [f64]
 [
-	30.89674
+	11.338209
 ]) })
 ```
 
 ## Working with Polars
 
-The examples below use the Polars 0.53 lazy API (`finance-query`'s `dataframe`
+The examples below use the Polars 0.55 lazy API (`finance-query`'s `dataframe`
 feature enables `polars/lazy`). For the full expression reference, see the
 [Polars Documentation](https://docs.pola.rs/).
 
@@ -313,7 +350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Total days: 125, high-volume days: 42
+Total days: 127, high-volume days: 44
 ```
 
 ### Computing Statistics
@@ -348,8 +385,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Average close: $285.81
-Range: $245.51 - $344.57
+Average close: $324.34
+Range: $273.75 - $360.83
 ```
 
 ### Adding Calculated Columns
@@ -380,20 +417,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Series(SeriesColumn { inner: shape: (23,)
+Series(SeriesColumn { inner: shape: (21,)
 Series: 'daily_return_pct' [f64]
 [
 	null
-	0.903024
-	-0.28461
-	0.631102
-	-0.772119
+	1.477479
+	-1.226677
+	-1.830948
+	-1.897616
 	…
-	-1.777213
-	1.964271
-	0.523626
-	0.453377
-	0.294479
+	-0.919285
+	-1.904297
+	1.903313
+	1.429478
+	0.426463
 ], materialized_at: None })
 ```
 
@@ -430,8 +467,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Filtered to fewer rows: true
 ```
 
-Calendar operations such as `dt().date()` or `dt().truncate()` work on the
-column directly.
+Calendar operations such as `dt().date()`, `dt().year()` and `dt().month()`
+work on the column directly.
 
 ### Sorting and Ranking
 
@@ -464,42 +501,55 @@ shape: (10, 59)
 │ symbol ┆ short_name ┆ long_name  ┆ display_na ┆ … ┆ earnings_ ┆ earnings_ ┆ earnings_ ┆ currency │
 │ ---    ┆ ---        ┆ ---        ┆ me         ┆   ┆ timestamp ┆ timestamp ┆ timestamp ┆ ---      │
 │ str    ┆ str        ┆ str        ┆ ---        ┆   ┆ ---       ┆ _start    ┆ _end      ┆ str      │
-│        ┆            ┆            ┆ str        ┆   ┆ i64       ┆ ---       ┆ ---       ┆          │
-│        ┆            ┆            ┆            ┆   ┆           ┆ i64       ┆ i64       ┆          │
+│        ┆            ┆            ┆ str        ┆   ┆ datetime[ ┆ ---       ┆ ---       ┆          │
+│        ┆            ┆            ┆            ┆   ┆ μs, UTC]  ┆ datetime[ ┆ datetime[ ┆          │
+│        ┆            ┆            ┆            ┆   ┆           ┆ μs, UTC]  ┆ μs, UTC]  ┆          │
 ╞════════╪════════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪══════════╡
-│ SPCX   ┆ Space Expl ┆ Space Expl ┆ Space Expl ┆ … ┆ 178587360 ┆ 179373600 ┆ 179373600 ┆ USD      │
-│        ┆ oration    ┆ oration    ┆ oration    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Technologi ┆ Technologi ┆            ┆   ┆           ┆           ┆           ┆          │
-│        ┆ es…        ┆ es…        ┆            ┆   ┆           ┆           ┆           ┆          │
-│ PLTR   ┆ Palantir   ┆ Palantir   ┆ Palantir   ┆ … ┆ 178578720 ┆ 179364960 ┆ 179364960 ┆ USD      │
-│        ┆ Technologi ┆ Technologi ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ es Inc.    ┆ es Inc.    ┆            ┆   ┆           ┆           ┆           ┆          │
-│ ABNB   ┆ Airbnb,    ┆ Airbnb,    ┆ Airbnb     ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ COHR   ┆ Coherent   ┆ Coherent   ┆ Coherent   ┆ … ┆ 178656480 ┆ 178656480 ┆ 178656480 ┆ USD      │
-│        ┆ Corp.      ┆ Corp.      ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ HONA   ┆ Honeywell  ┆ Honeywell  ┆ Honeywell  ┆ … ┆ 178596000 ┆ 179382240 ┆ 179382240 ┆ USD      │
-│        ┆ Aerospace  ┆ Aerospace  ┆ Aerospace  ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
-│ RKLB   ┆ Rocket Lab ┆ Rocket Lab ┆ Rocket Lab ┆ … ┆ 178639200 ┆ 178639200 ┆ 178639200 ┆ USD      │
-│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ n          ┆ n          ┆            ┆   ┆           ┆           ┆           ┆          │
-│ AU     ┆ AngloGold  ┆ AngloGold  ┆ AngloGold  ┆ … ┆ 178550100 ┆ 178550100 ┆ 178550100 ┆ USD      │
-│        ┆ Ashanti    ┆ Ashanti    ┆ Ashanti    ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ PLC        ┆ plc        ┆            ┆   ┆           ┆           ┆           ┆          │
-│ CRDO   ┆ Credo      ┆ Credo      ┆ Credo      ┆ … ┆ 178034400 ┆ 178837920 ┆ 178837920 ┆ USD      │
-│        ┆ Technology ┆ Technology ┆ Technology ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Group      ┆ Group      ┆ Group      ┆   ┆           ┆           ┆           ┆          │
-│        ┆ Holding…   ┆ Holding…   ┆ Holding    ┆   ┆           ┆           ┆           ┆          │
-│ NTRA   ┆ Natera,    ┆ Natera,    ┆ Natera     ┆ … ┆ 178604640 ┆ 179390880 ┆ 179390880 ┆ USD      │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│ AXON   ┆ Axon Enter ┆ Axon Enter ┆ Axon       ┆ … ┆ 178596000 ┆ 179373600 ┆ 179373600 ┆ USD      │
-│        ┆ prise,     ┆ prise,     ┆ Enterprise ┆   ┆ 0         ┆ 0         ┆ 0         ┆          │
-│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆           ┆           ┆           ┆          │
+│ ANT    ┆ Anthropic, ┆ Anthropic, ┆ null       ┆ … ┆ null      ┆ null      ┆ null      ┆ USD      │
+│        ┆ PBC        ┆ PBC        ┆            ┆   ┆           ┆           ┆           ┆          │
+│ SKHY   ┆ SK hynix   ┆ SK hynix   ┆ SK hynix   ┆ … ┆ 2026-10-2 ┆ 2027-01-2 ┆ 2027-01-2 ┆ USD      │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 7         ┆ 7         ┆ 7         ┆          │
+│        ┆            ┆            ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ MU     ┆ Micron Tec ┆ Micron Tec ┆ Micron     ┆ … ┆ 2026-12-1 ┆ 2026-12-1 ┆ 2026-12-1 ┆ USD      │
+│        ┆ hnology,   ┆ hnology,   ┆            ┆   ┆ 7         ┆ 7         ┆ 7         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ ANET   ┆ Arista     ┆ Arista     ┆ Arista     ┆ … ┆ 2026-11-0 ┆ 2027-02-0 ┆ 2027-02-0 ┆ USD      │
+│        ┆ Networks,  ┆ Networks,  ┆ Networks   ┆   ┆ 3         ┆ 9         ┆ 9         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ DELL   ┆ Dell Techn ┆ Dell Techn ┆ Dell       ┆ … ┆ 2026-11-2 ┆ 2027-02-2 ┆ 2027-02-2 ┆ USD      │
+│        ┆ ologies    ┆ ologies    ┆            ┆   ┆ 4         ┆ 5         ┆ 5         ┆          │
+│        ┆ Inc.       ┆ Inc.       ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ QCOM   ┆ QUALCOMM   ┆ QUALCOMM   ┆ QUALCOMM   ┆ … ┆ 2026-11-0 ┆ 2027-02-0 ┆ 2027-02-0 ┆ USD      │
+│        ┆ Incorporat ┆ Incorporat ┆            ┆   ┆ 4         ┆ 3         ┆ 3         ┆          │
+│        ┆ ed         ┆ ed         ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ MRVL   ┆ Marvell    ┆ Marvell    ┆ Marvell    ┆ … ┆ 2026-12-0 ┆ 2026-12-0 ┆ 2026-12-0 ┆ USD      │
+│        ┆ Technology ┆ Technology ┆            ┆   ┆ 1         ┆ 1         ┆ 1         ┆          │
+│        ┆ , Inc.     ┆ , Inc.     ┆            ┆   ┆ 21:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ STX    ┆ Seagate    ┆ Seagate    ┆ Seagate    ┆ … ┆ 2026-10-2 ┆ 2027-01-2 ┆ 2027-01-2 ┆ USD      │
+│        ┆ Technology ┆ Technology ┆            ┆   ┆ 7         ┆ 6         ┆ 6         ┆          │
+│        ┆ Holdings   ┆ Holdings   ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆ PL…        ┆ pl…        ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ WDC    ┆ Western    ┆ Western    ┆ Western    ┆ … ┆ 2026-10-2 ┆ 2027-01-2 ┆ 2027-01-2 ┆ USD      │
+│        ┆ Digital    ┆ Digital    ┆ Digital    ┆   ┆ 2         ┆ 8         ┆ 8         ┆          │
+│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆ n          ┆ n          ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
+│ SNDK   ┆ Sandisk    ┆ Sandisk    ┆ Sandisk    ┆ … ┆ 2026-10-2 ┆ 2027-02-1 ┆ 2027-02-1 ┆ USD      │
+│        ┆ Corporatio ┆ Corporatio ┆            ┆   ┆ 9         ┆ 5         ┆ 5         ┆          │
+│        ┆ n          ┆ n          ┆            ┆   ┆ 20:00:00  ┆ 21:00:00  ┆ 21:00:00  ┆          │
+│        ┆            ┆            ┆            ┆   ┆ UTC       ┆ UTC       ┆ UTC       ┆          │
 └────────┴────────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴──────────┘
 ```
 
 ### Aggregations
+
+A lazy `collect()` on a `current_thread` tokio runtime (such as `#[tokio::test]`)
+must run inside `tokio::task::spawn_blocking`.
 
 ```rust capture-output feature=dataframe
 use finance_query::{Interval, Ticker, TimeRange};
@@ -511,17 +561,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneYear).await?;
     let df = chart.to_dataframe()?;
 
-    // Group by month and aggregate
+    // Average close per calendar month
     let monthly = df
         .lazy()
-        .with_column(col("timestamp").dt().truncate(lit("1mo")).alias("month"))
-        .group_by([col("month")])
-        .agg([
-            col("close").mean().alias("avg_close"),
-            col("volume").sum().alias("total_volume"),
-            col("high").max().alias("max_high"),
-            col("low").min().alias("min_low"),
+        .with_columns([
+            col("timestamp").dt().year().alias("year"),
+            col("timestamp").dt().month().alias("month"),
         ])
+        .group_by([col("year"), col("month")])
+        .agg([col("close").mean().alias("close_mean")])
+        .sort(["year", "month"], SortMultipleOptions::default())
         .collect()?;
 
     println!("{}", monthly);
@@ -530,24 +579,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-shape: (14, 5)
-┌───────┬────────────┬──────────────┬────────────┬────────────┐
-│ month ┆ avg_close  ┆ total_volume ┆ max_high   ┆ min_low    │
-│ ---   ┆ ---        ┆ ---          ┆ ---        ┆ ---        │
-│ i64   ┆ f64        ┆ i64          ┆ f64        ┆ f64        │
-╞═══════╪════════════╪══════════════╪════════════╪════════════╡
-│ 679   ┆ 261.201363 ┆ 1086109600   ┆ 277.320007 ┆ 244.0      │
-│ 688   ┆ 322.733637 ┆ 1216397200   ┆ 344.570007 ┆ 300.0      │
-│ 676   ┆ 229.350006 ┆ 113854000    ┆ 231.0      ┆ 219.25     │
-│ 677   ┆ 231.592499 ┆ 943741000    ┆ 241.320007 ┆ 223.779999 │
-│ 684   ┆ 253.480499 ┆ 789735900    ┆ 262.480011 ┆ 245.509995 │
-│ …     ┆ …          ┆ …            ┆ …          ┆ …          │
-│ 689   ┆ 312.246663 ┆ 129985800    ┆ 316.290009 ┆ 305.670013 │
-│ 686   ┆ 303.452858 ┆ 1001455700   ┆ 316.940002 ┆ 285.779999 │
-│ 682   ┆ 259.249999 ┆ 1186011100   ┆ 279.5      ┆ 243.419998 │
-│ 685   ┆ 268.947273 ┆ 1041091400   ┆ 288.029999 ┆ 245.699997 │
-│ 678   ┆ 247.65909  ┆ 1257230200   ┆ 259.23999  ┆ 225.949997 │
-└───────┴────────────┴──────────────┴────────────┴────────────┘
+shape: (13, 3)
+┌──────┬───────┬────────────┐
+│ year ┆ month ┆ close_mean │
+│ ---  ┆ ---   ┆ ---        │
+│ i32  ┆ i8    ┆ f64        │
+╞══════╪═══════╪════════════╡
+│ 2025 ┆ 11    ┆ 278.850006 │
+│ 2025 ┆ 12    ┆ 276.306362 │
+│ 2026 ┆ 1     ┆ 257.649498 │
+│ 2026 ┆ 2     ┆ 269.178422 │
+│ 2026 ┆ 3     ┆ 254.906363 │
+│ …    ┆ …     ┆ …          │
+│ 2026 ┆ 7     ┆ 322.288637 │
+│ 2026 ┆ 8     ┆ 310.19381  │
+│ 2026 ┆ 9     ┆ 331.056665 │
+│ 2026 ┆ 10    ┆ 341.167275 │
+│ 2026 ┆ 11    ┆ 348.882779 │
+└──────┴───────┴────────────┘
 ```
 
 ## Multiple Symbols
@@ -573,7 +622,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-Combined data: 69 rows
+Combined data: 63 rows
 ```
 
 `BatchQuotesResponse`, `BatchSparksResponse`, `BatchDividendsResponse`,
@@ -709,7 +758,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-joined shape: (23, 8)
+joined shape: (21, 10)
 ```
 
 ### Custom Analysis
@@ -749,22 +798,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```text soothfast-output
 Most volatile days:
 shape: (10, 2)
-┌────────────┬───────────┐
-│ timestamp  ┆ range_pct │
-│ ---        ┆ ---       │
-│ i64        ┆ f64       │
-╞════════════╪═══════════╡
-│ 1784899800 ┆ 3.828599  │
-│ 1784122200 ┆ 3.483971  │
-│ 1785504600 ┆ 3.460556  │
-│ 1784554200 ┆ 3.071129  │
-│ 1785763800 ┆ 3.04528   │
-│ 1785850200 ┆ 2.941369  │
-│ 1783603800 ┆ 2.64689   │
-│ 1783517400 ┆ 2.479345  │
-│ 1783949400 ┆ 2.417199  │
-│ 1784208600 ┆ 2.367516  │
-└────────────┴───────────┘
+┌─────────────────────────┬───────────┐
+│ timestamp               ┆ range_pct │
+│ ---                     ┆ ---       │
+│ datetime[μs, UTC]       ┆ f64       │
+╞═════════════════════════╪═══════════╡
+│ 2026-10-30 13:30:00 UTC ┆ 4.306066  │
+│ 2026-11-20 14:30:00 UTC ┆ 4.022653  │
+│ 2026-11-05 14:30:00 UTC ┆ 3.870182  │
+│ 2026-11-04 14:30:00 UTC ┆ 3.865414  │
+│ 2026-11-25 14:30:00 UTC ┆ 3.267899  │
+│ 2026-11-03 14:30:00 UTC ┆ 2.762884  │
+│ 2026-11-19 14:30:00 UTC ┆ 2.522837  │
+│ 2026-11-24 14:30:00 UTC ┆ 2.406301  │
+│ 2026-11-02 14:30:00 UTC ┆ 2.358708  │
+│ 2026-11-06 14:30:00 UTC ┆ 2.187698  │
+└─────────────────────────┴───────────┘
 ```
 
 ## Type Conversions
@@ -793,7 +842,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-19 dividend rows
+20 dividend rows
 7 rows
 ```
 
@@ -995,7 +1044,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```text soothfast-output
-DataFrame created: 23 rows
+DataFrame created: 21 rows
 ```
 
 ## Best Practices

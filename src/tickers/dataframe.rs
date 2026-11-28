@@ -294,7 +294,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["MSFT", "AAPL", "AAPL"]);
         let timestamps: Vec<_> = df
@@ -348,7 +349,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(recommended, ["Y", "Z", "X"]);
     }
@@ -389,7 +391,8 @@ mod tests {
                 .unwrap()
                 .str()
                 .unwrap()
-                .into_no_null_iter()
+                .iter()
+                .map(Option::unwrap)
                 .map(str::to_string)
                 .collect()
         };
@@ -535,7 +538,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["VTSAX", "FXAIX", "FXAIX"]);
         let amounts: Vec<_> = df
@@ -582,7 +586,8 @@ mod tests {
                 .unwrap()
                 .str()
                 .unwrap()
-                .into_no_null_iter()
+                .iter()
+                .map(Option::unwrap)
                 .map(str::to_string)
                 .collect()
         };
@@ -626,7 +631,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["MSFT", "AAPL"]);
         let sma: Vec<_> = df.column("sma_10").unwrap().f64().unwrap().iter().collect();

@@ -24,6 +24,17 @@ ignore = [
     # clears these. Revisit when polars moves off chrono.
     "RUSTSEC-2026-0543",
     "RUSTSEC-2026-0555",
+    # `quick-xml` 0.39 (two DoS advisories, fixed in 0.41) and `humantime`
+    # (unmaintained) come in through object_store 0.13, which polars-error
+    # 0.55 pins; only object_store 0.14 has the fix. finance-query never uses
+    # polars' cloud I/O, so object_store never parses XML here. Revisit when
+    # polars moves to object_store 0.14.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+    "RUSTSEC-2026-0542",
+    # `bincode` is unmaintained (not vulnerable), with no fixed release;
+    # polars-utils 0.55 depends on it. Revisit at the next polars release.
+    "RUSTSEC-2025-0141",
 ]
 
 [bans]
