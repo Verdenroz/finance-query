@@ -41,10 +41,14 @@ const FEED_SOURCE_SLUGS: &[&str] = &[
     "ritholtz",
 ];
 
+fn normalize_slug(slug: &str) -> String {
+    slug.trim().to_lowercase().replace(['-', '_', ' '], "")
+}
+
 /// Parse one slug into its `FeedSource`, normalizing away `-`/`_`/space so
 /// `"sec-filings"`, `"sec_filings"`, and `"secfilings"` are all accepted.
 fn parse_source_slug(slug: &str, form_type: Option<&str>) -> Option<FeedSource> {
-    match slug.to_lowercase().replace(['-', '_', ' '], "").as_str() {
+    match normalize_slug(slug).as_str() {
         "federalreserve" => Some(FeedSource::FederalReserve),
         "sec" => Some(FeedSource::SecPressReleases),
         "secfilings" => Some(FeedSource::SecFilings(
@@ -91,6 +95,12 @@ pub fn parse_sources(
     slugs: Option<&[String]>,
     form_type: Option<&str>,
 ) -> Result<Vec<FeedSource>, String> {
+    if form_type.is_some()
+        && !slugs.is_some_and(|s| s.iter().any(|s| normalize_slug(s) == "secfilings"))
+    {
+        return Err("formType only applies to the sec-filings source".to_string());
+    }
+
     let default_sources = || {
         vec![
             FeedSource::FederalReserve,
@@ -144,4 +154,31 @@ pub async fn get_feeds(
             },
         )
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn slugs(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn form_type_with_sec_filings_is_applied() {
+        let parsed = parse_sources(Some(&slugs(&["sec-filings"])), Some("8-K")).unwrap();
+        assert!(matches!(parsed.as_slice(), [FeedSource::SecFilings(f)] if f == "8-K"));
+    }
+
+    #[test]
+    fn form_type_without_sec_filings_is_rejected() {
+        let err = parse_sources(Some(&slugs(&["sec"])), Some("8-K")).unwrap_err();
+        assert!(err.contains("sec-filings"), "{err}");
+        assert!(parse_sources(None, Some("8-K")).is_err());
+    }
+
+    #[test]
+    fn omitted_form_type_leaves_sources_unchanged() {
+        assert!(parse_sources(Some(&slugs(&["sec"])), None).is_ok());
+    }
 }
