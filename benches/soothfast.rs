@@ -81,12 +81,12 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    BatchQuotesResponse, Candle, Chart, CompanyFacts, CryptoCoin, CryptoQuote, Currency, Dividend,
-    EdgarSubmissions, Exchange, FearAndGreed, Fetch, FinancialStatement, ForexPair, ForexQuote,
-    IndustryData, Interval, LookupResults, MarketHours, MarketSummaryQuote, News, Operation,
-    Options, Provider, ProviderAdapter, ProviderSet, Providers, Quote, QuoteSummaryResponse,
-    Recommendation, Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers,
-    TimeRange, Transcript, TrendingQuote, analyze_sentiment,
+    BatchQuotesResponse, Candle, Chart, CompanyFacts, CryptoQuote, Currency, Dividend,
+    EdgarSubmissions, Exchange, FearAndGreed, Fetch, FinancialStatement, ForexQuote, IndustryData,
+    Interval, LookupResults, MarketHours, MarketSummaryQuote, News, Operation, Options, Provider,
+    ProviderAdapter, ProviderSet, Providers, Quote, QuoteSummaryResponse, Recommendation, Region,
+    Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers, TimeRange, Transcript,
+    TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::sync::Arc;
@@ -2178,31 +2178,36 @@ fn canned_provider_set() -> Arc<ProviderSet> {
     ))
 }
 
+// Setup runs once and the body is warmed before measuring, so a handle built
+// in setup would only ever serve cache hits. The benches below take the
+// provider set from setup and build a fresh handle per run.
 #[fixture]
-fn canned_ticker() -> (tokio::runtime::Runtime, Ticker) {
+fn canned_ticker() -> (tokio::runtime::Runtime, Arc<ProviderSet>) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
         .unwrap();
-    let ticker = rt
-        .block_on(
-            Ticker::builder("AAPL")
-                .with_provider_set(canned_provider_set())
-                .build(),
-        )
-        .unwrap();
-    (rt, ticker)
+    (rt, canned_provider_set())
 }
 
-/// First `.quote()` dispatches through the canned provider; the second hits
-/// the module cache — both run every measured iteration, so this gates the
-/// combined dispatch-then-cache-hit cost of the real `Ticker` cache logic.
+async fn fresh_ticker(set: &Arc<ProviderSet>) -> Ticker {
+    Ticker::builder("AAPL")
+        .with_provider_set(Arc::clone(set))
+        .build()
+        .await
+        .unwrap()
+}
+
+/// A fresh `Ticker` whose first `.quote()` dispatches through the canned
+/// provider and whose second hits the module cache, gating the combined
+/// dispatch-then-cache-hit cost of the real cache logic.
 #[bench(
     group = "ticker",
     setup = canned_ticker,
     covers = "finance_query::Ticker::quote"
 )]
-fn ticker_quote_then_cached(input: &(tokio::runtime::Runtime, Ticker)) {
-    let (rt, ticker) = input;
+fn ticker_quote_then_cached(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let ticker = rt.block_on(fresh_ticker(set));
     let first = rt
         .block_on(ticker.quote::<finance_query::format::Raw>())
         .unwrap();
@@ -2217,8 +2222,9 @@ fn ticker_quote_then_cached(input: &(tokio::runtime::Runtime, Ticker)) {
     setup = canned_ticker,
     covers = "finance_query::Ticker::chart"
 )]
-fn ticker_chart_then_cached(input: &(tokio::runtime::Runtime, Ticker)) {
-    let (rt, ticker) = input;
+fn ticker_chart_then_cached(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let ticker = rt.block_on(fresh_ticker(set));
     let first = rt
         .block_on(ticker.chart(Interval::OneDay, TimeRange::OneMonth))
         .unwrap();
@@ -2390,89 +2396,87 @@ fn canned_markets() -> Providers {
 }
 
 #[fixture]
-fn canned_crypto_coin() -> (tokio::runtime::Runtime, CryptoCoin) {
+fn canned_crypto() -> (tokio::runtime::Runtime, Providers) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
         .unwrap();
-    (rt, canned_markets().crypto("bitcoin"))
+    (rt, canned_markets())
 }
 
 #[fixture]
-fn canned_forex_pair() -> (tokio::runtime::Runtime, ForexPair) {
+fn canned_forex() -> (tokio::runtime::Runtime, Providers) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
         .unwrap();
-    (rt, canned_markets().forex("EUR", "USD"))
+    (rt, canned_markets())
 }
 
-/// Dispatch to the canned provider, then a cache hit.
+/// A fresh handle dispatches to the canned provider, then hits its cache.
 #[bench(
     group = "crypto",
-    setup = canned_crypto_coin,
-    alloc = 10,
+    setup = canned_crypto,
+    alloc = 36,
     covers = "finance_query::CryptoCoin::quote"
 )]
-fn crypto_coin_quote_then_cached(input: &(tokio::runtime::Runtime, CryptoCoin)) {
-    let (rt, coin) = input;
+fn crypto_coin_quote_then_cached(input: &(tokio::runtime::Runtime, Providers)) {
+    let (rt, providers) = input;
+    let coin = providers.crypto("bitcoin");
     let first = rt.block_on(coin.quote("usd")).unwrap();
     let second = rt.block_on(coin.quote("usd")).unwrap();
     keep((first, second));
 }
 
-/// Dispatch to the canned provider, then a cache hit.
+/// A fresh handle dispatches to the canned provider, then hits its cache.
 #[bench(
     group = "forex",
-    setup = canned_forex_pair,
-    alloc = 6,
+    setup = canned_forex,
+    alloc = 29,
     covers = "finance_query::ForexPair::quote"
 )]
-fn forex_pair_quote_then_cached(input: &(tokio::runtime::Runtime, ForexPair)) {
-    let (rt, pair) = input;
+fn forex_pair_quote_then_cached(input: &(tokio::runtime::Runtime, Providers)) {
+    let (rt, providers) = input;
+    let pair = providers.forex("EUR", "USD");
     let first = rt.block_on(pair.quote()).unwrap();
     let second = rt.block_on(pair.quote()).unwrap();
     keep((first, second));
 }
 
 #[fixture]
-fn canned_tickers() -> (tokio::runtime::Runtime, Tickers) {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
-    let tickers = rt
-        .block_on(
-            Tickers::builder(["AAPL", "MSFT", "GOOGL"])
-                .with_provider_set(canned_provider_set())
-                .build(),
-        )
-        .unwrap();
-    (rt, tickers)
+fn canned_tickers() -> (tokio::runtime::Runtime, Arc<ProviderSet>) {
+    canned_ticker()
 }
 
-/// Batch dispatch (one provider call for all symbols) then a cache hit.
+fn fresh_tickers(
+    rt: &tokio::runtime::Runtime,
+    set: &Arc<ProviderSet>,
+    symbols: impl IntoIterator<Item = String>,
+) -> Tickers {
+    rt.block_on(
+        Tickers::builder(symbols)
+            .with_provider_set(Arc::clone(set))
+            .build(),
+    )
+    .unwrap()
+}
+
+/// A fresh `Tickers` batch-dispatches once (one provider call for all
+/// symbols), then hits its cache.
 #[bench(
     group = "tickers",
     setup = canned_tickers,
     covers = "finance_query::Tickers::quotes"
 )]
-fn tickers_batch_quote_then_cached(input: &(tokio::runtime::Runtime, Tickers)) {
-    let (rt, tickers) = input;
+fn tickers_batch_quote_then_cached(input: &(tokio::runtime::Runtime, Arc<ProviderSet>)) {
+    let (rt, set) = input;
+    let tickers = fresh_tickers(rt, set, ["AAPL", "MSFT", "GOOGL"].map(String::from));
     let first = rt.block_on(tickers.quotes()).unwrap();
     let second = rt.block_on(tickers.quotes()).unwrap();
     keep((first, second));
 }
 
-fn canned_tickers_sized(n: usize) -> (tokio::runtime::Runtime, Tickers) {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
-    let tickers = rt
-        .block_on(
-            Tickers::builder((0..n).map(|i| format!("S{i}")))
-                .with_provider_set(canned_provider_set())
-                .build(),
-        )
-        .unwrap();
-    (rt, tickers)
+fn canned_tickers_sized(n: usize) -> (tokio::runtime::Runtime, Arc<ProviderSet>, usize) {
+    let (rt, set) = canned_ticker();
+    (rt, set, n)
 }
 
 #[bench(
@@ -2482,8 +2486,9 @@ fn canned_tickers_sized(n: usize) -> (tokio::runtime::Runtime, Tickers) {
     complexity = "n",
     covers = "finance_query::Tickers::quotes"
 )]
-fn tickers_batch_quote_large_cached(input: &(tokio::runtime::Runtime, Tickers)) {
-    let (rt, tickers) = input;
+fn tickers_batch_quote_large_cached(input: &(tokio::runtime::Runtime, Arc<ProviderSet>, usize)) {
+    let (rt, set, n) = input;
+    let tickers = fresh_tickers(rt, set, (0..*n).map(|i| format!("S{i}")));
     let first = rt.block_on(tickers.quotes()).unwrap();
     let second = rt.block_on(tickers.quotes()).unwrap();
     keep((first, second));
@@ -3006,16 +3011,8 @@ fn score_transcript(t: &Transcript) {
 }
 
 #[fixture]
-fn canned_ticker_only() -> Ticker {
-    tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap()
-        .block_on(
-            Ticker::builder("AAPL")
-                .with_provider_set(canned_provider_set())
-                .build(),
-        )
-        .unwrap()
+fn canned_set() -> Arc<ProviderSet> {
+    canned_provider_set()
 }
 
 /// The same dispatch-then-cache-hit path as `ticker_quote_then_cached`, but
@@ -3023,10 +3020,11 @@ fn canned_ticker_only() -> Ticker {
 /// times the quote future is polled, which instruction counts cannot see.
 #[bench(
     group = "ticker",
-    setup = canned_ticker_only,
+    setup = canned_set,
     covers = "finance_query::Ticker::quote"
 )]
-async fn ticker_quote_polls(ticker: &Ticker) {
+async fn ticker_quote_polls(set: &Arc<ProviderSet>) {
+    let ticker = fresh_ticker(set).await;
     let first = ticker.quote::<finance_query::format::Raw>().await.unwrap();
     let second = ticker.quote::<finance_query::format::Raw>().await.unwrap();
     keep((first, second));
