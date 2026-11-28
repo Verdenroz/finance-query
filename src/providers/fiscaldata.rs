@@ -36,6 +36,10 @@ impl EconomicProvider for FiscalDataProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for FiscalDataProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         Some(self)
     }

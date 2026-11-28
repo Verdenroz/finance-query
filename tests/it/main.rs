@@ -18,6 +18,7 @@ mod fmp_catalog;
 mod fmp_delisted;
 mod fmp_page_progress;
 mod fmp_pages;
+mod keyless_endpoints;
 mod minute_bar_sources;
 mod polygon_filings;
 mod provider_handles;

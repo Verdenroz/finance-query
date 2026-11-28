@@ -34,14 +34,18 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(45);
 
 keyless_limiter!(rate = DEFILLAMA_RATE_PER_SEC);
 
-/// Build a client against the live API, reusing the shared token bucket.
+/// Build a client against the live API, reusing the shared token bucket. A
+/// scoped endpoint replaces both origins.
 fn client() -> Result<DefiLlamaClient> {
-    DefiLlamaClient::new(
-        DEFAULT_TIMEOUT,
-        shared_limiter(),
-        client::LLAMA_BASE,
-        client::STABLECOINS_BASE,
-    )
+    let (base, stablecoins) =
+        match crate::adapters::keys::scoped_key("defillama").and_then(|scoped| scoped.base_url) {
+            Some(origin) => (origin.clone(), origin),
+            None => (
+                client::LLAMA_BASE.to_string(),
+                client::STABLECOINS_BASE.to_string(),
+            ),
+        };
+    DefiLlamaClient::new(DEFAULT_TIMEOUT, shared_limiter(), base, stablecoins)
 }
 
 pub(crate) use crypto::{fetch_protocol_tvl_history_response, fetch_protocol_tvl_response};
