@@ -286,6 +286,15 @@ pub trait EconomicProvider: ProviderCore {
         Err(self.not_supported(Operation::EconomicReleaseDates))
     }
 
+    /// Fetch only the newest observation of a series, `None` when it has none.
+    #[cfg(feature = "fred")]
+    async fn fetch_economic_latest_observation(
+        &self,
+        _series_id: &str,
+    ) -> Result<Option<crate::models::economic::MacroObservation>> {
+        Err(self.not_supported(Operation::EconomicLatestObservation))
+    }
+
     /// Fetch US Treasury securities auctions matching `query`, most recent
     /// auction date first.
     ///

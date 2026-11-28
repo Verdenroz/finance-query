@@ -163,6 +163,9 @@ pub enum Operation {
     /// Upcoming scheduled release dates of major macro data.
     #[cfg(feature = "fred")]
     EconomicReleaseDates,
+    /// Most recent observation of a macro series.
+    #[cfg(feature = "fred")]
+    EconomicLatestObservation,
     /// US Treasury securities auctions, announced through settled.
     #[cfg(feature = "fiscaldata")]
     TreasuryAuctions,
@@ -285,6 +288,8 @@ impl Operation {
             Self::EconomicReleases => "economic_releases",
             #[cfg(feature = "fred")]
             Self::EconomicReleaseDates => "economic_release_dates",
+            #[cfg(feature = "fred")]
+            Self::EconomicLatestObservation => "economic_latest_observation",
             #[cfg(feature = "fiscaldata")]
             Self::TreasuryAuctions => "treasury_auctions",
             #[cfg(feature = "fiscaldata")]
@@ -354,7 +359,7 @@ impl Operation {
             | Self::EconomicCategories
             | Self::EconomicReleases => Capability::ECONOMIC,
             #[cfg(feature = "fred")]
-            Self::EconomicReleaseDates => Capability::ECONOMIC,
+            Self::EconomicReleaseDates | Self::EconomicLatestObservation => Capability::ECONOMIC,
             #[cfg(feature = "fiscaldata")]
             Self::TreasuryAuctions | Self::UpcomingAuctions => Capability::ECONOMIC,
             Self::ForexQuote | Self::ForexNews => Capability::FOREX,
