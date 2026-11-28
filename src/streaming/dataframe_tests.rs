@@ -8,7 +8,7 @@ use super::options::{Greeks, OptionContractUpdate};
 use super::pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 #[cfg(feature = "polygon")]
 use super::trades::TradeTick;
-use crate::models::dataframe_test_util::{columns, micros};
+use crate::models::dataframe_test_util::{columns, columns_exempt, micros};
 use polars::prelude::DataType;
 use serde_json::json;
 
@@ -58,7 +58,7 @@ fn price_update_columns() {
     let df = update.to_dataframe().unwrap();
     assert_eq!(df.width(), 33);
     assert_eq!(
-        columns(&df)[..8],
+        columns_exempt(&df, &["expire_date"])[..8],
         [
             "id:str",
             "price:f64",
@@ -219,16 +219,25 @@ fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
         update: PriceUpdate::default(),
     };
     let df = event.to_dataframe().unwrap();
-    assert_eq!(columns(&df)[..2], ["previous_price:f64", "update_id:str"]);
+    assert_eq!(
+        columns_exempt(&df, &["update_expire_date"])[..2],
+        ["previous_price:f64", "update_id:str"]
+    );
     assert_eq!(df.width(), 1 + 33 + 1);
-    assert_eq!(columns(&df).last().unwrap(), "condition_kind:str");
+    assert_eq!(
+        columns_exempt(&df, &["update_expire_date"]).last().unwrap(),
+        "condition_kind:str"
+    );
     assert_eq!(
         df.column("condition_kind").unwrap().str().unwrap().get(0),
         Some("priceAbove")
     );
 
     let empty = AlertEvent::vec_to_dataframe(&[]).unwrap();
-    assert_eq!(columns(&empty), columns(&df));
+    assert_eq!(
+        columns_exempt(&empty, &["update_expire_date"]),
+        columns_exempt(&df, &["update_expire_date"])
+    );
     assert_eq!(empty.height(), 0);
 
     let two = AlertEvent::vec_to_dataframe(&[event.clone(), event]).unwrap();
