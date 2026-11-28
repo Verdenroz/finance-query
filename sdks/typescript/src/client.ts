@@ -231,7 +231,7 @@ export interface GetBatchFinancialsOptions {
   fields?: string;
   /** Frequency: annual or quarterly (default: annual) */
   frequency?: models.Frequency;
-  /** Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome") */
+  /** Comma-separated list of metric names to include in the statement (e.g. "total_revenue,net_income") */
   metrics?: string;
   /** Statement type (required): income, balance, cashflow */
   statement: models.StatementType;
@@ -595,7 +595,7 @@ export interface GetFinancialsOptions {
   fields?: string;
   /** Frequency: annual or quarterly (default: annual) */
   frequency?: models.Frequency;
-  /** Comma-separated list of metric names to include in the statement (e.g. "TotalRevenue,NetIncome") */
+  /** Comma-separated list of metric names to include in the statement (e.g. "total_revenue,net_income") */
   metrics?: string;
 }
 

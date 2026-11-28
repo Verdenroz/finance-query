@@ -1332,11 +1332,11 @@ type GqlFinancialDataPoint {
 }
 
 """
-A single line item in a financial statement (e.g., "TotalRevenue").
+A single line item in a financial statement (e.g., "total_revenue").
 """
 type GqlFinancialLineItem {
 	"""
-	Metric name (e.g., "TotalRevenue", "NetIncome").
+	Metric name (e.g., "total_revenue", "net_income").
 	"""
 	metric: String!
 	"""
@@ -3791,7 +3791,7 @@ type GqlTicker {
 	recommendations(limit: Int! = 5): GqlRecommendation!
 	financials(		statement: GqlStatementType!,		frequency: GqlFrequency! = ANNUAL,
 		"""
-		Filter to specific metric names (e.g. ["TotalRevenue","NetIncome"]). Omitted = all metrics.
+		Filter to specific metric names (e.g. ["total_revenue","net_income"]). Omitted = all metrics.
 		"""
 		metrics: [String!]
 	): [GqlFinancialLineItem!]!
@@ -4512,7 +4512,7 @@ type QueryRoot {
 	"""
 	financialsBatch(		symbols: [String!]!,		statement: GqlStatementType!,		frequency: GqlFrequency! = ANNUAL,
 		"""
-		Filter to specific metric names (e.g. ["TotalRevenue","NetIncome"]). Omitted = all metrics.
+		Filter to specific metric names (e.g. ["total_revenue","net_income"]). Omitted = all metrics.
 		"""
 		metrics: [String!]
 	): GqlFinancialsBatch!

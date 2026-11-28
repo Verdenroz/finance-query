@@ -16,7 +16,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}: {} metrics", symbol, statement.statement.len());
 
         // Access specific metrics
-        if let Some(revenue_data) = statement.statement.get("TotalRevenue") {
+        if let Some(revenue_data) = statement.statement.get("total_revenue") {
             println!("  Revenue data points: {}", revenue_data.len());
 
             // Get most recent revenue
@@ -25,7 +25,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if let Some(income_data) = statement.statement.get("NetIncome")
+        if let Some(income_data) = statement.statement.get("net_income")
             && let Some((date, value)) = income_data.iter().next()
         {
             println!("  Latest Net Income ({}): ${}", date, value);

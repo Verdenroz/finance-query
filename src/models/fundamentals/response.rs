@@ -47,9 +47,8 @@ impl FinancialStatement {
     /// Converts the statement to a long-format polars DataFrame, one row per metric and date.
     ///
     /// Columns are `symbol`, `statement_type`, `frequency`, `metric` (strings), `date` (Date)
-    /// and `value` (f64). `metric` holds the provider's metric name in snake_case
-    /// (`TotalRevenue` becomes `total_revenue`). Rows are sorted by metric, then date. Errors
-    /// when two metric names map to the same snake_case name.
+    /// and `value` (f64). `metric` holds the statement's metric name
+    /// (`total_revenue`). Rows are sorted by metric, then date.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
         use polars::prelude::*;
 

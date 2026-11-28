@@ -2296,7 +2296,7 @@ paths:
           in: query
           required: false
           schema:
-            description: "Comma-separated list of metric names to include in the statement (e.g. \"TotalRevenue,NetIncome\")"
+            description: "Comma-separated list of metric names to include in the statement (e.g. \"total_revenue,net_income\")"
             type: string
         - name: statement
           in: query
@@ -2366,7 +2366,7 @@ paths:
           in: query
           required: false
           schema:
-            description: "Comma-separated list of metric names to include in the statement (e.g. \"TotalRevenue,NetIncome\")"
+            description: "Comma-separated list of metric names to include in the statement (e.g. \"total_revenue,net_income\")"
             type: string
         - name: symbol
           in: path
@@ -5954,7 +5954,7 @@ components:
           description: "Frequency: annual or quarterly (default: annual)"
           $ref: "#/components/schemas/Frequency"
         metrics:
-          description: "Comma-separated list of metric names to include in the statement (e.g. \"TotalRevenue,NetIncome\")"
+          description: "Comma-separated list of metric names to include in the statement (e.g. \"total_revenue,net_income\")"
           type: string
         statement:
           description: "Statement type (required): income, balance, cashflow"
@@ -6479,7 +6479,7 @@ components:
           description: "Frequency: annual or quarterly (default: annual)"
           $ref: "#/components/schemas/Frequency"
         metrics:
-          description: "Comma-separated list of metric names to include in the statement (e.g. \"TotalRevenue,NetIncome\")"
+          description: "Comma-separated list of metric names to include in the statement (e.g. \"total_revenue,net_income\")"
           type: string
     ForexQuery:
       description: "Query parameters for `GET /v2/forex/{from}/{to}`."
@@ -7896,11 +7896,11 @@ components:
         - date
         - value
     GqlFinancialLineItem:
-      description: "A single line item in a financial statement (e.g., \"TotalRevenue\")."
+      description: "A single line item in a financial statement (e.g., \"total_revenue\")."
       type: object
       properties:
         metric:
-          description: "Metric name (e.g., \"TotalRevenue\", \"NetIncome\")."
+          description: "Metric name (e.g., \"total_revenue\", \"net_income\")."
           type: string
         values:
           description: "Time-series values: date → value pairs."

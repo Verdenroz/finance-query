@@ -653,9 +653,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 The `date` column is a polars `Date` sorted ascending. Metric names are
-snake_case in both frames, whatever casing the provider uses: Yahoo's
-`TotalRevenue` and FMP's `totalRevenue` both become `total_revenue`. The
-statement map itself (`income.statement`) keeps the provider's names.
+the same in both frames and in the statement map itself (`income.statement`):
+every provider's revenue is `total_revenue`. A metric with no canonical
+equivalent keeps the provider's own name in snake_case.
 
 ## Exporting Data
 

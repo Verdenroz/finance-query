@@ -919,13 +919,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     // Access data by metric name
-    if let Some(revenue_map) = income.statement.get("TotalRevenue") {
+    if let Some(revenue_map) = income.statement.get("total_revenue") {
         for (date, value) in revenue_map {
             println!("{}: Revenue ${:.2}B", date, value / 1e9);
         }
     }
 
-    if let Some(net_income_map) = income.statement.get("NetIncome") {
+    if let Some(net_income_map) = income.statement.get("net_income") {
         for (date, value) in net_income_map {
             println!("{}: Net Income ${:.2}B", date, value / 1e9);
         }
