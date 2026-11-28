@@ -289,8 +289,8 @@ pub trait EconomicProvider: ProviderCore {
 
     /// Fetch scheduled release dates from today onward, ascending.
     ///
-    /// NOTE: stays FRED-only; no other provider integrated here exposes a
-    /// release schedule.
+    /// FRED-only; no other provider integrated here exposes a release
+    /// schedule.
     #[cfg(feature = "fred")]
     async fn fetch_economic_release_dates(
         &self,

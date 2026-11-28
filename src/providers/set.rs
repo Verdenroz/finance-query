@@ -353,7 +353,7 @@ impl ProviderSet {
     pub(crate) async fn economic_release_dates(
         &self,
     ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
-        self.fetch(Capability::ECONOMIC, |p| {
+        let call = |p: &Arc<dyn ProviderAdapter>| {
             let p = p.clone();
             async move {
                 p.as_economic()
@@ -361,8 +361,14 @@ impl ProviderSet {
                     .fetch_economic_release_dates()
                     .await
             }
-        })
-        .await
+        };
+        if self.routes.map.contains_key(&Capability::ECONOMIC) {
+            return self.fetch(Capability::ECONOMIC, call).await;
+        }
+        let fred = self
+            .adapter(Provider::Fred)
+            .ok_or_else(|| Self::no_provider(Capability::ECONOMIC))?;
+        self.scope(call(fred)).await
     }
 
     pub(crate) fn adapter(&self, id: super::Provider) -> Option<&Arc<dyn ProviderAdapter>> {

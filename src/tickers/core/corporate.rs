@@ -394,16 +394,16 @@ mod tests {
 
     #[tokio::test]
     #[cfg(feature = "fred")]
-    async fn calendar_includes_fred_releases_from_the_default_routes() {
+    async fn calendar_includes_fred_releases_from_a_default_set() {
         use crate::providers::mock::{CountingProvider, ScheduledFred};
-        use crate::providers::{ProviderAdapter, ProviderSet, default_equity_routes};
+        use crate::providers::{Fetch, ProviderAdapter, ProviderSet, Routes};
 
         let adapters: Vec<Arc<dyn ProviderAdapter>> =
             vec![CountingProvider::new(), Arc::new(ScheduledFred)];
         let tickers = Tickers::builder(["AAPL"])
             .with_provider_set(Arc::new(ProviderSet::new(
                 adapters,
-                default_equity_routes(),
+                Routes::new(Fetch::Sequential),
             )))
             .build()
             .await

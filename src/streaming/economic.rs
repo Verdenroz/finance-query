@@ -16,10 +16,7 @@ use tracing::warn;
 
 use super::handle::{SourceStream, stream_handle};
 use super::source::StreamCommand;
-use crate::providers::fred::FredProvider;
-use crate::providers::{
-    Capability, Fetch, Operation, Provider, ProviderAdapter, ProviderSet, Routes,
-};
+use crate::providers::{Capability, Operation, Provider, solo_set};
 
 /// Default interval between polls of all subscribed series.
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(900);
@@ -148,12 +145,8 @@ impl EconomicStreamBuilder {
 
     /// Start the stream.
     pub async fn build(self) -> EconomicStream {
-        let providers = ProviderSet::new(
-            vec![Arc::new(FredProvider) as Arc<dyn ProviderAdapter>],
-            Routes::new(Fetch::Sequential).route(Capability::ECONOMIC, [Provider::Fred]),
-        );
         EconomicStream::start(
-            Arc::new(DefaultReleaseSource(providers)),
+            Arc::new(DefaultReleaseSource),
             self.series,
             self.poll_interval,
         )
@@ -167,25 +160,27 @@ impl Default for EconomicStreamBuilder {
 }
 
 /// FRED-backed release source.
-struct DefaultReleaseSource(ProviderSet);
+struct DefaultReleaseSource;
 
 #[async_trait::async_trait]
 impl ReleaseSource for DefaultReleaseSource {
     async fn latest(&self, series_id: &str) -> Option<(String, Option<f64>)> {
         // Only the newest observation matters here; the full series is decades
         // of rows to discard.
-        let observation = self
-            .0
-            .fetch(Capability::ECONOMIC, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_economic()
-                        .ok_or_else(|| p.not_supported(Operation::EconomicLatestObservation))?
-                        .fetch_economic_latest_observation(series_id)
-                        .await
-                }
-            })
-            .await;
+        let observation = async {
+            solo_set(Provider::Fred, Capability::ECONOMIC)?
+                .fetch(Capability::ECONOMIC, |p| {
+                    let p = p.clone();
+                    async move {
+                        p.as_economic()
+                            .ok_or_else(|| p.not_supported(Operation::EconomicLatestObservation))?
+                            .fetch_economic_latest_observation(series_id)
+                            .await
+                    }
+                })
+                .await
+        }
+        .await;
         match observation {
             Ok(observation) => observation.map(|o| (o.date, o.value)),
             Err(e) => {

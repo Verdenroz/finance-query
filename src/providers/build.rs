@@ -83,24 +83,31 @@ fn adapter_for(
     })
 }
 
-/// Routes for a default-built `Ticker`/`Tickers`: sequential, with FRED serving
-/// the release dates that `calendar()` merges in. FRED is registered without
-/// `initialize`, so a missing key only skips those events.
-pub(crate) fn default_equity_routes() -> Routes {
-    let routes = Routes::new(Fetch::Sequential);
-    #[cfg(feature = "fred")]
-    let routes = routes.route(Capability::ECONOMIC, [Provider::Fred]);
-    routes
-}
-
-/// A default-routed set over an already-open Yahoo session.
+/// A set over an already-open Yahoo session. FRED rides along uninitialized so
+/// `calendar()` can merge release dates without requiring a key.
 pub(crate) fn shared_yahoo_set(session: Arc<LazySession>) -> ProviderSet {
     #[allow(unused_mut)]
     let mut providers: Vec<Arc<dyn ProviderAdapter>> =
         vec![Arc::new(yahoo::YahooProvider::new(Arc::clone(&session)))];
     #[cfg(feature = "fred")]
     providers.push(Arc::new(fred::FredProvider));
-    ProviderSet::new(providers, default_equity_routes()).with_yahoo_session(Some(session))
+    ProviderSet::new(providers, Routes::new(Fetch::Sequential)).with_yahoo_session(Some(session))
+}
+
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "fred"
+))]
+/// A set holding only `id`, routed for `cap`. The adapter is not initialized,
+/// so a missing key surfaces from the call that needs it.
+pub(crate) fn solo_set(id: Provider, cap: Capability) -> Result<ProviderSet> {
+    let adapter = adapter_for(id, &ClientConfig::default(), &mut None)?;
+    Ok(ProviderSet::new(
+        vec![adapter],
+        Routes::new(Fetch::Sequential).route(cap, [id]),
+    ))
 }
 
 pub(crate) async fn build_providers(
@@ -123,8 +130,10 @@ pub(crate) async fn build_providers(
     if needs_edgar_injection(ids) {
         providers.push(Arc::new(edgar::EdgarProvider));
     }
+    // Uninitialized and unrouted: `calendar()` reaches it for release dates
+    // when no ECONOMIC route is set, and a missing key only skips those events.
     #[cfg(feature = "fred")]
-    if !ids.contains(&Provider::Fred) {
+    if !providers.iter().any(|p| p.id() == Provider::Fred) {
         providers.push(Arc::new(fred::FredProvider));
     }
     for routed in routes.map.values() {

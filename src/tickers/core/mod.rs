@@ -16,9 +16,7 @@ use crate::models::corporate::recommendation::Recommendation;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::Quote;
-use crate::providers::{
-    Provider, ProviderSet, build_providers, default_equity_routes, shared_yahoo_set,
-};
+use crate::providers::{Fetch, Provider, ProviderSet, Routes, build_providers, shared_yahoo_set};
 use crate::ticker::ClientHandle;
 use crate::utils::{CacheEntry, CacheMode};
 use std::collections::HashMap;
@@ -288,7 +286,7 @@ impl TickersBuilder {
                     &[Provider::Yahoo],
                     Vec::new(),
                     &self.config,
-                    default_equity_routes(),
+                    Routes::new(Fetch::Sequential),
                 )
                 .await?,
             )

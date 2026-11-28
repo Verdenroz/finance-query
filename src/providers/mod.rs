@@ -74,7 +74,14 @@ pub(crate) mod statement_metrics;
 mod stock_bars;
 pub(crate) mod stock_listing;
 
-pub(crate) use build::{build_providers, default_equity_routes, shared_yahoo_set};
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "fred"
+))]
+pub(crate) use build::solo_set;
+pub(crate) use build::{build_providers, shared_yahoo_set};
 #[allow(unused_imports)] // each is used only by a feature-gated provider bridge
 pub(crate) use convert::{build_financial_statement, build_options, range_to_dates};
 pub use finance_query_types::Capability;

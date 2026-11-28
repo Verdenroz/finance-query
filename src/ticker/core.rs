@@ -30,7 +30,7 @@ use crate::models::quote::{
 use super::macros::ticker_fetch;
 use crate::providers::types::recommendation_from_similar;
 use crate::providers::{
-    Capability, Provider, ProviderSet, build_providers, default_equity_routes, shared_yahoo_set,
+    Capability, Fetch, Provider, ProviderSet, Routes, build_providers, shared_yahoo_set,
 };
 #[cfg(feature = "risk")]
 use crate::risk;
@@ -183,7 +183,7 @@ impl TickerBuilder {
                     &[Provider::Yahoo],
                     Vec::new(),
                     &self.config,
-                    default_equity_routes(),
+                    Routes::new(Fetch::Sequential),
                 )
                 .await?,
             )

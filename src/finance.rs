@@ -17,14 +17,8 @@ use crate::models::market::sectors::SectorData;
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "alphavantage")]
-use crate::providers::alphavantage::AlphaVantageProvider;
-#[cfg(feature = "fmp")]
-use crate::providers::fmp::FmpProvider;
-#[cfg(feature = "polygon")]
-use crate::providers::polygon::PolygonProvider;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-use crate::providers::{Capability, Fetch, Operation, ProviderAdapter, ProviderSet, Routes};
+use crate::providers::{Capability, Operation, Provider, ProviderAdapter, solo_set};
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use std::sync::Arc;
 
@@ -675,26 +669,20 @@ pub struct AnalystRecommendation {
     pub analyst_ratings_strong_sell: Option<i32>,
 }
 
-/// Runs `f` against a set holding only `adapter`, routed for `cap`. The adapter
-/// is not initialized, so a missing key surfaces from the call itself.
+/// Runs `f` against a set holding only `id`, routed for `cap`.
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-async fn via<A, T, F, Fut>(adapter: A, cap: Capability, f: F) -> Result<T>
+async fn via<T, F, Fut>(id: Provider, cap: Capability, f: F) -> Result<T>
 where
-    A: ProviderAdapter + 'static,
     F: Fn(Arc<dyn ProviderAdapter>) -> Fut,
     Fut: std::future::Future<Output = Result<T>>,
 {
-    let adapter: Arc<dyn ProviderAdapter> = Arc::new(adapter);
-    let routes = Routes::new(Fetch::Sequential).route(cap, [adapter.id()]);
-    ProviderSet::new(vec![adapter], routes)
-        .fetch(cap, |p| f(Arc::clone(p)))
-        .await
+    solo_set(id, cap)?.fetch(cap, |p| f(Arc::clone(p))).await
 }
 
 /// Fetch insider trading transactions for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTransaction>> {
-    via(FmpProvider, Capability::FILINGS, |p| async move {
+    via(Provider::Fmp, Capability::FILINGS, |p| async move {
         p.as_filings()
             .ok_or_else(|| p.not_supported(Operation::InsiderTrades))?
             .fetch_insider_transactions(symbol, limit)
@@ -706,7 +694,7 @@ pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTran
 /// Fetch analyst estimates for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn analyst_estimates(symbol: &str, period: Period) -> Result<Vec<AnalystEstimate>> {
-    via(FmpProvider, Capability::FUNDAMENTALS, |p| async move {
+    via(Provider::Fmp, Capability::FUNDAMENTALS, |p| async move {
         p.as_fundamentals()
             .ok_or_else(|| p.not_supported(Operation::AnalystEstimates))?
             .fetch_analyst_estimates(symbol, period)
@@ -718,7 +706,7 @@ pub async fn analyst_estimates(symbol: &str, period: Period) -> Result<Vec<Analy
 /// Fetch analyst stock recommendations for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendation>> {
-    via(FmpProvider, Capability::FUNDAMENTALS, |p| async move {
+    via(Provider::Fmp, Capability::FUNDAMENTALS, |p| async move {
         p.as_fundamentals()
             .ok_or_else(|| p.not_supported(Operation::AnalystRecommendations))?
             .fetch_analyst_recommendations(symbol)
@@ -732,7 +720,7 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 /// Fetch sentiment analysis for a symbol based on recent Polygon.io news.
 #[cfg(feature = "polygon")]
 pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::SymbolSentiment> {
-    via(PolygonProvider, Capability::CORPORATE, |p| async move {
+    via(Provider::Polygon, Capability::CORPORATE, |p| async move {
         p.as_corporate()
             .ok_or_else(|| p.not_supported(Operation::SymbolSentiment))?
             .fetch_symbol_sentiment(symbol)
@@ -789,24 +777,32 @@ pub struct IpoCalendarEntry {
 /// Fetch the upcoming earnings calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn earnings_calendar() -> Result<Vec<EarningsCalendarEntry>> {
-    via(AlphaVantageProvider, Capability::CALENDAR, |p| async move {
-        p.as_calendar()
-            .ok_or_else(|| p.not_supported(Operation::EarningsCalendar))?
-            .fetch_earnings_calendar()
-            .await
-    })
+    via(
+        Provider::AlphaVantage,
+        Capability::CALENDAR,
+        |p| async move {
+            p.as_calendar()
+                .ok_or_else(|| p.not_supported(Operation::EarningsCalendar))?
+                .fetch_earnings_calendar()
+                .await
+        },
+    )
     .await
 }
 
 /// Fetch the upcoming IPO calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn ipo_calendar() -> Result<Vec<IpoCalendarEntry>> {
-    via(AlphaVantageProvider, Capability::CALENDAR, |p| async move {
-        p.as_calendar()
-            .ok_or_else(|| p.not_supported(Operation::IpoCalendar))?
-            .fetch_ipo_calendar()
-            .await
-    })
+    via(
+        Provider::AlphaVantage,
+        Capability::CALENDAR,
+        |p| async move {
+            p.as_calendar()
+                .ok_or_else(|| p.not_supported(Operation::IpoCalendar))?
+                .fetch_ipo_calendar()
+                .await
+        },
+    )
     .await
 }
 
