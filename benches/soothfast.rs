@@ -2008,9 +2008,7 @@ fn alerts_evaluate(input: &(Vec<AlertRule>, Vec<PriceUpdate>)) {
 
 #[fixture]
 fn pricing_frame() -> String {
-    include_str!("../tests/fixtures/yahoo/pricing_frame_btc_usd.b64")
-        .trim()
-        .to_owned()
+    __bench::pricing_frame()
 }
 
 #[bench(
@@ -2020,6 +2018,23 @@ fn pricing_frame() -> String {
     covers = "finance_query::streaming::PriceUpdate"
 )]
 fn stream_decode_pricing(frame: &str) {
+    keep(__bench::decode_pricing(keep(frame)).unwrap());
+}
+
+#[fixture]
+fn captured_pricing_frame() -> String {
+    include_str!("../tests/fixtures/yahoo/pricing_frame_btc_usd.b64")
+        .trim()
+        .to_owned()
+}
+
+#[bench(
+    group = "streaming",
+    setup = captured_pricing_frame,
+    alloc = 5,
+    covers = "finance_query::streaming::PriceUpdate"
+)]
+fn stream_decode_pricing_captured(frame: &str) {
     keep(__bench::decode_pricing(keep(frame)).unwrap());
 }
 
@@ -2069,7 +2084,7 @@ fn provider_registry() -> Vec<Capability> {
     alloc = 0,
     covers = "finance_query::Capability"
 )]
-fn capability_filter(registry: &[Capability]) {
+fn dispatch_select(registry: &[Capability]) {
     let wanted = keep(Capability::QUOTE);
     keep(registry.iter().filter(|c| c.contains(wanted)).count());
 }

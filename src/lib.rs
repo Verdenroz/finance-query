@@ -666,7 +666,38 @@ pub mod __bench {
     use crate::adapters::yahoo::quote::quotes::parse_quotes_batch;
     use crate::models::quote::Quote;
     use crate::streaming::PriceUpdate;
-    use crate::streaming::pricing::PricingData;
+    use crate::streaming::pricing::{MarketHoursTypeProto, PricingData, QuoteTypeProto};
+
+    /// A base64 pricing frame shaped like a live equity tick.
+    pub fn pricing_frame() -> String {
+        let data = PricingData {
+            id: "AAPL".into(),
+            price: 189.5,
+            time: 1_700_000_000_000,
+            currency: "USD".into(),
+            exchange: "NMS".into(),
+            quote_type: QuoteTypeProto::Equity as i32,
+            market_hours: MarketHoursTypeProto::RegularMarket as i32,
+            change_percent: -0.25,
+            day_volume: 51_234_567,
+            day_high: 190.1,
+            day_low: 188.2,
+            change: -0.48,
+            short_name: "Apple Inc.".into(),
+            open_price: 189.0,
+            previous_close: 189.98,
+            bid: 189.25,
+            bid_size: 4,
+            ask: 189.75,
+            ask_size: 2,
+            price_hint: 2,
+            ..Default::default()
+        };
+        base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            prost::Message::encode_to_vec(&data),
+        )
+    }
 
     /// Decode a base64 pricing frame into the public update type.
     pub fn decode_pricing(encoded: &str) -> Option<PriceUpdate> {
