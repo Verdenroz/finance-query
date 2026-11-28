@@ -80,11 +80,11 @@ use finance_query::translation::{
     Lang, TranslationBackend, set_backend, translate, translate_texts, translate_with,
 };
 use finance_query::{
-    BatchQuotesResponse, Candle, Chart, CompanyFacts, Currency, Dividend, EdgarSubmissions,
-    FearAndGreed, Fetch, FinancialStatement, Interval, MarketHours, MarketSummaryQuote, News,
-    Operation, Options, Provider, ProviderAdapter, ProviderSet, Quote, QuoteSummaryResponse,
-    Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker, Tickers, TimeRange,
-    Transcript, TrendingQuote, analyze_sentiment,
+    BatchQuotesResponse, BatchSparksResponse, Candle, Chart, CompanyFacts, Currency, Dividend,
+    EdgarSubmissions, FearAndGreed, Fetch, FinancialStatement, Interval, MarketHours,
+    MarketSummaryQuote, News, Operation, Options, Provider, ProviderAdapter, ProviderSet, Quote,
+    QuoteSummaryResponse, Region, Routes, ScreenerResults, SearchResults, SectorData, Ticker,
+    Tickers, TimeRange, Transcript, TrendingQuote, analyze_sentiment,
 };
 use soothfast::{bench, fixture, keep};
 use std::collections::BTreeMap;
@@ -2573,6 +2573,32 @@ fn batch_quotes() -> BatchQuotesResponse {
     covers = "finance_query::BatchQuotesResponse::to_dataframe"
 )]
 fn df_batch_quotes(batch: &BatchQuotesResponse) {
+    keep(keep(batch).to_dataframe().unwrap());
+}
+
+#[fixture]
+fn batch_sparks() -> BatchSparksResponse {
+    let spark = |symbol: String| {
+        serde_json::json!({
+            "symbol": symbol, "meta": {"symbol": "AAPL"},
+            "timestamps": (0..500).collect::<Vec<i64>>(),
+            "closes": (0..500).map(f64::from).collect::<Vec<f64>>(),
+            "interval": "5m", "range": "1d"
+        })
+    };
+    let sparks: serde_json::Map<String, serde_json::Value> = (0..10)
+        .map(|i| (format!("SYM{i}"), spark(format!("SYM{i}"))))
+        .collect();
+    serde_json::from_value(serde_json::json!({ "sparks": sparks, "errors": {} })).unwrap()
+}
+
+#[bench(
+    group = "dataframe",
+    setup = batch_sparks,
+    alloc = 42,
+    covers = "finance_query::BatchSparksResponse::to_dataframe"
+)]
+fn df_batch_sparks(batch: &BatchSparksResponse) {
     keep(keep(batch).to_dataframe().unwrap());
 }
 

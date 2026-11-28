@@ -154,8 +154,6 @@ impl_metric_rows!(
 delegate_rows_to_inherent!(
     crate::CalendarEvent,
     crate::MarketCalendarEntry,
-    crate::models::chart::spark::Spark,
-    crate::SparkData,
     crate::EdgarSearchHit,
 );
 

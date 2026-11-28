@@ -19,14 +19,22 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "dataframe",
+    derive(crate::ToDataFrame),
+    dataframe(crate = "crate", columnar)
+)]
 pub struct Spark {
     /// Stock symbol
     pub symbol: String,
     /// Metadata about the chart (currency, exchange, current price, etc.)
+    #[cfg_attr(feature = "dataframe", dataframe(skip))]
     pub meta: ChartMeta,
     /// Timestamps for each data point (Unix timestamps)
+    #[cfg_attr(feature = "dataframe", dataframe(rename = "timestamp", datetime = "s"))]
     pub timestamps: Vec<i64>,
     /// Close prices for each data point
+    #[cfg_attr(feature = "dataframe", dataframe(rename = "close"))]
     pub closes: Vec<f64>,
     /// Time interval (e.g., "5m", "1d")
     pub interval: Option<String>,
@@ -115,64 +123,6 @@ impl Spark {
 
 #[cfg(feature = "dataframe")]
 impl Spark {
-    /// Converts the points to a long-format polars DataFrame, one row per point.
-    ///
-    /// Columns are `symbol` (string), `timestamp` (`Datetime(us, UTC)`), `close`
-    /// (f64), `interval` and `range` (strings, repeated on every row). The
-    /// shorter of `timestamps` and `closes` is padded with nulls. Chart metadata is in
-    /// [`meta_dataframe`](Self::meta_dataframe).
-    pub fn to_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::__dataframe::{EpochUnit, epoch_datetime, padded};
-        use polars::prelude::*;
-
-        let rows = self.timestamps.len().max(self.closes.len());
-        DataFrame::new(
-            rows,
-            vec![
-                Series::new("symbol".into(), vec![self.symbol.as_str(); rows]).into(),
-                epoch_datetime(
-                    "timestamp".into(),
-                    EpochUnit::Seconds,
-                    false,
-                    padded(self.timestamps.iter().copied().map(Some), rows).into_iter(),
-                ),
-                Series::new(
-                    "close".into(),
-                    padded(self.closes.iter().copied().map(Some), rows),
-                )
-                .into(),
-                Series::new("interval".into(), vec![self.interval.as_deref(); rows]).into(),
-                Series::new("range".into(), vec![self.range.as_deref(); rows]).into(),
-            ],
-        )
-    }
-
-    /// Converts a slice of sparks to one long-format DataFrame with the columns
-    /// of [`to_dataframe`](Self::to_dataframe).
-    pub fn vec_to_dataframe(
-        items: &[Self],
-    ) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
-        use crate::__dataframe::{EpochUnit, epoch_datetime};
-        use polars::prelude::*;
-
-        let schema = DataFrame::new(
-            0,
-            vec![
-                Series::new("symbol".into(), Vec::<&str>::new()).into(),
-                epoch_datetime(
-                    "timestamp".into(),
-                    EpochUnit::Seconds,
-                    false,
-                    std::iter::empty(),
-                ),
-                Series::new("close".into(), Vec::<f64>::new()).into(),
-                Series::new("interval".into(), Vec::<&str>::new()).into(),
-                Series::new("range".into(), Vec::<&str>::new()).into(),
-            ],
-        );
-        crate::__dataframe::stack_rows(schema, items, Self::to_dataframe)
-    }
-
     /// Converts the chart metadata to a one-row polars DataFrame.
     pub fn meta_dataframe(&self) -> polars::prelude::PolarsResult<polars::prelude::DataFrame> {
         self.meta.to_dataframe()
