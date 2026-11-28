@@ -206,7 +206,7 @@ prod: ## Start production stack (docker compose -f ... -f docker-compose.prod.ym
 # Version bumping
 # =============================================================================
 
-bump: soothfast-cli ## Bump version for core + server + mcp + derive + types + backtesting (usage: make bump VERSION=x.y.z)
+bump: soothfast-cli ## Bump version for core + server + mcp + derive + types + models + backtesting (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif
@@ -217,6 +217,8 @@ endif
 	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' Cargo.toml
 	@# Update finance-query-types dependency version in root Cargo.toml
 	@sed -i 's/finance-query-types = { version = "[^"]*"/finance-query-types = { version = "$(VERSION)"/' Cargo.toml
+	@# Update finance-query-models dependency version in root Cargo.toml
+	@sed -i 's/finance-query-models = { version = "[^"]*"/finance-query-models = { version = "$(VERSION)"/' Cargo.toml
 	@# Update finance-query-backtesting dependency version in root Cargo.toml
 	@sed -i 's/finance-query-backtesting = { version = "[^"]*"/finance-query-backtesting = { version = "$(VERSION)"/' Cargo.toml
 	@# Update server Cargo.toml
@@ -228,6 +230,10 @@ endif
 	@# Update types Cargo.toml and its derive dependency version
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-types/Cargo.toml
 	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' finance-query-types/Cargo.toml
+	@# Update models Cargo.toml and its types and derive dependency versions
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-models/Cargo.toml
+	@sed -i 's/finance-query-types = { version = "[^"]*"/finance-query-types = { version = "$(VERSION)"/' finance-query-models/Cargo.toml
+	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' finance-query-models/Cargo.toml
 	@# Update backtesting Cargo.toml and its types dependency version
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-backtesting/Cargo.toml
 	@sed -i 's/finance-query-types = { version = "[^"]*"/finance-query-types = { version = "$(VERSION)"/' finance-query-backtesting/Cargo.toml
@@ -246,6 +252,7 @@ endif
 	@echo "  - finance-query-mcp/Cargo.toml"
 	@echo "  - finance-query-derive/Cargo.toml"
 	@echo "  - finance-query-types/Cargo.toml"
+	@echo "  - finance-query-models/Cargo.toml"
 	@echo "  - finance-query-backtesting/Cargo.toml"
 	@echo "  - server.json"
 	@echo "  - docs/server/api/openapi.md"

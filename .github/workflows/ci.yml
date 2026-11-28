@@ -53,6 +53,7 @@ jobs:
               - 'finance-query-mcp/**'
               - 'finance-query-derive/**'
               - 'finance-query-types/**'
+              - 'finance-query-models/**'
               - 'finance-query-backtesting/**'
               - 'benches/**'
               - 'tests/**'
@@ -67,6 +68,7 @@ jobs:
               - 'server/**'
               - 'finance-query-derive/**'
               - 'finance-query-types/**'
+              - 'finance-query-models/**'
               - 'finance-query-backtesting/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -76,6 +78,7 @@ jobs:
               - 'finance-query-mcp/**'
               - 'finance-query-derive/**'
               - 'finance-query-types/**'
+              - 'finance-query-models/**'
               - 'finance-query-backtesting/**'
               - 'Cargo.toml'
               - '!finance-query-mcp/CHANGELOG.md'
@@ -83,6 +86,7 @@ jobs:
             fuzz:
               - 'src/**'
               - 'finance-query-types/**'
+              - 'finance-query-models/**'
               - 'fuzz/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -103,9 +107,9 @@ jobs:
             fuzz_inputs:
               - 'fuzz/**'
               - 'src/adapters/**'
-              - 'src/models/**'
               - 'src/streaming/pricing.rs'
               - 'finance-query-types/**'
+              - 'finance-query-models/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - '.github/workflows/ci.yml'
@@ -321,7 +325,7 @@ jobs:
       - name: Build rustdoc (deny broken links)
         env:
           RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
-        run: cargo doc -p finance-query -p finance-query-types -p finance-query-backtesting --no-deps --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe
+        run: cargo doc -p finance-query -p finance-query-types -p finance-query-models -p finance-query-backtesting --no-deps --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe
 
   # Default and full both hide cfg mismatches: a re-export gated on fewer
   # features than the item it exports compiles under either, and fails only

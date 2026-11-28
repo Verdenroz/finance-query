@@ -219,10 +219,10 @@ Open a pull request on GitHub with:
     }
     ```
 
-2. Define model in `src/models/`:
+2. Define model in `finance-query-models/src/`:
 
     ```rust ignore
-    // src/models/options.rs
+    // finance-query-models/src/options.rs
     #[derive(Debug, Clone, Deserialize)]
     pub struct OptionsChain {
         pub symbol: String,

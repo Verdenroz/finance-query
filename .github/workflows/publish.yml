@@ -30,7 +30,7 @@ jobs:
       - name: Run tests
         # Not --all-features: that pulls in `translation-offline`, which builds
         # CTranslate2 from source and needs cmake + a C++ toolchain.
-        run: cargo test -p finance-query -p finance-query-types -p finance-query-backtesting --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe --verbose
+        run: cargo test -p finance-query -p finance-query-types -p finance-query-models -p finance-query-backtesting --features finance-query/full,finance-query-types/indicators,finance-query-types/dataframe,finance-query-backtesting/dataframe --verbose
 
   publish:
     name: Publish to crates.io
@@ -74,6 +74,14 @@ jobs:
 
       - name: Publish finance-query-types
         run: cargo publish -p finance-query-types
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Wait for crates.io to index
+        run: sleep 30
+
+      - name: Publish finance-query-models
+        run: cargo publish -p finance-query-models
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
