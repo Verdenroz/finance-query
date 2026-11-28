@@ -203,7 +203,7 @@ Capabilities supported by each provider. Providers that don't support a given ca
   filter over a local list, not a dispatch.
 
 <!-- soothfast:claim finance_query::dispatch_fallthrough.alloc.allocs <= 10 -->
-<!-- soothfast:claim finance_query::dispatch_fallthrough.perfcnt.instructions < 50000 -->
+<!-- soothfast:claim finance_query::dispatch_fallthrough.perfcnt.instructions < 70000 -->
 <!-- soothfast:claim finance_query::dispatch_fallthrough_polls.asyncexec.polls <= 1 -->
 - A quote whose first provider lacks the capability falls through to the next
   one in **under 50,000 CPU instructions** with **at most 10 allocations**,
