@@ -249,6 +249,7 @@ components:
         exchange:
           type: string
         expireDate:
+          description: "Expiry as Yahoo sends it, `0` when not provided."
           type: integer
           format: int64
         fromCurrency:
@@ -293,6 +294,7 @@ components:
           type: number
           format: double
         time:
+          description: "Milliseconds since the Unix epoch, `0` when not provided."
           type: integer
           format: int64
         underlyingSymbol:
