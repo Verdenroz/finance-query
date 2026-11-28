@@ -5,7 +5,7 @@
 #[cfg(feature = "indicators")]
 pub mod compute;
 mod stock_bars;
-pub use stock_bars::{PriceAdjustment, StockBar};
+pub use stock_bars::{PriceAdjustment, StockBar, StockBarFieldsInit};
 mod data;
 pub mod dividend_analytics;
 pub mod events;
@@ -17,13 +17,13 @@ pub mod result;
 /// Spark / sparkline submodule.
 pub mod spark;
 
-pub use data::Chart;
 #[cfg(feature = "risk")]
 pub use data::returns;
+pub use data::{Chart, ChartFieldsInit};
 pub use dividend_analytics::DividendAnalytics;
 pub use events::{CapitalGain, Dividend, Split};
 pub use finance_query_types::Candle;
-pub use meta::ChartMeta;
+pub use meta::{ChartMeta, ChartMetaFieldsInit};
 
 #[cfg(all(test, feature = "dataframe"))]
 mod dataframe_tests;

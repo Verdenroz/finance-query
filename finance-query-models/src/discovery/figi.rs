@@ -3,6 +3,7 @@
 //! Populated by the OpenFIGI adapter, which resolves a CUSIP, ISIN, SEDOL, or
 //! FIGI to the instruments carrying it.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// One instrument matching a security identifier.
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Obtain via `openfigi::resolve_cusip` and
 /// friends.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]

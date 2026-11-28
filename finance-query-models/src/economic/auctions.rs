@@ -5,6 +5,7 @@
 //! have been announced or settled; [`UpcomingAuction`] covers the announced
 //! schedule ahead of the auction date.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// One US Treasury securities auction.
@@ -18,7 +19,7 @@ use serde::{Deserialize, Serialize};
 /// [`high_investment_rate`](Self::high_investment_rate) and leaves
 /// [`high_yield`](Self::high_yield) unset, while notes and bonds do the
 /// reverse.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -83,7 +84,7 @@ pub struct TreasuryAuction {
 ///
 /// Treasury announces terms in stages, so [`offering_amt`](Self::offering_amt)
 /// is unset until the formal announcement lands.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

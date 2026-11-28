@@ -7,7 +7,7 @@ mod contract;
 pub mod response;
 
 pub use chain::{OptionChain, OptionsQuote};
-pub use contract::{Contracts, OptionContract};
+pub use contract::{Contracts, OptionContract, OptionContractFieldsInit};
 pub use response::Options;
 
 #[cfg(all(test, feature = "dataframe"))]

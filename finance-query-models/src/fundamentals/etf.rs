@@ -7,10 +7,12 @@
 //! country breakdown or inception date) so gaps default rather than
 //! widening per-provider.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Profile and composition of an exchange-traded fund.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -44,7 +46,7 @@ pub struct EtfProfile {
 }
 
 /// One position inside an ETF's portfolio.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -58,7 +60,7 @@ pub struct EtfHolding {
 }
 
 /// One sector's weight inside an ETF's portfolio.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -70,7 +72,7 @@ pub struct EtfSectorWeighting {
 }
 
 /// One country's weight inside an ETF's portfolio.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

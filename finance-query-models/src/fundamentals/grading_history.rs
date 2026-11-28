@@ -5,10 +5,11 @@
 //! [`RatingConsensus`](super::RatingConsensus) rollup — this is the
 //! individual upgrade/downgrade events behind that rollup.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A single analyst upgrade/downgrade/initiation action.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

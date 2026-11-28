@@ -1,3 +1,4 @@
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
@@ -47,7 +48,7 @@ impl Contracts {
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::options()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]

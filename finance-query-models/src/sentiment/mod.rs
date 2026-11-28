@@ -8,7 +8,7 @@ pub mod response;
 #[cfg(feature = "sentiment")]
 mod score;
 
-pub use response::{FearAndGreed, FearGreedLabel};
+pub use response::{FearAndGreed, FearAndGreedFieldsInit, FearGreedLabel};
 
 #[cfg(feature = "sentiment")]
 pub use score::{Sentiment, SentimentLabel, analyze};
@@ -16,6 +16,7 @@ pub use score::{Sentiment, SentimentLabel, analyze};
 #[cfg(feature = "sentiment")]
 pub use score::{aggregate, aggregate_weighted};
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Per-symbol sentiment from provider news analysis (Polygon, etc.).
@@ -23,7 +24,7 @@ use serde::{Deserialize, Serialize};
 /// Scores range from -1.0 (very negative) to 1.0 (very positive).
 /// Unlike [`FearAndGreed`] (a market-wide 0—100 gauge from Alternative.me),
 /// this reflects news sentiment for a specific stock.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

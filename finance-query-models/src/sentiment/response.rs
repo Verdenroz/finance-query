@@ -2,6 +2,7 @@
 //!
 //! Represents market sentiment from the Alternative.me Fear & Greed Index.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Classification label for the Fear & Greed Index value.
@@ -44,7 +45,7 @@ impl std::fmt::Display for FearGreedLabel {
 /// The current CNN Fear & Greed Index reading from Alternative.me.
 ///
 /// Scale: 0 (Extreme Fear) → 100 (Extreme Greed).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

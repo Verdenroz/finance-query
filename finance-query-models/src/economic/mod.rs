@@ -2,13 +2,17 @@
 //!
 //! Canonical public types for FRED series and US Treasury yield curve data.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "fiscaldata")]
 mod auctions;
 mod catalog;
 #[cfg(feature = "fiscaldata")]
-pub use auctions::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
+pub use auctions::{
+    TreasuryAuction, TreasuryAuctionFieldsInit, TreasuryAuctionQuery, UpcomingAuction,
+    UpcomingAuctionFieldsInit,
+};
 pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
 
 /// A provider-agnostic economic data series with metadata.
@@ -16,7 +20,7 @@ pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
 /// Obtain via `Providers::economic` then
 /// `.series()`. Supported providers:
 /// Alpha Vantage, Polygon, FRED.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[non_exhaustive]
 pub struct EconomicSeries {
     /// Series identifier (e.g., `"REAL_GDP"`, `"FEDFUNDS"`, `"inflation"`)
@@ -32,7 +36,7 @@ pub struct EconomicSeries {
 }
 
 /// A single observation in a FRED data series.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -48,7 +52,7 @@ pub struct MacroObservation {
 ///
 /// Obtain via `fred::series`.
 #[cfg(feature = "fred")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[non_exhaustive]
 pub struct MacroSeries {
     /// FRED series ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`, `"DGS10"`)
@@ -62,7 +66,7 @@ pub struct MacroSeries {
 /// Maturities with no published rate on a given date are `None`.
 /// Obtain via `fred::treasury_yields`, which returns rows oldest first.
 #[cfg(feature = "fred")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

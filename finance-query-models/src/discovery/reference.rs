@@ -5,10 +5,12 @@
 //! provider-neutral shapes — unlike [`SearchResults`](super::search::SearchResults),
 //! which mirrors Yahoo's response for the `finance::search` shortcut.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A symbol matched by a search or listing query.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -47,7 +49,7 @@ pub struct SymbolMatch {
 }
 
 /// Detailed reference data for a single symbol.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -97,7 +99,8 @@ pub struct SymbolDetails {
 }
 
 /// A tradable exchange.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -121,7 +124,7 @@ pub struct ExchangeInfo {
 }
 
 /// A symbol matched by a screener query.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

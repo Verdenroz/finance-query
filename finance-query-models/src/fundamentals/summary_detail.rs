@@ -1,5 +1,5 @@
 use crate::format::{Both, Format};
-use finance_query_derive::FormatConvert;
+use finance_query_derive::{FieldsInit, FormatConvert};
 /// Summary Detail module
 ///
 /// Contains detailed trading and valuation metrics for the symbol.
@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// Obtain converted views via [`Quote::as_raw`](super::super::quote::Quote::as_raw) or call
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]

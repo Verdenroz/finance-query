@@ -3,6 +3,7 @@
 //! Canonical public types for futures contracts and quotes,
 //! shared across Yahoo, Polygon, and other futures data providers.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Commitments of Traders weekly positioning models (CFTC).
@@ -12,7 +13,7 @@ pub mod cot;
 /// A futures contract quote.
 ///
 /// Obtain via `Providers::futures``(symbol).quote()`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

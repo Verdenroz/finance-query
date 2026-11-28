@@ -1,5 +1,5 @@
 use crate::format::{Both, Format};
-use finance_query_derive::FormatConvert;
+use finance_query_derive::{FieldsInit, FormatConvert};
 use serde::{Deserialize, Serialize};
 
 /// Default key statistics for a symbol
@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 /// - `DefaultKeyStatistics` / `DefaultKeyStatistics<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase", bound = "")]

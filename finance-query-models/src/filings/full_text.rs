@@ -5,6 +5,7 @@
 //! [`EdgarSearchResults`](super::EdgarSearchResults), which mirrors EDGAR's raw
 //! Elasticsearch envelope — this is the flattened shape the routed API returns.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Which parts of a full-text search to constrain.
@@ -56,7 +57,7 @@ impl FilingSearchFilters {
 }
 
 /// One filing matching a full-text search.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

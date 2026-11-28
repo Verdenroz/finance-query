@@ -5,10 +5,11 @@
 //! over the whole analyst panel — distinct from the raw per-analyst grade
 //! actions in [`UpgradeDowngradeHistory`](super::super::corporate::UpgradeDowngradeHistory).
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Consensus analyst price target for a symbol.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -27,7 +28,7 @@ pub struct PriceTargetConsensus {
 
 /// Price-target activity over trailing windows: how many targets were published
 /// and their average, per window.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -54,7 +55,7 @@ pub struct PriceTargetSummary {
 
 /// Consensus rating rollup — the analyst panel's grade distribution plus the
 /// provider's headline recommendation.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

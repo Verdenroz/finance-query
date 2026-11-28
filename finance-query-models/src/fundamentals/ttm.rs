@@ -13,11 +13,13 @@
 //! Per-share metrics live on [`FinancialRatiosTtm`], not [`KeyMetricsTtm`] —
 //! FMP's stable tier serves them from `ratios-ttm`.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Valuation, capital-efficiency, and working-capital metrics over the
 /// trailing twelve months.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -155,7 +157,8 @@ pub struct KeyMetricsTtm {
 
 /// Margin, turnover, liquidity, coverage, valuation, and per-share ratios over
 /// the trailing twelve months.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

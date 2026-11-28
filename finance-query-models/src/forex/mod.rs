@@ -3,13 +3,14 @@
 //! Canonical public types for currency pair quotes and exchange rates,
 //! shared across Polygon, FMP, and Alpha Vantage providers.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A forex currency pair quote (e.g., EUR/USD).
 ///
 /// Obtain via `Providers::forex` then
 /// `.quote()`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

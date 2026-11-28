@@ -3,12 +3,13 @@
 //! Canonical public types for commodity quotes (gold, silver, oil, etc.),
 //! shared across FMP and Alpha Vantage providers.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A commodity price quote (e.g., gold, silver, crude oil).
 ///
 /// Obtain via `Providers::commodity``(symbol).quote()`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

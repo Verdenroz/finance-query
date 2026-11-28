@@ -2,4 +2,4 @@
 
 mod scraped;
 
-pub use scraped::News;
+pub use scraped::{News, NewsFieldsInit};

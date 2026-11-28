@@ -3,6 +3,7 @@
 //! Served through the [`Capability::FILINGS`](finance_query_types::Capability::FILINGS)
 //! route by EDGAR (best-effort HTML section extraction, keyless) or Polygon.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Which filing form to fetch sectioned text for.
@@ -16,7 +17,7 @@ pub enum FilingSectionForm {
 }
 
 /// One section of an SEC filing's text.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -28,7 +29,7 @@ pub struct FilingSection {
 }
 
 /// A risk factor extracted from SEC filings.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

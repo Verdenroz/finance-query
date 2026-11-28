@@ -23,8 +23,9 @@ pub use formatted_value::FormattedValue;
 // From fundamentals/
 pub use crate::fundamentals::{
     BalanceSheetHistory, BalanceSheetHistoryQuarterly, CashflowStatementHistory,
-    CashflowStatementHistoryQuarterly, DefaultKeyStatistics, FinancialData, IncomeStatementHistory,
-    IncomeStatementHistoryQuarterly, SummaryDetail,
+    CashflowStatementHistoryQuarterly, DefaultKeyStatistics, DefaultKeyStatisticsFieldsInit,
+    FinancialData, IncomeStatementHistory, IncomeStatementHistoryQuarterly, SummaryDetail,
+    SummaryDetailFieldsInit,
 };
 
 // From corporate/
@@ -39,9 +40,9 @@ pub use crate::corporate::{
 pub use crate::market::{IndexTrend, IndustryTrend, SectorTrend};
 
 // Internal re-exports for crate use
-pub use price::Price;
-pub use quote_type::QuoteTypeData;
-pub use response::QuoteSummaryResponse;
+pub use price::{Price, PriceFieldsInit};
+pub use quote_type::{QuoteTypeData, QuoteTypeDataFieldsInit};
+pub use response::{QuoteSummaryResponse, QuoteSummaryResponseFieldsInit};
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint
 ///

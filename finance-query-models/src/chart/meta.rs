@@ -1,3 +1,4 @@
+use finance_query_derive::FieldsInit;
 use finance_query_types::Provider;
 /// Chart Metadata module
 ///
@@ -8,7 +9,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]

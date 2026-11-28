@@ -7,5 +7,5 @@ pub mod response;
 pub mod result;
 mod symbol;
 
-pub use data::Recommendation;
-pub use symbol::SimilarSymbol;
+pub use data::{Recommendation, RecommendationFieldsInit};
+pub use symbol::{SimilarSymbol, SimilarSymbolFieldsInit};

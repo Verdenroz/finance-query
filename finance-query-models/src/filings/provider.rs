@@ -4,12 +4,13 @@
 //! EDGAR adapter, these types represent the provider-agnostic canonical shape
 //! returned by the FILINGS capability through ProviderSet.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A collection of SEC filings from a provider (e.g., Polygon EDGAR).
 ///
 /// Obtain via `Ticker::filings`.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, FieldsInit)]
 #[non_exhaustive]
 pub struct ProviderFilings {
     /// Ticker symbol these filings belong to.
@@ -19,7 +20,7 @@ pub struct ProviderFilings {
 }
 
 /// A single SEC filing entry from a provider.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

@@ -1,3 +1,4 @@
+use finance_query_derive::FieldsInit;
 /// Quote Type module data
 ///
 /// Contains metadata about the symbol including exchange, type, and timezone information.
@@ -36,7 +37,8 @@ pub struct QuoteTypeResult {
 /// Quote type metadata for a symbol (used in quoteSummary module)
 ///
 /// Contains exchange information, company names, timezone data, and other metadata.
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]

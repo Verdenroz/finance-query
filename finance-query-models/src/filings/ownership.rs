@@ -12,10 +12,12 @@
 //! came from); fails-to-deliver also has a keyless EDGAR fallback (feature
 //! `secftd`).
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// One transaction line from a Form 3, 4, or 5.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -62,7 +64,7 @@ pub struct InsiderTrade {
 }
 
 /// One position from a 13F-HR information table.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -98,7 +100,7 @@ pub struct InstitutionalHolding {
 }
 
 /// One legislator stock-trade disclosure filed under the STOCK Act.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -130,7 +132,7 @@ pub struct CongressionalTrade {
 }
 
 /// One SEC fails-to-deliver record for a settlement date.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

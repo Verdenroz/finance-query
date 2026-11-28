@@ -6,6 +6,7 @@
 //! pairs, crypto pairs, and indices — see
 //! `Providers::snapshot`.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Which market a snapshot row belongs to.
@@ -49,7 +50,7 @@ impl std::fmt::Display for AssetClass {
 /// Providers return a row per requested symbol even when the lookup failed, so
 /// a batch is never silently short: check [`error`](Self::error) before reading
 /// the price fields.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

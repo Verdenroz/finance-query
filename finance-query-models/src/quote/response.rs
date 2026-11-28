@@ -3,6 +3,7 @@
 //! Handles parsing of Yahoo Finance quoteSummary API responses
 
 use crate::quote::*;
+use finance_query_derive::FieldsInit;
 
 /// Response from the quoteSummary endpoint
 ///
@@ -13,7 +14,8 @@ use crate::quote::*;
 /// The return type of `QuoteProvider::fetch_quote`,
 /// so an implementor populates the modules it can serve and leaves the rest
 /// `None`. Each field mirrors one Yahoo `quoteSummary` module.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, FieldsInit)]
+#[fields_init(default)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

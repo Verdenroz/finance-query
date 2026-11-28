@@ -406,8 +406,12 @@ pub fn derive_format_convert(input: TokenStream) -> TokenStream {
 /// For `struct X { .. }` it emits `#[doc(hidden)] pub struct XFieldsInit { .. }` with
 /// every field public, plus `impl From<XFieldsInit> for X`. Unlike `X`, which may be
 /// `#[non_exhaustive]`, the initializer can be built with a struct literal from any
-/// crate, and the literal still has to set every field.
-#[proc_macro_derive(FieldsInit)]
+/// crate, and the literal still has to set every field. `impl From<X> for XFieldsInit`
+/// supports `..x` struct update.
+///
+/// `#[fields_init(default)]` also implements `Default` for `XFieldsInit` from
+/// `X::default()`, so a literal can end in `..Default::default()`.
+#[proc_macro_derive(FieldsInit, attributes(fields_init))]
 pub fn derive_fields_init(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     fields_init::expand(&input)

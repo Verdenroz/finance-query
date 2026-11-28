@@ -6,6 +6,7 @@
 #[cfg(feature = "defi")]
 pub mod defi;
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A provider-agnostic cryptocurrency quote.
@@ -13,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// Obtain via `Providers::crypto` then
 /// `.quote()`. Supported providers:
 /// Alpha Vantage, CoinGecko, FMP, Polygon.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -77,7 +78,7 @@ pub struct CoinQuote {
 ///
 /// Obtain via `Market::crypto_trending`.
 #[cfg(feature = "crypto")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -100,7 +101,7 @@ pub struct TrendingCoin {
 ///
 /// Obtain via `Market::crypto_global`.
 #[cfg(feature = "crypto")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

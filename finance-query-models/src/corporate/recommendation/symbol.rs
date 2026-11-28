@@ -1,3 +1,4 @@
+use finance_query_derive::FieldsInit;
 /// Similar Symbol module
 ///
 /// Contains the SimilarSymbol type representing a recommended symbol.
@@ -7,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::recommendations()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct SimilarSymbol {

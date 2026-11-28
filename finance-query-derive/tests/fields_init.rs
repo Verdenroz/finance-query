@@ -65,3 +65,34 @@ fn cfg_fields_follow_their_cfg() {
     });
     assert_eq!(built.only_test, 2);
 }
+
+#[derive(FieldsInit, Default, Debug, PartialEq)]
+#[fields_init(default)]
+#[non_exhaustive]
+struct WithDefault {
+    symbol: String,
+    price: Option<f64>,
+}
+
+#[test]
+fn default_attribute_fills_remaining_fields() {
+    let value = WithDefault::from(WithDefaultFieldsInit {
+        symbol: "AAPL".to_string(),
+        ..Default::default()
+    });
+    assert_eq!(value.symbol, "AAPL");
+    assert_eq!(value.price, None);
+}
+
+#[test]
+fn struct_update_from_existing_value() {
+    let base = WithDefault::from(WithDefaultFieldsInit {
+        symbol: "AAPL".to_string(),
+        price: Some(1.0),
+    });
+    let updated = WithDefault::from(WithDefaultFieldsInit {
+        symbol: "MSFT".to_string(),
+        ..WithDefaultFieldsInit::from(base)
+    });
+    assert_eq!(updated.price, Some(1.0));
+}

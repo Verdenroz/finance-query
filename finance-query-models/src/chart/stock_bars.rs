@@ -1,5 +1,6 @@
 //! Lossless stock-bar downloads, separate from chart presentation.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Price adjustment policy. There is no implicit provider default.
@@ -13,7 +14,7 @@ pub enum PriceAdjustment {
 }
 
 /// A provider price bar with exact timestamp units and fractional volume.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

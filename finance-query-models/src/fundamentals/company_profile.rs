@@ -6,10 +6,11 @@
 //! [`KeyMetricsTtm`](super::KeyMetricsTtm), [`RatingConsensus`](super::RatingConsensus),
 //! and [`EarningsSurprise`](super::EarningsSurprise) instead of being duplicated here.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// A company's identity and classification profile.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

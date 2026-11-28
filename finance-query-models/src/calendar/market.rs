@@ -5,6 +5,7 @@
 //! market over a date range, unlike [`CalendarEvent`](super::CalendarEvent),
 //! which builds a per-symbol timeline from already-fetched Yahoo quote data.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Which market-wide calendar to fetch.
@@ -31,7 +32,7 @@ pub enum CalendarKind {
 /// One market-wide calendar entry.
 ///
 /// The `kind`-specific payload lives in [`MarketCalendarEntry::detail`].
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[non_exhaustive]
 pub struct MarketCalendarEntry {
     /// Ticker symbol. `None` for economic releases, which are market-wide.
@@ -145,6 +146,57 @@ pub enum CalendarDetail {
         /// Provider-assigned impact rating (e.g. `"High"`).
         impact: Option<String>,
     },
+}
+
+/// Field-complete initializer for [`CalendarDetail::Earnings`], whose variant is
+/// `#[non_exhaustive]` and so cannot be built with a literal from another crate.
+#[doc(hidden)]
+pub struct EarningsDetailFieldsInit {
+    pub eps: Option<f64>,
+    pub eps_estimated: Option<f64>,
+    pub revenue: Option<f64>,
+    pub revenue_estimated: Option<f64>,
+    pub fiscal_date_ending: Option<String>,
+    pub time: Option<String>,
+    pub company: Option<String>,
+    pub estimate_count: Option<u32>,
+    pub surprise_percent: Option<f64>,
+    pub previous_eps: Option<f64>,
+    pub previous_report_date: Option<String>,
+    pub market_cap: Option<f64>,
+}
+
+impl From<EarningsDetailFieldsInit> for CalendarDetail {
+    fn from(init: EarningsDetailFieldsInit) -> Self {
+        let EarningsDetailFieldsInit {
+            eps,
+            eps_estimated,
+            revenue,
+            revenue_estimated,
+            fiscal_date_ending,
+            time,
+            company,
+            estimate_count,
+            surprise_percent,
+            previous_eps,
+            previous_report_date,
+            market_cap,
+        } = init;
+        Self::Earnings {
+            eps,
+            eps_estimated,
+            revenue,
+            revenue_estimated,
+            fiscal_date_ending,
+            time,
+            company,
+            estimate_count,
+            surprise_percent,
+            previous_eps,
+            previous_report_date,
+            market_cap,
+        }
+    }
 }
 
 #[cfg(feature = "dataframe")]

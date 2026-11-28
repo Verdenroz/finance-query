@@ -110,7 +110,8 @@ impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for FormattedValue
 
 impl FormattedValue<f64> {
     /// Rescales `raw` from a fraction to percent, leaving `fmt` and `long_fmt` untouched.
-    pub(crate) fn fraction_to_percent(self) -> Self {
+    #[doc(hidden)]
+    pub fn fraction_to_percent(self) -> Self {
         Self {
             raw: self.raw.map(|v| v * 100.0),
             ..self

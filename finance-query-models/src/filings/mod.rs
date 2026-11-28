@@ -16,14 +16,21 @@ mod submissions;
 pub use cik::CikEntry;
 pub use company_facts::{CompanyFacts, FactConcept, FactUnit, FactsByTaxonomy};
 pub use filing_index::EdgarFilingIndex;
-pub use full_text::{FilingSearchFilters, FilingSearchHit};
-pub use ownership::{CongressionalTrade, FailToDeliver, InsiderTrade, InstitutionalHolding};
-pub use provider::{ProviderFiling, ProviderFilings};
+pub use full_text::{FilingSearchFilters, FilingSearchHit, FilingSearchHitFieldsInit};
+pub use ownership::{
+    CongressionalTrade, CongressionalTradeFieldsInit, FailToDeliver, FailToDeliverFieldsInit,
+    InsiderTrade, InsiderTradeFieldsInit, InstitutionalHolding, InstitutionalHoldingFieldsInit,
+};
+pub use provider::{
+    ProviderFiling, ProviderFilingFieldsInit, ProviderFilings, ProviderFilingsFieldsInit,
+};
 pub use search::{
     EdgarSearchHit, EdgarSearchHitsContainer, EdgarSearchResults, EdgarSearchSource,
     EdgarSearchTotal,
 };
-pub use sections::{FilingSection, FilingSectionForm, RiskFactor};
+pub use sections::{
+    FilingSection, FilingSectionFieldsInit, FilingSectionForm, RiskFactor, RiskFactorFieldsInit,
+};
 pub use submissions::{
     EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSubmissions,
 };

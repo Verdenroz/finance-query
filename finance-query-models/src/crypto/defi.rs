@@ -4,13 +4,14 @@
 //! rather than tradable instruments, so they live beside — not inside —
 //! [`CryptoQuote`](super::CryptoQuote).
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Serialize};
 
 /// Total value locked in a DeFi protocol, with the metadata needed to
 /// identify it.
 ///
 /// Obtain via `CryptoCoin::tvl`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -40,7 +41,7 @@ pub struct ProtocolTvl {
 }
 
 /// One chain's share of a protocol's TVL.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -54,7 +55,7 @@ pub struct ChainAllocation {
 /// One point of a protocol's TVL history.
 ///
 /// Obtain via `CryptoCoin::tvl_history`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -69,7 +70,7 @@ pub struct TvlPoint {
 /// Aggregate value locked on one blockchain.
 ///
 /// Obtain via `defi::chains`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -89,7 +90,7 @@ pub struct ChainTvl {
 /// Circulating supply of one stablecoin.
 ///
 /// Obtain via `defi::stablecoins`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
