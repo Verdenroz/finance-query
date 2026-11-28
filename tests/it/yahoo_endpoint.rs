@@ -181,9 +181,7 @@ async fn scope_points_finance_functions_at_the_mock() {
     let trending = server
         .mock("GET", "/v1/finance/trending/US")
         .match_query(Matcher::Any)
-        .with_body(
-            json!({"finance": {"result": [{"quotes": [{"symbol": "NVDA"}]}]}}).to_string(),
-        )
+        .with_body(json!({"finance": {"result": [{"quotes": [{"symbol": "NVDA"}]}]}}).to_string())
         .expect(1)
         .create_async()
         .await;

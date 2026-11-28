@@ -206,10 +206,7 @@ mod tests {
             resolve(Some(ORIGIN), &api::quote_summary("AAPL")).unwrap(),
             "http://127.0.0.1:9/v10/finance/quoteSummary/AAPL"
         );
-        assert_eq!(
-            resolve(Some(ORIGIN), base::YAHOO_FC).unwrap(),
-            ORIGIN
-        );
+        assert_eq!(resolve(Some(ORIGIN), base::YAHOO_FC).unwrap(), ORIGIN);
         assert_eq!(
             resolve(Some(ORIGIN), "https://finance.yahoo.com/xhr/transcript").unwrap(),
             "http://127.0.0.1:9/xhr/transcript"

@@ -58,7 +58,6 @@ async fn crypto_news_service_shapes_fmp_response_and_maps_errors() {
     failing.assert_async().await;
 }
 
-
 // One test: the DefiLlama endpoint override is process-global, so cases share a single server.
 #[tokio::test]
 async fn crypto_tvl_services_shape_defillama_responses_and_map_errors() {
