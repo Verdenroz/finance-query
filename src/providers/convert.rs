@@ -180,3 +180,32 @@ pub(crate) fn range_to_dates(range: crate::TimeRange) -> (String, String) {
         end.format("%Y-%m-%d").to_string(),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
+        let contract = |symbol: &str, expiration: Option<i64>| -> finance_query_models::options::OptionContract {
+            serde_json::from_value(serde_json::json!({
+                "contractSymbol": symbol,
+                "strike": 1.0,
+                "expiration": expiration,
+            }))
+            .unwrap()
+        };
+        let options = build_options(
+            "X".into(),
+            Provider::Yahoo,
+            vec![],
+            vec![
+                contract("C0", None),
+                contract("C2", Some(200)),
+                contract("C1", Some(100)),
+            ],
+            vec![],
+        );
+        assert_eq!(options.loaded_expiration(), Some(100));
+    }
+}

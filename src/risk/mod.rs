@@ -102,16 +102,7 @@ pub struct RiskSummary {
     pub tracking_error: Option<f64>,
 }
 
-/// Simple close-to-close returns of a candle series, one fewer than `candles`.
-///
-/// These are the returns every function in this module is computed from.
-/// `close` is not dividend-adjusted, so returns exclude dividends.
-pub fn returns(candles: &[Candle]) -> Vec<f64> {
-    candles
-        .windows(2)
-        .map(|w| (w[1].close - w[0].close) / w[0].close)
-        .collect()
-}
+pub use finance_query_models::chart::returns;
 
 /// Trading calendar used to annualise risk ratios — different asset classes
 /// have different period counts per year.

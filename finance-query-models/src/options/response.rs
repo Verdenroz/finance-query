@@ -292,30 +292,6 @@ mod tests {
     }
 
     #[test]
-    fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
-        let contract = |symbol: &str, expiration: Option<i64>| -> crate::options::OptionContract {
-            serde_json::from_value(serde_json::json!({
-                "contractSymbol": symbol,
-                "strike": 1.0,
-                "expiration": expiration,
-            }))
-            .unwrap()
-        };
-        let options = crate::providers::build_options(
-            "X".into(),
-            Provider::Yahoo,
-            vec![],
-            vec![
-                contract("C0", None),
-                contract("C2", Some(200)),
-                contract("C1", Some(100)),
-            ],
-            vec![],
-        );
-        assert_eq!(options.loaded_expiration(), Some(100));
-    }
-
-    #[test]
     fn empty_result_has_no_contracts_or_expiration() {
         let options: Options = serde_json::from_value(
             serde_json::json!({"optionChain": {"result": [], "error": null}}),
