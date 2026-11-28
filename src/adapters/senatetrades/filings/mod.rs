@@ -3,6 +3,7 @@
 mod search;
 mod transactions;
 
+use chromiumoxide::element::Element;
 use futures::stream::{self, StreamExt};
 
 use crate::error::Result;
@@ -36,6 +37,12 @@ pub(crate) async fn fetch_congressional_trades_response(
     result
 }
 
+/// Text of the `index`th cell. The outer `None` means the cell is missing or
+/// the read failed, which drops the row; the inner `None` is an empty cell.
+async fn cell_text(cells: &[Element], index: usize) -> Option<Option<String>> {
+    cells.get(index)?.inner_text().await.ok()
+}
+
 async fn scan(client: &SenateTradesClient, symbol: &str) -> Result<Vec<CongressionalTrade>> {
     let mut entries = search_recent_ptrs(client).await?;
     entries.truncate(MAX_FILINGS_SCANNED);
@@ -49,6 +56,11 @@ async fn scan(client: &SenateTradesClient, symbol: &str) -> Result<Vec<Congressi
         .flatten()
         .collect();
     Ok(trades)
+}
+
+#[cfg(test)]
+fn cells<const N: usize>(texts: [&str; N]) -> [Option<String>; N] {
+    texts.map(|t| Some(t.to_string()))
 }
 
 #[cfg(test)]
