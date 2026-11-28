@@ -46,17 +46,23 @@ struct FieldAttrs {
     nonzero: bool,
     rename: Option<String>,
     prefix: Option<String>,
+    time_exempt: Option<LitStr>,
     time: Option<TimeAttr>,
 }
 
 pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
-    let krate = crate_path(input)?;
+    let (krate, explicit_crate) = crate_path(input)?;
     let fields = named_fields(input)?;
     let format_param = format_param(input);
     let name = &input.ident;
     let impl_ty = match format_param {
         Some(_) => quote! { #name<#krate::format::Both> },
         None => quote! { #name },
+    };
+    let time_naming_test = if explicit_crate {
+        time_naming_test(name, &impl_ty, fields, &krate)?
+    } else {
+        TokenStream::new()
     };
     let columns = fields
         .iter()
@@ -82,6 +88,8 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
     };
 
     Ok(quote! {
+        #time_naming_test
+
         impl #impl_ty {
             #nested_methods
 
@@ -129,6 +137,37 @@ pub(crate) fn expand(input: &DeriveInput) -> syn::Result<TokenStream> {
                     #( ::std::iter::FromIterator::from_iter(#columns) ),*
                 ];
                 columns.into_iter().flatten().collect()
+            }
+        }
+    })
+}
+
+/// Emits a test that checks the empty frame's column names against its time dtypes.
+fn time_naming_test(
+    name: &Ident,
+    impl_ty: &TokenStream,
+    fields: &syn::punctuated::Punctuated<Field, syn::Token![,]>,
+    krate: &Path,
+) -> syn::Result<TokenStream> {
+    let mut exempt = Vec::new();
+    for field in fields {
+        let attrs = field_attrs(field)?;
+        if attrs.time_exempt.is_some() {
+            if let Some(ident) = &field.ident {
+                exempt.push(attrs.rename.unwrap_or_else(|| ident.to_string()));
+            }
+        }
+    }
+    let module = Ident::new(&format!("__dataframe_time_naming_{name}"), name.span());
+    let label = name.to_string();
+    Ok(quote! {
+        #[cfg(test)]
+        #[allow(non_snake_case)]
+        mod #module {
+            #[test]
+            fn time_columns_are_named_and_typed() {
+                let frame = <super::#impl_ty>::vec_to_dataframe(&[]).unwrap();
+                #krate::__dataframe::assert_time_naming(#label, &frame, &[#(#exempt),*]);
             }
         }
     })
@@ -401,6 +440,15 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.nonzero = true;
             } else if meta.path.is_ident("rename") {
                 attrs.rename = Some(meta.value()?.parse::<LitStr>()?.value());
+            } else if meta.path.is_ident("time_exempt") {
+                let reason = meta.value()?.parse::<LitStr>()?;
+                if reason.value().trim().is_empty() {
+                    return Err(syn::Error::new_spanned(
+                        &reason,
+                        "`time_exempt` needs a non-empty reason",
+                    ));
+                }
+                attrs.time_exempt = Some(reason);
             } else if meta.path.is_ident("prefix") {
                 attrs.prefix = Some(meta.value()?.parse::<LitStr>()?.value());
             } else if meta.path.is_ident("datetime") || meta.path.is_ident("date") {
@@ -431,7 +479,7 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
                 attrs.time = Some(TimeAttr { kind, unit });
             } else {
                 return Err(meta.error(
-                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date`, `rename = \"...\"` or `prefix = \"...\"`",
+                    "expected `skip`, `flatten`, `list`, `nested`, `nonzero`, `datetime`, `date`, `rename = \"...\"`, `prefix = \"...\"` or `time_exempt = \"...\"`",
                 ));
             }
             Ok(())
@@ -464,8 +512,9 @@ fn field_attrs(field: &Field) -> syn::Result<FieldAttrs> {
     Ok(attrs)
 }
 
-fn crate_path(input: &DeriveInput) -> syn::Result<Path> {
+fn crate_path(input: &DeriveInput) -> syn::Result<(Path, bool)> {
     let mut krate = syn::parse_quote!(::finance_query);
+    let mut explicit = false;
     for attr in input
         .attrs
         .iter()
@@ -474,13 +523,14 @@ fn crate_path(input: &DeriveInput) -> syn::Result<Path> {
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("crate") {
                 krate = meta.value()?.parse::<LitStr>()?.parse()?;
+                explicit = true;
                 Ok(())
             } else {
                 Err(meta.error("expected `crate = \"...\"`"))
             }
         })?;
     }
-    Ok(krate)
+    Ok((krate, explicit))
 }
 
 fn named_fields(

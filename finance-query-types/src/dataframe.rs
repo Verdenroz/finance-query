@@ -406,6 +406,63 @@ pub mod derive {
         }
     }
 
+    const STRONG_TIME_TOKENS: &[&str] = &["date", "time", "timestamp", "expiration"];
+    const WEAK_TIME_TOKENS: &[&str] = &[
+        "start",
+        "end",
+        "ending",
+        "filed",
+        "published",
+        "updated",
+        "quarter",
+        "year",
+        "period",
+    ];
+
+    fn is_time_dtype(dtype: &DataType) -> bool {
+        match dtype {
+            DataType::List(inner) => is_time_dtype(inner),
+            _ => *dtype == DataType::Date || *dtype == datetime_dtype(),
+        }
+    }
+
+    /// Asserts that a column is time-typed exactly when its name says it is a point in time.
+    ///
+    /// A name ending in `date`, `time`, `timestamp`, `expiration` or `at` must be `Date` or
+    /// `Datetime` (or a list of either). A `Date` or `Datetime` column must have one of those
+    /// tokens anywhere, or one of `start`, `end`, `ending`, `filed`, `published`, `updated`,
+    /// `quarter`, `year` or `period`. `exempt` names columns checked by neither rule.
+    pub fn assert_time_naming(ty: &str, frame: &DataFrame, exempt: &[&str]) {
+        let violations: Vec<String> = frame
+            .schema()
+            .iter()
+            .filter(|(name, _)| !exempt.contains(&name.as_str()))
+            .filter_map(|(name, dtype)| {
+                let tokens: Vec<&str> = name.split('_').collect();
+                let strong = tokens
+                    .last()
+                    .is_some_and(|t| STRONG_TIME_TOKENS.contains(t) || *t == "at");
+                let weak = strong
+                    || tokens
+                        .iter()
+                        .any(|t| STRONG_TIME_TOKENS.contains(t) || WEAK_TIME_TOKENS.contains(t));
+                let time = is_time_dtype(dtype);
+                (strong && !time)
+                    .then(|| {
+                        format!("{ty}.{name}: {dtype} is named like a time but is not typed as one")
+                    })
+                    .or_else(|| {
+                        (time && !weak).then(|| {
+                            format!(
+                                "{ty}.{name}: {dtype} is a time column without a time-like name"
+                            )
+                        })
+                    })
+            })
+            .collect();
+        assert!(violations.is_empty(), "{}", violations.join("\n"));
+    }
+
     #[non_exhaustive]
     pub struct SkipColumn;
 
@@ -423,10 +480,10 @@ pub mod derive {
 #[cfg(all(test, feature = "dataframe"))]
 mod tests {
     use super::derive::{
-        EpochUnit, date_list, datetime_dtype, datetime_list, epoch_date, epoch_datetime,
-        rfc3339_datetime, str_date,
+        EpochUnit, assert_time_naming, date_list, datetime_dtype, datetime_list, epoch_date,
+        epoch_datetime, rfc3339_datetime, str_date,
     };
-    use polars::prelude::DataType;
+    use polars::prelude::{DataFrame, DataType, NamedFrom, Series};
 
     #[test]
     fn epoch_units_scale_to_microseconds() {
@@ -483,5 +540,43 @@ mod tests {
         let dates = date_list("d".into(), EpochUnit::Seconds, false, rows(), |v| Some(*v));
         assert_eq!(dates.dtype(), &DataType::List(Box::new(DataType::Date)));
         assert_eq!(dates.null_count(), 1);
+    }
+
+    fn frame(name: &str, dtype: &DataType) -> DataFrame {
+        let column = Series::new(name.into(), Vec::<i64>::new())
+            .cast(dtype)
+            .unwrap();
+        DataFrame::new(0, vec![column.into()]).unwrap()
+    }
+
+    #[test]
+    fn time_naming_accepts_agreeing_names_and_dtypes() {
+        for (name, dtype) in [
+            ("filing_date", DataType::Date),
+            ("observation_start", DataType::Date),
+            ("updated", datetime_dtype()),
+            ("earnings_date", DataType::List(Box::new(DataType::Date))),
+            ("all_time_high", DataType::Float64),
+            ("count", DataType::Int64),
+        ] {
+            assert_time_naming("T", &frame(name, &dtype), &[]);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "named like a time")]
+    fn time_naming_rejects_untyped_time_names() {
+        assert_time_naming("T", &frame("ipo_date", &DataType::Int64), &[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "without a time-like name")]
+    fn time_naming_rejects_time_columns_with_other_names() {
+        assert_time_naming("T", &frame("day", &DataType::Date), &[]);
+    }
+
+    #[test]
+    fn time_naming_skips_exempt_columns() {
+        assert_time_naming("T", &frame("time", &DataType::Int64), &["time"]);
     }
 }

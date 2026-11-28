@@ -124,7 +124,7 @@ mod tests {
     struct Generic<F: crate::models::format::Format = crate::format::Both> {
         #[dataframe(datetime = "s")]
         time: Option<F::Value<i64>>,
-        #[dataframe(date = "s", nonzero)]
+        #[dataframe(date = "s", nonzero, time_exempt = "test fixture")]
         day: Option<F::Value<i64>>,
     }
 

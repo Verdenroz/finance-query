@@ -29,6 +29,10 @@ pub struct SearchResults {
     pub research_reports: ResearchReports,
     /// Total search execution time (milliseconds)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(time_exempt = "duration in ms, not a point in time")
+    )]
     pub total_time: Option<i64>,
 }
 

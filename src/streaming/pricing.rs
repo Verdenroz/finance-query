@@ -343,6 +343,7 @@ impl PricingData {
 /// that serialize to readable strings like `"EQUITY"` or `"CRYPTOCURRENCY"`.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct PriceUpdate {
@@ -362,6 +363,10 @@ pub struct PriceUpdate {
     pub change: f64,
     pub short_name: String,
     /// Expiry as Yahoo sends it, `0` when not provided.
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(time_exempt = "unit unverified; Yahoo sends 0")
+    )]
     pub expire_date: i64,
     pub open_price: f64,
     pub previous_close: f64,

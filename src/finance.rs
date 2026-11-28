@@ -588,6 +588,7 @@ impl From<Period> for crate::adapters::fmp::models::Period {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct InsiderTransaction {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -652,6 +653,7 @@ impl From<crate::adapters::fmp::corporate::insider_trading::InsiderTradeDTO>
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct AnalystEstimate {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -724,6 +726,7 @@ impl From<crate::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO> for
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct AnalystRecommendation {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -843,6 +846,7 @@ pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct EarningsCalendarEntry {
     /// Ticker symbol.
     pub symbol: String,
@@ -880,6 +884,7 @@ impl From<crate::adapters::alphavantage::models::EarningsCalendarEntryDTO>
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 pub struct IpoCalendarEntry {
     /// Ticker symbol.
     pub symbol: Option<String>,

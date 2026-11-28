@@ -88,6 +88,8 @@ use syn::{
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
 /// - `#[dataframe(flatten, prefix = "name")]` uses `{name}_{column}` instead, and
 ///   `prefix = ""` emits the bare `{column}`. `prefix` requires `flatten`.
+/// - `#[dataframe(time_exempt = "reason")]` exempts a column from the time naming test
+///   below. The reason must not be empty.
 /// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
 /// - `#[dataframe(nested)]` on a `Vec<T>`, `Option<Vec<T>>`, `T` or `Option<T>`
 ///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
@@ -100,7 +102,12 @@ use syn::{
 ///   `Vec<T>` child frames stay flat. It cannot be combined with `skip`, `list`
 ///   or `flatten`.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
-///   `finance_query` re-exported under another path.
+///   `finance_query` re-exported under another path, and adds a `#[cfg(test)]` test
+///   that checks the empty frame's time naming: a name ending in `date`, `time`,
+///   `timestamp`, `expiration` or `at` must be a `Date` or `Datetime` column (or a
+///   list of either), and a `Date` or `Datetime` column must carry one of those
+///   words or `start`, `end`, `ending`, `filed`, `published`, `updated`, `quarter`,
+///   `year` or `period` in its name.
 ///
 /// # Time columns
 ///
@@ -265,6 +272,17 @@ use syn::{
 /// struct Parent {
 ///     #[dataframe(prefix = "row")]
 ///     row: Row,
+/// }
+/// ```
+///
+/// `time_exempt` needs a reason:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(time_exempt = "")]
+///     time: String,
 /// }
 /// ```
 ///
