@@ -1,6 +1,8 @@
 mod backtesting_margin_leverage;
 mod custom_provider;
 mod custom_stock_adapter;
+#[cfg(feature = "dataframe")]
+mod dataframe_lazy;
 mod doc_binance;
 mod doc_bls;
 mod doc_defillama;

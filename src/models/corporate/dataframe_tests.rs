@@ -778,7 +778,7 @@ fn calendar_events_time_columns() {
     assert_eq!(day.phys.get(0), Some(20_770));
     let dates = df.column("earnings_earnings_date").unwrap().list().unwrap();
     let first = dates.get_as_series(0).unwrap().cast(&utc()).unwrap();
-    let micros: Vec<_> = first.datetime().unwrap().phys.into_iter().collect();
+    let micros: Vec<_> = first.datetime().unwrap().phys.iter().collect();
     assert_eq!(
         micros,
         [Some(1_785_441_600_000_000), Some(1_785_873_600_000_000)]

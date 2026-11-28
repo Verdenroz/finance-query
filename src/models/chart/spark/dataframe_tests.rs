@@ -50,13 +50,10 @@ fn spark_rows_pair_each_timestamp_with_its_close() {
     let timestamps = &df.column("timestamp").unwrap().datetime().unwrap().phys;
     let closes = df.column("close").unwrap().f64().unwrap();
     assert_eq!(
-        timestamps.into_iter().collect::<Vec<_>>(),
+        timestamps.iter().collect::<Vec<_>>(),
         [Some(1_000_000), Some(3_000_000)]
     );
-    assert_eq!(
-        closes.into_iter().collect::<Vec<_>>(),
-        [Some(1.5), Some(3.5)]
-    );
+    assert_eq!(closes.iter().collect::<Vec<_>>(), [Some(1.5), Some(3.5)]);
 }
 
 #[test]

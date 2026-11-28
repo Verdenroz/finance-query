@@ -125,7 +125,7 @@ mod tests {
             .unwrap()
             .f64()
             .unwrap()
-            .into_no_null_iter()
+            .iter().flatten()
             .collect();
         assert_eq!(equity, [100.0, 90.0, 95.0]);
     }
@@ -172,7 +172,7 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter().flatten()
             .collect();
         assert_eq!(sides, ["LONG", "SHORT"]);
     }

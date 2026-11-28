@@ -385,7 +385,7 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter().flatten()
             .collect();
         assert_eq!(assets, ["cash", "A", "B"]);
     }
@@ -496,7 +496,7 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .into_no_null_iter()
+            .iter().flatten()
             .collect();
         assert_eq!(
             samples,

@@ -28,7 +28,8 @@ fn calendar_event_frame() {
         .unwrap()
         .str()
         .unwrap()
-        .into_no_null_iter()
+        .iter()
+        .flatten()
         .collect();
     assert_eq!(types, ["ex_dividend", "options_expiration"]);
     assert_eq!(df.column("symbol").unwrap().null_count(), 1);
