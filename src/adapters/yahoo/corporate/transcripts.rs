@@ -70,7 +70,7 @@ pub async fn fetch_for_symbol(
     year: Option<i32>,
 ) -> Result<Transcript> {
     let quartr_id = get_quartr_id(client, symbol).await?;
-    let calls = scrape_earnings_calls(symbol).await?;
+    let calls = scrape_earnings_calls(client.config().origin.as_deref(), symbol).await?;
     let call = find_matching_call(&calls, quarter, year)?;
     fetch(client, &call.event_id, &quartr_id).await
 }
@@ -88,7 +88,7 @@ pub async fn fetch_all_for_symbol(
     limit: Option<usize>,
 ) -> Result<Vec<TranscriptWithMeta>> {
     let quartr_id = get_quartr_id(client, symbol).await?;
-    let calls = scrape_earnings_calls(symbol).await?;
+    let calls = scrape_earnings_calls(client.config().origin.as_deref(), symbol).await?;
 
     let calls_to_fetch: Vec<_> = match limit {
         Some(n) => calls.into_iter().take(n).collect(),

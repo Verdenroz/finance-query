@@ -3,6 +3,7 @@
 //! Scrapes the quote page to get a list of available earnings call transcripts,
 //! extracting event IDs needed to fetch full transcripts.
 
+use crate::adapters::yahoo::endpoints::resolve;
 use crate::error::{FinanceError, Result};
 use regex::Regex;
 use std::collections::HashSet;
@@ -68,18 +69,24 @@ impl EarningsCall {
 ///
 /// A list of `EarningsCall` objects containing event IDs and metadata needed
 /// to fetch full transcripts via the `earnings_transcript` endpoint.
-pub(crate) async fn scrape_earnings_calls(symbol: &str) -> Result<Vec<EarningsCall>> {
+pub(crate) async fn scrape_earnings_calls(
+    origin: Option<&str>,
+    symbol: &str,
+) -> Result<Vec<EarningsCall>> {
     let symbol_upper = symbol.to_uppercase();
-    let url = format!("https://finance.yahoo.com/quote/{}", symbol_upper);
+    let live_url = format!("https://finance.yahoo.com/quote/{}", symbol_upper);
+    let url = resolve(origin, &live_url)?;
 
     info!("Fetching earnings calls from quote page for {}", symbol);
 
-    let client = reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .http1_only()
-        .build()?;
+        .http1_only();
+    if origin.is_some() {
+        builder = builder.redirect(reqwest::redirect::Policy::none());
+    }
 
-    let response = client.get(&url).send().await?;
+    let response = builder.build()?.get(&*url).send().await?;
 
     if response.status() == reqwest::StatusCode::NOT_FOUND {
         return Err(FinanceError::SymbolNotFound {
@@ -307,7 +314,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires network access
     async fn test_scrape_earnings_calls() {
-        let calls = scrape_earnings_calls("AAPL").await;
+        let calls = scrape_earnings_calls(None, "AAPL").await;
         assert!(calls.is_ok(), "Failed: {:?}", calls.err());
         let list = calls.unwrap();
         assert!(!list.is_empty());
