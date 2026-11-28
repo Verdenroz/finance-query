@@ -385,7 +385,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .iter().flatten()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(assets, ["cash", "A", "B"]);
     }
@@ -496,7 +497,8 @@ mod tests {
             .unwrap()
             .str()
             .unwrap()
-            .iter().flatten()
+            .iter()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(
             samples,

@@ -186,7 +186,7 @@ mod tests {
                 .str()
                 .unwrap()
                 .iter()
-                .flatten()
+                .map(Option::unwrap)
                 .map(String::from)
                 .collect()
         }

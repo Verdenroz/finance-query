@@ -295,7 +295,7 @@ mod tests {
             .str()
             .unwrap()
             .iter()
-            .flatten()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["MSFT", "AAPL", "AAPL"]);
         let timestamps: Vec<_> = df
@@ -305,8 +305,7 @@ mod tests {
             .unwrap()
             .i64()
             .unwrap()
-            .iter()
-            .flatten()
+            .into_no_null_iter()
             .map(|micros| micros / 86_400_000_000)
             .collect();
         assert_eq!(timestamps, [5, 1, 2]);
@@ -351,7 +350,7 @@ mod tests {
             .str()
             .unwrap()
             .iter()
-            .flatten()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(recommended, ["Y", "Z", "X"]);
     }
@@ -393,7 +392,7 @@ mod tests {
                 .str()
                 .unwrap()
                 .iter()
-                .flatten()
+                .map(Option::unwrap)
                 .map(str::to_string)
                 .collect()
         };
@@ -540,7 +539,7 @@ mod tests {
             .str()
             .unwrap()
             .iter()
-            .flatten()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["VTSAX", "FXAIX", "FXAIX"]);
         let amounts: Vec<_> = df
@@ -548,8 +547,7 @@ mod tests {
             .unwrap()
             .f64()
             .unwrap()
-            .iter()
-            .flatten()
+            .into_no_null_iter()
             .collect();
         assert_eq!(amounts, [0.75, 0.1, 0.2]);
 
@@ -589,7 +587,7 @@ mod tests {
                 .str()
                 .unwrap()
                 .iter()
-                .flatten()
+                .map(Option::unwrap)
                 .map(str::to_string)
                 .collect()
         };
@@ -634,7 +632,7 @@ mod tests {
             .str()
             .unwrap()
             .iter()
-            .flatten()
+            .map(Option::unwrap)
             .collect();
         assert_eq!(symbols, ["MSFT", "AAPL"]);
         let sma: Vec<_> = df.column("sma_10").unwrap().f64().unwrap().iter().collect();
