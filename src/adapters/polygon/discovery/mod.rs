@@ -1,5 +1,6 @@
 //! Reference data endpoints: tickers, exchanges, conditions, market holidays, market status.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -250,9 +251,11 @@ pub async fn fetch_similar_symbols_response(
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|r| SimilarSymbol {
-            symbol: r.ticker.unwrap_or_default(),
-            score: 0.0,
+        .map(|r| {
+            init!(SimilarSymbol {
+                symbol: r.ticker.unwrap_or_default(),
+                score: 0.0,
+            })
         })
         .collect())
 }
@@ -271,7 +274,7 @@ pub async fn fetch_symbol_search_response(
         .unwrap_or_default()
         .into_iter()
         .filter_map(|t| {
-            Some(SymbolMatch {
+            Some(init!(SymbolMatch {
                 symbol: t.ticker?,
                 id: None,
                 name: t.name,
@@ -284,7 +287,7 @@ pub async fn fetch_symbol_search_response(
                 image: None,
                 ipo_date: None,
                 delisted_date: None,
-            })
+            }))
         })
         .collect())
 }
@@ -308,7 +311,7 @@ pub(super) fn details_to_canonical(
             field: "results".to_string(),
             context: format!("No ticker details returned for {symbol}"),
         })?;
-    Ok(SymbolDetails {
+    Ok(init!(SymbolDetails {
         symbol: d.ticker.unwrap_or_else(|| symbol.to_string()),
         name: d.name,
         description: d.description,
@@ -329,7 +332,7 @@ pub(super) fn details_to_canonical(
         active: d.active,
         delisted_utc: d.delisted_utc,
         provider_id: Some(crate::Provider::Polygon),
-    })
+    }))
 }
 
 /// Fetch the tradable exchange listing (canonical).
@@ -341,15 +344,17 @@ pub async fn fetch_exchanges_response()
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|e| ExchangeInfo {
-            id: e.id,
-            name: e.name,
-            mic: e.mic,
-            operating_mic: e.operating_mic,
-            asset_class: e.asset_class,
-            locale: e.locale,
-            exchange_type: e.exchange_type,
-            url: e.url,
+        .map(|e| {
+            init!(ExchangeInfo {
+                id: e.id,
+                name: e.name,
+                mic: e.mic,
+                operating_mic: e.operating_mic,
+                asset_class: e.asset_class,
+                locale: e.locale,
+                exchange_type: e.exchange_type,
+                url: e.url,
+            })
         })
         .collect())
 }
@@ -401,17 +406,17 @@ fn holiday_to_canonical(
     h: MarketHolidayDTO,
 ) -> crate::models::calendar::market::MarketCalendarEntry {
     use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
-    MarketCalendarEntry {
-        symbol: None,
-        date: h.date,
-        detail: CalendarDetail::MarketHoliday {
+    MarketCalendarEntry::new(
+        None,
+        h.date,
+        CalendarDetail::MarketHoliday {
             name: h.name,
             exchange: h.exchange,
             status: h.status,
             open: h.open,
             close: h.close,
         },
-    }
+    )
 }
 
 #[cfg(test)]

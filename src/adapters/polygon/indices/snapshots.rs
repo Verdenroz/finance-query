@@ -1,5 +1,6 @@
 //! Index snapshot endpoints.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -87,7 +88,7 @@ fn snapshot_to_quote(symbol: &str, resp: IndexSnapshotResponseDTO) -> IndexQuote
         }
     });
     let session = snap.as_ref().and_then(|s| s.session.as_ref());
-    IndexQuote {
+    init!(IndexQuote {
         symbol: snap
             .as_ref()
             .and_then(|s| s.ticker.clone())
@@ -97,7 +98,7 @@ fn snapshot_to_quote(symbol: &str, resp: IndexSnapshotResponseDTO) -> IndexQuote
         change: session.and_then(|s| s.change),
         change_percent: session.and_then(|s| s.change_percent),
         timestamp: None,
-    }
+    })
 }
 
 #[cfg(test)]

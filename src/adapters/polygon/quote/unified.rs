@@ -4,6 +4,7 @@
 //! per-market snapshot endpoints each cost their own request and rate-limit
 //! unit, which matters on the 5 req/sec free tier.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::polygon::build_client;
@@ -133,7 +134,7 @@ fn parse_asset_class(raw: Option<&str>) -> Option<AssetClass> {
 
 pub(crate) fn to_market_snapshot(dto: UnifiedSnapshotDTO) -> MarketSnapshot {
     let session = dto.session;
-    MarketSnapshot {
+    init!(MarketSnapshot {
         symbol: dto.ticker,
         name: dto.name,
         asset_class: parse_asset_class(dto.asset_type.as_deref()),
@@ -151,7 +152,7 @@ pub(crate) fn to_market_snapshot(dto: UnifiedSnapshotDTO) -> MarketSnapshot {
         change_percent: session.and_then(|s| s.change_percent),
         error: dto.error,
         message: dto.message,
-    }
+    })
 }
 
 /// Fetch canonical cross-market snapshots for a mixed list of symbols.

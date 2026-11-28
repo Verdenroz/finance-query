@@ -1,5 +1,6 @@
 //! Current Massive futures contract snapshots.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -136,7 +137,7 @@ fn snapshot_to_quote(symbol: &str, response: FuturesSnapshotResponseDTO) -> Futu
     let session = snapshot.as_ref().and_then(|item| item.session.as_ref());
     let last_trade = snapshot.as_ref().and_then(|item| item.last_trade.as_ref());
     let last_minute = snapshot.as_ref().and_then(|item| item.last_minute.as_ref());
-    FuturesQuote {
+    init!(FuturesQuote {
         symbol: snapshot
             .as_ref()
             .and_then(|item| item.ticker.clone())
@@ -164,7 +165,7 @@ fn snapshot_to_quote(symbol: &str, response: FuturesSnapshotResponseDTO) -> Futu
                     .and_then(|minute| minute.last_updated)
                     .map(|millis| millis / MILLIS_PER_SECOND)
             }),
-    }
+    })
 }
 
 #[cfg(test)]

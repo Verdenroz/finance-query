@@ -2,6 +2,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
+use crate::init;
 use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
@@ -35,7 +36,7 @@ fn snapshot_to_canonical(symbol: &str, snap: Option<&TickerSnapshotDTO>) -> Quot
             .and_then(|d| d.close)
             .filter(|close| *close > 0.0)
     });
-    let price = Price {
+    let price = init!(Price {
         regular_market_price: close.map(|v| FormattedValue {
             raw: Some(v),
             fmt: None,
@@ -62,12 +63,12 @@ fn snapshot_to_canonical(symbol: &str, snap: Option<&TickerSnapshotDTO>) -> Quot
             long_fmt: None,
         }),
         ..Default::default()
-    };
-    QuoteSummaryResponse {
+    });
+    init!(QuoteSummaryResponse {
         symbol: symbol.to_string(),
         price: Some(price),
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch quote summary response (canonical) for a stock ticker.

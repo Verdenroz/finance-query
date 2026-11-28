@@ -3,6 +3,7 @@
 use crate::adapters::polygon::client::PathRule;
 use crate::adapters::polygon::models::{AggBarDTO, AggregateResponseDTO};
 use crate::adapters::polygon::{build_client, invalid_page};
+use crate::init;
 use crate::{PageCursor, Provider, ProviderPage, Result, StockBar, StockBarsRequest};
 
 fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
@@ -15,7 +16,7 @@ fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
     {
         return Err(invalid_page("bar"));
     }
-    Ok(StockBar {
+    Ok(init!(StockBar {
         timestamp_ms: row.timestamp,
         open: row.open,
         high: row.high,
@@ -24,7 +25,7 @@ fn bar_to_canonical(row: AggBarDTO) -> Result<StockBar> {
         volume: row.volume,
         transactions: row.transactions,
         vwap: row.vwap,
-    })
+    }))
 }
 
 pub(crate) async fn fetch_stock_bars_page(
@@ -77,14 +78,12 @@ pub(crate) async fn fetch_stock_bars_page(
         PathRule::AggregateWindow,
         &current,
     )?;
-    Ok(ProviderPage {
-        items,
-        next,
-        provider_id: Provider::Polygon,
+    Ok(init!(ProviderPage {
         request_id: body.request_id,
         results_count: body.results_count,
         query_count: body.query_count,
         reported_symbol: body.ticker,
         adjusted: body.adjusted,
-    })
+        ..ProviderPage::new(items, Provider::Polygon, next)
+    }))
 }

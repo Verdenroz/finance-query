@@ -1,5 +1,6 @@
 //! SEC filing endpoints: filing index, 10-K sections, 8-K text, risk factors.
 
+use crate::init;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -108,23 +109,23 @@ pub async fn risk_factors(params: &[(&str, &str)]) -> Result<PaginatedResponseDT
 }
 
 fn filing_to_canonical(entry: FilingEntryDTO) -> ProviderFiling {
-    ProviderFiling {
+    init!(ProviderFiling {
         accession_number: entry.accession_number,
         filing_date: entry.filing_date,
         filing_type: entry.form_type,
         filing_url: entry.filing_url,
         company_name: entry.issuer_name,
         cik: entry.cik,
-    }
+    })
 }
 
 fn risk_factor_to_canonical(row: RiskFactorDTO) -> RiskFactor {
-    RiskFactor {
+    init!(RiskFactor {
         title: row.tertiary_category,
         text: row.supporting_text,
         category: row.primary_category,
         filing_date: row.filing_date,
-    }
+    })
 }
 
 /// Fetch a symbol's most recent filings (canonical).
@@ -135,7 +136,7 @@ pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
         ("limit", "100"),
     ])
     .await?;
-    Ok(ProviderFilings {
+    Ok(init!(ProviderFilings {
         symbol: symbol.to_string(),
         filings: page
             .results
@@ -143,7 +144,7 @@ pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
             .into_iter()
             .map(filing_to_canonical)
             .collect(),
-    })
+    }))
 }
 
 /// Fetch canonical risk factors for a stock ticker.
@@ -254,9 +255,11 @@ pub async fn fetch_filing_sections_response(
         )
         .await?
         .into_iter()
-        .map(|row| FilingSection {
-            section: row.section,
-            content: row.text,
+        .map(|row| {
+            init!(FilingSection {
+                section: row.section,
+                content: row.text,
+            })
         })
         .collect(),
         FilingSectionForm::EightK => rows_for_accession(
@@ -267,9 +270,11 @@ pub async fn fetch_filing_sections_response(
         )
         .await?
         .into_iter()
-        .map(|row| FilingSection {
-            section: Some("items".into()),
-            content: row.items_text,
+        .map(|row| {
+            init!(FilingSection {
+                section: Some("items".into()),
+                content: row.items_text,
+            })
         })
         .collect(),
     };

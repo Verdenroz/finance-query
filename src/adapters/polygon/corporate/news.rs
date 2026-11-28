@@ -1,5 +1,6 @@
 //! Stock news endpoints with sentiment analysis.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::Provider;
@@ -81,15 +82,17 @@ pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
         .results
         .into_iter()
         .flatten()
-        .map(|a| News {
-            title: a.title.unwrap_or_default(),
-            link: a.article_url.unwrap_or_default(),
-            source: a.publisher.and_then(|p| p.name).unwrap_or_default(),
-            img: String::new(),
-            time: a.published_utc.unwrap_or_default(),
-            provider_id: Some(Provider::Polygon),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|a| {
+            init!(News {
+                title: a.title.unwrap_or_default(),
+                link: a.article_url.unwrap_or_default(),
+                source: a.publisher.and_then(|p| p.name).unwrap_or_default(),
+                img: String::new(),
+                time: a.published_utc.unwrap_or_default(),
+                provider_id: Some(Provider::Polygon),
+                #[cfg(feature = "sentiment")]
+                sentiment: None,
+            })
         })
         .collect())
 }
