@@ -24,8 +24,8 @@ const YAHOO_CASHFLOW: Table = &[("ChangesinCash", "changes_in_cash")];
 
 /// Rewrites a statement's metric names to the canonical vocabulary.
 ///
-/// When a passthrough name equals a canonical name that another key already maps to, the
-/// mapped value stays and the passthrough is dropped.
+/// When an unmapped key's snake_case name is already taken, by a canonical name or another
+/// unmapped key, the mapped value keeps the name and the unmapped one keeps its own spelling.
 pub(crate) fn canonicalize(
     provider: Provider,
     statement_type: StatementType,
@@ -57,7 +57,9 @@ pub(crate) fn canonicalize(
     }
     out.extend(derived);
     for (key, values) in unmapped {
-        out.entry(snake_case(&key)).or_insert(values);
+        let snake = snake_case(&key);
+        let name = if out.contains_key(&snake) { key } else { snake };
+        out.entry(name).or_insert(values);
     }
     out
 }
@@ -199,17 +201,31 @@ mod tests {
     }
 
     #[test]
-    fn mapped_value_wins_over_a_passthrough_with_the_same_name() {
+    fn unmapped_key_colliding_with_a_canonical_name_keeps_its_spelling() {
         let out = canonicalize(
             Provider::Yahoo,
             StatementType::CashFlow,
             metrics(&[
-                ("changes_in_cash", &[("2024-09-30", 9.0)]),
+                ("ChangesInCash", &[("2024-09-30", 9.0)]),
                 ("ChangesinCash", &[("2024-09-30", 2.0)]),
             ]),
         );
-        assert_eq!(out.len(), 1);
         assert_eq!(out["changes_in_cash"]["2024-09-30"], 2.0);
+        assert_eq!(out["ChangesInCash"]["2024-09-30"], 9.0);
+    }
+
+    #[test]
+    fn unmapped_keys_colliding_with_each_other_both_survive() {
+        let out = canonicalize(
+            Provider::Yahoo,
+            StatementType::Income,
+            metrics(&[
+                ("fooBar", &[("2024-09-30", 1.0)]),
+                ("FooBar", &[("2024-09-30", 2.0)]),
+            ]),
+        );
+        assert_eq!(out["foo_bar"]["2024-09-30"], 2.0);
+        assert_eq!(out["fooBar"]["2024-09-30"], 1.0);
     }
 
     #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
