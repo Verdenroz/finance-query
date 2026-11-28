@@ -121,6 +121,29 @@ pub mod derive {
             })
     }
 
+    /// Stacks one frame per keyed item, each led by a `name` column repeating its key.
+    ///
+    /// `empty` supplies the schema when there are no items.
+    pub fn stack_keyed<K: AsRef<str>, T>(
+        name: &str,
+        items: impl IntoIterator<Item = (K, T)>,
+        frame: impl Fn(T) -> PolarsResult<DataFrame>,
+        empty: impl FnOnce() -> PolarsResult<DataFrame>,
+    ) -> PolarsResult<DataFrame> {
+        let mut frames = items
+            .into_iter()
+            .map(|(key, item)| with_leading_column(frame(item)?, name, key.as_ref()));
+        let Some(first) = frames.next() else {
+            return with_leading_column(empty()?, name, "");
+        };
+        let mut stacked = first?;
+        for frame in frames {
+            stacked.vstack_mut(&frame?)?;
+        }
+        stacked.rechunk_mut();
+        Ok(stacked)
+    }
+
     /// Prepends a string column that repeats `value` on every row.
     pub fn with_leading_column(
         mut frame: DataFrame,
@@ -130,6 +153,60 @@ pub mod derive {
         let column = Series::new(name.into(), vec![value; frame.height()]);
         frame.insert_column(0, column.into())?;
         Ok(frame)
+    }
+
+    /// The items of a row iterator's iterators, with an exact length so `collect_map` allocates once.
+    pub struct ByRows<R: Iterator> {
+        rows: R,
+        front: Option<R::Item>,
+        len: usize,
+    }
+
+    impl<R: Iterator<Item: Iterator>> Iterator for ByRows<R> {
+        type Item = <R::Item as Iterator>::Item;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            loop {
+                if let Some(item) = self.front.as_mut().and_then(Iterator::next) {
+                    self.len -= 1;
+                    return Some(item);
+                }
+                self.front = Some(self.rows.next()?);
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
+        }
+    }
+
+    impl<R: Iterator<Item: Iterator>> ByRows<R> {
+        /// Collects `f` of every item into a `Vec`, extending row by row so each row runs a tight loop.
+        pub fn collect_map<T>(self, mut f: impl FnMut(<R::Item as Iterator>::Item) -> T) -> Vec<T> {
+            let mut out = Vec::with_capacity(self.len);
+            for row in self.front.into_iter().chain(self.rows) {
+                out.extend(row.map(&mut f));
+            }
+            out
+        }
+    }
+
+    /// Flattens `rows`, which must yield exactly `len` items in total.
+    pub fn by_rows<R: Iterator<Item: Iterator>>(rows: R, len: usize) -> ByRows<R> {
+        ByRows {
+            rows,
+            front: None,
+            len,
+        }
+    }
+
+    /// A column name with `prefix` prepended, without allocating when there is none.
+    pub fn column_name(prefix: &str, column: &str) -> PlSmallStr {
+        if prefix.is_empty() {
+            column.into()
+        } else {
+            format!("{prefix}{column}").into()
+        }
     }
 
     /// Collects `values` into a nullable column of `rows` entries, padding the tail with nulls.
