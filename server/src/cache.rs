@@ -170,6 +170,14 @@ impl Cache {
         }
     }
 
+    /// Cache-key segment for a symbol list: case-folded before sorting, so
+    /// `["aapl", "MSFT"]` and `["AAPL", "msft"]` share one entry.
+    pub fn symbols_key(symbols: &[impl AsRef<str>]) -> String {
+        let mut upper: Vec<String> = symbols.iter().map(|s| s.as_ref().to_uppercase()).collect();
+        upper.sort();
+        upper.join(",")
+    }
+
     /// Get a value from cache
     #[cfg(feature = "redis-cache")]
     pub async fn get<T: DeserializeOwned>(&self, key: &str) -> Option<T> {
@@ -385,5 +393,14 @@ mod tests {
     fn nested_errors_field_keeps_ttl() {
         let value = serde_json::json!({ "quote": { "errors": ["x"] } });
         assert_eq!(write_ttl(&value, ttl::QUOTES, true), Some(10));
+    }
+
+    #[test]
+    fn symbols_key_ignores_input_case() {
+        assert_eq!(Cache::symbols_key(&["aapl", "MSFT"]), "AAPL,MSFT");
+        assert_eq!(
+            Cache::symbols_key(&["AAPL", "msft"]),
+            Cache::symbols_key(&["msft", "aapl"])
+        );
     }
 }

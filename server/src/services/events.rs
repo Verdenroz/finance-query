@@ -86,7 +86,7 @@ pub async fn get_batch_dividends(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("dividends", &[&symbols_key, range_str]);
 
     cache
@@ -116,7 +116,7 @@ pub async fn get_batch_splits(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("splits", &[&symbols_key, range_str]);
 
     cache
@@ -146,7 +146,7 @@ pub async fn get_batch_capital_gains(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("capital-gains", &[&symbols_key, range_str]);
 
     cache

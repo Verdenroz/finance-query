@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- Typed-time column naming and check (#779)
 - Polars 0.55 with streaming (#772)
 - Typed core, backtest and stream time columns (#764)
 - Typed Yahoo epoch columns (#762)
@@ -46,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Case-fold batch cache keys, alert on bursts (#788)
 - Error replies for bad feeds stream input (#776)
 - Alert on rate-limit rejections, not traffic (#775)
 - Pin session-dependent fields on quotes-batch (#774)
@@ -70,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Documentation
 
+- Add design principles to CONTRIBUTING (#780)
 - Fix first-use gaps and use instruction claims (#729)
 - Nested, list, series and streaming DataFrames (#718)
 
@@ -86,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Parse Senate eFD rows offline (#786)
+- Cover server service helpers and forex (#783)
 - Capture a real secFilings fixture (#771)
 - Read typed timestamps with the micros helper (#767)
 - Cover remaining batch to_dataframe impls (#757)
@@ -510,6 +515,8 @@ REMOVED  finance_query::providers::provider::Provider::capabilities
 REMOVED  finance_query::providers::provider::Provider::custom
 REMOVED  finance_query::ticker::core::Ticker::dividend_analytics
 REMOVED  finance_query::ticker::core::Ticker::quote
+CHANGED  finance_query::AnalystEstimate (body)
+CHANGED  finance_query::AnalystRecommendation (body)
 CHANGED  finance_query::BatchCapitalGainsResponse (signature)
 CHANGED  finance_query::BatchChartsResponse (signature)
 CHANGED  finance_query::BatchDividendsResponse (signature)
@@ -532,6 +539,7 @@ CHANGED  finance_query::CongressionalTrade (body)
 CHANGED  finance_query::CotObservation (body)
 CHANGED  finance_query::Dividend (body)
 CHANGED  finance_query::DividendAnalytics (body)
+CHANGED  finance_query::EarningsCalendarEntry (body)
 CHANGED  finance_query::EarningsSurprise (body)
 CHANGED  finance_query::EarningsTranscript (body)
 CHANGED  finance_query::EconomicSeriesMatch (body)
@@ -560,7 +568,9 @@ CHANGED  finance_query::IndicatorsSummary (body)
 CHANGED  finance_query::IndustryData (body)
 CHANGED  finance_query::IndustryPe (body)
 CHANGED  finance_query::InsiderTrade (body)
+CHANGED  finance_query::InsiderTransaction (body)
 CHANGED  finance_query::InstitutionalHolding (body)
+CHANGED  finance_query::IpoCalendarEntry (body)
 CHANGED  finance_query::MarketSummaryQuote (body)
 CHANGED  finance_query::MarketTime (body)
 CHANGED  finance_query::News (signature)
@@ -630,6 +640,11 @@ CHANGED  finance_query::crypto::SymbolMatch (body)
 CHANGED  finance_query::defi::ProtocolTvl (signature)
 CHANGED  finance_query::defi::TvlPoint (body)
 CHANGED  finance_query::feeds::FeedEntry (body)
+CHANGED  finance_query::finance::AnalystEstimate (body)
+CHANGED  finance_query::finance::AnalystRecommendation (body)
+CHANGED  finance_query::finance::EarningsCalendarEntry (body)
+CHANGED  finance_query::finance::InsiderTransaction (body)
+CHANGED  finance_query::finance::IpoCalendarEntry (body)
 CHANGED  finance_query::fred::MacroObservation (body)
 CHANGED  finance_query::fred::TreasuryYield (body)
 CHANGED  finance_query::gdelt::News (signature)
@@ -656,6 +671,9 @@ CHANGED  finance_query::models::corporate::calendar_events::EarningsCalendar (bo
 CHANGED  finance_query::models::corporate::earnings::Earnings (body)
 CHANGED  finance_query::models::corporate::earnings::EarningsChart (body)
 CHANGED  finance_query::models::corporate::earnings::FinancialsChart (body)
+CHANGED  finance_query::models::corporate::earnings::QuarterlyEarnings (body)
+CHANGED  finance_query::models::corporate::earnings::QuarterlyFinancials (body)
+CHANGED  finance_query::models::corporate::earnings::YearlyFinancials (body)
 CHANGED  finance_query::models::corporate::earnings_history::EarningsHistoryEntry (body)
 CHANGED  finance_query::models::corporate::earnings_transcript::EarningsTranscript (body)
 CHANGED  finance_query::models::corporate::earnings_trend::EarningsTrendPeriod (body)
