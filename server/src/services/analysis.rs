@@ -108,7 +108,7 @@ pub async fn get_batch_recommendations(
 ) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
-    let symbols_key = symbols.join(",").to_uppercase();
+    let symbols_key = Cache::symbols_key(&symbols);
     let cache_key = Cache::key("recommendations", &[&symbols_key, &limit.to_string()]);
 
     cache
