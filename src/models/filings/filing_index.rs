@@ -16,7 +16,7 @@ where
 }
 
 /// Filing index response for a specific EDGAR accession.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EdgarFilingIndex {
     /// Directory listing metadata.
@@ -37,7 +37,7 @@ pub struct EdgarFilingIndexDirectory {
 }
 
 /// Single file entry within an EDGAR filing index.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

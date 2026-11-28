@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::recommendations()` to obtain recommendations.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Recommendation {
     /// Symbol that was queried
     pub symbol: String,

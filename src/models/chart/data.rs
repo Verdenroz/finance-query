@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, FieldsInit)]
 pub struct Chart {
     /// Stock symbol
     pub symbol: String,

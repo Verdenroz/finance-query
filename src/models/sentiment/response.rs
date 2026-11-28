@@ -5,10 +5,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Classification label for the Fear & Greed Index value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum FearGreedLabel {
     /// 0–24: Extreme Fear
+    #[default]
     #[serde(rename = "Extreme Fear")]
     ExtremeFear,
     /// 25–44: Fear
@@ -44,7 +45,7 @@ impl std::fmt::Display for FearGreedLabel {
 /// The current CNN Fear & Greed Index reading from Alternative.me.
 ///
 /// Scale: 0 (Extreme Fear) → 100 (Extreme Greed).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
