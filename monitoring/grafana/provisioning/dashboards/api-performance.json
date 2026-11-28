@@ -1959,7 +1959,7 @@
       ],
       "title": "Rate Limit Usage",
       "type": "gauge",
-      "description": "Share of the per-minute rate limit quota consumed by allowed requests."
+      "description": "Allowed requests per minute across all clients, relative to one client's quota. The quota applies per client IP, so values above 100% are normal with several clients; rejections are what show a client at its limit."
     },
     {
       "datasource": {
