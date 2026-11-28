@@ -86,6 +86,13 @@ use syn::{
 /// - `#[dataframe(rename = "name")]` sets the column name.
 /// - `#[dataframe(flatten)]` on a field whose type also derives `ToDataFrame`
 ///   emits that type's columns as `{field}_{column}`, null where the field is `None`.
+/// - `#[dataframe(flatten, prefix = "name")]` uses `{name}_{column}` instead, and
+///   `prefix = ""` emits the bare `{column}`. `prefix` requires `flatten` and must not
+///   end in `_`.
+/// - `#[dataframe(time_exempt = "reason")]` exempts a column from the time naming test
+///   below. The reason must not be empty. It cannot be combined with `skip`,
+///   `flatten` or `nested`; a parent that flattens a child must exempt the child's
+///   columns itself.
 /// - `#[dataframe(list)]` on a `Vec<String>` field emits a `List(String)` column.
 /// - `#[dataframe(nested)]` on a `Vec<T>`, `Option<Vec<T>>`, `T` or `Option<T>`
 ///   field, where `T: ToDataFrame`, keeps the rows out of `to_dataframe` and adds
@@ -99,6 +106,17 @@ use syn::{
 ///   or `flatten`.
 /// - `#[dataframe(crate = "path")]` on the struct points the generated code at
 ///   `finance_query` re-exported under another path.
+///
+/// # Time naming test
+///
+/// When the crate being compiled has a name starting with `finance-query` (except `finance-query-derive`), the derive
+/// also emits a `#[cfg(test)]` test that checks the empty frame's time naming: a name
+/// ending in `date`, `time`, `timestamp`, `expiration`, `ending` or `at` must be a `Date`
+/// or `Datetime` column (or a list of either), and a `Date` or `Datetime` column must
+/// carry one of those words or `start`, `end`, `filed`, `published`, `updated`,
+/// `quarter`, `year` or `period` in its name. Other crates get no test. The test lives
+/// in a child module and names the type through `super`, so a type checked by it must
+/// be declared at module level, not inside a function body.
 ///
 /// # Time columns
 ///
@@ -247,6 +265,65 @@ use syn::{
 /// struct Parent {
 ///     #[dataframe(nested, flatten)]
 ///     rows: Vec<Row>,
+/// }
+/// ```
+///
+/// `prefix` without `flatten` fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(prefix = "row")]
+///     row: Row,
+/// }
+/// ```
+///
+/// `time_exempt` needs a reason:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     #[dataframe(time_exempt = "")]
+///     time: String,
+/// }
+/// ```
+///
+/// `time_exempt` on a flattened field fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(flatten, time_exempt = "reason")]
+///     row: Row,
+/// }
+/// ```
+///
+/// A `prefix` ending in `_` fails to compile:
+///
+/// ```compile_fail
+/// # use finance_query::ToDataFrame;
+/// #[derive(ToDataFrame)]
+/// struct Row {
+///     value: i64,
+/// }
+///
+/// #[derive(ToDataFrame)]
+/// struct Parent {
+///     #[dataframe(flatten, prefix = "row_")]
+///     row: Row,
 /// }
 /// ```
 ///

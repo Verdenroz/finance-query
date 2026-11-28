@@ -243,6 +243,7 @@ impl FeedSource {
 /// A single entry from an RSS/Atom feed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
 pub struct FeedEntry {
     /// Article or item title

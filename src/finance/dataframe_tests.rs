@@ -8,7 +8,7 @@ fn analyst_estimate_columns() {
     let row: AnalystEstimate = serde_json::from_value(json!({})).unwrap();
     let expected = [
         "symbol:str",
-        "date:str",
+        "date:date",
         "estimated_revenue_low:f64",
         "estimated_revenue_high:f64",
         "estimated_revenue_avg:f64",
@@ -36,7 +36,7 @@ fn analyst_recommendation_columns() {
     let row: AnalystRecommendation = serde_json::from_value(json!({})).unwrap();
     let expected = [
         "symbol:str",
-        "date:str",
+        "date:date",
         "analyst_ratings_buy:i32",
         "analyst_ratings_hold:i32",
         "analyst_ratings_sell:i32",
@@ -59,8 +59,8 @@ fn earnings_calendar_entry_columns() {
     let expected = [
         "symbol:str",
         "name:str",
-        "report_date:str",
-        "fiscal_date_ending:str",
+        "report_date:date",
+        "fiscal_date_ending:date",
         "estimate:f64",
         "currency:str",
     ];
@@ -80,7 +80,7 @@ fn ipo_calendar_entry_columns() {
     let expected = [
         "symbol:str",
         "name:str",
-        "ipo_date:str",
+        "ipo_date:date",
         "price_range:str",
         "exchange:str",
     ];
@@ -99,8 +99,8 @@ fn insider_transaction_columns() {
     let row: InsiderTransaction = serde_json::from_value(json!({})).unwrap();
     let expected = [
         "symbol:str",
-        "filing_date:str",
-        "transaction_date:str",
+        "filing_date:date",
+        "transaction_date:date",
         "reporting_name:str",
         "transaction_type:str",
         "securities_transacted:f64",

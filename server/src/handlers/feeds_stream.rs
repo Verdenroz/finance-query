@@ -30,6 +30,11 @@
 //! ```
 //!
 //! Source slugs are the same ones accepted by `GET /v2/feeds?sources=...`.
+//! `formType` applies only to `sec-filings`.
+//!
+//! **Errors** (unknown slug, `formType` without `sec-filings`, malformed or
+//! unrecognized commands) arrive as `{"error": "..."}`; the connection stays
+//! open.
 
 use axum::{
     extract::{
@@ -67,6 +72,15 @@ pub(crate) async fn ws_feeds_stream_handler(
 /// Parse requested source slugs into `FeedSource`s.
 fn parse_slugs(slugs: &[String], form_type: Option<&str>) -> Result<Vec<FeedSource>, String> {
     finance_query_server::services::feeds::parse_sources(Some(slugs), form_type)
+}
+
+fn parse_command(text: &str) -> Result<FeedStreamCommand, String> {
+    let cmd: FeedStreamCommand =
+        serde_json::from_str(text).map_err(|e| format!("Invalid command: {e}"))?;
+    if cmd.subscribe.is_none() && cmd.unsubscribe.is_none() {
+        return Err("Command must include 'subscribe' or 'unsubscribe'".to_string());
+    }
+    Ok(cmd)
 }
 
 fn error_message(msg: &str) -> Message {
@@ -157,8 +171,11 @@ async fn handle_feeds_stream_socket(state: AppState, mut socket: WebSocket) {
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
-                Message::Text(text) => {
-                    if let Ok(cmd) = serde_json::from_str::<FeedStreamCommand>(&text) {
+                Message::Text(text) => match parse_command(&text) {
+                    Err(msg) => {
+                        let _ = out_tx.send(error_message(&msg)).await;
+                    }
+                    Ok(cmd) => {
                         metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
                         info!("Received feeds stream command: {:?}", cmd);
 
@@ -200,7 +217,7 @@ async fn handle_feeds_stream_socket(state: AppState, mut socket: WebSocket) {
                             }
                         }
                     }
-                }
+                },
                 Message::Close(_) => {
                     info!("Feeds WebSocket closed by client");
                     break;
@@ -235,10 +252,19 @@ async fn wait_for_subscription(
 ) -> Option<(Vec<FeedSource>, HashSet<String>)> {
     while let Some(Ok(msg)) = socket.next().await {
         let Message::Text(text) = msg else { continue };
-        let Ok(cmd) = serde_json::from_str::<FeedStreamCommand>(&text) else {
+        let cmd = match parse_command(&text) {
+            Ok(cmd) => cmd,
+            Err(msg) => {
+                let _ = socket.send(error_message(&msg)).await;
+                continue;
+            }
+        };
+        let Some(slugs) = cmd.subscribe else {
+            let _ = socket
+                .send(error_message("Send a 'subscribe' command first"))
+                .await;
             continue;
         };
-        let Some(slugs) = cmd.subscribe else { continue };
         let sources = match parse_slugs(&slugs, cmd.form_type.as_deref()) {
             Ok(sources) => sources,
             Err(msg) => {
@@ -250,4 +276,27 @@ async fn wait_for_subscription(
         return Some((sources, names));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subscribe_and_unsubscribe_commands_parse() {
+        assert!(parse_command(r#"{"subscribe":["sec"]}"#).is_ok());
+        assert!(parse_command(r#"{"unsubscribe":["sec"]}"#).is_ok());
+    }
+
+    #[test]
+    fn commands_with_the_wrong_shape_are_rejected() {
+        assert!(parse_command(r#"{"subscribe":"sec"}"#).is_err());
+        assert!(parse_command("not json").is_err());
+    }
+
+    #[test]
+    fn commands_without_subscribe_or_unsubscribe_are_rejected() {
+        let err = parse_command(r#"{"action":"subscribe","sources":["sec"]}"#).unwrap_err();
+        assert!(err.contains("subscribe"), "{err}");
+    }
 }

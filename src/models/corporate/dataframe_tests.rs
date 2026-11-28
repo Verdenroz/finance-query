@@ -73,7 +73,7 @@ fn earnings_row_frames() {
     assert_eq!(
         columns(&QuarterlyEarnings::vec_to_dataframe(&quarterly).unwrap()),
         [
-            "date:str",
+            "quarter:str",
             "actual:f64",
             "estimate:f64",
             "difference:str",
@@ -86,13 +86,13 @@ fn earnings_row_frames() {
     let yearly: Vec<YearlyFinancials> = parse(json!([{"date": 2024, "revenue": fvi(1)}]));
     assert_eq!(
         columns(&YearlyFinancials::vec_to_dataframe(&yearly).unwrap()),
-        ["date:i64", "revenue:i64", "earnings:i64"]
+        ["year:i64", "revenue:i64", "earnings:i64"]
     );
 
     let quarters: Vec<QuarterlyFinancials> = parse(json!([{"date": "1Q2024"}]));
     assert_eq!(
         columns(&QuarterlyFinancials::vec_to_dataframe(&quarters).unwrap()),
-        ["date:str", "revenue:i64", "earnings:i64"]
+        ["quarter:str", "revenue:i64", "earnings:i64"]
     );
 }
 
@@ -188,10 +188,7 @@ fn recommendation_and_grade_wrapper_frames() {
     let grades: UpgradeDowngradeHistory =
         parse(json!({"history": [{"firm": "GS", "currentPriceTarget": 200.0}]}));
     let cols = columns(&grades.to_dataframe().unwrap());
-    assert_eq!(
-        cols[..2],
-        ["epoch_grade_date:datetime[μs, UTC]", "firm:str"]
-    );
+    assert_eq!(cols[..2], ["grade_date:datetime[μs, UTC]", "firm:str"]);
     assert!(cols.contains(&"current_price_target:f64".to_string()));
 }
 
@@ -205,7 +202,6 @@ fn sec_filings_wrapper_skips_exhibit_list() {
         [
             "max_age:i64",
             "date:date",
-            "epoch_date:date",
             "filing_type:str",
             "title:str",
             "edgar_url:str",
@@ -230,7 +226,7 @@ fn captured_sec_filings_dates_match_epochs() {
 
     let cols = columns(&df);
     assert!(cols.contains(&"date:date".to_string()));
-    assert!(cols.contains(&"epoch_date:date".to_string()));
+    assert!(!cols.iter().any(|c| c.starts_with("epoch_date")));
     let days = |name: &str| -> Vec<Option<i32>> {
         df.column(name)
             .unwrap()
@@ -241,7 +237,12 @@ fn captured_sec_filings_dates_match_epochs() {
             .collect()
     };
     assert_eq!(days("date"), [Some(20_760), Some(20_759), Some(20_665)]);
-    assert_eq!(days("date"), days("epoch_date"));
+    let epoch_days: Vec<_> = filings
+        .filings
+        .iter()
+        .map(|f| f.epoch_date.map(|s| (s / 86_400) as i32))
+        .collect();
+    assert_eq!(days("date"), epoch_days);
 }
 
 #[test]
@@ -312,8 +313,8 @@ fn calendar_events_flattens_earnings() {
     let cols = columns(&df);
 
     assert!(cols.contains(&"ex_dividend_date:date".to_string()));
-    assert!(cols.contains(&"earnings_earnings_average:f64".to_string()));
-    assert!(cols.contains(&"earnings_revenue_low:i64".to_string()));
+    assert!(cols.contains(&"earnings_average:f64".to_string()));
+    assert!(cols.contains(&"revenue_low:i64".to_string()));
     assert_eq!(df.height(), 1);
 }
 
@@ -541,8 +542,8 @@ fn flat_frames_of_nested_types_keep_their_exact_columns() {
             "compensation_risk:i32",
             "shareholder_rights_risk:i32",
             "overall_risk:i32",
-            "governance_epoch_date:date",
-            "compensation_as_of_epoch_date:date",
+            "governance_date:date",
+            "compensation_as_of_date:date",
             "max_age:i64",
         ]
     );
@@ -582,7 +583,6 @@ fn flat_frames_of_nested_types_keep_their_exact_columns() {
         [
             "max_age:i64",
             "date:date",
-            "epoch_date:date",
             "filing_type:str",
             "title:str",
             "edgar_url:str",
@@ -698,7 +698,7 @@ fn earnings_wrappers_expose_their_rows() {
         .unwrap()
         .quarterly_dataframe()
         .unwrap();
-    assert_eq!(columns(&quarterly)[..2], ["date:str", "actual:f64"]);
+    assert_eq!(columns(&quarterly)[..2], ["quarter:str", "actual:f64"]);
 
     let financials = earnings.financials_chart_dataframe().unwrap();
     assert_eq!(
@@ -797,11 +797,11 @@ fn calendar_events_time_columns() {
     let df = events.to_dataframe().unwrap();
     let cols = columns(&df);
     assert!(cols.contains(&"dividend_date:date".to_string()));
-    assert!(cols.contains(&format!("earnings_earnings_date:list[{DT}]")));
+    assert!(cols.contains(&format!("earnings_date:list[{DT}]")));
 
     let day = df.column("ex_dividend_date").unwrap().date().unwrap();
     assert_eq!(day.phys.get(0), Some(20_770));
-    let dates = df.column("earnings_earnings_date").unwrap().list().unwrap();
+    let dates = df.column("earnings_date").unwrap().list().unwrap();
     let first = dates.get_as_series(0).unwrap().cast(&utc()).unwrap();
     let micros: Vec<_> = first.datetime().unwrap().phys.iter().collect();
     assert_eq!(
@@ -863,7 +863,7 @@ fn grade_filing_and_profile_epochs() {
     let grades: UpgradeDowngradeHistory =
         parse(json!({"history": [{"firm": "GS", "epochGradeDate": 1794603601}]}));
     let df = grades.to_dataframe().unwrap();
-    let time = df.column("epoch_grade_date").unwrap().datetime().unwrap();
+    let time = df.column("grade_date").unwrap().datetime().unwrap();
     assert_eq!(time.phys.get(0), Some(1_794_603_601_000_000));
 
     let profile: AssetProfile = parse(json!({
@@ -871,10 +871,10 @@ fn grade_filing_and_profile_epochs() {
     }));
     let df = profile.to_dataframe().unwrap();
     let cols = columns(&df);
-    assert!(cols.contains(&"governance_epoch_date:date".to_string()));
-    assert!(cols.contains(&"compensation_as_of_epoch_date:date".to_string()));
+    assert!(cols.contains(&"governance_date:date".to_string()));
+    assert!(cols.contains(&"compensation_as_of_date:date".to_string()));
     assert_eq!(
-        df.column("governance_epoch_date")
+        df.column("governance_date")
             .unwrap()
             .date()
             .unwrap()

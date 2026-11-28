@@ -21,6 +21,10 @@ pub struct News {
     pub img: String,
 
     /// Relative time when the news was published (e.g., "1 hour ago", "2 days ago")
+    #[cfg_attr(
+        feature = "dataframe",
+        dataframe(time_exempt = "relative string such as '1 hour ago'")
+    )]
     pub time: String,
 
     /// Which provider supplied this article (None = Yahoo Finance default)

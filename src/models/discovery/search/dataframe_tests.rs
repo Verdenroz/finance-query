@@ -2,7 +2,7 @@ use super::SearchResults;
 use super::news::SearchNews;
 use super::research::ResearchReport;
 use super::thumbnail::{NewsThumbnail, ThumbnailResolution};
-use crate::models::dataframe_test_util::columns;
+use crate::models::dataframe_test_util::{columns, columns_exempt};
 use serde_json::json;
 
 #[test]
@@ -64,7 +64,7 @@ fn search_results_nest_quotes_news_and_reports() {
     }))
     .unwrap();
     assert_eq!(
-        columns(&results.to_dataframe().unwrap()),
+        columns_exempt(&results.to_dataframe().unwrap(), &["total_time"]),
         ["count:i32", "total_time:i64"]
     );
     let quotes = columns(&results.quotes_dataframe().unwrap());
@@ -74,7 +74,7 @@ fn search_results_nest_quotes_news_and_reports() {
     assert_eq!(reports.height(), 0);
     assert!(reports.width() > 0);
 
-    let cols = columns(&results.to_nested_dataframe().unwrap());
+    let cols = columns_exempt(&results.to_nested_dataframe().unwrap(), &["total_time"]);
     assert!(cols[2].starts_with("quotes:list[struct["));
     assert!(cols[3].starts_with("news:list[struct["));
     assert!(cols[4].starts_with("research_reports:list[struct["));
@@ -108,7 +108,10 @@ fn search_results_nested_schema_does_not_depend_on_the_data() {
     .unwrap();
     let full = SearchResults::vec_to_nested_dataframe(&[results]).unwrap();
     let empty = SearchResults::vec_to_nested_dataframe(&[]).unwrap();
-    assert_eq!(columns(&empty), columns(&full));
+    assert_eq!(
+        columns_exempt(&empty, &["total_time"]),
+        columns_exempt(&full, &["total_time"])
+    );
 }
 
 #[test]

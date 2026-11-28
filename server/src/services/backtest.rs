@@ -135,3 +135,129 @@ pub async fn run_backtest(
         )
         .await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn indicators(strategy: GqlStrategy, params: &GqlBacktestParams) -> Vec<String> {
+        build_strategy(strategy, params)
+            .required_indicators()
+            .into_iter()
+            .map(|(_, indicator)| format!("{indicator:?}"))
+            .collect()
+    }
+
+    #[test]
+    fn each_strategy_variant_builds_its_own_strategy() {
+        let params = GqlBacktestParams::default();
+        let names: Vec<String> = [
+            GqlStrategy::SmaCrossover,
+            GqlStrategy::RsiReversal,
+            GqlStrategy::MacdSignal,
+            GqlStrategy::BollingerMeanReversion,
+            GqlStrategy::SupertrendFollow,
+            GqlStrategy::DonchianBreakout,
+        ]
+        .into_iter()
+        .map(|s| build_strategy(s, &params).name().to_string())
+        .collect();
+        assert_eq!(
+            names,
+            vec![
+                "SMA Crossover",
+                "RSI Reversal",
+                "MACD Signal",
+                "Bollinger Mean Reversion",
+                "SuperTrend Follow",
+                "Donchian Breakout",
+            ]
+        );
+    }
+
+    #[test]
+    fn strategy_defaults_follow_the_library_periods() {
+        let params = GqlBacktestParams::default();
+        assert_eq!(
+            indicators(GqlStrategy::SmaCrossover, &params),
+            vec!["Sma(10)", "Sma(20)"]
+        );
+        assert_eq!(
+            indicators(GqlStrategy::RsiReversal, &params),
+            vec!["Rsi(14)"]
+        );
+        assert_eq!(
+            indicators(GqlStrategy::MacdSignal, &params),
+            vec!["Macd { fast: 12, slow: 26, signal: 9 }"]
+        );
+        assert_eq!(
+            indicators(GqlStrategy::BollingerMeanReversion, &params),
+            vec!["Bollinger { period: 20, std_dev: 2.0 }"]
+        );
+        assert_eq!(
+            indicators(GqlStrategy::SupertrendFollow, &params),
+            vec!["Supertrend { period: 10, multiplier: 3.0 }"]
+        );
+    }
+
+    #[test]
+    fn strategy_params_override_defaults() {
+        let params = GqlBacktestParams {
+            fast_period: Some(5),
+            slow_period: Some(30),
+            period: Some(7),
+            ..Default::default()
+        };
+        assert_eq!(
+            indicators(GqlStrategy::SmaCrossover, &params),
+            vec!["Sma(5)", "Sma(30)"]
+        );
+        assert_eq!(
+            indicators(GqlStrategy::RsiReversal, &params),
+            vec!["Rsi(7)"]
+        );
+    }
+
+    #[test]
+    fn bars_per_year_follows_the_interval() {
+        let params = GqlBacktestParams::default();
+        assert_eq!(
+            build_config(&params, Interval::OneDay)
+                .unwrap()
+                .bars_per_year,
+            252.0
+        );
+        assert_eq!(
+            build_config(&params, Interval::OneHour)
+                .unwrap()
+                .bars_per_year,
+            1_638.0
+        );
+    }
+
+    #[test]
+    fn config_knobs_are_applied() {
+        let params = GqlBacktestParams {
+            initial_capital: Some(50_000.0),
+            commission_pct: Some(0.002),
+            allow_short: Some(true),
+            stop_loss_pct: Some(0.05),
+            ..Default::default()
+        };
+        let config = build_config(&params, Interval::OneDay).unwrap();
+        assert_eq!(config.initial_capital, 50_000.0);
+        assert_eq!(config.commission_pct, 0.002);
+        assert!(config.allow_short);
+        assert_eq!(config.stop_loss_pct, Some(0.05));
+    }
+
+    #[test]
+    fn invalid_knob_surfaces_as_a_service_error() {
+        let params = GqlBacktestParams {
+            initial_capital: Some(-1.0),
+            ..Default::default()
+        };
+        let err = build_config(&params, Interval::OneDay).unwrap_err();
+        assert!(err.to_string().contains("initial_capital"), "{err}");
+    }
+}
