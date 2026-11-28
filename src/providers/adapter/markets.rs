@@ -119,6 +119,18 @@ pub trait CalendarProvider: ProviderCore {
         from: &str,
         to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>>;
+
+    /// Fetch the upcoming earnings calendar in the provider's own flat record shape.
+    #[cfg(feature = "alphavantage")]
+    async fn fetch_earnings_calendar(&self) -> Result<Vec<crate::finance::EarningsCalendarEntry>> {
+        Err(self.not_supported(Operation::EarningsCalendar))
+    }
+
+    /// Fetch the upcoming IPO calendar in the provider's own flat record shape.
+    #[cfg(feature = "alphavantage")]
+    async fn fetch_ipo_calendar(&self) -> Result<Vec<crate::finance::IpoCalendarEntry>> {
+        Err(self.not_supported(Operation::IpoCalendar))
+    }
 }
 
 /// [`crate::Capability::MARKET`] — sector/industry performance and movers.

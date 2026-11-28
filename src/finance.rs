@@ -17,6 +17,8 @@ use crate::models::market::sectors::SectorData;
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "alphavantage")]
+use crate::providers::alphavantage::AlphaVantageProvider;
 #[cfg(feature = "fmp")]
 use crate::providers::fmp::FmpProvider;
 #[cfg(feature = "polygon")]
@@ -764,22 +766,6 @@ pub struct EarningsCalendarEntry {
     pub currency: Option<String>,
 }
 
-#[cfg(feature = "alphavantage")]
-impl From<crate::adapters::alphavantage::models::EarningsCalendarEntryDTO>
-    for EarningsCalendarEntry
-{
-    fn from(d: crate::adapters::alphavantage::models::EarningsCalendarEntryDTO) -> Self {
-        Self {
-            symbol: d.symbol,
-            name: d.name,
-            report_date: d.report_date,
-            fiscal_date_ending: d.fiscal_date_ending,
-            estimate: d.estimate,
-            currency: d.currency,
-        }
-    }
-}
-
 /// An upcoming IPO calendar entry.
 #[cfg(feature = "alphavantage")]
 #[non_exhaustive]
@@ -800,33 +786,28 @@ pub struct IpoCalendarEntry {
     pub exchange: Option<String>,
 }
 
-#[cfg(feature = "alphavantage")]
-impl From<crate::adapters::alphavantage::models::IpoCalendarEntryDTO> for IpoCalendarEntry {
-    fn from(d: crate::adapters::alphavantage::models::IpoCalendarEntryDTO) -> Self {
-        Self {
-            symbol: d.symbol,
-            name: d.name,
-            ipo_date: d.ipo_date,
-            price_range: d.price_range,
-            exchange: d.exchange,
-        }
-    }
-}
-
 /// Fetch the upcoming earnings calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn earnings_calendar() -> Result<Vec<EarningsCalendarEntry>> {
-    crate::adapters::alphavantage::fundamentals::earnings_calendar()
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(AlphaVantageProvider, Capability::CALENDAR, |p| async move {
+        p.as_calendar()
+            .ok_or_else(|| p.not_supported(Operation::EarningsCalendar))?
+            .fetch_earnings_calendar()
+            .await
+    })
+    .await
 }
 
 /// Fetch the upcoming IPO calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn ipo_calendar() -> Result<Vec<IpoCalendarEntry>> {
-    crate::adapters::alphavantage::fundamentals::ipo_calendar()
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(AlphaVantageProvider, Capability::CALENDAR, |p| async move {
+        p.as_calendar()
+            .ok_or_else(|| p.not_supported(Operation::IpoCalendar))?
+            .fetch_ipo_calendar()
+            .await
+    })
+    .await
 }
 
 #[cfg(test)]

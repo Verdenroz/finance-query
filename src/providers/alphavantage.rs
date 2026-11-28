@@ -217,6 +217,16 @@ impl CalendarProvider for AlphaVantageProvider {
         }
         av::fetch_market_status_response().await
     }
+
+    async fn fetch_earnings_calendar(&self) -> Result<Vec<crate::finance::EarningsCalendarEntry>> {
+        let entries = av::fundamentals::earnings_calendar().await?;
+        Ok(entries.into_iter().map(Into::into).collect())
+    }
+
+    async fn fetch_ipo_calendar(&self) -> Result<Vec<crate::finance::IpoCalendarEntry>> {
+        let entries = av::fundamentals::ipo_calendar().await?;
+        Ok(entries.into_iter().map(Into::into).collect())
+    }
 }
 
 /// `fetch_filings` is the trait's required primary operation, but Alpha
