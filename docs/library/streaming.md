@@ -250,6 +250,195 @@ async fn main() {
 }
 ```
 
+## Alerts
+
+`AlertExt::alerts` wraps any `PriceStream` (or any `Stream<Item = PriceUpdate>`) and yields an `AlertEvent` only when a rule fires, so you stop filtering every tick by hand. Each `AlertRule` pairs a symbol with an `AlertCondition`; a rule fires once unless you call `repeating()`, which re-arms it whenever the condition stops holding.
+
+```rust no_run covers=finance_query::streaming::alerts::AlertEvent
+use finance_query::streaming::{AlertCondition, AlertExt, AlertRule, PriceStream};
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut alerts = PriceStream::subscribe(["AAPL", "NVDA"])
+        .await?
+        .alerts([
+            AlertRule::new("AAPL", AlertCondition::CrossesAbove(200.0)),
+            AlertRule::new("NVDA", AlertCondition::PercentChangeBelow(-3.0)).repeating(),
+        ]);
+
+    while let Some(alert) = alerts.next().await {
+        println!("{} at {}", alert.update.id, alert.update.price);
+    }
+    Ok(())
+}
+```
+
+The conditions are `CrossesAbove`, `CrossesBelow`, `PriceAbove`, `PriceBelow`, `PercentChangeAbove`, `PercentChangeBelow` and `VolumeAbove`. The crossing conditions compare against the last price seen for the symbol, so they never fire on a symbol's first tick.
+
+If you already own a stream, `AlertEvaluator` applies the same rules to one tick at a time:
+
+<!-- soothfast:claim finance_query::alerts_evaluate.perfcnt.instructions < 58000 -->
+- Evaluating 32 ticks against five rules stays **under 58 thousand CPU instructions**, so the check is cheap enough to run on every tick.
+
+<!-- soothfast:bind finance_query::streaming::alerts::AlertEvent -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `condition` | `AlertCondition` | The condition that fired |
+| `previous_price` | `Option<f64>` | Last price seen before this tick, if any |
+| `update` | `PriceUpdate` | The full tick that triggered the alert |
+
+<!-- /soothfast:bind -->
+
+## Order Book Streaming
+
+`DepthStream` pushes level-2 order-book depth: the full ladder of price levels on each side, where `PriceUpdate` carries only the top of book. It is backed by Polygon's crypto level-2 feed, so pairs are crypto pairs such as `"BTC-USD"`. It needs the `polygon` feature and `POLYGON_API_KEY` in the environment.
+
+```rust no_run feature=polygon covers=finance_query::streaming::book::OrderBookUpdate
+use finance_query::streaming::DepthStream;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut books = DepthStream::subscribe(["BTC-USD"]).await?;
+
+    while let Some(book) = books.next().await {
+        println!("{} spread {:?} mid {:?}", book.symbol, book.spread(), book.mid());
+    }
+    Ok(())
+}
+```
+
+`DepthStreamBuilder` sets the reconnect delay and attempt limit, and `add_pairs` / `remove_pairs` change the subscription after the stream starts.
+
+<!-- soothfast:bind finance_query::streaming::book::OrderBookUpdate -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `symbol` | `String` | Symbol or pair the book belongs to |
+| `bids` | `Vec<BookLevel>` | Bid levels, highest price first |
+| `asks` | `Vec<BookLevel>` | Ask levels, lowest price first |
+| `exchange` | `Option<i32>` | Exchange identifier, where the venue reports one |
+| `time` | `i64` | Update timestamp in milliseconds |
+
+<!-- /soothfast:bind -->
+
+Each `BookLevel` has a `price` and the total `size` resting at it. `best_bid`, `best_ask`, `spread`, `mid` and `depth` read the top of book and the total size per side.
+
+## Trade Streaming
+
+`TradeStream` pushes every executed trade print for the symbols you subscribe to, where `PriceStream` coalesces activity into a last-price tick. Use it for execution-quality and microstructure work. It needs the `polygon` feature and `POLYGON_API_KEY`.
+
+```rust no_run feature=polygon covers=finance_query::streaming::trades::TradeTick
+use finance_query::streaming::TradeStream;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut trades = TradeStream::subscribe(["AAPL"]).await?;
+
+    while let Some(trade) = trades.next().await {
+        println!("{} {} @ {} (notional {:.2})",
+            trade.symbol, trade.size, trade.price, trade.notional());
+    }
+    Ok(())
+}
+```
+
+`TradeStreamBuilder::asset_class` switches the feed to another `AssetClass`, and `add_symbols` / `remove_symbols` change the subscription after the stream starts.
+
+<!-- soothfast:bind finance_query::streaming::trades::TradeTick -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `symbol` | `String` | Symbol or pair the trade executed on |
+| `price` | `f64` | Execution price |
+| `size` | `f64` | Executed size (shares, contracts, or base-asset units) |
+| `exchange` | `Option<i32>` | Exchange identifier, where the venue reports one |
+| `conditions` | `Vec<i32>` | Trade condition codes |
+| `trade_id` | `Option<String>` | Provider trade identifier, where one is supplied |
+| `time` | `i64` | Execution timestamp in milliseconds |
+
+<!-- /soothfast:bind -->
+
+## Options Chain Streaming
+
+`OptionsChainStream` follows live options quotes. Subscribe by underlying (`"AAPL"`) to follow the whole chain, or by OCC symbol (`"O:AAPL250117C00150000"`) to follow single contracts. Bid, ask and last come from the WebSocket; greeks and open interest come from a REST snapshot refreshed every 60 seconds by default. It needs the `polygon` feature and `POLYGON_API_KEY`.
+
+```rust no_run feature=polygon covers=finance_query::streaming::options::OptionContractUpdate
+use finance_query::streaming::OptionsChainStream;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut stream = OptionsChainStream::subscribe(["AAPL"]).await?;
+
+    while let Some(contract) = stream.next().await {
+        println!("{} {:?}/{:?}", contract.contract_symbol, contract.bid, contract.ask);
+    }
+    Ok(())
+}
+```
+
+`OptionsChainStreamBuilder::greeks_refresh` changes the snapshot interval, and `None` turns the snapshot off so only WebSocket fields arrive.
+
+<!-- soothfast:bind finance_query::streaming::options::OptionContractUpdate -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contract_symbol` | `String` | OCC contract symbol |
+| `underlying` | `String` | Underlying symbol |
+| `expiration` | `Option<i64>` | Expiration as a Unix timestamp in seconds |
+| `strike` | `Option<f64>` | Strike price |
+| `option_type` | `Option<OptionType>` | Call or put |
+| `bid` | `Option<f64>` | Best bid |
+| `bid_size` | `Option<f64>` | Size at the best bid |
+| `ask` | `Option<f64>` | Best ask |
+| `ask_size` | `Option<f64>` | Size at the best ask |
+| `last_price` | `Option<f64>` | Last trade price |
+| `last_size` | `Option<f64>` | Last trade size |
+| `volume` | `Option<i64>` | Day volume |
+| `open_interest` | `Option<i64>` | Open interest |
+| `implied_volatility` | `Option<f64>` | Implied volatility |
+| `greeks` | `Option<Greeks>` | Delta, gamma, theta and vega |
+| `time` | `i64` | Update timestamp in milliseconds |
+
+<!-- /soothfast:bind -->
+
+## Economic Series Streaming
+
+`EconomicStream` polls FRED series on an interval (15 minutes by default) and yields a `SeriesUpdate` only when a series' latest observation is new or revised. Macro data has no push transport, so this is a poll loop. It needs the `fred` feature and [`fred::init`](providers/fred.md).
+
+```rust no_run feature=fred covers=finance_query::streaming::economic::SeriesUpdate
+use finance_query::streaming::EconomicStream;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() {
+    let mut stream = EconomicStream::subscribe(["FEDFUNDS", "CPIAUCSL"]).await;
+
+    while let Some(release) = stream.next().await {
+        println!("{} = {:?} ({})", release.series_id, release.value, release.date);
+    }
+}
+```
+
+`EconomicStreamBuilder::poll_interval` changes the interval, and `add_series` / `remove_series` change the subscription after the stream starts.
+
+<!-- soothfast:bind finance_query::streaming::economic::SeriesUpdate -->
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `series_id` | `String` | Series identifier (e.g., `"FEDFUNDS"`) |
+| `date` | `String` | Observation date as `YYYY-MM-DD` |
+| `value` | `Option<f64>` | Newly published value, or `None` when the source reports a gap |
+| `previous_value` | `Option<f64>` | Value this release replaced |
+| `revision` | `bool` | `true` when the same observation date was re-published with a new value |
+| `observed_at` | `i64` | Unix timestamp in seconds at which the release was observed |
+
+<!-- /soothfast:bind -->
+
 ## Next Steps
 
 - [Ticker API](ticker.md) - Fetch snapshot quotes and historical data for the same symbols
