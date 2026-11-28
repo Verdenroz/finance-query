@@ -50,7 +50,7 @@ pub use crate::adapters::yahoo::discovery::search::SearchOptions;
 /// # }
 /// ```
 pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResults> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     let results = client.search(query, options).await;
     #[cfg(feature = "sentiment")]
     let results = results.map(|mut r| {
@@ -100,7 +100,7 @@ pub async fn lookup(
     query: &str,
     options: &LookupOptions,
 ) -> Result<crate::models::discovery::lookup::LookupResults> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     client.lookup(query, options).await
 }
 
@@ -132,7 +132,7 @@ pub async fn lookup(
 /// # }
 /// ```
 pub async fn screener(screener_type: Screener, count: u32) -> Result<ScreenerResults> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::discovery::screeners::fetch(&client, screener_type, count).await
 }
 
@@ -168,7 +168,7 @@ pub async fn screener(screener_type: Screener, count: u32) -> Result<ScreenerRes
 pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerField>(
     query: crate::models::discovery::screeners::ScreenerQuery<F>,
 ) -> Result<ScreenerResults> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::discovery::screeners::fetch_custom(&client, query).await
 }
 
@@ -232,7 +232,7 @@ pub async fn earnings_transcript(
     quarter: Option<&str>,
     year: Option<i32>,
 ) -> Result<Transcript> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     let transcript = crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(
         &client, symbol, quarter, year,
     )
@@ -275,7 +275,7 @@ pub async fn earnings_transcripts(
     symbol: &str,
     limit: Option<usize>,
 ) -> Result<Vec<TranscriptWithMeta>> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     let transcripts = crate::adapters::yahoo::corporate::transcripts::fetch_all_for_symbol(
         &client, symbol, limit,
     )
@@ -313,7 +313,7 @@ pub async fn earnings_transcripts(
 /// # }
 /// ```
 pub async fn hours(region: Option<Region>) -> Result<crate::models::market::hours::MarketHours> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::hours::fetch(&client, region.map(|r| r.region())).await
 }
 
@@ -381,7 +381,7 @@ pub async fn indices(
 /// # }
 /// ```
 pub async fn sector(sector_type: Sector) -> Result<SectorData> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::sectors::fetch(&client, sector_type).await
 }
 
@@ -411,7 +411,7 @@ pub async fn sector(sector_type: Sector) -> Result<SectorData> {
 /// # }
 /// ```
 pub async fn industry(industry_key: impl AsRef<str>) -> Result<IndustryData> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::industries::fetch(&client, industry_key.as_ref()).await
 }
 
@@ -430,7 +430,7 @@ pub async fn industry(industry_key: impl AsRef<str>) -> Result<IndustryData> {
 /// # }
 /// ```
 pub async fn currencies() -> Result<Vec<crate::models::market::currencies::Currency>> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::currencies::fetch(&client).await
 }
 
@@ -480,7 +480,7 @@ pub async fn exchanges() -> Result<Vec<crate::models::market::exchanges::Exchang
 pub async fn market_summary(
     region: Option<Region>,
 ) -> Result<Vec<crate::models::market::market_summary::MarketSummaryQuote>> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::market_summary::fetch(&client, region).await
 }
 
@@ -508,7 +508,7 @@ pub async fn market_summary(
 pub async fn trending(
     region: Option<Region>,
 ) -> Result<Vec<crate::models::discovery::trending::TrendingQuote>> {
-    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
+    let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::ambient()).await?;
     crate::adapters::yahoo::market::trending::fetch(&client, region).await
 }
 
