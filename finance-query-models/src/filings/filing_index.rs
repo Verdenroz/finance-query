@@ -3,6 +3,7 @@
 //! Models for the filing directory index at:
 //! `https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/index.json`.
 
+use finance_query_derive::FieldsInit;
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// The wire value is always a JSON string ("24417" or "" for directory
@@ -16,7 +17,7 @@ where
 }
 
 /// Filing index response for a specific EDGAR accession.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[non_exhaustive]
 pub struct EdgarFilingIndex {
     /// Directory listing metadata.
@@ -25,7 +26,7 @@ pub struct EdgarFilingIndex {
 }
 
 /// Directory metadata for an EDGAR filing.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]
@@ -37,7 +38,7 @@ pub struct EdgarFilingIndexDirectory {
 }
 
 /// Single file entry within an EDGAR filing index.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FieldsInit)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

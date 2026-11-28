@@ -57,21 +57,22 @@ mod dataframe;
 #[doc(hidden)]
 pub use finance_query_types::{__dataframe, ToDataFrame, polars};
 
-#[cfg(all(test, feature = "dataframe"))]
-pub(crate) mod dataframe_test_util {
+#[cfg(feature = "dataframe")]
+#[doc(hidden)]
+pub mod dataframe_test_util {
     use polars::prelude::DataFrame;
 
     /// The first row of a `Datetime` column, in epoch microseconds.
-    pub(crate) fn micros(df: &DataFrame, name: &str) -> Option<i64> {
+    pub fn micros(df: &DataFrame, name: &str) -> Option<i64> {
         df.column(name).unwrap().datetime().unwrap().phys.get(0)
     }
 
     /// The first row of a `Date` column, in days since the epoch.
-    pub(crate) fn days(df: &DataFrame, name: &str) -> Option<i32> {
+    pub fn days(df: &DataFrame, name: &str) -> Option<i32> {
         df.column(name).unwrap().date().unwrap().phys.get(0)
     }
 
-    pub(crate) fn columns(df: &DataFrame) -> Vec<String> {
+    pub fn columns(df: &DataFrame) -> Vec<String> {
         df.schema()
             .iter()
             .map(|(name, dtype)| format!("{name}:{dtype}"))

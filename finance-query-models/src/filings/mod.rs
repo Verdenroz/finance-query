@@ -15,7 +15,7 @@ mod submissions;
 
 pub use cik::CikEntry;
 pub use company_facts::{CompanyFacts, FactConcept, FactUnit, FactsByTaxonomy};
-pub use filing_index::EdgarFilingIndex;
+pub use filing_index::{EdgarFilingIndex, EdgarFilingIndexFieldsInit};
 pub use full_text::{FilingSearchFilters, FilingSearchHit, FilingSearchHitFieldsInit};
 pub use ownership::{
     CongressionalTrade, CongressionalTradeFieldsInit, FailToDeliver, FailToDeliverFieldsInit,
