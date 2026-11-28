@@ -55,6 +55,41 @@ pub struct AnalystEstimateDTO {
     pub number_analysts_estimated_eps: Option<i32>,
 }
 
+impl From<AnalystEstimateDTO> for crate::finance::AnalystEstimate {
+    fn from(d: AnalystEstimateDTO) -> Self {
+        let AnalystEstimateDTO {
+            symbol,
+            date,
+            estimated_revenue_low,
+            estimated_revenue_high,
+            estimated_revenue_avg,
+            estimated_ebitda_low,
+            estimated_ebitda_high,
+            estimated_ebitda_avg,
+            estimated_eps_avg,
+            estimated_eps_high,
+            estimated_eps_low,
+            number_analyst_estimated_revenue,
+            number_analysts_estimated_eps,
+        } = d;
+        Self {
+            symbol,
+            date,
+            estimated_revenue_low,
+            estimated_revenue_high,
+            estimated_revenue_avg,
+            estimated_ebitda_low,
+            estimated_ebitda_high,
+            estimated_ebitda_avg,
+            estimated_eps_avg,
+            estimated_eps_high,
+            estimated_eps_low,
+            number_analyst_estimated_revenue,
+            number_analysts_estimated_eps,
+        }
+    }
+}
+
 /// Analyst recommendation entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -78,6 +113,29 @@ pub struct AnalystRecommendationDTO {
     /// Analyst ratings strong sell count.
     #[serde(rename = "analystRatingsStrongSell")]
     pub analyst_ratings_strong_sell: Option<i32>,
+}
+
+impl From<AnalystRecommendationDTO> for crate::finance::AnalystRecommendation {
+    fn from(d: AnalystRecommendationDTO) -> Self {
+        let AnalystRecommendationDTO {
+            symbol,
+            date,
+            analyst_ratings_buy,
+            analyst_ratings_hold,
+            analyst_ratings_sell,
+            analyst_ratings_strong_buy,
+            analyst_ratings_strong_sell,
+        } = d;
+        Self {
+            symbol,
+            date,
+            analyst_ratings_buy,
+            analyst_ratings_hold,
+            analyst_ratings_sell,
+            analyst_ratings_strong_buy,
+            analyst_ratings_strong_sell,
+        }
+    }
 }
 
 /// Earnings surprise entry.

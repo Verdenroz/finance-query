@@ -132,6 +132,36 @@ pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTrad
         .await
 }
 
+impl From<InsiderTradeDTO> for crate::finance::InsiderTransaction {
+    fn from(d: InsiderTradeDTO) -> Self {
+        let InsiderTradeDTO {
+            symbol,
+            filing_date,
+            transaction_date,
+            reporting_name,
+            transaction_type,
+            securities_transacted,
+            price,
+            securities_owned,
+            type_of_owner,
+            link,
+            ..
+        } = d;
+        Self {
+            symbol,
+            filing_date,
+            transaction_date,
+            reporting_name,
+            transaction_type,
+            securities_transacted,
+            price,
+            securities_owned,
+            type_of_owner,
+            link,
+        }
+    }
+}
+
 /// FMP has no form type, accession number, or ownership flags, so those
 /// default; `transaction_code` is `transaction_type`'s letter prefix.
 fn to_insider_trade(dto: InsiderTradeDTO) -> InsiderTrade {
