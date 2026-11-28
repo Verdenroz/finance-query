@@ -336,10 +336,11 @@ name = "calendar"
 path = "/v2/calendar?symbols=AAPL,MSFT&range=3mo"
 assert = ["#len >= 1", "[].date exists", "[].timestamp > 0"]
 
-# Market holidays are exchange-wide, so no entry carries a symbol.
+# Market holidays are exchange-wide, so no entry carries a symbol. The default
+# window is six days, which often holds no holiday, so the probe asks for a year.
 [[probe]]
 name = "market-calendar"
-path = "/v2/market-calendar?kind=market-holiday"
+path = "/v2/market-calendar?kind=market-holiday&from=2026-01-01&to=2026-12-31"
 sometimes = ["[].symbol"]
 assert = ["[].date exists", "[].detail exists"]
 
