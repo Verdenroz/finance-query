@@ -1995,7 +1995,7 @@ fn provider_registry() -> Vec<Capability> {
     alloc = 0,
     covers = "finance_query::Capability"
 )]
-fn dispatch_select(registry: &[Capability]) {
+fn capability_filter(registry: &[Capability]) {
     let wanted = keep(Capability::QUOTE);
     keep(registry.iter().filter(|c| c.contains(wanted)).count());
 }
@@ -2214,6 +2214,22 @@ fn dispatch_fallthrough(input: &(tokio::runtime::Runtime, Ticker)) {
         rt.block_on(ticker.quote::<finance_query::format::Raw>())
             .unwrap(),
     );
+}
+
+#[fixture]
+fn fallthrough_ticker_only() -> Ticker {
+    fallthrough_ticker().1
+}
+
+/// Awaited on the counting executor, so the claim gates polls to completion
+/// when the first provider falls through.
+#[bench(
+    group = "dispatch",
+    setup = fallthrough_ticker_only,
+    covers = "finance_query::Ticker::quote"
+)]
+async fn dispatch_fallthrough_polls(ticker: &Ticker) {
+    keep(ticker.quote::<finance_query::format::Raw>().await.unwrap());
 }
 
 #[bench(
