@@ -10,15 +10,15 @@ use crate::error::{FinanceError, Result};
 use crate::format::Both;
 #[cfg(any(feature = "backtesting", feature = "indicators"))]
 use crate::indicators;
-use crate::models::chart::events::ChartEvents;
-use crate::models::chart::{CapitalGain, Chart, Dividend, DividendAnalytics, Split};
-use crate::models::corporate::news::News;
-use crate::models::corporate::recommendation::Recommendation;
-use crate::models::filings::{CompanyFacts, EdgarSubmissions, ProviderFilings};
-use crate::models::format::Format;
-use crate::models::fundamentals::FinancialStatement;
-use crate::models::options::Options;
-use crate::models::quote::{
+use finance_query_models::chart::events::ChartEvents;
+use finance_query_models::chart::{CapitalGain, Chart, Dividend, DividendAnalytics, Split};
+use finance_query_models::corporate::news::News;
+use finance_query_models::corporate::recommendation::Recommendation;
+use finance_query_models::filings::{CompanyFacts, EdgarSubmissions, ProviderFilings};
+use finance_query_models::format::Format;
+use finance_query_models::fundamentals::FinancialStatement;
+use finance_query_models::options::Options;
+use finance_query_models::quote::{
     AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
     EquityPerformance, FinancialData, FundOwnership, FundPerformance, FundProfile, IndexTrend,
     IndustryTrend, InsiderHolders, InsiderTransactions, InstitutionOwnership,
@@ -562,7 +562,7 @@ impl Ticker {
         let news = {
             let mut news = news;
             for article in news.iter_mut() {
-                article.sentiment = Some(crate::models::sentiment::analyze(&article.title));
+                article.sentiment = Some(finance_query_models::sentiment::analyze(&article.title));
             }
             news
         };
@@ -586,14 +586,14 @@ impl Ticker {
     ///
     /// Only available when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
-    pub async fn news_sentiment(&self) -> Result<crate::models::sentiment::Sentiment> {
+    pub async fn news_sentiment(&self) -> Result<finance_query_models::sentiment::Sentiment> {
         let news = self.news().await?;
         let scores: Vec<f64> = news
             .iter()
             .filter_map(|n| n.sentiment.as_ref().map(|s| s.score))
             .collect();
-        Ok(crate::models::sentiment::aggregate(&scores)
-            .unwrap_or_else(crate::models::sentiment::Sentiment::neutral))
+        Ok(finance_query_models::sentiment::aggregate(&scores)
+            .unwrap_or_else(finance_query_models::sentiment::Sentiment::neutral))
     }
 
     /// Expiration date (Unix timestamp) that `options(None)` resolves to.
@@ -797,7 +797,9 @@ impl Ticker {
     /// the current and prior-month snapshots from key statistics (keyless);
     /// route to Polygon for the full bi-monthly history:
     /// `.route(Capability::FUNDAMENTALS, [Provider::Polygon, Provider::Yahoo])`.
-    pub async fn short_interest(&self) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+    pub async fn short_interest(
+        &self,
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortInterest>> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -809,7 +811,9 @@ impl Ticker {
 
     /// Fetch daily short-volume data via the configured
     /// [`Capability::FUNDAMENTALS`] provider (currently Polygon only).
-    pub async fn short_volume(&self) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+    pub async fn short_volume(
+        &self,
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortVolume>> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -822,7 +826,7 @@ impl Ticker {
     /// Fetch share float and shares outstanding via the configured
     /// [`Capability::FUNDAMENTALS`] provider (Yahoo-derived on the default
     /// route; Polygon serves it too).
-    pub async fn share_float(&self) -> Result<crate::models::fundamentals::ShareFloat> {
+    pub async fn share_float(&self) -> Result<finance_query_models::fundamentals::ShareFloat> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -838,7 +842,7 @@ impl Ticker {
     pub async fn press_releases(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+    ) -> Result<Vec<finance_query_models::corporate::press_release::PressRelease>> {
         ticker_fetch!(
             self,
             CORPORATE,
@@ -855,7 +859,7 @@ impl Ticker {
     /// `.route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])`.
     pub async fn price_target_consensus(
         &self,
-    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetConsensus> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -870,7 +874,7 @@ impl Ticker {
     /// [`Capability::FUNDAMENTALS`] provider (currently FMP only).
     pub async fn price_target_summary(
         &self,
-    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetSummary> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -884,7 +888,9 @@ impl Ticker {
     /// headline label) via the configured [`Capability::FUNDAMENTALS`] provider
     /// (currently FMP only). Distinct from
     /// [`recommendations`](Self::recommendations), which returns similar symbols.
-    pub async fn rating_consensus(&self) -> Result<crate::models::fundamentals::RatingConsensus> {
+    pub async fn rating_consensus(
+        &self,
+    ) -> Result<finance_query_models::fundamentals::RatingConsensus> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -900,7 +906,9 @@ impl Ticker {
     /// A TTM snapshot is a single always-current rollup, so callers do not need
     /// to fetch the latest fiscal period and reason about whether it is still
     /// current — see [`financials`](Self::financials) for the period series.
-    pub async fn key_metrics_ttm(&self) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+    pub async fn key_metrics_ttm(
+        &self,
+    ) -> Result<finance_query_models::fundamentals::KeyMetricsTtm> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -912,7 +920,9 @@ impl Ticker {
 
     /// Fetch the trailing-twelve-month financial-ratios snapshot via the
     /// configured [`Capability::FUNDAMENTALS`] provider (currently FMP only).
-    pub async fn ratios_ttm(&self) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+    pub async fn ratios_ttm(
+        &self,
+    ) -> Result<finance_query_models::fundamentals::FinancialRatiosTtm> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -927,7 +937,7 @@ impl Ticker {
     /// only). Extracted from DEF 14A proxy statements, so it lags the filing.
     pub async fn executive_compensation(
         &self,
-    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::ExecutiveCompensation>> {
         ticker_fetch!(
             self,
             CORPORATE,
@@ -942,7 +952,7 @@ impl Ticker {
     /// Taken from 10-K cover pages, so it is annual.
     pub async fn employee_count(
         &self,
-    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::EmployeeCount>> {
         ticker_fetch!(
             self,
             CORPORATE,
@@ -958,7 +968,7 @@ impl Ticker {
     ///
     /// Holdings come back heaviest-first. Errors for a symbol that is not a
     /// fund.
-    pub async fn etf_profile(&self) -> Result<crate::models::fundamentals::EtfProfile> {
+    pub async fn etf_profile(&self) -> Result<finance_query_models::fundamentals::EtfProfile> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -972,7 +982,7 @@ impl Ticker {
     /// [`Capability::FUNDAMENTALS`] provider (FMP or Alpha Vantage).
     pub async fn earnings_surprises(
         &self,
-    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -986,7 +996,9 @@ impl Ticker {
     /// [`Capability::FUNDAMENTALS`] provider (currently FMP only). Distinct
     /// from [`rating_consensus`](Self::rating_consensus), which returns the
     /// aggregated rollup over this same history.
-    pub async fn grading_actions(&self) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+    pub async fn grading_actions(
+        &self,
+    ) -> Result<Vec<finance_query_models::fundamentals::GradingAction>> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -998,7 +1010,9 @@ impl Ticker {
 
     /// Fetch the company's identity/classification profile via the
     /// configured [`Capability::FUNDAMENTALS`] provider (Yahoo, Alpha Vantage, or FMP).
-    pub async fn company_profile(&self) -> Result<crate::models::fundamentals::CompanyProfile> {
+    pub async fn company_profile(
+        &self,
+    ) -> Result<finance_query_models::fundamentals::CompanyProfile> {
         ticker_fetch!(
             self,
             FUNDAMENTALS,
@@ -1018,7 +1032,7 @@ impl Ticker {
         &self,
         quarter: Option<&str>,
         year: Option<i32>,
-    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+    ) -> Result<finance_query_models::corporate::earnings_transcript::EarningsTranscript> {
         ticker_fetch!(
             self,
             CORPORATE,
@@ -1039,7 +1053,7 @@ impl Ticker {
         range: TimeRange,
     ) -> Result<indicators::IndicatorResult> {
         let chart = self.chart(interval, range).await?;
-        Ok(crate::models::chart::compute::compute_indicator(
+        Ok(finance_query_models::chart::compute::compute_indicator(
             indicator, &chart,
         )?)
     }
@@ -1148,7 +1162,7 @@ impl Ticker {
     pub async fn calendar(
         &self,
         range: TimeRange,
-    ) -> Result<Vec<crate::models::calendar::CalendarEvent>> {
+    ) -> Result<Vec<finance_query_models::calendar::CalendarEvent>> {
         let now = chrono::Utc::now().timestamp();
         let window = (now, now + range.approx_duration_secs());
 
@@ -1167,7 +1181,8 @@ impl Ticker {
         let options = options.ok();
         let extra_chains = match &options {
             Some(opts) => {
-                let dates = crate::models::calendar::uncounted_monthly_expirations(opts, window);
+                let dates =
+                    finance_query_models::calendar::uncounted_monthly_expirations(opts, window);
                 futures::future::join_all(dates.into_iter().map(|ts| self.options(Some(ts))))
                     .await
                     .into_iter()
@@ -1180,9 +1195,9 @@ impl Ticker {
             .key_stats()
             .await?
             .as_ref()
-            .and_then(crate::models::calendar::last_dividend_value);
+            .and_then(finance_query_models::calendar::last_dividend_value);
 
-        let mut events = crate::models::calendar::build_symbol_events(
+        let mut events = finance_query_models::calendar::build_symbol_events(
             &self.symbol,
             calendar_events.as_ref(),
             options.as_ref(),
@@ -1198,7 +1213,7 @@ impl Ticker {
             ));
         }
 
-        crate::models::calendar::sort_events(&mut events);
+        finance_query_models::calendar::sort_events(&mut events);
         Ok(events)
     }
 

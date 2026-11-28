@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::Deserialize;
 
 use crate::error::{FinanceError, Result};
-use crate::models::sentiment::{FearAndGreed, FearGreedLabel};
+use finance_query_models::sentiment::{FearAndGreed, FearGreedLabel};
 
 const BASE_URL: &str = "https://api.alternative.me/fng";
 
@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(fg.value, 20);
         assert_eq!(
             fg.classification,
-            crate::models::sentiment::FearGreedLabel::ExtremeFear
+            finance_query_models::sentiment::FearGreedLabel::ExtremeFear
         );
         assert_eq!(fg.timestamp, 1_700_000_000);
     }

@@ -3,9 +3,9 @@
 use crate::adapters::edgar::filings::sections::html_to_text;
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
 use crate::error::Result;
-use crate::models::corporate::press_release::PressRelease;
-use crate::models::filings::EdgarFiling;
-use crate::models::filings::filing_index::EdgarFilingIndexItem;
+use finance_query_models::corporate::press_release::PressRelease;
+use finance_query_models::filings::EdgarFiling;
+use finance_query_models::filings::filing_index::EdgarFilingIndexItem;
 
 /// Fetch the symbol's most recent 8-K exhibits tagged `EX-99*`, newest first.
 pub async fn fetch_press_releases_response(symbol: &str, limit: u32) -> Result<Vec<PressRelease>> {

@@ -17,7 +17,7 @@ impl ForexProvider for FrankfurterProvider {
         &self,
         from: &str,
         to: &str,
-    ) -> Result<crate::models::forex::ForexQuote> {
+    ) -> Result<finance_query_models::forex::ForexQuote> {
         crate::adapters::frankfurter::fetch_forex_quote_response(from, to).await
     }
 }

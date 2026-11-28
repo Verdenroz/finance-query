@@ -1,6 +1,6 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::error::Result;
-use crate::models::market::hours::MarketHours;
+use finance_query_models::market::hours::MarketHours;
 
 /// Fetch market hours/time data
 ///

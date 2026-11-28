@@ -10,7 +10,7 @@ use super::xml::{self, XmlNode};
 use crate::adapters::edgar::client::EdgarClient;
 use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::Result;
-use crate::models::filings::InsiderTrade;
+use finance_query_models::filings::InsiderTrade;
 
 /// Forms that report insider ownership changes, amendments included.
 const OWNERSHIP_FORMS: [&str; 6] = ["3", "4", "5", "3/A", "4/A", "5/A"];

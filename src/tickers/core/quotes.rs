@@ -1,9 +1,9 @@
 use super::{BatchQuotesResponse, Tickers};
 use crate::error::{FinanceError, Result};
 use crate::format::{Both, Raw};
-use crate::models::format::Format;
-use crate::models::quote::{Quote, QuoteSummaryResponse};
 use crate::providers::Capability;
+use finance_query_models::format::Format;
+use finance_query_models::quote::{Quote, QuoteSummaryResponse};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;

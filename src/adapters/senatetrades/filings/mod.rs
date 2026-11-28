@@ -6,7 +6,7 @@ mod transactions;
 use futures::stream::{self, StreamExt};
 
 use crate::error::Result;
-use crate::models::filings::CongressionalTrade;
+use finance_query_models::filings::CongressionalTrade;
 
 use super::client::SenateTradesClient;
 use search::search_recent_ptrs;

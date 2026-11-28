@@ -40,7 +40,7 @@ pub use self::ratios::{
 };
 pub use self::var::{historical_var, parametric_var};
 
-use crate::models::chart::Candle;
+use finance_query_models::chart::Candle;
 use serde::{Deserialize, Serialize};
 
 /// Comprehensive risk summary for a symbol.

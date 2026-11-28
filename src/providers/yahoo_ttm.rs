@@ -6,8 +6,8 @@ use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::fundamental_types::*;
 use crate::constants::{Frequency, StatementType};
 use crate::error::Result;
-use crate::models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
-use crate::models::quote::price::Price;
+use finance_query_models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
+use finance_query_models::quote::price::Price;
 
 #[derive(Default)]
 struct Facts {

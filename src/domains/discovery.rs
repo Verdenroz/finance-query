@@ -5,10 +5,10 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::models::discovery::reference::{
+use crate::providers::Capability;
+use finance_query_models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
-use crate::providers::Capability;
 
 domain_handle! {
     /// Symbol discovery backed by configured data providers.

@@ -4,7 +4,7 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::Region;
 use crate::error::Result;
-use crate::models::market::market_summary::MarketSummaryQuote;
+use finance_query_models::market::market_summary::MarketSummaryQuote;
 
 /// Fetch market summary from Yahoo Finance.
 ///

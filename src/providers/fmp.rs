@@ -20,14 +20,14 @@ impl QuoteProvider for FmpProvider {
     async fn fetch_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::quote::QuoteSummaryResponse> {
+    ) -> Result<finance_query_models::quote::QuoteSummaryResponse> {
         crate::adapters::fmp::quote::fetch_canonical_quote(symbol).await
     }
 
     async fn fetch_quotes_batch(
         &self,
         symbols: &[&str],
-    ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+    ) -> Result<Vec<(String, finance_query_models::quote::QuoteSummaryResponse)>> {
         crate::adapters::fmp::quote::fetch_canonical_quotes_batch(symbols).await
     }
 }
@@ -47,11 +47,11 @@ impl ChartProvider for FmpProvider {
         symbol: &str,
         interval: crate::Interval,
         range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         let (from, to) = range_dates(range);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles,
@@ -67,12 +67,12 @@ impl ChartProvider for FmpProvider {
         interval: crate::Interval,
         start: i64,
         end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         let from = timestamp_to_date_str(start);
         let to = timestamp_to_date_str(end);
         let candles = fetch_candles(symbol, interval, from, to).await?;
 
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles,
@@ -93,7 +93,7 @@ impl FundamentalsProvider for FmpProvider {
         symbol: &str,
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement> {
         let period = match frequency {
             crate::Frequency::Annual => crate::adapters::fmp::Period::Annual,
             crate::Frequency::Quarterly => crate::adapters::fmp::Period::Quarter,
@@ -117,7 +117,7 @@ impl FundamentalsProvider for FmpProvider {
     async fn fetch_price_target_consensus(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetConsensus> {
         crate::adapters::fmp::fundamentals::consensus::fetch_price_target_consensus_response(symbol)
             .await
     }
@@ -125,7 +125,7 @@ impl FundamentalsProvider for FmpProvider {
     async fn fetch_price_target_summary(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetSummary> {
         crate::adapters::fmp::fundamentals::consensus::fetch_price_target_summary_response(symbol)
             .await
     }
@@ -133,42 +133,42 @@ impl FundamentalsProvider for FmpProvider {
     async fn fetch_rating_consensus(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+    ) -> Result<finance_query_models::fundamentals::RatingConsensus> {
         crate::adapters::fmp::fundamentals::consensus::fetch_rating_consensus_response(symbol).await
     }
 
     async fn fetch_key_metrics_ttm(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+    ) -> Result<finance_query_models::fundamentals::KeyMetricsTtm> {
         crate::adapters::fmp::fundamentals::ttm::fetch_key_metrics_ttm_response(symbol).await
     }
 
     async fn fetch_ratios_ttm(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+    ) -> Result<finance_query_models::fundamentals::FinancialRatiosTtm> {
         crate::adapters::fmp::fundamentals::ttm::fetch_ratios_ttm_response(symbol).await
     }
 
     async fn fetch_share_float(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::ShareFloat> {
+    ) -> Result<finance_query_models::fundamentals::ShareFloat> {
         crate::adapters::fmp::fundamentals::float::fetch_share_float_response(symbol).await
     }
 
     async fn fetch_etf_profile(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::EtfProfile> {
+    ) -> Result<finance_query_models::fundamentals::EtfProfile> {
         crate::adapters::fmp::fundamentals::fund_holdings::fetch_etf_profile_response(symbol).await
     }
 
     async fn fetch_earnings_surprises(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
         crate::adapters::fmp::fundamentals::estimates::fetch_earnings_surprises_response(symbol)
             .await
     }
@@ -176,7 +176,7 @@ impl FundamentalsProvider for FmpProvider {
     async fn fetch_grading_history(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::GradingAction>> {
         crate::adapters::fmp::fundamentals::estimates::fetch_grading_history_response(symbol, 50)
             .await
     }
@@ -184,14 +184,17 @@ impl FundamentalsProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl CorporateProvider for FmpProvider {
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+    async fn fetch_news(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::fmp::corporate::fetch_canonical_news(symbol, 50).await
     }
 
     async fn fetch_events(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
+    ) -> Result<finance_query_models::chart::events::ChartEvents> {
         crate::adapters::fmp::corporate::fetch_canonical_events(symbol).await
     }
 
@@ -199,7 +202,7 @@ impl CorporateProvider for FmpProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+    ) -> Result<Vec<finance_query_models::corporate::recommendation::SimilarSymbol>> {
         crate::adapters::fmp::quote::fetch_canonical_similar_symbols(symbol, limit).await
     }
 
@@ -207,14 +210,14 @@ impl CorporateProvider for FmpProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+    ) -> Result<Vec<finance_query_models::corporate::press_release::PressRelease>> {
         crate::adapters::fmp::corporate::fetch_press_releases_response(symbol, limit).await
     }
 
     async fn fetch_executive_compensation(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::ExecutiveCompensation>> {
         crate::adapters::fmp::corporate::ownership::fetch_executive_compensation_response(symbol)
             .await
     }
@@ -222,7 +225,7 @@ impl CorporateProvider for FmpProvider {
     async fn fetch_employee_count(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::EmployeeCount>> {
         crate::adapters::fmp::corporate::ownership::fetch_employee_count_response(symbol).await
     }
 }
@@ -236,7 +239,7 @@ impl FilingsProvider for FmpProvider {
     async fn fetch_filings(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::filings::ProviderFilings> {
+    ) -> Result<finance_query_models::filings::ProviderFilings> {
         Err(self.not_supported(Operation::Filings))
     }
 
@@ -244,7 +247,7 @@ impl FilingsProvider for FmpProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::InsiderTrade>> {
         crate::adapters::fmp::corporate::insider_trading::fetch_insider_trades_response(
             symbol, limit,
         )
@@ -254,7 +257,7 @@ impl FilingsProvider for FmpProvider {
     async fn fetch_congressional_trades(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::CongressionalTrade>> {
         crate::adapters::fmp::corporate::insider_trading::fetch_congressional_trades_response(
             symbol,
         )
@@ -264,7 +267,7 @@ impl FilingsProvider for FmpProvider {
     async fn fetch_fails_to_deliver(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+    ) -> Result<Vec<finance_query_models::filings::FailToDeliver>> {
         crate::adapters::fmp::corporate::insider_trading::fetch_fails_to_deliver_response(symbol)
             .await
     }
@@ -298,21 +301,21 @@ impl DiscoveryProvider for FmpProvider {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         crate::adapters::fmp::discovery::screener::fetch_symbol_search_response(query, limit).await
     }
 
     async fn fetch_screener(
         &self,
-        filters: &crate::models::discovery::reference::ScreenerFilters,
-    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        filters: &finance_query_models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<finance_query_models::discovery::reference::ScreenerMatch>> {
         crate::adapters::fmp::discovery::screener::fetch_screener_response(filters).await
     }
 
     async fn fetch_listing_status(
         &self,
         active: bool,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         if active {
             crate::adapters::fmp::discovery::stocks::fetch_stock_list(true).await
         } else {
@@ -325,10 +328,10 @@ impl DiscoveryProvider for FmpProvider {
 impl CalendarProvider for FmpProvider {
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         from: &str,
         to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
         crate::adapters::fmp::market::calendars::fetch_market_calendar_response(kind, from, to)
             .await
     }
@@ -338,8 +341,8 @@ impl CalendarProvider for FmpProvider {
 impl MarketProvider for FmpProvider {
     async fn fetch_market_movers(
         &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        direction: finance_query_models::market::performance::MoverDirection,
+    ) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
         crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
             .await
     }
@@ -347,7 +350,7 @@ impl MarketProvider for FmpProvider {
     async fn fetch_sector_performance_history(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformanceHistory>> {
         crate::adapters::fmp::market::market_performance::fetch_sector_performance_history_response(
             limit,
         )
@@ -356,17 +359,19 @@ impl MarketProvider for FmpProvider {
 
     async fn fetch_sector_performance(
         &self,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformance>> {
         crate::adapters::fmp::market::market_performance::fetch_sector_performance_response().await
     }
 
-    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+    async fn fetch_sector_pe(
+        &self,
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPe>> {
         crate::adapters::fmp::market::market_performance::fetch_sector_pe_response().await
     }
 
     async fn fetch_industry_pe(
         &self,
-    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+    ) -> Result<Vec<finance_query_models::market::performance::IndustryPe>> {
         crate::adapters::fmp::market::market_performance::fetch_industry_pe_response().await
     }
 }
@@ -377,14 +382,14 @@ impl ForexProvider for FmpProvider {
         &self,
         from: &str,
         to: &str,
-    ) -> Result<crate::models::forex::ForexQuote> {
+    ) -> Result<finance_query_models::forex::ForexQuote> {
         crate::adapters::fmp::forex::fetch_canonical_forex_quote(from, to).await
     }
 
     async fn fetch_forex_news(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::fmp::corporate::news::fetch_forex_news_response(limit).await
     }
 }
@@ -394,21 +399,21 @@ impl IndicesProvider for FmpProvider {
     async fn fetch_indices_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::indices::IndexQuote> {
+    ) -> Result<finance_query_models::indices::IndexQuote> {
         crate::adapters::fmp::indices::fetch_canonical_index_quote(symbol).await
     }
 
     async fn fetch_index_constituents(
         &self,
-        index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
         crate::adapters::fmp::indices::fetch_index_constituents_response(index).await
     }
 
     async fn fetch_index_constituent_changes(
         &self,
-        index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
         crate::adapters::fmp::indices::fetch_index_constituent_changes_response(index).await
     }
 }
@@ -418,7 +423,7 @@ impl CommoditiesProvider for FmpProvider {
     async fn fetch_commodities_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::commodities::CommodityQuote> {
+    ) -> Result<finance_query_models::commodities::CommodityQuote> {
         crate::adapters::fmp::commodities::fetch_canonical_commodity_quote(symbol).await
     }
 }
@@ -429,14 +434,14 @@ impl CryptoProvider for FmpProvider {
         &self,
         id: &str,
         vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         crate::adapters::fmp::crypto::fetch_canonical_crypto_quote(id, vs_currency).await
     }
 
     async fn fetch_crypto_news(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::fmp::corporate::news::fetch_crypto_news_response(limit).await
     }
 }
@@ -505,7 +510,7 @@ async fn fetch_candles(
     interval: crate::Interval,
     from: String,
     to: String,
-) -> Result<Vec<crate::models::chart::Candle>> {
+) -> Result<Vec<finance_query_models::chart::Candle>> {
     let params = crate::adapters::fmp::quote::HistoricalPriceParams {
         from: Some(from),
         to: Some(to),

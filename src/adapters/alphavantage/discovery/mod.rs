@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::adapters::alphavantage::models::{ListingEntryDTO, SymbolMatchDTO};
 use crate::error::Result;
-use crate::models::discovery::reference::{ExchangeInfo, SymbolMatch};
+use finance_query_models::discovery::reference::{ExchangeInfo, SymbolMatch};
 
 pub(crate) fn to_symbol_match(dto: SymbolMatchDTO) -> SymbolMatch {
     SymbolMatch {

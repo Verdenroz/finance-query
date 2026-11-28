@@ -1,7 +1,7 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::screeners::Screener;
 use crate::error::Result;
-use crate::models::discovery::screeners::{ScreenerField, ScreenerQuery, ScreenerResults};
+use finance_query_models::discovery::screeners::{ScreenerField, ScreenerQuery, ScreenerResults};
 
 /// Fetch data from a predefined Yahoo Finance screener.
 ///

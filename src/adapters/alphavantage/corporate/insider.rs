@@ -9,7 +9,7 @@
 
 use crate::adapters::alphavantage::models::InsiderTransactionDTO;
 use crate::error::{FinanceError, Result};
-use crate::models::filings::InsiderTrade;
+use finance_query_models::filings::InsiderTrade;
 
 use super::super::build_client;
 

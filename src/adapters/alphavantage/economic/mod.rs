@@ -140,7 +140,7 @@ pub async fn nonfarm_payroll() -> Result<EconomicSeriesDTO> {
 /// Fetch canonical EconomicSeries by series_id.
 pub async fn fetch_economic_series_response(
     series_id: &str,
-) -> Result<crate::models::economic::EconomicSeries> {
+) -> Result<finance_query_models::economic::EconomicSeries> {
     let (dto, func_name) = match series_id.to_uppercase().as_str() {
         "REAL_GDP" => (real_gdp(None).await?, "REAL_GDP"),
         "REAL_GDP_PER_CAPITA" => (real_gdp_per_capita().await?, "REAL_GDP_PER_CAPITA"),
@@ -164,13 +164,13 @@ pub async fn fetch_economic_series_response(
 }
 
 /// Map an economic series DTO to the canonical
-/// [`EconomicSeries`](crate::models::economic::EconomicSeries); empty
+/// [`EconomicSeries`](finance_query_models::economic::EconomicSeries); empty
 /// unit/interval strings become `None`.
 fn dto_to_series(
     func_name: &str,
     dto: EconomicSeriesDTO,
-) -> crate::models::economic::EconomicSeries {
-    crate::models::economic::EconomicSeries {
+) -> finance_query_models::economic::EconomicSeries {
+    finance_query_models::economic::EconomicSeries {
         series_id: func_name.to_string(),
         title: Some(dto.name),
         units: if dto.unit.is_empty() {
@@ -186,7 +186,7 @@ fn dto_to_series(
         observations: dto
             .data
             .into_iter()
-            .map(|dp| crate::models::economic::MacroObservation {
+            .map(|dp| finance_query_models::economic::MacroObservation {
                 date: dp.date,
                 value: dp.value,
             })

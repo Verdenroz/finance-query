@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::constants::{Frequency, StatementType};
 use crate::error::{FinanceError, Result};
-use crate::models::fundamentals::FinancialStatement;
+use finance_query_models::fundamentals::FinancialStatement;
 
 /// Raw response structure from Yahoo Finance fundamentals-timeseries API
 #[derive(Debug, Clone, Deserialize)]

@@ -1,7 +1,7 @@
 //! Crypto snapshot endpoints: single ticker.
 
 use crate::error::Result;
-use crate::models::crypto::CryptoQuote;
+use finance_query_models::crypto::CryptoQuote;
 
 use super::super::build_client;
 use super::super::models::*;

@@ -3,8 +3,8 @@
 use crate::adapters::common::crypto_chart::{CryptoExchange, crypto_chart};
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::{Candle, Chart};
 use crate::providers::{Operation, Provider};
+use finance_query_models::chart::{Candle, Chart};
 
 use super::models::KrakenCandle;
 use super::symbols;

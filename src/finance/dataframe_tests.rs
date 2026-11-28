@@ -1,5 +1,5 @@
 use super::*;
-use crate::models::dataframe_test_util::columns;
+use finance_query_models::dataframe_test_util::columns;
 use serde_json::json;
 
 #[cfg(feature = "fmp")]

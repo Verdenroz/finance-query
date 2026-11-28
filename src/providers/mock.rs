@@ -5,12 +5,12 @@ use super::{
     ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
 use crate::error::Result;
-use crate::models::chart::events::ChartEvents;
-use crate::models::chart::{Chart, ChartMeta};
-use crate::models::corporate::news::News;
-use crate::models::options::Options;
-use crate::models::options::response::OptionChainContainer;
-use crate::models::quote::QuoteSummaryResponse;
+use finance_query_models::chart::events::ChartEvents;
+use finance_query_models::chart::{Chart, ChartMeta};
+use finance_query_models::corporate::news::News;
+use finance_query_models::options::Options;
+use finance_query_models::options::response::OptionChainContainer;
+use finance_query_models::quote::QuoteSummaryResponse;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

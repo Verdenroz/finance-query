@@ -10,8 +10,8 @@ use serde::Deserialize;
 
 use crate::constants::{Interval, TimeRange};
 use crate::error::{FinanceError, Result};
-use crate::models::chart::{Candle, Chart};
 use crate::providers::Provider;
+use finance_query_models::chart::{Candle, Chart};
 
 /// `/coins/{id}/ohlc` rows are `[timestamp_ms, open, high, low, close]`.
 #[derive(Debug, Clone, Deserialize)]

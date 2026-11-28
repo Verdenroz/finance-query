@@ -82,21 +82,21 @@ fn parse_exchange_rate(
 pub async fn fetch_forex_quote_response(
     from: &str,
     to: &str,
-) -> Result<crate::models::forex::ForexQuote> {
+) -> Result<finance_query_models::forex::ForexQuote> {
     let rate = exchange_rate(from, to).await?;
     Ok(rate_to_canonical(rate))
 }
 
-/// Map an exchange-rate DTO to the canonical [`ForexQuote`](crate::models::forex::ForexQuote);
+/// Map an exchange-rate DTO to the canonical [`ForexQuote`](finance_query_models::forex::ForexQuote);
 /// `price` uses the bid.
-fn rate_to_canonical(rate: ExchangeRateDTO) -> crate::models::forex::ForexQuote {
+fn rate_to_canonical(rate: ExchangeRateDTO) -> finance_query_models::forex::ForexQuote {
     let timestamp = parse_av_datetime(&rate.last_refreshed);
     let symbol = format!(
         "{}{}",
         rate.from_currency_code.to_uppercase(),
         rate.to_currency_code.to_uppercase()
     );
-    crate::models::forex::ForexQuote {
+    finance_query_models::forex::ForexQuote {
         symbol,
         base_currency: Some(rate.from_currency_code),
         quote_currency: Some(rate.to_currency_code),

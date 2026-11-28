@@ -41,11 +41,11 @@ mod endpoints;
 pub(crate) mod filings; // FILINGS
 
 use crate::error::{FinanceError, Result};
-use crate::models::filings::{
-    CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions,
-};
 use crate::rate_limiter::RateLimiter;
 use client::EdgarClientBuilder;
+use finance_query_models::filings::{
+    CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions,
+};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -469,8 +469,8 @@ pub(crate) async fn company_facts_for_symbol(symbol: &str) -> Result<CompanyFact
 /// Fetch canonical ProviderFilings for a ticker symbol.
 pub async fn fetch_filings_response(
     symbol: &str,
-) -> Result<crate::models::filings::ProviderFilings> {
-    use crate::models::filings::{ProviderFiling, ProviderFilings};
+) -> Result<finance_query_models::filings::ProviderFilings> {
+    use finance_query_models::filings::{ProviderFiling, ProviderFilings};
 
     let subs = submissions_for_symbol(symbol).await?;
 

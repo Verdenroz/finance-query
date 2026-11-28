@@ -83,9 +83,9 @@ pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
 /// Fetch a canonical [`CompanyProfile`] for a symbol.
 pub(crate) async fn fetch_company_profile_response(
     symbol: &str,
-) -> Result<crate::models::fundamentals::CompanyProfile> {
+) -> Result<finance_query_models::fundamentals::CompanyProfile> {
     let dto = company_overview(symbol).await?;
-    Ok(crate::models::fundamentals::CompanyProfile {
+    Ok(finance_query_models::fundamentals::CompanyProfile {
         symbol: Some(dto.symbol),
         name: dto.name,
         description: dto.description,
@@ -261,12 +261,12 @@ pub async fn earnings(symbol: &str) -> Result<EarningsHistoryDTO> {
 /// Fetch canonical quarterly earnings-surprise history for a symbol.
 pub(crate) async fn fetch_earnings_surprises_response(
     symbol: &str,
-) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
     let history = earnings(symbol).await?;
     Ok(history
         .quarterly_earnings
         .into_iter()
-        .map(|e| crate::models::fundamentals::EarningsSurprise {
+        .map(|e| finance_query_models::fundamentals::EarningsSurprise {
             symbol: Some(history.symbol.clone()),
             date: e.reported_date.or(e.fiscal_date_ending),
             actual_eps: e.reported_eps,
@@ -418,7 +418,7 @@ pub async fn fetch_financials_response(
     symbol: &str,
     stmt_type: crate::StatementType,
     frequency: crate::Frequency,
-) -> Result<crate::models::fundamentals::FinancialStatement> {
+) -> Result<finance_query_models::fundamentals::FinancialStatement> {
     let stmts = match stmt_type {
         crate::StatementType::Income => income_statement(symbol).await?,
         crate::StatementType::Balance => balance_sheet(symbol).await?,

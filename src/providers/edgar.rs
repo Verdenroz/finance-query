@@ -8,7 +8,7 @@ use super::{
     CorporateProvider, DiscoveryProvider, FilingsProvider, Operation, ProviderAdapter, ProviderCore,
 };
 use crate::error::Result;
-use crate::models::filings::ProviderFilings;
+use finance_query_models::filings::ProviderFilings;
 
 pub(crate) struct EdgarProvider;
 
@@ -28,8 +28,8 @@ impl FilingsProvider for EdgarProvider {
         &self,
         symbol: Option<&str>,
         query: &str,
-        filters: &crate::models::filings::FilingSearchFilters,
-    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        filters: &finance_query_models::filings::FilingSearchFilters,
+    ) -> Result<Vec<finance_query_models::filings::FilingSearchHit>> {
         crate::adapters::edgar::filings::full_text::fetch_filing_search_response(
             symbol, query, filters,
         )
@@ -40,14 +40,14 @@ impl FilingsProvider for EdgarProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::InsiderTrade>> {
         crate::adapters::edgar::filings::insider::fetch_insider_trades_response(symbol, limit).await
     }
 
     async fn fetch_institutional_holdings(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+    ) -> Result<Vec<finance_query_models::filings::InstitutionalHolding>> {
         crate::adapters::edgar::filings::thirteen_f::fetch_institutional_holdings_response(symbol)
             .await
     }
@@ -56,7 +56,7 @@ impl FilingsProvider for EdgarProvider {
     async fn fetch_fails_to_deliver(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+    ) -> Result<Vec<finance_query_models::filings::FailToDeliver>> {
         crate::adapters::edgar::filings::fails_to_deliver::fetch_fails_to_deliver_response(symbol)
             .await
     }
@@ -64,8 +64,8 @@ impl FilingsProvider for EdgarProvider {
     async fn fetch_filing_sections(
         &self,
         accession_number: &str,
-        form: crate::models::filings::FilingSectionForm,
-    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        form: finance_query_models::filings::FilingSectionForm,
+    ) -> Result<Vec<finance_query_models::filings::FilingSection>> {
         crate::adapters::edgar::filings::sections::fetch_filing_sections_response(
             accession_number,
             form,
@@ -76,7 +76,7 @@ impl FilingsProvider for EdgarProvider {
     async fn fetch_risk_factors(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+    ) -> Result<Vec<finance_query_models::filings::RiskFactor>> {
         crate::adapters::edgar::filings::sections::fetch_risk_factors_response(symbol).await
     }
 }
@@ -84,14 +84,17 @@ impl FilingsProvider for EdgarProvider {
 /// EDGAR has no general news feed — only 8-K exhibit press releases.
 #[async_trait::async_trait]
 impl CorporateProvider for EdgarProvider {
-    async fn fetch_news(&self, _symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+    async fn fetch_news(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         Err(self.not_supported(Operation::News))
     }
 
     async fn fetch_events(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
+    ) -> Result<finance_query_models::chart::events::ChartEvents> {
         Err(self.not_supported(Operation::Events))
     }
 
@@ -99,7 +102,7 @@ impl CorporateProvider for EdgarProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+    ) -> Result<Vec<finance_query_models::corporate::press_release::PressRelease>> {
         crate::adapters::edgar::filings::press_releases::fetch_press_releases_response(
             symbol, limit,
         )
@@ -109,14 +112,14 @@ impl CorporateProvider for EdgarProvider {
     async fn fetch_employee_count(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::EmployeeCount>> {
         crate::adapters::edgar::filings::employee_count::fetch_employee_count_response(symbol).await
     }
 
     async fn fetch_executive_compensation(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::ExecutiveCompensation>> {
         crate::adapters::edgar::filings::executive_compensation::fetch_executive_compensation_response(
             symbol,
         )
@@ -131,14 +134,14 @@ impl DiscoveryProvider for EdgarProvider {
         &self,
         _query: &str,
         _limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         Err(self.not_supported(Operation::SymbolSearch))
     }
 
     async fn fetch_listing_status(
         &self,
         active: bool,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         crate::adapters::edgar::discovery::fetch_listing_status_response(active).await
     }
 }

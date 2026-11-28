@@ -1,6 +1,6 @@
 use super::ProviderPage;
-use crate::models::dataframe_test_util::columns;
 use crate::{Dividend, Provider, ToDataFrame};
+use finance_query_models::dataframe_test_util::columns;
 use serde_json::json;
 
 fn page(timestamps: &[i64]) -> ProviderPage<Dividend> {

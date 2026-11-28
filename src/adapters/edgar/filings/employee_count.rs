@@ -6,8 +6,8 @@
 
 use crate::adapters::edgar::company_facts_for_symbol;
 use crate::error::{FinanceError, Result};
-use crate::models::corporate::governance::EmployeeCount;
-use crate::models::filings::{CompanyFacts, FactUnit};
+use finance_query_models::corporate::governance::EmployeeCount;
+use finance_query_models::filings::{CompanyFacts, FactUnit};
 
 fn to_employee_count(
     unit: &FactUnit,

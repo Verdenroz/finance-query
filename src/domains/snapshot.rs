@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::models::quote::snapshot::MarketSnapshot;
 use crate::providers::{Capability, Operation};
+use finance_query_models::quote::snapshot::MarketSnapshot;
 
 domain_handle! {
     /// Snapshots for a watchlist spanning several asset classes, from one request.

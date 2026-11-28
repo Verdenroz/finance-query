@@ -15,14 +15,17 @@ impl ProviderCore for GdeltProvider {
 
 #[async_trait::async_trait]
 impl CorporateProvider for GdeltProvider {
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+    async fn fetch_news(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::gdelt::fetch_news_response(symbol).await
     }
 
     async fn fetch_events(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
+    ) -> Result<finance_query_models::chart::events::ChartEvents> {
         Err(self.not_supported(Operation::Events))
     }
 }
@@ -33,14 +36,14 @@ impl CryptoProvider for GdeltProvider {
         &self,
         _id: &str,
         _vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         Err(self.not_supported(Operation::CryptoQuote))
     }
 
     async fn fetch_crypto_news(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::gdelt::fetch_crypto_news_response(limit).await
     }
 }
@@ -51,14 +54,14 @@ impl ForexProvider for GdeltProvider {
         &self,
         _from: &str,
         _to: &str,
-    ) -> Result<crate::models::forex::ForexQuote> {
+    ) -> Result<finance_query_models::forex::ForexQuote> {
         Err(self.not_supported(Operation::ForexQuote))
     }
 
     async fn fetch_forex_news(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::gdelt::fetch_forex_news_response(limit).await
     }
 }

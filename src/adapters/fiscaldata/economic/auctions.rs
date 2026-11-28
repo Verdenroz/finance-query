@@ -5,7 +5,7 @@
 //! `upcoming_auctions` holds the forward schedule.
 
 use crate::error::{FinanceError, Result};
-use crate::models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
+use finance_query_models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 
 use super::super::client::{DATE_FIELD, RowQuery};
 use super::super::models::FiscalRow;

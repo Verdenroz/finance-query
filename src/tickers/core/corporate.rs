@@ -1,9 +1,9 @@
 use super::{BatchCapitalGainsResponse, BatchDividendsResponse, BatchSplitsResponse, Tickers};
 use crate::constants::TimeRange;
 use crate::error::Result;
-use crate::models::chart::events::ChartEvents;
 use crate::providers::Capability;
 use crate::utils::{CacheEntry, filter_by_range};
+use finance_query_models::chart::events::ChartEvents;
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -188,7 +188,7 @@ impl Tickers {
     pub async fn calendar(
         &self,
         range: TimeRange,
-    ) -> Result<Vec<crate::models::calendar::CalendarEvent>> {
+    ) -> Result<Vec<finance_query_models::calendar::CalendarEvent>> {
         let now = chrono::Utc::now().timestamp();
         let window = (now, now + range.approx_duration_secs());
 
@@ -239,11 +239,11 @@ impl Tickers {
 
         let mut extra_dates: Vec<i64> = options_map
             .values()
-            .flat_map(|o| crate::models::calendar::uncounted_monthly_expirations(o, window))
+            .flat_map(|o| finance_query_models::calendar::uncounted_monthly_expirations(o, window))
             .collect();
         extra_dates.sort_unstable();
         extra_dates.dedup();
-        let mut extra_chains: HashMap<String, Vec<crate::models::options::Options>> =
+        let mut extra_chains: HashMap<String, Vec<finance_query_models::options::Options>> =
             HashMap::new();
         for ts in extra_dates {
             if let Ok(resp) = self.options(Some(ts)).await {
@@ -253,10 +253,10 @@ impl Tickers {
             }
         }
 
-        let mut events: Vec<crate::models::calendar::CalendarEvent> = per_symbol_quotes
+        let mut events: Vec<finance_query_models::calendar::CalendarEvent> = per_symbol_quotes
             .into_iter()
             .flat_map(|(sym, quote)| {
-                crate::models::calendar::build_symbol_events(
+                finance_query_models::calendar::build_symbol_events(
                     &sym,
                     quote.as_ref().and_then(|q| q.calendar_events.as_ref()),
                     options_map.get(&sym),
@@ -264,7 +264,7 @@ impl Tickers {
                     quote
                         .as_ref()
                         .and_then(|q| q.default_key_statistics.as_ref())
-                        .and_then(crate::models::calendar::last_dividend_value),
+                        .and_then(finance_query_models::calendar::last_dividend_value),
                     window,
                 )
             })
@@ -277,7 +277,7 @@ impl Tickers {
             ));
         }
 
-        crate::models::calendar::sort_events(&mut events);
+        finance_query_models::calendar::sort_events(&mut events);
         Ok(events)
     }
 

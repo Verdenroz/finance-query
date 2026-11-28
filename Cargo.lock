@@ -1671,6 +1671,7 @@ dependencies = [
  "ct2rs",
  "finance-query-backtesting",
  "finance-query-derive",
+ "finance-query-models",
  "finance-query-types",
  "flate2",
  "futures",
@@ -1693,7 +1694,6 @@ dependencies = [
  "tokio-test",
  "tokio-tungstenite 0.28.0",
  "tracing",
- "vader_sentiment",
  "zip",
 ]
 

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
 use crate::error::{FinanceError, Result};
-use crate::models::fundamentals::ShareFloat;
+use finance_query_models::fundamentals::ShareFloat;
 
 /// Share float entry (`/stable/shares-float`).
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -6,7 +6,7 @@
 use super::xml::{self, XmlNode};
 use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::{FinanceError, Result};
-use crate::models::filings::InstitutionalHolding;
+use finance_query_models::filings::InstitutionalHolding;
 
 /// Forms carrying an information table. `13F-NT` (notice) never does.
 const HOLDINGS_FORMS: [&str; 2] = ["13F-HR", "13F-HR/A"];

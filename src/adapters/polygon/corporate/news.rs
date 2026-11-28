@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Provider;
 use crate::error::Result;
-use crate::models::corporate::news::News;
+use finance_query_models::corporate::news::News;
 
 use super::super::build_client;
 use super::super::models::PaginatedResponseDTO;

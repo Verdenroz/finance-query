@@ -3,7 +3,7 @@
 use crate::adapters::common::numbers::parse_number;
 use crate::adapters::common::periods;
 use crate::error::Result;
-use crate::models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{EconomicSeries, MacroObservation};
 
 use super::models::BlsSeries;
 
@@ -87,7 +87,7 @@ pub(super) fn to_canonical(series_id: &str, series: BlsSeries) -> EconomicSeries
 }
 
 /// Fetch a BLS series as the canonical
-/// [`EconomicSeries`](crate::models::economic::EconomicSeries).
+/// [`EconomicSeries`](finance_query_models::economic::EconomicSeries).
 pub(crate) async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicSeries> {
     let series = super::client()?.series(series_id).await?;
     Ok(to_canonical(series_id, series))

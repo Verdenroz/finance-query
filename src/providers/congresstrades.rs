@@ -15,7 +15,7 @@
 
 use super::{FilingsProvider, Operation, Provider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
-use crate::models::filings::CongressionalTrade;
+use finance_query_models::filings::CongressionalTrade;
 
 pub(crate) struct CongressTradesProvider;
 
@@ -55,7 +55,7 @@ impl FilingsProvider for CongressTradesProvider {
     async fn fetch_filings(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::filings::ProviderFilings> {
+    ) -> Result<finance_query_models::filings::ProviderFilings> {
         Err(self.not_supported(Operation::Filings))
     }
 

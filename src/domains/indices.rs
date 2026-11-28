@@ -4,19 +4,19 @@
 
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Chart;
+use finance_query_models::chart::Chart;
 
 domain_handle! {
     /// A stock market index backed by configured data providers.
     ///
     /// Created via [`Providers::index`](crate::Providers::index).
     pub struct Index { symbol, symbol }
-    cache: crate::models::indices::IndexQuote, chart
+    cache: finance_query_models::indices::IndexQuote, chart
 }
 
 impl Index {
     /// Fetch the current quote for this index.
-    pub async fn quote(&self) -> Result<crate::models::indices::IndexQuote> {
+    pub async fn quote(&self) -> Result<finance_query_models::indices::IndexQuote> {
         fetch_via!(
             self,
             symbol,
@@ -24,7 +24,7 @@ impl Index {
             as_indices,
             IndicesQuote,
             fetch_indices_quote,
-            crate::models::indices::IndexQuote
+            finance_query_models::indices::IndexQuote
         )
     }
 
@@ -42,10 +42,10 @@ impl Index {
         self.chart(range.default_interval(), range).await
     }
 
-    /// The [`MajorIndex`](crate::models::indices::MajorIndex) this handle's
+    /// The [`MajorIndex`](finance_query_models::indices::MajorIndex) this handle's
     /// symbol denotes, or an error for indices without constituent support.
-    fn major_index(&self) -> Result<crate::models::indices::MajorIndex> {
-        crate::models::indices::MajorIndex::from_symbol(self.symbol()).ok_or_else(|| {
+    fn major_index(&self) -> Result<finance_query_models::indices::MajorIndex> {
+        finance_query_models::indices::MajorIndex::from_symbol(self.symbol()).ok_or_else(|| {
             crate::error::FinanceError::InvalidParameter {
                 param: "symbol".into(),
                 reason: format!(
@@ -59,7 +59,9 @@ impl Index {
 
     /// Fetch the index's current constituents (major indices only). Not
     /// cached — constituent lists change rarely but the call is uncommon.
-    pub async fn constituents(&self) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+    pub async fn constituents(
+        &self,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
         let index = self.major_index()?;
         self.providers
             .fetch(crate::providers::Capability::INDICES, move |p| {
@@ -80,7 +82,7 @@ impl Index {
     /// S&P 500 only on FMP).
     pub async fn constituent_changes(
         &self,
-    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
         let index = self.major_index()?;
         self.providers
             .fetch(crate::providers::Capability::INDICES, move |p| {

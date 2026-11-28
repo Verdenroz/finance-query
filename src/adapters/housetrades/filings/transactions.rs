@@ -19,7 +19,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::models::filings::CongressionalTrade;
+use finance_query_models::filings::CongressionalTrade;
 
 use super::super::models::PtrIndexEntry;
 use super::index::parse_us_date;

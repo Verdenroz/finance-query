@@ -1,7 +1,7 @@
 //! Shared utility functions for ticker and tickers modules.
 
 use crate::constants::TimeRange;
-use crate::models::chart::{CapitalGain, Dividend, Split};
+use finance_query_models::chart::{CapitalGain, Dividend, Split};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;

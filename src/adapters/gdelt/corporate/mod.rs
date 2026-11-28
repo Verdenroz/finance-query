@@ -5,7 +5,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 use crate::error::Result;
-use crate::models::corporate::news::News;
+use finance_query_models::corporate::news::News;
 
 use super::models::GdeltArticle;
 

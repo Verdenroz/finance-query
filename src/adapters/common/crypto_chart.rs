@@ -5,8 +5,8 @@
 //! the exchange's identity, so it is built in one place.
 
 use crate::constants::{Interval, TimeRange};
-use crate::models::chart::{Candle, Chart, ChartMeta};
 use crate::providers::Provider;
+use finance_query_models::chart::{Candle, Chart, ChartMeta};
 
 /// How an exchange names itself in canonical chart metadata.
 pub(crate) struct CryptoExchange {

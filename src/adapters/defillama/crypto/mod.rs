@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::error::{FinanceError, Result};
-use crate::models::crypto::defi::{ChainAllocation, ProtocolTvl, TvlPoint};
+use finance_query_models::crypto::defi::{ChainAllocation, ProtocolTvl, TvlPoint};
 
 use super::models::{LiteProtocol, LiteResponse, Period, ProtocolResponse};
 

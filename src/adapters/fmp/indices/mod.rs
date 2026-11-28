@@ -11,9 +11,9 @@ use crate::adapters::fmp::models::FmpQuoteDTO;
 fn index_quote_to_canonical(
     symbol: &str,
     quotes: &[FmpQuoteDTO],
-) -> crate::models::indices::IndexQuote {
+) -> finance_query_models::indices::IndexQuote {
     let q = quotes.first();
-    crate::models::indices::IndexQuote {
+    finance_query_models::indices::IndexQuote {
         symbol: symbol.to_string(),
         name: q.and_then(|q| q.name.clone()),
         price: q.and_then(|q| q.price),
@@ -26,7 +26,7 @@ fn index_quote_to_canonical(
 /// Fetch a canonical index quote.
 pub async fn fetch_canonical_index_quote(
     symbol: &str,
-) -> Result<crate::models::indices::IndexQuote> {
+) -> Result<finance_query_models::indices::IndexQuote> {
     let quotes = crate::adapters::fmp::quote::quote(symbol).await?;
     Ok(index_quote_to_canonical(symbol, &quotes))
 }
@@ -104,8 +104,10 @@ pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
 }
 
 /// Convert a constituent DTO into the canonical model.
-fn constituent_to_canonical(c: IndexConstituentDTO) -> crate::models::indices::IndexConstituent {
-    crate::models::indices::IndexConstituent {
+fn constituent_to_canonical(
+    c: IndexConstituentDTO,
+) -> finance_query_models::indices::IndexConstituent {
+    finance_query_models::indices::IndexConstituent {
         symbol: c.symbol.unwrap_or_default(),
         name: c.name,
         sector: c.sector,
@@ -119,9 +121,9 @@ fn constituent_to_canonical(c: IndexConstituentDTO) -> crate::models::indices::I
 
 /// Fetch canonical constituents for a major index.
 pub async fn fetch_index_constituents_response(
-    index: crate::models::indices::MajorIndex,
-) -> Result<Vec<crate::models::indices::IndexConstituent>> {
-    use crate::models::indices::MajorIndex;
+    index: finance_query_models::indices::MajorIndex,
+) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
+    use finance_query_models::indices::MajorIndex;
     let dtos = match index {
         MajorIndex::Sp500 => sp500_constituents().await?,
         MajorIndex::Nasdaq100 => nasdaq_constituents().await?,
@@ -134,9 +136,9 @@ pub async fn fetch_index_constituents_response(
 ///
 /// FMP publishes historical changes for the S&P 500 only.
 pub async fn fetch_index_constituent_changes_response(
-    index: crate::models::indices::MajorIndex,
-) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
-    use crate::models::indices::MajorIndex;
+    index: finance_query_models::indices::MajorIndex,
+) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
+    use finance_query_models::indices::MajorIndex;
     let dtos = match index {
         MajorIndex::Sp500 => historical_sp500().await?,
         other => {
@@ -150,7 +152,7 @@ pub async fn fetch_index_constituent_changes_response(
     };
     Ok(dtos
         .into_iter()
-        .map(|c| crate::models::indices::IndexConstituentChange {
+        .map(|c| finance_query_models::indices::IndexConstituentChange {
             date: c.date,
             symbol: c.symbol,
             added_security: c.added_security,

@@ -78,14 +78,12 @@ base64 = "0.22"
 polars = { version = "0.55.2", optional = true, default-features = false, features = ["lazy", "polars-ops", "fmt", "dtype-struct", "dtype-datetime", "dtype-date", "timezones", "streaming"] }
 finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 finance-query-types = { version = "3.4.0", path = "finance-query-types" }
+finance-query-models = { version = "3.4.0", path = "finance-query-models" }
 finance-query-backtesting = { version = "3.4.0", path = "finance-query-backtesting", optional = true }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
 csv = { version = "1", optional = true }
 chrono-tz = { version = "0.10", optional = true }
-
-# Optional: offline VADER lexicon-based news/text sentiment scoring
-vader_sentiment = { version = "0.1", optional = true }
 
 # Optional: fully local machine translation (CTranslate2 + opus-mt bilingual)
 ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers", "sentencepiece"] }
@@ -132,19 +130,19 @@ full = [
     "senatetrades",
 ]
 # Enable DataFrame conversions with polars
-dataframe = ["dep:polars", "finance-query-types/dataframe", "finance-query-backtesting?/dataframe"]
+dataframe = ["dep:polars", "finance-query-types/dataframe", "finance-query-models/dataframe", "finance-query-backtesting?/dataframe"]
 # Enable technical analysis indicators
-indicators = ["finance-query-types/indicators"]
+indicators = ["finance-query-types/indicators", "finance-query-models/indicators"]
 # Enable backtesting engine for strategy simulation (requires indicators)
 backtesting = ["indicators", "dep:finance-query-backtesting"]
 # Enable FRED API and US Treasury yield curve
-fred = ["dep:csv", "finance-query-types/fred"]
+fred = ["dep:csv", "finance-query-types/fred", "finance-query-models/fred"]
 # Enable CoinGecko cryptocurrency data
-crypto = ["finance-query-types/crypto"]
+crypto = ["finance-query-types/crypto", "finance-query-models/crypto"]
 # Enable World Bank Open Data global macro indicators (keyless)
 worldbank = ["finance-query-types/worldbank"]
 # Enable US Treasury FiscalData federal debt/interest statistics (keyless)
-fiscaldata = ["finance-query-types/fiscaldata"]
+fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata"]
 # Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
 bls = ["finance-query-types/bls"]
 # Enable Frankfurter ECB reference exchange rates (keyless forex)
@@ -156,13 +154,13 @@ kraken = ["finance-query-types/kraken"]
 # Enable FINRA daily short-sale volume (free, non-commercial use)
 finra = ["finance-query-types/finra"]
 # Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
-openfigi = []
+openfigi = ["finance-query-models/openfigi"]
 # Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
-defi = ["finance-query-types/defi"]
+defi = ["finance-query-types/defi", "finance-query-models/defi"]
 # Enable GDELT DOC 2.0 global news search (keyless)
 gdelt = ["finance-query-types/gdelt"]
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
-cftc = ["finance-query-types/cftc"]
+cftc = ["finance-query-types/cftc", "finance-query-models/cftc"]
 # Enable Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless)
 nasdaq = ["finance-query-types/nasdaq"]
 # Enable Wikipedia S&P 500 index-constituent table scraping (keyless)
@@ -180,7 +178,7 @@ fuzzing = []
 # `bench-gate` only.
 bench-internals = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
-sentiment = ["dep:vader_sentiment"]
+sentiment = ["finance-query-models/sentiment"]
 # Enable Alpha Vantage financial data API
 alphavantage = ["finance-query-types/alphavantage"]
 # Enable Polygon.io financial data API
@@ -188,7 +186,7 @@ polygon = ["finance-query-types/polygon"]
 # Enable Financial Modeling Prep (FMP) financial data API
 fmp = ["dep:csv", "dep:chrono-tz", "finance-query-types/fmp"]
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
-risk = ["indicators"]
+risk = ["indicators", "finance-query-models/risk"]
 # Enable translation of human-readable response fields: built-in dictionary
 # for finite finance terms + pluggable ML backend (pure Rust, no heavy deps)
 translation = []

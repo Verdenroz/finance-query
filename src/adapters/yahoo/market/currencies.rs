@@ -3,7 +3,7 @@
 /// Fetch available currencies from Yahoo Finance.
 use crate::adapters::yahoo::client::YahooClient;
 use crate::error::Result;
-use crate::models::market::currencies::Currency;
+use finance_query_models::market::currencies::Currency;
 
 /// Fetch currencies from Yahoo Finance.
 ///

@@ -17,7 +17,7 @@ impl CryptoProvider for KrakenProvider {
         &self,
         id: &str,
         vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         crate::adapters::kraken::fetch_crypto_quote_response(id, vs_currency).await
     }
 }
@@ -29,7 +29,7 @@ impl ChartProvider for KrakenProvider {
         symbol: &str,
         interval: crate::Interval,
         range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         crate::adapters::kraken::fetch_chart_response(symbol, interval, range).await
     }
 
@@ -39,7 +39,7 @@ impl ChartProvider for KrakenProvider {
         interval: crate::Interval,
         start: i64,
         end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         crate::adapters::kraken::fetch_chart_range_response(symbol, interval, start, end).await
     }
 }

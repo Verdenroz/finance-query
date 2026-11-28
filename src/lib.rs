@@ -80,7 +80,6 @@ pub mod edgar {
 // Internal modules
 mod backoff;
 use finance_query_types::constants;
-mod models;
 #[cfg(feature = "risk")]
 use finance_query_types::perf_metrics;
 mod providers;
@@ -130,7 +129,7 @@ pub mod fred {
     pub use crate::adapters::fred::{
         ReleaseDate, init, init_with_timeout, release_dates, series, treasury_yields,
     };
-    pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
+    pub use finance_query_models::economic::{MacroObservation, MacroSeries, TreasuryYield};
 }
 
 #[cfg(feature = "crypto")]
@@ -145,8 +144,8 @@ pub mod crypto {
         CoinQuote, coin, coins, fetch_crypto_global_response as global,
         fetch_crypto_trending_response as trending, fetch_symbol_search_response as search,
     };
-    pub use crate::models::crypto::{GlobalCryptoStats, TrendingCoin};
-    pub use crate::models::discovery::reference::SymbolMatch;
+    pub use finance_query_models::crypto::{GlobalCryptoStats, TrendingCoin};
+    pub use finance_query_models::discovery::reference::SymbolMatch;
 }
 
 #[cfg(feature = "gdelt")]
@@ -157,7 +156,7 @@ pub mod gdelt {
     //! [`Ticker::news`](crate::Ticker::news) reaches the same data through
     //! `Capability::CORPORATE` when GDELT is routed.
     pub use crate::adapters::gdelt::fetch_news_response as news;
-    pub use crate::models::corporate::news::News;
+    pub use finance_query_models::corporate::news::News;
 }
 
 #[cfg(feature = "cftc")]
@@ -168,7 +167,7 @@ pub mod cftc {
     //! [`FuturesContract::commitments_of_traders`](crate::FuturesContract::commitments_of_traders)
     //! reaches the same data through `Capability::FUTURES` when CFTC is routed.
     pub use crate::adapters::cftc::fetch_commitments_of_traders_response as commitments_of_traders;
-    pub use crate::models::futures::cot::{CommitmentsOfTraders, CotObservation};
+    pub use finance_query_models::futures::cot::{CommitmentsOfTraders, CotObservation};
 }
 
 #[cfg(feature = "openfigi")]
@@ -201,7 +200,9 @@ pub mod openfigi {
     //! ```
 
     use crate::error::Result;
-    pub use crate::models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
+    pub use finance_query_models::discovery::figi::{
+        MappingFilter, SecurityIdKind, SecurityMapping,
+    };
 
     /// Resolve a CUSIP to every instrument carrying it.
     ///
@@ -274,7 +275,7 @@ pub mod defi {
     //! ```
 
     use crate::error::Result;
-    pub use crate::models::crypto::defi::{
+    pub use finance_query_models::crypto::defi::{
         ChainAllocation, ChainTvl, ProtocolTvl, StablecoinSupply, TvlPoint,
     };
 
@@ -304,7 +305,7 @@ pub mod translation;
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub mod domains;
-pub use models::quote::response::QuoteSummaryResponse;
+pub use finance_query_models::quote::response::QuoteSummaryResponse;
 
 /// Yahoo `quoteSummary` module types carried by [`QuoteSummaryResponse`].
 ///
@@ -312,16 +313,18 @@ pub use models::quote::response::QuoteSummaryResponse;
 /// [`Ticker::price`], [`Ticker::asset_profile`] and the other module
 /// accessors return.
 pub mod quote {
-    pub use crate::models::corporate::{
+    pub use finance_query_models::corporate::{
         AssetProfile, CalendarEvents, CompanyOfficer, Earnings, EarningsHistory, EarningsTrend,
         EquityPerformance, FundOwnership, FundPerformance, FundProfile, InsiderHolders,
         InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
         RecommendationTrend, SecFilings, SummaryProfile, TopHoldings, UpgradeDowngradeHistory,
     };
-    pub use crate::models::fundamentals::{DefaultKeyStatistics, FinancialData, SummaryDetail};
-    pub use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend, TrendEstimate};
-    pub use crate::models::quote::price::Price;
-    pub use crate::models::quote::quote_type::QuoteTypeData;
+    pub use finance_query_models::fundamentals::{
+        DefaultKeyStatistics, FinancialData, SummaryDetail,
+    };
+    pub use finance_query_models::market::{IndexTrend, IndustryTrend, SectorTrend, TrendEstimate};
+    pub use finance_query_models::quote::price::Price;
+    pub use finance_query_models::quote::quote_type::QuoteTypeData;
 }
 pub use providers::CryptoProvider;
 pub use providers::EconomicProvider;
@@ -390,13 +393,15 @@ pub use tickers::BatchIndicatorsResponse;
 // Error types and results
 // ============================================================================
 // Capability-routed response types (DISCOVERY / CALENDAR / MARKET / CHART)
-pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
-pub use models::chart::{PriceAdjustment, StockBar};
-pub use models::discovery::listings::{StockListing, StockType, TickerChange};
-pub use models::discovery::reference::{
+pub use finance_query_models::calendar::market::{
+    CalendarDetail, CalendarKind, MarketCalendarEntry,
+};
+pub use finance_query_models::chart::{PriceAdjustment, StockBar};
+pub use finance_query_models::discovery::listings::{StockListing, StockType, TickerChange};
+pub use finance_query_models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
-pub use models::market::performance::{
+pub use finance_query_models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
 
@@ -419,7 +424,7 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // ============================================================================
 // Response types - Top-level types returned by API methods
 // ============================================================================
-pub use models::{
+pub use finance_query_models::{
     calendar::{CalendarEvent, EventKind},
     chart::Chart,
     chart::spark::Spark,
@@ -456,26 +461,30 @@ pub use models::{
 };
 // Offline VADER sentiment scoring (feature-gated)
 #[cfg(feature = "sentiment")]
-pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentiment};
+pub use finance_query_models::sentiment::{
+    Sentiment, SentimentLabel, analyze as analyze_sentiment,
+};
 // Multi-provider capability response types (feature-gated)
-pub use models::commodities::CommodityQuote;
-pub use models::crypto::CryptoQuote;
-pub use models::economic::{
+pub use finance_query_models::commodities::CommodityQuote;
+pub use finance_query_models::crypto::CryptoQuote;
+pub use finance_query_models::economic::{
     EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch,
 };
 #[cfg(feature = "fiscaldata")]
-pub use models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
-pub use models::forex::ForexQuote;
-pub use models::futures::FuturesQuote;
+pub use finance_query_models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
+pub use finance_query_models::forex::ForexQuote;
+pub use finance_query_models::futures::FuturesQuote;
 #[cfg(feature = "cftc")]
-pub use models::futures::cot::{CommitmentsOfTraders, CotObservation};
-pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
-pub use models::quote::snapshot::{AssetClass, MarketSnapshot};
+pub use finance_query_models::futures::cot::{CommitmentsOfTraders, CotObservation};
+pub use finance_query_models::indices::{
+    IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex,
+};
+pub use finance_query_models::quote::snapshot::{AssetClass, MarketSnapshot};
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types
 // ============================================================================
-pub use models::{
+pub use finance_query_models::{
     chart::{Candle, CapitalGain, ChartEvents, ChartMeta, Dividend, DividendAnalytics, Split},
     corporate::recommendation::SimilarSymbol,
     discovery::lookup::LookupQuote,
@@ -501,7 +510,7 @@ pub use models::{
 // ============================================================================
 pub use constants::exchange_codes::ExchangeCode;
 pub use constants::industries::Industry;
-pub use models::discovery::screeners::{
+pub use finance_query_models::discovery::screeners::{
     ConditionValue, EquityField, EquityScreenerQuery, FundField, FundScreenerQuery,
     LogicalOperator, Operator, QueryCondition, QueryGroup, QueryOperand, QuoteType, ScreenerField,
     ScreenerFieldExt, ScreenerFundCategory, ScreenerPeerGroup, ScreenerQuery, SortType,
@@ -535,7 +544,7 @@ pub mod streaming;
 /// # }
 /// ```
 pub mod format {
-    pub use crate::models::format::{Both, Pretty, Raw};
+    pub use finance_query_models::format::{Both, Pretty, Raw};
 }
 
 // ============================================================================
@@ -664,9 +673,9 @@ pub fn __fuzz_pricing(bytes: &[u8]) {
 #[doc(hidden)]
 pub mod __bench {
     use crate::adapters::yahoo::quote::quotes::parse_quotes_batch;
-    use crate::models::quote::Quote;
     use crate::streaming::PriceUpdate;
     use crate::streaming::pricing::{MarketHoursTypeProto, PricingData, QuoteTypeProto};
+    use finance_query_models::quote::Quote;
 
     /// A base64 pricing frame shaped like a live equity tick.
     pub fn pricing_frame() -> String {

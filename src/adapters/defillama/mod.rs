@@ -21,8 +21,8 @@ use std::time::Duration;
 
 use crate::adapters::singleton::keyless_limiter;
 use crate::error::Result;
-use crate::models::crypto::defi::{ChainTvl, StablecoinSupply};
 use client::DefiLlamaClient;
+use finance_query_models::crypto::defi::{ChainTvl, StablecoinSupply};
 
 /// Self-imposed pacing. DefiLlama publishes no quota for the free API but
 /// throttles abusive clients.

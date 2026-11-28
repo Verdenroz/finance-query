@@ -1,7 +1,7 @@
 //! `FOREX` capability for Frankfurter (ECB reference rates).
 
 use crate::error::Result;
-use crate::models::forex::ForexQuote;
+use finance_query_models::forex::ForexQuote;
 
 /// Midnight UTC of an ISO `YYYY-MM-DD` date, as a unix timestamp.
 ///

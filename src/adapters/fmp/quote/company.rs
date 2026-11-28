@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 use crate::error::{FinanceError, Result};
-use crate::models::discovery::reference::SymbolMatch;
+use finance_query_models::discovery::reference::SymbolMatch;
 
 // ============================================================================
 // Response types
@@ -62,12 +62,12 @@ pub struct DelistedCompanyDTO {
 fn stock_peers_to_canonical(
     peers: Vec<StockPeersDTO>,
     limit: usize,
-) -> Vec<crate::models::corporate::recommendation::SimilarSymbol> {
-    let mut symbols: Vec<crate::models::corporate::recommendation::SimilarSymbol> = peers
+) -> Vec<finance_query_models::corporate::recommendation::SimilarSymbol> {
+    let mut symbols: Vec<finance_query_models::corporate::recommendation::SimilarSymbol> = peers
         .into_iter()
         .filter_map(|p| p.symbol)
         .map(
-            |s| crate::models::corporate::recommendation::SimilarSymbol {
+            |s| finance_query_models::corporate::recommendation::SimilarSymbol {
                 symbol: s,
                 score: 0.0,
             },
@@ -81,7 +81,7 @@ fn stock_peers_to_canonical(
 pub async fn fetch_canonical_similar_symbols(
     symbol: &str,
     limit: u32,
-) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+) -> Result<Vec<finance_query_models::corporate::recommendation::SimilarSymbol>> {
     let peers = stock_peers(symbol).await?;
     Ok(stock_peers_to_canonical(peers, limit as usize))
 }

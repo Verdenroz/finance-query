@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{FinanceError, Result};
-use crate::models::filings::{
+use finance_query_models::filings::{
     FilingSection, FilingSectionForm, ProviderFiling, ProviderFilings, RiskFactor,
 };
 

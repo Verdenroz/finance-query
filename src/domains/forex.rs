@@ -4,7 +4,7 @@
 
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Chart;
+use finance_query_models::chart::Chart;
 
 domain_handle! {
     /// A foreign-exchange currency pair backed by configured data providers.
@@ -16,12 +16,12 @@ domain_handle! {
         /// The quote (to) currency code (e.g., `"EUR"`).
         to, to,
     }
-    cache: crate::models::forex::ForexQuote, chart
+    cache: finance_query_models::forex::ForexQuote, chart
 }
 
 impl ForexPair {
     /// Fetch the current exchange rate for this currency pair.
-    pub async fn quote(&self) -> Result<crate::models::forex::ForexQuote> {
+    pub async fn quote(&self) -> Result<finance_query_models::forex::ForexQuote> {
         fetch_via_two!(
             self,
             from,
@@ -30,7 +30,7 @@ impl ForexPair {
             as_forex,
             ForexQuote,
             fetch_forex_quote,
-            crate::models::forex::ForexQuote
+            finance_query_models::forex::ForexQuote
         )
     }
 
@@ -50,7 +50,10 @@ impl ForexPair {
 
     /// Fetch market-wide forex news via `Capability::FOREX` (currently FMP
     /// only). Not scoped to this handle's currency pair.
-    pub async fn news(&self, limit: u32) -> Result<Vec<crate::models::corporate::news::News>> {
+    pub async fn news(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         dispatch_via!(
             self,
             FOREX,

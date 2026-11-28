@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::{build_client, first_or_missing};
 use crate::error::Result;
-use crate::models::fundamentals::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
+use finance_query_models::fundamentals::{
+    PriceTargetConsensus, PriceTargetSummary, RatingConsensus,
+};
 
 // ============================================================================
 // Response types

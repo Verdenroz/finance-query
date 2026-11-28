@@ -2,7 +2,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+use finance_query_models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
 use super::models::*;

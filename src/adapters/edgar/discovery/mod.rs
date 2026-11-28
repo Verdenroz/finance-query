@@ -6,8 +6,8 @@
 use crate::adapters::edgar::build_client;
 use crate::adapters::edgar::client::CompanyTickerEntry;
 use crate::error::Result;
-use crate::models::discovery::reference::SymbolMatch;
 use crate::providers::{Operation, Provider};
+use finance_query_models::discovery::reference::SymbolMatch;
 
 fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> SymbolMatch {
     SymbolMatch {

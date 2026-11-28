@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::indices::IndexQuote;
+use finance_query_models::indices::IndexQuote;
 
 use super::super::build_client;
 

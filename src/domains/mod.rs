@@ -94,7 +94,7 @@ macro_rules! domain_handle {
             $field: std::sync::Arc<str>,
             providers: std::sync::Arc<crate::providers::ProviderSet>,
             cache: crate::domains::DomainCache<$val>,
-            chart_cache: crate::domains::DomainCache<crate::models::chart::Chart>,
+            chart_cache: crate::domains::DomainCache<finance_query_models::chart::Chart>,
             $($( $(#[$ecfg])* $ecache: crate::domains::DomainCache<$eval>, )+)?
         }
 
@@ -175,7 +175,7 @@ macro_rules! domain_handle {
             $field2: std::sync::Arc<str>,
             providers: std::sync::Arc<crate::providers::ProviderSet>,
             cache: crate::domains::DomainCache<$val>,
-            chart_cache: crate::domains::DomainCache<crate::models::chart::Chart>,
+            chart_cache: crate::domains::DomainCache<finance_query_models::chart::Chart>,
         }
 
         impl $name {
@@ -512,7 +512,7 @@ macro_rules! impl_chartable_analytics {
                 range: crate::TimeRange,
             ) -> crate::error::Result<crate::indicators::IndicatorResult> {
                 let chart = self.chart(interval, range).await?;
-                Ok(crate::models::chart::compute::compute_indicator(
+                Ok(finance_query_models::chart::compute::compute_indicator(
                     indicator, &chart,
                 )?)
             }

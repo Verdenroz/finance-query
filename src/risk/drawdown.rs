@@ -1,6 +1,6 @@
 //! Maximum drawdown analysis.
 
-use crate::models::chart::Candle;
+use finance_query_models::chart::Candle;
 
 /// Maximum drawdown result.
 #[derive(Debug, Clone)]

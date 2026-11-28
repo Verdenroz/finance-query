@@ -9,8 +9,8 @@ use chrono::{Datelike, Duration, NaiveDate, Utc, Weekday};
 use super::{CalendarProvider, ProviderAdapter, ProviderCore};
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::Result;
-use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 use crate::providers::Operation;
+use finance_query_models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
 pub(crate) struct LocalMarketCalendarProvider;
 

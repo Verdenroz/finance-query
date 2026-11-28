@@ -3,8 +3,8 @@
 //! Scrapes news from stockanalysis.com
 
 use crate::error::{FinanceError, Result};
-use crate::models::corporate::news::News;
 use crate::scrapers::html;
+use finance_query_models::corporate::news::News;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::info;

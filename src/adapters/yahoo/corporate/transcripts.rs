@@ -5,9 +5,9 @@
 
 use crate::adapters::yahoo::client::YahooClient;
 use crate::error::{FinanceError, Result};
-use crate::models::corporate::transcript::{Transcript, TranscriptWithMeta};
-use crate::models::quote::quote_type::QuoteTypeResponse;
 use crate::scrapers::yahoo_earnings::{EarningsCall, scrape_earnings_calls};
+use finance_query_models::corporate::transcript::{Transcript, TranscriptWithMeta};
+use finance_query_models::quote::quote_type::QuoteTypeResponse;
 
 /// Fetch earnings call transcript by event ID and company ID (low-level)
 ///

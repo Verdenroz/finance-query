@@ -59,10 +59,10 @@ pub struct PressReleaseDTO {
 /// Convert stock news DTOs into canonical News items.
 fn stock_news_to_canonical(
     articles: Vec<StockNewsDTO>,
-) -> Vec<crate::models::corporate::news::News> {
+) -> Vec<finance_query_models::corporate::news::News> {
     articles
         .into_iter()
-        .map(|a| crate::models::corporate::news::News {
+        .map(|a| finance_query_models::corporate::news::News {
             title: a.title.unwrap_or_default(),
             link: a.url.unwrap_or_default(),
             source: a.site.or(a.publisher).unwrap_or_default(),
@@ -79,7 +79,7 @@ fn stock_news_to_canonical(
 pub async fn fetch_canonical_news(
     symbol: &str,
     limit: u32,
-) -> Result<Vec<crate::models::corporate::news::News>> {
+) -> Result<Vec<finance_query_models::corporate::news::News>> {
     let articles = stock_news(symbol, limit).await?;
     Ok(stock_news_to_canonical(articles))
 }
@@ -142,14 +142,14 @@ pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 /// Fetch canonical crypto news.
 pub async fn fetch_crypto_news_response(
     limit: u32,
-) -> Result<Vec<crate::models::corporate::news::News>> {
+) -> Result<Vec<finance_query_models::corporate::news::News>> {
     Ok(stock_news_to_canonical(crypto_news(limit).await?))
 }
 
 /// Fetch canonical forex news.
 pub async fn fetch_forex_news_response(
     limit: u32,
-) -> Result<Vec<crate::models::corporate::news::News>> {
+) -> Result<Vec<finance_query_models::corporate::news::News>> {
     Ok(stock_news_to_canonical(forex_news(limit).await?))
 }
 
@@ -157,16 +157,18 @@ pub async fn fetch_forex_news_response(
 pub async fn fetch_press_releases_response(
     symbol: &str,
     limit: u32,
-) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+) -> Result<Vec<finance_query_models::corporate::press_release::PressRelease>> {
     let dtos = press_releases(symbol, limit).await?;
     Ok(dtos
         .into_iter()
-        .map(|d| crate::models::corporate::press_release::PressRelease {
-            symbol: d.symbol.or_else(|| Some(symbol.to_string())),
-            date: d.date,
-            title: d.title,
-            text: d.text,
-        })
+        .map(
+            |d| finance_query_models::corporate::press_release::PressRelease {
+                symbol: d.symbol.or_else(|| Some(symbol.to_string())),
+                date: d.date,
+                title: d.title,
+                text: d.text,
+            },
+        )
         .collect())
 }
 

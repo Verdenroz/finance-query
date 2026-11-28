@@ -4,8 +4,8 @@
 //! with their suffixes and data providers.
 
 use crate::error::{FinanceError, Result};
-use crate::models::market::exchanges::Exchange;
 use crate::scrapers::html;
+use finance_query_models::market::exchanges::Exchange;
 use tracing::info;
 
 const EXCHANGES_URL: &str = "https://help.yahoo.com/kb/finance-for-web/SLN2310.html";

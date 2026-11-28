@@ -12,8 +12,8 @@
 //! tracks additions/removals.
 
 use crate::error::{FinanceError, Result};
-use crate::models::indices::{IndexConstituent, IndexConstituentChange, MajorIndex};
 use crate::scrapers::html;
+use finance_query_models::indices::{IndexConstituent, IndexConstituentChange, MajorIndex};
 
 const SP500_ARTICLE: &str = "List_of_S%26P_500_companies";
 const SP500_CHANGES_ARTICLE: &str = "Historical_components_of_the_S%26P_500";

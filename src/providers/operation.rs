@@ -2,7 +2,7 @@
 
 use super::{Capability, Provider};
 use crate::error::FinanceError;
-use crate::models::calendar::market::CalendarKind;
+use finance_query_models::calendar::market::CalendarKind;
 
 /// A single provider-adapter operation — finer-grained than [`Capability`]
 /// (e.g. `Chart`, `ChartRange`, and `Spark` all fall under `Capability::CHART`).

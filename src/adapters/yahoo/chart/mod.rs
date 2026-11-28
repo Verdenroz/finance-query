@@ -516,10 +516,10 @@ pub async fn fetch_with_dates(
 pub(crate) fn parse_chart_data(
     json: serde_json::Value,
     symbol: &str,
-) -> Result<crate::models::chart::Chart> {
+) -> Result<finance_query_models::chart::Chart> {
     use crate::Provider;
 
-    let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
+    let chart_response = finance_query_models::chart::response::ChartResponse::from_json(json)
         .map_err(FinanceError::JsonParseError)?;
     let results = chart_response
         .chart
@@ -536,11 +536,11 @@ pub(crate) fn parse_chart_data(
         })?;
 
     let meta = &result.meta;
-    let candles: Vec<crate::models::chart::Candle> = result
+    let candles: Vec<finance_query_models::chart::Candle> = result
         .to_candles()
         .into_iter()
         .map(|c| {
-            crate::models::chart::Candle::__new(
+            finance_query_models::chart::Candle::__new(
                 c.timestamp,
                 c.open,
                 c.high,
@@ -553,12 +553,12 @@ pub(crate) fn parse_chart_data(
         })
         .collect();
 
-    let chart_meta = crate::models::chart::ChartMeta {
+    let chart_meta = finance_query_models::chart::ChartMeta {
         provider_id: Some(Provider::Yahoo),
         ..meta.clone()
     };
 
-    Ok(crate::models::chart::Chart {
+    Ok(finance_query_models::chart::Chart {
         symbol: symbol.to_string(),
         meta: chart_meta,
         candles,
@@ -578,7 +578,7 @@ pub async fn fetch_chart(
     symbol: &str,
     interval: Interval,
     range: TimeRange,
-) -> Result<crate::models::chart::Chart> {
+) -> Result<finance_query_models::chart::Chart> {
     // Max range with daily/weekly intervals requires chunking
     if matches!(range, TimeRange::Max) && matches!(interval, Interval::OneDay | Interval::OneWeek) {
         let json = fetch(client, symbol, interval, range).await?;
@@ -594,7 +594,7 @@ pub async fn fetch_chart_with_dates(
     interval: Interval,
     start: i64,
     end: i64,
-) -> Result<crate::models::chart::Chart> {
+) -> Result<finance_query_models::chart::Chart> {
     client.get_chart_range(symbol, interval, start, end).await
 }
 
@@ -604,8 +604,8 @@ pub async fn fetch_chart_with_dates(
 pub async fn fetch_events(
     client: &YahooClient,
     symbol: &str,
-) -> Result<crate::models::chart::events::ChartEvents> {
-    use crate::models::chart::response::ChartResponse;
+) -> Result<finance_query_models::chart::events::ChartEvents> {
+    use finance_query_models::chart::response::ChartResponse;
 
     let json = fetch(client, symbol, Interval::OneDay, TimeRange::Max).await?;
     let chart_response = ChartResponse::from_json(json).map_err(FinanceError::JsonParseError)?;

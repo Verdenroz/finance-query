@@ -11,7 +11,7 @@ pub async fn fetch(
     client: &YahooClient,
     symbol: &str,
     date: Option<i64>,
-) -> Result<crate::models::options::Options> {
+) -> Result<finance_query_models::options::Options> {
     client.get_options(symbol, date).await
 }
 

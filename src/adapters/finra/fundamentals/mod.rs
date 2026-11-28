@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use crate::error::Result;
-use crate::models::fundamentals::ShortVolume;
+use finance_query_models::fundamentals::ShortVolume;
 
 use super::models::RegShoDailyRow;
 

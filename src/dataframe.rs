@@ -121,7 +121,7 @@ mod tests {
 
     #[derive(crate::ToDataFrame)]
     #[dataframe(crate = "crate")]
-    struct Generic<F: crate::models::format::Format = crate::format::Both> {
+    struct Generic<F: finance_query_models::format::Format = crate::format::Both> {
         #[dataframe(datetime = "s")]
         time: Option<F::Value<i64>>,
         #[dataframe(date = "s", nonzero)]

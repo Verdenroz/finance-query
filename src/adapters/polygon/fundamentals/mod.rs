@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::fundamentals::FinancialStatement;
 use crate::providers::build_financial_statement;
 use crate::{Frequency, Provider, StatementType};
+use finance_query_models::fundamentals::FinancialStatement;
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -429,13 +429,13 @@ pub async fn stock_float(ticker: &str) -> Result<PaginatedResponseDTO<FloatDataD
 /// Fetch canonical short-interest reports for a stock ticker.
 pub async fn fetch_short_interest_response(
     symbol: &str,
-) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+) -> Result<Vec<finance_query_models::fundamentals::ShortInterest>> {
     let paginated = stock_short_interest(symbol, &[("limit", "50")]).await?;
     Ok(paginated
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|d| crate::models::fundamentals::ShortInterest {
+        .map(|d| finance_query_models::fundamentals::ShortInterest {
             settlement_date: d.settlement_date,
             short_interest: d.short_interest,
             avg_daily_volume: d.avg_daily_volume,
@@ -447,13 +447,13 @@ pub async fn fetch_short_interest_response(
 /// Fetch canonical daily short-volume data for a stock ticker.
 pub async fn fetch_short_volume_response(
     symbol: &str,
-) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+) -> Result<Vec<finance_query_models::fundamentals::ShortVolume>> {
     let paginated = stock_short_volume(symbol, &[("limit", "50")]).await?;
     Ok(paginated
         .results
         .unwrap_or_default()
         .into_iter()
-        .map(|d| crate::models::fundamentals::ShortVolume {
+        .map(|d| finance_query_models::fundamentals::ShortVolume {
             date: d.date,
             short_volume: d.short_volume,
             short_exempt_volume: d.exempt_volume,
@@ -465,7 +465,7 @@ pub async fn fetch_short_volume_response(
 /// Fetch canonical share float / shares outstanding for a stock ticker.
 pub async fn fetch_share_float_response(
     symbol: &str,
-) -> Result<crate::models::fundamentals::ShareFloat> {
+) -> Result<finance_query_models::fundamentals::ShareFloat> {
     let paginated = stock_float(symbol).await?;
     let d = paginated
         .results
@@ -476,7 +476,7 @@ pub async fn fetch_share_float_response(
             field: "results".into(),
             context: format!("no float data returned for {symbol}"),
         })?;
-    Ok(crate::models::fundamentals::ShareFloat {
+    Ok(finance_query_models::fundamentals::ShareFloat {
         symbol: d.ticker.or_else(|| Some(symbol.to_string())),
         float_shares: d.free_float,
         // Massive's float endpoint reports no shares-outstanding figure, and
@@ -609,7 +609,7 @@ mod tests {
         assert_eq!(d.free_float, Some(15_000_000_000.0));
         assert_eq!(d.free_float_percent, Some(98.5));
 
-        let share_float = crate::models::fundamentals::ShareFloat {
+        let share_float = finance_query_models::fundamentals::ShareFloat {
             symbol: d.ticker,
             float_shares: d.free_float,
             outstanding_shares: None,

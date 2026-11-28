@@ -1,8 +1,8 @@
 use super::{BatchChartsResponse, BatchSparksResponse, Tickers};
 use crate::constants::{Interval, TimeRange};
 use crate::error::{FinanceError, Result};
-use crate::models::chart::Chart;
 use crate::providers::Capability;
+use finance_query_models::chart::Chart;
 use futures::stream::{self, StreamExt};
 use std::sync::Arc;
 

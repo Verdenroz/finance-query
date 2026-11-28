@@ -3,7 +3,7 @@
 /// Fetches similar/recommended quotes for a given symbol.
 use crate::adapters::yahoo::client::YahooClient;
 use crate::error::Result;
-use crate::models::corporate::recommendation::SimilarSymbol;
+use finance_query_models::corporate::recommendation::SimilarSymbol;
 
 /// Fetch recommendations and convert to canonical `SimilarSymbol` models.
 ///

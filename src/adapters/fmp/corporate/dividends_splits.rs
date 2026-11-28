@@ -76,8 +76,8 @@ pub struct SplitHistoryResponseDTO {
 fn dividends_splits_to_events(
     divs: DividendHistoryResponseDTO,
     splits: SplitHistoryResponseDTO,
-) -> crate::models::chart::events::ChartEvents {
-    use crate::models::chart::events::{ChartEvents, DividendEvent, SplitEvent};
+) -> finance_query_models::chart::events::ChartEvents {
+    use finance_query_models::chart::events::{ChartEvents, DividendEvent, SplitEvent};
     let mut chart_events = ChartEvents::default();
     chart_events.dividends = divs
         .historical
@@ -125,7 +125,7 @@ fn dividends_splits_to_events(
 /// Fetch canonical chart events (dividends + splits) for a symbol.
 pub async fn fetch_canonical_events(
     symbol: &str,
-) -> Result<crate::models::chart::events::ChartEvents> {
+) -> Result<finance_query_models::chart::events::ChartEvents> {
     let divs = historical_dividends(symbol).await?;
     let splits = historical_splits(symbol).await?;
     Ok(dividends_splits_to_events(divs, splits))

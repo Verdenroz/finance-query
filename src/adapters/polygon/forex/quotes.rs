@@ -2,7 +2,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use crate::models::forex::ForexQuote;
+use finance_query_models::forex::ForexQuote;
 use serde::{Deserialize, Serialize};
 
 use super::super::build_client;

@@ -1,7 +1,7 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::sectors::Sector;
 use crate::error::Result;
-use crate::models::market::sectors::SectorData;
+use finance_query_models::market::sectors::SectorData;
 
 /// Fetch detailed sector data from Yahoo Finance
 ///

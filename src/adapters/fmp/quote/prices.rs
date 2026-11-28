@@ -27,8 +27,8 @@ pub struct HistoricalPriceParams {
 fn quote_to_canonical(
     symbol: &str,
     quotes: &[FmpQuoteDTO],
-) -> crate::models::quote::QuoteSummaryResponse {
-    use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+) -> finance_query_models::quote::QuoteSummaryResponse {
+    use finance_query_models::quote::{FormattedValue, Price, QuoteSummaryResponse};
     let q = quotes.first();
     let price = Price {
         regular_market_price: q.and_then(|q| q.price).map(|v| FormattedValue {
@@ -80,7 +80,7 @@ fn quote_to_canonical(
 /// Fetch a canonical quote summary for a symbol.
 pub async fn fetch_canonical_quote(
     symbol: &str,
-) -> Result<crate::models::quote::QuoteSummaryResponse> {
+) -> Result<finance_query_models::quote::QuoteSummaryResponse> {
     let quotes = quote(symbol).await?;
     Ok(quote_to_canonical(symbol, &quotes))
 }
@@ -91,7 +91,7 @@ pub async fn fetch_canonical_quote(
 /// batch costs one request instead of N against the 250 req/day tier.
 pub async fn fetch_canonical_quotes_batch(
     symbols: &[&str],
-) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+) -> Result<Vec<(String, finance_query_models::quote::QuoteSummaryResponse)>> {
     let quotes = batch_quote(symbols).await?;
     Ok(quotes
         .iter()
@@ -108,8 +108,10 @@ pub async fn fetch_canonical_quotes_batch(
 ///
 /// FMP serves newest-first; candles are returned ascending by timestamp, which
 /// is what the backtesting engine and every consumer of `Chart` expect.
-fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::models::chart::Candle> {
-    let mut candles: Vec<crate::models::chart::Candle> = historical
+fn historical_to_candles(
+    historical: Vec<HistoricalPriceDTO>,
+) -> Vec<finance_query_models::chart::Candle> {
+    let mut candles: Vec<finance_query_models::chart::Candle> = historical
         .into_iter()
         .filter_map(|r| {
             let ts = chrono::NaiveDate::parse_from_str(r.date.as_deref()?, "%Y-%m-%d")
@@ -117,7 +119,7 @@ fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::mode
                 .and_hms_opt(0, 0, 0)?
                 .and_utc()
                 .timestamp();
-            Some(crate::models::chart::Candle::__new(
+            Some(finance_query_models::chart::Candle::__new(
                 ts,
                 r.open?,
                 r.high?,
@@ -137,8 +139,10 @@ fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::mode
 ///
 /// As with the daily series, FMP serves newest-first and callers expect ascending.
 /// FMP reports intraday times in New York local time.
-fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::chart::Candle> {
-    let mut candles: Vec<crate::models::chart::Candle> = intraday
+fn intraday_to_candles(
+    intraday: Vec<IntradayPriceDTO>,
+) -> Vec<finance_query_models::chart::Candle> {
+    let mut candles: Vec<finance_query_models::chart::Candle> = intraday
         .into_iter()
         .filter_map(|r| {
             let local =
@@ -147,7 +151,7 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
             let ts = chrono::TimeZone::from_local_datetime(&chrono_tz::America::New_York, &local)
                 .earliest()?
                 .timestamp();
-            Some(crate::models::chart::Candle::__new(
+            Some(finance_query_models::chart::Candle::__new(
                 ts,
                 r.open?,
                 r.high?,
@@ -167,7 +171,7 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
 pub async fn fetch_daily_chart_candles(
     symbol: &str,
     params: Option<HistoricalPriceParams>,
-) -> Result<Vec<crate::models::chart::Candle>> {
+) -> Result<Vec<finance_query_models::chart::Candle>> {
     let resp = historical_price_daily(symbol, params).await?;
     Ok(historical_to_candles(resp.historical))
 }
@@ -177,7 +181,7 @@ pub async fn fetch_intraday_chart_candles(
     symbol: &str,
     interval: &str,
     params: Option<HistoricalPriceParams>,
-) -> Result<Vec<crate::models::chart::Candle>> {
+) -> Result<Vec<finance_query_models::chart::Candle>> {
     let points = historical_price_intraday(symbol, interval, params).await?;
     Ok(intraday_to_candles(points))
 }

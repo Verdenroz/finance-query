@@ -4,23 +4,23 @@
 
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Chart;
+use finance_query_models::chart::Chart;
 
 domain_handle! {
     /// A futures contract backed by configured data providers.
     ///
     /// Created via [`Providers::futures`](crate::Providers::futures).
     pub struct FuturesContract { symbol, symbol }
-    cache: crate::models::futures::FuturesQuote, chart,
+    cache: finance_query_models::futures::FuturesQuote, chart,
     extra: {
         #[cfg(feature = "cftc")]
-        cot_cache: crate::models::futures::cot::CommitmentsOfTraders,
+        cot_cache: finance_query_models::futures::cot::CommitmentsOfTraders,
     }
 }
 
 impl FuturesContract {
     /// Fetch the current quote for this futures contract.
-    pub async fn quote(&self) -> Result<crate::models::futures::FuturesQuote> {
+    pub async fn quote(&self) -> Result<finance_query_models::futures::FuturesQuote> {
         fetch_via!(
             self,
             symbol,
@@ -28,7 +28,7 @@ impl FuturesContract {
             as_futures,
             FuturesQuote,
             fetch_futures_quote,
-            crate::models::futures::FuturesQuote
+            finance_query_models::futures::FuturesQuote
         )
     }
 
@@ -60,7 +60,7 @@ impl FuturesContract {
     #[cfg(feature = "cftc")]
     pub async fn commitments_of_traders(
         &self,
-    ) -> Result<crate::models::futures::cot::CommitmentsOfTraders> {
+    ) -> Result<finance_query_models::futures::cot::CommitmentsOfTraders> {
         fetch_via!(
             cache: cot_cache,
             self,
@@ -69,7 +69,7 @@ impl FuturesContract {
             as_futures,
             CommitmentsOfTraders,
             fetch_commitments_of_traders,
-            crate::models::futures::cot::CommitmentsOfTraders
+            finance_query_models::futures::cot::CommitmentsOfTraders
         )
     }
 }

@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use crate::models::options::OptionContract;
-use crate::models::options::Options;
 use crate::providers::build_options;
+use finance_query_models::options::OptionContract;
+use finance_query_models::options::Options;
 
 use super::super::build_client;
 use super::super::models::*;

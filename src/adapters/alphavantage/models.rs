@@ -257,7 +257,7 @@ pub struct MarketStatusDTO {
 ///
 /// Alpha Vantage's fields are coarser than a Form 3/4/5 line item — no
 /// accession number, form type, or derivative/non-derivative distinction —
-/// so mapping into the canonical [`InsiderTrade`](crate::models::filings::InsiderTrade)
+/// so mapping into the canonical [`InsiderTrade`](finance_query_models::filings::InsiderTrade)
 /// leaves those fields `None`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

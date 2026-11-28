@@ -16,7 +16,7 @@ impl EconomicProvider for WorldBankProvider {
     async fn fetch_economic_series(
         &self,
         series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         crate::adapters::worldbank::fetch_economic_series_response(series_id).await
     }
 }

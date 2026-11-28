@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::polygon::build_client;
 use crate::error::{FinanceError, Result};
-use crate::models::quote::snapshot::{AssetClass, MarketSnapshot};
+use finance_query_models::quote::snapshot::{AssetClass, MarketSnapshot};
 
 /// Polygon caps `ticker.any_of` at 250 symbols per request.
 const MAX_SYMBOLS: usize = 250;

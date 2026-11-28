@@ -144,7 +144,7 @@ pub(crate) async fn fetch_earnings_transcript_response(
     symbol: &str,
     quarter: Option<&str>,
     year: Option<i32>,
-) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+) -> Result<finance_query_models::corporate::earnings_transcript::EarningsTranscript> {
     let (quarter, year) = match (quarter, year) {
         (Some(q), Some(y)) => (q, y),
         _ => {
@@ -157,7 +157,7 @@ pub(crate) async fn fetch_earnings_transcript_response(
     let av_quarter = format!("{year}Q{}", quarter.trim_start_matches(['Q', 'q']));
     let dto = earnings_call_transcript(symbol, &av_quarter).await?;
     Ok(
-        crate::models::corporate::earnings_transcript::EarningsTranscript {
+        finance_query_models::corporate::earnings_transcript::EarningsTranscript {
             symbol: Some(dto.symbol),
             quarter: Some(quarter.to_string()),
             year: Some(year),
@@ -226,11 +226,11 @@ pub async fn top_gainers_losers() -> Result<TopMoversDTO> {
 /// Fetch canonical news articles for a symbol.
 pub async fn fetch_news_response(
     symbol: &str,
-) -> Result<Vec<crate::models::corporate::news::News>> {
+) -> Result<Vec<finance_query_models::corporate::news::News>> {
     let articles = news_sentiment(Some(&[symbol]), None, Some(50)).await?;
     Ok(articles
         .into_iter()
-        .map(|a| crate::models::corporate::news::News {
+        .map(|a| finance_query_models::corporate::news::News {
             title: a.title,
             link: a.url,
             source: a.source,
@@ -246,18 +246,18 @@ pub async fn fetch_news_response(
 /// Fetch canonical chart events (dividends + splits) for a symbol.
 pub async fn fetch_events_response(
     symbol: &str,
-) -> Result<crate::models::chart::events::ChartEvents> {
+) -> Result<finance_query_models::chart::events::ChartEvents> {
     let divs = super::fundamentals::dividends(symbol).await?;
     let splits = super::fundamentals::splits(symbol).await?;
 
-    let mut chart_events = crate::models::chart::events::ChartEvents::default();
+    let mut chart_events = finance_query_models::chart::events::ChartEvents::default();
     chart_events.dividends = divs
         .into_iter()
         .filter_map(|d| {
             let ts = parse_av_date(d.ex_dividend_date.as_deref()?)?;
             Some((
                 ts.to_string(),
-                crate::models::chart::events::DividendEvent {
+                finance_query_models::chart::events::DividendEvent {
                     date: ts,
                     amount: d.amount.unwrap_or(0.0),
                 },
@@ -271,7 +271,7 @@ pub async fn fetch_events_response(
             let (num, den) = parse_split_ratio(s.split_ratio.as_deref().unwrap_or("1:1"));
             Some((
                 ts.to_string(),
-                crate::models::chart::events::SplitEvent {
+                finance_query_models::chart::events::SplitEvent {
                     date: ts,
                     numerator: num as f64,
                     denominator: den as f64,
@@ -311,17 +311,17 @@ fn parse_split_ratio(ratio: &str) -> (u32, u32) {
 /// Alpha Vantage returns gainers, losers, and most-active in one response;
 /// the numbers arrive as strings (`"12.34"`, `"5.67%"`) and are parsed here.
 pub async fn fetch_market_movers_response(
-    direction: crate::models::market::performance::MoverDirection,
-) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+    direction: finance_query_models::market::performance::MoverDirection,
+) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
     Ok(movers_to_canonical(top_gainers_losers().await?, direction))
 }
 
 /// Select `direction`'s list and parse AV's stringly-typed numbers.
 fn movers_to_canonical(
     movers: crate::adapters::alphavantage::models::TopMoversDTO,
-    direction: crate::models::market::performance::MoverDirection,
-) -> Vec<crate::models::market::performance::MoverQuote> {
-    use crate::models::market::performance::{MoverDirection, MoverQuote};
+    direction: finance_query_models::market::performance::MoverDirection,
+) -> Vec<finance_query_models::market::performance::MoverQuote> {
+    use finance_query_models::market::performance::{MoverDirection, MoverQuote};
 
     let list = match direction {
         MoverDirection::Gainers => movers.top_gainers,
@@ -344,7 +344,7 @@ fn movers_to_canonical(
 mod tests {
     use super::*;
     use crate::adapters::alphavantage::models::{TopMoverTickerDTO, TopMoversDTO};
-    use crate::models::market::performance::MoverDirection;
+    use finance_query_models::market::performance::MoverDirection;
 
     fn movers() -> TopMoversDTO {
         TopMoversDTO {

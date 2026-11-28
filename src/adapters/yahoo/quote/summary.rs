@@ -5,8 +5,8 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::{FinanceError, Result};
-use crate::models::quote::QuoteSummaryResponse;
-use crate::models::quote::price::Price;
+use finance_query_models::quote::QuoteSummaryResponse;
+use finance_query_models::quote::price::Price;
 use serde_json::Value;
 use tracing::info;
 
@@ -23,7 +23,7 @@ pub(crate) async fn fetch_summary(
     info!("Fetching quote summary for: {}", symbol);
 
     let base_url = api::quote_summary(symbol);
-    let modules = crate::models::quote::Module::all()
+    let modules = finance_query_models::quote::Module::all()
         .iter()
         .map(|m| m.as_str())
         .collect::<Vec<_>>()
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn summary_and_batch_quotes_agree_on_change_percent() {
         use crate::adapters::yahoo::quote::quotes::parse_quotes_batch;
-        use crate::models::quote::Quote;
+        use finance_query_models::quote::Quote;
 
         let summary_json: Value = serde_json::from_str(include_str!(
             "../../../../tests/fixtures/yahoo/quote_summary_price.json"
@@ -230,7 +230,7 @@ mod tests {
         .unwrap();
         let from_batch = Quote::from_response(&batch[0].1, None, None);
 
-        let raw = |v: &Option<crate::models::quote::FormattedValue<f64>>| {
+        let raw = |v: &Option<finance_query_models::quote::FormattedValue<f64>>| {
             v.as_ref().and_then(|v| v.raw).unwrap()
         };
         assert!(

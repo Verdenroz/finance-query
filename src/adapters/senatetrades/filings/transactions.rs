@@ -8,7 +8,7 @@
 
 use chromiumoxide::element::Element;
 
-use crate::models::filings::CongressionalTrade;
+use finance_query_models::filings::CongressionalTrade;
 
 use super::super::client::{SENATE_BASE, SenateTradesClient, wait_for_elements};
 use super::super::models::SenateFilingEntry;

@@ -72,18 +72,18 @@ pub(crate) async fn fetch_commodity(
 /// Fetch canonical CommodityQuote for a commodity symbol.
 pub async fn fetch_commodities_quote_response(
     symbol: &str,
-) -> Result<crate::models::commodities::CommodityQuote> {
+) -> Result<finance_query_models::commodities::CommodityQuote> {
     let series = fetch_commodity(symbol, Some("daily")).await?;
     Ok(series_to_quote(symbol, series))
 }
 
 /// Map a commodity series to the canonical
-/// [`CommodityQuote`](crate::models::commodities::CommodityQuote), deriving
+/// [`CommodityQuote`](finance_query_models::commodities::CommodityQuote), deriving
 /// change from the two most recent data points.
 fn series_to_quote(
     symbol: &str,
     series: CommoditySeriesDTO,
-) -> crate::models::commodities::CommodityQuote {
+) -> finance_query_models::commodities::CommodityQuote {
     let (price, change, change_percent) = match series.data.len() {
         0 => (None, None, None),
         1 => (series.data[0].value, None, None),
@@ -101,7 +101,7 @@ fn series_to_quote(
             }
         }
     };
-    crate::models::commodities::CommodityQuote {
+    finance_query_models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: Some(series.name),
         unit: Some(series.unit),

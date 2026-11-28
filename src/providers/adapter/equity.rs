@@ -2,7 +2,7 @@
 
 use super::super::Operation;
 use crate::error::Result;
-use crate::models::quote::QuoteSummaryResponse;
+use finance_query_models::quote::QuoteSummaryResponse;
 
 use super::ProviderCore;
 
@@ -29,7 +29,7 @@ pub trait QuoteProvider: ProviderCore {
     async fn fetch_unified_snapshot(
         &self,
         _symbols: &[&str],
-    ) -> Result<Vec<crate::models::quote::snapshot::MarketSnapshot>> {
+    ) -> Result<Vec<finance_query_models::quote::snapshot::MarketSnapshot>> {
         Err(self.not_supported(Operation::UnifiedSnapshot))
     }
 }
@@ -51,7 +51,7 @@ pub trait ChartProvider: ProviderCore {
         symbol: &str,
         interval: crate::Interval,
         range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart>;
+    ) -> Result<finance_query_models::chart::Chart>;
 
     /// Fetch OHLCV candles between two Unix timestamps.
     async fn fetch_chart_range(
@@ -60,7 +60,7 @@ pub trait ChartProvider: ProviderCore {
         _interval: crate::Interval,
         _start: i64,
         _end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         Err(self.not_supported(Operation::ChartRange))
     }
 
@@ -72,7 +72,7 @@ pub trait ChartProvider: ProviderCore {
         _symbols: &[&str],
         _interval: crate::Interval,
         _range: crate::TimeRange,
-    ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
+    ) -> Result<Vec<(String, finance_query_models::chart::spark::Spark)>> {
         Err(self.not_supported(Operation::Spark))
     }
 
@@ -85,7 +85,7 @@ pub trait ChartProvider: ProviderCore {
     async fn fetch_grouped_daily(
         &self,
         _date: &str,
-    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+    ) -> Result<Vec<(String, finance_query_models::chart::Candle)>> {
         Err(self.not_supported(Operation::GroupedDaily))
     }
 
@@ -99,7 +99,7 @@ pub trait ChartProvider: ProviderCore {
     async fn fetch_crypto_grouped_daily(
         &self,
         _date: &str,
-    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+    ) -> Result<Vec<(String, finance_query_models::chart::Candle)>> {
         Err(self.not_supported(Operation::CryptoGroupedDaily))
     }
 
@@ -113,7 +113,7 @@ pub trait ChartProvider: ProviderCore {
     async fn fetch_forex_grouped_daily(
         &self,
         _date: &str,
-    ) -> Result<Vec<(String, crate::models::chart::Candle)>> {
+    ) -> Result<Vec<(String, finance_query_models::chart::Candle)>> {
         Err(self.not_supported(Operation::ForexGroupedDaily))
     }
 }
@@ -127,13 +127,13 @@ pub trait FundamentalsProvider: ProviderCore {
         symbol: &str,
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement>;
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement>;
 
     /// Fetch bi-monthly short-interest settlement reports.
     async fn fetch_short_interest(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortInterest>> {
         Err(self.not_supported(Operation::ShortInterest))
     }
 
@@ -141,7 +141,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_short_volume(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortVolume>> {
         Err(self.not_supported(Operation::ShortVolume))
     }
 
@@ -149,7 +149,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_share_float(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::ShareFloat> {
+    ) -> Result<finance_query_models::fundamentals::ShareFloat> {
         Err(self.not_supported(Operation::ShareFloat))
     }
 
@@ -157,7 +157,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_company_profile(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+    ) -> Result<finance_query_models::fundamentals::CompanyProfile> {
         Err(self.not_supported(Operation::CompanyProfile))
     }
 
@@ -165,7 +165,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_price_target_consensus(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetConsensus> {
         Err(self.not_supported(Operation::PriceTargetConsensus))
     }
 
@@ -177,7 +177,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_price_target_summary(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetSummary> {
         Err(self.not_supported(Operation::PriceTargetSummary))
     }
 
@@ -185,7 +185,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_rating_consensus(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+    ) -> Result<finance_query_models::fundamentals::RatingConsensus> {
         Err(self.not_supported(Operation::RatingConsensus))
     }
 
@@ -193,7 +193,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_key_metrics_ttm(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+    ) -> Result<finance_query_models::fundamentals::KeyMetricsTtm> {
         Err(self.not_supported(Operation::KeyMetricsTtm))
     }
 
@@ -201,7 +201,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_ratios_ttm(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+    ) -> Result<finance_query_models::fundamentals::FinancialRatiosTtm> {
         Err(self.not_supported(Operation::RatiosTtm))
     }
 
@@ -209,7 +209,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_etf_profile(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::fundamentals::EtfProfile> {
+    ) -> Result<finance_query_models::fundamentals::EtfProfile> {
         Err(self.not_supported(Operation::EtfProfile))
     }
 
@@ -217,7 +217,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_earnings_surprises(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
         Err(self.not_supported(Operation::EarningsSurprises))
     }
 
@@ -226,7 +226,7 @@ pub trait FundamentalsProvider: ProviderCore {
     async fn fetch_grading_history(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::GradingAction>> {
         Err(self.not_supported(Operation::GradingHistory))
     }
 }
@@ -236,18 +236,23 @@ pub trait FundamentalsProvider: ProviderCore {
 #[async_trait::async_trait]
 pub trait CorporateProvider: ProviderCore {
     /// Fetch recent news articles mentioning one symbol.
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>>;
+    async fn fetch_news(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>>;
 
     /// Fetch dividends, splits, and capital gains for one symbol.
-    async fn fetch_events(&self, symbol: &str)
-    -> Result<crate::models::chart::events::ChartEvents>;
+    async fn fetch_events(
+        &self,
+        symbol: &str,
+    ) -> Result<finance_query_models::chart::events::ChartEvents>;
 
     /// Symbols this provider considers comparable to `symbol`.
     async fn fetch_similar_symbols(
         &self,
         _symbol: &str,
         _limit: u32,
-    ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+    ) -> Result<Vec<finance_query_models::corporate::recommendation::SimilarSymbol>> {
         Err(self.not_supported(Operation::Recommendations))
     }
 
@@ -256,7 +261,7 @@ pub trait CorporateProvider: ProviderCore {
         &self,
         _symbol: &str,
         _limit: u32,
-    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+    ) -> Result<Vec<finance_query_models::corporate::press_release::PressRelease>> {
         Err(self.not_supported(Operation::PressReleases))
     }
 
@@ -268,7 +273,7 @@ pub trait CorporateProvider: ProviderCore {
         _symbol: &str,
         _quarter: Option<&str>,
         _year: Option<i32>,
-    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+    ) -> Result<finance_query_models::corporate::earnings_transcript::EarningsTranscript> {
         Err(self.not_supported(Operation::EarningsTranscript))
     }
 
@@ -276,7 +281,7 @@ pub trait CorporateProvider: ProviderCore {
     async fn fetch_executive_compensation(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::ExecutiveCompensation>> {
         Err(self.not_supported(Operation::ExecutiveCompensation))
     }
 
@@ -284,7 +289,7 @@ pub trait CorporateProvider: ProviderCore {
     async fn fetch_employee_count(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+    ) -> Result<Vec<finance_query_models::corporate::governance::EmployeeCount>> {
         Err(self.not_supported(Operation::EmployeeCount))
     }
 }
@@ -297,21 +302,24 @@ pub trait OptionsProvider: ProviderCore {
         &self,
         symbol: &str,
         date: Option<i64>,
-    ) -> Result<crate::models::options::Options>;
+    ) -> Result<finance_query_models::options::Options>;
 }
 
 /// [`crate::Capability::FILINGS`] — SEC filing data.
 #[async_trait::async_trait]
 pub trait FilingsProvider: ProviderCore {
     /// Fetch regulatory filings for one symbol.
-    async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings>;
+    async fn fetch_filings(
+        &self,
+        symbol: &str,
+    ) -> Result<finance_query_models::filings::ProviderFilings>;
 
     /// Fetch the sectioned text of one filing by accession number.
     async fn fetch_filing_sections(
         &self,
         _accession_number: &str,
-        _form: crate::models::filings::FilingSectionForm,
-    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        _form: finance_query_models::filings::FilingSectionForm,
+    ) -> Result<Vec<finance_query_models::filings::FilingSection>> {
         Err(self.not_supported(Operation::FilingSections))
     }
 
@@ -324,8 +332,8 @@ pub trait FilingsProvider: ProviderCore {
         &self,
         _symbol: &str,
         accession_number: &str,
-        form: crate::models::filings::FilingSectionForm,
-    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        form: finance_query_models::filings::FilingSectionForm,
+    ) -> Result<Vec<finance_query_models::filings::FilingSection>> {
         self.fetch_filing_sections(accession_number, form).await
     }
 
@@ -333,7 +341,7 @@ pub trait FilingsProvider: ProviderCore {
     async fn fetch_risk_factors(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+    ) -> Result<Vec<finance_query_models::filings::RiskFactor>> {
         Err(self.not_supported(Operation::RiskFactors))
     }
 
@@ -346,8 +354,8 @@ pub trait FilingsProvider: ProviderCore {
         &self,
         _symbol: Option<&str>,
         _query: &str,
-        _filters: &crate::models::filings::FilingSearchFilters,
-    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        _filters: &finance_query_models::filings::FilingSearchFilters,
+    ) -> Result<Vec<finance_query_models::filings::FilingSearchHit>> {
         Err(self.not_supported(Operation::FilingSearch))
     }
 
@@ -356,7 +364,7 @@ pub trait FilingsProvider: ProviderCore {
         &self,
         _symbol: &str,
         _limit: u32,
-    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::InsiderTrade>> {
         Err(self.not_supported(Operation::InsiderTrades))
     }
 
@@ -364,7 +372,7 @@ pub trait FilingsProvider: ProviderCore {
     async fn fetch_institutional_holdings(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+    ) -> Result<Vec<finance_query_models::filings::InstitutionalHolding>> {
         Err(self.not_supported(Operation::InstitutionalHoldings))
     }
 
@@ -372,7 +380,7 @@ pub trait FilingsProvider: ProviderCore {
     async fn fetch_congressional_trades(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::CongressionalTrade>> {
         Err(self.not_supported(Operation::CongressionalTrades))
     }
 
@@ -380,7 +388,7 @@ pub trait FilingsProvider: ProviderCore {
     async fn fetch_fails_to_deliver(
         &self,
         _symbol: &str,
-    ) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+    ) -> Result<Vec<finance_query_models::filings::FailToDeliver>> {
         Err(self.not_supported(Operation::FailsToDeliver))
     }
 }

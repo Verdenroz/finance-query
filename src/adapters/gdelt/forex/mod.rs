@@ -1,7 +1,7 @@
 //! GDELT market-wide forex news (no per-pair vocabulary).
 
 use crate::error::Result;
-use crate::models::corporate::news::News;
+use finance_query_models::corporate::news::News;
 
 const QUERY: &str = "(forex OR \"foreign exchange\" OR currency)";
 

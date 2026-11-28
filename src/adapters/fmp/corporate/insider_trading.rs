@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::filings::{CongressionalTrade, FailToDeliver, InsiderTrade};
+use finance_query_models::filings::{CongressionalTrade, FailToDeliver, InsiderTrade};
 
 use crate::adapters::fmp::build_client;
 

@@ -1,8 +1,8 @@
 //! Data models for macro-economic sources (FRED, US Treasury).
 //!
-//! Re-exports canonical types from `crate::models::economic`.
+//! Re-exports canonical types from `finance_query_models::economic`.
 
-pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
+pub use finance_query_models::economic::{MacroObservation, MacroSeries, TreasuryYield};
 
 /// A single scheduled economic-data release date from the FRED
 /// `releases/dates` endpoint.

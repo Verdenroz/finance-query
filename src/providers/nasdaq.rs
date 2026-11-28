@@ -16,11 +16,11 @@ impl ProviderCore for NasdaqProvider {
 impl CalendarProvider for NasdaqProvider {
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         from: &str,
         to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        use crate::models::calendar::market::CalendarKind;
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
+        use finance_query_models::calendar::market::CalendarKind;
 
         if !matches!(
             kind,

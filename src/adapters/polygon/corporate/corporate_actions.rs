@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::chart::events::{ChartEvents, DividendEvent, SplitEvent};
+use finance_query_models::chart::events::{ChartEvents, DividendEvent, SplitEvent};
 
 use super::super::build_client;
 use super::super::models::PaginatedResponseDTO;

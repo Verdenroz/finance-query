@@ -4,7 +4,7 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::Region;
 use crate::error::Result;
-use crate::models::discovery::trending::TrendingQuote;
+use finance_query_models::discovery::trending::TrendingQuote;
 
 /// Fetch trending tickers for a region from Yahoo Finance.
 ///

@@ -126,7 +126,7 @@ pub(crate) async fn fetch_results(
     client: &YahooClient,
     query: &str,
     options: &LookupOptions,
-) -> Result<crate::models::discovery::lookup::LookupResults> {
+) -> Result<finance_query_models::discovery::lookup::LookupResults> {
     if query.trim().is_empty() {
         return Err(crate::error::FinanceError::InvalidParameter {
             param: "query".to_string(),
@@ -171,13 +171,13 @@ pub(crate) async fn fetch_results(
     if options.include_logo {
         let json: serde_json::Value = response.json().await?;
         let json = enrich_with_logos(client, json).await?;
-        Ok(crate::models::discovery::lookup::LookupResults::from_json(
-            json,
-        )?)
+        Ok(finance_query_models::discovery::lookup::LookupResults::from_json(json)?)
     } else {
-        Ok(crate::models::discovery::lookup::LookupResults::from_slice(
-            &response.bytes().await?,
-        )?)
+        Ok(
+            finance_query_models::discovery::lookup::LookupResults::from_slice(
+                &response.bytes().await?,
+            )?,
+        )
     }
 }
 
@@ -293,7 +293,8 @@ mod tests {
             }
         }"#;
 
-        let parsed = crate::models::discovery::lookup::LookupResults::from_slice(body).unwrap();
+        let parsed =
+            finance_query_models::discovery::lookup::LookupResults::from_slice(body).unwrap();
         assert_eq!(parsed.result_count(), 2);
         assert_eq!(parsed.quotes().len(), 2);
         assert_eq!(parsed.quotes()[0].symbol, "AAPL");
@@ -303,7 +304,7 @@ mod tests {
 
     #[test]
     fn lookup_results_parse_from_bytes_empty_result() {
-        let parsed = crate::models::discovery::lookup::LookupResults::from_slice(
+        let parsed = finance_query_models::discovery::lookup::LookupResults::from_slice(
             br#"{"finance": {"result": []}}"#,
         )
         .unwrap();

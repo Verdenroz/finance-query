@@ -6,7 +6,7 @@
 
 use crate::adapters::edgar::build_client;
 use crate::error::Result;
-use crate::models::filings::{
+use finance_query_models::filings::{
     EdgarSearchHit, EdgarSearchResults, FilingSearchFilters, FilingSearchHit,
 };
 

@@ -6,14 +6,14 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
-use crate::models::chart::Candle;
-use crate::models::market::performance::{
-    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
-};
 use crate::providers::Capability;
 use crate::providers::Operation;
 use crate::providers::ProviderSet;
+use finance_query_models::calendar::market::{CalendarKind, MarketCalendarEntry};
+use finance_query_models::chart::Candle;
+use finance_query_models::market::performance::{
+    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
+};
 
 domain_handle! {
     /// Market-wide event calendars backed by configured data providers.
@@ -154,7 +154,7 @@ impl Market {
     pub async fn sector_performance_history(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformanceHistory>> {
         dispatch_via!(
             self,
             MARKET,
@@ -274,7 +274,7 @@ impl Market {
     /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
     /// Currently CoinGecko only.
     #[cfg(feature = "crypto")]
-    pub async fn crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+    pub async fn crypto_trending(&self) -> Result<Vec<finance_query_models::crypto::TrendingCoin>> {
         dispatch_via!(
             self,
             CRYPTO,
@@ -290,7 +290,7 @@ impl Market {
     /// Routes through [`Capability::CRYPTO`](crate::providers::Capability::CRYPTO).
     /// Currently CoinGecko only.
     #[cfg(feature = "crypto")]
-    pub async fn crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+    pub async fn crypto_global(&self) -> Result<finance_query_models::crypto::GlobalCryptoStats> {
         dispatch_via!(
             self,
             CRYPTO,

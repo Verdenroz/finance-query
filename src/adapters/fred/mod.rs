@@ -45,7 +45,7 @@ use client::FredClientBuilder;
 use std::sync::Arc;
 use std::time::Duration;
 
-pub use crate::models::economic::{MacroSeries, TreasuryYield};
+pub use finance_query_models::economic::{MacroSeries, TreasuryYield};
 pub use models::ReleaseDate;
 
 /// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
@@ -130,7 +130,7 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
 
 pub(crate) async fn latest_observation(
     series_id: &str,
-) -> Result<Option<crate::models::economic::MacroObservation>> {
+) -> Result<Option<finance_query_models::economic::MacroObservation>> {
     build_client()?.latest_observation(series_id).await
 }
 
@@ -171,15 +171,15 @@ pub async fn treasury_yields(year: u32) -> Result<Vec<TreasuryYield>> {
 /// Fetch canonical EconomicSeries for a FRED series ID.
 pub async fn fetch_economic_series_response(
     series_id: &str,
-) -> Result<crate::models::economic::EconomicSeries> {
+) -> Result<finance_query_models::economic::EconomicSeries> {
     let series = crate::adapters::fred::series(series_id).await?;
     Ok(series_to_canonical(series))
 }
 
 /// Map a FRED [`MacroSeries`] to the canonical
-/// [`EconomicSeries`](crate::models::economic::EconomicSeries).
-fn series_to_canonical(series: MacroSeries) -> crate::models::economic::EconomicSeries {
-    crate::models::economic::EconomicSeries {
+/// [`EconomicSeries`](finance_query_models::economic::EconomicSeries).
+fn series_to_canonical(series: MacroSeries) -> finance_query_models::economic::EconomicSeries {
+    finance_query_models::economic::EconomicSeries {
         series_id: series.id,
         title: None,
         units: None,
@@ -187,7 +187,7 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
         observations: series
             .observations
             .into_iter()
-            .map(|o| crate::models::economic::MacroObservation {
+            .map(|o| finance_query_models::economic::MacroObservation {
                 date: o.date,
                 value: o.value,
             })
@@ -200,7 +200,7 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
 pub async fn fetch_market_calendar_response(
     from: &str,
     to: &str,
-) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
     Ok(release_dates_to_calendar_entries(
         release_dates_between(from, to).await?,
     ))
@@ -212,8 +212,8 @@ pub async fn fetch_market_calendar_response(
 /// stays `None`.
 fn release_dates_to_calendar_entries(
     dates: Vec<ReleaseDate>,
-) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
-    use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+) -> Vec<finance_query_models::calendar::market::MarketCalendarEntry> {
+    use finance_query_models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 
     calendar::drop_phantom_daily_fills(dates)
         .into_iter()
@@ -429,8 +429,10 @@ mod tests {
         assert_eq!(entries[0].symbol, None);
         assert_eq!(entries[0].date.as_deref(), Some("2026-01-14"));
         match &entries[0].detail {
-            crate::models::calendar::market::CalendarDetail::Economic {
-                event, country, ..
+            finance_query_models::calendar::market::CalendarDetail::Economic {
+                event,
+                country,
+                ..
             } => {
                 assert_eq!(event.as_deref(), Some("Consumer Price Index"));
                 assert_eq!(country.as_deref(), Some("US"));

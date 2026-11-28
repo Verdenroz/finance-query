@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{EconomicSeries, MacroObservation};
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;

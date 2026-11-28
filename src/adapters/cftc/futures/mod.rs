@@ -5,7 +5,7 @@
 //! `NotSupported` for a plain futures quote.
 
 use crate::error::{FinanceError, Result};
-use crate::models::futures::cot::{CommitmentsOfTraders, CotObservation};
+use finance_query_models::futures::cot::{CommitmentsOfTraders, CotObservation};
 
 use super::models::CotRow;
 

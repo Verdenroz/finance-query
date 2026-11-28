@@ -7,7 +7,7 @@ pub(crate) mod parse;
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::{Frequency, StatementType};
 use crate::error::Result;
-use crate::models::fundamentals::FinancialStatement;
+use finance_query_models::fundamentals::FinancialStatement;
 
 /// Fetch financial statement data for a symbol
 ///

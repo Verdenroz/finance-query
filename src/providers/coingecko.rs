@@ -17,15 +17,17 @@ impl CryptoProvider for CoinGeckoProvider {
         &self,
         id: &str,
         vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         crate::adapters::coingecko::fetch_crypto_quote_response(id, vs_currency).await
     }
 
-    async fn fetch_crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+    async fn fetch_crypto_trending(
+        &self,
+    ) -> Result<Vec<finance_query_models::crypto::TrendingCoin>> {
         crate::adapters::coingecko::fetch_crypto_trending_response().await
     }
 
-    async fn fetch_crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+    async fn fetch_crypto_global(&self) -> Result<finance_query_models::crypto::GlobalCryptoStats> {
         crate::adapters::coingecko::fetch_crypto_global_response().await
     }
 }
@@ -36,7 +38,7 @@ impl DiscoveryProvider for CoinGeckoProvider {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         crate::adapters::coingecko::fetch_symbol_search_response(query, limit).await
     }
 }
@@ -51,7 +53,7 @@ impl ChartProvider for CoinGeckoProvider {
         symbol: &str,
         interval: crate::Interval,
         range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         crate::adapters::coingecko::chart::fetch_chart_response(symbol, interval, range).await
     }
 }

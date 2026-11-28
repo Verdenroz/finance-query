@@ -8,11 +8,11 @@ use crate::constants::Region;
 use crate::constants::screeners::Screener;
 use crate::constants::sectors::Sector;
 use crate::error::Result;
-use crate::models::corporate::transcript::{Transcript, TranscriptWithMeta};
-use crate::models::discovery::screeners::ScreenerResults;
-use crate::models::discovery::search::SearchResults;
-use crate::models::market::industries::IndustryData;
-use crate::models::market::sectors::SectorData;
+use finance_query_models::corporate::transcript::{Transcript, TranscriptWithMeta};
+use finance_query_models::discovery::screeners::ScreenerResults;
+use finance_query_models::discovery::search::SearchResults;
+use finance_query_models::market::industries::IndustryData;
+use finance_query_models::market::sectors::SectorData;
 
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResult
     let results = results.map(|mut r| {
         for article in r.news.0.iter_mut() {
             if let Some(title) = article.title.as_deref() {
-                article.sentiment = Some(crate::models::sentiment::analyze(title));
+                article.sentiment = Some(finance_query_models::sentiment::analyze(title));
             }
         }
         r
@@ -99,7 +99,7 @@ pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResult
 pub async fn lookup(
     query: &str,
     options: &LookupOptions,
-) -> Result<crate::models::discovery::lookup::LookupResults> {
+) -> Result<finance_query_models::discovery::lookup::LookupResults> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     client.lookup(query, options).await
 }
@@ -165,8 +165,8 @@ pub async fn screener(screener_type: Screener, count: u32) -> Result<ScreenerRes
 /// # Ok(())
 /// # }
 /// ```
-pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerField>(
-    query: crate::models::discovery::screeners::ScreenerQuery<F>,
+pub async fn custom_screener<F: finance_query_models::discovery::screeners::ScreenerField>(
+    query: finance_query_models::discovery::screeners::ScreenerQuery<F>,
 ) -> Result<ScreenerResults> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     crate::adapters::yahoo::discovery::screeners::fetch_custom(&client, query).await
@@ -187,12 +187,12 @@ pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerFie
 /// # Ok(())
 /// # }
 /// ```
-pub async fn news() -> Result<Vec<crate::models::corporate::news::News>> {
+pub async fn news() -> Result<Vec<finance_query_models::corporate::news::News>> {
     let news = crate::scrapers::stockanalysis::scrape_general_news().await;
     #[cfg(feature = "sentiment")]
     let news = news.map(|mut articles| {
         for article in articles.iter_mut() {
-            article.sentiment = Some(crate::models::sentiment::analyze(&article.title));
+            article.sentiment = Some(finance_query_models::sentiment::analyze(&article.title));
         }
         articles
     });
@@ -312,7 +312,9 @@ pub async fn earnings_transcripts(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn hours(region: Option<Region>) -> Result<crate::models::market::hours::MarketHours> {
+pub async fn hours(
+    region: Option<Region>,
+) -> Result<finance_query_models::market::hours::MarketHours> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     crate::adapters::yahoo::market::hours::fetch(&client, region.map(|r| r.region())).await
 }
@@ -429,7 +431,7 @@ pub async fn industry(industry_key: impl AsRef<str>) -> Result<IndustryData> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn currencies() -> Result<Vec<crate::models::market::currencies::Currency>> {
+pub async fn currencies() -> Result<Vec<finance_query_models::market::currencies::Currency>> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     crate::adapters::yahoo::market::currencies::fetch(&client).await
 }
@@ -452,7 +454,7 @@ pub async fn currencies() -> Result<Vec<crate::models::market::currencies::Curre
 /// # Ok(())
 /// # }
 /// ```
-pub async fn exchanges() -> Result<Vec<crate::models::market::exchanges::Exchange>> {
+pub async fn exchanges() -> Result<Vec<finance_query_models::market::exchanges::Exchange>> {
     crate::scrapers::yahoo_exchanges::scrape_exchanges().await
 }
 
@@ -479,7 +481,7 @@ pub async fn exchanges() -> Result<Vec<crate::models::market::exchanges::Exchang
 /// ```
 pub async fn market_summary(
     region: Option<Region>,
-) -> Result<Vec<crate::models::market::market_summary::MarketSummaryQuote>> {
+) -> Result<Vec<finance_query_models::market::market_summary::MarketSummaryQuote>> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     crate::adapters::yahoo::market::market_summary::fetch(&client, region).await
 }
@@ -507,7 +509,7 @@ pub async fn market_summary(
 /// ```
 pub async fn trending(
     region: Option<Region>,
-) -> Result<Vec<crate::models::discovery::trending::TrendingQuote>> {
+) -> Result<Vec<finance_query_models::discovery::trending::TrendingQuote>> {
     let client = crate::adapters::yahoo::session::get_or_auth(&ClientConfig::default()).await?;
     crate::adapters::yahoo::market::trending::fetch(&client, region).await
 }
@@ -527,7 +529,7 @@ pub async fn trending(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> {
+pub async fn fear_and_greed() -> Result<finance_query_models::sentiment::FearAndGreed> {
     crate::adapters::yahoo::market::fear_and_greed::fetch().await
 }
 
@@ -557,7 +559,7 @@ pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> 
 /// ```
 pub async fn fear_and_greed_crypto(
     limit: u32,
-) -> Result<Vec<crate::models::sentiment::FearAndGreed>> {
+) -> Result<Vec<finance_query_models::sentiment::FearAndGreed>> {
     crate::adapters::yahoo::market::fear_and_greed::fetch_history(limit).await
 }
 
@@ -793,7 +795,9 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 
 /// Fetch sentiment analysis for a symbol based on recent Polygon.io news.
 #[cfg(feature = "polygon")]
-pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::SymbolSentiment> {
+pub async fn symbol_sentiment(
+    symbol: &str,
+) -> Result<finance_query_models::sentiment::SymbolSentiment> {
     use crate::adapters::polygon;
     let paginated = polygon::stock_news(&[("ticker", symbol), ("limit", "10")]).await?;
     let articles = paginated.results.unwrap_or_default();
@@ -829,7 +833,7 @@ pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::
         (None, None)
     };
 
-    Ok(crate::models::sentiment::SymbolSentiment { score, label })
+    Ok(finance_query_models::sentiment::SymbolSentiment { score, label })
 }
 
 // ── Alpha Vantage ───────────────────────────────────────────────────

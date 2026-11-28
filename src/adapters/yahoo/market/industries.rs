@@ -1,6 +1,6 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::error::Result;
-use crate::models::market::industries::IndustryData;
+use finance_query_models::market::industries::IndustryData;
 
 /// Fetch detailed industry data from Yahoo Finance
 ///

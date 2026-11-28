@@ -2,7 +2,7 @@
 //!
 //! BLS and the World Bank spell their period labels differently (`"Q01"`,
 //! `"2023Q3"`, `"M04"`), but both resolve to the same thing:
-//! [`MacroObservation::date`](crate::models::economic::MacroObservation::date),
+//! [`MacroObservation::date`](finance_query_models::economic::MacroObservation::date),
 //! documented as the `YYYY-MM-DD` **start** of the period. These helpers own
 //! that convention so the adapters cannot drift from it.
 

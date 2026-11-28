@@ -4,7 +4,7 @@
 //! FiscalData returns into the canonical [`EconomicSeries`].
 
 use crate::error::{FinanceError, Result};
-use crate::models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{EconomicSeries, MacroObservation};
 
 use super::client::{DATE_FIELD, SeriesQuery};
 use super::models::{FiscalMeta, FiscalRow};
@@ -189,7 +189,7 @@ pub(super) fn to_canonical(
 }
 
 /// Fetch a FiscalData series as the canonical
-/// [`EconomicSeries`](crate::models::economic::EconomicSeries).
+/// [`EconomicSeries`](finance_query_models::economic::EconomicSeries).
 pub(crate) async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicSeries> {
     let resolved = resolve(series_id)?;
     let (rows, meta) = super::client()?.series(&resolved.query()).await?;

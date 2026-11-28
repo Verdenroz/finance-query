@@ -6,8 +6,8 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
-use crate::models::fundamentals::{DefaultKeyStatistics, SummaryDetail};
-use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse, QuoteTypeData};
+use finance_query_models::fundamentals::{DefaultKeyStatistics, SummaryDetail};
+use finance_query_models::quote::{FormattedValue, Price, QuoteSummaryResponse, QuoteTypeData};
 use tracing::info;
 
 /// Fetch batch quotes for multiple symbols
@@ -534,7 +534,7 @@ pub(crate) fn parse_quotes_batch(body: &[u8]) -> Result<Vec<(String, QuoteSummar
 mod tests {
     use super::*;
     use crate::adapters::yahoo::client::ClientConfig;
-    use crate::models::quote::Quote;
+    use finance_query_models::quote::Quote;
 
     const BATCH_FIXTURE: &[u8] =
         include_bytes!("../../../../tests/fixtures/yahoo/batch_quote.json");

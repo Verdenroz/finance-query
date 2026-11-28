@@ -22,21 +22,21 @@ impl CryptoProvider for DefiLlamaProvider {
         &self,
         _id: &str,
         _vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         Err(self.not_supported(Operation::CryptoQuote))
     }
 
     async fn fetch_protocol_tvl(
         &self,
         protocol: &str,
-    ) -> Result<crate::models::crypto::defi::ProtocolTvl> {
+    ) -> Result<finance_query_models::crypto::defi::ProtocolTvl> {
         crate::adapters::defillama::fetch_protocol_tvl_response(protocol).await
     }
 
     async fn fetch_protocol_tvl_history(
         &self,
         protocol: &str,
-    ) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
+    ) -> Result<Vec<finance_query_models::crypto::defi::TvlPoint>> {
         crate::adapters::defillama::fetch_protocol_tvl_history_response(protocol).await
     }
 }

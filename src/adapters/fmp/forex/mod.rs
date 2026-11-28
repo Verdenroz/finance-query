@@ -11,10 +11,10 @@ fn forex_quote_to_canonical(
     from: &str,
     to: &str,
     quotes: &[FmpQuoteDTO],
-) -> crate::models::forex::ForexQuote {
+) -> finance_query_models::forex::ForexQuote {
     let q = quotes.first();
     let price = q.and_then(|q| q.price);
-    crate::models::forex::ForexQuote {
+    finance_query_models::forex::ForexQuote {
         symbol: pair.to_string(),
         base_currency: Some(from.to_uppercase()),
         quote_currency: Some(to.to_uppercase()),
@@ -31,7 +31,7 @@ fn forex_quote_to_canonical(
 pub async fn fetch_canonical_forex_quote(
     from: &str,
     to: &str,
-) -> Result<crate::models::forex::ForexQuote> {
+) -> Result<finance_query_models::forex::ForexQuote> {
     let pair = format!("{}{}", from.to_uppercase(), to.to_uppercase());
     let quotes = forex_quote(&pair).await?;
     Ok(forex_quote_to_canonical(&pair, from, to, &quotes))

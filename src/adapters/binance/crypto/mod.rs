@@ -1,7 +1,7 @@
 //! `CRYPTO` capability for Binance public market data.
 
 use crate::error::Result;
-use crate::models::crypto::CryptoQuote;
+use finance_query_models::crypto::CryptoQuote;
 
 use super::models::Ticker24hr;
 use super::symbols;

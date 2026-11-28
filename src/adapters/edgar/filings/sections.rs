@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::adapters::edgar::{accession_parts, build_client, submissions_for_symbol};
 use crate::error::{FinanceError, Result};
-use crate::models::filings::{FilingSection, FilingSectionForm, RiskFactor};
+use finance_query_models::filings::{FilingSection, FilingSectionForm, RiskFactor};
 
 /// Block-level tags become line breaks; inline tags are stripped without breaks
 /// to keep words split across them adjacent.
@@ -123,7 +123,9 @@ fn slice_sections(text: &str, heading: &Regex) -> Vec<FilingSection> {
         .collect()
 }
 
-fn primary_document_name(index: &crate::models::filings::EdgarFilingIndex) -> Option<String> {
+fn primary_document_name(
+    index: &finance_query_models::filings::EdgarFilingIndex,
+) -> Option<String> {
     index
         .directory
         .item
@@ -268,8 +270,8 @@ mod tests {
 
     #[test]
     fn primary_document_ignores_exhibits_and_xbrl_viewer_pages() {
-        use crate::models::filings::EdgarFilingIndex;
-        use crate::models::filings::filing_index::{
+        use finance_query_models::filings::EdgarFilingIndex;
+        use finance_query_models::filings::filing_index::{
             EdgarFilingIndexDirectory, EdgarFilingIndexItem,
         };
 

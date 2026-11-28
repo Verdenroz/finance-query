@@ -11,8 +11,8 @@ use regex::Regex;
 
 use crate::adapters::edgar::{build_client, submissions_for_symbol};
 use crate::error::{FinanceError, Result};
-use crate::models::corporate::governance::ExecutiveCompensation;
 use crate::scrapers::html;
+use finance_query_models::corporate::governance::ExecutiveCompensation;
 
 /// Block-level boundaries produce no text-flow separator when tags are
 /// stripped, so `Name<br/>Position` or `<div>Stock</div><div>Awards</div>`

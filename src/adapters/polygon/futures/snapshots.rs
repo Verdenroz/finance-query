@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::futures::FuturesQuote;
+use finance_query_models::futures::FuturesQuote;
 
 use super::super::{build_client, models::PaginatedResponseDTO};
 

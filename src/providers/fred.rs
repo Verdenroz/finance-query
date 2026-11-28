@@ -17,7 +17,7 @@ impl EconomicProvider for FredProvider {
     async fn fetch_economic_series(
         &self,
         series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         crate::adapters::fred::fetch_economic_series_response(series_id).await
     }
 
@@ -25,7 +25,7 @@ impl EconomicProvider for FredProvider {
         &self,
         series_id: &str,
         date: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         crate::adapters::fred::economic::catalog::series_as_of(series_id, date).await
     }
 
@@ -33,20 +33,20 @@ impl EconomicProvider for FredProvider {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::economic::EconomicSeriesMatch>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicSeriesMatch>> {
         crate::adapters::fred::economic::catalog::search(query, limit).await
     }
 
     async fn fetch_economic_categories(
         &self,
         parent_id: i64,
-    ) -> Result<Vec<crate::models::economic::EconomicCategory>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicCategory>> {
         crate::adapters::fred::economic::catalog::categories(parent_id).await
     }
 
     async fn fetch_economic_releases(
         &self,
-    ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicRelease>> {
         crate::adapters::fred::economic::catalog::releases().await
     }
 }
@@ -57,11 +57,11 @@ impl EconomicProvider for FredProvider {
 impl CalendarProvider for FredProvider {
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         from: &str,
         to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        if kind != crate::models::calendar::market::CalendarKind::Economic {
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
+        if kind != finance_query_models::calendar::market::CalendarKind::Economic {
             return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         crate::adapters::fred::fetch_market_calendar_response(from, to).await

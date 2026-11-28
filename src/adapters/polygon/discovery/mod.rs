@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use crate::models::corporate::recommendation::SimilarSymbol;
+use finance_query_models::corporate::recommendation::SimilarSymbol;
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -261,8 +261,8 @@ pub async fn fetch_similar_symbols_response(
 pub async fn fetch_symbol_search_response(
     query: &str,
     limit: u32,
-) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
-    use crate::models::discovery::reference::SymbolMatch;
+) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
+    use finance_query_models::discovery::reference::SymbolMatch;
     let limit_str = limit.to_string();
     let paginated =
         all_tickers(&[("search", query), ("active", "true"), ("limit", &limit_str)]).await?;
@@ -292,7 +292,7 @@ pub async fn fetch_symbol_search_response(
 /// Fetch detailed reference data for a ticker (canonical).
 pub async fn fetch_symbol_details_response(
     symbol: &str,
-) -> Result<crate::models::discovery::reference::SymbolDetails> {
+) -> Result<finance_query_models::discovery::reference::SymbolDetails> {
     let resp = ticker_details(symbol).await?;
     details_to_canonical(symbol, resp)
 }
@@ -334,8 +334,8 @@ pub(super) fn details_to_canonical(
 
 /// Fetch the tradable exchange listing (canonical).
 pub async fn fetch_exchanges_response()
--> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
-    use crate::models::discovery::reference::ExchangeInfo;
+-> Result<Vec<finance_query_models::discovery::reference::ExchangeInfo>> {
+    use finance_query_models::discovery::reference::ExchangeInfo;
     let paginated = exchanges(&[]).await?;
     Ok(paginated
         .results
@@ -388,7 +388,7 @@ pub async fn market_status() -> Result<MarketStatusDTO> {
 
 /// Fetch upcoming market holidays as canonical calendar entries.
 pub async fn fetch_market_holidays_response()
--> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+-> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
     Ok(market_holidays()
         .await?
         .into_iter()
@@ -399,8 +399,8 @@ pub async fn fetch_market_holidays_response()
 /// Convert one holiday DTO into a canonical calendar entry.
 fn holiday_to_canonical(
     h: MarketHolidayDTO,
-) -> crate::models::calendar::market::MarketCalendarEntry {
-    use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+) -> finance_query_models::calendar::market::MarketCalendarEntry {
+    use finance_query_models::calendar::market::{CalendarDetail, MarketCalendarEntry};
     MarketCalendarEntry {
         symbol: None,
         date: h.date,
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn holiday_maps_to_calendar_entry() {
-        use crate::models::calendar::market::CalendarDetail;
+        use finance_query_models::calendar::market::CalendarDetail;
         let entry = holiday_to_canonical(
             serde_json::from_value(serde_json::json!({
                 "name": "Thanksgiving",

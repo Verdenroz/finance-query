@@ -5,7 +5,7 @@
 
 use crate::adapters::alphavantage::models::{EtfHoldingDTO, EtfProfileDTO};
 use crate::error::Result;
-use crate::models::fundamentals::{EtfHolding, EtfProfile};
+use finance_query_models::fundamentals::{EtfHolding, EtfProfile};
 
 pub(crate) fn to_etf_holding(dto: EtfHoldingDTO) -> EtfHolding {
     EtfHolding {

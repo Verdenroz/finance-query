@@ -16,21 +16,21 @@ impl IndicesProvider for WikipediaProvider {
     async fn fetch_indices_quote(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::indices::IndexQuote> {
+    ) -> Result<finance_query_models::indices::IndexQuote> {
         Err(self.not_supported(Operation::IndicesQuote))
     }
 
     async fn fetch_index_constituents(
         &self,
-        index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
         crate::adapters::wikipedia::fetch_index_constituents_response(index).await
     }
 
     async fn fetch_index_constituent_changes(
         &self,
-        index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
         crate::adapters::wikipedia::fetch_index_constituent_changes_response(index).await
     }
 }

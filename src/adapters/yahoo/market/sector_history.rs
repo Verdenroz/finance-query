@@ -10,8 +10,8 @@ use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::sectors::Sector;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Candle;
-use crate::models::market::performance::{SectorPerformance, SectorPerformanceHistory};
+use finance_query_models::chart::Candle;
+use finance_query_models::market::performance::{SectorPerformance, SectorPerformanceHistory};
 use std::collections::BTreeMap;
 
 fn range_for_limit(limit: u32) -> TimeRange {

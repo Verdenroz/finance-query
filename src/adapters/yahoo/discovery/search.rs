@@ -185,7 +185,7 @@ mod tests {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = SearchOptions::new().quotes_count(5);
         let bytes = fetch_bytes(&client, "Apple", &options).await.unwrap();
-        let results: crate::models::discovery::search::SearchResults =
+        let results: finance_query_models::discovery::search::SearchResults =
             serde_json::from_slice(&bytes).unwrap();
         assert!(!results.quotes.0.is_empty());
     }
@@ -199,14 +199,14 @@ mod tests {
             .news_count(3)
             .enable_research_reports(true);
         let bytes = fetch_bytes(&client, "NVDA", &options).await.unwrap();
-        let results: crate::models::discovery::search::SearchResults =
+        let results: finance_query_models::discovery::search::SearchResults =
             serde_json::from_slice(&bytes).unwrap();
         assert!(!results.quotes.0.is_empty());
     }
 
     #[test]
     fn search_results_parse_from_slice() {
-        use crate::models::discovery::search::SearchResults;
+        use finance_query_models::discovery::search::SearchResults;
 
         // Realistic minimal search payload: top-level fields plus one quote
         // that only carries the always-present `symbol`, mirroring a partial

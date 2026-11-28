@@ -21,14 +21,14 @@ impl FuturesProvider for CftcProvider {
     async fn fetch_futures_quote(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::futures::FuturesQuote> {
+    ) -> Result<finance_query_models::futures::FuturesQuote> {
         Err(self.not_supported(Operation::FuturesQuote))
     }
 
     async fn fetch_commitments_of_traders(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::futures::cot::CommitmentsOfTraders> {
+    ) -> Result<finance_query_models::futures::cot::CommitmentsOfTraders> {
         crate::adapters::cftc::fetch_commitments_of_traders_response(symbol).await
     }
 }

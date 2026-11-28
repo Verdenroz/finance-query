@@ -20,9 +20,9 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use crate::error::{FinanceError, Result};
-use crate::models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
 use crate::rate_limiter::RateLimiter;
 use client::OpenFigiClient;
+use finance_query_models::discovery::figi::{MappingFilter, SecurityIdKind, SecurityMapping};
 use models::{FigiRecord, MappingJob};
 
 const OPENFIGI_ANONYMOUS_RATE_PER_SEC: f64 = 25.0 / 60.0;

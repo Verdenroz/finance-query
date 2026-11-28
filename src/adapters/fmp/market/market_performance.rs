@@ -188,7 +188,7 @@ pub async fn stock_market_most_active() -> Result<Vec<MarketMoverDTO>> {
 
 /// Fetch sector performance and map to provider-neutral entries.
 pub async fn fetch_sector_performance_response()
--> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+-> Result<Vec<finance_query_models::market::performance::SectorPerformance>> {
     Ok(sector_performance()
         .await?
         .into_iter()
@@ -198,19 +198,21 @@ pub async fn fetch_sector_performance_response()
 
 fn to_sector_performance(
     dto: SectorPerformanceDTO,
-) -> Option<crate::models::market::performance::SectorPerformance> {
-    Some(crate::models::market::performance::SectorPerformance {
-        sector: dto.sector?,
-        exchange: dto.exchange,
-        change_percent: dto.average_change,
-    })
+) -> Option<finance_query_models::market::performance::SectorPerformance> {
+    Some(
+        finance_query_models::market::performance::SectorPerformance {
+            sector: dto.sector?,
+            exchange: dto.exchange,
+            change_percent: dto.average_change,
+        },
+    )
 }
 
 /// Fetch market movers for `direction` and map to provider-neutral entries.
 pub async fn fetch_market_movers_response(
-    direction: crate::models::market::performance::MoverDirection,
-) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
-    use crate::models::market::performance::{MoverDirection, MoverQuote};
+    direction: finance_query_models::market::performance::MoverDirection,
+) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
+    use finance_query_models::market::performance::{MoverDirection, MoverQuote};
     let movers = match direction {
         MoverDirection::Gainers => stock_market_gainers().await?,
         MoverDirection::Losers => stock_market_losers().await?,
@@ -232,9 +234,9 @@ pub async fn fetch_market_movers_response(
 }
 
 /// Fetch sector price/earnings ratios and map to provider-neutral entries.
-pub async fn fetch_sector_pe_response() -> Result<Vec<crate::models::market::performance::SectorPe>>
-{
-    use crate::models::market::performance::SectorPe;
+pub async fn fetch_sector_pe_response()
+-> Result<Vec<finance_query_models::market::performance::SectorPe>> {
+    use finance_query_models::market::performance::SectorPe;
     Ok(sectors_pe()
         .await?
         .into_iter()
@@ -251,8 +253,8 @@ pub async fn fetch_sector_pe_response() -> Result<Vec<crate::models::market::per
 
 /// Fetch industry price/earnings ratios and map to provider-neutral entries.
 pub async fn fetch_industry_pe_response()
--> Result<Vec<crate::models::market::performance::IndustryPe>> {
-    use crate::models::market::performance::IndustryPe;
+-> Result<Vec<finance_query_models::market::performance::IndustryPe>> {
+    use finance_query_models::market::performance::IndustryPe;
     Ok(industries_pe()
         .await?
         .into_iter()
@@ -274,8 +276,8 @@ pub async fn fetch_industry_pe_response()
 fn group_history_by_date(
     rows: Vec<SectorPerformanceDTO>,
     limit: usize,
-) -> Vec<crate::models::market::performance::SectorPerformanceHistory> {
-    use crate::models::market::performance::{SectorPerformance, SectorPerformanceHistory};
+) -> Vec<finance_query_models::market::performance::SectorPerformanceHistory> {
+    use finance_query_models::market::performance::{SectorPerformance, SectorPerformanceHistory};
 
     let mut by_date = std::collections::BTreeMap::<String, Vec<SectorPerformance>>::new();
     for row in rows {
@@ -303,7 +305,7 @@ fn group_history_by_date(
 /// sessions, most recent first.
 pub async fn fetch_sector_performance_history_response(
     limit: u32,
-) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+) -> Result<Vec<finance_query_models::market::performance::SectorPerformanceHistory>> {
     // The endpoint has no `limit`; ask for a window wide enough to contain
     // `limit` sessions and trim after grouping.
     let today = chrono::Utc::now().date_naive();

@@ -96,7 +96,7 @@ pub async fn historical_options(symbol: &str, date: Option<&str>) -> Result<Opti
 pub async fn fetch_options_response(
     symbol: &str,
     date: Option<i64>,
-) -> Result<crate::models::options::Options> {
+) -> Result<finance_query_models::options::Options> {
     let date_str = date.map(timestamp_to_date_string);
     let chain = if let Some(ref d) = date_str {
         historical_options(symbol, Some(d)).await?
@@ -112,7 +112,7 @@ pub async fn fetch_options_response(
         let exp_ts = parse_av_date(&contract.expiration).unwrap_or(0);
         expiration_dates_set.insert(exp_ts);
 
-        let contract_data = crate::models::options::OptionContract {
+        let contract_data = finance_query_models::options::OptionContract {
             contract_symbol: contract.contractid,
             strike: contract.strike,
             currency: None,

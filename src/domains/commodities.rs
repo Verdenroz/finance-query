@@ -4,19 +4,19 @@
 
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Chart;
+use finance_query_models::chart::Chart;
 
 domain_handle! {
     /// A commodity backed by configured data providers.
     ///
     /// Created via [`Providers::commodity`](crate::Providers::commodity).
     pub struct Commodity { symbol, symbol }
-    cache: crate::models::commodities::CommodityQuote, chart
+    cache: finance_query_models::commodities::CommodityQuote, chart
 }
 
 impl Commodity {
     /// Fetch the current quote for this commodity.
-    pub async fn quote(&self) -> Result<crate::models::commodities::CommodityQuote> {
+    pub async fn quote(&self) -> Result<finance_query_models::commodities::CommodityQuote> {
         fetch_via!(
             self,
             symbol,
@@ -24,7 +24,7 @@ impl Commodity {
             as_commodities,
             CommoditiesQuote,
             fetch_commodities_quote,
-            crate::models::commodities::CommodityQuote
+            finance_query_models::commodities::CommodityQuote
         )
     }
 

@@ -1,7 +1,7 @@
 //! GDELT market-wide crypto news (no per-coin vocabulary).
 
 use crate::error::Result;
-use crate::models::corporate::news::News;
+use finance_query_models::corporate::news::News;
 
 const QUERY: &str = "(bitcoin OR ethereum OR cryptocurrency)";
 

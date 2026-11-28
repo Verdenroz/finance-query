@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 use crate::adapters::fred::build_client;
 use crate::error::Result;
-use crate::models::economic::{
+use finance_query_models::economic::{
     EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch, MacroObservation,
 };
 

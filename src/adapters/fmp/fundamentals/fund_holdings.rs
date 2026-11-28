@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::percent::strip_percent;
 use crate::error::Result;
-use crate::models::fundamentals::{
+use finance_query_models::fundamentals::{
     EtfCountryWeighting, EtfHolding, EtfProfile, EtfSectorWeighting,
 };
 

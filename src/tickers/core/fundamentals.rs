@@ -4,10 +4,10 @@ use super::{
 };
 use crate::constants::{Frequency, StatementType};
 use crate::error::Result;
-use crate::models::corporate::news::News;
 use crate::providers::Capability;
 use crate::providers::types::recommendation_from_similar;
 use crate::tickers::macros::batch_fetch_cached;
+use finance_query_models::corporate::news::News;
 use futures::stream::StreamExt;
 
 impl Tickers {

@@ -8,7 +8,7 @@ use super::options::{Greeks, OptionContractUpdate};
 use super::pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
 #[cfg(feature = "polygon")]
 use super::trades::TradeTick;
-use crate::models::dataframe_test_util::{columns, micros};
+use finance_query_models::dataframe_test_util::{columns, micros};
 use polars::prelude::DataType;
 use serde_json::json;
 

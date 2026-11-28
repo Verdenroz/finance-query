@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::fmp::build_client;
 use crate::error::Result;
-use crate::models::corporate::governance::{EmployeeCount, ExecutiveCompensation};
+use finance_query_models::corporate::governance::{EmployeeCount, ExecutiveCompensation};
 
 // ============================================================================
 // Response types

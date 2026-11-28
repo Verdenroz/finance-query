@@ -23,7 +23,7 @@ pub(crate) fn build_financial_statement(
     frequency: String,
     provider_id: Provider,
     data: std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>,
-) -> crate::models::fundamentals::FinancialStatement {
+) -> finance_query_models::fundamentals::FinancialStatement {
     let statement = data
         .into_iter()
         .filter_map(|(metric, values)| {
@@ -38,7 +38,7 @@ pub(crate) fn build_financial_statement(
             }
         })
         .collect();
-    crate::models::fundamentals::FinancialStatement {
+    finance_query_models::fundamentals::FinancialStatement {
         symbol,
         statement_type,
         frequency,
@@ -51,16 +51,16 @@ pub(crate) fn build_options(
     symbol: String,
     provider_id: Provider,
     expiration_dates: Vec<i64>,
-    calls: Vec<crate::models::options::OptionContract>,
-    puts: Vec<crate::models::options::OptionContract>,
-) -> crate::models::options::Options {
+    calls: Vec<finance_query_models::options::OptionContract>,
+    puts: Vec<finance_query_models::options::OptionContract>,
+) -> finance_query_models::options::Options {
     use std::collections::BTreeMap;
 
     let mut chains_by_expiration: BTreeMap<
         i64,
         (
-            Vec<crate::models::options::OptionContract>,
-            Vec<crate::models::options::OptionContract>,
+            Vec<finance_query_models::options::OptionContract>,
+            Vec<finance_query_models::options::OptionContract>,
         ),
     > = BTreeMap::new();
 
@@ -81,11 +81,11 @@ pub(crate) fn build_options(
             .push(contract);
     }
 
-    let option_chains: Vec<crate::models::options::response::OptionChainData> =
+    let option_chains: Vec<finance_query_models::options::response::OptionChainData> =
         chains_by_expiration
             .into_iter()
             .map(
-                |(expiration, (c, p))| crate::models::options::response::OptionChainData {
+                |(expiration, (c, p))| finance_query_models::options::response::OptionChainData {
                     expiration_date: expiration,
                     has_mini_options: None,
                     calls: Some(c),
@@ -128,7 +128,7 @@ pub(crate) fn build_options(
     strikes.sort_by(|a, b| a.total_cmp(b));
     strikes.dedup_by(|a, b| a.total_cmp(b).is_eq());
 
-    let result = crate::models::options::response::OptionChainResult {
+    let result = finance_query_models::options::response::OptionChainResult {
         underlying_symbol: Some(symbol),
         expiration_dates: Some(expiration_dates),
         strikes: Some(strikes),
@@ -137,8 +137,8 @@ pub(crate) fn build_options(
         options: option_chains,
     };
 
-    crate::models::options::Options {
-        option_chain: crate::models::options::response::OptionChainContainer {
+    finance_query_models::options::Options {
+        option_chain: finance_query_models::options::response::OptionChainContainer {
             result: vec![result],
             error: None,
         },
@@ -187,7 +187,9 @@ mod tests {
 
     #[test]
     fn loaded_expiration_skips_undated_contracts_from_flat_providers() {
-        let contract = |symbol: &str, expiration: Option<i64>| -> finance_query_models::options::OptionContract {
+        let contract = |symbol: &str,
+                        expiration: Option<i64>|
+         -> finance_query_models::options::OptionContract {
             serde_json::from_value(serde_json::json!({
                 "contractSymbol": symbol,
                 "strike": 1.0,

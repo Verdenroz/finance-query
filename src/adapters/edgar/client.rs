@@ -5,10 +5,10 @@
 
 use super::endpoints as urls;
 use crate::error::{FinanceError, Result};
-use crate::models::filings::{
+use crate::rate_limiter::RateLimiter;
+use finance_query_models::filings::{
     CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions,
 };
-use crate::rate_limiter::RateLimiter;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;

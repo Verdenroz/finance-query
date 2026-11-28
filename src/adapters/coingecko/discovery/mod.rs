@@ -3,7 +3,7 @@
 //! alongside FMP/Polygon/Alpha Vantage.
 
 use crate::error::Result;
-use crate::models::discovery::reference::SymbolMatch;
+use finance_query_models::discovery::reference::SymbolMatch;
 
 use super::models::SearchCoinDTO;
 

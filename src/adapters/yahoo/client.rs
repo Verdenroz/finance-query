@@ -387,7 +387,7 @@ impl YahooClient {
 
     /// Fetch chart data for a symbol
     ///
-    /// Returns a canonical [`Chart`](crate::models::chart::Chart) with OHLCV candles,
+    /// Returns a canonical [`Chart`](finance_query_models::chart::Chart) with OHLCV candles,
     /// metadata, and optional events (dividends, splits, capital gains).
     ///
     /// # Example
@@ -405,7 +405,7 @@ impl YahooClient {
         symbol: &str,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         use crate::error::FinanceError;
 
         super::common::validate_symbol(symbol)?;
@@ -428,7 +428,7 @@ impl YahooClient {
             .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
-        let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
+        let chart_response = finance_query_models::chart::response::ChartResponse::from_json(json)
             .map_err(FinanceError::JsonParseError)?;
         let results = chart_response
             .chart
@@ -445,11 +445,11 @@ impl YahooClient {
             })?;
 
         let meta = &result.meta;
-        let candles: Vec<crate::models::chart::Candle> = result
+        let candles: Vec<finance_query_models::chart::Candle> = result
             .to_candles()
             .into_iter()
             .map(|c| {
-                crate::models::chart::Candle::__new(
+                finance_query_models::chart::Candle::__new(
                     c.timestamp,
                     c.open,
                     c.high,
@@ -462,12 +462,12 @@ impl YahooClient {
             })
             .collect();
 
-        let chart_meta = crate::models::chart::ChartMeta {
+        let chart_meta = finance_query_models::chart::ChartMeta {
             provider_id: Some(crate::Provider::Yahoo),
             ..meta.clone()
         };
 
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: chart_meta,
             candles,
@@ -487,7 +487,7 @@ impl YahooClient {
         interval: Interval,
         start: i64,
         end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         use crate::error::FinanceError;
 
         super::common::validate_symbol(symbol)?;
@@ -514,7 +514,7 @@ impl YahooClient {
             .map_err(|e| e.with_symbol(symbol))?;
         let json: serde_json::Value = response.json().await?;
 
-        let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
+        let chart_response = finance_query_models::chart::response::ChartResponse::from_json(json)
             .map_err(FinanceError::JsonParseError)?;
         let results = chart_response
             .chart
@@ -531,11 +531,11 @@ impl YahooClient {
             })?;
 
         let meta = &result.meta;
-        let candles: Vec<crate::models::chart::Candle> = result
+        let candles: Vec<finance_query_models::chart::Candle> = result
             .to_candles()
             .into_iter()
             .map(|c| {
-                crate::models::chart::Candle::__new(
+                finance_query_models::chart::Candle::__new(
                     c.timestamp,
                     c.open,
                     c.high,
@@ -548,12 +548,12 @@ impl YahooClient {
             })
             .collect();
 
-        let chart_meta = crate::models::chart::ChartMeta {
+        let chart_meta = finance_query_models::chart::ChartMeta {
             provider_id: Some(crate::Provider::Yahoo),
             ..meta.clone()
         };
 
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: chart_meta,
             candles,
@@ -587,7 +587,7 @@ impl YahooClient {
         &self,
         query: &str,
         options: &crate::adapters::yahoo::discovery::search::SearchOptions,
-    ) -> Result<crate::models::discovery::search::SearchResults> {
+    ) -> Result<finance_query_models::discovery::search::SearchResults> {
         let bytes =
             crate::adapters::yahoo::discovery::search::fetch_bytes(self, query, options).await?;
         Ok(serde_json::from_slice(&bytes)?)
@@ -620,13 +620,13 @@ impl YahooClient {
         &self,
         query: &str,
         options: &crate::adapters::yahoo::discovery::lookup::LookupOptions,
-    ) -> Result<crate::models::discovery::lookup::LookupResults> {
+    ) -> Result<finance_query_models::discovery::lookup::LookupResults> {
         crate::adapters::yahoo::discovery::lookup::fetch_results(self, query, options).await
     }
 
     /// Get recommended/similar quotes for a symbol
     ///
-    /// Returns a list of [`SimilarSymbol`](crate::models::corporate::recommendation::SimilarSymbol)
+    /// Returns a list of [`SimilarSymbol`](finance_query_models::corporate::recommendation::SimilarSymbol)
     /// entries that Yahoo suggests as similar to the given symbol.
     ///
     /// # Example
@@ -642,9 +642,9 @@ impl YahooClient {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+    ) -> Result<Vec<finance_query_models::corporate::recommendation::SimilarSymbol>> {
         use crate::adapters::yahoo::endpoints::api;
-        use crate::models::corporate::recommendation::response::RecommendationResponse;
+        use finance_query_models::corporate::recommendation::response::RecommendationResponse;
 
         crate::adapters::yahoo::common::validate_symbol(symbol)?;
         tracing::info!("Fetching similar quotes for: {}", symbol);
@@ -694,7 +694,7 @@ impl YahooClient {
         symbol: &str,
         statement_type: crate::constants::StatementType,
         frequency: crate::constants::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement> {
         use crate::adapters::yahoo::client::{API_PARAM_MERGE, API_PARAM_PAD_TIMESERIES};
 
         super::common::validate_symbol(symbol)?;
@@ -758,7 +758,7 @@ impl YahooClient {
 
     /// Get options chain for a symbol
     ///
-    /// Returns a canonical [`Options`](crate::models::options::Options) model with
+    /// Returns a canonical [`Options`](finance_query_models::options::Options) model with
     /// both call and put contracts for each available expiration date.
     ///
     /// # Example
@@ -774,9 +774,9 @@ impl YahooClient {
         &self,
         symbol: &str,
         date: Option<i64>,
-    ) -> Result<crate::models::options::Options> {
+    ) -> Result<finance_query_models::options::Options> {
         use crate::Provider;
-        use crate::models::options::OptionContract;
+        use finance_query_models::options::OptionContract;
 
         super::common::validate_symbol(symbol)?;
         tracing::info!("Fetching options for: {}", symbol);
@@ -895,16 +895,16 @@ impl YahooClient {
         &self,
         screener_type: crate::constants::screeners::Screener,
         count: u32,
-    ) -> Result<crate::models::discovery::screeners::ScreenerResults> {
+    ) -> Result<finance_query_models::discovery::screeners::ScreenerResults> {
         let url = crate::adapters::yahoo::endpoints::builders::screener(screener_type, count);
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::discovery::screeners::ScreenerResults::from_response(json).map_err(|e| {
-            crate::error::FinanceError::ResponseStructureError {
+        finance_query_models::discovery::screeners::ScreenerResults::from_response(json).map_err(
+            |e| crate::error::FinanceError::ResponseStructureError {
                 field: "screeners".to_string(),
                 context: e,
-            }
-        })
+            },
+        )
     }
 
     /// Execute a custom screener query
@@ -933,19 +933,18 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerField>(
+    pub async fn custom_screener<F: finance_query_models::discovery::screeners::ScreenerField>(
         &self,
-        query: crate::models::discovery::screeners::ScreenerQuery<F>,
-    ) -> Result<crate::models::discovery::screeners::ScreenerResults> {
+        query: finance_query_models::discovery::screeners::ScreenerQuery<F>,
+    ) -> Result<finance_query_models::discovery::screeners::ScreenerResults> {
         let url = crate::adapters::yahoo::endpoints::builders::custom_screener();
         let response = self.request_post_with_crumb(&url, &query).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::discovery::screeners::ScreenerResults::from_custom_response(json).map_err(
-            |e| crate::error::FinanceError::ResponseStructureError {
+        finance_query_models::discovery::screeners::ScreenerResults::from_custom_response(json)
+            .map_err(|e| crate::error::FinanceError::ResponseStructureError {
                 field: "custom_screener".to_string(),
                 context: e,
-            },
-        )
+            })
     }
 
     /// Fetch detailed sector data from Yahoo Finance
@@ -975,11 +974,11 @@ impl YahooClient {
     pub async fn get_sector(
         &self,
         sector_type: crate::constants::sectors::Sector,
-    ) -> Result<crate::models::market::sectors::SectorData> {
+    ) -> Result<finance_query_models::market::sectors::SectorData> {
         let url = crate::adapters::yahoo::endpoints::builders::sector(sector_type.as_api_path());
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::sectors::SectorData::from_response(json).map_err(|e| {
+        finance_query_models::market::sectors::SectorData::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "sector".to_string(),
                 context: e,
@@ -1013,11 +1012,11 @@ impl YahooClient {
     pub async fn get_industry(
         &self,
         industry_key: &str,
-    ) -> Result<crate::models::market::industries::IndustryData> {
+    ) -> Result<finance_query_models::market::industries::IndustryData> {
         let url = crate::adapters::yahoo::endpoints::builders::industry(industry_key);
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::industries::IndustryData::from_response(json).map_err(|e| {
+        finance_query_models::market::industries::IndustryData::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "industry".to_string(),
                 context: e,
@@ -1049,7 +1048,7 @@ impl YahooClient {
     pub async fn get_hours(
         &self,
         region: Option<&str>,
-    ) -> Result<crate::models::market::hours::MarketHours> {
+    ) -> Result<finance_query_models::market::hours::MarketHours> {
         let config = self.config();
         let region = region.unwrap_or(&config.region);
         let params = [
@@ -1061,7 +1060,7 @@ impl YahooClient {
             .request_with_params(crate::adapters::yahoo::endpoints::api::MARKET_TIME, &params)
             .await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::hours::MarketHours::from_response(json).map_err(|e| {
+        finance_query_models::market::hours::MarketHours::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "hours".to_string(),
                 context: e,
@@ -1082,7 +1081,9 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_currencies(&self) -> Result<Vec<crate::models::market::currencies::Currency>> {
+    pub async fn get_currencies(
+        &self,
+    ) -> Result<Vec<finance_query_models::market::currencies::Currency>> {
         let config = self.config();
         tracing::info!(
             "Fetching currencies (lang={}, region={})",
@@ -1097,9 +1098,7 @@ impl YahooClient {
             .request_with_params(crate::adapters::yahoo::endpoints::api::CURRENCIES, &params)
             .await?;
         let json: serde_json::Value = response.json().await?;
-        Ok(crate::models::market::currencies::Currency::from_response(
-            json,
-        )?)
+        Ok(finance_query_models::market::currencies::Currency::from_response(json)?)
     }
 
     /// Get market summary
@@ -1126,7 +1125,7 @@ impl YahooClient {
     pub async fn get_market_summary(
         &self,
         region: Option<Region>,
-    ) -> Result<Vec<crate::models::market::market_summary::MarketSummaryQuote>> {
+    ) -> Result<Vec<finance_query_models::market::market_summary::MarketSummaryQuote>> {
         let config = self.config();
         let (lang, region) = match region {
             Some(r) => (r.lang(), r.region()),
@@ -1141,7 +1140,7 @@ impl YahooClient {
             )
             .await?;
         let json: serde_json::Value = response.json().await?;
-        Ok(crate::models::market::market_summary::MarketSummaryQuote::from_response(json)?)
+        Ok(finance_query_models::market::market_summary::MarketSummaryQuote::from_response(json)?)
     }
 
     /// Get trending tickers for a region
@@ -1168,7 +1167,7 @@ impl YahooClient {
     pub async fn get_trending(
         &self,
         region: Option<Region>,
-    ) -> Result<Vec<crate::models::discovery::trending::TrendingQuote>> {
+    ) -> Result<Vec<finance_query_models::discovery::trending::TrendingQuote>> {
         let config = self.config();
         let (lang, region) = match region {
             Some(r) => (r.lang(), r.region()),
@@ -1183,7 +1182,7 @@ impl YahooClient {
         let params = [("lang", lang), ("region", region)];
         let response = self.request_with_params(&url, &params).await?;
         let json: serde_json::Value = response.json().await?;
-        Ok(crate::models::discovery::trending::TrendingQuote::from_response(json)?)
+        Ok(finance_query_models::discovery::trending::TrendingQuote::from_response(json)?)
     }
 }
 

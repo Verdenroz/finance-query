@@ -5,7 +5,7 @@
 
 use super::{DiscoveryProvider, Operation, ProviderAdapter, ProviderCore};
 use crate::error::Result;
-use crate::models::discovery::reference::{ExchangeInfo, SymbolMatch};
+use finance_query_models::discovery::reference::{ExchangeInfo, SymbolMatch};
 
 pub(crate) struct LocalExchangeProvider;
 

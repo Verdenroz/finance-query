@@ -1,7 +1,7 @@
 //! Market-wide economic-release calendar events built from FRED release dates.
 
 use super::models::ReleaseDate;
-use crate::models::calendar::{CalendarEvent, EventKind};
+use finance_query_models::calendar::{CalendarEvent, EventKind};
 
 /// FRED release IDs for the major, market-moving US economic releases surfaced
 /// in the calendar.

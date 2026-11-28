@@ -23,14 +23,14 @@ impl FundamentalsProvider for FinraProvider {
         _symbol: &str,
         _stmt_type: crate::StatementType,
         _frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement> {
         Err(self.not_supported(Operation::Financials))
     }
 
     async fn fetch_short_volume(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortVolume>> {
         crate::adapters::finra::fetch_short_volume_response(symbol).await
     }
 }

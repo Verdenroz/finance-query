@@ -10,7 +10,7 @@ use super::{
 };
 use crate::adapters::alphavantage as av;
 use crate::error::Result;
-use crate::models::quote::QuoteSummaryResponse;
+use finance_query_models::quote::QuoteSummaryResponse;
 
 pub(crate) struct AlphaVantageProvider;
 
@@ -41,7 +41,7 @@ impl ChartProvider for AlphaVantageProvider {
         symbol: &str,
         interval: crate::Interval,
         range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         av::fetch_chart_response(symbol, interval, range).await
     }
 
@@ -51,7 +51,7 @@ impl ChartProvider for AlphaVantageProvider {
         interval: crate::Interval,
         start: i64,
         end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         av::fetch_chart_range_response(symbol, interval, start, end).await
     }
 }
@@ -63,28 +63,28 @@ impl FundamentalsProvider for AlphaVantageProvider {
         symbol: &str,
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement> {
         av::fetch_financials_response(symbol, stmt_type, frequency).await
     }
 
     async fn fetch_etf_profile(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::EtfProfile> {
+    ) -> Result<finance_query_models::fundamentals::EtfProfile> {
         av::fundamentals::etf::fetch_etf_profile_response(symbol).await
     }
 
     async fn fetch_company_profile(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+    ) -> Result<finance_query_models::fundamentals::CompanyProfile> {
         av::fundamentals::fetch_company_profile_response(symbol).await
     }
 
     async fn fetch_earnings_surprises(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
         av::fundamentals::fetch_earnings_surprises_response(symbol).await
     }
 }
@@ -95,7 +95,7 @@ impl DiscoveryProvider for AlphaVantageProvider {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         av::discovery::fetch_symbol_search_response(query, limit).await
     }
 
@@ -103,28 +103,31 @@ impl DiscoveryProvider for AlphaVantageProvider {
     /// the active listing universe, so only `name` is populated.
     async fn fetch_exchanges(
         &self,
-    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::ExchangeInfo>> {
         av::discovery::fetch_exchanges_response().await
     }
 
     async fn fetch_listing_status(
         &self,
         active: bool,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         av::discovery::fetch_listing_status_response(active).await
     }
 }
 
 #[async_trait::async_trait]
 impl CorporateProvider for AlphaVantageProvider {
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+    async fn fetch_news(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         av::fetch_news_response(symbol).await
     }
 
     async fn fetch_events(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
+    ) -> Result<finance_query_models::chart::events::ChartEvents> {
         av::fetch_events_response(symbol).await
     }
 
@@ -133,7 +136,7 @@ impl CorporateProvider for AlphaVantageProvider {
         symbol: &str,
         quarter: Option<&str>,
         year: Option<i32>,
-    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+    ) -> Result<finance_query_models::corporate::earnings_transcript::EarningsTranscript> {
         av::corporate::fetch_earnings_transcript_response(symbol, quarter, year).await
     }
 }
@@ -144,7 +147,7 @@ impl OptionsProvider for AlphaVantageProvider {
         &self,
         symbol: &str,
         date: Option<i64>,
-    ) -> Result<crate::models::options::Options> {
+    ) -> Result<finance_query_models::options::Options> {
         av::fetch_options_response(symbol, date).await
     }
 }
@@ -155,7 +158,7 @@ impl ForexProvider for AlphaVantageProvider {
         &self,
         from: &str,
         to: &str,
-    ) -> Result<crate::models::forex::ForexQuote> {
+    ) -> Result<finance_query_models::forex::ForexQuote> {
         av::fetch_forex_quote_response(from, to).await
     }
 }
@@ -165,7 +168,7 @@ impl CommoditiesProvider for AlphaVantageProvider {
     async fn fetch_commodities_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::commodities::CommodityQuote> {
+    ) -> Result<finance_query_models::commodities::CommodityQuote> {
         av::fetch_commodities_quote_response(symbol).await
     }
 }
@@ -176,7 +179,7 @@ impl CryptoProvider for AlphaVantageProvider {
         &self,
         symbol: &str,
         market: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
+    ) -> Result<finance_query_models::crypto::CryptoQuote> {
         av::fetch_crypto_quote_response(symbol, market).await
     }
 }
@@ -186,7 +189,7 @@ impl EconomicProvider for AlphaVantageProvider {
     async fn fetch_economic_series(
         &self,
         series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         av::fetch_economic_series_response(series_id).await
     }
 }
@@ -195,8 +198,8 @@ impl EconomicProvider for AlphaVantageProvider {
 impl MarketProvider for AlphaVantageProvider {
     async fn fetch_market_movers(
         &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        direction: finance_query_models::market::performance::MoverDirection,
+    ) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
         av::fetch_market_movers_response(direction).await
     }
 }
@@ -208,11 +211,11 @@ impl CalendarProvider for AlphaVantageProvider {
     /// ignored: this is a snapshot, not a dated event.
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         _from: &str,
         _to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
+        if kind != finance_query_models::calendar::market::CalendarKind::MarketStatus {
             return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         av::fetch_market_status_response().await
@@ -228,19 +231,19 @@ impl FilingsProvider for AlphaVantageProvider {
     async fn fetch_filings(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::filings::ProviderFilings> {
+    ) -> Result<finance_query_models::filings::ProviderFilings> {
         Err(self.not_supported(Operation::Filings))
     }
 
     /// A second route for the ownership surface alongside EDGAR — Alpha
     /// Vantage's `INSIDER_TRANSACTIONS` is coarser (no accession number, form
     /// type, or derivative/non-derivative distinction) but covers the same
-    /// canonical [`InsiderTrade`](crate::models::filings::InsiderTrade) model.
+    /// canonical [`InsiderTrade`](finance_query_models::filings::InsiderTrade) model.
     async fn fetch_insider_trades(
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::InsiderTrade>> {
         av::corporate::fetch_insider_trades_response(symbol, limit).await
     }
 }

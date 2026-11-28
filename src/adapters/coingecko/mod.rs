@@ -33,8 +33,8 @@ use client::CoinGeckoClient;
 use std::sync::OnceLock;
 
 use crate::error::Result;
-pub use crate::models::crypto::CoinQuote;
 pub use discovery::fetch_symbol_search_response;
+pub use finance_query_models::crypto::CoinQuote;
 
 /// Process-global CoinGecko client (initialized lazily on first use).
 static COINGECKO_CLIENT: OnceLock<CoinGeckoClient> = OnceLock::new();
@@ -80,9 +80,9 @@ pub async fn coin(id: &str, vs_currency: &str) -> Result<CoinQuote> {
 pub async fn fetch_crypto_quote_response(
     id: &str,
     vs_currency: &str,
-) -> Result<crate::models::crypto::CryptoQuote> {
+) -> Result<finance_query_models::crypto::CryptoQuote> {
     let quote = coin(id, vs_currency).await?;
-    Ok(crate::models::crypto::CryptoQuote {
+    Ok(finance_query_models::crypto::CryptoQuote {
         id: quote.id,
         symbol: quote.symbol,
         name: quote.name,
@@ -97,9 +97,11 @@ pub async fn fetch_crypto_quote_response(
     })
 }
 
-/// Convert one trending-coin wrapper into the canonical [`TrendingCoin`](crate::models::crypto::TrendingCoin).
-fn to_trending_coin(w: models::TrendingCoinWrapperDTO) -> crate::models::crypto::TrendingCoin {
-    crate::models::crypto::TrendingCoin {
+/// Convert one trending-coin wrapper into the canonical [`TrendingCoin`](finance_query_models::crypto::TrendingCoin).
+fn to_trending_coin(
+    w: models::TrendingCoinWrapperDTO,
+) -> finance_query_models::crypto::TrendingCoin {
+    finance_query_models::crypto::TrendingCoin {
         id: Some(w.item.id),
         symbol: Some(w.item.symbol.to_ascii_uppercase()),
         name: Some(w.item.name),
@@ -109,15 +111,18 @@ fn to_trending_coin(w: models::TrendingCoinWrapperDTO) -> crate::models::crypto:
     }
 }
 
-/// Fetch coins trending in the last 24h as canonical [`TrendingCoin`](crate::models::crypto::TrendingCoin)s.
-pub async fn fetch_crypto_trending_response() -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+/// Fetch coins trending in the last 24h as canonical [`TrendingCoin`](finance_query_models::crypto::TrendingCoin)s.
+pub async fn fetch_crypto_trending_response()
+-> Result<Vec<finance_query_models::crypto::TrendingCoin>> {
     let resp = client()?.trending().await?;
     Ok(resp.coins.into_iter().map(to_trending_coin).collect())
 }
 
-/// Convert the raw `/global` payload into canonical [`GlobalCryptoStats`](crate::models::crypto::GlobalCryptoStats).
-fn to_global_crypto_stats(data: models::GlobalDataDTO) -> crate::models::crypto::GlobalCryptoStats {
-    crate::models::crypto::GlobalCryptoStats {
+/// Convert the raw `/global` payload into canonical [`GlobalCryptoStats`](finance_query_models::crypto::GlobalCryptoStats).
+fn to_global_crypto_stats(
+    data: models::GlobalDataDTO,
+) -> finance_query_models::crypto::GlobalCryptoStats {
+    finance_query_models::crypto::GlobalCryptoStats {
         active_cryptocurrencies: data.active_cryptocurrencies,
         markets: data.markets,
         total_market_cap_usd: data.total_market_cap.get("usd").copied(),
@@ -129,7 +134,8 @@ fn to_global_crypto_stats(data: models::GlobalDataDTO) -> crate::models::crypto:
 }
 
 /// Fetch aggregate global cryptocurrency market statistics.
-pub async fn fetch_crypto_global_response() -> Result<crate::models::crypto::GlobalCryptoStats> {
+pub async fn fetch_crypto_global_response()
+-> Result<finance_query_models::crypto::GlobalCryptoStats> {
     let resp = client()?.global().await?;
     Ok(to_global_crypto_stats(resp.data))
 }

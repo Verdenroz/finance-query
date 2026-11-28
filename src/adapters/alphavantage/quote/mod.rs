@@ -2,9 +2,9 @@
 
 use crate::adapters::common::percent::strip_percent;
 use crate::error::{FinanceError, Result};
-use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
-use crate::models::chart::{Candle, Chart};
-use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+use finance_query_models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+use finance_query_models::chart::{Candle, Chart};
+use finance_query_models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
 use super::models::*;

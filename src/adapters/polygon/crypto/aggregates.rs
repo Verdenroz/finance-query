@@ -3,7 +3,7 @@
 use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
-use crate::models::chart::Candle;
+use finance_query_models::chart::Candle;
 
 use super::super::build_client;
 use super::super::models::*;

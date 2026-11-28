@@ -4,22 +4,22 @@
 //! exchange codes, currency codes, keys, URLs, addresses, and numeric or
 //! date fields are never translated.
 
-use crate::models::chart::spark::Spark;
-use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
-use crate::models::corporate::news::News;
-use crate::models::corporate::recommendation::Recommendation;
-use crate::models::corporate::transcript::{Transcript, TranscriptWithMeta};
-use crate::models::discovery::lookup::{LookupQuote, LookupResults};
-use crate::models::discovery::search::{
+use finance_query_models::chart::spark::Spark;
+use finance_query_models::chart::{CapitalGain, Chart, Dividend, Split};
+use finance_query_models::corporate::news::News;
+use finance_query_models::corporate::recommendation::Recommendation;
+use finance_query_models::corporate::transcript::{Transcript, TranscriptWithMeta};
+use finance_query_models::discovery::lookup::{LookupQuote, LookupResults};
+use finance_query_models::discovery::search::{
     SearchNews, SearchNewsList, SearchQuote, SearchQuotes, SearchResults,
 };
-use crate::models::format::Format;
-use crate::models::fundamentals::FinancialStatement;
-use crate::models::market::industries::IndustryData;
-use crate::models::market::market_summary::MarketSummaryQuote;
-use crate::models::market::sectors::SectorData;
-use crate::models::options::Options;
-use crate::models::quote::{
+use finance_query_models::format::Format;
+use finance_query_models::fundamentals::FinancialStatement;
+use finance_query_models::market::industries::IndustryData;
+use finance_query_models::market::market_summary::MarketSummaryQuote;
+use finance_query_models::market::sectors::SectorData;
+use finance_query_models::options::Options;
+use finance_query_models::quote::{
     AssetProfile, CalendarEvents, CompanyOfficer, DefaultKeyStatistics, Earnings, EarningsHistory,
     EarningsTrend, EquityPerformance, FinancialData, FundOwnership, FundPerformance, FundProfile,
     IndexTrend, IndustryTrend, InsiderHolders, InsiderTransactions, InstitutionOwnership,

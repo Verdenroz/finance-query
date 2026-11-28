@@ -725,12 +725,12 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
         (
             "fetch_filing_sections_response_10k",
             ten_k,
-            crate::models::filings::FilingSectionForm::TenK,
+            finance_query_models::filings::FilingSectionForm::TenK,
         ),
         (
             "fetch_filing_sections_response_8k",
             eight_k,
-            crate::models::filings::FilingSectionForm::EightK,
+            finance_query_models::filings::FilingSectionForm::EightK,
         ),
     ] {
         match accession {
@@ -772,7 +772,7 @@ async fn all_routed_polygon_endpoints_return_populated_data() {
             filings::fetch_filing_sections_response(
                 Some(&ticker),
                 &accession,
-                crate::models::filings::FilingSectionForm::TenK,
+                finance_query_models::filings::FilingSectionForm::TenK,
             ),
             |sections| non_empty(sections, "agent-filed 10-K sections"),
         )

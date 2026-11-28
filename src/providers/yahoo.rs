@@ -49,14 +49,14 @@ impl QuoteProvider for YahooProvider {
     async fn fetch_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::quote::QuoteSummaryResponse> {
+    ) -> Result<finance_query_models::quote::QuoteSummaryResponse> {
         crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol).await
     }
 
     async fn fetch_quotes_batch(
         &self,
         symbols: &[&str],
-    ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+    ) -> Result<Vec<(String, finance_query_models::quote::QuoteSummaryResponse)>> {
         crate::adapters::yahoo::quote::quotes::fetch_quotes_batch(&*self.client().await?, symbols)
             .await
     }
@@ -69,7 +69,7 @@ impl ChartProvider for YahooProvider {
         symbol: &str,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         crate::adapters::yahoo::chart::fetch_chart(&*self.client().await?, symbol, interval, range)
             .await
     }
@@ -80,7 +80,7 @@ impl ChartProvider for YahooProvider {
         interval: Interval,
         start: i64,
         end: i64,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         crate::adapters::yahoo::chart::fetch_chart_with_dates(
             &*self.client().await?,
             symbol,
@@ -96,9 +96,9 @@ impl ChartProvider for YahooProvider {
         symbols: &[&str],
         interval: Interval,
         range: TimeRange,
-    ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
-        use crate::models::chart::spark::Spark;
-        use crate::models::chart::spark::response::SparkResponse;
+    ) -> Result<Vec<(String, finance_query_models::chart::spark::Spark)>> {
+        use finance_query_models::chart::spark::Spark;
+        use finance_query_models::chart::spark::response::SparkResponse;
 
         let json = crate::adapters::yahoo::quote::spark::fetch(
             &*self.client().await?,
@@ -139,7 +139,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_short_interest(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::ShortInterest>> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -152,7 +152,7 @@ impl FundamentalsProvider for YahooProvider {
 
         let mut out = Vec::new();
         if let Some(shares) = stats.shares_short.as_ref().and_then(|v| v.raw) {
-            out.push(crate::models::fundamentals::ShortInterest {
+            out.push(finance_query_models::fundamentals::ShortInterest {
                 settlement_date: stats
                     .date_short_interest
                     .as_ref()
@@ -164,7 +164,7 @@ impl FundamentalsProvider for YahooProvider {
             });
         }
         if let Some(shares) = stats.shares_short_prior_month.as_ref().and_then(|v| v.raw) {
-            out.push(crate::models::fundamentals::ShortInterest {
+            out.push(finance_query_models::fundamentals::ShortInterest {
                 settlement_date: stats
                     .shares_short_previous_month_date
                     .as_ref()
@@ -183,7 +183,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_share_float(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::ShareFloat> {
+    ) -> Result<finance_query_models::fundamentals::ShareFloat> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -193,7 +193,7 @@ impl FundamentalsProvider for YahooProvider {
                 context: format!("no key statistics returned for {symbol}"),
             }
         })?;
-        Ok(crate::models::fundamentals::ShareFloat {
+        Ok(finance_query_models::fundamentals::ShareFloat {
             symbol: Some(symbol.to_string()),
             float_percent: None,
             float_shares: stats
@@ -215,7 +215,7 @@ impl FundamentalsProvider for YahooProvider {
         symbol: &str,
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+    ) -> Result<finance_query_models::fundamentals::FinancialStatement> {
         let mut stmt = crate::adapters::yahoo::fundamentals::fetch(
             &*self.client().await?,
             symbol,
@@ -233,7 +233,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_rating_consensus(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+    ) -> Result<finance_query_models::fundamentals::RatingConsensus> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -248,7 +248,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_company_profile(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::CompanyProfile> {
+    ) -> Result<finance_query_models::fundamentals::CompanyProfile> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -264,7 +264,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_price_target_consensus(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+    ) -> Result<finance_query_models::fundamentals::PriceTargetConsensus> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -279,7 +279,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_grading_history(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::GradingAction>> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -293,7 +293,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_earnings_surprises(
         &self,
         symbol: &str,
-    ) -> Result<Vec<crate::models::fundamentals::EarningsSurprise>> {
+    ) -> Result<Vec<finance_query_models::fundamentals::EarningsSurprise>> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -308,7 +308,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_etf_profile(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::EtfProfile> {
+    ) -> Result<finance_query_models::fundamentals::EtfProfile> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -327,7 +327,7 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_key_metrics_ttm(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+    ) -> Result<finance_query_models::fundamentals::KeyMetricsTtm> {
         super::yahoo_ttm::fetch_key_metrics_ttm(&*self.client().await?, symbol).await
     }
 
@@ -337,21 +337,21 @@ impl FundamentalsProvider for YahooProvider {
     async fn fetch_ratios_ttm(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+    ) -> Result<finance_query_models::fundamentals::FinancialRatiosTtm> {
         super::yahoo_ttm::fetch_ratios_ttm(&*self.client().await?, symbol).await
     }
 }
 
 fn recommendation_trend_to_rating_consensus(
     symbol: &str,
-    trend: Option<crate::models::corporate::RecommendationTrend>,
-) -> crate::models::fundamentals::RatingConsensus {
+    trend: Option<finance_query_models::corporate::RecommendationTrend>,
+) -> finance_query_models::fundamentals::RatingConsensus {
     let period = trend.and_then(|t| {
         t.trend
             .into_iter()
             .find(|p| p.period.as_deref() == Some("0m"))
     });
-    crate::models::fundamentals::RatingConsensus {
+    finance_query_models::fundamentals::RatingConsensus {
         symbol: Some(symbol.to_string()),
         strong_buy: period.as_ref().and_then(|p| p.strong_buy).map(i64::from),
         buy: period.as_ref().and_then(|p| p.buy).map(i64::from),
@@ -364,10 +364,10 @@ fn recommendation_trend_to_rating_consensus(
 
 fn profile_and_price_to_company_profile(
     symbol: &str,
-    profile: Option<crate::models::corporate::AssetProfile>,
-    price: Option<crate::models::quote::price::Price>,
-) -> crate::models::fundamentals::CompanyProfile {
-    crate::models::fundamentals::CompanyProfile {
+    profile: Option<finance_query_models::corporate::AssetProfile>,
+    price: Option<finance_query_models::quote::price::Price>,
+) -> finance_query_models::fundamentals::CompanyProfile {
+    finance_query_models::fundamentals::CompanyProfile {
         symbol: Some(symbol.to_string()),
         name: price
             .as_ref()
@@ -400,13 +400,13 @@ fn profile_and_price_to_company_profile(
 
 fn profile_and_price_to_symbol_details(
     symbol: &str,
-    profile: Option<crate::models::corporate::AssetProfile>,
-    price: Option<crate::models::quote::price::Price>,
-    key_stats: Option<crate::models::quote::DefaultKeyStatistics>,
-) -> crate::models::discovery::reference::SymbolDetails {
+    profile: Option<finance_query_models::corporate::AssetProfile>,
+    price: Option<finance_query_models::quote::price::Price>,
+    key_stats: Option<finance_query_models::quote::DefaultKeyStatistics>,
+) -> finance_query_models::discovery::reference::SymbolDetails {
     let company_profile =
         profile_and_price_to_company_profile(symbol, profile.clone(), price.clone());
-    crate::models::discovery::reference::SymbolDetails {
+    finance_query_models::discovery::reference::SymbolDetails {
         symbol: symbol.to_string(),
         name: company_profile.name,
         description: company_profile.description,
@@ -437,9 +437,9 @@ fn profile_and_price_to_symbol_details(
 
 fn financial_data_to_price_target_consensus(
     symbol: &str,
-    data: Option<crate::models::quote::FinancialData>,
-) -> crate::models::fundamentals::PriceTargetConsensus {
-    crate::models::fundamentals::PriceTargetConsensus {
+    data: Option<finance_query_models::quote::FinancialData>,
+) -> finance_query_models::fundamentals::PriceTargetConsensus {
+    finance_query_models::fundamentals::PriceTargetConsensus {
         symbol: Some(symbol.to_string()),
         target_high: data
             .as_ref()
@@ -462,13 +462,13 @@ fn financial_data_to_price_target_consensus(
 
 fn upgrade_downgrade_history_to_grading_actions(
     symbol: &str,
-    history: Option<crate::models::quote::UpgradeDowngradeHistory>,
-) -> Vec<crate::models::fundamentals::GradingAction> {
+    history: Option<finance_query_models::quote::UpgradeDowngradeHistory>,
+) -> Vec<finance_query_models::fundamentals::GradingAction> {
     history
         .map(|h| h.history)
         .unwrap_or_default()
         .into_iter()
-        .map(|g| crate::models::fundamentals::GradingAction {
+        .map(|g| finance_query_models::fundamentals::GradingAction {
             symbol: Some(symbol.to_string()),
             date: g.epoch_grade_date.and_then(epoch_to_date),
             grading_company: g.firm,
@@ -480,13 +480,13 @@ fn upgrade_downgrade_history_to_grading_actions(
 
 fn earnings_history_to_surprises(
     symbol: &str,
-    history: Option<crate::models::quote::EarningsHistory>,
-) -> Vec<crate::models::fundamentals::EarningsSurprise> {
+    history: Option<finance_query_models::quote::EarningsHistory>,
+) -> Vec<finance_query_models::fundamentals::EarningsSurprise> {
     history
         .map(|h| h.history)
         .unwrap_or_default()
         .into_iter()
-        .map(|e| crate::models::fundamentals::EarningsSurprise {
+        .map(|e| finance_query_models::fundamentals::EarningsSurprise {
             symbol: Some(symbol.to_string()),
             date: e.quarter.and_then(|v| v.raw).and_then(epoch_to_date),
             actual_eps: e.eps_actual.and_then(|v| v.raw),
@@ -494,7 +494,7 @@ fn earnings_history_to_surprises(
             surprise: e.eps_difference.and_then(|v| v.raw),
             surprise_percent: e
                 .surprise_percent
-                .map(crate::models::quote::FormattedValue::fraction_to_percent)
+                .map(finance_query_models::quote::FormattedValue::fraction_to_percent)
                 .and_then(|v| v.raw),
         })
         .collect()
@@ -502,11 +502,11 @@ fn earnings_history_to_surprises(
 
 fn fund_modules_to_etf_profile(
     symbol: &str,
-    price: Option<crate::models::quote::price::Price>,
-    summary_detail: Option<crate::models::quote::SummaryDetail>,
-    fund_profile: Option<crate::models::quote::FundProfile>,
-    top_holdings: Option<crate::models::quote::TopHoldings>,
-) -> crate::models::fundamentals::EtfProfile {
+    price: Option<finance_query_models::quote::price::Price>,
+    summary_detail: Option<finance_query_models::quote::SummaryDetail>,
+    fund_profile: Option<finance_query_models::quote::FundProfile>,
+    top_holdings: Option<finance_query_models::quote::TopHoldings>,
+) -> finance_query_models::fundamentals::EtfProfile {
     let (asset_type, fees) = match fund_profile {
         Some(p) => (p.legal_type, p.fees_expenses_investment),
         None => (None, None),
@@ -516,7 +516,7 @@ fn fund_modules_to_etf_profile(
         None => (Vec::new(), None),
     };
 
-    crate::models::fundamentals::EtfProfile {
+    finance_query_models::fundamentals::EtfProfile {
         symbol: Some(symbol.to_string()),
         name: price
             .as_ref()
@@ -543,7 +543,7 @@ fn fund_modules_to_etf_profile(
         inception_date: None,
         holdings: holdings
             .into_iter()
-            .map(|h| crate::models::fundamentals::EtfHolding {
+            .map(|h| finance_query_models::fundamentals::EtfHolding {
                 symbol: h.symbol,
                 description: h.holding_name,
                 weight: h.holding_percent.and_then(|v| v.raw),
@@ -557,8 +557,8 @@ fn fund_modules_to_etf_profile(
 }
 
 fn sector_weighting_rows(
-    sw: crate::models::corporate::top_holdings::SectorWeighting,
-) -> Vec<crate::models::fundamentals::EtfSectorWeighting> {
+    sw: finance_query_models::corporate::top_holdings::SectorWeighting,
+) -> Vec<finance_query_models::fundamentals::EtfSectorWeighting> {
     use crate::constants::sectors::Sector;
     [
         (Sector::RealEstate, sw.realestate),
@@ -577,7 +577,7 @@ fn sector_weighting_rows(
     .filter_map(|(sector, weight)| {
         weight
             .and_then(|v| v.raw)
-            .map(|w| crate::models::fundamentals::EtfSectorWeighting {
+            .map(|w| finance_query_models::fundamentals::EtfSectorWeighting {
                 sector: Some(sector.display_name().to_string()),
                 weight: Some(w),
             })
@@ -594,7 +594,7 @@ impl FuturesProvider for YahooProvider {
     async fn fetch_futures_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::futures::FuturesQuote> {
+    ) -> Result<finance_query_models::futures::FuturesQuote> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -608,10 +608,10 @@ impl FuturesProvider for YahooProvider {
 
 fn price_and_summary_to_futures_quote(
     symbol: &str,
-    price: Option<crate::models::quote::price::Price>,
-    summary_detail: Option<crate::models::quote::SummaryDetail>,
-) -> crate::models::futures::FuturesQuote {
-    crate::models::futures::FuturesQuote {
+    price: Option<finance_query_models::quote::price::Price>,
+    summary_detail: Option<finance_query_models::quote::SummaryDetail>,
+) -> finance_query_models::futures::FuturesQuote {
+    finance_query_models::futures::FuturesQuote {
         symbol: symbol.to_string(),
         name: price
             .as_ref()
@@ -639,14 +639,17 @@ fn price_and_summary_to_futures_quote(
 
 #[async_trait::async_trait]
 impl CorporateProvider for YahooProvider {
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+    async fn fetch_news(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         crate::adapters::yahoo::corporate::news::fetch_news(symbol).await
     }
 
     async fn fetch_events(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
+    ) -> Result<finance_query_models::chart::events::ChartEvents> {
         crate::adapters::yahoo::chart::fetch_events(&*self.client().await?, symbol).await
     }
 
@@ -654,7 +657,7 @@ impl CorporateProvider for YahooProvider {
         &self,
         symbol: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+    ) -> Result<Vec<finance_query_models::corporate::recommendation::SimilarSymbol>> {
         crate::adapters::yahoo::corporate::recommendations::fetch(
             &*self.client().await?,
             symbol,
@@ -668,7 +671,7 @@ impl CorporateProvider for YahooProvider {
         symbol: &str,
         quarter: Option<&str>,
         year: Option<i32>,
-    ) -> Result<crate::models::corporate::earnings_transcript::EarningsTranscript> {
+    ) -> Result<finance_query_models::corporate::earnings_transcript::EarningsTranscript> {
         let transcript = crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(
             &*self.client().await?,
             symbol,
@@ -677,7 +680,7 @@ impl CorporateProvider for YahooProvider {
         )
         .await?;
         Ok(
-            crate::models::corporate::earnings_transcript::EarningsTranscript {
+            finance_query_models::corporate::earnings_transcript::EarningsTranscript {
                 symbol: Some(symbol.to_string()),
                 quarter: Some(transcript.quarter().to_string()),
                 year: Some(transcript.year()),
@@ -695,10 +698,10 @@ impl MarketProvider for YahooProvider {
     /// so movers work on the default keyless route.
     async fn fetch_market_movers(
         &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        direction: finance_query_models::market::performance::MoverDirection,
+    ) -> Result<Vec<finance_query_models::market::performance::MoverQuote>> {
         use crate::constants::screeners::Screener;
-        use crate::models::market::performance::MoverDirection;
+        use finance_query_models::market::performance::MoverDirection;
 
         let screener = match direction {
             MoverDirection::Gainers => Screener::DayGainers,
@@ -719,7 +722,7 @@ impl MarketProvider for YahooProvider {
     /// fails to fetch is dropped rather than failing the whole call.
     async fn fetch_sector_performance(
         &self,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformance>> {
         use crate::constants::sectors::Sector;
 
         let client = self.client().await?;
@@ -743,7 +746,7 @@ impl MarketProvider for YahooProvider {
     async fn fetch_sector_performance_history(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformanceHistory>> {
         crate::adapters::yahoo::market::sector_history::fetch_sector_performance_history(
             &*self.client().await?,
             limit,
@@ -758,9 +761,11 @@ impl MarketProvider for YahooProvider {
     /// the same fan-out over ~160 industry slugs is too costly for one
     /// call, and thin industries wouldn't have enough sampled P/Es for a
     /// meaningful aggregate.
-    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+    async fn fetch_sector_pe(
+        &self,
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPe>> {
         use crate::constants::sectors::Sector;
-        use crate::models::discovery::screeners::{
+        use finance_query_models::discovery::screeners::{
             EquityField, EquityScreenerQuery, ScreenerFieldExt,
         };
 
@@ -778,7 +783,7 @@ impl MarketProvider for YahooProvider {
                 .size(SAMPLE_SIZE);
             match crate::adapters::yahoo::discovery::screeners::fetch_custom(client, query).await {
                 Ok(results) => median_trailing_pe(&results.quotes).map(|pe| {
-                    crate::models::market::performance::SectorPe {
+                    finance_query_models::market::performance::SectorPe {
                         sector: sector.display_name().to_string(),
                         exchange: None,
                         pe: Some(pe),
@@ -803,7 +808,7 @@ impl MarketProvider for YahooProvider {
 /// non-finite values (negative-earnings companies aren't meaningfully
 /// "priced" via P/E, so including them would skew the aggregate).
 fn median_trailing_pe(
-    quotes: &[crate::models::discovery::screeners::ScreenerQuote],
+    quotes: &[finance_query_models::discovery::screeners::ScreenerQuote],
 ) -> Option<f64> {
     let mut values: Vec<f64> = quotes
         .iter()
@@ -823,9 +828,9 @@ fn median_trailing_pe(
 }
 
 fn sector_data_to_performance(
-    data: crate::models::market::sectors::SectorData,
-) -> crate::models::market::performance::SectorPerformance {
-    crate::models::market::performance::SectorPerformance {
+    data: finance_query_models::market::sectors::SectorData,
+) -> finance_query_models::market::performance::SectorPerformance {
+    finance_query_models::market::performance::SectorPerformance {
         sector: data.name,
         exchange: None,
         change_percent: data
@@ -837,12 +842,12 @@ fn sector_data_to_performance(
 
 /// Map screener rows to canonical mover quotes.
 fn screener_quotes_to_movers(
-    results: crate::models::discovery::screeners::ScreenerResults,
-) -> Vec<crate::models::market::performance::MoverQuote> {
+    results: finance_query_models::discovery::screeners::ScreenerResults,
+) -> Vec<finance_query_models::market::performance::MoverQuote> {
     results
         .quotes
         .into_iter()
-        .map(|q| crate::models::market::performance::MoverQuote {
+        .map(|q| finance_query_models::market::performance::MoverQuote {
             name: Some(q.short_name.clone())
                 .filter(|s| !s.is_empty())
                 .or(q.long_name),
@@ -863,7 +868,7 @@ impl IndicesProvider for YahooProvider {
     async fn fetch_indices_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::indices::IndexQuote> {
+    ) -> Result<finance_query_models::indices::IndexQuote> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -873,9 +878,9 @@ impl IndicesProvider for YahooProvider {
 
 fn price_to_index_quote(
     symbol: &str,
-    price: Option<&crate::models::quote::price::Price>,
-) -> crate::models::indices::IndexQuote {
-    crate::models::indices::IndexQuote {
+    price: Option<&finance_query_models::quote::price::Price>,
+) -> finance_query_models::indices::IndexQuote {
+    finance_query_models::indices::IndexQuote {
         symbol: symbol.to_string(),
         name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
         price: price.and_then(|p| p.current_price()),
@@ -893,7 +898,7 @@ impl CommoditiesProvider for YahooProvider {
     async fn fetch_commodities_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::commodities::CommodityQuote> {
+    ) -> Result<finance_query_models::commodities::CommodityQuote> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -903,9 +908,9 @@ impl CommoditiesProvider for YahooProvider {
 
 fn price_to_commodity_quote(
     symbol: &str,
-    price: Option<&crate::models::quote::price::Price>,
-) -> crate::models::commodities::CommodityQuote {
-    crate::models::commodities::CommodityQuote {
+    price: Option<&finance_query_models::quote::price::Price>,
+) -> finance_query_models::commodities::CommodityQuote {
+    finance_query_models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: price.and_then(|p| p.short_name.clone().or_else(|| p.long_name.clone())),
         unit: None,
@@ -925,7 +930,7 @@ impl DiscoveryProvider for YahooProvider {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         let options =
             crate::adapters::yahoo::discovery::search::SearchOptions::new().quotes_count(limit);
         let results = self.client().await?.search(query, &options).await?;
@@ -941,7 +946,7 @@ impl DiscoveryProvider for YahooProvider {
     async fn fetch_symbol_details(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+    ) -> Result<finance_query_models::discovery::reference::SymbolDetails> {
         let resp =
             crate::adapters::yahoo::quote::summary::fetch_summary(&*self.client().await?, symbol)
                 .await?;
@@ -971,9 +976,9 @@ impl DiscoveryProvider for YahooProvider {
     /// response carries none of them as a result column.
     async fn fetch_screener(
         &self,
-        filters: &crate::models::discovery::reference::ScreenerFilters,
-    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
-        use crate::models::discovery::screeners::{
+        filters: &finance_query_models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<finance_query_models::discovery::reference::ScreenerMatch>> {
+        use finance_query_models::discovery::screeners::{
             EquityField, EquityScreenerQuery, ScreenerFieldExt,
         };
 
@@ -1016,13 +1021,13 @@ impl DiscoveryProvider for YahooProvider {
     }
 }
 
-fn add_range_condition<F: crate::models::discovery::screeners::ScreenerField>(
-    query: crate::models::discovery::screeners::ScreenerQuery<F>,
+fn add_range_condition<F: finance_query_models::discovery::screeners::ScreenerField>(
+    query: finance_query_models::discovery::screeners::ScreenerQuery<F>,
     field: F,
     min: Option<f64>,
     max: Option<f64>,
-) -> crate::models::discovery::screeners::ScreenerQuery<F> {
-    use crate::models::discovery::screeners::ScreenerFieldExt;
+) -> finance_query_models::discovery::screeners::ScreenerQuery<F> {
+    use finance_query_models::discovery::screeners::ScreenerFieldExt;
 
     match (min, max) {
         (Some(min), Some(max)) => query.add_condition(field.between(min, max)),
@@ -1033,50 +1038,54 @@ fn add_range_condition<F: crate::models::discovery::screeners::ScreenerField>(
 }
 
 fn search_quotes_to_symbol_matches(
-    quotes: crate::models::discovery::search::SearchQuotes,
-) -> Vec<crate::models::discovery::reference::SymbolMatch> {
+    quotes: finance_query_models::discovery::search::SearchQuotes,
+) -> Vec<finance_query_models::discovery::reference::SymbolMatch> {
     quotes
         .into_iter()
-        .map(|q| crate::models::discovery::reference::SymbolMatch {
-            symbol: q.symbol,
-            id: None,
-            name: q.short_name.or(q.long_name),
-            exchange: q.exchange,
-            asset_type: q.quote_type,
-            currency: None,
-            active: None,
-            market_cap_rank: None,
-            thumbnail: q.logo_url.clone(),
-            image: q.logo_url,
-            ipo_date: None,
-            delisted_date: None,
-        })
+        .map(
+            |q| finance_query_models::discovery::reference::SymbolMatch {
+                symbol: q.symbol,
+                id: None,
+                name: q.short_name.or(q.long_name),
+                exchange: q.exchange,
+                asset_type: q.quote_type,
+                currency: None,
+                active: None,
+                market_cap_rank: None,
+                thumbnail: q.logo_url.clone(),
+                image: q.logo_url,
+                ipo_date: None,
+                delisted_date: None,
+            },
+        )
         .collect()
 }
 
 fn screener_quotes_to_screener_matches(
-    quotes: Vec<crate::models::discovery::screeners::ScreenerQuote>,
-) -> Vec<crate::models::discovery::reference::ScreenerMatch> {
+    quotes: Vec<finance_query_models::discovery::screeners::ScreenerQuote>,
+) -> Vec<finance_query_models::discovery::reference::ScreenerMatch> {
     quotes
         .into_iter()
-        .map(|q| crate::models::discovery::reference::ScreenerMatch {
-            symbol: q.symbol,
-            name: Some(q.short_name).filter(|s| !s.is_empty()).or(q.long_name),
-            price: q.regular_market_price.raw,
-            market_cap: q.market_cap.and_then(|v| v.raw).map(|v| v as f64),
-            sector: None,
-            industry: None,
-            beta: None,
-            volume: q
-                .regular_market_volume
-                .and_then(|v| v.raw)
-                .map(|v| v as f64),
-            exchange: Some(q.exchange),
-            country: None,
-            is_etf: Some(q.quote_type == "ETF"),
-            is_actively_trading: None,
-            is_fund: Some(q.quote_type == "MUTUALFUND"),
-        })
+        .map(
+            |q| finance_query_models::discovery::reference::ScreenerMatch {
+                symbol: q.symbol,
+                name: Some(q.short_name).filter(|s| !s.is_empty()).or(q.long_name),
+                price: q.regular_market_price.raw,
+                market_cap: q.market_cap.and_then(|v| v.raw).map(|v| v as f64),
+                sector: None,
+                industry: None,
+                beta: None,
+                volume: q
+                    .regular_market_volume
+                    .and_then(|v| v.raw)
+                    .map(|v| v as f64),
+                exchange: Some(q.exchange),
+                country: None,
+                is_etf: Some(q.quote_type == "ETF"),
+                is_actively_trading: None,
+                is_fund: Some(q.quote_type == "MUTUALFUND"),
+            },
+        )
         .collect()
 }
 
@@ -1087,11 +1096,11 @@ impl CalendarProvider for YahooProvider {
     /// a snapshot, not a dated event.
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         _from: &str,
         _to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        if kind != crate::models::calendar::market::CalendarKind::MarketStatus {
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>> {
+        if kind != finance_query_models::calendar::market::CalendarKind::MarketStatus {
             return Err(self.not_supported(Operation::from_calendar(kind)));
         }
         let hours =
@@ -1101,21 +1110,23 @@ impl CalendarProvider for YahooProvider {
 }
 
 fn market_times_to_calendar_entries(
-    markets: Vec<crate::models::market::hours::MarketTime>,
-) -> Vec<crate::models::calendar::market::MarketCalendarEntry> {
+    markets: Vec<finance_query_models::market::hours::MarketTime>,
+) -> Vec<finance_query_models::calendar::market::MarketCalendarEntry> {
     markets
         .into_iter()
-        .map(|m| crate::models::calendar::market::MarketCalendarEntry {
-            symbol: None,
-            date: None,
-            detail: crate::models::calendar::market::CalendarDetail::MarketHoliday {
-                name: Some(m.name),
-                exchange: None,
-                status: Some(m.status),
-                open: m.open,
-                close: m.close,
+        .map(
+            |m| finance_query_models::calendar::market::MarketCalendarEntry {
+                symbol: None,
+                date: None,
+                detail: finance_query_models::calendar::market::CalendarDetail::MarketHoliday {
+                    name: Some(m.name),
+                    exchange: None,
+                    status: Some(m.status),
+                    open: m.open,
+                    close: m.close,
+                },
             },
-        })
+        )
         .collect()
 }
 
@@ -1125,7 +1136,7 @@ impl OptionsProvider for YahooProvider {
         &self,
         symbol: &str,
         date: Option<i64>,
-    ) -> Result<crate::models::options::Options> {
+    ) -> Result<finance_query_models::options::Options> {
         crate::adapters::yahoo::options::fetch(&*self.client().await?, symbol, date).await
     }
 }
@@ -1190,7 +1201,7 @@ mod tests {
         assert!(pes.iter().any(|p| p.pe.is_some_and(|pe| pe > 0.0)));
     }
 
-    fn fixture_asset_profile() -> crate::models::corporate::AssetProfile {
+    fn fixture_asset_profile() -> finance_query_models::corporate::AssetProfile {
         serde_json::from_value(serde_json::json!({
             "website": "https://www.apple.com",
             "fullTimeEmployees": 164_000,
@@ -1199,7 +1210,7 @@ mod tests {
         .unwrap()
     }
 
-    fn fixture_details_price() -> crate::models::quote::price::Price {
+    fn fixture_details_price() -> finance_query_models::quote::price::Price {
         serde_json::from_value(serde_json::json!({
             "shortName": "Apple Inc.",
             "exchangeName": "NMS",
@@ -1209,7 +1220,7 @@ mod tests {
         .unwrap()
     }
 
-    fn fixture_key_stats() -> crate::models::quote::DefaultKeyStatistics {
+    fn fixture_key_stats() -> finance_query_models::quote::DefaultKeyStatistics {
         serde_json::from_value(serde_json::json!({
             "sharesOutstanding": {"raw": 15_000_000_000i64, "fmt": "15B"}
         }))
@@ -1254,7 +1265,7 @@ mod tests {
 
     #[test]
     fn screener_rows_map_to_mover_quotes() {
-        let results: crate::models::discovery::screeners::ScreenerResults =
+        let results: finance_query_models::discovery::screeners::ScreenerResults =
             serde_json::from_value(serde_json::json!({
                 "quotes": [{
                     "symbol": "NVDA",
@@ -1278,7 +1289,7 @@ mod tests {
         assert_eq!(movers[0].change_percent, Some(4.81));
     }
 
-    fn fixture_price() -> crate::models::quote::price::Price {
+    fn fixture_price() -> finance_query_models::quote::price::Price {
         serde_json::from_value(serde_json::json!({
             "shortName": "S&P 500",
             "regularMarketPrice": {"raw": 5678.9, "fmt": "5,678.90"},
@@ -1313,7 +1324,7 @@ mod tests {
 
     #[test]
     fn search_quotes_map_to_symbol_matches() {
-        let quotes: crate::models::discovery::search::SearchQuotes =
+        let quotes: finance_query_models::discovery::search::SearchQuotes =
             serde_json::from_value(serde_json::json!([{
                 "symbol": "AAPL",
                 "shortName": "Apple Inc.",
@@ -1336,7 +1347,7 @@ mod tests {
 
     #[test]
     fn screener_quotes_map_to_screener_matches() {
-        let quotes: Vec<crate::models::discovery::screeners::ScreenerQuote> =
+        let quotes: Vec<finance_query_models::discovery::screeners::ScreenerQuote> =
             serde_json::from_value(serde_json::json!([{
                 "symbol": "NVDA",
                 "shortName": "NVIDIA Corporation",
@@ -1362,7 +1373,7 @@ mod tests {
 
     #[test]
     fn range_condition_picks_between_gte_or_lte() {
-        use crate::models::discovery::screeners::{EquityField, EquityScreenerQuery};
+        use finance_query_models::discovery::screeners::{EquityField, EquityScreenerQuery};
 
         let both = add_range_condition(
             EquityScreenerQuery::new(),
@@ -1386,18 +1397,20 @@ mod tests {
     #[test]
     fn market_times_map_to_calendar_entries() {
         let markets = vec![
-            serde_json::from_value::<crate::models::market::hours::MarketTime>(serde_json::json!({
-                "id": "us",
-                "name": "U.S. markets",
-                "status": "closed",
-                "open": "2026-08-03T00:00:00Z",
-                "close": "2026-08-03T06:30:00Z"
-            }))
+            serde_json::from_value::<finance_query_models::market::hours::MarketTime>(
+                serde_json::json!({
+                    "id": "us",
+                    "name": "U.S. markets",
+                    "status": "closed",
+                    "open": "2026-08-03T00:00:00Z",
+                    "close": "2026-08-03T06:30:00Z"
+                }),
+            )
             .unwrap(),
         ];
         let entries = market_times_to_calendar_entries(markets);
         assert_eq!(entries.len(), 1);
-        let crate::models::calendar::market::CalendarDetail::MarketHoliday {
+        let finance_query_models::calendar::market::CalendarDetail::MarketHoliday {
             name,
             exchange,
             status,
@@ -1416,7 +1429,7 @@ mod tests {
 
     #[test]
     fn sector_data_maps_to_sector_performance() {
-        let data: crate::models::market::sectors::SectorData =
+        let data: finance_query_models::market::sectors::SectorData =
             serde_json::from_value(serde_json::json!({
                 "name": "Technology",
                 "key": "technology",
@@ -1436,7 +1449,7 @@ mod tests {
         assert_eq!(performance.change_percent, Some(1.23));
     }
 
-    fn quote_with_pe(pe: Option<f64>) -> crate::models::discovery::screeners::ScreenerQuote {
+    fn quote_with_pe(pe: Option<f64>) -> finance_query_models::discovery::screeners::ScreenerQuote {
         serde_json::from_value(serde_json::json!({
             "symbol": "AAPL",
             "quoteType": "EQUITY",
@@ -1480,7 +1493,7 @@ mod tests {
 
     #[test]
     fn recommendation_trend_maps_current_period_to_rating_consensus() {
-        let trend: crate::models::corporate::RecommendationTrend =
+        let trend: finance_query_models::corporate::RecommendationTrend =
             serde_json::from_value(serde_json::json!({
                 "trend": [
                     {"period": "0m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0},
@@ -1500,7 +1513,7 @@ mod tests {
 
     #[test]
     fn profile_and_price_map_to_company_profile() {
-        let profile: crate::models::corporate::AssetProfile =
+        let profile: finance_query_models::corporate::AssetProfile =
             serde_json::from_value(serde_json::json!({
                 "country": "United States",
                 "sector": "Technology",
@@ -1508,14 +1521,15 @@ mod tests {
                 "longBusinessSummary": "Designs and sells consumer electronics."
             }))
             .unwrap();
-        let price: crate::models::quote::price::Price = serde_json::from_value(serde_json::json!({
-            "shortName": "Apple Inc.",
-            "quoteType": "EQUITY",
-            "exchangeName": "NMS",
-            "currency": "USD",
-            "marketCap": {"raw": 3_000_000_000_000_i64, "fmt": "3.00T"}
-        }))
-        .unwrap();
+        let price: finance_query_models::quote::price::Price =
+            serde_json::from_value(serde_json::json!({
+                "shortName": "Apple Inc.",
+                "quoteType": "EQUITY",
+                "exchangeName": "NMS",
+                "currency": "USD",
+                "marketCap": {"raw": 3_000_000_000_000_i64, "fmt": "3.00T"}
+            }))
+            .unwrap();
         let company = profile_and_price_to_company_profile("AAPL", Some(profile), Some(price));
         assert_eq!(company.symbol.as_deref(), Some("AAPL"));
         assert_eq!(company.name.as_deref(), Some("Apple Inc."));
@@ -1534,13 +1548,14 @@ mod tests {
 
     #[test]
     fn financial_data_maps_to_price_target_consensus() {
-        let data: crate::models::quote::FinancialData = serde_json::from_value(serde_json::json!({
-            "targetHighPrice": {"raw": 250.0, "fmt": "250.00"},
-            "targetLowPrice": {"raw": 180.0, "fmt": "180.00"},
-            "targetMeanPrice": {"raw": 215.0, "fmt": "215.00"},
-            "targetMedianPrice": {"raw": 210.0, "fmt": "210.00"}
-        }))
-        .unwrap();
+        let data: finance_query_models::quote::FinancialData =
+            serde_json::from_value(serde_json::json!({
+                "targetHighPrice": {"raw": 250.0, "fmt": "250.00"},
+                "targetLowPrice": {"raw": 180.0, "fmt": "180.00"},
+                "targetMeanPrice": {"raw": 215.0, "fmt": "215.00"},
+                "targetMedianPrice": {"raw": 210.0, "fmt": "210.00"}
+            }))
+            .unwrap();
         let consensus = financial_data_to_price_target_consensus("AAPL", Some(data));
         assert_eq!(consensus.symbol.as_deref(), Some("AAPL"));
         assert_eq!(consensus.target_high, Some(250.0));
@@ -1551,7 +1566,7 @@ mod tests {
 
     #[test]
     fn upgrade_downgrade_history_maps_to_grading_actions() {
-        let history: crate::models::quote::UpgradeDowngradeHistory =
+        let history: finance_query_models::quote::UpgradeDowngradeHistory =
             serde_json::from_value(serde_json::json!({
                 "history": [{
                     "epochGradeDate": 1_700_000_000,
@@ -1576,7 +1591,7 @@ mod tests {
 
     #[test]
     fn earnings_history_maps_to_surprises() {
-        let history: crate::models::quote::EarningsHistory =
+        let history: finance_query_models::quote::EarningsHistory =
             serde_json::from_value(serde_json::json!({
                 "history": [{
                     "quarter": {"raw": 1_700_000_000, "fmt": "3Q2023"},
@@ -1600,12 +1615,12 @@ mod tests {
     #[test]
     fn fund_modules_map_to_etf_profile() {
         let price = fixture_price();
-        let summary_detail: crate::models::quote::SummaryDetail =
+        let summary_detail: finance_query_models::quote::SummaryDetail =
             serde_json::from_value(serde_json::json!({
                 "dividendYield": {"raw": 0.0058, "fmt": "0.58%"}
             }))
             .unwrap();
-        let fund_profile: crate::models::quote::FundProfile =
+        let fund_profile: finance_query_models::quote::FundProfile =
             serde_json::from_value(serde_json::json!({
                 "legalType": "Exchange Traded Fund",
                 "feesExpensesInvestment": {
@@ -1615,7 +1630,7 @@ mod tests {
                 }
             }))
             .unwrap();
-        let top_holdings: crate::models::quote::TopHoldings =
+        let top_holdings: finance_query_models::quote::TopHoldings =
             serde_json::from_value(serde_json::json!({
                 "holdings": [{
                     "symbol": "MSFT",
@@ -1657,17 +1672,18 @@ mod tests {
 
     #[test]
     fn price_and_summary_map_to_futures_quote() {
-        let price: crate::models::quote::price::Price = serde_json::from_value(serde_json::json!({
-            "shortName": "E-mini S&P 500 Dec 26",
-            "exchangeName": "CME",
-            "regularMarketPrice": {"raw": 5678.9, "fmt": "5,678.90"},
-            "regularMarketChange": {"raw": 12.3, "fmt": "12.30"},
-            "regularMarketChangePercent": {"raw": 0.22, "fmt": "0.22%"},
-            "regularMarketVolume": {"raw": 150_000, "fmt": "150,000"},
-            "regularMarketTime": 1_700_000_000
-        }))
-        .unwrap();
-        let summary_detail: crate::models::quote::SummaryDetail =
+        let price: finance_query_models::quote::price::Price =
+            serde_json::from_value(serde_json::json!({
+                "shortName": "E-mini S&P 500 Dec 26",
+                "exchangeName": "CME",
+                "regularMarketPrice": {"raw": 5678.9, "fmt": "5,678.90"},
+                "regularMarketChange": {"raw": 12.3, "fmt": "12.30"},
+                "regularMarketChangePercent": {"raw": 0.22, "fmt": "0.22%"},
+                "regularMarketVolume": {"raw": 150_000, "fmt": "150,000"},
+                "regularMarketTime": 1_700_000_000
+            }))
+            .unwrap();
+        let summary_detail: finance_query_models::quote::SummaryDetail =
             serde_json::from_value(serde_json::json!({
                 "openInterest": {"raw": 42_000, "fmt": "42,000"}
             }))

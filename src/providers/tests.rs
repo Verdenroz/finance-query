@@ -22,7 +22,7 @@ impl ChartProvider for NoSparkProvider {
         _: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         Err(FinanceError::ApiError(
             "not exercised by these tests".into(),
         ))
@@ -191,7 +191,7 @@ impl ChartProvider for NoSparkEdgar {
         _: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         Err(FinanceError::ApiError("not exercised".into()))
     }
 }
@@ -253,7 +253,7 @@ async fn real_errors_outrank_not_supported_in_final_error() {
             _: &str,
             _: crate::Interval,
             _: crate::TimeRange,
-        ) -> Result<crate::models::chart::Chart> {
+        ) -> Result<finance_query_models::chart::Chart> {
             Err(FinanceError::ApiError("upstream 500".into()))
         }
         async fn fetch_spark(
@@ -261,7 +261,7 @@ async fn real_errors_outrank_not_supported_in_final_error() {
             _: &[&str],
             _: crate::Interval,
             _: crate::TimeRange,
-        ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
+        ) -> Result<Vec<(String, finance_query_models::chart::spark::Spark)>> {
             Err(FinanceError::ApiError("upstream 500".into()))
         }
     }
@@ -332,14 +332,14 @@ impl ChartProvider for FlakyChartProvider {
         symbol: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         if n < self.fail_times {
             return Err(FinanceError::RateLimited {
                 retry_after: Some(0),
             });
         }
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles: Vec::new(),
@@ -357,7 +357,7 @@ impl ProviderAdapter for FlakyChartProvider {
     }
 }
 
-async fn fetch_chart_via(set: &ProviderSet) -> Result<crate::models::chart::Chart> {
+async fn fetch_chart_via(set: &ProviderSet) -> Result<finance_query_models::chart::Chart> {
     set.fetch(Capability::CHART, |p| {
         let p = p.clone();
         async move {
@@ -492,7 +492,7 @@ impl ChartProvider for UnknownSymbolProvider {
         symbol: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         Err(FinanceError::SymbolNotFound {
             symbol: Some(symbol.to_string()),
             context: "no such ticker".into(),
@@ -684,10 +684,10 @@ impl ChartProvider for CountingChartProvider {
         symbol: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         tokio::task::yield_now().await;
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles: Vec::new(),
@@ -798,11 +798,11 @@ impl ChartProvider for KeyObservingProvider {
         symbol: &str,
         _: crate::Interval,
         _: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
+    ) -> Result<finance_query_models::chart::Chart> {
         let observed = crate::adapters::keys::scoped_key("fmp").map(|k| k.api_key);
         *self.seen.lock().expect("not poisoned") = Some(observed);
         tokio::task::yield_now().await;
-        Ok(crate::models::chart::Chart {
+        Ok(finance_query_models::chart::Chart {
             symbol: symbol.to_string(),
             meta: Default::default(),
             candles: Vec::new(),

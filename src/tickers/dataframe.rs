@@ -7,12 +7,12 @@ use super::{
     SymbolMap,
 };
 use crate::__dataframe::Columns;
-use crate::models::chart::spark::Spark;
-use crate::models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
-use crate::models::corporate::news::News;
-use crate::models::corporate::recommendation::SimilarSymbol;
-use crate::models::fundamentals::FinancialStatement;
-use crate::models::options::{Contracts, Options};
+use finance_query_models::chart::spark::Spark;
+use finance_query_models::chart::{Candle, CapitalGain, Chart, Dividend, Split};
+use finance_query_models::corporate::news::News;
+use finance_query_models::corporate::recommendation::SimilarSymbol;
+use finance_query_models::fundamentals::FinancialStatement;
+use finance_query_models::options::{Contracts, Options};
 use polars::prelude::{DataFrame, NamedFrom, PolarsResult, Series};
 use std::collections::BTreeMap;
 
@@ -236,7 +236,7 @@ impl super::BatchIndicatorsResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::quote::Quote;
+    use finance_query_models::quote::Quote;
     use polars::prelude::DataType;
 
     fn response<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> T {
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn quotes_as_both_frame_matches_batch_quotes_frame() {
-        let summary = crate::models::quote::QuoteSummaryResponse {
+        let summary = finance_query_models::quote::QuoteSummaryResponse {
             symbol: "AAPL".into(),
             ..Default::default()
         };

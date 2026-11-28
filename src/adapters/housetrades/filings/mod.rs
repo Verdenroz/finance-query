@@ -9,7 +9,7 @@ use chrono::{Datelike, Utc};
 use futures::stream::{self, StreamExt};
 
 use crate::error::{FinanceError, Result};
-use crate::models::filings::CongressionalTrade;
+use finance_query_models::filings::CongressionalTrade;
 
 use super::models::PtrIndexEntry;
 use index::{parse_index, parse_us_date};

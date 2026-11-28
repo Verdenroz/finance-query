@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
-use crate::models::discovery::reference::ScreenerFilters;
+use finance_query_models::discovery::reference::ScreenerFilters;
 
 /// A result from the stock screener endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,8 +101,8 @@ pub async fn symbol_search(
 pub async fn fetch_symbol_search_response(
     query: &str,
     limit: u32,
-) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
-    use crate::models::discovery::reference::SymbolMatch;
+) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
+    use finance_query_models::discovery::reference::SymbolMatch;
     let results = symbol_search(query, Some(limit), None).await?;
     Ok(results
         .into_iter()
@@ -167,9 +167,9 @@ fn screener_query(filters: &ScreenerFilters) -> Vec<(&'static str, String)> {
 
 /// Run a screener query and return provider-neutral matches.
 pub async fn fetch_screener_response(
-    filters: &crate::models::discovery::reference::ScreenerFilters,
-) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
-    use crate::models::discovery::reference::ScreenerMatch;
+    filters: &finance_query_models::discovery::reference::ScreenerFilters,
+) -> Result<Vec<finance_query_models::discovery::reference::ScreenerMatch>> {
+    use finance_query_models::discovery::reference::ScreenerMatch;
     let owned = screener_query(filters);
     let params: Vec<(&str, &str)> = owned.iter().map(|(k, v)| (*k, v.as_str())).collect();
     let results = stock_screener(&params).await?;
@@ -253,7 +253,7 @@ mod tests {
         let matched: Vec<_> = hits
             .into_iter()
             .filter_map(|r| {
-                Some(crate::models::discovery::reference::SymbolMatch {
+                Some(finance_query_models::discovery::reference::SymbolMatch {
                     symbol: r.symbol?,
                     id: None,
                     name: r.name,

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::models::fundamentals::{EarningsSurprise, GradingAction};
+use finance_query_models::fundamentals::{EarningsSurprise, GradingAction};
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::Period;

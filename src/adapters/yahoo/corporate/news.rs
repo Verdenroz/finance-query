@@ -3,7 +3,7 @@ use crate::Provider;
 ///
 /// Wraps the StockAnalysis news scraper and sets Yahoo provider_id.
 use crate::error::Result;
-use crate::models::corporate::news::News;
+use finance_query_models::corporate::news::News;
 
 /// Fetch news for a symbol using the StockAnalysis scraper.
 ///

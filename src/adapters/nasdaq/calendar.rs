@@ -5,8 +5,8 @@ use chrono::{Datelike, NaiveDate};
 use super::models::{NasdaqDividendRow, NasdaqEarningsRow, NasdaqIpoRow, NasdaqSplitRow};
 use crate::adapters::common::date_range::parse_date_range;
 use crate::error::{FinanceError, Result};
-use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 use crate::providers::Operation;
+use finance_query_models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
 /// Earnings/dividends/splits are fetched one day at a time; cap the range so
 /// a broad request doesn't fan out into hundreds of HTTP calls.

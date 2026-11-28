@@ -67,28 +67,28 @@ pub trait DiscoveryProvider: ProviderCore {
         &self,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>>;
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>>;
 
     /// Fetch detailed reference data for a single symbol.
     async fn fetch_symbol_details(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+    ) -> Result<finance_query_models::discovery::reference::SymbolDetails> {
         Err(self.not_supported(Operation::SymbolDetails))
     }
 
     /// Fetch the provider's tradable exchange listing.
     async fn fetch_exchanges(
         &self,
-    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::ExchangeInfo>> {
         Err(self.not_supported(Operation::Exchanges))
     }
 
     /// Run a screener query over the provider's universe.
     async fn fetch_screener(
         &self,
-        _filters: &crate::models::discovery::reference::ScreenerFilters,
-    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        _filters: &finance_query_models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<finance_query_models::discovery::reference::ScreenerMatch>> {
         Err(self.not_supported(Operation::Screener))
     }
 
@@ -100,7 +100,7 @@ pub trait DiscoveryProvider: ProviderCore {
     async fn fetch_listing_status(
         &self,
         _active: bool,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    ) -> Result<Vec<finance_query_models::discovery::reference::SymbolMatch>> {
         Err(self.not_supported(Operation::ListingStatus))
     }
 }
@@ -115,10 +115,10 @@ pub trait CalendarProvider: ProviderCore {
     /// [`Operation`] in `NotSupported` errors.
     async fn fetch_market_calendar(
         &self,
-        kind: crate::models::calendar::market::CalendarKind,
+        kind: finance_query_models::calendar::market::CalendarKind,
         from: &str,
         to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>>;
+    ) -> Result<Vec<finance_query_models::calendar::market::MarketCalendarEntry>>;
 }
 
 /// [`crate::Capability::MARKET`] — sector/industry performance and movers.
@@ -131,13 +131,13 @@ pub trait MarketProvider: ProviderCore {
     /// Fetch the market movers list for `direction`.
     async fn fetch_market_movers(
         &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>>;
+        direction: finance_query_models::market::performance::MoverDirection,
+    ) -> Result<Vec<finance_query_models::market::performance::MoverQuote>>;
 
     /// Fetch aggregate performance for every sector.
     async fn fetch_sector_performance(
         &self,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformance>> {
         Err(self.not_supported(Operation::SectorPerformance))
     }
 
@@ -145,12 +145,14 @@ pub trait MarketProvider: ProviderCore {
     async fn fetch_sector_performance_history(
         &self,
         _limit: u32,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPerformanceHistory>> {
         Err(self.not_supported(Operation::SectorPerformanceHistory))
     }
 
     /// Fetch sector price/earnings ratios.
-    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+    async fn fetch_sector_pe(
+        &self,
+    ) -> Result<Vec<finance_query_models::market::performance::SectorPe>> {
         Err(self.not_supported(Operation::SectorPerformance))
     }
 
@@ -162,7 +164,7 @@ pub trait MarketProvider: ProviderCore {
     /// sampled P/Es to aggregate into a publishable number.
     async fn fetch_industry_pe(
         &self,
-    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+    ) -> Result<Vec<finance_query_models::market::performance::IndustryPe>> {
         Err(self.not_supported(Operation::SectorPerformance))
     }
 }
@@ -175,14 +177,14 @@ pub trait CryptoProvider: ProviderCore {
         &self,
         id: &str,
         vs_currency: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote>;
+    ) -> Result<finance_query_models::crypto::CryptoQuote>;
 
     /// Fetch total value locked in a DeFi protocol.
     #[cfg(feature = "defi")]
     async fn fetch_protocol_tvl(
         &self,
         _protocol: &str,
-    ) -> Result<crate::models::crypto::defi::ProtocolTvl> {
+    ) -> Result<finance_query_models::crypto::defi::ProtocolTvl> {
         Err(self.not_supported(Operation::ProtocolTvl))
     }
 
@@ -191,19 +193,21 @@ pub trait CryptoProvider: ProviderCore {
     async fn fetch_protocol_tvl_history(
         &self,
         _protocol: &str,
-    ) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
+    ) -> Result<Vec<finance_query_models::crypto::defi::TvlPoint>> {
         Err(self.not_supported(Operation::ProtocolTvlHistory))
     }
 
     /// Fetch coins/nfts/categories trending in the last 24h (CoinGecko only).
     #[cfg(feature = "crypto")]
-    async fn fetch_crypto_trending(&self) -> Result<Vec<crate::models::crypto::TrendingCoin>> {
+    async fn fetch_crypto_trending(
+        &self,
+    ) -> Result<Vec<finance_query_models::crypto::TrendingCoin>> {
         Err(self.not_supported(Operation::CryptoTrending))
     }
 
     /// Fetch aggregate global cryptocurrency market statistics (CoinGecko only).
     #[cfg(feature = "crypto")]
-    async fn fetch_crypto_global(&self) -> Result<crate::models::crypto::GlobalCryptoStats> {
+    async fn fetch_crypto_global(&self) -> Result<finance_query_models::crypto::GlobalCryptoStats> {
         Err(self.not_supported(Operation::CryptoGlobal))
     }
 
@@ -211,7 +215,7 @@ pub trait CryptoProvider: ProviderCore {
     async fn fetch_crypto_news(
         &self,
         _limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         Err(self.not_supported(Operation::CryptoNews))
     }
 }
@@ -223,7 +227,7 @@ pub trait EconomicProvider: ProviderCore {
     async fn fetch_economic_series(
         &self,
         series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries>;
+    ) -> Result<finance_query_models::economic::EconomicSeries>;
 
     /// Fetch a series as it stood on `date` (`YYYY-MM-DD`) rather than as
     /// currently revised — the point-in-time view backtests need.
@@ -236,7 +240,7 @@ pub trait EconomicProvider: ProviderCore {
         &self,
         _series_id: &str,
         _date: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         Err(self.not_supported(Operation::EconomicSeriesAsOf))
     }
 
@@ -250,7 +254,7 @@ pub trait EconomicProvider: ProviderCore {
         &self,
         _query: &str,
         _limit: u32,
-    ) -> Result<Vec<crate::models::economic::EconomicSeriesMatch>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicSeriesMatch>> {
         Err(self.not_supported(Operation::EconomicSearch))
     }
 
@@ -261,7 +265,7 @@ pub trait EconomicProvider: ProviderCore {
     async fn fetch_economic_categories(
         &self,
         _parent_id: i64,
-    ) -> Result<Vec<crate::models::economic::EconomicCategory>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicCategory>> {
         Err(self.not_supported(Operation::EconomicCategories))
     }
 
@@ -271,7 +275,7 @@ pub trait EconomicProvider: ProviderCore {
     /// entity. Stays FRED-only.
     async fn fetch_economic_releases(
         &self,
-    ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
+    ) -> Result<Vec<finance_query_models::economic::EconomicRelease>> {
         Err(self.not_supported(Operation::EconomicReleases))
     }
 
@@ -284,8 +288,8 @@ pub trait EconomicProvider: ProviderCore {
     #[cfg(feature = "fiscaldata")]
     async fn fetch_treasury_auctions(
         &self,
-        _query: &crate::models::economic::TreasuryAuctionQuery,
-    ) -> Result<Vec<crate::models::economic::TreasuryAuction>> {
+        _query: &finance_query_models::economic::TreasuryAuctionQuery,
+    ) -> Result<Vec<finance_query_models::economic::TreasuryAuction>> {
         Err(self.not_supported(Operation::TreasuryAuctions))
     }
 
@@ -297,7 +301,7 @@ pub trait EconomicProvider: ProviderCore {
     #[cfg(feature = "fiscaldata")]
     async fn fetch_upcoming_auctions(
         &self,
-    ) -> Result<Vec<crate::models::economic::UpcomingAuction>> {
+    ) -> Result<Vec<finance_query_models::economic::UpcomingAuction>> {
         Err(self.not_supported(Operation::UpcomingAuctions))
     }
 }
@@ -310,13 +314,13 @@ pub trait ForexProvider: ProviderCore {
         &self,
         from: &str,
         to: &str,
-    ) -> Result<crate::models::forex::ForexQuote>;
+    ) -> Result<finance_query_models::forex::ForexQuote>;
 
     /// Fetch market-wide forex news, newest first.
     async fn fetch_forex_news(
         &self,
         _limit: u32,
-    ) -> Result<Vec<crate::models::corporate::news::News>> {
+    ) -> Result<Vec<finance_query_models::corporate::news::News>> {
         Err(self.not_supported(Operation::ForexNews))
     }
 }
@@ -325,22 +329,24 @@ pub trait ForexProvider: ProviderCore {
 #[async_trait::async_trait]
 pub trait IndicesProvider: ProviderCore {
     /// Fetch a quote for one market index.
-    async fn fetch_indices_quote(&self, symbol: &str)
-    -> Result<crate::models::indices::IndexQuote>;
+    async fn fetch_indices_quote(
+        &self,
+        symbol: &str,
+    ) -> Result<finance_query_models::indices::IndexQuote>;
 
     /// Fetch the current constituents of a major index.
     async fn fetch_index_constituents(
         &self,
-        _index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        _index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituent>> {
         Err(self.not_supported(Operation::IndexConstituents))
     }
 
     /// Fetch historical constituent changes of a major index.
     async fn fetch_index_constituent_changes(
         &self,
-        _index: crate::models::indices::MajorIndex,
-    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        _index: finance_query_models::indices::MajorIndex,
+    ) -> Result<Vec<finance_query_models::indices::IndexConstituentChange>> {
         Err(self.not_supported(Operation::IndexConstituentChanges))
     }
 }
@@ -352,7 +358,7 @@ pub trait FuturesProvider: ProviderCore {
     async fn fetch_futures_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::futures::FuturesQuote>;
+    ) -> Result<finance_query_models::futures::FuturesQuote>;
 
     /// Fetch weekly CFTC Commitments of Traders positioning for a futures
     /// symbol, broken down by trader category.
@@ -360,7 +366,7 @@ pub trait FuturesProvider: ProviderCore {
     async fn fetch_commitments_of_traders(
         &self,
         _symbol: &str,
-    ) -> Result<crate::models::futures::cot::CommitmentsOfTraders> {
+    ) -> Result<finance_query_models::futures::cot::CommitmentsOfTraders> {
         Err(self.not_supported(Operation::CommitmentsOfTraders))
     }
 }
@@ -372,5 +378,5 @@ pub trait CommoditiesProvider: ProviderCore {
     async fn fetch_commodities_quote(
         &self,
         symbol: &str,
-    ) -> Result<crate::models::commodities::CommodityQuote>;
+    ) -> Result<finance_query_models::commodities::CommodityQuote>;
 }

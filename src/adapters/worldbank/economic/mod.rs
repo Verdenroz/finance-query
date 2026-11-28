@@ -2,7 +2,7 @@
 
 use crate::adapters::common::periods;
 use crate::error::Result;
-use crate::models::economic::{EconomicSeries, MacroObservation};
+use finance_query_models::economic::{EconomicSeries, MacroObservation};
 
 use super::models::WorldBankObservation;
 
@@ -108,7 +108,7 @@ pub(crate) fn to_canonical(series_id: &str, raw: Vec<WorldBankObservation>) -> E
 }
 
 /// Fetch a World Bank indicator series as the canonical
-/// [`EconomicSeries`](crate::models::economic::EconomicSeries).
+/// [`EconomicSeries`](finance_query_models::economic::EconomicSeries).
 pub(crate) async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicSeries> {
     let (country, indicator) = split_series_id(series_id);
     let raw = super::client()?.indicator(&country, &indicator).await?;

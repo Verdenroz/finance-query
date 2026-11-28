@@ -13,7 +13,7 @@ use chrono::{Datelike, NaiveDate, Utc};
 
 use crate::adapters::edgar::build_client;
 use crate::error::{FinanceError, Result};
-use crate::models::filings::FailToDeliver;
+use finance_query_models::filings::FailToDeliver;
 
 const SEC_WWW_BASE: &str = "https://www.sec.gov";
 

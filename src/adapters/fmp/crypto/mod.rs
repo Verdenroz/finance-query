@@ -10,9 +10,9 @@ fn crypto_quote_to_canonical(
     id: &str,
     _vs_currency: &str,
     quotes: &[FmpQuoteDTO],
-) -> crate::models::crypto::CryptoQuote {
+) -> finance_query_models::crypto::CryptoQuote {
     let q = quotes.first();
-    crate::models::crypto::CryptoQuote {
+    finance_query_models::crypto::CryptoQuote {
         id: id.to_string(),
         symbol: q
             .map(|q| q.symbol.clone())
@@ -33,7 +33,7 @@ fn crypto_quote_to_canonical(
 pub async fn fetch_canonical_crypto_quote(
     id: &str,
     vs_currency: &str,
-) -> Result<crate::models::crypto::CryptoQuote> {
+) -> Result<finance_query_models::crypto::CryptoQuote> {
     let pair = format!("{}{}", id.to_uppercase(), vs_currency.to_uppercase());
     let quotes = crypto_quote(&pair).await?;
     Ok(crypto_quote_to_canonical(id, vs_currency, &quotes))

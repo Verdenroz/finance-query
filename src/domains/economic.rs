@@ -5,22 +5,22 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::models::economic::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
-#[cfg(feature = "fiscaldata")]
-use crate::models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 use crate::providers::{Capability, Operation, ProviderSet};
+use finance_query_models::economic::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
+#[cfg(feature = "fiscaldata")]
+use finance_query_models::economic::{TreasuryAuction, TreasuryAuctionQuery, UpcomingAuction};
 
 domain_handle! {
     /// A macro-economic data series backed by configured data providers.
     ///
     /// Created via [`Providers::economic`](crate::Providers::economic).
     pub struct EconomicIndicator { series_id, series_id }
-    cache: crate::models::economic::EconomicSeries
+    cache: finance_query_models::economic::EconomicSeries
 }
 
 impl EconomicIndicator {
     /// Fetch the full data series for this economic indicator.
-    pub async fn series(&self) -> Result<crate::models::economic::EconomicSeries> {
+    pub async fn series(&self) -> Result<finance_query_models::economic::EconomicSeries> {
         fetch_via!(
             self,
             series_id,
@@ -28,7 +28,7 @@ impl EconomicIndicator {
             as_economic,
             EconomicSeries,
             fetch_economic_series,
-            crate::models::economic::EconomicSeries
+            finance_query_models::economic::EconomicSeries
         )
     }
 
@@ -39,7 +39,10 @@ impl EconomicIndicator {
     /// today's series is look-ahead bias: the values it trades on were not
     /// knowable at the time. This returns the vintage actually published as of
     /// `date`. Cached per date.
-    pub async fn as_of(&self, date: &str) -> Result<crate::models::economic::EconomicSeries> {
+    pub async fn as_of(
+        &self,
+        date: &str,
+    ) -> Result<finance_query_models::economic::EconomicSeries> {
         let series_id: String = self.series_id().to_string();
         let date = date.to_string();
         let providers = Arc::clone(&self.providers);

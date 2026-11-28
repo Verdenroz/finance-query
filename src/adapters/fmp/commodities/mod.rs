@@ -9,9 +9,9 @@ use crate::adapters::fmp::models::FmpQuoteDTO;
 fn commodity_quote_to_canonical(
     symbol: &str,
     quotes: &[FmpQuoteDTO],
-) -> crate::models::commodities::CommodityQuote {
+) -> finance_query_models::commodities::CommodityQuote {
     let q = quotes.first();
-    crate::models::commodities::CommodityQuote {
+    finance_query_models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: q.and_then(|q| q.name.clone()),
         unit: None,
@@ -25,7 +25,7 @@ fn commodity_quote_to_canonical(
 /// Fetch a canonical commodity quote.
 pub async fn fetch_canonical_commodity_quote(
     symbol: &str,
-) -> Result<crate::models::commodities::CommodityQuote> {
+) -> Result<finance_query_models::commodities::CommodityQuote> {
     let quotes = commodity_quote(symbol).await?;
     Ok(commodity_quote_to_canonical(symbol, &quotes))
 }

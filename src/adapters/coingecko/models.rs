@@ -1,12 +1,12 @@
 //! CoinGecko data models.
 //!
-//! Re-exports canonical type from `crate::models::crypto`.
+//! Re-exports canonical type from `finance_query_models::crypto`.
 
 use std::collections::HashMap;
 
 use serde::Deserialize;
 
-pub use crate::models::crypto::CoinQuote;
+pub use finance_query_models::crypto::CoinQuote;
 
 // ============================================================================
 // Search (`/search`)

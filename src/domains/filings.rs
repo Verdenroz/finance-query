@@ -10,12 +10,12 @@ domain_handle! {
     ///
     /// Created via [`Providers::filings`](crate::Providers::filings).
     pub struct Filings { symbol, symbol }
-    cache: crate::models::filings::ProviderFilings
+    cache: finance_query_models::filings::ProviderFilings
 }
 
 impl Filings {
     /// Fetch SEC filings for this symbol.
-    pub async fn get(&self) -> Result<crate::models::filings::ProviderFilings> {
+    pub async fn get(&self) -> Result<finance_query_models::filings::ProviderFilings> {
         fetch_via!(
             self,
             symbol,
@@ -23,7 +23,7 @@ impl Filings {
             as_filings,
             Filings,
             fetch_filings,
-            crate::models::filings::ProviderFilings
+            finance_query_models::filings::ProviderFilings
         )
     }
 
@@ -32,8 +32,8 @@ impl Filings {
     pub async fn sections(
         &self,
         accession_number: &str,
-        form: crate::models::filings::FilingSectionForm,
-    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        form: finance_query_models::filings::FilingSectionForm,
+    ) -> Result<Vec<finance_query_models::filings::FilingSection>> {
         let symbol = self.symbol().to_string();
         let accession = accession_number.to_string();
         self.providers
@@ -62,8 +62,8 @@ impl Filings {
     pub async fn search(
         &self,
         query: &str,
-        filters: crate::models::filings::FilingSearchFilters,
-    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        filters: finance_query_models::filings::FilingSearchFilters,
+    ) -> Result<Vec<finance_query_models::filings::FilingSearchHit>> {
         let symbol: String = self.symbol().to_string();
         self.dispatch_search(Some(symbol), query, filters).await
     }
@@ -77,8 +77,8 @@ impl Filings {
     pub async fn search_all(
         &self,
         query: &str,
-        filters: crate::models::filings::FilingSearchFilters,
-    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        filters: finance_query_models::filings::FilingSearchFilters,
+    ) -> Result<Vec<finance_query_models::filings::FilingSearchHit>> {
         self.dispatch_search(None, query, filters).await
     }
 
@@ -86,8 +86,8 @@ impl Filings {
         &self,
         symbol: Option<String>,
         query: &str,
-        filters: crate::models::filings::FilingSearchFilters,
-    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        filters: finance_query_models::filings::FilingSearchFilters,
+    ) -> Result<Vec<finance_query_models::filings::FilingSearchHit>> {
         let query = query.to_string();
         let filters = std::sync::Arc::new(filters);
         self.providers
@@ -116,7 +116,7 @@ impl Filings {
     pub async fn insider_trades(
         &self,
         limit: u32,
-    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::InsiderTrade>> {
         let symbol: String = self.symbol().to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
@@ -140,7 +140,7 @@ impl Filings {
     /// no 13F errors rather than returning an empty list. Not cached.
     pub async fn institutional_holdings(
         &self,
-    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+    ) -> Result<Vec<finance_query_models::filings::InstitutionalHolding>> {
         let symbol: String = self.symbol().to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
@@ -160,7 +160,7 @@ impl Filings {
 
     /// Fetch risk factors extracted from this symbol's SEC filings via the
     /// FILINGS route (currently Polygon only). Not cached.
-    pub async fn risk_factors(&self) -> Result<Vec<crate::models::filings::RiskFactor>> {
+    pub async fn risk_factors(&self) -> Result<Vec<finance_query_models::filings::RiskFactor>> {
         let symbol: String = self.symbol().to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
@@ -181,7 +181,7 @@ impl Filings {
     /// Senate PTR disclosures). Not cached.
     pub async fn congressional_trades(
         &self,
-    ) -> Result<Vec<crate::models::filings::CongressionalTrade>> {
+    ) -> Result<Vec<finance_query_models::filings::CongressionalTrade>> {
         let symbol: String = self.symbol().to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
@@ -201,7 +201,9 @@ impl Filings {
 
     /// SEC fails-to-deliver data for this symbol, via the FILINGS route
     /// (FMP, or keyless EDGAR when FMP isn't routed). Not cached.
-    pub async fn fails_to_deliver(&self) -> Result<Vec<crate::models::filings::FailToDeliver>> {
+    pub async fn fails_to_deliver(
+        &self,
+    ) -> Result<Vec<finance_query_models::filings::FailToDeliver>> {
         let symbol: String = self.symbol().to_string();
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {

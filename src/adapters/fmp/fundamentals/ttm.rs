@@ -5,11 +5,11 @@
 //! and FMP handles partial periods and restatements server-side.
 //!
 //! FMP's `*TTM`-suffixed keys deserialize straight into the public models via
-//! their `serde` aliases — see [`crate::models::fundamentals::ttm`].
+//! their `serde` aliases — see [`finance_query_models::fundamentals::ttm`].
 
 use crate::adapters::fmp::{build_client, first_or_missing};
 use crate::error::Result;
-use crate::models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
+use finance_query_models::fundamentals::{FinancialRatiosTtm, KeyMetricsTtm};
 
 // ============================================================================
 // Query functions

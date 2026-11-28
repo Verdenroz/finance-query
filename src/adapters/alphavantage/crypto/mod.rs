@@ -106,14 +106,14 @@ pub async fn crypto_daily(symbol: &str, market: &str) -> Result<CryptoTimeSeries
 pub async fn fetch_crypto_quote_response(
     symbol: &str,
     market: &str,
-) -> Result<crate::models::crypto::CryptoQuote> {
+) -> Result<finance_query_models::crypto::CryptoQuote> {
     let series = crypto_daily(symbol, market).await?;
     Ok(series_to_quote(series))
 }
 
-/// Map a daily time series to the canonical [`CryptoQuote`](crate::models::crypto::CryptoQuote),
+/// Map a daily time series to the canonical [`CryptoQuote`](finance_query_models::crypto::CryptoQuote),
 /// deriving 24h change from the two most recent entries.
-fn series_to_quote(series: CryptoTimeSeriesDTO) -> crate::models::crypto::CryptoQuote {
+fn series_to_quote(series: CryptoTimeSeriesDTO) -> finance_query_models::crypto::CryptoQuote {
     let (price, change_24h, change_percent_24h, high_24h, low_24h, volume_24h) =
         if series.entries.len() >= 2 {
             let latest = &series.entries[0];
@@ -146,7 +146,7 @@ fn series_to_quote(series: CryptoTimeSeriesDTO) -> crate::models::crypto::Crypto
             (None, None, None, None, None, None)
         };
 
-    crate::models::crypto::CryptoQuote {
+    finance_query_models::crypto::CryptoQuote {
         id: series.symbol.clone(),
         symbol: series.symbol,
         name: String::new(),
