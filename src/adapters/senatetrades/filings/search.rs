@@ -73,7 +73,7 @@ async fn parse_row(row: &Element) -> Option<SenateFilingEntry> {
     let cells = row.find_elements("td").await.ok()?;
     let mut texts = Vec::with_capacity(cells.len());
     for cell in &cells {
-        texts.push(cell.inner_text().await.ok()?);
+        texts.push(cell.inner_text().await.ok().flatten());
     }
     let href = match cells.get(3) {
         Some(cell) => match cell.find_element("a").await {
@@ -119,6 +119,13 @@ mod tests {
         assert_eq!(entry.last_name, "Doe");
         assert_eq!(entry.filed_date, "03/14/2025");
         assert_eq!(entry.path, "/search/view/ptr/abc/");
+    }
+
+    #[test]
+    fn entry_from_cells_ignores_unused_cell_without_text() {
+        let mut row = cells(&["Jane", "Doe", "x", "y", "03/14/2025"]);
+        row[2] = None;
+        assert!(entry_from_cells(&row, Some("/x/".into())).is_some());
     }
 
     #[test]

@@ -60,7 +60,7 @@ async fn parse_row(row: &Element) -> Option<ParsedTransaction> {
     let cells = row.find_elements("td").await.ok()?;
     let mut texts = Vec::with_capacity(cells.len());
     for cell in &cells {
-        texts.push(cell.inner_text().await.ok()?);
+        texts.push(cell.inner_text().await.ok().flatten());
     }
     transaction_from_cells(&texts)
 }
@@ -183,6 +183,24 @@ mod tests {
             "1", "soon", "Self", "AAPL", "Apple", "Stock", "Sale", "$1 - $2",
         ]);
         assert_eq!(transaction_from_cells(&row).unwrap().transaction_date, None);
+    }
+
+    #[test]
+    fn transaction_from_cells_ignores_unused_cell_without_text() {
+        let mut row = cells(&[
+            "1",
+            "03/10/2025",
+            "Self",
+            "AAPL",
+            "Apple",
+            "Stock",
+            "Sale",
+            "$1 - $2",
+        ]);
+        row[0] = None;
+        row[2] = None;
+        row[5] = None;
+        assert!(transaction_from_cells(&row).is_some());
     }
 
     #[test]
