@@ -15,7 +15,7 @@ pub struct CalendarEvents {
 
     /// Upcoming earnings date(s)
     #[serde(default)]
-    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten, prefix = ""))]
     pub earnings: Option<EarningsCalendar>,
 
     /// Ex-dividend date (Unix timestamp)

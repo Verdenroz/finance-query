@@ -93,7 +93,7 @@ mod tests {
             ("stochastic_rsi_d", DataType::Float64),
             ("macd_macd", DataType::Float64),
             ("macd_histogram", DataType::Float64),
-            ("aroon_aroon_up", DataType::Float64),
+            ("aroon_up", DataType::Float64),
             ("supertrend_trend", DataType::String),
             ("ichimoku_lagging_span", DataType::Float64),
             ("bull_bear_power_bear_power", DataType::Float64),

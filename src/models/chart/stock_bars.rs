@@ -19,7 +19,7 @@ pub enum PriceAdjustment {
 #[non_exhaustive]
 pub struct StockBar {
     /// UTC Unix milliseconds, without rounding or timezone conversion.
-    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms"))]
+    #[cfg_attr(feature = "dataframe", dataframe(datetime = "ms", rename = "timestamp"))]
     pub timestamp_ms: i64,
     /// Opening price.
     pub open: f64,

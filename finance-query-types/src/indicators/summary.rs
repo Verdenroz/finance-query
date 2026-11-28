@@ -378,7 +378,7 @@ pub struct IndicatorsSummary {
     pub adx_14: Option<f64>,
     /// Aroon Indicator (25-period)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "dataframe", dataframe(flatten))]
+    #[cfg_attr(feature = "dataframe", dataframe(flatten, prefix = ""))]
     pub aroon: Option<AroonData>,
     /// SuperTrend Indicator (10, 3.0)
     #[serde(skip_serializing_if = "Option::is_none")]
