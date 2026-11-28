@@ -47,7 +47,7 @@ FROM chef AS builder
 
 # translation-offline for published images; dev overrides to translation
 # (dictionary tier only) to skip the from-source CTranslate2 C++ build.
-ARG CARGO_FEATURES=translation-offline
+ARG CARGO_FEATURES=translation-offline,backtesting
 
 # release: opt-level=3, fat LTO, single codegen unit. Dev overrides to `dev`
 # (docker-compose.override.yml) for much faster builds.

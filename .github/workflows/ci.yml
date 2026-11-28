@@ -527,7 +527,7 @@ jobs:
           # dev profile: this job smoke-tests the image and scans its dependency
           # manifest; deploy.yml builds the optimized image that ships.
           build-args: |
-            CARGO_FEATURES=translation
+            CARGO_FEATURES=translation,backtesting
             CARGO_PROFILE=dev
           push: false
           load: true

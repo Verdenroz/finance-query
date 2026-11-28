@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: finance-query-mcp/Dockerfile
       args:
-        CARGO_FEATURES: translation
+        CARGO_FEATURES: translation,backtesting
         CARGO_PROFILE: dev
     image: finance-query-mcp:dev
     ports:
