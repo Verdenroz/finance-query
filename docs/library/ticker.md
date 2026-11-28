@@ -3,7 +3,9 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — Ticker](https://docs.rs/finance-query/latest/finance_query/struct.Ticker.html)
 
+<!-- soothfast:bind finance_query::Ticker -->
 The `Ticker` struct is the primary interface for fetching financial data for a single symbol. It provides lazy-loaded, cached access to quotes, charts, financials, and more from your configured data providers (Yahoo Finance by default).
+<!-- /soothfast:bind -->
 
 !!! tip "Multiple Symbols"
     Need to fetch data for multiple symbols? Use the [`Tickers`](tickers.md) struct for efficient batch operations.
@@ -919,13 +921,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     // Access data by metric name
-    if let Some(revenue_map) = income.statement.get("TotalRevenue") {
+    if let Some(revenue_map) = income.statement.get("total_revenue") {
         for (date, value) in revenue_map {
             println!("{}: Revenue ${:.2}B", date, value / 1e9);
         }
     }
 
-    if let Some(net_income_map) = income.statement.get("NetIncome") {
+    if let Some(net_income_map) = income.statement.get("net_income") {
         for (date, value) in net_income_map {
             println!("{}: Net Income ${:.2}B", date, value / 1e9);
         }

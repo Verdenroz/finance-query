@@ -30,11 +30,11 @@ fn doc_block_line_21() {
     }
 }
 
-// line 64: compile-only (no_run)
+// line 66: compile-only (no_run)
 #[cfg(feature = "defi")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_64() {
+fn doc_block_line_66() {
     use finance_query::defi;
 
     #[tokio::main]

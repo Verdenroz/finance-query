@@ -200,7 +200,7 @@ translation-offline = ["translation", "dep:ct2rs", "dep:zip", "reqwest/blocking"
 # Regression-gate aggregate: every feature whose representative work is pure-Rust
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; translation-offline is excluded (native build).
-bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "dataframe", "housetrades", "bench-internals"]
+bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment", "dataframe", "housetrades", "fmp", "bench-internals"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the

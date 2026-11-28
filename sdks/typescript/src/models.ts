@@ -608,9 +608,9 @@ export interface GqlFinancialDataPoint {
   value: number;
 }
 
-/** A single line item in a financial statement (e.g., "TotalRevenue"). */
+/** A single line item in a financial statement (e.g., "total_revenue"). */
 export interface GqlFinancialLineItem {
-  /** Metric name (e.g., "TotalRevenue", "NetIncome"). */
+  /** Metric name (e.g., "total_revenue", "net_income"). */
   metric: string;
   /** Time-series values: date → value pairs. */
   values: GqlFinancialDataPoint[];

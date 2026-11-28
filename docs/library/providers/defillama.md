@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     `fetch_crypto_quote` reports `NotSupported`, so a `CRYPTO` route that includes DefiLlama should also include an exchange or aggregator for `quote()` to resolve:
     `.route(Capability::CRYPTO, [Provider::DefiLlama, Provider::CoinGecko])`
 
+<!-- soothfast:bind finance_query::defi::ProtocolTvl -->
 ### Per-chain allocations
 
 DefiLlama's `currentChainTvls` mixes genuine chain keys (`"Ethereum"`) with breakdown keys of the *same* capital (`"Ethereum-borrowed"`, `"pool2"`, `"staking"`). Summing everything would double-count, so `tvl_by_chain` keeps only keys naming a chain the protocol actually reports, sorted largest first.
@@ -58,6 +59,7 @@ The headline `tvl` is the latest history snapshot, not a sum of those allocation
 ### Change percentages
 
 `change_1d_percent` and `change_7d_percent` are computed from the history against the closest snapshot **at or before** that instant. They are `None` when the protocol has no snapshot old enough to compare against — a new protocol reports no 7-day change rather than a fabricated one.
+<!-- /soothfast:bind -->
 
 ## Market-Wide Views
 

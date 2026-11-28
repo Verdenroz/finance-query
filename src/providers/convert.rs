@@ -1,6 +1,7 @@
 //! Shared DTO-to-model helpers used by more than one provider bridge.
 
 use super::Provider;
+use crate::constants::StatementType;
 
 #[allow(dead_code)] // used by fmp, polygon, alphavantage feature-gated providers
 pub(crate) fn json_value_to_f64(value: serde_json::Value) -> Option<f64> {
@@ -19,7 +20,7 @@ pub(crate) fn json_value_to_f64(value: serde_json::Value) -> Option<f64> {
 #[allow(dead_code)] // used by fmp, polygon, alphavantage feature-gated providers
 pub(crate) fn build_financial_statement(
     symbol: String,
-    statement_type: String,
+    statement_type: StatementType,
     frequency: String,
     provider_id: Provider,
     data: std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>,
@@ -40,9 +41,9 @@ pub(crate) fn build_financial_statement(
         .collect();
     crate::models::fundamentals::FinancialStatement {
         symbol,
-        statement_type,
+        statement_type: statement_type.as_str().to_string(),
         frequency,
-        statement,
+        statement: super::statement_metrics::canonicalize(provider_id, statement_type, statement),
         provider_id: Some(provider_id),
     }
 }

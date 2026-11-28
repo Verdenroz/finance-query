@@ -32,6 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 !!! warning "A daily fix, not a live feed"
     The ECB publishes one set of reference rates per TARGET working day, around 16:00 CET. They are indicative — a reference for accounting and statistics, not a tradable price.
 
+<!-- soothfast:bind finance_query::ForexQuote -->
 That shapes the response:
 
 | Field | Value from Frankfurter |
@@ -42,6 +43,7 @@ That shapes the response:
 | `bid` / `ask` | Always `None` — a reference fix has no two-way price, and inventing a spread would misrepresent it |
 | `change` / `change_percent` | Against the previously published rate, which is the prior *working* day, not necessarily yesterday |
 | `timestamp` | Midnight UTC of the publication date — the ECB fix carries no intraday time |
+<!-- /soothfast:bind -->
 
 If you need intraday rates or a real bid/ask, route `FOREX` to a keyed provider first and leave Frankfurter as the fallback:
 

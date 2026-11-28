@@ -3,11 +3,11 @@
 use super::batch::GqlBatchError;
 use async_graphql::SimpleObject;
 
-/// A single line item in a financial statement (e.g., "TotalRevenue").
+/// A single line item in a financial statement (e.g., "total_revenue").
 #[derive(SimpleObject, Debug, Clone)]
 #[graphql(rename_fields = "camelCase")]
 pub struct GqlFinancialLineItem {
-    /// Metric name (e.g., "TotalRevenue", "NetIncome").
+    /// Metric name (e.g., "total_revenue", "net_income").
     pub metric: String,
     /// Time-series values: date → value pairs.
     pub values: Vec<GqlFinancialDataPoint>,

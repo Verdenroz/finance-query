@@ -5,6 +5,17 @@ use tracing::info;
 
 use super::{ServiceError, ServiceResult};
 
+/// Cached statements written before canonical metric names carry the old keys; bump on any
+/// change to the statement key vocabulary so they are not served.
+const STATEMENTS_ENDPOINT: &str = "financials-v2";
+
+fn statements_key(subject: &str, statement_str: &str, frequency_str: &str) -> String {
+    Cache::key(
+        STATEMENTS_ENDPOINT,
+        &[subject, statement_str, frequency_str],
+    )
+}
+
 pub async fn get_financials(
     cache: &Cache,
     symbol: &str,
@@ -13,10 +24,7 @@ pub async fn get_financials(
     frequency: Frequency,
     frequency_str: &str,
 ) -> ServiceResult {
-    let cache_key = Cache::key(
-        "financials",
-        &[&symbol.to_uppercase(), statement_str, frequency_str],
-    );
+    let cache_key = statements_key(&symbol.to_uppercase(), statement_str, frequency_str);
     let symbol = symbol.to_string();
 
     cache
@@ -44,7 +52,7 @@ pub async fn get_batch_financials(
     let mut symbols = symbols;
     symbols.sort();
     let symbols_key = Cache::symbols_key(&symbols);
-    let cache_key = Cache::key("financials", &[&symbols_key, statement_str, frequency_str]);
+    let cache_key = statements_key(&symbols_key, statement_str, frequency_str);
 
     cache
         .get_or_fetch(&cache_key, cache::ttl::FINANCIALS, false, || async move {
@@ -102,4 +110,16 @@ pub async fn get_ratios_ttm(
             },
         )
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn statement_keys_differ_from_those_cached_before_canonical_names() {
+        let old = Cache::key("financials", &["AAPL", "income", "annual"]);
+        let new = statements_key("AAPL", "income", "annual");
+        assert_ne!(old, new);
+    }
 }

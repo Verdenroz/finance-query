@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Documentation
 
+- Document alert, depth, trade, options and economic streams (#781)
 - Add design principles to CONTRIBUTING (#780)
 - Fix first-use gaps and use instruction claims (#729)
 - Nested, list, series and streaming DataFrames (#718)
@@ -89,6 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Internal
 
+- Cut per-PR jobs and cross-PR reruns (#793)
+- Accept backtest probe after fraction fields (#792)
 - Parse Senate eFD rows offline (#786)
 - Cover server service helpers and forex (#783)
 - Capture a real secFilings fixture (#771)

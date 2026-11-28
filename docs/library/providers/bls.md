@@ -65,6 +65,7 @@ Full series-id structure is documented in the [BLS series-id guide](https://www.
 
 ## Response Shape
 
+<!-- soothfast:bind finance_query::EconomicSeries -->
 Results come back as the provider-neutral [`EconomicSeries`](../economic.md):
 
 | Field | Value from BLS |
@@ -74,6 +75,7 @@ Results come back as the provider-neutral [`EconomicSeries`](../economic.md):
 | `units` | Always `None`; BLS returns no unit field, and the unit is implied by the series id |
 | `frequency` | `"Monthly"`, `"Quarterly"`, `"Semiannual"`, or `"Annual"`, from the period codes |
 | `observations` | Chronological (oldest first) |
+<!-- /soothfast:bind -->
 
 Two BLS conventions are normalised:
 

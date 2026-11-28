@@ -42,7 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## What the Fields Mean
 
+<!-- soothfast:bind finance_query::IndexConstituent -->
 `IndexConstituent`'s eight columns come straight off the Wikipedia table's eight columns, in order — symbol, company name, GICS sector, GICS sub-industry, headquarters location, date added, CIK, and founding year. See [Indices](../indices.md#indexconstituent-fields) for the full field table.
+<!-- /soothfast:bind -->
 
 ## Rate Limits
 

@@ -960,7 +960,7 @@ class GqlFinancialDataPoint:
 
 @dataclasses.dataclass(frozen=True)
 class GqlFinancialLineItem:
-    """A single line item in a financial statement (e.g., "TotalRevenue")."""
+    """A single line item in a financial statement (e.g., "total_revenue")."""
 
     metric: str
     values: list[GqlFinancialDataPoint]

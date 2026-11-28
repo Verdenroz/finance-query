@@ -144,6 +144,7 @@ Every filter on `TreasuryAuctionQuery` is optional, and `limit` caps how many au
 
 ## Response Shape
 
+<!-- soothfast:bind finance_query::EconomicSeries -->
 Results come back as the provider-neutral [`EconomicSeries`](../economic.md):
 
 | Field | Value from FiscalData |
@@ -153,6 +154,7 @@ Results come back as the provider-neutral [`EconomicSeries`](../economic.md):
 | `units` | From the curated table, or the column type for passthrough series |
 | `frequency` | From the curated table; `None` for passthrough series |
 | `observations` | Chronological (oldest first), keyed by `record_date` |
+<!-- /soothfast:bind -->
 
 FiscalData encodes every column as a string, including numbers, and marks a missing figure with the literal string `"null"` — both are normalised, so `value` is a real `Option<f64>`.
 

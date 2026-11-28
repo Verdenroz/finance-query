@@ -24,11 +24,11 @@ fn doc_block_line_25() {
     }
 }
 
-// line 61: compile-only (no_run)
+// line 63: compile-only (no_run)
 #[cfg(feature = "fmp")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_61() {
+fn doc_block_line_63() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
@@ -49,11 +49,11 @@ fn doc_block_line_61() {
     }
 }
 
-// line 136: compile-only (no_run)
+// line 138: compile-only (no_run)
 #[cfg(feature = "fmp")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_136() {
+fn doc_block_line_138() {
     use finance_query::{Capability, Provider, Providers};
 
     #[tokio::main]
