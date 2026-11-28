@@ -260,6 +260,9 @@ impl Providers {
     /// rate-limit budget estimate where the provider exposes one. Purely
     /// observational — it does not affect routing or retries.
     ///
+    /// EDGAR and, with the `fred` feature, FRED are registered in every set
+    /// even when not configured, so they appear here regardless.
+    ///
     /// # Example
     ///
     /// ```no_run

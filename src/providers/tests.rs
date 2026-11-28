@@ -994,7 +994,8 @@ fn provider_capability_table_matches_adapters() {
 #[cfg(feature = "fred")]
 mod injected_fred {
     use super::*;
-    use crate::providers::mock::ScheduledFred;
+    use crate::providers::mock::{CountingProvider, ScheduledFred};
+    use std::time::Duration;
 
     async fn set_with(routes: Routes) -> Result<ProviderSet> {
         build_providers(
@@ -1036,6 +1037,30 @@ mod injected_fred {
     async fn a_route_without_release_dates_falls_back_to_fred() {
         let routes = Routes::new(Fetch::Sequential).route(Capability::ECONOMIC, [Provider::Yahoo]);
         let set = set_with(routes).await.unwrap();
+
+        let releases = set.economic_release_dates().await.unwrap();
+
+        assert_eq!(releases[0].release_id, 10);
+    }
+
+    #[tokio::test]
+    async fn a_hand_built_set_without_fred_gets_a_transient_one() {
+        let mut server = mockito::Server::new_async().await;
+        let _releases = server
+            .mock("GET", "/fred/releases/dates")
+            .match_query(mockito::Matcher::Any)
+            .with_body(
+                r#"{"release_dates":[{"release_id":10,"release_name":"CPI","date":"2099-01-01"}]}"#,
+            )
+            .create_async()
+            .await;
+        let mut key = crate::adapters::keys::ScopedKey::new("k".into(), Duration::from_secs(5));
+        key.base_url = Some(server.url());
+        let set = ProviderSet::new(
+            vec![CountingProvider::new() as Arc<dyn ProviderAdapter>],
+            Routes::new(Fetch::Sequential),
+        )
+        .with_api_keys([("fred", key)].into());
 
         let releases = set.economic_release_dates().await.unwrap();
 

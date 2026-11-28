@@ -131,7 +131,8 @@ pub(crate) async fn build_providers(
         providers.push(Arc::new(edgar::EdgarProvider));
     }
     // Uninitialized and unrouted: `calendar()` reaches it for release dates
-    // when no ECONOMIC route is set, and a missing key only skips those events.
+    // whenever the ECONOMIC route cannot serve them, and a missing key only
+    // skips those events.
     #[cfg(feature = "fred")]
     if !providers.iter().any(|p| p.id() == Provider::Fred) {
         providers.push(Arc::new(fred::FredProvider));
