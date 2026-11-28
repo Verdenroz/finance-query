@@ -1,10 +1,11 @@
+use crate::adapters::yahoo::client::YahooClient;
+use crate::adapters::yahoo::endpoints::api;
+use crate::error::{FinanceError, Result};
 /// Quote summary endpoint
 ///
 /// Fetches full quote summary data for a single symbol.
 /// Uses the /v10/finance/quoteSummary endpoint with all available modules.
-use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
-use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::quote::QuoteSummaryResponse;
 use crate::models::quote::price::Price;
 use serde_json::Value;
@@ -111,7 +112,7 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
 
     let price: Option<Price> = deserialize_module!("price");
 
-    Ok(QuoteSummaryResponse {
+    Ok(init!(QuoteSummaryResponse {
         symbol: symbol.to_string(),
         price: price.map(Price::with_percent_changes),
         summary_detail: deserialize_module!("summaryDetail"),
@@ -140,7 +141,7 @@ pub(crate) fn parse_summary(json: Value, symbol: &str) -> Result<QuoteSummaryRes
         industry_trend: deserialize_module!("industryTrend"),
         sector_trend: deserialize_module!("sectorTrend"),
         equity_performance: deserialize_module!("equityPerformance"),
-    })
+    }))
 }
 
 #[cfg(test)]

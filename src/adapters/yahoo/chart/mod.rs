@@ -5,6 +5,7 @@ use super::endpoints::api;
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::{Interval, TimeRange};
 use crate::error::{FinanceError, Result};
+use crate::init;
 use futures::stream::StreamExt;
 use tracing::{debug, info};
 
@@ -553,19 +554,19 @@ pub(crate) fn parse_chart_data(
         })
         .collect();
 
-    let chart_meta = crate::models::chart::ChartMeta {
+    let chart_meta = init!(crate::models::chart::ChartMeta {
         provider_id: Some(Provider::Yahoo),
         ..meta.clone()
-    };
+    });
 
-    Ok(crate::models::chart::Chart {
+    Ok(init!(crate::models::chart::Chart {
         symbol: symbol.to_string(),
         meta: chart_meta,
         candles,
         interval: None,
         range: None,
         provider_id: Some(Provider::Yahoo),
-    })
+    }))
 }
 
 /// Fetch chart data and return a canonical `Chart` model.

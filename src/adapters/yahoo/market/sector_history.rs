@@ -10,6 +10,7 @@ use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::sectors::Sector;
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
+use crate::init;
 use crate::models::chart::Candle;
 use crate::models::market::performance::{SectorPerformance, SectorPerformanceHistory};
 use std::collections::BTreeMap;
@@ -47,11 +48,14 @@ fn pivot_to_history(
     let mut by_date: BTreeMap<String, Vec<SectorPerformance>> = BTreeMap::new();
     for (sector, changes) in per_sector {
         for (date, change_percent) in changes {
-            by_date.entry(date).or_default().push(SectorPerformance {
-                sector: sector.display_name().to_string(),
-                exchange: None,
-                change_percent: Some(change_percent),
-            });
+            by_date
+                .entry(date)
+                .or_default()
+                .push(init!(SectorPerformance {
+                    sector: sector.display_name().to_string(),
+                    exchange: None,
+                    change_percent: Some(change_percent),
+                }));
         }
     }
 
@@ -59,9 +63,11 @@ fn pivot_to_history(
         .into_iter()
         .rev()
         .take(limit as usize)
-        .map(|(date, sectors)| SectorPerformanceHistory {
-            date: Some(date),
-            sectors,
+        .map(|(date, sectors)| {
+            init!(SectorPerformanceHistory {
+                date: Some(date),
+                sectors,
+            })
         })
         .collect()
 }

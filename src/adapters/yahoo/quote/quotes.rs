@@ -1,11 +1,12 @@
+use crate::adapters::yahoo::client::YahooClient;
+use crate::adapters::yahoo::endpoints::api;
+use crate::error::Result;
 /// Batch quotes endpoint
 ///
 /// Fetches basic quote data for multiple symbols in a single request.
 /// This uses the /v7/finance/quote endpoint which is more efficient for batch requests
 /// than calling quoteSummary for each symbol individually.
-use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
-use crate::error::Result;
+use crate::init;
 use crate::models::fundamentals::{DefaultKeyStatistics, SummaryDetail};
 use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse, QuoteTypeData};
 use tracing::info;
@@ -420,7 +421,7 @@ fn fraction_from_percent(value: Option<f64>) -> Option<f64> {
 }
 
 fn row_to_response(row: QuoteRow) -> (String, QuoteSummaryResponse) {
-    let price = Price {
+    let price = init!(Price {
         short_name: row.short_name,
         long_name: row.long_name,
         exchange_name: row.exchange_name,
@@ -455,8 +456,8 @@ fn row_to_response(row: QuoteRow) -> (String, QuoteSummaryResponse) {
         average_daily_volume10_day: formatted(row.average_daily_volume10_day),
         market_cap: formatted(row.market_cap),
         ..Default::default()
-    };
-    let summary_detail = SummaryDetail {
+    });
+    let summary_detail = init!(SummaryDetail {
         day_high: formatted(row.regular_market_day_high),
         day_low: formatted(row.regular_market_day_low),
         open: formatted(row.regular_market_open),
@@ -477,8 +478,8 @@ fn row_to_response(row: QuoteRow) -> (String, QuoteSummaryResponse) {
         trailing_annual_dividend_rate: formatted(row.trailing_annual_dividend_rate),
         trailing_annual_dividend_yield: formatted(row.trailing_annual_dividend_yield),
         ..Default::default()
-    };
-    let key_statistics = DefaultKeyStatistics {
+    });
+    let key_statistics = init!(DefaultKeyStatistics {
         price_to_book: formatted(row.price_to_book),
         book_value: formatted(row.book_value),
         trailing_eps: formatted(row.eps_trailing_twelve_months),
@@ -487,22 +488,22 @@ fn row_to_response(row: QuoteRow) -> (String, QuoteSummaryResponse) {
         implied_shares_outstanding: formatted(row.implied_shares_outstanding),
         week_52_change: formatted(fraction_from_percent(row.fifty_two_week_change_percent)),
         ..Default::default()
-    };
-    let quote_type = QuoteTypeData {
+    });
+    let quote_type = init!(QuoteTypeData {
         time_zone_full_name: row.exchange_timezone_name,
         time_zone_short_name: row.exchange_timezone_short_name,
         gmt_off_set_milliseconds: row.gmt_off_set_milliseconds,
         first_trade_date_epoch_utc: row.first_trade_date_milliseconds.map(|ms| ms / 1000),
         ..Default::default()
-    };
-    let response = QuoteSummaryResponse {
+    });
+    let response = init!(QuoteSummaryResponse {
         symbol: row.symbol.clone(),
         price: Some(price),
         summary_detail: Some(summary_detail),
         default_key_statistics: Some(key_statistics),
         quote_type: Some(quote_type),
         ..Default::default()
-    };
+    });
     (row.symbol, response)
 }
 
