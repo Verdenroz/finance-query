@@ -363,8 +363,8 @@ mod tests {
                 "statementType": "income",
                 "frequency": "annual",
                 "statement": {
-                    "TotalRevenue": {"2024-09-30": revenue, "2023-09-30": revenue / 2.0},
-                    "NetIncome": {"2024-09-30": revenue / 4.0}
+                    "total_revenue": {"2024-09-30": revenue, "2023-09-30": revenue / 2.0},
+                    "net_income": {"2024-09-30": revenue / 4.0}
                 }
             })
         };

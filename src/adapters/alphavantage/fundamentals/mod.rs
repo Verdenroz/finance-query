@@ -434,7 +434,7 @@ pub async fn fetch_financials_response(
 
     Ok(crate::providers::build_financial_statement(
         symbol.to_string(),
-        stmt_type.as_str().to_string(),
+        stmt_type,
         frequency.as_str().to_string(),
         crate::Provider::AlphaVantage,
         data,
@@ -579,14 +579,14 @@ mod tests {
 
         let statement = crate::providers::build_financial_statement(
             "AAPL".into(),
-            "income".into(),
+            crate::StatementType::Income,
             "annual".into(),
             crate::Provider::AlphaVantage,
             pivot_av_reports(&[report]),
         );
 
-        assert_eq!(statement.statement["totalRevenue"]["2024-09-30"], 391035e6);
-        assert_eq!(statement.statement["grossProfit"]["2024-09-30"], 180683e6);
-        assert!(!statement.statement.contains_key("researchAndDevelopment"));
+        assert_eq!(statement.statement["total_revenue"]["2024-09-30"], 391035e6);
+        assert_eq!(statement.statement["gross_profit"]["2024-09-30"], 180683e6);
+        assert!(!statement.statement.contains_key("research_and_development"));
     }
 }

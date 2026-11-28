@@ -1,0 +1,143 @@
+use crate::constants::StatementType;
+
+pub(super) fn table(statement: StatementType) -> &'static [(&'static str, &'static str)] {
+    match statement {
+        StatementType::Income => INCOME,
+        StatementType::Balance => BALANCE,
+        StatementType::CashFlow => CASHFLOW,
+    }
+}
+
+const INCOME: &[(&str, &str)] = &[
+    ("revenue", "total_revenue"),
+    ("costOfRevenue", "cost_of_revenue"),
+    ("grossProfit", "gross_profit"),
+    ("researchAndDevelopmentExpenses", "research_and_development"),
+    (
+        "sellingGeneralAndAdministrativeExpenses",
+        "selling_general_and_administration",
+    ),
+    ("operatingExpenses", "operating_expense"),
+    ("costAndExpenses", "total_expenses"),
+    ("netInterestIncome", "net_interest_income"),
+    ("interestIncome", "interest_income"),
+    ("interestExpense", "interest_expense"),
+    (
+        "depreciationAndAmortization",
+        "depreciation_and_amortization",
+    ),
+    ("ebitda", "ebitda"),
+    ("ebit", "ebit"),
+    ("operatingIncome", "operating_income"),
+    ("incomeBeforeTax", "pretax_income"),
+    ("incomeTaxExpense", "tax_provision"),
+    ("netIncome", "net_income"),
+    ("eps", "basic_eps"),
+    ("epsDiluted", "diluted_eps"),
+    ("weightedAverageShsOut", "basic_average_shares"),
+    ("weightedAverageShsOutDil", "diluted_average_shares"),
+];
+
+const BALANCE: &[(&str, &str)] = &[
+    ("cashAndCashEquivalents", "cash_and_cash_equivalents"),
+    (
+        "cashAndShortTermInvestments",
+        "cash_cash_equivalents_and_short_term_investments",
+    ),
+    ("netReceivables", "receivables"),
+    ("accountsReceivables", "accounts_receivable"),
+    ("inventory", "inventory"),
+    ("prepaids", "prepaid_assets"),
+    ("otherCurrentAssets", "other_current_assets"),
+    ("totalCurrentAssets", "current_assets"),
+    ("propertyPlantEquipmentNet", "net_ppe"),
+    ("goodwill", "goodwill"),
+    ("intangibleAssets", "other_intangible_assets"),
+    (
+        "goodwillAndIntangibleAssets",
+        "goodwill_and_other_intangible_assets",
+    ),
+    ("longTermInvestments", "investments_and_advances"),
+    ("otherNonCurrentAssets", "other_non_current_assets"),
+    ("totalNonCurrentAssets", "total_non_current_assets"),
+    ("totalAssets", "total_assets"),
+    ("accountPayables", "accounts_payable"),
+    ("shortTermDebt", "current_debt"),
+    ("deferredRevenue", "current_deferred_revenue"),
+    ("otherCurrentLiabilities", "other_current_liabilities"),
+    ("totalCurrentLiabilities", "current_liabilities"),
+    ("longTermDebt", "long_term_debt"),
+    ("deferredRevenueNonCurrent", "non_current_deferred_revenue"),
+    (
+        "deferredTaxLiabilitiesNonCurrent",
+        "non_current_deferred_taxes_liabilities",
+    ),
+    (
+        "otherNonCurrentLiabilities",
+        "other_non_current_liabilities",
+    ),
+    (
+        "totalNonCurrentLiabilities",
+        "total_non_current_liabilities_net_minority_interest",
+    ),
+    (
+        "totalLiabilities",
+        "total_liabilities_net_minority_interest",
+    ),
+    ("treasuryStock", "treasury_stock"),
+    ("commonStock", "common_stock"),
+    ("retainedEarnings", "retained_earnings"),
+    ("additionalPaidInCapital", "additional_paid_in_capital"),
+    ("totalStockholdersEquity", "stockholders_equity"),
+    ("totalEquity", "total_equity_gross_minority_interest"),
+    ("totalDebt", "total_debt"),
+    ("netDebt", "net_debt"),
+];
+
+const CASHFLOW: &[(&str, &str)] = &[
+    ("netIncome", "net_income_from_continuing_operations"),
+    (
+        "depreciationAndAmortization",
+        "depreciation_and_amortization",
+    ),
+    ("deferredIncomeTax", "deferred_income_tax"),
+    ("stockBasedCompensation", "stock_based_compensation"),
+    ("changeInWorkingCapital", "change_in_working_capital"),
+    ("accountsReceivables", "changes_in_account_receivables"),
+    ("inventory", "change_in_inventory"),
+    ("accountsPayables", "change_in_account_payable"),
+    ("otherWorkingCapital", "change_in_other_working_capital"),
+    ("otherNonCashItems", "other_non_cash_items"),
+    ("operatingCashFlow", "operating_cash_flow"),
+    ("investmentsInPropertyPlantAndEquipment", "purchase_of_ppe"),
+    ("capitalExpenditure", "capital_expenditure"),
+    ("acquisitionsNet", "net_business_purchase_and_sale"),
+    ("purchasesOfInvestments", "purchase_of_investment"),
+    ("salesMaturitiesOfInvestments", "sale_of_investment"),
+    ("otherInvestingActivities", "net_other_investing_changes"),
+    (
+        "netCashProvidedByInvestingActivities",
+        "investing_cash_flow",
+    ),
+    ("netDebtIssuance", "net_issuance_payments_of_debt"),
+    ("longTermNetDebtIssuance", "net_long_term_debt_issuance"),
+    ("shortTermNetDebtIssuance", "net_short_term_debt_issuance"),
+    ("netCommonStockIssuance", "net_common_stock_issuance"),
+    ("commonStockIssuance", "common_stock_issuance"),
+    ("commonStockRepurchased", "common_stock_payments"),
+    ("netDividendsPaid", "cash_dividends_paid"),
+    ("commonDividendsPaid", "common_stock_dividend_paid"),
+    ("otherFinancingActivities", "net_other_financing_charges"),
+    (
+        "netCashProvidedByFinancingActivities",
+        "financing_cash_flow",
+    ),
+    (
+        "effectOfForexChangesOnCash",
+        "effect_of_exchange_rate_changes",
+    ),
+    ("netChangeInCash", "changes_in_cash"),
+    ("cashAtEndOfPeriod", "end_cash_position"),
+    ("cashAtBeginningOfPeriod", "beginning_cash_position"),
+    ("freeCashFlow", "free_cash_flow"),
+];

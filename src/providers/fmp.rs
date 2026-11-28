@@ -107,7 +107,7 @@ impl FundamentalsProvider for FmpProvider {
 
         Ok(super::build_financial_statement(
             symbol.to_string(),
-            stmt_type.as_str().to_string(),
+            stmt_type,
             frequency.as_str().to_string(),
             Provider::Fmp,
             data,
