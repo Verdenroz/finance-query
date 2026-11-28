@@ -2,7 +2,8 @@
 //!
 //! Canonical names are Yahoo's field names in snake_case. Each other provider maps its own
 //! names onto them through a per-statement table. A metric with no canonical equivalent keeps
-//! its own name in snake_case, so no data is dropped.
+//! its own name in snake_case, so no data is dropped. Values follow Yahoo's sign convention
+//! (cash outflows negative); a provider that reports them positive lists those keys as negated.
 
 #[cfg(feature = "alphavantage")]
 mod alphavantage;
@@ -31,6 +32,7 @@ pub(crate) fn canonicalize(
     metrics: Metrics,
 ) -> Metrics {
     let table = table(provider, statement_type);
+    let negated = negated(provider, statement_type);
     #[allow(unused_mut)] // only the polygon feature derives metrics
     let mut derived = Metrics::new();
     #[cfg(feature = "polygon")]
@@ -43,6 +45,11 @@ pub(crate) fn canonicalize(
     for (key, values) in metrics {
         match table.iter().find(|(from, _)| *from == key) {
             Some((_, canonical)) => {
+                let values = if negated.contains(&key.as_str()) {
+                    values.into_iter().map(|(date, v)| (date, -v)).collect()
+                } else {
+                    values
+                };
                 out.insert((*canonical).to_string(), values);
             }
             None => unmapped.push((key, values)),
@@ -53,6 +60,15 @@ pub(crate) fn canonicalize(
         out.entry(snake_case(&key)).or_insert(values);
     }
     out
+}
+
+#[cfg_attr(not(feature = "alphavantage"), allow(unused_variables))]
+fn negated(provider: Provider, statement_type: StatementType) -> &'static [&'static str] {
+    match provider {
+        #[cfg(feature = "alphavantage")]
+        Provider::AlphaVantage => alphavantage::negated(statement_type),
+        _ => &[],
+    }
 }
 
 fn table(provider: Provider, statement_type: StatementType) -> Table {
@@ -382,6 +398,30 @@ mod tests {
             for statement_type in STATEMENTS {
                 let table = table(Provider::AlphaVantage, statement_type);
                 assert_table_is_canonical("alphavantage", statement_type, table);
+            }
+        }
+
+        #[test]
+        fn positive_outflows_become_negative() {
+            let out = canonicalize(
+                Provider::AlphaVantage,
+                StatementType::CashFlow,
+                metrics(&[
+                    ("capitalExpenditures", &[("2024-09-30", 9447.0)]),
+                    ("dividendPayout", &[("2024-09-30", 15234.0)]),
+                    ("operatingCashflow", &[("2024-09-30", 118.0)]),
+                ]),
+            );
+            assert_eq!(out["capital_expenditure"]["2024-09-30"], -9447.0);
+            assert_eq!(out["cash_dividends_paid"]["2024-09-30"], -15234.0);
+            assert_eq!(out["operating_cash_flow"]["2024-09-30"], 118.0);
+        }
+
+        #[test]
+        fn negated_keys_are_mapped() {
+            let table = table(Provider::AlphaVantage, StatementType::CashFlow);
+            for key in negated(Provider::AlphaVantage, StatementType::CashFlow) {
+                assert!(table.iter().any(|(from, _)| from == key), "{key}");
             }
         }
 

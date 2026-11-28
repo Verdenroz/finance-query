@@ -8,6 +8,22 @@ pub(super) fn table(statement: StatementType) -> &'static [(&'static str, &'stat
     }
 }
 
+/// Alpha Vantage reports these cash outflows as positive numbers; Yahoo reports them negative.
+pub(super) fn negated(statement: StatementType) -> &'static [&'static str] {
+    match statement {
+        StatementType::CashFlow => CASHFLOW_OUTFLOWS,
+        _ => &[],
+    }
+}
+
+const CASHFLOW_OUTFLOWS: &[&str] = &[
+    "capitalExpenditures",
+    "dividendPayout",
+    "dividendPayoutCommonStock",
+    "paymentsForRepurchaseOfCommonStock",
+    "paymentsForRepurchaseOfEquity",
+];
+
 const INCOME: &[(&str, &str)] = &[
     ("totalRevenue", "total_revenue"),
     ("costOfRevenue", "cost_of_revenue"),
