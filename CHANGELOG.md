@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 Breaking changes
 
+- Polars 0.55 with streaming (#772)
 - Typed core, backtest and stream time columns (#764)
 - Typed Yahoo epoch columns (#762)
 - Typed date columns for string date fields (#759)
@@ -45,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixes
 
+- Error replies for bad feeds stream input (#776)
+- Alert on rate-limit rejections, not traffic (#775)
+- Pin session-dependent fields on quotes-batch (#774)
 - Round-trip TopHoldings sector weightings (#752)
 - Keep SymbolNotFound out of provider health (#756)
 - Polygon timestamps in seconds (#737)
