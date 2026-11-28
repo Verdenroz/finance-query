@@ -157,10 +157,10 @@ fn doc_block_line_837() {
     }
 }
 
-// line 1864: compile-only (no_run)
+// line 1865: compile-only (no_run)
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_1864() {
+fn doc_block_line_1865() {
         #[tokio::main]
         async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use finance_query::{Ticker, Interval, TimeRange};
