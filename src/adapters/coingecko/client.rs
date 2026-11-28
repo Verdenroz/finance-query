@@ -12,17 +12,20 @@ use super::models::{CoinQuote, GlobalResponseDTO, SearchResponseDTO, TrendingRes
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
-const COINGECKO_BASE: &str = "https://api.coingecko.com/api/v3";
+pub(super) const COINGECKO_ORIGIN: &str = "https://api.coingecko.com";
+const COINGECKO_PATH: &str = "/api/v3";
 /// 30 req/min = 0.5 req/sec
-const COINGECKO_RATE_PER_SEC: f64 = 0.5;
+pub(super) const COINGECKO_RATE_PER_SEC: f64 = 0.5;
 
+#[derive(Clone)]
 pub(crate) struct CoinGeckoClient {
     http: Client,
     limiter: Arc<RateLimiter>,
+    base_url: String,
 }
 
 impl CoinGeckoClient {
-    pub fn new() -> Result<Self> {
+    pub fn new(origin: &str, limiter: Arc<RateLimiter>) -> Result<Self> {
         let http = Client::builder()
             .timeout(Duration::from_secs(30))
             .user_agent(format!(
@@ -33,7 +36,8 @@ impl CoinGeckoClient {
 
         Ok(Self {
             http,
-            limiter: Arc::new(RateLimiter::new(COINGECKO_RATE_PER_SEC)),
+            limiter,
+            base_url: format!("{origin}{COINGECKO_PATH}"),
         })
     }
 
@@ -47,8 +51,9 @@ impl CoinGeckoClient {
         self.limiter.acquire().await;
 
         let per_page = count.min(250);
+        let base = &self.base_url;
         let url = format!(
-            "{COINGECKO_BASE}/coins/markets?vs_currency={vs_currency}&order=market_cap_desc&per_page={per_page}&page=1&sparkline=false"
+            "{base}/coins/markets?vs_currency={vs_currency}&order=market_cap_desc&per_page={per_page}&page=1&sparkline=false"
         );
 
         debug!("CoinGecko request: coins(vs_currency={vs_currency}, count={count})");
@@ -61,8 +66,9 @@ impl CoinGeckoClient {
     pub async fn coin(&self, id: &str, vs_currency: &str) -> Result<CoinQuote> {
         self.limiter.acquire().await;
 
+        let base = &self.base_url;
         let url = format!(
-            "{COINGECKO_BASE}/coins/markets?vs_currency={vs_currency}&ids={id}&order=market_cap_desc&per_page=1&page=1&sparkline=false"
+            "{base}/coins/markets?vs_currency={vs_currency}&ids={id}&order=market_cap_desc&per_page=1&page=1&sparkline=false"
         );
 
         debug!("CoinGecko request: coin(id={id})");
@@ -89,7 +95,8 @@ impl CoinGeckoClient {
     ) -> Result<Vec<super::chart::OhlcRowDTO>> {
         self.limiter.acquire().await;
 
-        let url = format!("{COINGECKO_BASE}/coins/{id}/ohlc?vs_currency={vs_currency}&days={days}");
+        let base = &self.base_url;
+        let url = format!("{base}/coins/{id}/ohlc?vs_currency={vs_currency}&days={days}");
         debug!("CoinGecko request: ohlc(id={id}, vs={vs_currency}, days={days})");
         let resp = self.http.get(&url).send().await?;
         CoinGeckoClient::check_status(&resp)?;
@@ -100,7 +107,8 @@ impl CoinGeckoClient {
     pub async fn search(&self, query: &str) -> Result<SearchResponseDTO> {
         self.limiter.acquire().await;
 
-        let url = format!("{COINGECKO_BASE}/search");
+        let base = &self.base_url;
+        let url = format!("{base}/search");
         debug!("CoinGecko request: search(query={query})");
         let resp = self
             .http
@@ -116,7 +124,8 @@ impl CoinGeckoClient {
     pub async fn trending(&self) -> Result<TrendingResponseDTO> {
         self.limiter.acquire().await;
 
-        let url = format!("{COINGECKO_BASE}/search/trending");
+        let base = &self.base_url;
+        let url = format!("{base}/search/trending");
         debug!("CoinGecko request: trending()");
         let resp = self.http.get(&url).send().await?;
         CoinGeckoClient::check_status(&resp)?;
@@ -127,7 +136,8 @@ impl CoinGeckoClient {
     pub async fn global(&self) -> Result<GlobalResponseDTO> {
         self.limiter.acquire().await;
 
-        let url = format!("{COINGECKO_BASE}/global");
+        let base = &self.base_url;
+        let url = format!("{base}/global");
         debug!("CoinGecko request: global()");
         let resp = self.http.get(&url).send().await?;
         CoinGeckoClient::check_status(&resp)?;

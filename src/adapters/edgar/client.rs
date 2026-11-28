@@ -39,6 +39,7 @@ pub(super) struct EdgarClientBuilder {
     email: String,
     app_name: String,
     timeout: Duration,
+    origin: Option<Arc<str>>,
 }
 
 impl EdgarClientBuilder {
@@ -50,7 +51,14 @@ impl EdgarClientBuilder {
             email: email.into(),
             app_name: "finance-query".to_string(),
             timeout: Duration::from_secs(30),
+            origin: None,
         }
+    }
+
+    /// Serve every SEC host from `origin`, without following redirects.
+    pub fn origin(mut self, origin: Option<Arc<str>>) -> Self {
+        self.origin = origin;
+        self
     }
 
     /// Set the application name (default: "finance-query").
@@ -90,15 +98,18 @@ impl EdgarClientBuilder {
         let version = env!("CARGO_PKG_VERSION");
         let user_agent = format!("{}/{} ({})", self.app_name, version, self.email);
 
-        let http = reqwest::Client::builder()
+        let mut http = reqwest::Client::builder()
             .user_agent(&user_agent)
-            .timeout(self.timeout)
-            .build()?;
+            .timeout(self.timeout);
+        if self.origin.is_some() {
+            http = http.redirect(reqwest::redirect::Policy::none());
+        }
 
         Ok(EdgarClient {
-            http,
+            http: http.build()?,
             rate_limiter,
             cik_cache,
+            origin: self.origin,
         })
     }
 }
@@ -112,18 +123,20 @@ pub(super) struct EdgarClient {
     http: reqwest::Client,
     rate_limiter: Arc<RateLimiter>,
     cik_cache: Arc<RwLock<Option<HashMap<String, u64>>>>,
+    origin: Option<Arc<str>>,
 }
 
 impl EdgarClient {
     /// Make a rate-limited GET request to an EDGAR endpoint.
     async fn get(&self, url: &str) -> Result<reqwest::Response> {
+        let url = urls::resolve(self.origin.as_deref(), url)?;
         self.rate_limiter.acquire().await;
         debug!("EDGAR GET {}", url);
-        let response = self.http.get(url).send().await?;
+        let response = self.http.get(&*url).send().await?;
 
         let status = response.status();
         if !status.is_success() {
-            return Err(Self::map_status(status.as_u16(), url));
+            return Err(Self::map_status(status.as_u16(), &url));
         }
         Ok(response)
     }
@@ -142,13 +155,14 @@ impl EdgarClient {
         url: &str,
         params: &T,
     ) -> Result<reqwest::Response> {
+        let url = urls::resolve(self.origin.as_deref(), url)?;
         self.rate_limiter.acquire().await;
         debug!("EDGAR GET {} (with params)", url);
-        let response = self.http.get(url).query(params).send().await?;
+        let response = self.http.get(&*url).query(params).send().await?;
 
         let status = response.status();
         if !status.is_success() {
-            return Err(Self::map_status(status.as_u16(), url));
+            return Err(Self::map_status(status.as_u16(), &url));
         }
         Ok(response)
     }

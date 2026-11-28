@@ -12,6 +12,7 @@ use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
 const FRED_BASE: &str = "https://api.stlouisfed.org/fred";
+pub(super) const FRED_PATH: &str = "/fred";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) struct FredClientBuilder {
@@ -34,8 +35,7 @@ impl FredClientBuilder {
         self
     }
 
-    /// Override the API base URL (used by tests to point at a mock server).
-    #[cfg(test)]
+    /// Override the API base URL.
     pub fn base_url(mut self, url: impl Into<String>) -> Self {
         self.base_url = Some(url.into());
         self

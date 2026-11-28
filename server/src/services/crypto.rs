@@ -22,28 +22,30 @@ pub async fn get_coins(cache: &Cache, vs_currency: &str, count: usize) -> Servic
         .await
 }
 
-pub async fn get_trending(cache: &Cache) -> ServiceResult {
+pub async fn get_trending(cache: &Cache, providers: &Arc<Providers>) -> ServiceResult {
+    let providers = Arc::clone(providers);
     cache
         .get_or_fetch(
             &Cache::key("crypto_trending", &[]),
             cache::ttl::QUOTES,
             cache::is_market_open(),
             || async move {
-                let coins = finance_query::crypto::trending().await?;
+                let coins = providers.market().crypto_trending().await?;
                 serde_json::to_value(&coins).map_err(|e| Box::new(e) as ServiceError)
             },
         )
         .await
 }
 
-pub async fn get_global(cache: &Cache) -> ServiceResult {
+pub async fn get_global(cache: &Cache, providers: &Arc<Providers>) -> ServiceResult {
+    let providers = Arc::clone(providers);
     cache
         .get_or_fetch(
             &Cache::key("crypto_global", &[]),
             cache::ttl::QUOTES,
             cache::is_market_open(),
             || async move {
-                let stats = finance_query::crypto::global().await?;
+                let stats = providers.market().crypto_global().await?;
                 serde_json::to_value(&stats).map_err(|e| Box::new(e) as ServiceError)
             },
         )

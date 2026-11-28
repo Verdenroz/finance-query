@@ -58,6 +58,10 @@ impl ChartProvider for CoinGeckoProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for CoinGeckoProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
         Some(self)
     }
