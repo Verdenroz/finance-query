@@ -169,4 +169,4 @@ files = ["src/**", "tests/**", "benches/**", "examples/**", "docs/**", "soothfas
 
 [bot]
 labels = true
-update_all = true
+update_all = false
