@@ -14,6 +14,7 @@ mod doc_openfigi;
 mod doc_worldbank;
 mod docs_nav_coverage;
 mod domain_charts;
+mod edgar_endpoint;
 mod fmp_catalog;
 mod fmp_delisted;
 mod fmp_page_progress;

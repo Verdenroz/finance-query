@@ -83,6 +83,10 @@ impl CalendarProvider for FredProvider {
 
 #[async_trait::async_trait]
 impl ProviderAdapter for FredProvider {
+    fn accepts_endpoint(&self) -> bool {
+        true
+    }
+
     async fn initialize(&self) -> crate::error::Result<()> {
         let _ = crate::adapters::fred::build_client()?;
         Ok(())

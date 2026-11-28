@@ -112,6 +112,13 @@ fn usable_key(value: Option<String>) -> Option<String> {
 }
 
 pub(crate) fn build_client() -> Result<client::FredClient> {
+    if let Some(scoped) = crate::adapters::keys::scoped_key("fred") {
+        let mut builder = FredClientBuilder::new(&scoped.api_key).timeout(scoped.timeout);
+        if let Some(origin) = &scoped.base_url {
+            builder = builder.base_url(format!("{origin}{}", client::FRED_PATH));
+        }
+        return builder.build_with_limiter(scoped.limiter("fred", FRED_RATE_PER_SEC));
+    }
     if FRED_SINGLETON.get().is_none()
         && let Some(key) = usable_key(std::env::var("FRED_API_KEY").ok())
     {

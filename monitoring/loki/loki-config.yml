@@ -37,14 +37,17 @@ compactor:
   delete_request_store: filesystem
 
 limits_config:
-  # 7 days of logs; anything older is compacted away.
-  retention_period: 168h
+  # 48h keeps worst-case usage near 8 GB on the 38 GB host; 7 days of
+  # unfiltered logs reached 26 GB.
+  retention_period: 48h
   reject_old_samples: true
-  reject_old_samples_max_age: 168h
-  ingestion_rate_mb: 4
-  ingestion_burst_size_mb: 8
+  reject_old_samples_max_age: 48h
+  ingestion_rate_mb: 2
+  ingestion_burst_size_mb: 4
+  per_stream_rate_limit: 1MB
+  per_stream_rate_limit_burst: 2MB
   max_query_series: 500
-  max_query_lookback: 168h
+  max_query_lookback: 48h
 
 analytics:
   reporting_enabled: false

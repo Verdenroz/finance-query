@@ -207,10 +207,19 @@ fn build_client() -> Result<client::EdgarClient> {
             reason: "EDGAR_EMAIL not set. Call edgar::init(email) or set EDGAR_EMAIL env var."
                 .to_string(),
         })?;
+    let origin = crate::adapters::keys::scoped_key("edgar")
+        .and_then(|scoped| scoped.base_url)
+        .map(Arc::from);
+    // A mock origin serves its own ticker map, which must not reach the shared cache.
+    let cik_cache = match origin {
+        Some(_) => Arc::new(RwLock::new(None)),
+        None => Arc::clone(&s.cik_cache),
+    };
     EdgarClientBuilder::new(&s.email)
         .app_name(&s.app_name)
         .timeout(s.timeout)
-        .build_with_shared_state(Arc::clone(&s.rate_limiter), Arc::clone(&s.cik_cache))
+        .origin(origin)
+        .build_with_shared_state(Arc::clone(&s.rate_limiter), cik_cache)
 }
 
 /// Split an accession number (`0000320193-26-000026`, dashes optional) into
@@ -339,7 +348,8 @@ pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
 /// Returns an error for a URL outside those locations, a missing file
 /// (`SymbolNotFound`), rate limiting (`RateLimited`) or a server error.
 pub async fn archive(url: &str) -> Result<Vec<u8>> {
-    if !is_archive_url(url) {
+    let origin = crate::adapters::keys::scoped_key("edgar").and_then(|scoped| scoped.base_url);
+    if !is_archive_url(url, origin.as_deref()) {
         return Err(FinanceError::InvalidParameter {
             param: "url".to_string(),
             reason: "must be an EDGAR archive, data.sec.gov or standard taxonomy URL".to_string(),
@@ -357,10 +367,13 @@ const ARCHIVE_PREFIXES: &[&str] = &[
 ];
 
 /// Checks the parsed form, since the request resolves `..` segments before it is sent.
-fn is_archive_url(url: &str) -> bool {
+fn is_archive_url(url: &str, origin: Option<&str>) -> bool {
     reqwest::Url::parse(url).is_ok_and(|parsed| {
+        let origin_prefix = origin.map(|origin| format!("{origin}/"));
         ARCHIVE_PREFIXES
             .iter()
+            .copied()
+            .chain(origin_prefix.as_deref())
             .any(|prefix| parsed.as_str().starts_with(prefix))
     })
 }
@@ -578,29 +591,87 @@ mod tests {
     #[test]
     fn test_archive_urls_stay_on_sec_hosts() {
         assert!(is_archive_url(
-            "https://www.sec.gov/Archives/edgar/full-index/2025/QTR1/xbrl.idx"
+            "https://www.sec.gov/Archives/edgar/full-index/2025/QTR1/xbrl.idx",
+            None
         ));
         assert!(is_archive_url(
-            "https://data.sec.gov/submissions/CIK0000320193-submissions-001.json"
+            "https://data.sec.gov/submissions/CIK0000320193-submissions-001.json",
+            None
         ));
         assert!(is_archive_url(
-            "https://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
+            "https://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd",
+            None
         ));
-        assert!(is_archive_url("https://xbrl.sec.gov/dei/2026/dei-2026.xsd"));
-        assert!(!is_archive_url(
-            "http://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
-        ));
-        assert!(!is_archive_url("https://www.sec.gov/cgi-bin/browse-edgar"));
-        assert!(!is_archive_url(
-            "https://www.sec.gov/Archives/../cgi-bin/browse-edgar"
+        assert!(is_archive_url(
+            "https://xbrl.sec.gov/dei/2026/dei-2026.xsd",
+            None
         ));
         assert!(!is_archive_url(
-            "https://www.sec.gov/Archives/%2e%2e/cgi-bin/browse-edgar"
+            "http://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd",
+            None
         ));
         assert!(!is_archive_url(
-            "http://www.sec.gov/Archives/edgar/data/1/2/x.htm"
+            "https://www.sec.gov/cgi-bin/browse-edgar",
+            None
         ));
-        assert!(!is_archive_url("https://example.com/Archives/"));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/../cgi-bin/browse-edgar",
+            None
+        ));
+        assert!(!is_archive_url(
+            "https://www.sec.gov/Archives/%2e%2e/cgi-bin/browse-edgar",
+            None
+        ));
+        assert!(!is_archive_url(
+            "http://www.sec.gov/Archives/edgar/data/1/2/x.htm",
+            None
+        ));
+        assert!(!is_archive_url("https://example.com/Archives/", None));
+    }
+
+    async fn scoped<F: std::future::Future>(origin: &str, f: F) -> F::Output {
+        use crate::adapters::keys::{KeyMap, ScopedKey, scope};
+        let mut key = ScopedKey::new(String::new(), Duration::from_secs(5));
+        key.base_url = Some(origin.to_string());
+        scope(Arc::new(KeyMap::from([("edgar", key)])), f).await
+    }
+
+    #[tokio::test]
+    async fn a_scoped_origin_serves_its_own_cik_map_and_leaves_the_shared_cache_empty() {
+        let _ = init("test@example.com");
+        let mut server = mockito::Server::new_async().await;
+        let tickers = server
+            .mock("GET", "/files/company_tickers.json")
+            .with_body(r#"{"0":{"cik_str":42,"ticker":"MOCK","title":"Mock Inc"}}"#)
+            .expect(1)
+            .create_async()
+            .await;
+
+        let cik = scoped(&server.url(), resolve_cik("mock")).await.unwrap();
+
+        assert_eq!(cik, 42);
+        tickers.assert_async().await;
+        let shared = EDGAR_SINGLETON.get().unwrap().cik_cache.read().await;
+        assert!(shared.as_ref().is_none_or(|map| !map.contains_key("MOCK")));
+    }
+
+    #[tokio::test]
+    async fn a_scoped_origin_refuses_an_unknown_host_before_any_request() {
+        let _ = init("test@example.com");
+        let result = scoped(
+            "http://127.0.0.1:9",
+            archive("https://xbrl.sec.gov/dei/2026/dei-2026.xsd"),
+        )
+        .await;
+        assert!(matches!(result, Err(FinanceError::InvalidParameter { .. })));
+    }
+
+    #[test]
+    fn archive_urls_accept_the_origin_host_only_when_one_is_set() {
+        let url = "http://127.0.0.1:9/Archives/edgar/data/1/2/x.htm";
+        assert!(is_archive_url(url, Some("http://127.0.0.1:9")));
+        assert!(!is_archive_url(url, None));
+        assert!(!is_archive_url(url, Some("http://127.0.0.1:99")));
     }
 
     #[tokio::test]
