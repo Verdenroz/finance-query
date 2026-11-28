@@ -13,6 +13,8 @@ permissions:
 
 env:
   EDGAR_EMAIL: harveytseng2@gmail.com
+  # Every probe comes from one IP, past the server's default per-client quota.
+  RATE_LIMIT_PER_MINUTE: "100000"
 
 concurrency:
   group: io-probe
