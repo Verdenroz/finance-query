@@ -17,6 +17,7 @@ pub(crate) mod client;
 pub(crate) mod crypto;
 pub(crate) mod models;
 
+use crate::init;
 use std::time::Duration;
 
 use crate::adapters::singleton::keyless_limiter;
@@ -62,12 +63,14 @@ pub(crate) async fn chains() -> Result<Vec<ChainTvl>> {
         .chains()
         .await?
         .into_iter()
-        .map(|chain| ChainTvl {
-            name: chain.name,
-            token_symbol: chain.token_symbol,
-            gecko_id: chain.gecko_id,
-            chain_id: chain.chain_id,
-            tvl: chain.tvl,
+        .map(|chain| {
+            init!(ChainTvl {
+                name: chain.name,
+                token_symbol: chain.token_symbol,
+                gecko_id: chain.gecko_id,
+                chain_id: chain.chain_id,
+                tvl: chain.tvl,
+            })
         })
         .collect();
     // DefiLlama returns these unordered; rank them so the list is useful
@@ -88,16 +91,18 @@ pub(crate) async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
         .await?
         .pegged_assets
         .into_iter()
-        .map(|asset| StablecoinSupply {
-            name: asset.name,
-            symbol: asset.symbol,
-            gecko_id: asset.gecko_id,
-            peg_type: asset.peg_type,
-            peg_mechanism: asset.peg_mechanism,
-            circulating: peg_value(&asset.circulating),
-            circulating_prev_day: peg_value(&asset.circulating_prev_day),
-            circulating_prev_week: peg_value(&asset.circulating_prev_week),
-            circulating_prev_month: peg_value(&asset.circulating_prev_month),
+        .map(|asset| {
+            init!(StablecoinSupply {
+                name: asset.name,
+                symbol: asset.symbol,
+                gecko_id: asset.gecko_id,
+                peg_type: asset.peg_type,
+                peg_mechanism: asset.peg_mechanism,
+                circulating: peg_value(&asset.circulating),
+                circulating_prev_day: peg_value(&asset.circulating_prev_day),
+                circulating_prev_week: peg_value(&asset.circulating_prev_week),
+                circulating_prev_month: peg_value(&asset.circulating_prev_month),
+            })
         })
         .collect();
     coins.sort_by(|a, b| {

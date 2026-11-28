@@ -1,5 +1,6 @@
 //! News endpoints: stock news, FMP articles, press releases, crypto news, forex news.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -62,15 +63,17 @@ fn stock_news_to_canonical(
 ) -> Vec<crate::models::corporate::news::News> {
     articles
         .into_iter()
-        .map(|a| crate::models::corporate::news::News {
-            title: a.title.unwrap_or_default(),
-            link: a.url.unwrap_or_default(),
-            source: a.site.or(a.publisher).unwrap_or_default(),
-            img: a.image.unwrap_or_default(),
-            time: a.published_date.unwrap_or_default(),
-            provider_id: Some(crate::providers::Provider::Fmp),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|a| {
+            init!(crate::models::corporate::news::News {
+                title: a.title.unwrap_or_default(),
+                link: a.url.unwrap_or_default(),
+                source: a.site.or(a.publisher).unwrap_or_default(),
+                img: a.image.unwrap_or_default(),
+                time: a.published_date.unwrap_or_default(),
+                provider_id: Some(crate::providers::Provider::Fmp),
+                #[cfg(feature = "sentiment")]
+                sentiment: None,
+            })
         })
         .collect()
 }
@@ -161,11 +164,13 @@ pub async fn fetch_press_releases_response(
     let dtos = press_releases(symbol, limit).await?;
     Ok(dtos
         .into_iter()
-        .map(|d| crate::models::corporate::press_release::PressRelease {
-            symbol: d.symbol.or_else(|| Some(symbol.to_string())),
-            date: d.date,
-            title: d.title,
-            text: d.text,
+        .map(|d| {
+            init!(crate::models::corporate::press_release::PressRelease {
+                symbol: d.symbol.or_else(|| Some(symbol.to_string())),
+                date: d.date,
+                title: d.title,
+                text: d.text,
+            })
         })
         .collect())
 }

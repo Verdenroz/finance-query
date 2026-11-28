@@ -1,5 +1,6 @@
 //! FRED API client with rate limiting and request pooling.
 
+use crate::init;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -187,14 +188,14 @@ impl FredClient {
                 } else {
                     raw.parse::<f64>().ok()
                 };
-                Some(MacroObservation { date, value })
+                Some(init!(MacroObservation { date, value }))
             })
             .collect();
 
-        Ok(MacroSeries {
+        Ok(init!(MacroSeries {
             id: series_id.to_string(),
             observations,
-        })
+        }))
     }
 
     /// Fetch scheduled economic-data release dates over `[from, to]`.

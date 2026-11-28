@@ -77,26 +77,30 @@ Each `MacroObservation` has:
 <!-- /soothfast:bind -->
 
 Both tables are backed by a compiled, real value — `EconomicSeries` and
-`MacroObservation` are `#[non_exhaustive]` and have no public constructor, but
-both derive `Deserialize`, so a fixture value can be built from outside the
-crate with `serde_json::from_value`:
+`MacroObservation` are `#[non_exhaustive]`, so a fixture value is built from
+outside the crate with `init!`:
 
 ```rust capture-output feature=fred covers=finance_query::EconomicSeries
-use finance_query::EconomicSeries;
 use finance_query::fred::MacroObservation;
+use finance_query::{EconomicSeries, init};
 
 fn main() {
-    let series: EconomicSeries = serde_json::from_value(serde_json::json!({
-        "series_id": "GDP",
-        "title": "Gross Domestic Product",
-        "units": "Billions of Dollars",
-        "frequency": "Quarterly",
-        "observations": [
-            {"date": "2024-01-01", "value": 28624.1},
-            {"date": "2024-04-01", "value": 29016.7}
-        ]
-    }))
-    .unwrap();
+    let series = init!(EconomicSeries {
+        series_id: "GDP".to_string(),
+        title: Some("Gross Domestic Product".to_string()),
+        units: Some("Billions of Dollars".to_string()),
+        frequency: Some("Quarterly".to_string()),
+        observations: vec![
+            init!(MacroObservation {
+                date: "2024-01-01".to_string(),
+                value: Some(28624.1),
+            }),
+            init!(MacroObservation {
+                date: "2024-04-01".to_string(),
+                value: Some(29016.7),
+            }),
+        ],
+    });
 
     let first: &MacroObservation = &series.observations[0];
     println!("series_id = {}", series.series_id);

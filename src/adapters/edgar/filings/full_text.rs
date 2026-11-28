@@ -6,6 +6,7 @@
 
 use crate::adapters::edgar::build_client;
 use crate::error::Result;
+use crate::init;
 use crate::models::filings::{
     EdgarSearchHit, EdgarSearchResults, FilingSearchFilters, FilingSearchHit,
 };
@@ -48,7 +49,7 @@ pub(crate) fn to_search_hit(hit: EdgarSearchHit) -> FilingSearchHit {
         ),
         None => (None, None, None, None, Vec::new(), Vec::new()),
     };
-    FilingSearchHit {
+    init!(FilingSearchHit {
         accession_number,
         form,
         filed_date,
@@ -57,7 +58,7 @@ pub(crate) fn to_search_hit(hit: EdgarSearchHit) -> FilingSearchHit {
         url: hit_url(hit._id.as_deref(), &ciks),
         ciks,
         score: hit._score,
-    }
+    })
 }
 
 pub(crate) fn to_search_hits(results: EdgarSearchResults) -> Vec<FilingSearchHit> {

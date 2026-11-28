@@ -48,7 +48,6 @@
 #![warn(rustdoc::missing_crate_level_docs)]
 
 mod dataframe;
-mod fields_init;
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -476,20 +475,6 @@ pub fn derive_format_convert(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
-}
-
-/// Derive macro that generates a hidden, exhaustive initializer for a struct.
-///
-/// For `struct X { .. }` it emits `#[doc(hidden)] pub struct XFieldsInit { .. }` with
-/// every field public, plus `impl From<XFieldsInit> for X`. Unlike `X`, which may be
-/// `#[non_exhaustive]`, the initializer can be built with a struct literal from any
-/// crate, and the literal still has to set every field.
-#[proc_macro_derive(FieldsInit)]
-pub fn derive_fields_init(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    fields_init::expand(&input)
-        .unwrap_or_else(|e| e.to_compile_error())
-        .into()
 }
 
 /// Returns true if `ty` is `Option<PARAM::Value<T>>` for the given format param name.

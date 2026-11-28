@@ -1,5 +1,6 @@
 //! Options snapshot endpoints: options chain, single contract snapshot.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::Provider;
@@ -161,7 +162,7 @@ fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
     let day = s.day.as_ref();
     let last_trade = s.last_trade.as_ref();
     let last_quote = s.last_quote.as_ref();
-    OptionContract {
+    init!(OptionContract {
         contract_symbol: details.and_then(|d| d.ticker.clone()).unwrap_or_default(),
         strike: details.and_then(|d| d.strike_price).unwrap_or(0.0),
         currency: None,
@@ -185,7 +186,7 @@ fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
         last_trade_date: None,
         implied_volatility: s.implied_volatility,
         in_the_money: None,
-    }
+    })
 }
 
 /// Fetch options chain (canonical) for a stock ticker.

@@ -7,6 +7,7 @@
 //! most recent half-month is typically published with a few weeks' lag, so lookup
 //! walks backward from the current period until it collects enough periods.
 
+use crate::init;
 use std::io::{Cursor, Read};
 
 use chrono::{Datelike, NaiveDate, Utc};
@@ -70,14 +71,14 @@ fn parse_rows(text: &str, symbol: &str) -> Vec<FailToDeliver> {
             let description = cols.next()?;
             let price = cols.next()?;
             let name = description.trim();
-            Some(FailToDeliver {
+            Some(init!(FailToDeliver {
                 symbol: Some(sym.to_string()),
                 date: format_settlement_date(date),
                 quantity: quantity.trim().parse().ok(),
                 price: price.trim().parse().ok(),
                 name: (!name.is_empty()).then(|| name.to_string()),
                 description: None,
-            })
+            }))
         })
         .collect()
 }

@@ -1,6 +1,7 @@
 //! Forex (foreign exchange) endpoints: exchange rates and FX time series.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -96,7 +97,7 @@ fn rate_to_canonical(rate: ExchangeRateDTO) -> crate::models::forex::ForexQuote 
         rate.from_currency_code.to_uppercase(),
         rate.to_currency_code.to_uppercase()
     );
-    crate::models::forex::ForexQuote {
+    init!(crate::models::forex::ForexQuote {
         symbol,
         base_currency: Some(rate.from_currency_code),
         quote_currency: Some(rate.to_currency_code),
@@ -106,7 +107,7 @@ fn rate_to_canonical(rate: ExchangeRateDTO) -> crate::models::forex::ForexQuote 
         change: None,
         change_percent: None,
         timestamp,
-    }
+    })
 }
 
 /// Parse an Alpha Vantage datetime string (e.g. "2024-01-15 14:30:00") to a Unix timestamp.

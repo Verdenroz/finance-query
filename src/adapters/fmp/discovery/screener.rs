@@ -1,5 +1,6 @@
 //! Stock screener, symbol search, and CIK lookup endpoints for Financial Modeling Prep.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -107,7 +108,7 @@ pub async fn fetch_symbol_search_response(
     Ok(results
         .into_iter()
         .filter_map(|r| {
-            Some(SymbolMatch {
+            Some(init!(SymbolMatch {
                 symbol: r.symbol?,
                 id: None,
                 name: r.name,
@@ -121,7 +122,7 @@ pub async fn fetch_symbol_search_response(
                 image: None,
                 ipo_date: None,
                 delisted_date: None,
-            })
+            }))
         })
         .collect())
 }
@@ -176,7 +177,7 @@ pub async fn fetch_screener_response(
     Ok(results
         .into_iter()
         .filter_map(|r| {
-            Some(ScreenerMatch {
+            Some(init!(ScreenerMatch {
                 symbol: r.symbol?,
                 name: r.company_name,
                 price: r.price,
@@ -190,7 +191,7 @@ pub async fn fetch_screener_response(
                 is_etf: r.is_etf,
                 is_actively_trading: r.is_actively_trading,
                 is_fund: r.is_fund,
-            })
+            }))
         })
         .collect())
 }
@@ -253,7 +254,7 @@ mod tests {
         let matched: Vec<_> = hits
             .into_iter()
             .filter_map(|r| {
-                Some(crate::models::discovery::reference::SymbolMatch {
+                Some(init!(crate::models::discovery::reference::SymbolMatch {
                     symbol: r.symbol?,
                     id: None,
                     name: r.name,
@@ -266,7 +267,7 @@ mod tests {
                     image: None,
                     ipo_date: None,
                     delisted_date: None,
-                })
+                }))
             })
             .collect();
 

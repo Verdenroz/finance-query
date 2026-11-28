@@ -6,11 +6,12 @@
 use crate::adapters::edgar::build_client;
 use crate::adapters::edgar::client::CompanyTickerEntry;
 use crate::error::Result;
+use crate::init;
 use crate::models::discovery::reference::SymbolMatch;
 use crate::providers::{Operation, Provider};
 
 fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> SymbolMatch {
-    SymbolMatch {
+    init!(SymbolMatch {
         symbol: entry.ticker,
         id: Some(entry.cik.to_string()),
         name: Some(entry.title),
@@ -23,7 +24,7 @@ fn to_symbol_match(entry: CompanyTickerEntry, exchange: Option<&String>) -> Symb
         image: None,
         ipo_date: None,
         delisted_date: None,
-    }
+    })
 }
 
 /// Fetch canonical listing status. `active = false` is not supported — SEC's

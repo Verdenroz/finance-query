@@ -6,6 +6,7 @@
 //! strategy against today's `GDPC1` is look-ahead bias — `as_of` asks for the
 //! series as it stood on a past date.
 
+use crate::init;
 use serde::Deserialize;
 
 use crate::adapters::fred::build_client;
@@ -69,11 +70,13 @@ pub struct ObservationDTO {
 pub(crate) fn to_observations(dto: ObservationsResponseDTO) -> Vec<MacroObservation> {
     dto.observations
         .into_iter()
-        .map(|o| MacroObservation {
-            date: o.date,
-            // "." is FRED's missing marker; anything unparseable is treated the
-            // same way rather than dropping the observation's date entirely.
-            value: (o.value != ".").then(|| o.value.parse().ok()).flatten(),
+        .map(|o| {
+            init!(MacroObservation {
+                date: o.date,
+                // "." is FRED's missing marker; anything unparseable is treated the
+                // same way rather than dropping the observation's date entirely.
+                value: (o.value != ".").then(|| o.value.parse().ok()).flatten(),
+            })
         })
         .collect()
 }
@@ -130,13 +133,13 @@ pub async fn series_as_of(series_id: &str, date: &str) -> Result<EconomicSeries>
         )
         .await?;
 
-    Ok(EconomicSeries {
+    Ok(init!(EconomicSeries {
         series_id: series_id.to_string(),
         title: None,
         units: None,
         frequency: None,
         observations: to_observations(resp),
-    })
+    }))
 }
 
 #[cfg(test)]

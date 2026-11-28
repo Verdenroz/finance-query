@@ -5,6 +5,7 @@
 //! column this parser doesn't model). Best-effort: unrecognized columns are
 //! ignored rather than failing the row.
 
+use crate::init;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -157,10 +158,10 @@ fn parse_summary_compensation_table(page: &str) -> Result<Vec<ExecutiveCompensat
             current_name = Some(cells[0].clone());
         }
 
-        let mut comp = ExecutiveCompensation {
+        let mut comp = init!(ExecutiveCompensation {
             name_and_position: current_name.clone(),
             ..Default::default()
-        };
+        });
         for (col, cell) in columns[offset..].iter().zip(cells.iter()) {
             match col {
                 Column::Year => comp.year = cell.parse().ok(),

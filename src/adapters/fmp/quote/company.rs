@@ -1,5 +1,6 @@
 //! FMP company information endpoints.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -66,12 +67,12 @@ fn stock_peers_to_canonical(
     let mut symbols: Vec<crate::models::corporate::recommendation::SimilarSymbol> = peers
         .into_iter()
         .filter_map(|p| p.symbol)
-        .map(
-            |s| crate::models::corporate::recommendation::SimilarSymbol {
+        .map(|s| {
+            init!(crate::models::corporate::recommendation::SimilarSymbol {
                 symbol: s,
                 score: 0.0,
-            },
-        )
+            })
+        })
         .collect();
     symbols.truncate(limit);
     symbols
@@ -211,16 +212,10 @@ pub(crate) async fn fetch_delisted_stocks_page(
     let (rows, next) = delisted_page(&client, limit, cursor).await?;
     let count = rows.len();
     let items = delisted_symbols(rows)?;
-    Ok(crate::ProviderPage {
-        items,
-        next,
-        provider_id: crate::Provider::Fmp,
-        request_id: None,
+    Ok(init!(crate::ProviderPage {
         results_count: Some(count),
-        query_count: None,
-        reported_symbol: None,
-        adjusted: None,
-    })
+        ..crate::ProviderPage::new(items, crate::Provider::Fmp, next)
+    }))
 }
 
 pub(crate) async fn fetch_delisted_stocks_page_at(
@@ -251,7 +246,7 @@ fn delisted_symbols(rows: Vec<DelistedCompanyDTO>) -> Result<Vec<SymbolMatch>> {
 /// Convert a delisted-company record into a canonical [`SymbolMatch`],
 /// dropping entries without a symbol.
 fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
-    Some(SymbolMatch {
+    Some(init!(SymbolMatch {
         symbol: dto.symbol?,
         id: None,
         name: dto.company_name,
@@ -264,7 +259,7 @@ fn to_delisted_symbol_match(dto: DelistedCompanyDTO) -> Option<SymbolMatch> {
         image: None,
         ipo_date: dto.ipo_date,
         delisted_date: dto.delisted_date,
-    })
+    }))
 }
 
 /// Fetch canonical delisted-security listing status

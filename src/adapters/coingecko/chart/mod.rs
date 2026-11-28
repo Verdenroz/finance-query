@@ -6,6 +6,7 @@
 //! therefore advisory, and candles come back with `volume: 0` rather than a
 //! number invented from a differently-bucketed series.
 
+use crate::init;
 use serde::Deserialize;
 
 use crate::constants::{Interval, TimeRange};
@@ -79,14 +80,14 @@ pub async fn fetch_chart_response(
         .ohlc(&id, &vs_currency, range_to_days(range))
         .await?;
 
-    Ok(Chart {
+    Ok(init!(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles: rows_to_candles(rows),
         interval: Some(interval),
         range: Some(range),
         provider_id: Some(Provider::CoinGecko),
-    })
+    }))
 }
 
 #[cfg(test)]

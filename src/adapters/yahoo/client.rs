@@ -1,6 +1,7 @@
 use super::auth::YahooAuth;
 use crate::constants::{Interval, Region, TimeRange};
 use crate::error::{FinanceError, Result};
+use crate::init;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
@@ -482,19 +483,19 @@ impl YahooClient {
             })
             .collect();
 
-        let chart_meta = crate::models::chart::ChartMeta {
+        let chart_meta = init!(crate::models::chart::ChartMeta {
             provider_id: Some(crate::Provider::Yahoo),
             ..meta.clone()
-        };
+        });
 
-        Ok(crate::models::chart::Chart {
+        Ok(init!(crate::models::chart::Chart {
             symbol: symbol.to_string(),
             meta: chart_meta,
             candles,
             interval: None,
             range: None,
             provider_id: Some(crate::Provider::Yahoo),
-        })
+        }))
     }
 
     /// Fetch chart data for a symbol using absolute date boundaries
@@ -568,19 +569,19 @@ impl YahooClient {
             })
             .collect();
 
-        let chart_meta = crate::models::chart::ChartMeta {
+        let chart_meta = init!(crate::models::chart::ChartMeta {
             provider_id: Some(crate::Provider::Yahoo),
             ..meta.clone()
-        };
+        });
 
-        Ok(crate::models::chart::Chart {
+        Ok(init!(crate::models::chart::Chart {
             symbol: symbol.to_string(),
             meta: chart_meta,
             candles,
             interval: None,
             range: None,
             provider_id: Some(crate::Provider::Yahoo),
-        })
+        }))
     }
 
     /// Search for quotes and news
@@ -831,22 +832,27 @@ impl YahooClient {
                 .map(|items| {
                     items
                         .iter()
-                        .map(|c| OptionContract {
-                            contract_symbol: c["contractSymbol"].as_str().unwrap_or("").to_string(),
-                            strike: c["strike"].as_f64().unwrap_or(0.0),
-                            currency: c["currency"].as_str().map(String::from),
-                            last_price: c["lastPrice"].as_f64(),
-                            change: c["change"].as_f64(),
-                            percent_change: c["percentChange"].as_f64(),
-                            volume: c["volume"].as_u64().map(|v| v as i64),
-                            open_interest: c["openInterest"].as_u64().map(|v| v as i64),
-                            bid: c["bid"].as_f64(),
-                            ask: c["ask"].as_f64(),
-                            contract_size: c["contractSize"].as_str().map(String::from),
-                            expiration: Some(c["expiration"].as_i64().unwrap_or(0)),
-                            last_trade_date: c["lastTradeDate"].as_i64(),
-                            implied_volatility: c["impliedVolatility"].as_f64(),
-                            in_the_money: c["inTheMoney"].as_bool(),
+                        .map(|c| {
+                            init!(OptionContract {
+                                contract_symbol: c["contractSymbol"]
+                                    .as_str()
+                                    .unwrap_or("")
+                                    .to_string(),
+                                strike: c["strike"].as_f64().unwrap_or(0.0),
+                                currency: c["currency"].as_str().map(String::from),
+                                last_price: c["lastPrice"].as_f64(),
+                                change: c["change"].as_f64(),
+                                percent_change: c["percentChange"].as_f64(),
+                                volume: c["volume"].as_u64().map(|v| v as i64),
+                                open_interest: c["openInterest"].as_u64().map(|v| v as i64),
+                                bid: c["bid"].as_f64(),
+                                ask: c["ask"].as_f64(),
+                                contract_size: c["contractSize"].as_str().map(String::from),
+                                expiration: Some(c["expiration"].as_i64().unwrap_or(0)),
+                                last_trade_date: c["lastTradeDate"].as_i64(),
+                                implied_volatility: c["impliedVolatility"].as_f64(),
+                                in_the_money: c["inTheMoney"].as_bool(),
+                            })
                         })
                         .collect()
                 })

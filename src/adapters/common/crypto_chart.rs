@@ -5,6 +5,7 @@
 //! the exchange's identity, so it is built in one place.
 
 use crate::constants::{Interval, TimeRange};
+use crate::init;
 use crate::models::chart::{Candle, Chart, ChartMeta};
 use crate::providers::Provider;
 
@@ -30,9 +31,9 @@ pub(crate) fn crypto_chart(
     interval: Option<Interval>,
     range: Option<TimeRange>,
 ) -> Chart {
-    Chart {
+    init!(Chart {
         symbol: symbol.to_string(),
-        meta: ChartMeta {
+        meta: init!(ChartMeta {
             symbol: symbol.to_string(),
             currency: quote_currency,
             exchange_name: Some(exchange.code.to_string()),
@@ -45,10 +46,10 @@ pub(crate) fn crypto_chart(
             range: range.map(|r| r.as_str().to_string()),
             provider_id: Some(exchange.provider),
             ..Default::default()
-        },
+        }),
         candles,
         interval,
         range,
         provider_id: Some(exchange.provider),
-    }
+    })
 }

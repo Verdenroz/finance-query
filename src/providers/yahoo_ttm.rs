@@ -1,5 +1,6 @@
 //! Locally computed TTM metrics reusing cached financials + quote data.
 
+use crate::init;
 use std::collections::BTreeMap;
 
 use crate::adapters::yahoo::client::YahooClient;
@@ -145,7 +146,7 @@ fn key_metrics_from_facts(symbol: &str, f: &Facts) -> KeyMetricsTtm {
     let cash_conversion_cycle =
         operating_cycle.and_then(|c| sub(Some(c), days_of_payables_outstanding));
 
-    KeyMetricsTtm {
+    init!(KeyMetricsTtm {
         symbol: Some(symbol.to_string()),
         market_cap: f.market_cap,
         enterprise_value,
@@ -170,7 +171,7 @@ fn key_metrics_from_facts(symbol: &str, f: &Facts) -> KeyMetricsTtm {
         operating_cycle,
         cash_conversion_cycle,
         ..Default::default()
-    }
+    })
 }
 
 pub(super) async fn fetch_ratios_ttm(
@@ -188,7 +189,7 @@ fn ratios_from_facts(symbol: &str, f: &Facts) -> FinancialRatiosTtm {
     let average_inventory = average(f.inventory, f.prior_inventory);
     let average_total_assets = average(f.total_assets, f.prior_total_assets);
 
-    FinancialRatiosTtm {
+    init!(FinancialRatiosTtm {
         symbol: Some(symbol.to_string()),
         gross_profit_margin: div(f.gross_profit, f.revenue),
         operating_profit_margin: div(f.operating_income, f.revenue),
@@ -213,7 +214,7 @@ fn ratios_from_facts(symbol: &str, f: &Facts) -> FinancialRatiosTtm {
         revenue_per_share: div(f.revenue, f.shares_outstanding),
         net_income_per_share: div(f.net_income, f.shares_outstanding),
         ..Default::default()
-    }
+    })
 }
 
 fn sorted_dates(stmt: &BTreeMap<String, BTreeMap<String, f64>>, metric: &str) -> Vec<String> {

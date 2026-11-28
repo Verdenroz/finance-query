@@ -1,6 +1,7 @@
 //! Cryptocurrency endpoints: exchange rates and crypto time series.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -146,7 +147,7 @@ fn series_to_quote(series: CryptoTimeSeriesDTO) -> crate::models::crypto::Crypto
             (None, None, None, None, None, None)
         };
 
-    crate::models::crypto::CryptoQuote {
+    init!(crate::models::crypto::CryptoQuote {
         id: series.symbol.clone(),
         symbol: series.symbol,
         name: String::new(),
@@ -158,7 +159,7 @@ fn series_to_quote(series: CryptoTimeSeriesDTO) -> crate::models::crypto::Crypto
         high_24h,
         low_24h,
         circulating_supply: None,
-    }
+    })
 }
 
 #[cfg(test)]

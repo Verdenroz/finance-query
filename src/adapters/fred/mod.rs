@@ -186,7 +186,7 @@ pub async fn fetch_economic_series_response(
 /// Map a FRED [`MacroSeries`] to the canonical
 /// [`EconomicSeries`](crate::models::economic::EconomicSeries).
 fn series_to_canonical(series: MacroSeries) -> crate::models::economic::EconomicSeries {
-    crate::models::economic::EconomicSeries {
+    crate::init!(crate::models::economic::EconomicSeries {
         series_id: series.id,
         title: None,
         units: None,
@@ -194,12 +194,12 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
         observations: series
             .observations
             .into_iter()
-            .map(|o| crate::models::economic::MacroObservation {
+            .map(|o| crate::init!(crate::models::economic::MacroObservation {
                 date: o.date,
                 value: o.value,
-            })
+            }))
             .collect(),
-    }
+    })
 }
 
 /// Fetch scheduled economic-data releases over `[from, to]` and map them to
@@ -224,19 +224,21 @@ fn release_dates_to_calendar_entries(
 
     calendar::drop_phantom_daily_fills(dates)
         .into_iter()
-        .map(|rd| MarketCalendarEntry {
-            symbol: None,
-            date: Some(rd.date),
-            detail: CalendarDetail::Economic {
-                event: Some(rd.release_name),
-                country: Some("US".to_string()),
-                actual: None,
-                previous: None,
-                estimate: None,
-                change: None,
-                change_percentage: None,
-                impact: None,
-            },
+        .map(|rd| {
+            MarketCalendarEntry::new(
+                None,
+                Some(rd.date),
+                CalendarDetail::Economic {
+                    event: Some(rd.release_name),
+                    country: Some("US".to_string()),
+                    actual: None,
+                    previous: None,
+                    estimate: None,
+                    change: None,
+                    change_percentage: None,
+                    impact: None,
+                },
+            )
         })
         .collect()
 }

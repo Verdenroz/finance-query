@@ -89,11 +89,11 @@ fn doc_block_line_161() {
     }
 }
 
-// line 225: compile-only (no_run)
+// line 224: compile-only (no_run)
 #[cfg(feature = "risk")]
 #[rustfmt::skip]
 #[allow(dead_code)]
-fn doc_block_line_225() {
+fn doc_block_line_224() {
     use finance_query::indicators::Indicator;
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 

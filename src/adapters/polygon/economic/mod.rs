@@ -1,5 +1,6 @@
 //! Economic indicator endpoints: inflation, labor market, treasury yields.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -103,7 +104,7 @@ pub async fn fetch_economic_series_response(series_id: &str) -> Result<EconomicS
 
 /// Map economic data points to the canonical [`EconomicSeries`].
 fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>) -> EconomicSeries {
-    EconomicSeries {
+    init!(EconomicSeries {
         series_id: series_id.to_string(),
         title: None,
         units: None,
@@ -111,7 +112,7 @@ fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>)
         observations: results
             .unwrap_or_default()
             .into_iter()
-            .map(|d| MacroObservation {
+            .map(|d| init!(MacroObservation {
                 date: d.date.unwrap_or_default(),
                 value: match series_id {
                     "inflation" => d.cpi_year_over_year.or(d.cpi),
@@ -120,9 +121,9 @@ fn points_to_series(series_id: &str, results: Option<Vec<EconomicDataPointDTO>>)
                     "treasury_yields" => d.yield_10_year,
                     _ => None,
                 },
-            })
+            }))
             .collect(),
-    }
+    })
 }
 
 #[cfg(test)]

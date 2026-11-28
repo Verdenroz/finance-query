@@ -41,6 +41,7 @@ mod endpoints;
 pub(crate) mod filings; // FILINGS
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::filings::{
     CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions,
 };
@@ -510,21 +511,21 @@ pub async fn fetch_filings_response(
             } else {
                 None
             };
-            ProviderFiling {
+            init!(ProviderFiling {
                 accession_number: Some(f.accession_number),
                 filing_date: Some(f.filing_date),
                 filing_type: Some(f.form),
                 filing_url: url,
                 company_name: company_name.clone(),
                 cik: Some(cik.clone()),
-            }
+            })
         })
         .collect();
 
-    Ok(ProviderFilings {
+    Ok(init!(ProviderFilings {
         symbol: symbol.to_string(),
         filings,
-    })
+    }))
 }
 
 #[cfg(test)]

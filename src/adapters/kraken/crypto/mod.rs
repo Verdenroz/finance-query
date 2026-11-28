@@ -1,6 +1,7 @@
 //! `CRYPTO` capability for Kraken public market data.
 
 use crate::error::Result;
+use crate::init;
 use crate::models::crypto::CryptoQuote;
 
 use super::models::KrakenTicker;
@@ -26,7 +27,7 @@ pub(super) fn to_quote(id: &str, base_ticker: &str, ticker: &KrakenTicker) -> Cr
         _ => None,
     };
 
-    CryptoQuote {
+    init!(CryptoQuote {
         id: id.to_string(),
         symbol: base_ticker.to_string(),
         name: symbols::asset_name(base_ticker)
@@ -41,7 +42,7 @@ pub(super) fn to_quote(id: &str, base_ticker: &str, ticker: &KrakenTicker) -> Cr
         high_24h: KrakenTicker::at(&ticker.h, ROLLING_24H),
         low_24h: KrakenTicker::at(&ticker.l, ROLLING_24H),
         circulating_supply: None,
-    }
+    })
 }
 
 /// Fetch a Kraken spot quote for `id` priced in `vs_currency`.

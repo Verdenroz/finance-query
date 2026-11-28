@@ -2,6 +2,7 @@
 //! calendar (earnings/dividends/splits), so this adapter never implements
 //! `fetch_events`.
 
+use crate::init;
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 use crate::error::Result;
@@ -66,7 +67,7 @@ pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
 /// Map one GDELT article onto the canonical [`News`] model, with `now` as the
 /// reference point for the relative `time` string.
 pub(crate) fn to_news_at(article: GdeltArticle, now: DateTime<Utc>) -> News {
-    News {
+    init!(News {
         title: article.title.unwrap_or_default(),
         link: article.url,
         source: article.domain.unwrap_or_default(),
@@ -79,7 +80,7 @@ pub(crate) fn to_news_at(article: GdeltArticle, now: DateTime<Utc>) -> News {
         provider_id: Some(crate::Provider::Gdelt),
         #[cfg(feature = "sentiment")]
         sentiment: None,
-    }
+    })
 }
 
 /// Convert a GDELT `seendate` into a relative time string (`"3 hours ago"`),

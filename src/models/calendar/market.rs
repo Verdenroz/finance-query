@@ -43,6 +43,17 @@ pub struct MarketCalendarEntry {
     pub detail: CalendarDetail,
 }
 
+impl MarketCalendarEntry {
+    /// An entry for `symbol` on `date` carrying `detail`.
+    pub fn new(symbol: Option<String>, date: Option<String>, detail: CalendarDetail) -> Self {
+        Self {
+            symbol,
+            date,
+            detail,
+        }
+    }
+}
+
 /// The event-specific payload of a [`MarketCalendarEntry`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -145,6 +156,30 @@ pub enum CalendarDetail {
         /// Provider-assigned impact rating (e.g. `"High"`).
         impact: Option<String>,
     },
+}
+
+impl CalendarDetail {
+    /// An [`Earnings`](Self::Earnings) payload with every field `None`.
+    ///
+    /// The variant is `#[non_exhaustive]`, so outside this crate set its fields
+    /// with [`init!`](crate::init) on top of this value:
+    /// `init!(CalendarDetail::Earnings { eps: Some(1.2), ..CalendarDetail::earnings() })`.
+    pub fn earnings() -> Self {
+        Self::Earnings {
+            eps: None,
+            eps_estimated: None,
+            revenue: None,
+            revenue_estimated: None,
+            fiscal_date_ending: None,
+            time: None,
+            company: None,
+            estimate_count: None,
+            surprise_percent: None,
+            previous_eps: None,
+            previous_report_date: None,
+            market_cap: None,
+        }
+    }
 }
 
 #[cfg(feature = "dataframe")]

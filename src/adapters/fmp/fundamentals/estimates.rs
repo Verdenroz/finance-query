@@ -1,5 +1,6 @@
 //! Analyst estimates, recommendations, earnings surprises, and grade history.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -184,14 +185,14 @@ fn to_earnings_surprise(dto: EarningsSurpriseDTO) -> EarningsSurprise {
         (Some(s), Some(estimated)) if estimated != 0.0 => Some(s / estimated.abs() * 100.0),
         _ => None,
     };
-    EarningsSurprise {
+    init!(EarningsSurprise {
         symbol: dto.symbol,
         date: dto.date,
         actual_eps: dto.actual_earning_result,
         estimated_eps: dto.estimated_earning,
         surprise,
         surprise_percent,
-    }
+    })
 }
 
 /// Fetch canonical earnings-surprise history for a symbol.
@@ -204,13 +205,13 @@ pub async fn fetch_earnings_surprises_response(symbol: &str) -> Result<Vec<Earni
 }
 
 fn to_grading_action(dto: StockGradeDTO) -> GradingAction {
-    GradingAction {
+    init!(GradingAction {
         symbol: dto.symbol,
         date: dto.date,
         grading_company: dto.grading_company,
         previous_grade: dto.previous_grade,
         new_grade: dto.new_grade,
-    }
+    })
 }
 
 /// Fetch canonical grade-action history for a symbol.

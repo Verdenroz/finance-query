@@ -1,5 +1,6 @@
 //! Calendar endpoints: earnings, IPO, stock split, dividend, and economic calendars.
 
+use crate::init;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -179,11 +180,7 @@ pub async fn fetch_market_calendar_response(
     use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
 
     let entry = |symbol: Option<String>, date: Option<String>, detail: CalendarDetail| {
-        MarketCalendarEntry {
-            symbol,
-            date,
-            detail,
-        }
+        MarketCalendarEntry::new(symbol, date, detail)
     };
 
     Ok(match kind {
@@ -206,20 +203,13 @@ pub async fn fetch_market_calendar_response(
                     e.date,
                     // FMP's stable earnings calendar reports neither the fiscal
                     // period end nor the bmo/amc announcement time.
-                    CalendarDetail::Earnings {
+                    init!(CalendarDetail::Earnings {
                         eps: e.eps,
                         eps_estimated: e.eps_estimated,
                         revenue: e.revenue,
                         revenue_estimated: e.revenue_estimated,
-                        fiscal_date_ending: None,
-                        time: None,
-                        company: None,
-                        estimate_count: None,
-                        surprise_percent: None,
-                        previous_eps: None,
-                        previous_report_date: None,
-                        market_cap: None,
-                    },
+                        ..CalendarDetail::earnings()
+                    }),
                 )
             })
             .collect(),

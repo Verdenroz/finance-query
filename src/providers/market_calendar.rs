@@ -79,17 +79,17 @@ fn holiday_entry(
     status: &'static str,
     close: Option<&'static str>,
 ) -> MarketCalendarEntry {
-    MarketCalendarEntry {
-        symbol: None,
-        date: Some(date.format("%Y-%m-%d").to_string()),
-        detail: CalendarDetail::MarketHoliday {
+    MarketCalendarEntry::new(
+        None,
+        Some(date.format("%Y-%m-%d").to_string()),
+        CalendarDetail::MarketHoliday {
             name: Some(name.to_string()),
             exchange: Some("NYSE".to_string()),
             status: Some(status.to_string()),
             open: None,
             close: close.map(str::to_string),
         },
-    }
+    )
 }
 
 type Holidays = Vec<(NaiveDate, &'static str)>;

@@ -2,6 +2,7 @@
 
 use crate::adapters::common::percent::strip_percent;
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -156,15 +157,15 @@ pub(crate) async fn fetch_earnings_transcript_response(
     };
     let av_quarter = format!("{year}Q{}", quarter.trim_start_matches(['Q', 'q']));
     let dto = earnings_call_transcript(symbol, &av_quarter).await?;
-    Ok(
+    Ok(init!(
         crate::models::corporate::earnings_transcript::EarningsTranscript {
             symbol: Some(dto.symbol),
             quarter: Some(quarter.to_string()),
             year: Some(year),
             date: None,
             text: dto.transcript,
-        },
-    )
+        }
+    ))
 }
 
 /// Fetch top gainers, losers, and most actively traded tickers.
@@ -230,15 +231,17 @@ pub async fn fetch_news_response(
     let articles = news_sentiment(Some(&[symbol]), None, Some(50)).await?;
     Ok(articles
         .into_iter()
-        .map(|a| crate::models::corporate::news::News {
-            title: a.title,
-            link: a.url,
-            source: a.source,
-            img: String::new(),
-            time: a.time_published,
-            provider_id: Some(crate::Provider::AlphaVantage),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|a| {
+            init!(crate::models::corporate::news::News {
+                title: a.title,
+                link: a.url,
+                source: a.source,
+                img: String::new(),
+                time: a.time_published,
+                provider_id: Some(crate::Provider::AlphaVantage),
+                #[cfg(feature = "sentiment")]
+                sentiment: None,
+            })
         })
         .collect())
 }
@@ -329,13 +332,15 @@ fn movers_to_canonical(
         MoverDirection::MostActive => movers.most_actively_traded,
     };
     list.into_iter()
-        .map(|t| MoverQuote {
-            symbol: t.ticker,
-            name: None,
-            price: strip_percent(&t.price),
-            change: strip_percent(&t.change_amount),
-            change_percent: strip_percent(&t.change_percentage),
-            exchange: None,
+        .map(|t| {
+            init!(MoverQuote {
+                symbol: t.ticker,
+                name: None,
+                price: strip_percent(&t.price),
+                change: strip_percent(&t.change_amount),
+                change_percent: strip_percent(&t.change_percentage),
+                exchange: None,
+            })
         })
         .collect()
 }

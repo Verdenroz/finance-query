@@ -1,6 +1,7 @@
 //! Commodity price endpoints: oil, gas, metals, agriculture, and composite index.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -101,7 +102,7 @@ fn series_to_quote(
             }
         }
     };
-    crate::models::commodities::CommodityQuote {
+    init!(crate::models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: Some(series.name),
         unit: Some(series.unit),
@@ -109,7 +110,7 @@ fn series_to_quote(
         change,
         change_percent,
         timestamp: None,
-    }
+    })
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@
 //! asks for one window small enough to come back whole and the cursor carries
 //! the next window.
 
+use crate::init;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone, Weekday};
 use chrono_tz::America::New_York;
 use serde::{Deserialize, Serialize};
@@ -118,7 +119,7 @@ fn bar(
     {
         return Err(invalid_row("a bar with non-finite values"));
     }
-    Ok(StockBar {
+    Ok(init!(StockBar {
         timestamp_ms,
         open,
         high,
@@ -127,7 +128,7 @@ fn bar(
         volume,
         transactions: None,
         vwap: None,
-    })
+    }))
 }
 
 fn minute_bars(
@@ -250,16 +251,13 @@ pub(crate) async fn fetch_stock_bars_page(
 }
 
 fn page(items: Vec<StockBar>, next: Option<PageCursor>, symbol: &str) -> ProviderPage<StockBar> {
-    ProviderPage {
-        results_count: Some(items.len()),
-        items,
-        next,
-        provider_id: Provider::Fmp,
-        request_id: None,
-        query_count: None,
+    let results_count = Some(items.len());
+    init!(ProviderPage {
+        results_count,
         reported_symbol: Some(symbol.to_string()),
         adjusted: Some(true),
-    }
+        ..ProviderPage::new(items, Provider::Fmp, next)
+    })
 }
 
 #[cfg(test)]

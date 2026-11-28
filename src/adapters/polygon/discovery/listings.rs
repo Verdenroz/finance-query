@@ -5,6 +5,7 @@ use super::{TickerDetailsResponseDTO, TickerRefDTO, details_to_canonical};
 use crate::adapters::polygon::client::PathRule;
 use crate::adapters::polygon::models::{PaginatedResponseDTO, StockTypeDTO};
 use crate::adapters::polygon::{build_client, invalid_page};
+use crate::init;
 use crate::providers::stock_listing::date;
 use crate::{
     FinanceError, PageCursor, Provider, ProviderPage, Result, StockListing, StockListingRequest,
@@ -32,7 +33,7 @@ fn listing_to_canonical(row: TickerRefDTO) -> Result<StockListing> {
         date(list_date).map_err(|_| invalid_page("list_date"))?;
     }
     validate_delisting(row.delisted_utc.as_deref())?;
-    Ok(StockListing {
+    Ok(init!(StockListing {
         symbol,
         name: row.name,
         exchange: row.primary_exchange,
@@ -44,19 +45,19 @@ fn listing_to_canonical(row: TickerRefDTO) -> Result<StockListing> {
         share_class_figi: row.share_class_figi,
         list_date: row.list_date,
         delisted_utc: row.delisted_utc,
-    })
+    }))
 }
 
 fn stock_type_to_canonical(row: StockTypeDTO) -> Result<StockType> {
     if row.code.is_empty() {
         return Err(invalid_page("code"));
     }
-    Ok(StockType {
+    Ok(init!(StockType {
         code: row.code,
         description: row.description,
         asset_class: row.asset_class,
         locale: row.locale,
-    })
+    }))
 }
 
 /// Polygon omits `results` on an empty page, so absence is only valid when a
@@ -106,16 +107,14 @@ pub(crate) async fn fetch_stock_listings_page(
         .map(listing_to_canonical)
         .collect::<Result<Vec<_>>>()?;
     let next = client.continuation(body.next_url, path, &params, PathRule::Exact, &current)?;
-    Ok(ProviderPage {
-        items,
-        next,
-        provider_id: Provider::Polygon,
+    Ok(init!(ProviderPage {
         request_id: body.request_id,
         results_count: body.results_count,
         query_count: body.query_count,
         reported_symbol: body.ticker,
         adjusted: body.adjusted,
-    })
+        ..ProviderPage::new(items, Provider::Polygon, next)
+    }))
 }
 
 pub(crate) async fn fetch_symbol_details_at(symbol: &str, as_of: &str) -> Result<SymbolDetails> {
@@ -199,7 +198,7 @@ pub(crate) async fn fetch_ticker_changes(id: &str) -> Result<Vec<TickerChange>> 
                 .and_then(|change| change.ticker)
                 .filter(|t| !t.is_empty());
             match (date, ticker) {
-                (Some(date), Some(ticker)) => Ok(TickerChange { date, ticker }),
+                (Some(date), Some(ticker)) => Ok(init!(TickerChange { date, ticker })),
                 _ => Err(invalid_page("ticker_change")),
             }
         })

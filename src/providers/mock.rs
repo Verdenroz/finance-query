@@ -5,6 +5,7 @@ use super::{
     ProviderCore, ProviderSet, QuoteProvider, Routes,
 };
 use crate::error::Result;
+use crate::init;
 use crate::models::chart::events::ChartEvents;
 use crate::models::chart::{Chart, ChartMeta};
 use crate::models::corporate::news::News;
@@ -109,14 +110,14 @@ impl ChartProvider for CountingProvider {
         if self.slow_chart == Some(symbol) {
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
         }
-        Ok(Chart {
+        Ok(init!(Chart {
             symbol: symbol.to_string(),
             meta: ChartMeta::default(),
             candles: Vec::new(),
             interval: None,
             range: None,
             provider_id: Some(Provider::Yahoo),
-        })
+        }))
     }
 }
 

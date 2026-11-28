@@ -15,6 +15,7 @@
 //! left of it on the same line is the description; the asset-type code sits
 //! either there or on the continuation line.
 
+use crate::init;
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -141,7 +142,7 @@ pub(super) fn to_congressional_trade(
     year: i32,
     tx: ParsedTransaction,
 ) -> CongressionalTrade {
-    CongressionalTrade {
+    init!(CongressionalTrade {
         symbol: tx.symbol,
         first_name: Some(entry.first.clone()),
         last_name: Some(entry.last.clone()),
@@ -156,7 +157,7 @@ pub(super) fn to_congressional_trade(
             "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/{year}/{}.pdf",
             entry.doc_id
         )),
-    }
+    })
 }
 
 #[cfg(test)]

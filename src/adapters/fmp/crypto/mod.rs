@@ -1,6 +1,7 @@
 //! Cryptocurrency endpoints for Financial Modeling Prep.
 
 use crate::error::Result;
+use crate::init;
 
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::FmpQuoteDTO;
@@ -12,7 +13,7 @@ fn crypto_quote_to_canonical(
     quotes: &[FmpQuoteDTO],
 ) -> crate::models::crypto::CryptoQuote {
     let q = quotes.first();
-    crate::models::crypto::CryptoQuote {
+    init!(crate::models::crypto::CryptoQuote {
         id: id.to_string(),
         symbol: q
             .map(|q| q.symbol.clone())
@@ -26,7 +27,7 @@ fn crypto_quote_to_canonical(
         high_24h: q.and_then(|q| q.day_high),
         low_24h: q.and_then(|q| q.day_low),
         circulating_supply: None,
-    }
+    })
 }
 
 /// Fetch a canonical crypto quote.

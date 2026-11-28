@@ -3,6 +3,7 @@ use crate::Provider;
 ///
 /// Wraps the StockAnalysis news scraper and sets Yahoo provider_id.
 use crate::error::Result;
+use crate::init;
 use crate::models::corporate::news::News;
 
 /// Fetch news for a symbol using the StockAnalysis scraper.
@@ -13,15 +14,17 @@ pub(crate) async fn fetch_news(symbol: &str) -> Result<Vec<News>> {
     let news = crate::scrapers::stockanalysis::scrape_symbol_news(symbol).await?;
     Ok(news
         .into_iter()
-        .map(|n| News {
-            title: n.title,
-            link: n.link,
-            source: n.source,
-            img: n.img,
-            time: n.time,
-            provider_id: Some(Provider::Yahoo),
-            #[cfg(feature = "sentiment")]
-            sentiment: None,
+        .map(|n| {
+            init!(News {
+                title: n.title,
+                link: n.link,
+                source: n.source,
+                img: n.img,
+                time: n.time,
+                provider_id: Some(Provider::Yahoo),
+                #[cfg(feature = "sentiment")]
+                sentiment: None,
+            })
         })
         .collect())
 }

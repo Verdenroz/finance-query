@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// Weekly Commitments of Traders positioning for one futures market.
 ///
 /// Obtain via `FuturesContract::commitments_of_traders`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CommitmentsOfTraders {
     /// The symbol this was requested with (e.g. `"GC=F"`, or a raw CFTC
@@ -29,7 +29,7 @@ pub struct CommitmentsOfTraders {
 }
 
 /// One weekly report row, broken down by trader category.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[cfg_attr(feature = "dataframe", dataframe(crate = "crate"))]
 #[non_exhaustive]

@@ -2,6 +2,7 @@
 
 use crate::adapters::common::percent::strip_percent;
 use crate::error::{FinanceError, Result};
+use crate::init;
 use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
 use crate::models::chart::{Candle, Chart};
 use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
@@ -366,17 +367,17 @@ fn market_status_to_canonical(m: MarketStatusDTO) -> MarketCalendarEntry {
         if s.is_empty() { None } else { Some(s) }
     }
 
-    MarketCalendarEntry {
-        symbol: None,
-        date: None,
-        detail: CalendarDetail::MarketHoliday {
+    MarketCalendarEntry::new(
+        None,
+        None,
+        CalendarDetail::MarketHoliday {
             name: Some(format!("{} ({})", m.region, m.market_type)),
             exchange: non_empty(m.primary_exchanges),
             status: non_empty(m.current_status),
             open: non_empty(m.local_open),
             close: non_empty(m.local_close),
         },
-    }
+    )
 }
 
 /// Fetch the current market status of every major global exchange as
@@ -429,7 +430,7 @@ pub async fn market_status() -> Result<Vec<MarketStatusDTO>> {
 /// Fetch canonical QuoteSummaryResponse from a stock symbol.
 pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> {
     let gq = global_quote(symbol).await?;
-    let price = Price {
+    let price = init!(Price {
         regular_market_price: Some(FormattedValue {
             raw: Some(gq.price),
             fmt: None,
@@ -471,12 +472,12 @@ pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> 
             long_fmt: None,
         }),
         ..Default::default()
-    };
-    Ok(QuoteSummaryResponse {
+    });
+    Ok(init!(QuoteSummaryResponse {
         symbol: symbol.to_string(),
         price: Some(price),
         ..Default::default()
-    })
+    }))
 }
 
 /// Build a canonical quote response from one bulk-quote entry.
@@ -488,7 +489,7 @@ fn bulk_quote_to_canonical(q: &BulkQuoteDTO) -> QuoteSummaryResponse {
             long_fmt: None,
         })
     };
-    let price = Price {
+    let price = init!(Price {
         regular_market_price: raw(q.price),
         regular_market_change: raw(q.change),
         regular_market_change_percent: raw(q.change_percent.as_deref().and_then(strip_percent)),
@@ -502,12 +503,12 @@ fn bulk_quote_to_canonical(q: &BulkQuoteDTO) -> QuoteSummaryResponse {
         regular_market_day_high: raw(q.high),
         regular_market_day_low: raw(q.low),
         ..Default::default()
-    };
-    QuoteSummaryResponse {
+    });
+    init!(QuoteSummaryResponse {
         symbol: q.symbol.clone(),
         price: Some(price),
         ..Default::default()
-    }
+    })
 }
 
 /// Fetch canonical quote summaries for many symbols in one request.
@@ -568,14 +569,14 @@ pub async fn fetch_chart_response(
         _ => time_series_daily(symbol, None).await?,
     };
 
-    Ok(Chart {
+    Ok(init!(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles: entries_to_candles(ts.entries),
         interval: None,
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
-    })
+    }))
 }
 
 /// Fetch canonical Chart from a symbol with explicit date range.
@@ -596,25 +597,25 @@ pub async fn fetch_chart_range_response(
         .filter(|bar| bar.timestamp >= from_date && bar.timestamp <= to_date)
         .collect();
 
-    Ok(Chart {
+    Ok(init!(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles: entries_to_candles(in_range),
         interval: None,
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
-    })
+    }))
 }
 
 fn adjusted_chart(symbol: &str, ts: AdjustedTimeSeriesDTO) -> Chart {
-    Chart {
+    init!(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
         candles: adjusted_entries_to_candles(ts.entries),
         interval: None,
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
-    }
+    })
 }
 
 fn adjusted_entries_to_candles(entries: Vec<AdjustedTimeSeriesEntryDTO>) -> Vec<Candle> {

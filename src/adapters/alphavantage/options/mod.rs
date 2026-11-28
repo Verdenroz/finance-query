@@ -1,6 +1,7 @@
 //! US options data endpoints: realtime and historical options chains.
 
 use crate::error::{FinanceError, Result};
+use crate::init;
 
 use super::build_client;
 use super::models::*;
@@ -112,7 +113,7 @@ pub async fn fetch_options_response(
         let exp_ts = parse_av_date(&contract.expiration).unwrap_or(0);
         expiration_dates_set.insert(exp_ts);
 
-        let contract_data = crate::models::options::OptionContract {
+        let contract_data = init!(crate::models::options::OptionContract {
             contract_symbol: contract.contractid,
             strike: contract.strike,
             currency: None,
@@ -128,7 +129,7 @@ pub async fn fetch_options_response(
             last_trade_date: None,
             implied_volatility: contract.implied_volatility,
             in_the_money: None,
-        };
+        });
 
         if contract.option_type == "call" {
             calls.push(contract_data);

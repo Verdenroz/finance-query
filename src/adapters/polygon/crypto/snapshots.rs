@@ -1,6 +1,7 @@
 //! Crypto snapshot endpoints: single ticker.
 
 use crate::error::Result;
+use crate::init;
 use crate::models::crypto::CryptoQuote;
 
 use super::super::build_client;
@@ -32,7 +33,7 @@ pub async fn fetch_crypto_quote_response(from: &str, to: &str) -> Result<CryptoQ
 fn snapshot_to_quote(ticker: String, resp: SingleSnapshotResponseDTO) -> CryptoQuote {
     let snap = resp.ticker;
     let day = snap.as_ref().and_then(|s| s.day.as_ref());
-    CryptoQuote {
+    init!(CryptoQuote {
         id: snap
             .as_ref()
             .and_then(|s| s.ticker.clone())
@@ -57,7 +58,7 @@ fn snapshot_to_quote(ticker: String, resp: SingleSnapshotResponseDTO) -> CryptoQ
         high_24h: day.and_then(|d| d.high),
         low_24h: day.and_then(|d| d.low),
         circulating_supply: None,
-    }
+    })
 }
 
 #[cfg(test)]
