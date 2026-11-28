@@ -12,6 +12,7 @@ use crate::models::filings::CongressionalTrade;
 
 use super::super::client::{SENATE_BASE, SenateTradesClient, wait_for_elements};
 use super::super::models::SenateFilingEntry;
+use super::cell_text;
 use super::search::parse_us_date;
 
 struct ParsedTransaction {
@@ -58,19 +59,25 @@ pub(super) async fn matching_transactions(
 
 async fn parse_row(row: &Element) -> Option<ParsedTransaction> {
     let cells = row.find_elements("td").await.ok()?;
-    let mut texts = Vec::with_capacity(cells.len());
-    for cell in &cells {
-        texts.push(cell.inner_text().await.ok().flatten());
-    }
+    let texts = [
+        cell_text(&cells, 1).await?,
+        cell_text(&cells, 3).await?,
+        cell_text(&cells, 4).await?,
+        cell_text(&cells, 6).await?,
+        cell_text(&cells, 7).await?,
+    ];
     transaction_from_cells(&texts)
 }
 
-fn transaction_from_cells(cells: &[Option<String>]) -> Option<ParsedTransaction> {
-    let transaction_date = cells.get(1)?.as_deref()?;
-    let ticker = cells.get(3)?.as_deref().unwrap_or_default();
-    let asset_name = cells.get(4)?.as_deref()?;
-    let trade_type = cells.get(6)?.as_deref()?;
-    let amount = cells.get(7)?.as_deref()?;
+/// `cells` holds the transaction date, ticker, asset name, type and amount,
+/// in that order.
+fn transaction_from_cells(cells: &[Option<String>; 5]) -> Option<ParsedTransaction> {
+    let [transaction_date, ticker, asset_name, trade_type, amount] = cells;
+    let transaction_date = transaction_date.as_deref()?;
+    let ticker = ticker.as_deref().unwrap_or_default();
+    let asset_name = asset_name.as_deref()?;
+    let trade_type = trade_type.as_deref()?;
+    let amount = amount.as_deref()?;
 
     let ticker = ticker.trim();
     Some(ParsedTransaction {
@@ -116,22 +123,16 @@ mod tests {
         }
     }
 
-    fn cells(texts: &[&str]) -> Vec<Option<String>> {
-        texts.iter().map(|t| Some(t.to_string())).collect()
-    }
+    use super::super::cells;
 
     #[test]
     fn transaction_from_cells_reads_columns() {
-        let row = cells(&[
-            "1",
+        let row = cells([
             "03/10/2025",
-            "Self",
             " aapl ",
             "Apple  Inc.\n Common Stock",
-            "Stock",
             "Purchase",
             "$1,001 - $15,000",
-            "",
         ]);
         let tx = transaction_from_cells(&row).unwrap();
         assert_eq!(tx.symbol.as_deref(), Some("AAPL"));
@@ -147,81 +148,28 @@ mod tests {
     #[test]
     fn transaction_from_cells_treats_dashes_and_blank_ticker_as_no_symbol() {
         for ticker in ["--", "", "  "] {
-            let row = cells(&[
-                "1",
-                "03/10/2025",
-                "Self",
-                ticker,
-                "Bond",
-                "Bond",
-                "Sale",
-                "$1 - $2",
-            ]);
+            let row = cells(["03/10/2025", ticker, "Bond", "Sale", "$1 - $2"]);
             assert_eq!(transaction_from_cells(&row).unwrap().symbol, None);
         }
     }
 
     #[test]
     fn transaction_from_cells_missing_ticker_text_is_no_symbol() {
-        let mut row = cells(&[
-            "1",
-            "03/10/2025",
-            "Self",
-            "x",
-            "Bond",
-            "Bond",
-            "Sale",
-            "$1 - $2",
-        ]);
-        row[3] = None;
+        let mut row = cells(["03/10/2025", "x", "Bond", "Sale", "$1 - $2"]);
+        row[1] = None;
         assert_eq!(transaction_from_cells(&row).unwrap().symbol, None);
     }
 
     #[test]
     fn transaction_from_cells_bad_date_keeps_row_without_date() {
-        let row = cells(&[
-            "1", "soon", "Self", "AAPL", "Apple", "Stock", "Sale", "$1 - $2",
-        ]);
+        let row = cells(["soon", "AAPL", "Apple", "Sale", "$1 - $2"]);
         assert_eq!(transaction_from_cells(&row).unwrap().transaction_date, None);
     }
 
     #[test]
-    fn transaction_from_cells_ignores_unused_cell_without_text() {
-        let mut row = cells(&[
-            "1",
-            "03/10/2025",
-            "Self",
-            "AAPL",
-            "Apple",
-            "Stock",
-            "Sale",
-            "$1 - $2",
-        ]);
-        row[0] = None;
-        row[2] = None;
-        row[5] = None;
-        assert!(transaction_from_cells(&row).is_some());
-    }
-
-    #[test]
-    fn transaction_from_cells_rejects_short_row() {
-        let row = cells(&["1", "03/10/2025", "Self", "AAPL", "Apple", "Stock"]);
-        assert!(transaction_from_cells(&row).is_none());
-    }
-
-    #[test]
     fn transaction_from_cells_rejects_missing_amount_text() {
-        let mut row = cells(&[
-            "1",
-            "03/10/2025",
-            "Self",
-            "AAPL",
-            "Apple",
-            "Stock",
-            "Sale",
-            "x",
-        ]);
-        row[7] = None;
+        let mut row = cells(["03/10/2025", "AAPL", "Apple", "Sale", "x"]);
+        row[4] = None;
         assert!(transaction_from_cells(&row).is_none());
     }
 
