@@ -18,7 +18,7 @@ impl EconomicProvider for FredProvider {
         &self,
         series_id: &str,
     ) -> Result<finance_query_models::economic::EconomicSeries> {
-        crate::adapters::fred::fetch_economic_series_response(series_id).await
+        finance_query_adapters_gov::fred::fetch_economic_series_response(series_id).await
     }
 
     async fn fetch_economic_series_as_of(
@@ -26,7 +26,7 @@ impl EconomicProvider for FredProvider {
         series_id: &str,
         date: &str,
     ) -> Result<finance_query_models::economic::EconomicSeries> {
-        crate::adapters::fred::economic::catalog::series_as_of(series_id, date).await
+        finance_query_adapters_gov::fred::economic::catalog::series_as_of(series_id, date).await
     }
 
     async fn fetch_economic_search(
@@ -34,20 +34,20 @@ impl EconomicProvider for FredProvider {
         query: &str,
         limit: u32,
     ) -> Result<Vec<finance_query_models::economic::EconomicSeriesMatch>> {
-        crate::adapters::fred::economic::catalog::search(query, limit).await
+        finance_query_adapters_gov::fred::economic::catalog::search(query, limit).await
     }
 
     async fn fetch_economic_categories(
         &self,
         parent_id: i64,
     ) -> Result<Vec<finance_query_models::economic::EconomicCategory>> {
-        crate::adapters::fred::economic::catalog::categories(parent_id).await
+        finance_query_adapters_gov::fred::economic::catalog::categories(parent_id).await
     }
 
     async fn fetch_economic_releases(
         &self,
     ) -> Result<Vec<finance_query_models::economic::EconomicRelease>> {
-        crate::adapters::fred::economic::catalog::releases().await
+        finance_query_adapters_gov::fred::economic::catalog::releases().await
     }
 }
 
@@ -64,19 +64,19 @@ impl CalendarProvider for FredProvider {
         if kind != finance_query_models::calendar::market::CalendarKind::Economic {
             return Err(self.not_supported(Operation::from_calendar(kind)));
         }
-        crate::adapters::fred::fetch_market_calendar_response(from, to).await
+        finance_query_adapters_gov::fred::fetch_market_calendar_response(from, to).await
     }
 }
 
 #[async_trait::async_trait]
 impl ProviderAdapter for FredProvider {
     async fn initialize(&self) -> crate::error::Result<()> {
-        let _ = crate::adapters::fred::build_client()?;
+        let _ = finance_query_adapters_gov::fred::build_client()?;
         Ok(())
     }
 
     fn rate_limit_remaining(&self) -> Option<f64> {
-        crate::adapters::fred::rate_limiter().and_then(|l| l.available_estimate())
+        finance_query_adapters_gov::fred::rate_limiter().and_then(|l| l.available_estimate())
     }
 
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {

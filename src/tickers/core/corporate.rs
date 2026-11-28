@@ -230,7 +230,7 @@ impl Tickers {
         let (per_symbol_quotes, options_resp, releases) = tokio::join!(
             per_symbol_fut,
             self.options(None),
-            crate::adapters::fred::release_dates()
+            finance_query_adapters_gov::fred::release_dates()
         );
         #[cfg(not(feature = "fred"))]
         let (per_symbol_quotes, options_resp) = tokio::join!(per_symbol_fut, self.options(None));
@@ -272,9 +272,9 @@ impl Tickers {
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
-            events.extend(crate::adapters::fred::calendar::build_economic_events(
-                releases, window,
-            ));
+            events.extend(
+                finance_query_adapters_gov::fred::calendar::build_economic_events(releases, window),
+            );
         }
 
         finance_query_models::calendar::sort_events(&mut events);

@@ -29,7 +29,7 @@ impl FuturesProvider for CftcProvider {
         &self,
         symbol: &str,
     ) -> Result<finance_query_models::futures::cot::CommitmentsOfTraders> {
-        crate::adapters::cftc::fetch_commitments_of_traders_response(symbol).await
+        finance_query_adapters_gov::cftc::fetch_commitments_of_traders_response(symbol).await
     }
 }
 

@@ -1172,7 +1172,7 @@ impl Ticker {
         let (calendar_events, options, releases) = tokio::join!(
             self.calendar_events(),
             self.options(None),
-            crate::adapters::fred::release_dates(),
+            finance_query_adapters_gov::fred::release_dates(),
         );
         #[cfg(not(feature = "fred"))]
         let (calendar_events, options) = tokio::join!(self.calendar_events(), self.options(None));
@@ -1208,9 +1208,9 @@ impl Ticker {
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
-            events.extend(crate::adapters::fred::calendar::build_economic_events(
-                releases, window,
-            ));
+            events.extend(
+                finance_query_adapters_gov::fred::calendar::build_economic_events(releases, window),
+            );
         }
 
         finance_query_models::calendar::sort_events(&mut events);

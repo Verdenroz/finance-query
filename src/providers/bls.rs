@@ -19,7 +19,7 @@ impl EconomicProvider for BlsProvider {
         &self,
         series_id: &str,
     ) -> Result<finance_query_models::economic::EconomicSeries> {
-        crate::adapters::bls::fetch_economic_series_response(series_id).await
+        finance_query_adapters_gov::bls::fetch_economic_series_response(series_id).await
     }
 }
 

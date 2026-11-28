@@ -1,0 +1,48 @@
+[package]
+name = "finance-query-adapters-gov"
+version = "3.4.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Internal provider adapters (fred, bls, fiscaldata, worldbank, finra, cftc, house and senate trades) for finance-query"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-adapters-gov"
+keywords = ["finance", "market-data", "internal"]
+categories = ["api-bindings", "finance"]
+
+[dependencies]
+finance-query-types = { version = "3.4.0", path = "../finance-query-types" }
+finance-query-models = { version = "3.4.0", path = "../finance-query-models" }
+finance-query-adapters-core = { version = "=3.4.0", path = "../finance-query-adapters-core" }
+chromiumoxide = { version = "0.9", optional = true }
+chrono = { version = "0.4", features = ["serde"] }
+csv = { version = "1", optional = true }
+flate2 = { version = "1", optional = true }
+futures = "0.3"
+regex = "1"
+reqwest = { version = "0.13", features = ["json", "cookies", "gzip", "brotli", "query"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "time", "macros", "net"] }
+tracing = "0.1"
+zip = { version = "9", optional = true, default-features = false, features = ["deflate"] }
+
+[features]
+default = []
+fred = ["finance-query-types/fred", "finance-query-models/fred", "dep:csv"]
+bls = ["finance-query-types/bls"]
+fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata", "finance-query-adapters-core/fiscaldata"]
+worldbank = ["finance-query-types/worldbank"]
+finra = ["finance-query-types/finra"]
+cftc = ["finance-query-types/cftc", "finance-query-models/cftc", "finance-query-adapters-core/cftc"]
+housetrades = ["finance-query-types/housetrades", "dep:zip", "dep:flate2"]
+senatetrades = ["finance-query-types/senatetrades", "dep:chromiumoxide"]
+fuzzing = []
+
+[dev-dependencies]
+mockito = "1"
+serial_test = "3"
+tokio = { version = "1", features = ["full", "test-util"] }
+
+[package.metadata.docs.rs]
+all-features = true

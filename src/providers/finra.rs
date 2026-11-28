@@ -31,7 +31,7 @@ impl FundamentalsProvider for FinraProvider {
         &self,
         symbol: &str,
     ) -> Result<Vec<finance_query_models::fundamentals::ShortVolume>> {
-        crate::adapters::finra::fetch_short_volume_response(symbol).await
+        finance_query_adapters_gov::finra::fetch_short_volume_response(symbol).await
     }
 }
 

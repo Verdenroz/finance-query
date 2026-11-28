@@ -165,7 +165,7 @@ impl ReleaseSource for DefaultReleaseSource {
     async fn latest(&self, series_id: &str) -> Option<(String, Option<f64>)> {
         // Only the newest observation matters here; the full series is decades
         // of rows to discard.
-        match crate::adapters::fred::latest_observation(series_id).await {
+        match finance_query_adapters_gov::fred::latest_observation(series_id).await {
             Ok(observation) => observation.map(|o| (o.date, o.value)),
             Err(e) => {
                 warn!("economic stream poll failed for {series_id}: {e}");

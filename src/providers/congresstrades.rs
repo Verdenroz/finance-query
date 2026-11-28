@@ -63,19 +63,28 @@ impl FilingsProvider for CongressTradesProvider {
         #[cfg(all(feature = "housetrades", feature = "senatetrades"))]
         {
             let (house, senate) = tokio::join!(
-                crate::adapters::housetrades::fetch_congressional_trades_response(symbol),
-                crate::adapters::senatetrades::fetch_congressional_trades_response(symbol),
+                finance_query_adapters_gov::housetrades::fetch_congressional_trades_response(
+                    symbol
+                ),
+                finance_query_adapters_gov::senatetrades::fetch_congressional_trades_response(
+                    symbol
+                ),
             );
             return merge_sources(house, senate);
         }
         #[cfg(all(feature = "housetrades", not(feature = "senatetrades")))]
         {
-            return crate::adapters::housetrades::fetch_congressional_trades_response(symbol).await;
+            return finance_query_adapters_gov::housetrades::fetch_congressional_trades_response(
+                symbol,
+            )
+            .await;
         }
         #[cfg(all(feature = "senatetrades", not(feature = "housetrades")))]
         {
-            return crate::adapters::senatetrades::fetch_congressional_trades_response(symbol)
-                .await;
+            return finance_query_adapters_gov::senatetrades::fetch_congressional_trades_response(
+                symbol,
+            )
+            .await;
         }
     }
 }

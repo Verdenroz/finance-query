@@ -126,7 +126,7 @@ pub mod fred {
     //! FRED economic data API (requires `fred` feature).
     //!
     //! Access 800k+ macroeconomic time series and US Treasury yield curve data.
-    pub use crate::adapters::fred::{
+    pub use finance_query_adapters_gov::fred::{
         ReleaseDate, init, init_with_timeout, release_dates, series, treasury_yields,
     };
     pub use finance_query_models::economic::{MacroObservation, MacroSeries, TreasuryYield};
@@ -166,7 +166,7 @@ pub mod cftc {
     //! Keyless shortcut;
     //! [`FuturesContract::commitments_of_traders`](crate::FuturesContract::commitments_of_traders)
     //! reaches the same data through `Capability::FUTURES` when CFTC is routed.
-    pub use crate::adapters::cftc::fetch_commitments_of_traders_response as commitments_of_traders;
+    pub use finance_query_adapters_gov::cftc::fetch_commitments_of_traders_response as commitments_of_traders;
     pub use finance_query_models::futures::cot::{CommitmentsOfTraders, CotObservation};
 }
 
@@ -641,7 +641,7 @@ const _: () = {
 #[cfg(all(feature = "fuzzing", feature = "housetrades"))]
 #[doc(hidden)]
 pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
-    crate::adapters::housetrades::pdf::extract_lines(bytes).ok()
+    finance_query_adapters_gov::housetrades::pdf::extract_lines(bytes).ok()
 }
 
 /// Drive the PDF parsers that need no decryption, for `fuzz/fuzz_targets`.
@@ -650,7 +650,7 @@ pub fn __fuzz_pdf_extract_lines(bytes: Vec<u8>) -> Option<Vec<String>> {
 #[cfg(all(feature = "fuzzing", feature = "housetrades"))]
 #[doc(hidden)]
 pub fn __fuzz_pdf_unencrypted(bytes: &[u8]) {
-    crate::adapters::housetrades::pdf::fuzz_unencrypted(bytes);
+    finance_query_adapters_gov::housetrades::pdf::fuzz_unencrypted(bytes);
 }
 
 /// Decode a Yahoo pricing frame from arbitrary bytes, for `fuzz/fuzz_targets`.
@@ -726,6 +726,6 @@ pub mod __bench {
     /// Extract the text lines of a House PTR disclosure PDF.
     #[cfg(feature = "housetrades")]
     pub fn house_ptr_lines(pdf: &[u8]) -> Option<Vec<String>> {
-        crate::adapters::housetrades::pdf::extract_lines(pdf.to_vec()).ok()
+        finance_query_adapters_gov::housetrades::pdf::extract_lines(pdf.to_vec()).ok()
     }
 }

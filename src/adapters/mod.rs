@@ -64,22 +64,6 @@ pub(crate) mod fmp;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
 
-/// FRED economic data API (requires `fred` feature).
-#[cfg(feature = "fred")]
-pub(crate) mod fred;
-
-/// World Bank Open Data global macro indicators (keyless, requires `worldbank` feature).
-#[cfg(feature = "worldbank")]
-pub(crate) mod worldbank;
-
-/// US Treasury FiscalData federal fiscal statistics (keyless, requires `fiscaldata` feature).
-#[cfg(feature = "fiscaldata")]
-pub(crate) mod fiscaldata;
-
-/// BLS labor and inflation statistics (keyless v1 / keyed v2, requires `bls` feature).
-#[cfg(feature = "bls")]
-pub(crate) mod bls;
-
 /// Frankfurter ECB reference exchange rates (keyless, requires `frankfurter` feature).
 #[cfg(feature = "frankfurter")]
 pub(crate) mod frankfurter;
@@ -91,10 +75,6 @@ pub(crate) mod binance;
 /// Kraken public market data (keyless, requires `kraken` feature).
 #[cfg(feature = "kraken")]
 pub(crate) mod kraken;
-
-/// FINRA daily short-sale volume (keyless, requires `finra` feature).
-#[cfg(feature = "finra")]
-pub(crate) mod finra;
 
 /// OpenFIGI security-identifier mapping (keyless, requires `openfigi` feature).
 #[cfg(feature = "openfigi")]
@@ -108,10 +88,6 @@ pub(crate) mod defillama;
 #[cfg(feature = "gdelt")]
 pub(crate) mod gdelt;
 
-/// CFTC Commitments of Traders futures positioning (keyless, requires `cftc` feature).
-#[cfg(feature = "cftc")]
-pub(crate) mod cftc;
-
 /// Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless, requires `nasdaq` feature).
 #[cfg(feature = "nasdaq")]
 pub(crate) mod nasdaq;
@@ -119,14 +95,6 @@ pub(crate) mod nasdaq;
 /// Wikipedia S&P 500 index-constituent table scraping (keyless, requires `wikipedia` feature).
 #[cfg(feature = "wikipedia")]
 pub(crate) mod wikipedia;
-
-/// House of Representatives PTR stock-trade disclosures (keyless, requires `housetrades` feature).
-#[cfg(feature = "housetrades")]
-pub(crate) mod housetrades;
-
-/// Senate PTR stock-trade disclosures (keyless, browser-driven, requires `senatetrades` feature).
-#[cfg(feature = "senatetrades")]
-pub(crate) mod senatetrades;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

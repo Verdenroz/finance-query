@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-adapters-core", "finance-query-models", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
+members = ["server", "finance-query-adapters-gov", "finance-query-adapters-core", "finance-query-models", "finance-query-derive", "finance-query-types", "finance-query-backtesting", "finance-query-mcp"]
 resolver = "2"
 
 [package]
@@ -80,6 +80,7 @@ finance-query-derive = { version = "3.4.0", path = "finance-query-derive" }
 finance-query-types = { version = "3.4.0", path = "finance-query-types" }
 finance-query-models = { version = "3.4.0", path = "finance-query-models" }
 finance-query-adapters-core = { version = "=3.4.0", path = "finance-query-adapters-core" }
+finance-query-adapters-gov = { version = "=3.4.0", path = "finance-query-adapters-gov", optional = true }
 finance-query-backtesting = { version = "3.4.0", path = "finance-query-backtesting", optional = true }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
@@ -90,12 +91,6 @@ chrono-tz = { version = "0.10", optional = true }
 ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers", "sentencepiece"] }
 # Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
 zip = { version = "9", optional = true, default-features = false, features = ["deflate"] }
-
-# Optional: inflate PDF content streams for House PTR text extraction
-flate2 = { version = "1", optional = true }
-
-# Optional: headless-Chromium browser automation for the Senate eFD adapter
-chromiumoxide = { version = "0.9", optional = true }
 
 [features]
 default = []
@@ -137,15 +132,15 @@ indicators = ["finance-query-types/indicators", "finance-query-models/indicators
 # Enable backtesting engine for strategy simulation (requires indicators)
 backtesting = ["indicators", "dep:finance-query-backtesting"]
 # Enable FRED API and US Treasury yield curve
-fred = ["dep:csv", "finance-query-types/fred", "finance-query-models/fred"]
+fred = ["finance-query-types/fred", "finance-query-models/fred", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/fred"]
 # Enable CoinGecko cryptocurrency data
 crypto = ["finance-query-types/crypto", "finance-query-models/crypto", "finance-query-adapters-core/crypto"]
 # Enable World Bank Open Data global macro indicators (keyless)
-worldbank = ["finance-query-types/worldbank"]
+worldbank = ["finance-query-types/worldbank", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/worldbank"]
 # Enable US Treasury FiscalData federal debt/interest statistics (keyless)
-fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata", "finance-query-adapters-core/fiscaldata"]
+fiscaldata = ["finance-query-types/fiscaldata", "finance-query-models/fiscaldata", "finance-query-adapters-core/fiscaldata", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/fiscaldata"]
 # Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
-bls = ["finance-query-types/bls"]
+bls = ["finance-query-types/bls", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/bls"]
 # Enable Frankfurter ECB reference exchange rates (keyless forex)
 frankfurter = ["finance-query-types/frankfurter"]
 # Enable Binance public market data (keyless crypto quotes + OHLCV)
@@ -153,7 +148,7 @@ binance = ["finance-query-types/binance"]
 # Enable Kraken public market data (keyless crypto, US-accessible)
 kraken = ["finance-query-types/kraken"]
 # Enable FINRA daily short-sale volume (free, non-commercial use)
-finra = ["finance-query-types/finra"]
+finra = ["finance-query-types/finra", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/finra"]
 # Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
 openfigi = ["finance-query-models/openfigi"]
 # Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
@@ -161,7 +156,7 @@ defi = ["finance-query-types/defi", "finance-query-models/defi", "finance-query-
 # Enable GDELT DOC 2.0 global news search (keyless)
 gdelt = ["finance-query-types/gdelt"]
 # Enable CFTC Commitments of Traders futures positioning data (keyless)
-cftc = ["finance-query-types/cftc", "finance-query-models/cftc", "finance-query-adapters-core/cftc"]
+cftc = ["finance-query-types/cftc", "finance-query-models/cftc", "finance-query-adapters-core/cftc", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/cftc"]
 # Enable Nasdaq market-wide earnings/IPO/dividend/split calendars (keyless)
 nasdaq = ["finance-query-types/nasdaq"]
 # Enable Wikipedia S&P 500 index-constituent table scraping (keyless)
@@ -169,12 +164,12 @@ wikipedia = ["finance-query-types/wikipedia"]
 # Enable SEC fails-to-deliver flat-file data on the EDGAR adapter (keyless)
 secftd = ["dep:zip"]
 # Enable House of Representatives Periodic Transaction Report disclosures (keyless)
-housetrades = ["dep:zip", "dep:flate2", "finance-query-types/housetrades"]
+housetrades = ["finance-query-types/housetrades", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/housetrades"]
 # Enable Senate Periodic Transaction Report disclosures (keyless, headless-Chromium)
-senatetrades = ["dep:chromiumoxide", "finance-query-types/senatetrades"]
+senatetrades = ["finance-query-types/senatetrades", "dep:finance-query-adapters-gov", "finance-query-adapters-gov/senatetrades"]
 # Expose internal parsers to `fuzz/` targets. Never enabled by `full` or a
 # normal build: it widens the public surface for fuzzing only.
-fuzzing = []
+fuzzing = ["finance-query-adapters-gov?/fuzzing"]
 # Expose thin wrappers over internal parsers to `benches/`. Enabled by
 # `bench-gate` only.
 bench-internals = []
