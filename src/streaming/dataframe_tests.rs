@@ -246,8 +246,11 @@ fn alert_event_flattens_the_tick_and_appends_the_condition_kind() {
 
 #[test]
 fn zero_stream_times_are_null() {
-    let trade = TradeTick::default().to_dataframe().unwrap();
-    assert_eq!(trade.column("time").unwrap().null_count(), 1);
+    #[cfg(feature = "polygon")]
+    {
+        let trade = TradeTick::default().to_dataframe().unwrap();
+        assert_eq!(trade.column("time").unwrap().null_count(), 1);
+    }
     let price = PriceUpdate::default().to_dataframe().unwrap();
     assert_eq!(price.column("time").unwrap().null_count(), 1);
 }
