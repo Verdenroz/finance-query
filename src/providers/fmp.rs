@@ -180,6 +180,29 @@ impl FundamentalsProvider for FmpProvider {
         crate::adapters::fmp::fundamentals::estimates::fetch_grading_history_response(symbol, 50)
             .await
     }
+
+    async fn fetch_analyst_estimates(
+        &self,
+        symbol: &str,
+        period: crate::finance::Period,
+    ) -> Result<Vec<crate::finance::AnalystEstimate>> {
+        let estimates = crate::adapters::fmp::fundamentals::estimates::analyst_estimates(
+            symbol,
+            period.into(),
+            4,
+        )
+        .await?;
+        Ok(estimates.into_iter().map(Into::into).collect())
+    }
+
+    async fn fetch_analyst_recommendations(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::finance::AnalystRecommendation>> {
+        let recommendations =
+            crate::adapters::fmp::fundamentals::estimates::analyst_recommendations(symbol).await?;
+        Ok(recommendations.into_iter().map(Into::into).collect())
+    }
 }
 
 #[async_trait::async_trait]
@@ -249,6 +272,17 @@ impl FilingsProvider for FmpProvider {
             symbol, limit,
         )
         .await
+    }
+
+    async fn fetch_insider_transactions(
+        &self,
+        symbol: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::finance::InsiderTransaction>> {
+        let trades =
+            crate::adapters::fmp::corporate::insider_trading::insider_trading(symbol, limit)
+                .await?;
+        Ok(trades.into_iter().map(Into::into).collect())
     }
 
     async fn fetch_congressional_trades(

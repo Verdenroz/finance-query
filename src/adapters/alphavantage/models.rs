@@ -647,6 +647,19 @@ pub struct EarningsCalendarEntryDTO {
     pub currency: Option<String>,
 }
 
+impl From<EarningsCalendarEntryDTO> for crate::finance::EarningsCalendarEntry {
+    fn from(d: EarningsCalendarEntryDTO) -> Self {
+        Self {
+            symbol: d.symbol,
+            name: d.name,
+            report_date: d.report_date,
+            fiscal_date_ending: d.fiscal_date_ending,
+            estimate: d.estimate,
+            currency: d.currency,
+        }
+    }
+}
+
 /// A single IPO calendar entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -661,6 +674,18 @@ pub struct IpoCalendarEntryDTO {
     pub price_range: Option<String>,
     /// Exchange
     pub exchange: Option<String>,
+}
+
+impl From<IpoCalendarEntryDTO> for crate::finance::IpoCalendarEntry {
+    fn from(d: IpoCalendarEntryDTO) -> Self {
+        Self {
+            symbol: d.symbol,
+            name: d.name,
+            ipo_date: d.ipo_date,
+            price_range: d.price_range,
+            exchange: d.exchange,
+        }
+    }
 }
 
 /// Listing status entry.

@@ -15,6 +15,15 @@ pub enum Period {
     Quarter,
 }
 
+impl From<crate::finance::Period> for Period {
+    fn from(p: crate::finance::Period) -> Self {
+        match p {
+            crate::finance::Period::Annual => Self::Annual,
+            crate::finance::Period::Quarter => Self::Quarter,
+        }
+    }
+}
+
 impl Period {
     /// Convert to FMP API parameter string.
     pub fn as_str(&self) -> &'static str {

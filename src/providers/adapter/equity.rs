@@ -229,6 +229,25 @@ pub trait FundamentalsProvider: ProviderCore {
     ) -> Result<Vec<crate::models::fundamentals::GradingAction>> {
         Err(self.not_supported(Operation::GradingHistory))
     }
+
+    /// Fetch analyst revenue, EBITDA and EPS estimates for `period`.
+    #[cfg(feature = "fmp")]
+    async fn fetch_analyst_estimates(
+        &self,
+        _symbol: &str,
+        _period: crate::finance::Period,
+    ) -> Result<Vec<crate::finance::AnalystEstimate>> {
+        Err(self.not_supported(Operation::AnalystEstimates))
+    }
+
+    /// Fetch analyst buy/hold/sell rating counts.
+    #[cfg(feature = "fmp")]
+    async fn fetch_analyst_recommendations(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::finance::AnalystRecommendation>> {
+        Err(self.not_supported(Operation::AnalystRecommendations))
+    }
 }
 
 /// [`crate::Capability::CORPORATE`] — news, corporate events, similar-symbol
@@ -249,6 +268,15 @@ pub trait CorporateProvider: ProviderCore {
         _limit: u32,
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         Err(self.not_supported(Operation::Recommendations))
+    }
+
+    /// Score one symbol from the sentiment insights on its recent news.
+    #[cfg(feature = "polygon")]
+    async fn fetch_symbol_sentiment(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::sentiment::SymbolSentiment> {
+        Err(self.not_supported(Operation::SymbolSentiment))
     }
 
     /// Fetch the company's own press releases.
@@ -305,6 +333,16 @@ pub trait OptionsProvider: ProviderCore {
 pub trait FilingsProvider: ProviderCore {
     /// Fetch regulatory filings for one symbol.
     async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings>;
+
+    /// Fetch insider transactions in the provider's own flat record shape.
+    #[cfg(feature = "fmp")]
+    async fn fetch_insider_transactions(
+        &self,
+        _symbol: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::finance::InsiderTransaction>> {
+        Err(self.not_supported(Operation::InsiderTrades))
+    }
 
     /// Fetch the sectioned text of one filing by accession number.
     async fn fetch_filing_sections(

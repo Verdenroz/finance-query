@@ -179,3 +179,45 @@ pub(crate) fn provider_set(provider: Arc<CountingProvider>) -> Arc<ProviderSet> 
         Routes::new(Fetch::Sequential),
     ))
 }
+
+/// A FRED stand-in that schedules one CPI release tomorrow.
+#[cfg(feature = "fred")]
+pub(crate) struct ScheduledFred;
+
+#[cfg(feature = "fred")]
+impl ProviderCore for ScheduledFred {
+    fn id(&self) -> Provider {
+        Provider::Fred
+    }
+}
+
+#[cfg(feature = "fred")]
+#[async_trait::async_trait]
+impl super::EconomicProvider for ScheduledFred {
+    async fn fetch_economic_series(
+        &self,
+        _: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        Err(self.not_supported(super::Operation::EconomicSeries))
+    }
+
+    async fn fetch_economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        Ok(vec![crate::models::economic::ReleaseDate {
+            release_id: 10,
+            release_name: "Consumer Price Index".to_string(),
+            date: (chrono::Utc::now() + chrono::Duration::days(1))
+                .format("%Y-%m-%d")
+                .to_string(),
+        }])
+    }
+}
+
+#[cfg(feature = "fred")]
+#[async_trait::async_trait]
+impl ProviderAdapter for ScheduledFred {
+    fn as_economic(&self) -> Option<&dyn super::EconomicProvider> {
+        Some(self)
+    }
+}

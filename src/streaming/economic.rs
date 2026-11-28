@@ -16,6 +16,7 @@ use tracing::warn;
 
 use super::handle::{SourceStream, stream_handle};
 use super::source::StreamCommand;
+use crate::providers::{Capability, Operation, Provider, solo_set};
 
 /// Default interval between polls of all subscribed series.
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(900);
@@ -166,7 +167,21 @@ impl ReleaseSource for DefaultReleaseSource {
     async fn latest(&self, series_id: &str) -> Option<(String, Option<f64>)> {
         // Only the newest observation matters here; the full series is decades
         // of rows to discard.
-        match crate::adapters::fred::latest_observation(series_id).await {
+        let observation = async {
+            solo_set(Provider::Fred, Capability::ECONOMIC)?
+                .fetch(Capability::ECONOMIC, |p| {
+                    let p = p.clone();
+                    async move {
+                        p.as_economic()
+                            .ok_or_else(|| p.not_supported(Operation::EconomicLatestObservation))?
+                            .fetch_economic_latest_observation(series_id)
+                            .await
+                    }
+                })
+                .await
+        }
+        .await;
+        match observation {
             Ok(observation) => observation.map(|o| (o.date, o.value)),
             Err(e) => {
                 warn!("economic stream poll failed for {series_id}: {e}");

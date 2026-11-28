@@ -17,6 +17,11 @@ use crate::models::market::sectors::SectorData;
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 use serde::{Deserialize, Serialize};
 
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+use crate::providers::{Capability, Operation, Provider, ProviderAdapter, solo_set};
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+use std::sync::Arc;
+
 // Re-export options for convenience
 pub use crate::adapters::yahoo::discovery::lookup::{LookupOptions, LookupType};
 pub use crate::adapters::yahoo::discovery::search::SearchOptions;
@@ -573,16 +578,6 @@ pub enum Period {
     Quarter,
 }
 
-#[cfg(feature = "fmp")]
-impl From<Period> for crate::adapters::fmp::models::Period {
-    fn from(p: Period) -> Self {
-        match p {
-            Period::Annual => Self::Annual,
-            Period::Quarter => Self::Quarter,
-        }
-    }
-}
-
 /// An insider trading transaction record.
 #[cfg(feature = "fmp")]
 #[non_exhaustive]
@@ -612,40 +607,6 @@ pub struct InsiderTransaction {
     pub type_of_owner: Option<String>,
     /// Link to SEC filing.
     pub link: Option<String>,
-}
-
-#[cfg(feature = "fmp")]
-impl From<crate::adapters::fmp::corporate::insider_trading::InsiderTradeDTO>
-    for InsiderTransaction
-{
-    fn from(d: crate::adapters::fmp::corporate::insider_trading::InsiderTradeDTO) -> Self {
-        use crate::adapters::fmp::corporate::insider_trading::InsiderTradeDTO;
-        let InsiderTradeDTO {
-            symbol,
-            filing_date,
-            transaction_date,
-            reporting_name,
-            transaction_type,
-            securities_transacted,
-            price,
-            securities_owned,
-            type_of_owner,
-            link,
-            ..
-        } = d;
-        Self {
-            symbol,
-            filing_date,
-            transaction_date,
-            reporting_name,
-            transaction_type,
-            securities_transacted,
-            price,
-            securities_owned,
-            type_of_owner,
-            link,
-        }
-    }
 }
 
 /// An analyst estimate entry (revenue, EBITDA, EPS forecasts).
@@ -684,43 +645,6 @@ pub struct AnalystEstimate {
     pub number_analysts_estimated_eps: Option<i32>,
 }
 
-#[cfg(feature = "fmp")]
-impl From<crate::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO> for AnalystEstimate {
-    fn from(d: crate::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO) -> Self {
-        use crate::adapters::fmp::fundamentals::estimates::AnalystEstimateDTO;
-        let AnalystEstimateDTO {
-            symbol,
-            date,
-            estimated_revenue_low,
-            estimated_revenue_high,
-            estimated_revenue_avg,
-            estimated_ebitda_low,
-            estimated_ebitda_high,
-            estimated_ebitda_avg,
-            estimated_eps_avg,
-            estimated_eps_high,
-            estimated_eps_low,
-            number_analyst_estimated_revenue,
-            number_analysts_estimated_eps,
-        } = d;
-        Self {
-            symbol,
-            date,
-            estimated_revenue_low,
-            estimated_revenue_high,
-            estimated_revenue_avg,
-            estimated_ebitda_low,
-            estimated_ebitda_high,
-            estimated_ebitda_avg,
-            estimated_eps_avg,
-            estimated_eps_high,
-            estimated_eps_low,
-            number_analyst_estimated_revenue,
-            number_analysts_estimated_eps,
-        }
-    }
-}
-
 /// An analyst stock recommendation (buy/hold/sell counts).
 #[cfg(feature = "fmp")]
 #[non_exhaustive]
@@ -745,55 +669,50 @@ pub struct AnalystRecommendation {
     pub analyst_ratings_strong_sell: Option<i32>,
 }
 
-#[cfg(feature = "fmp")]
-impl From<crate::adapters::fmp::fundamentals::estimates::AnalystRecommendationDTO>
-    for AnalystRecommendation
+/// Runs `f` against a set holding only `id`, routed for `cap`.
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+async fn via<T, F, Fut>(id: Provider, cap: Capability, f: F) -> Result<T>
+where
+    F: Fn(Arc<dyn ProviderAdapter>) -> Fut,
+    Fut: std::future::Future<Output = Result<T>>,
 {
-    fn from(d: crate::adapters::fmp::fundamentals::estimates::AnalystRecommendationDTO) -> Self {
-        use crate::adapters::fmp::fundamentals::estimates::AnalystRecommendationDTO;
-        let AnalystRecommendationDTO {
-            symbol,
-            date,
-            analyst_ratings_buy,
-            analyst_ratings_hold,
-            analyst_ratings_sell,
-            analyst_ratings_strong_buy,
-            analyst_ratings_strong_sell,
-        } = d;
-        Self {
-            symbol,
-            date,
-            analyst_ratings_buy,
-            analyst_ratings_hold,
-            analyst_ratings_sell,
-            analyst_ratings_strong_buy,
-            analyst_ratings_strong_sell,
-        }
-    }
+    solo_set(id, cap)?.fetch(cap, |p| f(Arc::clone(p))).await
 }
 
 /// Fetch insider trading transactions for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTransaction>> {
-    crate::adapters::fmp::corporate::insider_trading::insider_trading(symbol, limit)
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(Provider::Fmp, Capability::FILINGS, |p| async move {
+        p.as_filings()
+            .ok_or_else(|| p.not_supported(Operation::InsiderTrades))?
+            .fetch_insider_transactions(symbol, limit)
+            .await
+    })
+    .await
 }
 
 /// Fetch analyst estimates for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn analyst_estimates(symbol: &str, period: Period) -> Result<Vec<AnalystEstimate>> {
-    crate::adapters::fmp::fundamentals::estimates::analyst_estimates(symbol, period.into(), 4)
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(Provider::Fmp, Capability::FUNDAMENTALS, |p| async move {
+        p.as_fundamentals()
+            .ok_or_else(|| p.not_supported(Operation::AnalystEstimates))?
+            .fetch_analyst_estimates(symbol, period)
+            .await
+    })
+    .await
 }
 
 /// Fetch analyst stock recommendations for a symbol.
 #[cfg(feature = "fmp")]
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendation>> {
-    crate::adapters::fmp::fundamentals::estimates::analyst_recommendations(symbol)
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(Provider::Fmp, Capability::FUNDAMENTALS, |p| async move {
+        p.as_fundamentals()
+            .ok_or_else(|| p.not_supported(Operation::AnalystRecommendations))?
+            .fetch_analyst_recommendations(symbol)
+            .await
+    })
+    .await
 }
 
 // ── Polygon.io ──────────────────────────────────────────────────────
@@ -801,42 +720,13 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 /// Fetch sentiment analysis for a symbol based on recent Polygon.io news.
 #[cfg(feature = "polygon")]
 pub async fn symbol_sentiment(symbol: &str) -> Result<crate::models::sentiment::SymbolSentiment> {
-    use crate::adapters::polygon;
-    let paginated = polygon::stock_news(&[("ticker", symbol), ("limit", "10")]).await?;
-    let articles = paginated.results.unwrap_or_default();
-
-    let mut positive = 0u32;
-    let mut negative = 0u32;
-    let total = articles.len().max(1) as f64;
-    for article in &articles {
-        if let Some(ref insights) = article.insights {
-            for insight in insights {
-                if insight.ticker.as_deref() == Some(symbol) {
-                    match insight.sentiment.as_deref() {
-                        Some("positive") => positive += 1,
-                        Some("negative") => negative += 1,
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-
-    let (score, label): (Option<f64>, Option<String>) = if total > 0.0 {
-        let s = (positive as f64 - negative as f64) / total;
-        let l = if s > 0.2 {
-            "positive"
-        } else if s < -0.2 {
-            "negative"
-        } else {
-            "neutral"
-        };
-        (Some(s), Some(l.to_string()))
-    } else {
-        (None, None)
-    };
-
-    Ok(crate::models::sentiment::SymbolSentiment { score, label })
+    via(Provider::Polygon, Capability::CORPORATE, |p| async move {
+        p.as_corporate()
+            .ok_or_else(|| p.not_supported(Operation::SymbolSentiment))?
+            .fetch_symbol_sentiment(symbol)
+            .await
+    })
+    .await
 }
 
 // ── Alpha Vantage ───────────────────────────────────────────────────
@@ -864,22 +754,6 @@ pub struct EarningsCalendarEntry {
     pub currency: Option<String>,
 }
 
-#[cfg(feature = "alphavantage")]
-impl From<crate::adapters::alphavantage::models::EarningsCalendarEntryDTO>
-    for EarningsCalendarEntry
-{
-    fn from(d: crate::adapters::alphavantage::models::EarningsCalendarEntryDTO) -> Self {
-        Self {
-            symbol: d.symbol,
-            name: d.name,
-            report_date: d.report_date,
-            fiscal_date_ending: d.fiscal_date_ending,
-            estimate: d.estimate,
-            currency: d.currency,
-        }
-    }
-}
-
 /// An upcoming IPO calendar entry.
 #[cfg(feature = "alphavantage")]
 #[non_exhaustive]
@@ -900,33 +774,36 @@ pub struct IpoCalendarEntry {
     pub exchange: Option<String>,
 }
 
-#[cfg(feature = "alphavantage")]
-impl From<crate::adapters::alphavantage::models::IpoCalendarEntryDTO> for IpoCalendarEntry {
-    fn from(d: crate::adapters::alphavantage::models::IpoCalendarEntryDTO) -> Self {
-        Self {
-            symbol: d.symbol,
-            name: d.name,
-            ipo_date: d.ipo_date,
-            price_range: d.price_range,
-            exchange: d.exchange,
-        }
-    }
-}
-
 /// Fetch the upcoming earnings calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn earnings_calendar() -> Result<Vec<EarningsCalendarEntry>> {
-    crate::adapters::alphavantage::fundamentals::earnings_calendar()
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(
+        Provider::AlphaVantage,
+        Capability::CALENDAR,
+        |p| async move {
+            p.as_calendar()
+                .ok_or_else(|| p.not_supported(Operation::EarningsCalendar))?
+                .fetch_earnings_calendar()
+                .await
+        },
+    )
+    .await
 }
 
 /// Fetch the upcoming IPO calendar (market-wide, not symbol-filtered).
 #[cfg(feature = "alphavantage")]
 pub async fn ipo_calendar() -> Result<Vec<IpoCalendarEntry>> {
-    crate::adapters::alphavantage::fundamentals::ipo_calendar()
-        .await
-        .map(|v| v.into_iter().map(Into::into).collect())
+    via(
+        Provider::AlphaVantage,
+        Capability::CALENDAR,
+        |p| async move {
+            p.as_calendar()
+                .ok_or_else(|| p.not_supported(Operation::IpoCalendar))?
+                .fetch_ipo_calendar()
+                .await
+        },
+    )
+    .await
 }
 
 #[cfg(test)]

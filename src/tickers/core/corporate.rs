@@ -230,7 +230,7 @@ impl Tickers {
         let (per_symbol_quotes, options_resp, releases) = tokio::join!(
             per_symbol_fut,
             self.options(None),
-            crate::adapters::fred::release_dates()
+            self.providers.economic_release_dates()
         );
         #[cfg(not(feature = "fred"))]
         let (per_symbol_quotes, options_resp) = tokio::join!(per_symbol_fut, self.options(None));
@@ -272,7 +272,7 @@ impl Tickers {
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
-            events.extend(crate::adapters::fred::calendar::build_economic_events(
+            events.extend(crate::models::calendar::release::build_economic_events(
                 releases, window,
             ));
         }
@@ -390,6 +390,44 @@ mod tests {
         assert!(result.dividends.contains_key("MSFT"));
         let error = &result.errors["AAPL"];
         assert!(error.contains("events upstream failed"), "{error}");
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "fred")]
+    async fn calendar_includes_fred_releases_from_a_default_set() {
+        use crate::providers::mock::{CountingProvider, ScheduledFred};
+        use crate::providers::{Fetch, ProviderAdapter, ProviderSet, Routes};
+
+        let adapters: Vec<Arc<dyn ProviderAdapter>> =
+            vec![CountingProvider::new(), Arc::new(ScheduledFred)];
+        let tickers = Tickers::builder(["AAPL"])
+            .with_provider_set(Arc::new(ProviderSet::new(
+                adapters,
+                Routes::new(Fetch::Sequential),
+            )))
+            .build()
+            .await
+            .unwrap();
+
+        let events = tickers.calendar(TimeRange::OneMonth).await.unwrap();
+
+        assert!(events.iter().any(|e| matches!(
+            &e.event,
+            crate::models::calendar::EventKind::EconomicRelease { series_id, .. } if series_id == "10"
+        )));
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "fred")]
+    async fn default_built_tickers_register_fred_for_releases() {
+        let tickers = Tickers::builder(["AAPL"]).build().await.unwrap();
+
+        assert!(
+            tickers
+                .providers
+                .adapter(crate::providers::Provider::Fred)
+                .is_some()
+        );
     }
 
     #[tokio::test]

@@ -49,6 +49,19 @@ impl EconomicProvider for FredProvider {
     ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
         crate::adapters::fred::economic::catalog::releases().await
     }
+
+    async fn fetch_economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        crate::adapters::fred::release_dates().await
+    }
+
+    async fn fetch_economic_latest_observation(
+        &self,
+        series_id: &str,
+    ) -> Result<Option<crate::models::economic::MacroObservation>> {
+        crate::adapters::fred::latest_observation(series_id).await
+    }
 }
 
 /// FRED's release calendar covers `CalendarKind::Economic` only — it has no

@@ -27,6 +27,9 @@ macro_rules! payload_column {
 /// Market-wide calendars routed through `Capability::CALENDAR`.
 pub mod market;
 
+#[cfg(feature = "fred")]
+pub(crate) mod release;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

@@ -119,6 +119,18 @@ pub trait CalendarProvider: ProviderCore {
         from: &str,
         to: &str,
     ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>>;
+
+    /// Fetch the upcoming earnings calendar in the provider's own flat record shape.
+    #[cfg(feature = "alphavantage")]
+    async fn fetch_earnings_calendar(&self) -> Result<Vec<crate::finance::EarningsCalendarEntry>> {
+        Err(self.not_supported(Operation::EarningsCalendar))
+    }
+
+    /// Fetch the upcoming IPO calendar in the provider's own flat record shape.
+    #[cfg(feature = "alphavantage")]
+    async fn fetch_ipo_calendar(&self) -> Result<Vec<crate::finance::IpoCalendarEntry>> {
+        Err(self.not_supported(Operation::IpoCalendar))
+    }
 }
 
 /// [`crate::Capability::MARKET`] — sector/industry performance and movers.
@@ -273,6 +285,26 @@ pub trait EconomicProvider: ProviderCore {
         &self,
     ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
         Err(self.not_supported(Operation::EconomicReleases))
+    }
+
+    /// Fetch scheduled release dates from today onward, ascending.
+    ///
+    /// FRED-only; no other provider integrated here exposes a release
+    /// schedule.
+    #[cfg(feature = "fred")]
+    async fn fetch_economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        Err(self.not_supported(Operation::EconomicReleaseDates))
+    }
+
+    /// Fetch only the newest observation of a series, `None` when it has none.
+    #[cfg(feature = "fred")]
+    async fn fetch_economic_latest_observation(
+        &self,
+        _series_id: &str,
+    ) -> Result<Option<crate::models::economic::MacroObservation>> {
+        Err(self.not_supported(Operation::EconomicLatestObservation))
     }
 
     /// Fetch US Treasury securities auctions matching `query`, most recent

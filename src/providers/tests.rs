@@ -990,3 +990,100 @@ fn provider_capability_table_matches_adapters() {
         );
     }
 }
+
+#[cfg(feature = "fred")]
+mod injected_fred {
+    use super::*;
+    use crate::providers::mock::{CountingProvider, ScheduledFred};
+    use std::time::Duration;
+
+    async fn set_with(routes: Routes) -> Result<ProviderSet> {
+        build_providers(
+            &[Provider::Yahoo],
+            vec![Arc::new(ScheduledFred)],
+            &crate::adapters::yahoo::client::ClientConfig::default(),
+            routes,
+        )
+        .await
+    }
+
+    fn is_yahoo_unsupported(err: &FinanceError) -> bool {
+        matches!(
+            err,
+            FinanceError::NotSupported {
+                provider: Provider::Yahoo,
+                ..
+            }
+        )
+    }
+
+    #[tokio::test]
+    async fn builds_without_a_fred_key() {
+        let providers = crate::Providers::builder().build().await;
+
+        assert!(providers.is_ok());
+    }
+
+    #[tokio::test]
+    async fn unrouted_set_still_serves_release_dates() {
+        let set = set_with(Routes::new(Fetch::Sequential)).await.unwrap();
+
+        let releases = set.economic_release_dates().await.unwrap();
+
+        assert_eq!(releases[0].release_id, 10);
+    }
+
+    #[tokio::test]
+    async fn a_route_without_release_dates_falls_back_to_fred() {
+        let routes = Routes::new(Fetch::Sequential).route(Capability::ECONOMIC, [Provider::Yahoo]);
+        let set = set_with(routes).await.unwrap();
+
+        let releases = set.economic_release_dates().await.unwrap();
+
+        assert_eq!(releases[0].release_id, 10);
+    }
+
+    #[tokio::test]
+    async fn a_hand_built_set_without_fred_gets_a_transient_one() {
+        let mut server = mockito::Server::new_async().await;
+        let _releases = server
+            .mock("GET", "/fred/releases/dates")
+            .match_query(mockito::Matcher::Any)
+            .with_body(
+                r#"{"release_dates":[{"release_id":10,"release_name":"CPI","date":"2099-01-01"}]}"#,
+            )
+            .create_async()
+            .await;
+        let mut key = crate::adapters::keys::ScopedKey::new("k".into(), Duration::from_secs(5));
+        key.base_url = Some(server.url());
+        let set = ProviderSet::new(
+            vec![CountingProvider::new() as Arc<dyn ProviderAdapter>],
+            Routes::new(Fetch::Sequential),
+        )
+        .with_api_keys([("fred", key)].into());
+
+        let releases = set.economic_release_dates().await.unwrap();
+
+        assert_eq!(releases[0].release_id, 10);
+    }
+
+    #[tokio::test]
+    async fn injection_leaves_other_capabilities_on_yahoo() {
+        let set = set_with(Routes::new(Fetch::Sequential)).await.unwrap();
+
+        let err = set
+            .fetch(Capability::ECONOMIC, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_economic()
+                        .ok_or_else(|| p.not_supported(Operation::EconomicSeries))?
+                        .fetch_economic_series("CPIAUCSL")
+                        .await
+                }
+            })
+            .await
+            .unwrap_err();
+
+        assert!(is_yahoo_unsupported(&err));
+    }
+}

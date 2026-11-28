@@ -128,6 +128,13 @@ impl CorporateProvider for PolygonProvider {
         polygon::fetch_news_response(symbol).await
     }
 
+    async fn fetch_symbol_sentiment(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::sentiment::SymbolSentiment> {
+        polygon::fetch_symbol_sentiment_response(symbol).await
+    }
+
     async fn fetch_events(
         &self,
         symbol: &str,

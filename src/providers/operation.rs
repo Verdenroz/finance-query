@@ -160,6 +160,21 @@ pub enum Operation {
     EconomicCategories,
     /// Scheduled macro data releases.
     EconomicReleases,
+    /// Upcoming scheduled release dates of major macro data.
+    #[cfg(feature = "fred")]
+    EconomicReleaseDates,
+    /// Analyst revenue, EBITDA and EPS forecasts.
+    #[cfg(feature = "fmp")]
+    AnalystEstimates,
+    /// Analyst buy/hold/sell rating counts.
+    #[cfg(feature = "fmp")]
+    AnalystRecommendations,
+    /// News-derived sentiment score for one symbol.
+    #[cfg(feature = "polygon")]
+    SymbolSentiment,
+    /// Most recent observation of a macro series.
+    #[cfg(feature = "fred")]
+    EconomicLatestObservation,
     /// US Treasury securities auctions, announced through settled.
     #[cfg(feature = "fiscaldata")]
     TreasuryAuctions,
@@ -280,6 +295,16 @@ impl Operation {
             Self::EconomicSearch => "economic_search",
             Self::EconomicCategories => "economic_categories",
             Self::EconomicReleases => "economic_releases",
+            #[cfg(feature = "fred")]
+            Self::EconomicReleaseDates => "economic_release_dates",
+            #[cfg(feature = "fred")]
+            Self::EconomicLatestObservation => "economic_latest_observation",
+            #[cfg(feature = "polygon")]
+            Self::SymbolSentiment => "symbol_sentiment",
+            #[cfg(feature = "fmp")]
+            Self::AnalystEstimates => "analyst_estimates",
+            #[cfg(feature = "fmp")]
+            Self::AnalystRecommendations => "analyst_recommendations",
             #[cfg(feature = "fiscaldata")]
             Self::TreasuryAuctions => "treasury_auctions",
             #[cfg(feature = "fiscaldata")]
@@ -348,6 +373,12 @@ impl Operation {
             | Self::EconomicSearch
             | Self::EconomicCategories
             | Self::EconomicReleases => Capability::ECONOMIC,
+            #[cfg(feature = "fred")]
+            Self::EconomicReleaseDates | Self::EconomicLatestObservation => Capability::ECONOMIC,
+            #[cfg(feature = "fmp")]
+            Self::AnalystEstimates | Self::AnalystRecommendations => Capability::FUNDAMENTALS,
+            #[cfg(feature = "polygon")]
+            Self::SymbolSentiment => Capability::CORPORATE,
             #[cfg(feature = "fiscaldata")]
             Self::TreasuryAuctions | Self::UpcomingAuctions => Capability::ECONOMIC,
             Self::ForexQuote | Self::ForexNews => Capability::FOREX,

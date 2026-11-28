@@ -341,12 +341,52 @@ impl ProviderSet {
                 param: "cursor".into(),
                 reason: "cursor provider is not configured on this route".into(),
             })?;
-        crate::adapters::keys::scope(Arc::clone(&self.api_keys), async {
-            let result = self.call_with_retry(p, &f).await;
+        self.call_one(p, &f).await
+    }
+
+    async fn call_one<T, F, Fut>(&self, p: &Arc<dyn ProviderAdapter>, f: &F) -> Result<T>
+    where
+        F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        self.scope(async {
+            let result = self.call_with_retry(p, f).await;
             self.record_health(p.id(), &result);
             result
         })
         .await
+    }
+
+    #[cfg(feature = "fred")]
+    pub(crate) async fn economic_release_dates(
+        &self,
+    ) -> Result<Vec<crate::models::economic::ReleaseDate>> {
+        let call = |p: &Arc<dyn ProviderAdapter>| {
+            let p = p.clone();
+            async move {
+                p.as_economic()
+                    .ok_or_else(|| p.not_supported(super::Operation::EconomicReleaseDates))?
+                    .fetch_economic_release_dates()
+                    .await
+            }
+        };
+        if self.routes.map.contains_key(&Capability::ECONOMIC) {
+            match self.fetch(Capability::ECONOMIC, &call).await {
+                Err(
+                    FinanceError::NotSupported { .. }
+                    | FinanceError::NoProviderSupports { .. }
+                    | FinanceError::NoProviderAvailable { .. },
+                ) => {}
+                routed => return routed,
+            }
+        }
+        match self.adapter(Provider::Fred) {
+            Some(fred) => self.call_one(fred, &call).await,
+            None => {
+                let fred = super::solo_set(Provider::Fred, Capability::ECONOMIC)?;
+                self.scope(fred.fetch(Capability::ECONOMIC, &call)).await
+            }
+        }
     }
 
     pub(crate) fn adapter(&self, id: super::Provider) -> Option<&Arc<dyn ProviderAdapter>> {

@@ -98,6 +98,33 @@ fn factory_for(id: Provider) -> Result<Factory> {
         })
 }
 
+/// A set over an already-open Yahoo session. FRED rides along uninitialized so
+/// `calendar()` can merge release dates without requiring a key.
+pub(crate) fn shared_yahoo_set(session: Arc<LazySession>) -> ProviderSet {
+    #[allow(unused_mut)]
+    let mut providers: Vec<Arc<dyn ProviderAdapter>> =
+        vec![Arc::new(yahoo::YahooProvider::new(Arc::clone(&session)))];
+    #[cfg(feature = "fred")]
+    providers.push(Arc::new(fred::FredProvider));
+    ProviderSet::new(providers, Routes::new(Fetch::Sequential)).with_yahoo_session(Some(session))
+}
+
+#[cfg(any(
+    feature = "fmp",
+    feature = "polygon",
+    feature = "alphavantage",
+    feature = "fred"
+))]
+/// A set holding only `id`, routed for `cap`. The adapter is not initialized,
+/// so a missing key surfaces from the call that needs it.
+pub(crate) fn solo_set(id: Provider, cap: Capability) -> Result<ProviderSet> {
+    let adapter = factory_for(id)?(&ClientConfig::default(), &mut None)?;
+    Ok(ProviderSet::new(
+        vec![adapter],
+        Routes::new(Fetch::Sequential).route(cap, [id]),
+    ))
+}
+
 pub(crate) async fn build_providers(
     ids: &[Provider],
     extra: Vec<Arc<dyn ProviderAdapter>>,
@@ -117,6 +144,13 @@ pub(crate) async fn build_providers(
     }
     if needs_edgar_injection(ids) {
         providers.push(Arc::new(edgar::EdgarProvider));
+    }
+    // Uninitialized and unrouted: `calendar()` reaches it for release dates
+    // whenever the ECONOMIC route cannot serve them, and a missing key only
+    // skips those events.
+    #[cfg(feature = "fred")]
+    if !providers.iter().any(|p| p.id() == Provider::Fred) {
+        providers.push(Arc::new(fred::FredProvider));
     }
     for routed in routes.map.values() {
         for provider in &routed.providers {
