@@ -504,6 +504,9 @@ impl ProvidersBuilder {
     /// anything: a capability with no explicit route still falls back to its
     /// default provider.
     ///
+    /// Models are `#[non_exhaustive]`, so an adapter outside this crate builds
+    /// them with [`init!`](crate::init) instead of a struct literal.
+    ///
     /// ```no_run
     /// # use std::sync::Arc;
     /// # use finance_query::{Capability, Provider, Providers, ProviderAdapter};

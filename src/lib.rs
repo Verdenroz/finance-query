@@ -79,6 +79,7 @@ pub mod edgar {
 
 // Internal modules
 mod backoff;
+mod init;
 use finance_query_types::constants;
 mod models;
 #[cfg(feature = "risk")]
